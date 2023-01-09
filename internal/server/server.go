@@ -58,12 +58,11 @@ func NewServer(fs afero.Fs) (Server, error) {
 }
 
 func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
-	imageName := strings.Replace(base, "@", ":", 1)
 	var err error
 	var image *api.Image
 	var op lxd.RemoteOperation
 
-	if _, _, err = s.GetImage(imageName); err == nil {
+	if _, _, err = s.GetImageAlias(base); err == nil {
 		return err
 	} else {
 		imageServer, err := ConnectSimpleStreams("https://cloud-images.ubuntu.com/releases/", nil)
@@ -71,7 +70,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 			return err
 		}
 
-		names := strings.Split(imageName, ":")
+		names := strings.Split(base, "@")
 		if len(names) <= 1 {
 			return fmt.Errorf("cannot find a base image for the workspace")
 		}
@@ -86,7 +85,10 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 			return err
 		}
 
-		op, err = s.CopyImage(imageServer, *image, nil)
+		var args lxd.ImageCopyArgs
+
+		args.Aliases = append(args.Aliases, api.ImageAlias{Name: base})
+		op, err = s.CopyImage(imageServer, *image, &args)
 
 		if err != nil {
 			return err
@@ -119,5 +121,5 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 
 	}
 
-	return nil
+	return err
 }

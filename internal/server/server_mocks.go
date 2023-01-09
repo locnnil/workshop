@@ -31,6 +31,11 @@ func (s *MockLxdInstanceServer) GetImage(fingerprint string) (image *api.Image, 
 	return args.Get(0).(*api.Image), args.String(1), args.Error(2)
 }
 
+func (s *MockLxdInstanceServer) GetImageAlias(name string) (alias *api.ImageAliasesEntry, ETag string, err error) {
+	args := s.Called(name)
+	return args.Get(0).(*api.ImageAliasesEntry), args.String(1), args.Error(2)
+}
+
 func (s *MockLxdInstanceServer) GetProject(name string) (project *api.Project, ETag string, err error) {
 	args := s.Called(name)
 	return args.Get(0).(*api.Project), args.String(1), args.Error(2)

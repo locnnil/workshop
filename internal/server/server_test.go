@@ -28,7 +28,7 @@ func (suite *LaunchTestSuite) SetupTest() {
 }
 
 func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchLocalImageExists() {
-	suite.InstMock.On("GetImage", "ubuntu:20.04").Return((*api.Image)(nil), "",
+	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "",
 		nil)
 
 	err := suite.Srv.LaunchWorkspaceInstance("test", "ubuntu@20.04")
@@ -48,7 +48,7 @@ func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchNoLocalImage() {
 
 	imageAlias.Target = "2DFSJF359FNS"
 
-	suite.InstMock.On("GetImage", "ubuntu:20.04").Return((*api.Image)(nil), "",
+	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "",
 		notFoundError)
 	suite.ImgMock.On("GetImageAlias", "20.04").Return(&imageAlias, "",
 		nil)
