@@ -1,7 +1,10 @@
 package main
 
 import (
-	workspace "github.com/canonical/workspace/internal"
+	"fmt"
+
+	srv "github.com/canonical/workspace/internal/server"
+	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +25,23 @@ func (c *CmdLaunch) Command() *cobra.Command {
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	fs := afero.NewOsFs()
-	_, err := workspace.NewWorkspace(fs, ".workspace.project.yaml")
+
+	server, err := srv.NewServer(fs)
+	if err != nil {
+		fmt.Printf("%v", err)
+		return err
+	}
+
+	ws, err := workspace.NewWorkspace(server, fs, ".workspace.project.yaml")
+	if err != nil {
+		fmt.Printf("%v", err)
+		return err
+	}
+
+	if err = ws.Launch(); err != nil {
+		fmt.Printf("%v", err)
+		return err
+	}
+
 	return err
 }

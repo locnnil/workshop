@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	srv "github.com/canonical/workspace/internal/server"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -9,13 +10,15 @@ type Workspace interface {
 	Launch() error
 }
 
-type LXDWorkspace struct {
+type LxdWorkspace struct {
 	Name string `yaml:"name"`
 	Base string `yaml:"base"`
+
+	server srv.Server
 }
 
-func NewWorkspace(fs afero.Fs, filepath string) (Workspace, error) {
-	var ws LXDWorkspace
+func NewWorkspace(server srv.Server, fs afero.Fs, filepath string) (Workspace, error) {
+	var ws = LxdWorkspace{server: server}
 	buf, err := afero.ReadFile(fs, filepath)
 
 	if err != nil {
@@ -29,6 +32,10 @@ func NewWorkspace(fs afero.Fs, filepath string) (Workspace, error) {
 	return &ws, nil
 }
 
-func (w *LXDWorkspace) Launch() error {
+func (w *LxdWorkspace) Launch() error {
+	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base); err != nil {
+		return err
+	}
+
 	return nil
 }
