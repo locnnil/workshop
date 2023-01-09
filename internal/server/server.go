@@ -121,5 +121,5 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 
 	}
 
-	return err
+	return nil
 }
