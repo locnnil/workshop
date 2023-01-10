@@ -7,11 +7,11 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
-const SDK_PROJECT_NAME = "canonical.workspace"
+const WORKSPACE_PROJECT_NAME = "canonical.workspace"
 
 /* Initialise the SDK project namespace. */
 func initProject(conn lxd.InstanceServer) error {
-	if _, _, err := conn.GetProject(SDK_PROJECT_NAME); err != nil {
+	if _, _, err := conn.GetProject(WORKSPACE_PROJECT_NAME); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return conn.CreateProject(api.ProjectsPost{
 				ProjectPut: api.ProjectPut{
@@ -20,9 +20,9 @@ func initProject(conn lxd.InstanceServer) error {
 						"features.profiles":        "true",
 						"features.storage.volumes": "true",
 					},
-					Description: "SDK Project Namespace",
+					Description: "Workspace Project Namespace",
 				},
-				Name: SDK_PROJECT_NAME,
+				Name: WORKSPACE_PROJECT_NAME,
 			})
 		} else {
 			return err

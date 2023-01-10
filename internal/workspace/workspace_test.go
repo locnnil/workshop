@@ -28,6 +28,11 @@ func (s *MockServer) LaunchWorkspaceInstance(name, base string) error {
 	return args.Error(0)
 }
 
+func (s *MockServer) SetInstanceState(name, action string) error {
+	args := s.Called(name, action)
+	return args.Error(0)
+}
+
 func (suite *LaunchTestSuite) SetupTest() {
 	suite.Fs = afero.NewMemMapFs()
 	suite.Srv = MockServer{}

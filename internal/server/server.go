@@ -15,6 +15,7 @@ import (
 
 type Server interface {
 	LaunchWorkspaceInstance(name, base string) error
+	SetInstanceState(name, action string) error
 }
 
 type LxdServer struct {
@@ -33,13 +34,13 @@ func (s *LxdServer) connect() (srv lxd.InstanceServer, err error) {
 		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
 			return nil, err
 		} else {
-			return srv.UseProject(SDK_PROJECT_NAME), nil
+			return srv.UseProject(WORKSPACE_PROJECT_NAME), nil
 		}
 	} else {
 		if srv, err := lxd.ConnectLXDUnix("", nil); err != nil {
 			return nil, err
 		} else {
-			return srv.UseProject(SDK_PROJECT_NAME), nil
+			return srv.UseProject(WORKSPACE_PROJECT_NAME), nil
 		}
 	}
 }
@@ -159,4 +160,30 @@ func ProgressHandler(o api.Operation) {
 	if termios.IsTerminal(syscall.Stdout) {
 		fmt.Print("\033[A\033[2K\r")
 	}
+}
+
+func (s *LxdServer) SetInstanceState(name string, action string) error {
+	inst, etag, err := s.GetInstance(name)
+	if err != nil {
+		return err
+	}
+
+	/* Do nothing if the instance is already in the desired state */
+	if (inst.StatusCode == api.Running && action == "start") ||
+		(inst.StatusCode == api.Stopped && action == "stop") {
+		return nil
+	}
+
+	req := api.InstanceStatePut{
+		Action:  action,
+		Timeout: -1,
+		Force:   false,
+	}
+
+	op, err := s.UpdateInstanceState(name, req, etag)
+	if err != nil {
+		return err
+	}
+
+	return op.Wait()
 }

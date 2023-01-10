@@ -39,3 +39,7 @@ func (w *LxdWorkspace) Launch() error {
 
 	return nil
 }
+
+func (w *LxdWorkspace) Start() error {
+	return w.server.SetInstanceState(w.Name, "start")
+}
