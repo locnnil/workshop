@@ -144,9 +144,6 @@ func (s *LxdServer) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, 
 }
 
 func ProgressHandler(o api.Operation) {
-	if termios.IsTerminal(syscall.Stdout) {
-		fmt.Print("\033[A\033[2K\r")
-	}
 
 	if o.Metadata["download_progress"] != nil {
 		fmt.Printf("Download image: %v\n", o.Metadata["download_progress"])
@@ -157,5 +154,9 @@ func ProgressHandler(o api.Operation) {
 		fmt.Printf("Imported image fingerprint: %v\n", receivedFingerprint)
 	} else if o.Err == "" {
 		fmt.Printf("UNEXPECTED: %v\n", o.Err)
+	}
+
+	if termios.IsTerminal(syscall.Stdout) {
+		fmt.Print("\033[A\033[2K\r")
 	}
 }
