@@ -8,6 +8,7 @@ import (
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -28,10 +29,25 @@ func (suite *LaunchTestSuite) SetupTest() {
 }
 
 func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchLocalImageExists() {
-	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "",
+	var name, base, fingerprint string = "test", "ubuntu@20.04", "FS34DS"
+	var image api.Image
+	image.Fingerprint = fingerprint
+	var op MockRemoteOperation
+	alias := api.ImageAliasesEntry{
+		ImageAliasesEntryPut: api.ImageAliasesEntryPut{Target: fingerprint},
+	}
+
+	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return(&alias, "",
+		nil)
+	suite.InstMock.On("GetImage", fingerprint).Return(&image, "",
+		nil)
+	suite.InstMock.On("CreateInstanceFromImage", &suite.Srv, image, mock.Anything).Return(&op,
 		nil)
 
-	err := suite.Srv.LaunchWorkspaceInstance("test", "ubuntu@20.04")
+	op.On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil)
+	op.On("Wait").Return(nil)
+
+	err := suite.Srv.LaunchWorkspaceInstance(name, base)
 	assert.Equal(suite.T(), err, nil)
 	suite.InstMock.AssertExpectations(suite.T())
 }
@@ -41,23 +57,39 @@ func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchNoLocalImage() {
 	ConnectSimpleStreams = func(url string, args *lxd.ConnectionArgs) (lxd.ImageServer, error) {
 		return &suite.ImgMock, nil
 	}
-	//var image api.Image
-	var imageAlias api.ImageAliasesEntry
-	var err error
-	var notFoundError = api.StatusErrorf(http.StatusNotFound, "Not found")
 
-	imageAlias.Target = "2DFSJF359FNS"
+	var name, base, fingerprint string = "test", "ubuntu@20.04", "FS34DS"
+
+	var remoteImageAlias api.ImageAliasesEntry
+	remoteImageAlias.Target = fingerprint
+
+	var localImageAlias api.ImageAliasesPost
+	localImageAlias.Name = base
+	localImageAlias.Target = fingerprint
+
+	var image api.Image
+	image.Fingerprint = fingerprint
+
+	var op MockRemoteOperation
+	var err error
 
 	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "",
-		notFoundError)
-	suite.ImgMock.On("GetImageAlias", "20.04").Return(&imageAlias, "",
+		api.StatusErrorf(http.StatusNotFound, ""))
+	suite.ImgMock.On("GetImageAlias", "20.04/amd64").Return(&remoteImageAlias, "",
 		nil)
-	suite.ImgMock.On("GetImage", imageAlias.Target).Return((*api.Image)(nil), "",
-		notFoundError)
+	suite.ImgMock.On("GetImage", fingerprint).Return(&image, "",
+		nil)
 
-	err = suite.Srv.LaunchWorkspaceInstance("test", "ubuntu@20.04")
+	suite.InstMock.On("CreateInstanceFromImage", &suite.ImgMock, image, mock.Anything).Return(&op,
+		nil)
 
-	assert.Equal(suite.T(), err, notFoundError)
+	op.On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil)
+	op.On("Wait").Return(nil)
+
+	suite.InstMock.On("CreateImageAlias", localImageAlias).Return(nil)
+
+	err = suite.Srv.LaunchWorkspaceInstance(name, base)
+	assert.NoError(suite.T(), err)
 	suite.InstMock.AssertExpectations(suite.T())
 }
 
