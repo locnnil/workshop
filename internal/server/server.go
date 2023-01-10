@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"syscall"
 
@@ -27,20 +28,24 @@ const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
-func (s *LxdServer) connect() (srv lxd.InstanceServer, err error) {
+func (s *LxdServer) connect() (lxd.InstanceServer, error) {
+	project, err := GetLXDProjectName()
+	if err != nil {
+		return nil, err
+	}
 	if ok, err := afero.Exists(s.filesystem, LXD_SOCK); err != nil {
 		return nil, err
 	} else if ok {
 		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
 			return nil, err
 		} else {
-			return srv.UseProject(WORKSPACE_PROJECT_NAME), nil
+			return srv.UseProject(project), nil
 		}
 	} else {
 		if srv, err := lxd.ConnectLXDUnix("", nil); err != nil {
 			return nil, err
 		} else {
-			return srv.UseProject(WORKSPACE_PROJECT_NAME), nil
+			return srv.UseProject(project), nil
 		}
 	}
 }
@@ -93,9 +98,16 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 }
 
 func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, image *api.Image) error {
+	projectPath, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
-			Devices: map[string]map[string]string{"root": {"type": "disk", "pool": "default", "path": "/"}},
+			Devices: map[string]map[string]string{
+				"root":              {"type": "disk", "pool": "default", "path": "/"},
+				"workspace_project": {"type": "disk", "source": projectPath, "path": "/project"},
+			},
 		},
 		Name: name,
 		Type: api.InstanceType("container"),

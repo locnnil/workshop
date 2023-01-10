@@ -12,7 +12,8 @@ import (
 
 type ProjectTestSuite struct {
 	suite.Suite
-	InstMock MockLxdInstanceServer
+	InstMock    MockLxdInstanceServer
+	projectName string
 }
 
 func (suite *ProjectTestSuite) SetupTest() {
@@ -23,8 +24,9 @@ func TestRunLxdProjectTests(t *testing.T) {
 	suite.Run(t, &ProjectTestSuite{})
 }
 
-func (suite *LaunchTestSuite) TestLxdProjectDoesNotExist() {
-	suite.InstMock.On("GetProject", WORKSPACE_PROJECT_NAME).Return((*api.Project)(nil), "", api.StatusErrorf(http.StatusNotFound, "Not found"))
+func (suite *ProjectTestSuite) TestLxdProjectDoesNotExist() {
+	projectName, _ := GetLXDProjectName()
+	suite.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", api.StatusErrorf(http.StatusNotFound, "Not found"))
 	suite.InstMock.On("CreateProject", mock.Anything).Return(nil)
 
 	err := initProject(&suite.InstMock)
@@ -32,10 +34,12 @@ func (suite *LaunchTestSuite) TestLxdProjectDoesNotExist() {
 	assert.NoError(suite.T(), err)
 }
 
-func (suite *LaunchTestSuite) TestLxdProjectIsNotAvail() {
+func (suite *ProjectTestSuite) TestLxdProjectIsNotAvail() {
 	// Make sure we do not attempt to create a project if a server connectivity issue is experienced (e.g. LXD is down)
 	var notAvail = api.StatusErrorf(http.StatusBadGateway, "Not found")
-	suite.InstMock.On("GetProject", WORKSPACE_PROJECT_NAME).Return((*api.Project)(nil), "", notAvail)
+	projectName, _ := GetLXDProjectName()
+
+	suite.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", notAvail)
 
 	err := initProject(&suite.InstMock)
 	suite.InstMock.AssertExpectations(suite.T())

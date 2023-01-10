@@ -10,9 +10,15 @@ type Workspace interface {
 	Launch() error
 }
 
+type SDK struct {
+	Channel string `yaml:"channel"`
+}
+
 type LxdWorkspace struct {
 	Name string `yaml:"name"`
 	Base string `yaml:"base"`
+
+	SDKs map[string]SDK `yaml:"sdks"`
 
 	server srv.Server
 }

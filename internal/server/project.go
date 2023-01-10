@@ -1,17 +1,38 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+
+	"os/user"
 
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 )
 
-const WORKSPACE_PROJECT_NAME = "canonical.workspace"
+const WORKSPACE_PROJECT_NAME_PREFIX string = "workspace."
+
+func GetLXDProjectName() (string, error) {
+	user, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	return WORKSPACE_PROJECT_NAME_PREFIX + user.Username, nil
+}
 
 /* Initialise the SDK project namespace. */
 func initProject(conn lxd.InstanceServer) error {
-	if _, _, err := conn.GetProject(WORKSPACE_PROJECT_NAME); err != nil {
+	project, err := GetLXDProjectName()
+	if err != nil {
+		return err
+	}
+
+	user, err := user.Current()
+	if err != nil {
+		return err
+	}
+	if _, _, err := conn.GetProject(project); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return conn.CreateProject(api.ProjectsPost{
 				ProjectPut: api.ProjectPut{
@@ -20,9 +41,9 @@ func initProject(conn lxd.InstanceServer) error {
 						"features.profiles":        "true",
 						"features.storage.volumes": "true",
 					},
-					Description: "Workspace Project Namespace",
+					Description: fmt.Sprintf("%s's workspaces", user.Username),
 				},
-				Name: WORKSPACE_PROJECT_NAME,
+				Name: project,
 			})
 		} else {
 			return err
