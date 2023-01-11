@@ -93,7 +93,7 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 		w.server.UpdateWorkspaceDevices(w.Name, devices)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("could not install \"%s\": %w", sdkName, err)
 		}
 
 		/* Run lifecycle hooks */

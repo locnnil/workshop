@@ -125,6 +125,9 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 				"root":              {"type": "disk", "pool": "default", "path": "/"},
 				"workspace_project": {"type": "disk", "source": projectPath, "path": "/project"},
 			},
+			Config: map[string]string{
+				"raw.idmap": fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+			},
 		},
 		Name: name,
 		Type: api.InstanceType("container"),
@@ -252,9 +255,9 @@ func (s *LxdServer) Exec(name, user string, command []string) error {
 	if op, err := s.ExecInstance(name, req, &arg); err != nil {
 		return err
 	} else if err := op.Wait(); err != nil {
-		return fmt.Errorf("command failed: (%s)", op.Get().Err)
-	} else if op.Get().StatusCode == api.Failure {
 		return fmt.Errorf("LXD error: (%s)", op.Get().Err)
+	} else if int(op.Get().Metadata["return"].(float64)) != 0 {
+		return fmt.Errorf("command failed with an error code (%d)", int(op.Get().Metadata["return"].(float64)))
 	}
 
 	/* Flush any remaining I/O */
