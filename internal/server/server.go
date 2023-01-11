@@ -19,8 +19,8 @@ type WorkspaceDevices map[string]map[string]string
 type Server interface {
 	LaunchWorkspaceInstance(name, base string) error
 	SetWorkspaceState(name, action string) error
-	UpdateWorkspaceDevices(devices WorkspaceDevices) error
-	GetWorkspaceDevices() (WorkspaceDevices, error)
+	UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error
+	GetWorkspaceDevices(name string) (WorkspaceDevices, error)
 }
 
 type LxdServer struct {
@@ -212,10 +212,23 @@ func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 	return op.Wait()
 }
 
-func (s *LxdServer) UpdateWorkspaceDevices(devices WorkspaceDevices) error {
-	return nil
+func (s *LxdServer) UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error {
+	inst, _, err := s.GetInstance(name)
+	if err != nil {
+		return err
+	}
+
+	inst.Devices = devices
+	op, _ := s.UpdateInstance(name, inst.InstancePut, "")
+
+	return op.Wait()
 }
 
-func (s *LxdServer) GetWorkspaceDevices() (WorkspaceDevices, error) {
-	return nil, nil
+func (s *LxdServer) GetWorkspaceDevices(name string) (WorkspaceDevices, error) {
+	inst, _, err := s.GetInstance(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return inst.Devices, nil
 }

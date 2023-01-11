@@ -69,7 +69,7 @@ sdks:
 	srv := suite.Srv
 	sdkFile := filepath.Join(util.SdksDir, "huggingface_latest_stable.sdk")
 	devices := server.WorkspaceDevices{
-		"huggingface": {"type": "disk", "source": sdkFile, "path": "/root"},
+		"huggingface": {"type": "disk", "source": sdkFile, "path": "/root/huggingface_latest_stable.sdk"},
 	}
 
 	srv.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(nil)
