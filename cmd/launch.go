@@ -39,7 +39,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if err = ws.Launch(); err != nil {
-		fmt.Printf("%v", err)
+		fmt.Printf("Error: %v\n", err)
 		return err
 	}
 

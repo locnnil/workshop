@@ -3,6 +3,7 @@ module github.com/canonical/workspace
 go 1.19
 
 require (
+	github.com/adrg/xdg v0.4.0
 	github.com/lxc/lxd v0.0.0-20221215165925-aa3cdeaec9a5
 	github.com/spf13/afero v1.9.3
 	github.com/spf13/cobra v1.6.1

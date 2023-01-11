@@ -2,13 +2,13 @@ package workspace
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
-	lxd "github.com/lxc/lxd/client"
+	util "github.com/canonical/workspace/internal"
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,24 +18,11 @@ type LaunchTestSuite struct {
 	Srv MockServer
 }
 
-type MockServer struct {
-	lxd.InstanceServer
-	mock.Mock
-}
-
-func (s *MockServer) LaunchWorkspaceInstance(name, base string) error {
-	args := s.Called(name, base)
-	return args.Error(0)
-}
-
-func (s *MockServer) SetInstanceState(name, action string) error {
-	args := s.Called(name, action)
-	return args.Error(0)
-}
-
 func (suite *LaunchTestSuite) SetupTest() {
 	suite.Fs = afero.NewMemMapFs()
 	suite.Srv = MockServer{}
+	suite.Fs.MkdirAll(util.DataDir, 0700)
+	suite.Fs.MkdirAll(util.SdksDir, 0700)
 }
 
 func (suite *LaunchTestSuite) TestWorkspaceLaunchFromFile() {
@@ -50,6 +37,8 @@ base: ubuntu@20.04`), 0644)
 	server := suite.Srv
 
 	mockCall := server.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(nil)
+	server.On("SetInstanceState", "translation", "start").Return(nil)
+
 	ws, err := NewWorkspace(&server, suite.Fs, ".workspace.translation.yaml")
 	assert.ErrorIs(suite.T(), err, nil)
 
@@ -62,6 +51,32 @@ base: ubuntu@20.04`), 0644)
 	err = ws.Launch()
 	server.AssertExpectations(suite.T())
 	assert.True(suite.T(), api.StatusErrorCheck(err, 404))
+}
+
+func (suite *LaunchTestSuite) TestSDKDownload() {
+	data := `name: translation
+base: ubuntu@20.04
+sdks:
+  huggingface:
+    channel: latest/stable`
+	afero.WriteFile(suite.Fs, ".workspace.translation.yaml",
+		[]byte(data), 0644)
+
+	server := suite.Srv
+
+	server.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(nil)
+	server.On("SetInstanceState", "translation", "start").Return(nil)
+
+	ws, err := NewWorkspace(&server, suite.Fs, ".workspace.translation.yaml")
+	assert.ErrorIs(suite.T(), err, nil)
+
+	err = ws.Launch()
+	assert.ErrorIs(suite.T(), err, nil)
+	server.AssertExpectations(suite.T())
+
+	exists, _ := afero.Exists(suite.Fs, filepath.Join(util.SdksDir, "huggingface_latest_stable.sdk"))
+	assert.True(suite.T(), exists)
+
 }
 
 func TestRunLaunchTests(t *testing.T) {

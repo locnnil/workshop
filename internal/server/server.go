@@ -24,6 +24,10 @@ type LxdServer struct {
 	filesystem afero.Fs
 }
 
+var (
+	ErrAlreadyExists = fmt.Errorf("The workspace instance exists already")
+)
+
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
@@ -69,6 +73,11 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
+
+	/* Skip if the instance exists already */
+	if _, _, err := s.GetInstance(name); err == nil {
+		return ErrAlreadyExists
+	}
 
 	if alias, _, err := s.GetImageAlias(base); err == nil {
 		if image, _, err = s.GetImage(alias.Target); err != nil {
@@ -116,7 +125,6 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 			Fingerprint: image.Fingerprint,
 		},
 	}
-	fmt.Printf("Setting up \"%s\" workspace...\n", name)
 	op, err := s.CreateInstanceFromImage(*imageServer, *image, req)
 	if err != nil {
 		return nil

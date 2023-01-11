@@ -12,8 +12,7 @@ import (
 
 type ProjectTestSuite struct {
 	suite.Suite
-	InstMock    MockLxdInstanceServer
-	projectName string
+	InstMock MockLxdInstanceServer
 }
 
 func (suite *ProjectTestSuite) SetupTest() {

@@ -5,6 +5,9 @@ import (
 	"os"
 	"os/signal"
 
+	"path/filepath"
+
+	"github.com/adrg/xdg"
 	lxd "github.com/lxc/lxd/client"
 )
 
@@ -12,6 +15,21 @@ var (
 	ErrCancelled    = fmt.Errorf("LXD operation cancelled by user")
 	ErrForcedCancel = fmt.Errorf("LXD operation forcefully cancelled by user")
 )
+
+var (
+	DataDir, SdksDir string
+)
+
+func init() {
+	xdg.Reload()
+	DataDir = filepath.Join(xdg.DataHome, "workspace")
+	SdksDir = filepath.Join(DataDir, "sdks")
+
+	if err := os.MkdirAll(SdksDir, 0700); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
+}
 
 func CancellableWait(op lxd.RemoteOperation) error {
 	sch := make(chan os.Signal, 1)

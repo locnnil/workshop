@@ -56,6 +56,11 @@ func (s *MockLxdInstanceServer) CreateImageAlias(alias api.ImageAliasesPost) (er
 	return args.Error(0)
 }
 
+func (s *MockLxdInstanceServer) GetInstance(name string) (instance *api.Instance, ETag string, err error) {
+	args := s.Called(name)
+	return args.Get(0).(*api.Instance), args.String(1), args.Error(2)
+}
+
 type MockRemoteOperation struct {
 	lxd.RemoteOperation
 	mock.Mock

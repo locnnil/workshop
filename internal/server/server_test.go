@@ -37,6 +37,8 @@ func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchLocalImageExists() {
 		ImageAliasesEntryPut: api.ImageAliasesEntryPut{Target: fingerprint},
 	}
 
+	suite.InstMock.On("GetInstance", name).Return((*api.Instance)(nil),
+		"", api.StatusErrorf(http.StatusNotFound, ""))
 	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return(&alias, "",
 		nil)
 	suite.InstMock.On("GetImage", fingerprint).Return(&image, "",
@@ -73,6 +75,8 @@ func (suite *LaunchTestSuite) TestWorkspaceLxdLaunchNoLocalImage() {
 	var op MockRemoteOperation
 	var err error
 
+	suite.InstMock.On("GetInstance", name).Return((*api.Instance)(nil),
+		"", api.StatusErrorf(http.StatusNotFound, ""))
 	suite.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "",
 		api.StatusErrorf(http.StatusNotFound, ""))
 	suite.ImgMock.On("GetImageAlias", "20.04/amd64").Return(&remoteImageAlias, "",
