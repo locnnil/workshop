@@ -3,10 +3,12 @@ package server
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
 
 	"github.com/lxc/lxd/shared/api"
@@ -21,6 +23,8 @@ type Server interface {
 	SetWorkspaceState(name, action string) error
 	UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error
 	GetWorkspaceDevices(name string) (WorkspaceDevices, error)
+
+	Exec(name, user string, command []string) error
 }
 
 type LxdServer struct {
@@ -231,4 +235,54 @@ func (s *LxdServer) GetWorkspaceDevices(name string) (WorkspaceDevices, error) {
 	}
 
 	return inst.Devices, nil
+}
+
+func (s *LxdServer) Exec(name, user string, command []string) error {
+	req := api.InstanceExecPost{
+		Command: command, WaitForWS: true,
+		User: 0, Group: 0, Cwd: "/",
+		Interactive: false,
+	}
+
+	arg := lxd.InstanceExecArgs{
+		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+		Control: signalHandler, DataDone: make(chan bool),
+	}
+
+	if op, err := s.ExecInstance(name, req, &arg); err != nil {
+		return err
+	} else if err := op.Wait(); err != nil {
+		return fmt.Errorf("command failed: (%s)", op.Get().Err)
+	} else if op.Get().StatusCode == api.Failure {
+		return fmt.Errorf("LXD error: (%s)", op.Get().Err)
+	}
+
+	/* Flush any remaining I/O */
+	<-arg.DataDone
+
+	return nil
+}
+
+func signalHandler(control *websocket.Conn) {
+	signals := make(chan os.Signal, 10)
+	signal.Notify(signals, syscall.SIGINT)
+
+	closeMessage := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+	defer control.WriteMessage(websocket.CloseMessage, closeMessage)
+
+	for {
+		signal := <-signals
+
+		switch signal {
+		case syscall.SIGINT:
+			err := control.WriteJSON(api.InstanceExecControl{
+				Command: "signal",
+				Signal:  int(syscall.SIGINT),
+			})
+			if err != nil {
+				fmt.Printf("Failed to interrupt command execution: %v\n", err)
+				return
+			}
+		}
+	}
 }

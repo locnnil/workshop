@@ -79,10 +79,24 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			return err
 		}
 		/* Unpack the SDK to the desired location in the workspace */
+		err = w.server.Exec(w.Name, "root", []string{
+			"tar",
+			"--extract",
+			"--file",
+			sdkMount["path"],
+			"--one-top-level=huggingface",
+			"--directory=/var/lib/workspace/sdks/",
+		})
 
 		/* Make sure the SDK file will be unmounted onces installed into the workspace */
 		delete(devices, sdkName)
 		w.server.UpdateWorkspaceDevices(w.Name, devices)
+
+		if err != nil {
+			return err
+		}
+
+		/* Run lifecycle hooks */
 	}
 
 	fmt.Printf("Workspace \"%s\" started.\n", w.Name)

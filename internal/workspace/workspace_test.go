@@ -63,6 +63,7 @@ base: ubuntu@20.04
 sdks:
   huggingface:
     channel: latest/stable`
+	name := "translation"
 	afero.WriteFile(suite.Fs, ".workspace.translation.yaml",
 		[]byte(data), 0644)
 
@@ -72,10 +73,17 @@ sdks:
 		"huggingface": {"type": "disk", "source": sdkFile, "path": "/root/huggingface_latest_stable.sdk"},
 	}
 
-	srv.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(nil)
-	srv.On("SetWorkspaceState", "translation", "start").Return(nil)
+	srv.On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil)
+	srv.On("SetWorkspaceState", name, "start").Return(nil)
 	srv.On("GetWorkspaceDevices").Return(make(server.WorkspaceDevices), nil)
 	srv.On("UpdateWorkspaceDevices", devices).Return(nil)
+	srv.On("Exec", name, "root", []string{"tar",
+		"--extract",
+		"--file",
+		"/root/huggingface_latest_stable.sdk",
+		"--one-top-level=huggingface",
+		"--directory=/var/lib/workspace/sdks/",
+	}).Return(nil)
 	srv.On("UpdateWorkspaceDevices", make(server.WorkspaceDevices)).Return(nil)
 
 	ws, err := NewWorkspace(&srv, suite.Fs, ".workspace.translation.yaml")
@@ -87,7 +95,6 @@ sdks:
 
 	exists, _ := afero.Exists(suite.Fs, sdkFile)
 	assert.True(suite.T(), exists)
-
 }
 
 func TestRunLaunchTests(t *testing.T) {
