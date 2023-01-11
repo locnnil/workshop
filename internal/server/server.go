@@ -14,9 +14,13 @@ import (
 	"github.com/spf13/afero"
 )
 
+type WorkspaceDevices map[string]map[string]string
+
 type Server interface {
 	LaunchWorkspaceInstance(name, base string) error
-	SetInstanceState(name, action string) error
+	SetWorkspaceState(name, action string) error
+	UpdateWorkspaceDevices(devices WorkspaceDevices) error
+	GetWorkspaceDevices() (WorkspaceDevices, error)
 }
 
 type LxdServer struct {
@@ -182,7 +186,7 @@ func ProgressHandler(o api.Operation) {
 	}
 }
 
-func (s *LxdServer) SetInstanceState(name string, action string) error {
+func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 	inst, etag, err := s.GetInstance(name)
 	if err != nil {
 		return err
@@ -206,4 +210,12 @@ func (s *LxdServer) SetInstanceState(name string, action string) error {
 	}
 
 	return op.Wait()
+}
+
+func (s *LxdServer) UpdateWorkspaceDevices(devices WorkspaceDevices) error {
+	return nil
+}
+
+func (s *LxdServer) GetWorkspaceDevices() (WorkspaceDevices, error) {
+	return nil, nil
 }

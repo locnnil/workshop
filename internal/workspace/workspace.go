@@ -2,18 +2,16 @@ package workspace
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	util "github.com/canonical/workspace/internal"
+	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
 type Workspace interface {
-	Launch() error
+	Launch(client store.StoreClient) error
 }
 
 type SDK struct {
@@ -21,9 +19,8 @@ type SDK struct {
 }
 
 type LxdWorkspace struct {
-	Name string `yaml:"name"`
-	Base string `yaml:"base"`
-
+	Name string         `yaml:"name"`
+	Base string         `yaml:"base"`
 	SDKs map[string]SDK `yaml:"sdks"`
 
 	server srv.Server
@@ -45,7 +42,7 @@ func NewWorkspace(server srv.Server, fs afero.Fs, filepath string) (Workspace, e
 	return &ws, nil
 }
 
-func (w *LxdWorkspace) Launch() error {
+func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 	var err error
 
 	fmt.Printf("Setting up \"%s\" workspace...\n", w.Name)
@@ -62,9 +59,28 @@ func (w *LxdWorkspace) Launch() error {
 		fmt.Printf("Setting up \"%s\" SDK revision from %s.\n", name, sdk.Channel)
 
 		/* Download an SDK */
-		w.downloadSDK(name, sdk.Channel)
+		filename, err := client.FetchSDK(name, sdk.Channel, util.SdksDir)
+		if err != nil {
+			return err
+		}
 
 		/* Bind-mount the SDK to the workspace */
+		devices, err := w.server.GetWorkspaceDevices()
+		if err != nil {
+			return err
+		}
+		sdkMount := map[string]string{"type": "disk", "source": filename, "path": "/root"}
+
+		devices[name] = sdkMount
+		err = w.server.UpdateWorkspaceDevices(devices)
+		if err != nil {
+			return err
+		}
+		/* Unpack the SDK to the desired location in the workspace */
+
+		/* Make sure the SDK file will be unmounted onces installed into the workspace */
+		delete(devices, name)
+		w.server.UpdateWorkspaceDevices(devices)
 	}
 
 	fmt.Printf("Workspace \"%s\" started.\n", w.Name)
@@ -73,22 +89,5 @@ func (w *LxdWorkspace) Launch() error {
 }
 
 func (w *LxdWorkspace) Start() error {
-	return w.server.SetInstanceState(w.Name, "start")
-}
-
-func (w *LxdWorkspace) downloadSDK(name, channel string) error {
-	var track, risk string
-	if sa := strings.Split(channel, "/"); len(sa) != 2 {
-		return fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
-	} else {
-		track, risk = sa[0], sa[1]
-	}
-
-	file, err := w.fs.OpenFile(filepath.Join(util.SdksDir, fmt.Sprintf("%s_%s_%s.sdk", name, track, risk)), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-	return nil
+	return w.server.SetWorkspaceState(w.Name, "start")
 }

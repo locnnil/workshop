@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
@@ -38,7 +39,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if err = ws.Launch(); err != nil {
+	storeClient, err := store.NewStoreClient(fs)
+	if err != nil {
+		return err
+	}
+
+	if err = ws.Launch(storeClient); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return err
 	}
