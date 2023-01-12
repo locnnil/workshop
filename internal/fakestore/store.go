@@ -33,6 +33,7 @@ type ObjectStoreClient struct {
 func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile, error) {
 	var track, risk string
 	var sdk SDKFile
+	var revision int64
 
 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
 		return sdk, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
@@ -50,24 +51,31 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 			return sdk, err
 		} else {
 			// a simple modulo to keep revision numbers in a readble form for testing
-			sdk.Revision = atr.Generation % 1000
+			revision = atr.Generation % 1000
 		}
 
 		if r, err := obj.NewReader(ctx); err != nil {
 			return sdk, err
 		} else {
-			filename := filepath.Join(destination, fmt.Sprintf("%s_%d.sdk", name, sdk.Revision))
-			file, err := c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-			if err != nil {
-				return sdk, err
-			}
 			defer r.Close()
+
+			filename := filepath.Join(destination, fmt.Sprintf("%s_%d.sdk", name, revision))
+
+			file, err := c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0600)
+			if err != nil && !os.IsExist(err) {
+				return sdk, err
+			} else if os.IsExist(err) {
+				sdk.Filename = filename
+				sdk.Revision = revision
+				return sdk, nil
+			}
 			defer file.Close()
 
 			if _, err = io.Copy(file, r); err != nil {
 				return sdk, err
 			}
 			sdk.Filename = filename
+			sdk.Revision = revision
 		}
 	}
 

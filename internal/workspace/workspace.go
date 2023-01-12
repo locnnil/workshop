@@ -91,7 +91,7 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 
 		/* Make sure the SDK file will be unmounted onces installed into the workspace */
 		delete(devices, sdkName)
-		//w.server.UpdateWorkspaceDevices(w.Name, devices)
+		w.server.UpdateWorkspaceDevices(w.Name, devices)
 
 		if err != nil {
 			return fmt.Errorf("could not install \"%s\": %w", sdkName, err)
