@@ -79,17 +79,19 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			return err
 		}
 		/* Unpack the SDK to the desired location in the workspace */
+		/* Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
 		err = w.server.Exec(w.Name, "root", []string{
 			"tar",
 			"--extract",
 			"--file",
 			sdkMount["path"],
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkName),
+			"--no-same-owner",
 		})
 
 		/* Make sure the SDK file will be unmounted onces installed into the workspace */
 		delete(devices, sdkName)
-		w.server.UpdateWorkspaceDevices(w.Name, devices)
+		//w.server.UpdateWorkspaceDevices(w.Name, devices)
 
 		if err != nil {
 			return fmt.Errorf("could not install \"%s\": %w", sdkName, err)

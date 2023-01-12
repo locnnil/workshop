@@ -81,6 +81,7 @@ sdks:
 		"--file",
 		filepath.Join("/root", filename),
 		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkname),
+		"--no-same-owner",
 	}).Return(nil)
 	srv.On("UpdateWorkspaceDevices", make(server.WorkspaceDevices)).Return(nil)
 
