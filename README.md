@@ -1,10 +1,10 @@
-# workspace
+# Workspace
 
 ## Installation
 
 ### Prerequisites
 
-SDK relies on LXD to orchestrate contatainers. To install and configure LXD:
+Workspace relies on LXD to orchestrate contatainers. To install and configure LXD:
 
 ```sh
 sudo snap install lxd
