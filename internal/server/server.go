@@ -33,7 +33,7 @@ type LxdServer struct {
 }
 
 var (
-	ErrAlreadyExists = fmt.Errorf("The workspace instance exists already")
+	ErrAlreadyExists = fmt.Errorf("the workspace exists already")
 )
 
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"

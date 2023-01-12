@@ -17,13 +17,15 @@ var (
 )
 
 var (
-	DataDir, SdksDir string
+	DataDir, SdksDir, WorkspaceSdksDir string
 )
 
 func init() {
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")
 	SdksDir = filepath.Join(DataDir, "sdks")
+
+	WorkspaceSdksDir = "/var/lib/workspace/sdks/"
 
 	if err := os.MkdirAll(SdksDir, 0700); err != nil {
 		fmt.Printf("%v", err)

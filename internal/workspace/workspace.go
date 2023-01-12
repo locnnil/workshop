@@ -57,13 +57,13 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 	}
 
 	for sdkName, sdk := range w.SDKs {
-		fmt.Printf("Setting up \"%s\" SDK revision from %s.\n", sdkName, sdk.Channel)
 
 		/* Download an SDK */
-		filename, err := client.FetchSDK(sdkName, sdk.Channel, util.SdksDir)
+		blob, err := client.FetchSDK(sdkName, sdk.Channel, util.SdksDir)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Setting up \"%s\" SDK revision %d from %s.\n", sdkName, blob.Revision, sdk.Channel)
 
 		/* Bind-mount the SDK to the workspace */
 		devices, err := w.server.GetWorkspaceDevices(w.Name)
@@ -71,7 +71,7 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			return err
 		}
 
-		sdkMount := map[string]string{"type": "disk", "source": filename, "path": filepath.Join("/root", filepath.Base(filename))}
+		sdkMount := map[string]string{"type": "disk", "source": blob.Filename, "path": filepath.Join("/root", filepath.Base(blob.Filename))}
 
 		devices[sdkName] = sdkMount
 		err = w.server.UpdateWorkspaceDevices(w.Name, devices)
@@ -84,8 +84,7 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			"--extract",
 			"--file",
 			sdkMount["path"],
-			"--one-top-level=huggingface",
-			"--directory=/var/lib/workspace/sdks/",
+			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkName),
 		})
 
 		/* Make sure the SDK file will be unmounted onces installed into the workspace */
