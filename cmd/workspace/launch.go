@@ -56,8 +56,8 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	wsList, err := enumWorkspaces(fs)
-	if err != nil || len(wsList) == 0 {
-		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.")
+	if err != nil || len(wsList) == 0 && wsName == "" {
+		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.\n")
 		return err
 	} else if len(wsList) > 1 && wsName == "" {
 		printWorkspaces(wsList)
@@ -72,9 +72,9 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if _, ok := wsList[wsName]; !ok {
-		fmt.Printf("\033[1m%s\033[0m not found. ", wsName)
+		fmt.Printf("\033[1m%s\033[0m not found.\n", wsName)
 		printWorkspaces(wsList)
-		return os.ErrNotExist
+		os.Exit(1)
 	}
 
 	server, err := srv.NewServer(fs)
@@ -103,8 +103,10 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 }
 
 func printWorkspaces(wsList map[string]workspace.WorkspaceFile) {
-	fmt.Printf("Available workspaces:\n")
-	for _, k := range wsList {
-		fmt.Printf("  \033[1m%s\033[0m\n", k.Name)
+	if len(wsList) > 0 {
+		fmt.Printf("Available workspaces:\n")
+		for _, k := range wsList {
+			fmt.Printf("  \033[1m%s\033[0m\n", k.Name)
+		}
 	}
 }
