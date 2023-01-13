@@ -55,12 +55,6 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		wsName = av[0]
 	}
 
-	server, err := srv.NewServer(fs)
-	if err != nil {
-		fmt.Printf("%v", err)
-		return err
-	}
-
 	wsList, err := enumWorkspaces(fs)
 	if err != nil || len(wsList) == 0 {
 		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.")
@@ -81,6 +75,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		fmt.Printf("\033[1m%s\033[0m not found. ", wsName)
 		printWorkspaces(wsList)
 		return os.ErrNotExist
+	}
+
+	server, err := srv.NewServer(fs)
+	if err != nil {
+		fmt.Printf("%v", err)
+		return err
 	}
 
 	ws, err := workspace.NewWorkspace(server, fs, wsList[wsName])
