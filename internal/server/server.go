@@ -32,10 +32,6 @@ type LxdServer struct {
 	filesystem afero.Fs
 }
 
-var (
-	ErrAlreadyExists = fmt.Errorf("the workspace exists already")
-)
-
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
@@ -84,7 +80,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 
 	/* Skip if the instance exists already */
 	if _, _, err := s.GetInstance(name); err == nil {
-		return ErrAlreadyExists
+		return fmt.Errorf("%s already exists", name)
 	}
 
 	if alias, _, err := s.GetImageAlias(base); err == nil {

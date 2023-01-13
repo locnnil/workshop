@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
 	"github.com/spf13/afero"
+	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,6 +36,8 @@ type WorkspaceFile struct {
 	File fs.FileInfo
 }
 
+var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
+
 func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
 	var ws = LxdWorkspace{server: server, fs: fs}
 	buf, err := afero.ReadFile(fs, wsFile.File.Name())
@@ -46,8 +50,27 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 		return nil, err
 	}
 
+	var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
+
+	if !validName.Match([]byte(ws.Name)) {
+		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
+	}
+
+	if !slices.Contains(SupportedBases, ws.Base) {
+		return nil, fmt.Errorf("unsupported base: %s", ws.Base)
+	}
+
 	if ws.Name != wsFile.Name {
 		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", ws.Name, ws.Name, wsFile.File.Name())
+	}
+
+	for i, k := range ws.SDKs {
+		if k.Channel != "latest/stable" {
+			sdk := ws.SDKs[i]
+			sdk.Channel = "latest/stable"
+			ws.SDKs[i] = sdk
+			fmt.Printf("Only latest/stable channels are supported for SDKs. Switching to latest/stable for \"%s\"\n", i)
+		}
 	}
 
 	return &ws, nil

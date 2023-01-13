@@ -28,7 +28,7 @@ func (c *CmdLaunch) Command() *cobra.Command {
 
 func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
 	var workspaces = make(map[string]workspace.WorkspaceFile, 0)
-	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z0-9]+)\.yaml$`)
+	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_]*)\.yaml$`)
 
 	files, err := afero.ReadDir(fsys, ".")
 	if err != nil {
@@ -80,23 +80,23 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	server, err := srv.NewServer(fs)
 	if err != nil {
 		fmt.Printf("%v", err)
-		return err
+		os.Exit(1)
 	}
 
 	ws, err := workspace.NewWorkspace(server, fs, wsList[wsName])
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return err
+		os.Exit(1)
 	}
 
 	storeClient, err := store.NewStoreClient(fs)
 	if err != nil {
-		return err
+		os.Exit(1)
 	}
 
 	if err = ws.Launch(storeClient); err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return err
+		os.Exit(1)
 	}
 
 	return err

@@ -34,7 +34,5 @@ $ workspace launch
 
 ## TODO
 
-- Validate workspace name and base names
 - Validate bases used for the workspace and SDKs (must be the same)
 - Avoid potential conflicts for SDK blobs if used concurrently
-- Ensure only the latest/stable channel can be used
