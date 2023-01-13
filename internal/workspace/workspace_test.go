@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,21 +27,19 @@ func (suite *LaunchTestSuite) SetupTest() {
 	suite.Fs.MkdirAll(util.SdksDir, 0700)
 }
 
-func (suite *LaunchTestSuite) TestWorkspaceLaunchFromFile() {
-	_, err := NewWorkspace(&suite.Srv, suite.Fs, "not_found.yaml")
-	assert.True(suite.T(), os.IsNotExist(err))
-}
-
 func (suite *LaunchTestSuite) TestWorkspaceLaunchWithNoSDKs() {
-	afero.WriteFile(suite.Fs, ".workspace.translation.yaml",
+	server := suite.Srv
+	name := "translation"
+	filename := ".workspace.translation.yaml"
+	afero.WriteFile(suite.Fs, filename,
 		[]byte(`name: translation
 base: ubuntu@20.04`), 0644)
-	server := suite.Srv
+	file, _ := suite.Fs.Stat(filename)
 
-	mockCall := server.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(nil)
-	server.On("SetWorkspaceState", "translation", "start").Return(nil)
+	mockCall := server.On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil)
+	server.On("SetWorkspaceState", name, "start").Return(nil)
 
-	ws, err := NewWorkspace(&server, suite.Fs, ".workspace.translation.yaml")
+	ws, err := NewWorkspace(&server, suite.Fs, WorkspaceFile{Name: name, File: file})
 	assert.ErrorIs(suite.T(), err, nil)
 
 	err = ws.Launch(&suite.Store)
@@ -50,7 +47,7 @@ base: ubuntu@20.04`), 0644)
 	server.AssertExpectations(suite.T())
 	mockCall.Unset()
 
-	server.On("LaunchWorkspaceInstance", "translation", "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
+	server.On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
 	err = ws.Launch(&suite.Store)
 	server.AssertExpectations(suite.T())
 	assert.True(suite.T(), api.StatusErrorCheck(err, 404))
@@ -65,6 +62,7 @@ sdks:
 	name, sdkname, filename := "translation", "huggingface", "huggingface_19.sdk"
 	afero.WriteFile(suite.Fs, ".workspace.translation.yaml",
 		[]byte(data), 0644)
+	wsfile, _ := suite.Fs.Stat(".workspace.translation.yaml")
 
 	srv := suite.Srv
 	sdkFile := filepath.Join(util.SdksDir, filename)
@@ -90,7 +88,7 @@ sdks:
 		Revision: 19,
 	}, nil)
 
-	ws, err := NewWorkspace(&srv, suite.Fs, ".workspace.translation.yaml")
+	ws, err := NewWorkspace(&srv, suite.Fs, WorkspaceFile{Name: name, File: wsfile})
 	assert.ErrorIs(suite.T(), err, nil)
 
 	err = ws.Launch(&suite.Store)

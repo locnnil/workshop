@@ -47,7 +47,7 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 	}
 
 	if ws.Name != wsFile.Name {
-		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)\n", ws.Name, ws.Name, wsFile.File.Name())
+		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", ws.Name, ws.Name, wsFile.File.Name())
 	}
 
 	return &ws, nil

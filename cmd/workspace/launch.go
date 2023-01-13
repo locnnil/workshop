@@ -85,7 +85,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	ws, err := workspace.NewWorkspace(server, fs, wsList[wsName])
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		fmt.Printf("Error: %v\n", err)
 		return err
 	}
 

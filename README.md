@@ -34,7 +34,6 @@ $ workspace launch
 
 ## TODO
 
-- Enumerate .workspace.\<project_name\>.yaml files in a CWD correctly
 - Validate workspace name and base names
 - Validate bases used for the workspace and SDKs (must be the same)
 - Avoid potential conflicts for SDK blobs if used concurrently
