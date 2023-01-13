@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 
 	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
@@ -24,8 +26,34 @@ func (c *CmdLaunch) Command() *cobra.Command {
 	return cmd
 }
 
+func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
+	var workspaces = make(map[string]workspace.WorkspaceFile, 0)
+	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z0-9]+)\.yaml$`)
+
+	files, err := afero.ReadDir(fsys, ".")
+	if err != nil {
+		return workspaces, nil
+	}
+
+	for _, info := range files {
+		if info.IsDir() {
+			continue
+		}
+
+		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); len(names) > 0 {
+			workspaces[names[1]] = workspace.WorkspaceFile{Name: names[1], File: info}
+		}
+	}
+	return workspaces, nil
+}
+
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
+	var wsName string
 	fs := afero.NewOsFs()
+
+	if len(av) == 1 {
+		wsName = av[0]
+	}
 
 	server, err := srv.NewServer(fs)
 	if err != nil {
@@ -33,9 +61,31 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	ws, err := workspace.NewWorkspace(server, fs, ".workspace.project.yaml")
+	wsList, err := enumWorkspaces(fs)
+	if err != nil || len(wsList) == 0 {
+		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.")
+		return err
+	} else if len(wsList) > 1 && wsName == "" {
+		printWorkspaces(wsList)
+		fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
+		return nil
+	} else if len(wsList) == 1 && wsName == "" {
+		/* Handle the case with a single workspace found but no args provided to the command */
+		for i := range wsList {
+			wsName = i
+			break
+		}
+	}
+
+	if _, ok := wsList[wsName]; !ok {
+		fmt.Printf("\033[1m%s\033[0m not found. ", wsName)
+		printWorkspaces(wsList)
+		return os.ErrNotExist
+	}
+
+	ws, err := workspace.NewWorkspace(server, fs, wsList[wsName])
 	if err != nil {
-		fmt.Printf("%v", err)
+		fmt.Printf("Error: %v", err)
 		return err
 	}
 
@@ -50,4 +100,11 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	return err
+}
+
+func printWorkspaces(wsList map[string]workspace.WorkspaceFile) {
+	fmt.Printf("Available workspaces:\n")
+	for _, k := range wsList {
+		fmt.Printf("  \033[1m%s\033[0m\n", k.Name)
+	}
 }

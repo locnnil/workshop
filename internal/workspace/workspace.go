@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 
 	util "github.com/canonical/workspace/internal"
@@ -28,9 +29,14 @@ type LxdWorkspace struct {
 	fs     afero.Fs
 }
 
-func NewWorkspace(server srv.Server, fs afero.Fs, filepath string) (Workspace, error) {
+type WorkspaceFile struct {
+	Name string
+	File fs.FileInfo
+}
+
+func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
 	var ws = LxdWorkspace{server: server, fs: fs}
-	buf, err := afero.ReadFile(fs, filepath)
+	buf, err := afero.ReadFile(fs, wsFile.File.Name())
 
 	if err != nil {
 		return nil, err
@@ -38,6 +44,10 @@ func NewWorkspace(server srv.Server, fs afero.Fs, filepath string) (Workspace, e
 
 	if err = yaml.Unmarshal(buf, &ws); err != nil {
 		return nil, err
+	}
+
+	if ws.Name != wsFile.Name {
+		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)\n", ws.Name, ws.Name, wsFile.File.Name())
 	}
 
 	return &ws, nil
@@ -89,12 +99,12 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			"--no-same-owner",
 		})
 
-		/* Make sure the SDK file will be unmounted onces installed into the workspace */
+		/* Make sure the SDK file will be unmounted once installed into the workspace */
 		delete(devices, sdkName)
 		w.server.UpdateWorkspaceDevices(w.Name, devices)
 
 		if err != nil {
-			return fmt.Errorf("could not install \"%s\": %w", sdkName, err)
+			fmt.Printf("could not install \"%s\": %v", sdkName, err)
 		}
 
 		/* Run lifecycle hooks */
