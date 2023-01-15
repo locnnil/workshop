@@ -23,9 +23,9 @@ type SDK struct {
 }
 
 type LxdWorkspace struct {
-	Name string         `yaml:"name"`
-	Base string         `yaml:"base"`
-	SDKs map[string]SDK `yaml:"sdks"`
+	Name string          `yaml:"name"`
+	Base string          `yaml:"base"`
+	SDKs map[string]*SDK `yaml:"sdks"`
 
 	server srv.Server
 	fs     afero.Fs
@@ -66,9 +66,7 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 
 	for i, k := range ws.SDKs {
 		if k.Channel != "latest/stable" {
-			sdk := ws.SDKs[i]
-			sdk.Channel = "latest/stable"
-			ws.SDKs[i] = sdk
+			ws.SDKs[i].Channel = "latest/stable"
 			fmt.Printf("Only latest/stable channels are supported for SDKs. Switching to latest/stable for \"%s\"\n", i)
 		}
 	}

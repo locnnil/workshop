@@ -119,10 +119,12 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 		InstancePut: api.InstancePut{
 			Devices: map[string]map[string]string{
 				"root":              {"type": "disk", "pool": "default", "path": "/"},
-				"workspace_project": {"type": "disk", "source": projectPath, "path": "/project"},
+				"workspace.project": {"type": "disk", "source": projectPath, "path": "/project"},
+				"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 			},
 			Config: map[string]string{
-				"raw.idmap": fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+				"raw.idmap":        fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+				"security.nesting": "true",
 			},
 		},
 		Name: name,
