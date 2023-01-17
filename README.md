@@ -37,3 +37,5 @@ $ workspace launch
 - Validate bases used for the workspace and SDKs (must be the same)
 - Avoid potential conflicts for SDK blobs if used concurrently
 - Create a separate network for the workspace's instances
+- Tests for the workspace YAML validation
+- Use logger and logging levels instead of fmt

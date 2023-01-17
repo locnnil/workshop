@@ -40,7 +40,8 @@ func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
 			continue
 		}
 
-		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); len(names) > 0 {
+		// the first element in names will contain the workspace name if matches
+		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
 			workspaces[names[1]] = workspace.WorkspaceFile{Name: names[1], File: info}
 		}
 	}

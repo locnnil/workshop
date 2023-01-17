@@ -38,6 +38,7 @@ type WorkspaceFile struct {
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
+var validChannel = regexp.MustCompile(`^(?P<track>[a-z]+)/(?P<risk>[a-z]+)$`)
 
 func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
 	var ws = LxdWorkspace{server: server, fs: fs}
@@ -51,7 +52,7 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 		return nil, err
 	}
 
-	if !validName.Match([]byte(ws.Name)) {
+	if !validName.MatchString(ws.Name) {
 		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
 
@@ -64,9 +65,15 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 	}
 
 	for i, k := range ws.SDKs {
-		if k.Channel != "latest/stable" {
-			ws.SDKs[i].Channel = "latest/stable"
-			fmt.Printf("Only latest/stable channels are supported for SDKs. Switching to latest/stable for \"%s\"\n", i)
+		if matches := validChannel.FindStringSubmatch(k.Channel); matches != nil {
+			track := matches[validChannel.SubexpIndex("track")]
+			risk := matches[validChannel.SubexpIndex("risk")]
+			if risk != "stable" {
+				ws.SDKs[i].Channel = fmt.Sprintf("%s/stable", track)
+				fmt.Printf("Only stable risk levels are supported. Switching to %s for \"%s\"\n", ws.SDKs[i].Channel, i)
+			}
+		} else {
+			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, i)
 		}
 	}
 
