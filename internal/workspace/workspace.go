@@ -37,6 +37,7 @@ type WorkspaceFile struct {
 }
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
+var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 
 func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
 	var ws = LxdWorkspace{server: server, fs: fs}
@@ -49,8 +50,6 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 	if err = yaml.Unmarshal(buf, &ws); err != nil {
 		return nil, err
 	}
-
-	var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 
 	if !validName.Match([]byte(ws.Name)) {
 		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")

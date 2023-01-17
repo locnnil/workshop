@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -111,7 +112,13 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 }
 
 func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, image *api.Image) error {
-	projectPath, err := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	// canonicalise the project's pathname to make sure it is unambiguous for
+	// all workspaces
+	projectPath, err := filepath.EvalSymlinks(cwd)
 	if err != nil {
 		return nil
 	}
