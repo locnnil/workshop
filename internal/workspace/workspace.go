@@ -38,7 +38,7 @@ type WorkspaceFile struct {
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
-var validChannel = regexp.MustCompile(`^(?P<track>[a-z]+)/(?P<risk>[a-z]+)$`)
+var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
 	var ws = LxdWorkspace{server: server, fs: fs}
