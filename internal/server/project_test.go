@@ -15,32 +15,34 @@ type ProjectTestSuite struct {
 	InstMock MockLxdInstanceServer
 }
 
-func (suite *ProjectTestSuite) SetupTest() {
-	suite.InstMock = MockLxdInstanceServer{}
+func (s *ProjectTestSuite) SetupTest() {
+	s.InstMock = MockLxdInstanceServer{}
 }
 
 func TestRunLxdProjectTests(t *testing.T) {
 	suite.Run(t, &ProjectTestSuite{})
 }
 
-func (suite *ProjectTestSuite) TestLxdProjectDoesNotExist() {
+func (s *ProjectTestSuite) TestLxdProjectDoesNotExist() {
 	projectName, _ := GetLXDProjectName()
-	suite.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", api.StatusErrorf(http.StatusNotFound, "Not found"))
-	suite.InstMock.On("CreateProject", mock.Anything).Return(nil)
+	s.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", ApiErrNotFound)
+	s.InstMock.On("CreateProject", mock.Anything).Return(nil)
 
-	err := initProject(&suite.InstMock)
-	suite.InstMock.AssertExpectations(suite.T())
-	assert.NoError(suite.T(), err)
+	err := initProject(&s.InstMock)
+	s.InstMock.AssertExpectations(s.T())
+	assert.NoError(s.T(), err)
 }
 
-func (suite *ProjectTestSuite) TestLxdProjectIsNotAvail() {
-	// Make sure we do not attempt to create a project if a server connectivity issue is experienced (e.g. LXD is down)
-	var notAvail = api.StatusErrorf(http.StatusBadGateway, "Not found")
+func (s *ProjectTestSuite) TestLxdProjectExistsORNotAvail() {
 	projectName, _ := GetLXDProjectName()
+	// Make sure we do not attempt to create a project if anything but 404 is returned by LXD
+	var errors = []error{api.StatusErrorf(http.StatusBadGateway, ""), nil}
 
-	suite.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", notAvail)
-
-	err := initProject(&suite.InstMock)
-	suite.InstMock.AssertExpectations(suite.T())
-	assert.Error(suite.T(), err, notAvail)
+	for _, i := range errors {
+		c := s.InstMock.On("GetProject", projectName).Return((*api.Project)(nil), "", i)
+		err := initProject(&s.InstMock)
+		s.InstMock.AssertExpectations(s.T())
+		assert.Equal(s.T(), err, i)
+		c.Unset()
+	}
 }
