@@ -1,9 +1,11 @@
-package server
+package server_test
 
 import (
 	"net/http"
 	"testing"
 
+	"github.com/canonical/workspace/internal/mocks"
+	"github.com/canonical/workspace/internal/server"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
@@ -15,24 +17,24 @@ import (
 type LaunchTestSuite struct {
 	suite.Suite
 	Fs       afero.Fs
-	Srv      LxdServer
-	InstMock MockLxdInstanceServer
-	ImgMock  MockLxdImageServer
+	Srv      server.LxdServer
+	InstMock *mocks.MockInstanceServer
+	ImgMock  *mocks.MockImageServer
 }
 
 var ApiErrNotFound = api.StatusErrorf(http.StatusNotFound, "")
 
 func (s *LaunchTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Srv = LxdServer{filesystem: s.Fs}
-	s.InstMock = MockLxdInstanceServer{}
-	s.Srv.InstanceServer = &s.InstMock
-	s.ImgMock = MockLxdImageServer{}
+	s.Srv = server.LxdServer{Fs: s.Fs}
+	s.InstMock = mocks.NewMockInstanceServer(s.T())
+	s.Srv.InstanceServer = s.InstMock
+	s.ImgMock = mocks.NewMockImageServer(s.T())
 }
 
-func (s *LaunchTestSuite) TestWorkspaceLxdLaunchLocalImageExists() {
+func (s *LaunchTestSuite) TestLaunchLocalImageExists() {
 	var name, base, fingerprint string = "test", "ubuntu@20.04", "FS34DS"
-	var op MockRemoteOperation
+	var op = mocks.NewMockRemoteOperation(s.T())
 	var image = api.Image{
 		Fingerprint: fingerprint,
 	}
@@ -42,49 +44,52 @@ func (s *LaunchTestSuite) TestWorkspaceLxdLaunchLocalImageExists() {
 		},
 	}
 
-	s.InstMock.On("GetInstance", name).Return((*api.Instance)(nil), "", ApiErrNotFound)
-	s.InstMock.On("GetImageAlias", "ubuntu@20.04").Return(&alias, "", nil)
-	s.InstMock.On("GetImage", fingerprint).Return(&image, "", nil)
-	s.InstMock.On("CreateInstanceFromImage", &s.Srv, image, mock.Anything).Return(&op, nil)
+	s.InstMock.
+		On("GetInstance", name).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetImageAlias", "ubuntu@20.04").Return(&alias, "", nil).
+		On("GetImage", fingerprint).Return(&image, "", nil).
+		On("CreateInstanceFromImage", &s.Srv, image, mock.Anything).Return(op, nil)
 
-	op.On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil)
-	op.On("Wait").Return(nil)
+	op.
+		On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil).
+		On("Wait").Return(nil)
 
 	err := s.Srv.LaunchWorkspaceInstance(name, base)
 	assert.Equal(s.T(), err, nil)
 	s.InstMock.AssertExpectations(s.T())
 }
 
-func (s *LaunchTestSuite) TestWorkspaceLxdLaunchNoLocalImage() {
-	ConnectSimpleStreams = func(url string, args *lxd.ConnectionArgs) (lxd.ImageServer, error) {
-		return &s.ImgMock, nil
+func (s *LaunchTestSuite) TestLaunchNoLocalImage() {
+	server.ConnectSimpleStreams = func(url string, args *lxd.ConnectionArgs) (lxd.ImageServer, error) {
+		return s.ImgMock, nil
 	}
 
 	var name, base, fingerprint string = "test", "ubuntu@20.04", "FS34DS"
-
 	var remoteImageAlias api.ImageAliasesEntry
-	remoteImageAlias.Target = fingerprint
-
 	var localImageAlias api.ImageAliasesPost
-	localImageAlias.Name = base
-	localImageAlias.Target = fingerprint
-
 	var image api.Image
-	image.Fingerprint = fingerprint
-
-	var op MockRemoteOperation
+	var op = mocks.NewMockRemoteOperation(s.T())
 	var err error
 
-	s.InstMock.On("GetInstance", name).Return((*api.Instance)(nil), "", ApiErrNotFound)
-	s.InstMock.On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "", ApiErrNotFound)
-	s.ImgMock.On("GetImageAlias", "20.04/amd64").Return(&remoteImageAlias, "", nil)
-	s.ImgMock.On("GetImage", fingerprint).Return(&image, "", nil)
-	s.InstMock.On("CreateInstanceFromImage", &s.ImgMock, image, mock.Anything).Return(&op, nil)
+	remoteImageAlias.Target = fingerprint
+	localImageAlias.Name = base
+	localImageAlias.Target = fingerprint
+	image.Fingerprint = fingerprint
 
-	op.On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil)
-	op.On("Wait").Return(nil)
+	s.InstMock.
+		On("GetInstance", name).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "", ApiErrNotFound).
+		On("CreateImageAlias", localImageAlias).Return(nil).
+		On("CreateInstanceFromImage", s.ImgMock, image, mock.Anything).Return(op, nil)
 
-	s.InstMock.On("CreateImageAlias", localImageAlias).Return(nil)
+	// The image is provided by a remote image server via an alias
+	s.ImgMock.
+		On("GetImageAlias", "20.04/amd64").Return(&remoteImageAlias, "", nil).
+		On("GetImage", fingerprint).Return(&image, "", nil)
+
+	op.
+		On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil).
+		On("Wait").Return(nil)
 
 	err = s.Srv.LaunchWorkspaceInstance(name, base)
 	assert.NoError(s.T(), err)

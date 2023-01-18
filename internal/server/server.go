@@ -30,7 +30,7 @@ type Server interface {
 
 type LxdServer struct {
 	lxd.InstanceServer
-	filesystem afero.Fs
+	Fs afero.Fs
 }
 
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
@@ -42,7 +42,7 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := afero.Exists(s.filesystem, LXD_SOCK); err != nil {
+	if ok, err := afero.Exists(s.Fs, LXD_SOCK); err != nil {
 		return nil, err
 	} else if ok {
 		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
@@ -60,12 +60,12 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 }
 
 func NewServer(fs afero.Fs) (Server, error) {
-	server := LxdServer{filesystem: fs}
+	server := LxdServer{Fs: fs}
 
 	if lxdInst, err := server.connect(); err != nil {
 		return nil, err
 	} else {
-		if err = initProject(lxdInst); err != nil {
+		if err = InitProject(lxdInst); err != nil {
 			return nil, err
 		}
 		server.InstanceServer = lxdInst
@@ -254,7 +254,7 @@ func (s *LxdServer) Exec(name, user string, command []string) error {
 
 	arg := lxd.InstanceExecArgs{
 		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
-		Control: signalHandler, DataDone: make(chan bool),
+		Control: SignalHandler, DataDone: make(chan bool),
 	}
 
 	if op, err := s.ExecInstance(name, req, &arg); err != nil {
@@ -271,7 +271,7 @@ func (s *LxdServer) Exec(name, user string, command []string) error {
 	return nil
 }
 
-func signalHandler(control *websocket.Conn) {
+func SignalHandler(control *websocket.Conn) {
 	signals := make(chan os.Signal, 10)
 	signal.Notify(signals, syscall.SIGINT)
 

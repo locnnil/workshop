@@ -22,7 +22,7 @@ func GetLXDProjectName() (string, error) {
 }
 
 /* Initialise the SDK project namespace. */
-func initProject(conn lxd.InstanceServer) error {
+func InitProject(conn lxd.InstanceServer) error {
 	project, err := GetLXDProjectName()
 	if err != nil {
 		return err

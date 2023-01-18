@@ -7,6 +7,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
+	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/server"
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
@@ -17,13 +18,14 @@ import (
 type LaunchTestSuite struct {
 	suite.Suite
 	Fs    afero.Fs
-	Srv   MockServer
-	Store StoreClientMock
+	Srv   *mocks.MockServer
+	Store *mocks.MockStoreClient
 }
 
 func (s *LaunchTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Srv = MockServer{}
+	s.Srv = mocks.NewMockServer(s.T())
+	s.Store = mocks.NewMockStoreClient(s.T())
 	s.Fs.MkdirAll(util.DataDir, 0700)
 	s.Fs.MkdirAll(util.SdksDir, 0700)
 }
@@ -35,10 +37,20 @@ func createTestWorkspaceFile(fs afero.Fs, filename string, data []byte) fs.FileI
 }
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
-	var ws = &LxdWorkspace{Name: "noname", Base: "ubuntu@20.04", server: &s.Srv}
+	var ws = &LxdWorkspace{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
 
 	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
-	ws.Launch(&s.Store)
+	ws.Launch(s.Store)
+	s.Srv.AssertExpectations(s.T())
+}
+
+func (s *LaunchTestSuite) TestLaunchSucceededStartFailed() {
+	var ws = &LxdWorkspace{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
+
+	s.Srv.
+		On("LaunchWorkspaceInstance", ws.Name, "ubuntu@20.04").Return(nil).
+		On("SetWorkspaceState", ws.Name, "start").Return(api.StatusErrorf(int(api.Failure), ""))
+	ws.Launch(s.Store)
 	s.Srv.AssertExpectations(s.T())
 }
 
@@ -48,13 +60,14 @@ base: ubuntu@20.04`)
 	name, filename := "translation", ".workspace.translation.yaml"
 	file := createTestWorkspaceFile(s.Fs, filename, data)
 
-	s.Srv.On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil)
-	s.Srv.On("SetWorkspaceState", name, "start").Return(nil)
+	s.Srv.
+		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
+		On("SetWorkspaceState", name, "start").Return(nil)
 
-	ws, err := NewWorkspace(&s.Srv, s.Fs, WorkspaceFile{Name: name, File: file})
+	ws, err := NewWorkspace(s.Srv, s.Fs, WorkspaceFile{Name: name, File: file})
 	assert.ErrorIs(s.T(), err, nil)
 
-	err = ws.Launch(&s.Store)
+	err = ws.Launch(s.Store)
 	assert.ErrorIs(s.T(), err, nil)
 	s.Srv.AssertExpectations(s.T())
 
@@ -75,28 +88,28 @@ sdks:
 		sdkname: {"type": "disk", "source": sdkFile, "path": filepath.Join("/root", filename)},
 	}
 
-	s.Srv.On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil)
-	s.Srv.On("SetWorkspaceState", name, "start").Return(nil)
-	s.Srv.On("GetWorkspaceDevices").Return(make(server.WorkspaceDevices), nil)
-	s.Srv.On("UpdateWorkspaceDevices", devices).Return(nil)
-	s.Srv.On("Exec", name, "root", []string{"tar",
-		"--extract",
-		"--file",
-		filepath.Join("/root", filename),
-		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkname),
-		"--no-same-owner",
-	}).Return(nil)
-	s.Srv.On("UpdateWorkspaceDevices", make(server.WorkspaceDevices)).Return(nil)
+	s.Srv.
+		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
+		On("SetWorkspaceState", name, "start").Return(nil).
+		On("GetWorkspaceDevices", name).Return(make(server.WorkspaceDevices), nil).
+		On("UpdateWorkspaceDevices", name, devices).Return(nil).
+		On("Exec", name, "root", []string{"tar",
+			"--extract",
+			"--file",
+			filepath.Join("/root", filename),
+			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkname),
+			"--no-same-owner"}).Return(nil).
+		On("UpdateWorkspaceDevices", name, make(server.WorkspaceDevices)).Return(nil)
 
 	s.Store.On("FetchSDK", sdkname, "latest/stable", util.SdksDir).Return(store.SDKFile{
 		Filename: sdkFile,
 		Revision: 19,
 	}, nil)
 
-	ws, err := NewWorkspace(&s.Srv, s.Fs, WorkspaceFile{Name: name, File: wsfile})
+	ws, err := NewWorkspace(s.Srv, s.Fs, WorkspaceFile{Name: name, File: wsfile})
 	assert.ErrorIs(s.T(), err, nil)
 
-	err = ws.Launch(&s.Store)
+	err = ws.Launch(s.Store)
 	assert.ErrorIs(s.T(), err, nil)
 	s.Srv.AssertExpectations(s.T())
 }
