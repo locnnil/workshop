@@ -17,15 +17,23 @@ import (
 	"github.com/spf13/afero"
 )
 
+type ErrExec struct {
+	Status int
+}
+
+func (e *ErrExec) Error() string {
+	return fmt.Sprintf("command failed with an error code (%d)", e.Status)
+}
+
 type WorkspaceDevices map[string]map[string]string
 
-type Server interface {
+type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base string) error
 	SetWorkspaceState(name, action string) error
 	UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error
 	GetWorkspaceDevices(name string) (WorkspaceDevices, error)
 
-	Exec(name, user string, command []string) error
+	Exec(name, user string, command []string) (chan bool, error)
 }
 
 type LxdServer struct {
@@ -59,7 +67,7 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	}
 }
 
-func NewServer(fs afero.Fs) (Server, error) {
+func NewServer(fs afero.Fs) (WorkspaceServer, error) {
 	server := LxdServer{Fs: fs}
 
 	if lxdInst, err := server.connect(); err != nil {
@@ -245,30 +253,29 @@ func (s *LxdServer) GetWorkspaceDevices(name string) (WorkspaceDevices, error) {
 	return inst.Devices, nil
 }
 
-func (s *LxdServer) Exec(name, user string, command []string) error {
+func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error) {
 	req := api.InstanceExecPost{
 		Command: command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: "/",
 		Interactive: false,
 	}
 
+	done := make(chan bool)
+
 	arg := lxd.InstanceExecArgs{
 		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
-		Control: SignalHandler, DataDone: make(chan bool),
+		Control: SignalHandler, DataDone: done,
 	}
 
 	if op, err := s.ExecInstance(name, req, &arg); err != nil {
-		return err
+		return done, err
 	} else if err := op.Wait(); err != nil {
-		return fmt.Errorf("LXD error: (%s)", op.Get().Err)
-	} else if int(op.Get().Metadata["return"].(float64)) != 0 {
-		return fmt.Errorf("command failed with an error code (%d)", int(op.Get().Metadata["return"].(float64)))
+		return done, err
+	} else if status := int(op.Get().Metadata["return"].(float64)); status != 0 {
+		return done, &ErrExec{Status: status}
 	}
 
-	/* Flush any remaining I/O */
-	<-arg.DataDone
-
-	return nil
+	return done, nil
 }
 
 func SignalHandler(control *websocket.Conn) {

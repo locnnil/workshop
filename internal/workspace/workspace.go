@@ -22,12 +22,12 @@ type SDK struct {
 	Channel string `yaml:"channel"`
 }
 
-type LxdWorkspace struct {
+type WorkspaceInstance struct {
 	Name string          `yaml:"name"`
 	Base string          `yaml:"base"`
 	SDKs map[string]*SDK `yaml:"sdks"`
 
-	server srv.Server
+	server srv.WorkspaceServer
 	fs     afero.Fs
 }
 
@@ -40,8 +40,8 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
-	var ws = LxdWorkspace{server: server, fs: fs}
+func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
+	var ws = WorkspaceInstance{server: server, fs: fs}
 	buf, err := afero.ReadFile(fs, wsFile.File.Name())
 
 	if err != nil {
@@ -80,7 +80,7 @@ func NewWorkspace(server srv.Server, fs afero.Fs, wsFile WorkspaceFile) (Workspa
 	return &ws, nil
 }
 
-func (w *LxdWorkspace) Launch(client store.StoreClient) error {
+func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	var err error
 
 	fmt.Printf("Setting up \"%s\" workspace...\n", w.Name)
@@ -117,7 +117,7 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 		}
 		/* Unpack the SDK to the desired location in the workspace */
 		/* Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-		err = w.server.Exec(w.Name, "root", []string{
+		done, err := w.server.Exec(w.Name, "root", []string{
 			"tar",
 			"--extract",
 			"--file",
@@ -125,6 +125,9 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkName),
 			"--no-same-owner",
 		})
+
+		/* LXD will close this channel */
+		<-done
 
 		/* Make sure the SDK file will be unmounted once installed into the workspace */
 		delete(devices, sdkName)
@@ -142,6 +145,6 @@ func (w *LxdWorkspace) Launch(client store.StoreClient) error {
 	return nil
 }
 
-func (w *LxdWorkspace) Start() error {
+func (w *WorkspaceInstance) Start() error {
 	return w.server.SetWorkspaceState(w.Name, "start")
 }

@@ -18,13 +18,13 @@ import (
 type LaunchTestSuite struct {
 	suite.Suite
 	Fs    afero.Fs
-	Srv   *mocks.MockServer
+	Srv   *mocks.MockWorkspaceServer
 	Store *mocks.MockStoreClient
 }
 
 func (s *LaunchTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Srv = mocks.NewMockServer(s.T())
+	s.Srv = mocks.NewMockWorkspaceServer(s.T())
 	s.Store = mocks.NewMockStoreClient(s.T())
 	s.Fs.MkdirAll(util.DataDir, 0700)
 	s.Fs.MkdirAll(util.SdksDir, 0700)
@@ -37,7 +37,7 @@ func createTestWorkspaceFile(fs afero.Fs, filename string, data []byte) fs.FileI
 }
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
-	var ws = &LxdWorkspace{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
+	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
 
 	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
 	ws.Launch(s.Store)
@@ -45,7 +45,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
 }
 
 func (s *LaunchTestSuite) TestLaunchSucceededStartFailed() {
-	var ws = &LxdWorkspace{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
+	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
 
 	s.Srv.
 		On("LaunchWorkspaceInstance", ws.Name, "ubuntu@20.04").Return(nil).
@@ -88,6 +88,10 @@ sdks:
 		sdkname: {"type": "disk", "source": sdkFile, "path": filepath.Join("/root", filename)},
 	}
 
+	// Make the exec return immediately
+	done := make(chan bool)
+	close(done)
+
 	s.Srv.
 		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
 		On("SetWorkspaceState", name, "start").Return(nil).
@@ -98,7 +102,7 @@ sdks:
 			"--file",
 			filepath.Join("/root", filename),
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, sdkname),
-			"--no-same-owner"}).Return(nil).
+			"--no-same-owner"}).Return(done, nil).
 		On("UpdateWorkspaceDevices", name, make(server.WorkspaceDevices)).Return(nil)
 
 	s.Store.On("FetchSDK", sdkname, "latest/stable", util.SdksDir).Return(store.SDKFile{
