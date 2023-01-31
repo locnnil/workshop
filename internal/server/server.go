@@ -92,6 +92,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 		return fmt.Errorf("%s already exists", name)
 	}
 
+	/* Check if we have the base image stored locally */
 	if alias, _, err := s.GetImageAlias(base); err == nil {
 		if image, _, err = s.GetImage(alias.Target); err != nil {
 			return err
@@ -124,12 +125,18 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 	if err != nil {
 		return err
 	}
-	// canonicalise the project's pathname to make sure it is unambiguous for
-	// all workspaces
+	/* Canonicalise the project's pathname to make sure it is unambiguous for
+	   all workspaces */
 	projectPath, err := filepath.EvalSymlinks(cwd)
 	if err != nil {
 		return nil
 	}
+
+	projectName, err := GetLXDProjectName()
+	if err != nil {
+		return err
+	}
+
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: map[string]map[string]string{
@@ -147,6 +154,7 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: image.Fingerprint,
+			Project:     projectName,
 		},
 	}
 	op, err := s.CreateInstanceFromImage(*imageServer, *image, req)

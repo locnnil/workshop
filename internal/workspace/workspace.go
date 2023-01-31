@@ -37,7 +37,7 @@ type WorkspaceFile struct {
 }
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
-var validName = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
+var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, wsFile WorkspaceFile) (Workspace, error) {
@@ -100,7 +100,7 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Setting up \"%s\" SDK revision %d from %s.\n", sdkName, blob.Revision, sdk.Channel)
+		fmt.Printf("Setting up \"%s\" SDK revision %d from %s...\n", sdkName, blob.Revision, sdk.Channel)
 
 		/* Bind-mount the SDK to the workspace */
 		devices, err := w.server.GetWorkspaceDevices(w.Name)

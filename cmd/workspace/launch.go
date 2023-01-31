@@ -28,7 +28,7 @@ func (c *CmdLaunch) Command() *cobra.Command {
 
 func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
 	var workspaces = make(map[string]workspace.WorkspaceFile, 0)
-	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_]*)\.yaml$`)
+	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 	files, err := afero.ReadDir(fsys, ".")
 	if err != nil {
