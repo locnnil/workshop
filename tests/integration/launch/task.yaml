@@ -9,5 +9,14 @@ execute: |
   EOF
 
     su - ubuntu -c 'PATH=~/go/bin; workspace launch integration-test' | MATCH started
-    lxc delete integration-test --force --project workspace.ubuntu
+    lxc project switch workspace.ubuntu
+
+    # Validate project directory mount
+    lxc config device get integration-test workspace.project source | MATCH /home/ubuntu
+    lxc config device get integration-test workspace.project path | MATCH /project
+
+    # The workspace must be in a RUNNING state
+    lxc list -c ns -f compact | MATCH "integration-test  RUNNING"
+    
+    lxc delete integration-test --force
   done
