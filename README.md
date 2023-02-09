@@ -14,7 +14,7 @@ sudo lxd init --minimal
 ### Install
 
 ```
-go install ./cmd/workspace
+go install github.com/canonical/workspace/cmd/workspace
 ```
 
 ## Use

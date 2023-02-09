@@ -50,7 +50,7 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 		if atr, err := obj.Attrs(ctx); err != nil {
 			return sdk, err
 		} else {
-			// a simple modulo to keep revision numbers in a readble form for testing
+			/* A simple modulo to keep revision numbers in a readble form for testing */
 			revision = atr.Generation % 1000
 		}
 

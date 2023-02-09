@@ -1,0 +1,20 @@
+project: workspace
+
+backends:
+  qemu:
+    systems:
+      - ubuntu-22.10-64:
+          username: ubuntu
+          password: ubuntu
+suites:
+  tests/integration/:
+    summary: Core workspace scenarios
+    environment: 
+      PATH: $PATH:~/go/bin
+    prepare: |
+      apt-get install -y --no-install-recommends gcc libc6-dev snapd
+      snap install go --classic
+      snap install lxd --classic
+      runuser - ubuntu -c 'cd /remote; go install -buildvcs=false /remote/cmd/workspace/'
+      lxd init --auto
+path: /remote
