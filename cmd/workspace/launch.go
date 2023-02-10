@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"regexp"
 
 	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
@@ -27,33 +25,6 @@ func (c *CmdLaunch) Command() *cobra.Command {
 	return cmd
 }
 
-func enumWorkspaces(fsys afero.Fs, project string) (map[string]workspace.WorkspaceFile, error) {
-	project = filepath.Clean(project)
-	if !filepath.IsAbs(project) {
-		return nil, fmt.Errorf("%s is not an absolute path", Project)
-	}
-
-	var workspaces = make(map[string]workspace.WorkspaceFile, 0)
-	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
-
-	files, err := afero.ReadDir(fsys, project)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, info := range files {
-		if info.IsDir() {
-			continue
-		}
-
-		/* The first element in names will contain the workspace name if matched */
-		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces[names[1]] = workspace.WorkspaceFile{Name: names[1], File: info}
-		}
-	}
-	return workspaces, nil
-}
-
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	var wsName string
 	fs := afero.NewOsFs()
@@ -62,22 +33,24 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		wsName = av[0]
 	}
 
-	wsList, err := enumWorkspaces(fs, Project)
+	wsList, err := workspace.EnumWorkspaces(fs, Project)
 	if err != nil || len(wsList) == 0 && wsName == "" {
-		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.\n")
+		fmt.Printf("Could not find a workspace to launch. Start by creating a .workspace.<name>.yaml for the project.\n")
 		return err
 	} else if len(wsList) > 1 && wsName == "" {
 		printWorkspaces(wsList)
 		fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
 		return nil
 	} else if len(wsList) == 1 && wsName == "" {
-		/* Handle the case with a single workspace found but no args provided to the command */
+		/* Handle the case with a single workspace found but no args provided to the command,
+		   it's a map, so iterate to the first element */
 		for i := range wsList {
 			wsName = i
 			break
 		}
 	}
 
+	/* If the name was provided by the user, test if we have such a workspace */
 	if _, ok := wsList[wsName]; !ok {
 		fmt.Printf("\033[1m%s\033[0m not found.\n", wsName)
 		printWorkspaces(wsList)

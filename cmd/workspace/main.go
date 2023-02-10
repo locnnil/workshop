@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +17,16 @@ var rootCmd = &cobra.Command{
 var Project string
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", ".", "specify a project's directory path")
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "specify a project's directory path")
 
 	rootCmd.AddCommand((&CmdLaunch{}).Command())
+	rootCmd.AddCommand((&CmdList{}).Command())
 }
 
 func main() {
