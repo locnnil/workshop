@@ -4,20 +4,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
+var rootCmd = &cobra.Command{
+	Use:              "workspace",
+	SilenceErrors:    false,
+	SilenceUsage:     true,
+	TraverseChildren: true,
+}
 
+var Project string
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", ".", "specify a project's directory path")
+
+	rootCmd.AddCommand((&CmdLaunch{}).Command())
 }
 
 func main() {
-	app := &cobra.Command{
-		Use:           "workspace",
-		SilenceErrors: true,
-		SilenceUsage:  true,
-	}
-
-	app.AddCommand((&CmdLaunch{}).Command())
-
-	if err := app.Execute(); err != nil {
-		return
-	}
+	rootCmd.Execute()
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	store "github.com/canonical/workspace/internal/fakestore"
@@ -26,13 +27,18 @@ func (c *CmdLaunch) Command() *cobra.Command {
 	return cmd
 }
 
-func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
+func enumWorkspaces(fsys afero.Fs, project string) (map[string]workspace.WorkspaceFile, error) {
+	project = filepath.Clean(project)
+	if !filepath.IsAbs(project) {
+		return nil, fmt.Errorf("%s is not an absolute path", Project)
+	}
+
 	var workspaces = make(map[string]workspace.WorkspaceFile, 0)
 	var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
-	files, err := afero.ReadDir(fsys, ".")
+	files, err := afero.ReadDir(fsys, project)
 	if err != nil {
-		return workspaces, nil
+		return nil, err
 	}
 
 	for _, info := range files {
@@ -40,7 +46,7 @@ func enumWorkspaces(fsys afero.Fs) (map[string]workspace.WorkspaceFile, error) {
 			continue
 		}
 
-		// the first element in names will contain the workspace name if matches
+		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
 			workspaces[names[1]] = workspace.WorkspaceFile{Name: names[1], File: info}
 		}
@@ -56,7 +62,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		wsName = av[0]
 	}
 
-	wsList, err := enumWorkspaces(fs)
+	wsList, err := enumWorkspaces(fs, Project)
 	if err != nil || len(wsList) == 0 && wsName == "" {
 		fmt.Printf("Could not find a workspace to launch. Start with creating a .workspace.<name>.yaml for the project.\n")
 		return err
