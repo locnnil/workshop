@@ -1,5 +1,4 @@
-summary: Launch an empty workspace
-
+summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
   WS_NAME: integration-test
 execute: |
@@ -11,7 +10,7 @@ execute: |
   EOF
 
     echo Launch $WS_NAME with a $base base
-    su - ubuntu -c 'PATH=~/go/bin; workspace launch $WS_NAME' | MATCH started
+    su - ubuntu -c "PATH=~/go/bin; workspace launch $WS_NAME" | MATCH started
     lxc project switch workspace.ubuntu
 
     echo "Validate project directory mount"

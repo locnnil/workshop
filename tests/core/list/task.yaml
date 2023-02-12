@@ -1,0 +1,17 @@
+summary: Ensure that workspace list renders a list of active workspaces correctly
+
+environment:
+  WS_NAME: xbert
+execute: |
+  cat <<-EOF > /home/ubuntu/.workspace.$WS_NAME.yaml
+  name: $WS_NAME
+  base: ubuntu@20.04 
+  EOF
+
+  echo Launch $WS_NAME
+  su - ubuntu -c "PATH=~/go/bin; workspace launch $WS_NAME"
+  lxc project switch workspace.ubuntu
+
+  echo $WS_NAME must present in the list of workspaces
+  su - ubuntu -c "PATH=~/go/bin;workspace --project /home/ubuntu list" | MATCH "^~[[:space:]]+xbert$"
+  lxc delete $WS_NAME --force

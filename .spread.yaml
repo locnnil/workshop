@@ -7,11 +7,12 @@ backends:
           username: ubuntu
           password: ubuntu
 suites:
-  tests/integration/:
+  tests/core/:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
     prepare: |
+      apt-get update
       apt-get install -y --no-install-recommends gcc libc6-dev snapd
       snap install go --classic
       snap install lxd --classic
