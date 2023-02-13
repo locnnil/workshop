@@ -20,7 +20,11 @@ func TestEnumWorkspacesInACWD(t *testing.T) {
 
 	ws, err := EnumWorkspaces(fs, "/")
 	assert.Contains(t, ws, "project1")
+	assert.Equal(t, ws["project1"].Name, "project1")
+	assert.Equal(t, ws["project1"].Project, "/")
 	assert.Contains(t, ws, "project2")
+	assert.Equal(t, ws["project2"].Name, "project2")
+	assert.Equal(t, ws["project2"].Project, "/")
 	assert.NotContains(t, ws, "")
 	assert.NotContains(t, ws, "project2dir")
 	assert.NotContains(t, ws, "project3")
@@ -37,6 +41,7 @@ func TestEnumWorkspacesInAGivenProject(t *testing.T) {
 	/* Test an absolute path use case */
 	ws, err := EnumWorkspaces(fs, project)
 	assert.Contains(t, ws, "project1")
+	assert.Equal(t, project, ws["project1"].Project)
 	assert.NoError(t, err)
 
 	/* No relative paths are allowed */

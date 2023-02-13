@@ -1,24 +1,32 @@
 summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
   WS_NAME: integration-test
+  PROJECT: /home/ubuntu
 execute: |
-  for base in ubuntu@20.04 ubuntu@22.04
-  do
-    cat <<-EOF > /home/ubuntu/.workspace.$WS_NAME.yaml
-    name: $WS_NAME
-    base: $base 
-  EOF
-
-    echo Launch $WS_NAME with a $base base
-    su - ubuntu -c "PATH=~/go/bin; workspace launch $WS_NAME" | MATCH started
-    lxc project switch workspace.ubuntu
-
-    echo "Validate project directory mount"
-    lxc config device get $WS_NAME workspace.project source | MATCH /home/ubuntu
+  function assert_workspace_config() {
+    echo Validate project directory mount
+    lxc config device get $WS_NAME workspace.project source | MATCH $1
     lxc config device get $WS_NAME workspace.project path | MATCH /project
 
     echo $WS_NAME must be in a RUNNING state
     lxc list -c ns -f compact | MATCH "$WS_NAME  RUNNING"
-    
+  }
+  mkdir -p $PROJECT
+  for base in ubuntu@20.04 ubuntu@22.04
+  do
+    cat <<-EOF > $PROJECT/.workspace.$WS_NAME.yaml
+    name: $WS_NAME
+    base: $base 
+  EOF
+    lxc project switch workspace.ubuntu
+
+    echo Launch $WS_NAME with a $base base from a working directory
+    su - ubuntu -c "cd $PROJECT; PATH=~/go/bin; workspace launch $WS_NAME" | MATCH started
+    assert_workspace_config $PROJECT
+    lxc delete $WS_NAME --force
+
+    echo Launch $WS_NAME outside of its working directory
+    su - ubuntu -c "cd /tmp; PATH=~/go/bin; workspace --project=$PROJECT launch $WS_NAME" | MATCH started
+    assert_workspace_config $PROJECT
     lxc delete $WS_NAME --force
   done

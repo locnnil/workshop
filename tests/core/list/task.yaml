@@ -15,3 +15,4 @@ execute: |
   echo $WS_NAME must present in the list of workspaces
   su - ubuntu -c "PATH=~/go/bin;workspace --project /home/ubuntu list" | MATCH "^~[[:space:]]+xbert$"
   lxc delete $WS_NAME --force
+

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -25,13 +24,16 @@ func (e *ErrExec) Error() string {
 	return fmt.Sprintf("command failed with an error code (%d)", e.Status)
 }
 
-type WorkspaceDevices map[string]map[string]string
+type WorkspaceDevice struct {
+	Name       string
+	Properties map[string]string
+}
 
 type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base string) error
 	SetWorkspaceState(name, action string) error
-	UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error
-	GetWorkspaceDevices(name string) (WorkspaceDevices, error)
+	AddWorkspaceDevice(name string, props WorkspaceDevice) error
+	RemoveWorkspaceDevice(name string, device string) error
 
 	Exec(name, user string, command []string) (chan bool, error)
 }
@@ -121,17 +123,6 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 }
 
 func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, image *api.Image) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	/* Canonicalise the project's pathname to make sure it is unambiguous for
-	   all workspaces */
-	projectPath, err := filepath.EvalSymlinks(cwd)
-	if err != nil {
-		return nil
-	}
-
 	projectName, err := GetLXDProjectName()
 	if err != nil {
 		return err
@@ -141,7 +132,6 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 		InstancePut: api.InstancePut{
 			Devices: map[string]map[string]string{
 				"root":              {"type": "disk", "pool": "default", "path": "/"},
-				"workspace.project": {"type": "disk", "source": projectPath, "path": "/project"},
 				"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 			},
 			Config: map[string]string{
@@ -240,25 +230,28 @@ func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 	return op.Wait()
 }
 
-func (s *LxdServer) UpdateWorkspaceDevices(name string, devices WorkspaceDevices) error {
-	inst, _, err := s.GetInstance(name)
+func (s *LxdServer) AddWorkspaceDevice(name string, device WorkspaceDevice) error {
+	inst, etag, err := s.GetInstance(name)
 	if err != nil {
 		return err
 	}
 
-	inst.Devices = devices
-	op, _ := s.UpdateInstance(name, inst.InstancePut, "")
+	inst.Devices[device.Name] = device.Properties
+	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
 
 	return op.Wait()
 }
 
-func (s *LxdServer) GetWorkspaceDevices(name string) (WorkspaceDevices, error) {
-	inst, _, err := s.GetInstance(name)
+func (s *LxdServer) RemoveWorkspaceDevice(name string, device string) error {
+	inst, etag, err := s.GetInstance(name)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return inst.Devices, nil
+	delete(inst.Devices, device)
+	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
+
+	return op.Wait()
 }
 
 func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error) {

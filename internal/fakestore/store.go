@@ -18,6 +18,7 @@ type StoreClient interface {
 }
 
 type SDKFile struct {
+	Name     string
 	Filename string
 	Revision int64
 }
@@ -65,6 +66,8 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 			if err != nil && !os.IsExist(err) {
 				return sdk, err
 			} else if os.IsExist(err) {
+				/* Reuse the existing blob if present */
+				sdk.Name = name
 				sdk.Filename = filename
 				sdk.Revision = revision
 				return sdk, nil
@@ -74,6 +77,7 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 			if _, err = io.Copy(file, r); err != nil {
 				return sdk, err
 			}
+			sdk.Name = name
 			sdk.Filename = filename
 			sdk.Revision = revision
 		}

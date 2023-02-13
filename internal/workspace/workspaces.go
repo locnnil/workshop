@@ -31,7 +31,7 @@ func EnumWorkspaces(fsys afero.Fs, project string) (map[string]WorkspaceFile, er
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces[names[1]] = WorkspaceFile{Name: names[1], File: info}
+			workspaces[names[1]] = WorkspaceFile{Name: names[1], Project: project, File: info}
 		}
 	}
 	return workspaces, nil

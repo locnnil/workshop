@@ -12,6 +12,20 @@ type MockWorkspaceServer struct {
 	mock.Mock
 }
 
+// AddWorkspaceDevice provides a mock function with given fields: name, props
+func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, props server.WorkspaceDevice) error {
+	ret := _m.Called(name, props)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, server.WorkspaceDevice) error); ok {
+		r0 = rf(name, props)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Exec provides a mock function with given fields: name, user, command
 func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) (chan bool, error) {
 	ret := _m.Called(name, user, command)
@@ -35,29 +49,6 @@ func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) 
 	return r0, r1
 }
 
-// GetWorkspaceDevices provides a mock function with given fields: name
-func (_m *MockWorkspaceServer) GetWorkspaceDevices(name string) (server.WorkspaceDevices, error) {
-	ret := _m.Called(name)
-
-	var r0 server.WorkspaceDevices
-	if rf, ok := ret.Get(0).(func(string) server.WorkspaceDevices); ok {
-		r0 = rf(name)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(server.WorkspaceDevices)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(name)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // LaunchWorkspaceInstance provides a mock function with given fields: name, base
 func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string) error {
 	ret := _m.Called(name, base)
@@ -72,13 +63,13 @@ func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string)
 	return r0
 }
 
-// SetWorkspaceState provides a mock function with given fields: name, action
-func (_m *MockWorkspaceServer) SetWorkspaceState(name string, action string) error {
-	ret := _m.Called(name, action)
+// RemoveWorkspaceDevice provides a mock function with given fields: name, device
+func (_m *MockWorkspaceServer) RemoveWorkspaceDevice(name string, device string) error {
+	ret := _m.Called(name, device)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(name, action)
+		r0 = rf(name, device)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -86,13 +77,13 @@ func (_m *MockWorkspaceServer) SetWorkspaceState(name string, action string) err
 	return r0
 }
 
-// UpdateWorkspaceDevices provides a mock function with given fields: name, devices
-func (_m *MockWorkspaceServer) UpdateWorkspaceDevices(name string, devices server.WorkspaceDevices) error {
-	ret := _m.Called(name, devices)
+// SetWorkspaceState provides a mock function with given fields: name, action
+func (_m *MockWorkspaceServer) SetWorkspaceState(name string, action string) error {
+	ret := _m.Called(name, action)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, server.WorkspaceDevices) error); ok {
-		r0 = rf(name, devices)
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(name, action)
 	} else {
 		r0 = ret.Error(0)
 	}

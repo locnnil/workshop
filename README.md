@@ -51,8 +51,6 @@ go install github.com/snapcore/spread/cmd/spread@latest
 spread 
 ```
 
-
-
 ## TODO
 
 - Validate bases used for the workspace and SDKs (must be the same)
