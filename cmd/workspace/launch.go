@@ -35,7 +35,6 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	wsList, err := workspace.EnumWorkspaces(fs, Project)
 	if err != nil || len(wsList) == 0 && wsName == "" {
-		fmt.Printf("Could not find a workspace to launch. Start by creating a .workspace.<name>.yaml for the project.\n")
 		return err
 	} else if len(wsList) > 1 && wsName == "" {
 		printWorkspaces(wsList)
