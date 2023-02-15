@@ -27,7 +27,7 @@ func (c *CmdList) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.all, "all", true, "list workspaces from all projects")
+	cmd.Flags().BoolVar(&c.all, "all", false, "list workspaces from all projects")
 
 	return cmd
 }
