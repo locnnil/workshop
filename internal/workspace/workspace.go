@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 
@@ -23,7 +22,6 @@ type SDK struct {
 }
 
 type Project struct {
-	Name string
 	Path string
 }
 
@@ -37,19 +35,13 @@ type WorkspaceInstance struct {
 	fs     afero.Fs
 }
 
-type WorkspaceFile struct {
-	Name    string
-	Project string
-	File    os.FileInfo
-}
-
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws WorkspaceFile) (Workspace, error) {
+func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile) (Workspace, error) {
 	var inst = WorkspaceInstance{
-		Prj:    Project{Name: ws.Project, Path: ws.Project},
+		Prj:    Project{Path: ws.Project},
 		server: server,
 		fs:     fs,
 	}
@@ -103,7 +95,7 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 
 	/* Configure workspace core properties: (1) project directory */
 	var prjMount = srv.WorkspaceDevice{
-		Name:       "workspace.project",
+		Name:       srv.PROJECT_DEVICE_NAME,
 		Properties: map[string]string{"type": "disk", "source": w.Prj.Path, "path": "/project"},
 	}
 

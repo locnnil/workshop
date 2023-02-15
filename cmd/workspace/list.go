@@ -8,6 +8,7 @@ import (
 
 	"text/tabwriter"
 
+	srv "github.com/canonical/workspace/internal/server"
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -40,7 +41,26 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 	fs := afero.NewOsFs()
 
-	wsList, err := workspace.EnumWorkspaces(fs, Project)
+	var wsList map[string]srv.WorkspaceFile
+	var err error
+	if !c.all {
+		/* List all workspaces for the current project */
+		wsList, err = workspace.EnumWorkspaces(fs, Project)
+	} else {
+		/* List all workspaces in all projects */
+		/* This is a naive approach that works with all the workspaces by
+		   enumerating them and their project mounts. It does not handle cases
+		   when a directory of the project was (re)moved, for example. To be substituted
+		   with a more decent implementation in the next iteration */
+		var server srv.WorkspaceServer
+		server, err = srv.NewServer(fs)
+		if err != nil {
+			fmt.Printf("%v", err)
+			os.Exit(1)
+		}
+		wsList, err = workspace.EnumAllWorkspaces(server)
+	}
+
 	if err != nil || len(wsList) == 0 {
 		return err
 	}
@@ -48,9 +68,9 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\n")
 
-	for i := range wsList {
+	for i, k := range wsList {
 		line := []string{
-			contractHomeDirectory(Project),
+			contractHomeDirectory(k.Project),
 			i,
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))

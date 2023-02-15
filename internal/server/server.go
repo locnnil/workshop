@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
+
 	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
 
@@ -29,11 +31,19 @@ type WorkspaceDevice struct {
 	Properties map[string]string
 }
 
+type WorkspaceFile struct {
+	Name    string
+	Project string
+	File    os.FileInfo
+}
+
 type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base string) error
 	SetWorkspaceState(name, action string) error
 	AddWorkspaceDevice(name string, props WorkspaceDevice) error
 	RemoveWorkspaceDevice(name string, device string) error
+
+	GetAllWorkspaces() (map[string]WorkspaceFile, error)
 
 	Exec(name, user string, command []string) (chan bool, error)
 }
@@ -44,6 +54,8 @@ type LxdServer struct {
 }
 
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
+
+const PROJECT_DEVICE_NAME = "workspace.project"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
@@ -277,6 +289,29 @@ func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error)
 	}
 
 	return done, nil
+}
+
+func (s *LxdServer) GetAllWorkspaces() (map[string]WorkspaceFile, error) {
+	instances, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws map[string]WorkspaceFile = make(map[string]WorkspaceFile)
+	for _, i := range instances {
+		wsfile, err := s.Fs.Stat(filepath.Join(i.Devices[PROJECT_DEVICE_NAME]["source"],
+			fmt.Sprintf(".workspace.%s.yaml", i.Name)))
+
+		if err == nil {
+			ws[i.Name] = WorkspaceFile{
+				Name:    i.Name,
+				Project: i.Devices[PROJECT_DEVICE_NAME]["source"],
+				File:    wsfile,
+			}
+		}
+	}
+
+	return ws, nil
+
 }
 
 func SignalHandler(control *websocket.Conn) {

@@ -49,6 +49,29 @@ func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) 
 	return r0, r1
 }
 
+// GetAllWorkspaces provides a mock function with given fields:
+func (_m *MockWorkspaceServer) GetAllWorkspaces() (map[string]server.WorkspaceFile, error) {
+	ret := _m.Called()
+
+	var r0 map[string]server.WorkspaceFile
+	if rf, ok := ret.Get(0).(func() map[string]server.WorkspaceFile); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]server.WorkspaceFile)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // LaunchWorkspaceInstance provides a mock function with given fields: name, base
 func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string) error {
 	ret := _m.Called(name, base)

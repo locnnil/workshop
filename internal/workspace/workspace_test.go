@@ -9,6 +9,7 @@ import (
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/server"
+	srv "github.com/canonical/workspace/internal/server"
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 	var data = []byte(`name: translation
 base: ubuntu@20.04`)
 	var name = "translation"
-	var wsfile = WorkspaceFile{Name: name, Project: "/home/user/project",
+	var wsfile = srv.WorkspaceFile{Name: name, Project: "/home/user/project",
 		File: createTestWorkspaceFile(s.Fs, "/home/user/project/.workspace.translation.yaml", data)}
 
 	var project = server.WorkspaceDevice{
@@ -112,7 +113,7 @@ sdks:
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)
 
 	ws, err := NewWorkspace(s.Srv, s.Fs,
-		WorkspaceFile{
+		srv.WorkspaceFile{
 			Name: name,
 			File: createTestWorkspaceFile(s.Fs, ".workspace.translation.yaml", data)})
 	assert.ErrorIs(s.T(), err, nil)

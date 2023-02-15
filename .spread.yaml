@@ -15,7 +15,9 @@ suites:
       apt-get update
       apt-get install -y --no-install-recommends gcc libc6-dev snapd
       snap install go --classic
+
       snap install lxd --classic
-      runuser - ubuntu -c 'cd /remote; go install -buildvcs=false /remote/cmd/workspace/'
+      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workspace/
       lxd init --auto
+
 path: /remote

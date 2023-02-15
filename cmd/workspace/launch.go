@@ -82,7 +82,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	return err
 }
 
-func printWorkspaces(wsList map[string]workspace.WorkspaceFile) {
+func printWorkspaces(wsList map[string]srv.WorkspaceFile) {
 	if len(wsList) > 0 {
 		fmt.Printf("Available workspaces:\n")
 		for _, k := range wsList {

@@ -1,18 +1,35 @@
 summary: Ensure that workspace list renders a list of active workspaces correctly
 
 environment:
-  WS_NAME: xbert
-execute: |
-  cat <<-EOF > /home/ubuntu/.workspace.$WS_NAME.yaml
-  name: $WS_NAME
-  base: ubuntu@20.04 
+  FIRST_WS_NAME: xbert
+  SECOND_WS_NAME: xbert-gpu
+
+prepare: |
+  function generate_workspace_file() {
+    cat <<-EOF > $1/.workspace.$2.yaml
+    name: $2
+    base: ubuntu@20.04 
   EOF
+  }
 
-  echo Launch $WS_NAME
-  su - ubuntu -c "PATH=~/go/bin; workspace launch $WS_NAME"
+  generate_workspace_file /home/ubuntu $FIRST_WS_NAME
+  sudo -i -u ubuntu workspace launch $FIRST_WS_NAME
+  generate_workspace_file /tmp $SECOND_WS_NAME
+  sudo -i -u ubuntu -- workspace --project /tmp launch $SECOND_WS_NAME
+
+restore: |
   lxc project switch workspace.ubuntu
+  lxc delete $FIRST_WS_NAME $SECOND_WS_NAME --force
+  rm -f /home/ubuntu/$FIRST_WS_NAME /tmp/$SECOND_WS_NAME
 
-  echo $WS_NAME must present in the list of workspaces
-  su - ubuntu -c "PATH=~/go/bin;workspace --project /home/ubuntu list" | MATCH "^~[[:space:]]+xbert$"
-  lxc delete $WS_NAME --force
+execute: |
+  echo $FIRST_WS_NAME must present in the list of workspaces
+  sudo -i -u ubuntu -- workspace --project ~ list | MATCH "^~[[:space:]]+xbert$"
+  sudo -i -u ubuntu workspace list | MATCH "^~[[:space:]]+xbert$"
+
+  echo $FIRST_WS_NAME and $SECOND_WS_NAME must present in the list of all workspaces
+  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert$"
+  sudo -i -u ubuntu -- workspace list --all | MATCH "^/tmp[[:space:]]+xbert-gpu$"
+
+
 
