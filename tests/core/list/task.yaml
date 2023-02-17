@@ -23,7 +23,7 @@ restore: |
   rm -f /home/ubuntu/$FIRST_WS_NAME /tmp/$SECOND_WS_NAME
 
 execute: |
-  echo $FIRST_WS_NAME must present in the list of workspaces
+  echo $FIRST_WS_NAME must present in the list of a project's workspaces (but not $SECOND_WS_NAME)
   sudo -i -u ubuntu -- workspace --project ~ list | MATCH "^~[[:space:]]+xbert$"
   sudo -i -u ubuntu workspace list | MATCH "^~[[:space:]]+xbert$"
   sudo -i -u ubuntu workspace list | NOMATCH "^~[[:space:]]+xbert-gpu$"

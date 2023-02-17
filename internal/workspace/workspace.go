@@ -86,7 +86,7 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	var err error
 
-	fmt.Printf("Setting up \"%s\" workspace...\n", w.Name)
+	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
 
 	/* Launch a workspace with the required base */
 	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base); err != nil {
@@ -115,7 +115,7 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Setting up \"%s\" SDK revision %d from %s...\n", sdkName, blob.Revision, sdk.Channel)
+		fmt.Printf("Setting up SDK \"%s\" from %s revision %d...\n", sdkName, sdk.Channel, blob.Revision)
 
 		/* Install SDK */
 		err = w.installSDK(blob)

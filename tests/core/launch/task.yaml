@@ -23,7 +23,7 @@ execute: |
     lxc project switch workspace.ubuntu
 
     echo Launch $WS_NAME with a $base base from a working directory
-    # using su instead of sudo -s here as in some distroes the latter would result in error
+    # using su instead of sudo -s here as in some distros the latter would result in error
     su - ubuntu -c "cd $PROJECT; workspace launch $WS_NAME" | MATCH started
     assert_workspace_config
     lxc delete $WS_NAME --force

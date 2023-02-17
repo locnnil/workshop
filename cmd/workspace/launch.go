@@ -51,7 +51,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	/* If the name was provided by the user, test if we have such a workspace */
 	if _, ok := wsList[wsName]; !ok {
-		fmt.Printf("\033[1m%s\033[0m not found.\n", wsName)
+		fmt.Printf("workspace \"\033[1m%s\033[0m\" not found.\n", wsName)
 		printWorkspaces(wsList)
 		os.Exit(1)
 	}
