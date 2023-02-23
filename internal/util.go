@@ -20,6 +20,10 @@ var (
 	DataDir, SdksDir, WorkspaceSdksDir string
 )
 
+func ToFileName(name string) string {
+	return fmt.Sprintf(".workspace.%s.yaml", name)
+}
+
 func init() {
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")

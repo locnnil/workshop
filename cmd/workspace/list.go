@@ -33,32 +33,36 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
+	var wsList map[string]srv.WorkspaceProps
+	var err error
+	var server srv.WorkspaceServer
+	var fs = afero.NewOsFs()
 
 	/* check if both --project and --all were provided */
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("all").Changed {
 		return fmt.Errorf("flags --project and --all are mutually exclusive")
 	}
 
-	fs := afero.NewOsFs()
+	server, err = srv.NewServer(fs)
+	if err != nil {
+		return err
+	}
 
-	var wsList map[string]srv.WorkspaceFile
-	var err error
+	project, err := workspace.NewProject(server, fs, Project)
+	if err != nil {
+		return err
+	}
+
 	if !c.all {
 		/* List all workspaces for the current project */
-		wsList, err = workspace.EnumWorkspaces(fs, Project)
+		wsList, err = project.EnumWorkspaces()
 	} else {
 		/* List all workspaces in all projects */
 		/* This is a naive approach that works with all the workspaces by
 		   enumerating them and their project mounts. It does not handle cases
 		   when a directory of the project was (re)moved, for example. To be substituted
 		   with a more decent implementation in the next iteration */
-		var server srv.WorkspaceServer
-		server, err = srv.NewServer(fs)
-		if err != nil {
-			fmt.Printf("%v", err)
-			os.Exit(1)
-		}
-		wsList, err = workspace.EnumAllWorkspaces(server)
+		wsList, err = project.EnumAllWorkspaces()
 	}
 
 	if err != nil || len(wsList) == 0 {
@@ -68,9 +72,9 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\n")
 
-	for i, k := range wsList {
+	for i := range wsList {
 		line := []string{
-			contractHomeDirectory(k.ProjectPath),
+			contractHomeDirectory(project.GetProjectDirectory()),
 			i,
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))

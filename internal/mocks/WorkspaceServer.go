@@ -12,6 +12,20 @@ type MockWorkspaceServer struct {
 	mock.Mock
 }
 
+// AddWorkspaceConfig provides a mock function with given fields: names, item
+func (_m *MockWorkspaceServer) AddWorkspaceConfig(names string, item *server.WorkspaceConfig) error {
+	ret := _m.Called(names, item)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, *server.WorkspaceConfig) error); ok {
+		r0 = rf(names, item)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AddWorkspaceDevice provides a mock function with given fields: name, props
 func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, props server.WorkspaceDevice) error {
 	ret := _m.Called(name, props)
@@ -19,6 +33,20 @@ func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, props server.Work
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, server.WorkspaceDevice) error); ok {
 		r0 = rf(name, props)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AddWorkspacesDevice provides a mock function with given fields: filter, props
+func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceFilter, props server.WorkspaceDevice) error {
+	ret := _m.Called(filter, props)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter, server.WorkspaceDevice) error); ok {
+		r0 = rf(filter, props)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -49,22 +77,22 @@ func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) 
 	return r0, r1
 }
 
-// GetAllWorkspaces provides a mock function with given fields:
-func (_m *MockWorkspaceServer) GetAllWorkspaces() (map[string]server.WorkspaceFile, error) {
-	ret := _m.Called()
+// GetWorkspaces provides a mock function with given fields: filter
+func (_m *MockWorkspaceServer) GetWorkspaces(filter server.WorkspaceFilter) (map[string]server.WorkspaceProps, error) {
+	ret := _m.Called(filter)
 
-	var r0 map[string]server.WorkspaceFile
-	if rf, ok := ret.Get(0).(func() map[string]server.WorkspaceFile); ok {
-		r0 = rf()
+	var r0 map[string]server.WorkspaceProps
+	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter) map[string]server.WorkspaceProps); ok {
+		r0 = rf(filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]server.WorkspaceFile)
+			r0 = ret.Get(0).(map[string]server.WorkspaceProps)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(server.WorkspaceFilter) error); ok {
+		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -79,6 +107,20 @@ func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string)
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string) error); ok {
 		r0 = rf(name, base)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveWorkspaceConfig provides a mock function with given fields: name, key
+func (_m *MockWorkspaceServer) RemoveWorkspaceConfig(name string, key string) error {
+	ret := _m.Called(name, key)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(name, key)
 	} else {
 		r0 = ret.Error(0)
 	}

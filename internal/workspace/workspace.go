@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"fmt"
-	"math/rand"
 	"path/filepath"
 	"regexp"
 
@@ -11,7 +10,7 @@ import (
 	srv "github.com/canonical/workspace/internal/server"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type Workspace interface {
@@ -22,39 +21,41 @@ type SDK struct {
 	Channel string `yaml:"channel"`
 }
 
-type Project struct {
-	Path      string
-	ProjectId string `yaml:"project-id"`
-}
-
 type WorkspaceInstance struct {
 	Name    string          `yaml:"name"`
 	Base    string          `yaml:"base"`
 	SDKs    map[string]*SDK `yaml:"sdks"`
-	Project *Project
+	project *Project
 
 	server srv.WorkspaceServer
 	fs     afero.Fs
 }
 
-const PROJECT_FILE_NAME = ".workspace.lock"
+type WorkspaceState int
+
+const (
+	Inactive WorkspaceState = iota
+	Ready
+)
+
+func (s WorkspaceState) String() string {
+	return [...]string{"inactive", "ready"}[s]
+}
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile) (Workspace, error) {
-	var project *Project
-
-	project, _ = NewProject(fs, ws.ProjectPath)
+func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws srv.WorkspaceProps) (Workspace, error) {
+	var err error
 
 	var inst = WorkspaceInstance{
-		Project: project,
+		project: project,
 		server:  server,
 		fs:      fs,
 	}
 
-	buf, err := afero.ReadFile(fs, filepath.Join(ws.ProjectPath, ws.File.Name()))
+	buf, err := afero.ReadFile(fs, filepath.Join(project.GetProjectDirectory(), ws.FileName))
 
 	if err != nil {
 		return nil, err
@@ -74,7 +75,7 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 	}
 
 	if inst.Name != ws.Name {
-		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, ws.File.Name())
+		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, ws.FileName)
 	}
 
 	for i, k := range inst.SDKs {
@@ -96,13 +97,6 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	var err error
 
-	/* Create a project-id if it does not exist */
-	if !w.Project.Exists(w.fs) {
-		if err = w.Project.CreateProject(w.fs); err != nil {
-			return err
-		}
-	}
-
 	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
 
 	/* Launch a workspace with the required base */
@@ -110,10 +104,19 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		return err
 	}
 
-	/* Configure workspace core properties: (1) project directory */
+	/* Configure workspace core properties: project-id field */
+	var projectId = srv.WorkspaceConfig{
+		Name:  "user.workspace.project-id",
+		Value: w.project.GetProjectId(),
+	}
+	if err = w.server.AddWorkspaceConfig(w.Name, &projectId); err != nil {
+		return err
+	}
+
+	/* Configure workspace core properties: project directory */
 	var prjMount = srv.WorkspaceDevice{
 		Name:       srv.PROJECT_DEVICE_NAME,
-		Properties: map[string]string{"type": "disk", "source": w.Project.Path, "path": "/project"},
+		Properties: map[string]string{"type": "disk", "source": w.project.GetProjectDirectory(), "path": "/project"},
 	}
 
 	if err = w.server.AddWorkspaceDevice(w.Name, prjMount); err != nil {
@@ -143,41 +146,17 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		/* TODO: Run lifecycle hooks */
 	}
 
+	/* Configure workspace core properties: state field */
+	var state = srv.WorkspaceConfig{
+		Name:  "user.workspace.state",
+		Value: Ready.String(),
+	}
+	if err = w.server.AddWorkspaceConfig(w.Name, &state); err != nil {
+		return err
+	}
+
 	fmt.Printf("Workspace \"%s\" started.\n", w.Name)
 
-	return nil
-}
-
-func NewProject(fs afero.Fs, path string) (*Project, error) {
-	var err error
-	var project Project
-	project.Path = path
-
-	/* Parse project-id */
-	if buf, err := afero.ReadFile(fs, filepath.Join(project.Path, PROJECT_FILE_NAME)); err == nil {
-		if err = yaml.Unmarshal(buf, &project); err != nil {
-			return &project, err
-		}
-	}
-	return &project, err
-}
-
-func (w *Project) Exists(fs afero.Fs) bool {
-	ok, _ := afero.Exists(fs, filepath.Join(w.Path, PROJECT_FILE_NAME))
-	return ok
-}
-
-func (w *Project) CreateProject(fs afero.Fs) error {
-	w.ProjectId = fmt.Sprintf("%d", rand.Int63())
-	var buf []byte
-	var err error
-	if buf, err = yaml.Marshal(w); err != nil {
-		return err
-	}
-
-	if err = afero.WriteFile(fs, filepath.Join(w.Path, PROJECT_FILE_NAME), buf, 0644); err != nil {
-		return err
-	}
 	return nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -31,19 +30,43 @@ type WorkspaceDevice struct {
 	Properties map[string]string
 }
 
-type WorkspaceFile struct {
-	Name        string
-	ProjectPath string
-	File        os.FileInfo
+type WorkspaceConfig struct {
+	Name  string
+	Value string
+}
+
+type WorkspaceProps struct {
+	Name     string
+	FileName string
+}
+
+type WorkspaceFilter func(config map[string]string) bool
+
+func NewWorkspaceFilter(key string, value string) WorkspaceFilter {
+	return func(config map[string]string) bool {
+		return config[key] == value
+	}
+}
+
+func NoWorkspaceFilter() WorkspaceFilter {
+	return func(config map[string]string) bool {
+		return true
+	}
 }
 
 type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base string) error
 	SetWorkspaceState(name, action string) error
+
+	AddWorkspacesDevice(filter WorkspaceFilter, props WorkspaceDevice) error
 	AddWorkspaceDevice(name string, props WorkspaceDevice) error
+
 	RemoveWorkspaceDevice(name string, device string) error
 
-	GetAllWorkspaces() (map[string]WorkspaceFile, error)
+	AddWorkspaceConfig(names string, item *WorkspaceConfig) error
+	RemoveWorkspaceConfig(name string, key string) error
+
+	GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error)
 
 	Exec(name, user string, command []string) (chan bool, error)
 }
@@ -242,6 +265,29 @@ func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 	return op.Wait()
 }
 
+func (s *LxdServer) AddWorkspaceConfig(name string, item *WorkspaceConfig) error {
+	inst, etag, err := s.GetInstance(name)
+	if err != nil {
+		return err
+	}
+	inst.Config[item.Name] = item.Value
+	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdServer) RemoveWorkspaceConfig(name string, key string) error {
+	inst, etag, err := s.GetInstance(name)
+	if err != nil {
+		return err
+	}
+
+	delete(inst.Config, key)
+	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
 func (s *LxdServer) AddWorkspaceDevice(name string, device WorkspaceDevice) error {
 	inst, etag, err := s.GetInstance(name)
 	if err != nil {
@@ -291,27 +337,40 @@ func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error)
 	return done, nil
 }
 
-func (s *LxdServer) GetAllWorkspaces() (map[string]WorkspaceFile, error) {
+func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device WorkspaceDevice) error {
+	inst, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range inst {
+		if filter(i.Config) {
+			i.Devices[device.Name] = device.Properties
+			s.UpdateInstance(i.Name, i.InstancePut, "")
+		}
+	}
+
+	return nil
+}
+
+func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]WorkspaceFile = make(map[string]WorkspaceFile)
+	var ws map[string]WorkspaceProps = make(map[string]WorkspaceProps, len(instances))
 	for _, i := range instances {
-		wsfile, err := s.Fs.Stat(filepath.Join(i.Devices[PROJECT_DEVICE_NAME]["source"],
-			fmt.Sprintf(".workspace.%s.yaml", i.Name)))
-
-		if err == nil {
-			ws[i.Name] = WorkspaceFile{
-				Name:        i.Name,
-				ProjectPath: i.Devices[PROJECT_DEVICE_NAME]["source"],
-				File:        wsfile,
+		if filter(i.Config) {
+			if err == nil {
+				ws[i.Name] = WorkspaceProps{
+					Name:     i.Name,
+					FileName: util.ToFileName(i.Name),
+				}
 			}
 		}
 	}
 
 	return ws, nil
-
 }
 
 func SignalHandler(control *websocket.Conn) {
