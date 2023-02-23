@@ -32,9 +32,9 @@ type WorkspaceDevice struct {
 }
 
 type WorkspaceFile struct {
-	Name    string
-	Project string
-	File    os.FileInfo
+	Name        string
+	ProjectPath string
+	File        os.FileInfo
 }
 
 type WorkspaceServer interface {
@@ -103,7 +103,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 
 	/* Skip if the instance exists already */
 	if _, _, err := s.GetInstance(name); err == nil {
-		return fmt.Errorf("%s already exists", name)
+		return fmt.Errorf("workspace \"%s\" already exists", name)
 	}
 
 	/* Check if we have the base image stored locally */
@@ -303,9 +303,9 @@ func (s *LxdServer) GetAllWorkspaces() (map[string]WorkspaceFile, error) {
 
 		if err == nil {
 			ws[i.Name] = WorkspaceFile{
-				Name:    i.Name,
-				Project: i.Devices[PROJECT_DEVICE_NAME]["source"],
-				File:    wsfile,
+				Name:        i.Name,
+				ProjectPath: i.Devices[PROJECT_DEVICE_NAME]["source"],
+				File:        wsfile,
 			}
 		}
 	}

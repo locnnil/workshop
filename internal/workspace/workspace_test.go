@@ -32,7 +32,7 @@ func (s *LaunchTestSuite) SetupTest() {
 	s.Fs.MkdirAll(util.SdksDir, 0700)
 }
 
-func createTestWorkspaceFile(fs afero.Fs, filename string, data []byte) fs.FileInfo {
+func createTestFile(fs afero.Fs, filename string, data []byte) fs.FileInfo {
 	dir := filepath.Dir(filename)
 	fs.MkdirAll(dir, 0644)
 	afero.WriteFile(fs, filename, []byte(data), 0644)
@@ -40,8 +40,65 @@ func createTestWorkspaceFile(fs afero.Fs, filename string, data []byte) fs.FileI
 	return file
 }
 
+var dataNoSDK = []byte(`name: translation
+base: ubuntu@20.04`)
+
+var dataWithSDK = []byte(`name: translation
+base: ubuntu@20.04
+sdks:
+  huggingface:
+    channel: latest/stable`)
+
+var projectId = []byte(`project-id: 1234567`)
+
+func (s *LaunchTestSuite) TestNewWorkspaceEmptyNoProject() {
+	var file = srv.WorkspaceFile{Name: "translation",
+		ProjectPath: "/project",
+		File:        createTestFile(s.Fs, "/project/.workspace.translation.yaml", dataNoSDK)}
+	ws, err := NewWorkspace(s.Srv, s.Fs, file)
+	assert.NoError(s.T(), err)
+	assert.Empty(s.T(), ws.(*WorkspaceInstance).Project.ProjectId)
+	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
+	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
+	assert.Empty(s.T(), ws.(*WorkspaceInstance).SDKs)
+	assert.NotNil(s.T(), ws)
+}
+
+func (s *LaunchTestSuite) TestNewWorkspaceEmptyWithProject() {
+	var file = srv.WorkspaceFile{Name: "translation",
+		ProjectPath: "/project",
+		File:        createTestFile(s.Fs, "/project/.workspace.translation.yaml", dataNoSDK)}
+	createTestFile(s.Fs, filepath.Join("/project", PROJECT_FILE_NAME), projectId)
+
+	ws, err := NewWorkspace(s.Srv, s.Fs, file)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "1234567", ws.(*WorkspaceInstance).Project.ProjectId)
+	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
+	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
+	assert.Empty(s.T(), ws.(*WorkspaceInstance).SDKs)
+	assert.NotNil(s.T(), ws)
+}
+
+func (s *LaunchTestSuite) TestNewWorkspaceWithSDKsWithProject() {
+	var file = srv.WorkspaceFile{Name: "translation",
+		ProjectPath: "/project",
+		File:        createTestFile(s.Fs, "/project/.workspace.translation.yaml", dataWithSDK)}
+	createTestFile(s.Fs, filepath.Join("/project", PROJECT_FILE_NAME), projectId)
+
+	ws, err := NewWorkspace(s.Srv, s.Fs, file)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "1234567", ws.(*WorkspaceInstance).Project.ProjectId)
+	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
+	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
+	assert.Equal(s.T(), &SDK{Channel: "latest/stable"}, ws.(*WorkspaceInstance).SDKs["huggingface"])
+	assert.NotNil(s.T(), ws)
+}
+
 func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
-	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv}
+	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv, fs: s.Fs,
+		Project: &Project{Path: "/project"}}
 
 	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
 	ws.Launch(s.Store)
@@ -49,15 +106,13 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
 }
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
-	var data = []byte(`name: translation
-base: ubuntu@20.04`)
 	var name = "translation"
-	var wsfile = srv.WorkspaceFile{Name: name, Project: "/home/user/project",
-		File: createTestWorkspaceFile(s.Fs, "/home/user/project/.workspace.translation.yaml", data)}
+	var file = srv.WorkspaceFile{Name: name, ProjectPath: "/project",
+		File: createTestFile(s.Fs, "/project/.workspace.translation.yaml", dataNoSDK)}
 
 	var project = server.WorkspaceDevice{
 		Name:       "workspace.project",
-		Properties: map[string]string{"type": "disk", "source": wsfile.Project, "path": filepath.Join("/project")},
+		Properties: map[string]string{"type": "disk", "source": file.ProjectPath, "path": filepath.Join("/project")},
 	}
 
 	s.Srv.
@@ -65,21 +120,20 @@ base: ubuntu@20.04`)
 		On("AddWorkspaceDevice", name, project).Return(nil).
 		On("SetWorkspaceState", name, "start").Return(nil)
 
-	ws, err := NewWorkspace(s.Srv, s.Fs, wsfile)
+	ws, err := NewWorkspace(s.Srv, s.Fs, file)
 	assert.ErrorIs(s.T(), err, nil)
 
 	err = ws.Launch(s.Store)
 	assert.ErrorIs(s.T(), err, nil)
+
+	/* Make sure a new project-id was generated */
+	assert.True(s.T(), ws.(*WorkspaceInstance).Project.Exists(s.Fs))
+	assert.NoError(s.T(), err)
+
 	s.Srv.AssertExpectations(s.T())
 }
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
-	var data = []byte(`name: translation
-base: ubuntu@20.04
-sdks:
-  huggingface:
-    channel: latest/stable`)
-
 	name, filename := "translation", "huggingface_19.sdk"
 
 	var blob = store.SDKFile{
@@ -115,7 +169,7 @@ sdks:
 	ws, err := NewWorkspace(s.Srv, s.Fs,
 		srv.WorkspaceFile{
 			Name: name,
-			File: createTestWorkspaceFile(s.Fs, ".workspace.translation.yaml", data)})
+			File: createTestFile(s.Fs, ".workspace.translation.yaml", dataWithSDK)})
 	assert.ErrorIs(s.T(), err, nil)
 
 	err = ws.Launch(s.Store)

@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"regexp"
 
@@ -22,30 +23,38 @@ type SDK struct {
 }
 
 type Project struct {
-	Path string
+	Path      string
+	ProjectId string `yaml:"project-id"`
 }
 
 type WorkspaceInstance struct {
-	Name string          `yaml:"name"`
-	Base string          `yaml:"base"`
-	SDKs map[string]*SDK `yaml:"sdks"`
-	Prj  Project
+	Name    string          `yaml:"name"`
+	Base    string          `yaml:"base"`
+	SDKs    map[string]*SDK `yaml:"sdks"`
+	Project *Project
 
 	server srv.WorkspaceServer
 	fs     afero.Fs
 }
+
+const PROJECT_FILE_NAME = ".workspace.lock"
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile) (Workspace, error) {
+	var project *Project
+
+	project, _ = NewProject(fs, ws.ProjectPath)
+
 	var inst = WorkspaceInstance{
-		Prj:    Project{Path: ws.Project},
-		server: server,
-		fs:     fs,
+		Project: project,
+		server:  server,
+		fs:      fs,
 	}
-	buf, err := afero.ReadFile(fs, filepath.Join(ws.Project, ws.File.Name()))
+
+	buf, err := afero.ReadFile(fs, filepath.Join(ws.ProjectPath, ws.File.Name()))
 
 	if err != nil {
 		return nil, err
@@ -55,6 +64,7 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 		return nil, err
 	}
 
+	/* Validate workspace properties */
 	if !validName.MatchString(inst.Name) {
 		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
@@ -86,6 +96,13 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	var err error
 
+	/* Create a project-id if it does not exist */
+	if !w.Project.Exists(w.fs) {
+		if err = w.Project.CreateProject(w.fs); err != nil {
+			return err
+		}
+	}
+
 	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
 
 	/* Launch a workspace with the required base */
@@ -96,14 +113,14 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	/* Configure workspace core properties: (1) project directory */
 	var prjMount = srv.WorkspaceDevice{
 		Name:       srv.PROJECT_DEVICE_NAME,
-		Properties: map[string]string{"type": "disk", "source": w.Prj.Path, "path": "/project"},
+		Properties: map[string]string{"type": "disk", "source": w.Project.Path, "path": "/project"},
 	}
 
 	if err = w.server.AddWorkspaceDevice(w.Name, prjMount); err != nil {
 		return err
 	}
 
-	/* Start the workspace. TODO: make sure that we have it completed before attempting to change the state */
+	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
 	if err = w.Start(); err != nil {
 		return err
 	}
@@ -131,6 +148,39 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	return nil
 }
 
+func NewProject(fs afero.Fs, path string) (*Project, error) {
+	var err error
+	var project Project
+	project.Path = path
+
+	/* Parse project-id */
+	if buf, err := afero.ReadFile(fs, filepath.Join(project.Path, PROJECT_FILE_NAME)); err == nil {
+		if err = yaml.Unmarshal(buf, &project); err != nil {
+			return &project, err
+		}
+	}
+	return &project, err
+}
+
+func (w *Project) Exists(fs afero.Fs) bool {
+	ok, _ := afero.Exists(fs, filepath.Join(w.Path, PROJECT_FILE_NAME))
+	return ok
+}
+
+func (w *Project) CreateProject(fs afero.Fs) error {
+	w.ProjectId = fmt.Sprintf("%d", rand.Int63())
+	var buf []byte
+	var err error
+	if buf, err = yaml.Marshal(w); err != nil {
+		return err
+	}
+
+	if err = afero.WriteFile(fs, filepath.Join(w.Path, PROJECT_FILE_NAME), buf, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 	/* Bind-mount the SDK to the workspace */
 	var sdkMount = srv.WorkspaceDevice{
@@ -144,8 +194,8 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 		return err
 	}
 
-	/* Unpack the SDK to the desired location in the workspace */
-	/* Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
+	/* Unpack the SDK to the desired location in the workspace
+	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
 	done, err := w.server.Exec(w.Name, "root", []string{
 		"tar",
 		"--extract",
@@ -155,7 +205,7 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 		"--no-same-owner",
 	})
 
-	/* The server will close this channel when exec is finished and no i/o remains outstanding*/
+	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
 
 	/* Make sure the SDK file will be unmounted once installed into the workspace */

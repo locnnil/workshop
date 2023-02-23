@@ -70,7 +70,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 	for i, k := range wsList {
 		line := []string{
-			contractHomeDirectory(k.Project),
+			contractHomeDirectory(k.ProjectPath),
 			i,
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))
