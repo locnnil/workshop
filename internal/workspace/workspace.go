@@ -89,16 +89,7 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
 
 	/* Launch a workspace with the required base */
-	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base); err != nil {
-		return err
-	}
-
-	/* Configure workspace core properties: project-id field */
-	var projectId = srv.WorkspaceConfig{
-		Name:  "user.workspace.project-id",
-		Value: w.project.GetProjectId(),
-	}
-	if err = w.server.AddWorkspaceConfig(w.Name, &projectId); err != nil {
+	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base, w.project.GetProjectId()); err != nil {
 		return err
 	}
 
@@ -108,7 +99,7 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		Properties: map[string]string{"type": "disk", "source": w.project.GetProjectDirectory(), "path": "/project"},
 	}
 
-	if err = w.server.AddWorkspaceDevice(w.Name, prjMount); err != nil {
+	if err = w.server.AddWorkspaceDevice(w.Name, w.project.GetProjectId(), prjMount); err != nil {
 		return err
 	}
 
@@ -148,14 +139,14 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 			"path": filepath.Join("/root", filepath.Base(blob.Filename))},
 	}
 
-	err := w.server.AddWorkspaceDevice(w.Name, sdkMount)
+	err := w.server.AddWorkspaceDevice(w.Name, w.project.GetProjectId(), sdkMount)
 	if err != nil {
 		return err
 	}
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	done, err := w.server.Exec(w.Name, "root", []string{
+	done, err := w.server.Exec(w.Name, w.project.GetProjectId(), "root", []string{
 		"tar",
 		"--extract",
 		"--file",
@@ -168,7 +159,7 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 	<-done
 
 	/* Make sure the SDK file will be unmounted once installed into the workspace */
-	w.server.RemoveWorkspaceDevice(w.Name, sdkMount.Name)
+	w.server.RemoveWorkspaceDevice(w.Name, w.project.GetProjectId(), sdkMount.Name)
 
 	if err != nil {
 		fmt.Printf("could not install \"%s\": %v", blob.Name, err)
@@ -177,5 +168,5 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 }
 
 func (w *WorkspaceInstance) Start() error {
-	return w.server.SetWorkspaceState(w.Name, "start")
+	return w.server.SetWorkspaceState(w.Name, w.project.GetProjectId(), "start")
 }

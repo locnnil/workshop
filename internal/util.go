@@ -38,6 +38,10 @@ func ToFileName(name string) string {
 	return fmt.Sprintf(".workspace.%s.yaml", name)
 }
 
+func ToInstanceName(name string, project_id string) string {
+	return fmt.Sprintf("workspace-%s-%s", name, project_id)
+}
+
 func init() {
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")

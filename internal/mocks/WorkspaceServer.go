@@ -12,13 +12,13 @@ type MockWorkspaceServer struct {
 	mock.Mock
 }
 
-// AddWorkspaceConfig provides a mock function with given fields: names, item
-func (_m *MockWorkspaceServer) AddWorkspaceConfig(names string, item *server.WorkspaceConfig) error {
-	ret := _m.Called(names, item)
+// AddWorkspaceConfig provides a mock function with given fields: names, project_id, item
+func (_m *MockWorkspaceServer) AddWorkspaceConfig(names string, project_id string, item *server.WorkspaceConfigValue) error {
+	ret := _m.Called(names, project_id, item)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, *server.WorkspaceConfig) error); ok {
-		r0 = rf(names, item)
+	if rf, ok := ret.Get(0).(func(string, string, *server.WorkspaceConfigValue) error); ok {
+		r0 = rf(names, project_id, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -26,13 +26,13 @@ func (_m *MockWorkspaceServer) AddWorkspaceConfig(names string, item *server.Wor
 	return r0
 }
 
-// AddWorkspaceDevice provides a mock function with given fields: name, props
-func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, props server.WorkspaceDevice) error {
-	ret := _m.Called(name, props)
+// AddWorkspaceDevice provides a mock function with given fields: name, project_id, props
+func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, project_id string, props server.WorkspaceDevice) error {
+	ret := _m.Called(name, project_id, props)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, server.WorkspaceDevice) error); ok {
-		r0 = rf(name, props)
+	if rf, ok := ret.Get(0).(func(string, string, server.WorkspaceDevice) error); ok {
+		r0 = rf(name, project_id, props)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -54,13 +54,13 @@ func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceFilter
 	return r0
 }
 
-// Exec provides a mock function with given fields: name, user, command
-func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) (chan bool, error) {
-	ret := _m.Called(name, user, command)
+// Exec provides a mock function with given fields: name, project_id, user, command
+func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string, command []string) (chan bool, error) {
+	ret := _m.Called(name, project_id, user, command)
 
 	var r0 chan bool
-	if rf, ok := ret.Get(0).(func(string, string, []string) chan bool); ok {
-		r0 = rf(name, user, command)
+	if rf, ok := ret.Get(0).(func(string, string, string, []string) chan bool); ok {
+		r0 = rf(name, project_id, user, command)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(chan bool)
@@ -68,8 +68,8 @@ func (_m *MockWorkspaceServer) Exec(name string, user string, command []string) 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, []string) error); ok {
-		r1 = rf(name, user, command)
+	if rf, ok := ret.Get(1).(func(string, string, string, []string) error); ok {
+		r1 = rf(name, project_id, user, command)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -100,13 +100,13 @@ func (_m *MockWorkspaceServer) GetWorkspaces(filter server.WorkspaceFilter) (map
 	return r0, r1
 }
 
-// LaunchWorkspaceInstance provides a mock function with given fields: name, base
-func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string) error {
-	ret := _m.Called(name, base)
+// LaunchWorkspaceInstance provides a mock function with given fields: name, base, project_id
+func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string, project_id string) error {
+	ret := _m.Called(name, base, project_id)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(name, base)
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(name, base, project_id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -114,13 +114,13 @@ func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string)
 	return r0
 }
 
-// RemoveWorkspaceConfig provides a mock function with given fields: name, key
-func (_m *MockWorkspaceServer) RemoveWorkspaceConfig(name string, key string) error {
-	ret := _m.Called(name, key)
+// RemoveWorkspaceConfig provides a mock function with given fields: name, project_id, key
+func (_m *MockWorkspaceServer) RemoveWorkspaceConfig(name string, project_id string, key string) error {
+	ret := _m.Called(name, project_id, key)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(name, key)
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(name, project_id, key)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -128,13 +128,13 @@ func (_m *MockWorkspaceServer) RemoveWorkspaceConfig(name string, key string) er
 	return r0
 }
 
-// RemoveWorkspaceDevice provides a mock function with given fields: name, device
-func (_m *MockWorkspaceServer) RemoveWorkspaceDevice(name string, device string) error {
-	ret := _m.Called(name, device)
+// RemoveWorkspaceDevice provides a mock function with given fields: name, project_id, device
+func (_m *MockWorkspaceServer) RemoveWorkspaceDevice(name string, project_id string, device string) error {
+	ret := _m.Called(name, project_id, device)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(name, device)
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(name, project_id, device)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -142,13 +142,13 @@ func (_m *MockWorkspaceServer) RemoveWorkspaceDevice(name string, device string)
 	return r0
 }
 
-// SetWorkspaceState provides a mock function with given fields: name, action
-func (_m *MockWorkspaceServer) SetWorkspaceState(name string, action string) error {
-	ret := _m.Called(name, action)
+// SetWorkspaceState provides a mock function with given fields: name, action, project_id
+func (_m *MockWorkspaceServer) SetWorkspaceState(name string, action string, project_id string) error {
+	ret := _m.Called(name, action, project_id)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(name, action)
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(name, action, project_id)
 	} else {
 		r0 = ret.Error(0)
 	}

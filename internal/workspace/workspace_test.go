@@ -94,7 +94,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
 	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv, fs: s.Fs,
 		project: &Project{Path: "/project", fs: s.Fs}}
 
-	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04").Return(api.StatusErrorf(404, "Not found"))
+	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04", mock.Anything).Return(api.StatusErrorf(404, "Not found"))
 	ws.Launch(s.Store)
 	s.Srv.AssertExpectations(s.T())
 }
@@ -108,10 +108,9 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 	}
 
 	s.Srv.
-		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
-		On("AddWorkspaceConfig", name, mock.Anything).Return(nil).
-		On("AddWorkspaceDevice", name, project).Return(nil).
-		On("SetWorkspaceState", name, "start").Return(nil)
+		On("LaunchWorkspaceInstance", name, "ubuntu@20.04", mock.Anything).Return(nil).
+		On("AddWorkspaceDevice", name, mock.Anything, project).Return(nil).
+		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil)
 
 	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
 	assert.ErrorIs(s.T(), err, nil)
@@ -141,18 +140,17 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 	close(done)
 
 	s.Srv.
-		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
-		On("AddWorkspaceConfig", name, mock.Anything).Return(nil).
-		On("SetWorkspaceState", name, "start").Return(nil).
-		On("AddWorkspaceDevice", name, mock.Anything).Return(nil).
-		On("AddWorkspaceDevice", name, device).Return(nil).
-		On("Exec", name, "root", []string{"tar",
+		On("LaunchWorkspaceInstance", name, "ubuntu@20.04", mock.Anything).Return(nil).
+		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil).
+		On("AddWorkspaceDevice", name, mock.Anything, mock.Anything).Return(nil).
+		On("AddWorkspaceDevice", name, mock.Anything, device).Return(nil).
+		On("Exec", name, mock.Anything, "root", []string{"tar",
 			"--extract",
 			"--file",
 			filepath.Join("/root", filename),
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
 			"--no-same-owner"}).Return(done, nil).
-		On("RemoveWorkspaceDevice", name, blob.Name).Return(nil)
+		On("RemoveWorkspaceDevice", name, mock.Anything, blob.Name).Return(nil)
 
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)
 

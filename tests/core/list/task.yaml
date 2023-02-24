@@ -24,13 +24,12 @@ restore: |
 
 execute: |
   echo $FIRST_WS_NAME must present in the list of a projects workspaces but not $SECOND_WS_NAME
-  sudo -i -u ubuntu -- workspace --project /home/ubuntu list | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu workspace list | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu workspace list | NOMATCH "^~[[:space:]]+xbert-gpu$"
+  sudo -i -u ubuntu -- workspace --project /home/ubuntu list | MATCH "^~[[:space:]]+xbert[[:space:]]+ready$"
+  sudo -i -u ubuntu workspace list | NOMATCH "^~[[:space:]]+xbert-gpu[[:space:]]+ready$"
 
   echo $FIRST_WS_NAME and $SECOND_WS_NAME must present in the list of all workspaces
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert-gpu$"
+  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert[[:space:]]+ready$"
+  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert-gpu[[:space:]]+ready$"
 
 
 

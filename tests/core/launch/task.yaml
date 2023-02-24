@@ -2,18 +2,26 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
   WS_NAME: launch-test
   PROJECT: /home/ubuntu/translation
-
+  PROJECT_ID: 1
 execute: |
   function assert_workspace_config() {
     echo Validate project directory mount
-    lxc config device get $WS_NAME workspace.project source | MATCH $PROJECT
-    lxc config device get $WS_NAME workspace.project path | MATCH /project
+    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project source | MATCH $PROJECT
+    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project path | MATCH /project
+    lxc config device get workspace-$WS_NAME-$PROJECT_ID user workspace.project-id | MATCH $PROJECT_ID
 
     echo $WS_NAME must be in a RUNNING state
     lxc list -c ns -f compact | MATCH "$WS_NAME  RUNNING"
   }
 
   sudo -u ubuntu -i -- mkdir -p $PROJECT
+
+  # create a project for validating results
+  sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.lock
+  path: $PROJECT
+  project-id: $PROJECT_ID
+  EOF
+
   for base in ubuntu@20.04 ubuntu@22.04
   do
     sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.$WS_NAME.yaml
