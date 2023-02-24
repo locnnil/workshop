@@ -103,6 +103,42 @@ func (w *Project) SaveProject() error {
 }
 
 func (w *Project) EnumWorkspaces() (map[string]srv.WorkspaceProps, error) {
+	/* (1) Find all the project's workspace files */
+	workspaces, err := w.enumWorkspaceFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	/* (2) List all the project's instances */
+	instances, err := w.enumWorkspaceInstances()
+	if err != nil {
+		return nil, err
+	}
+
+	/* (3) Merge both lists from (1) and (2) to build a list of workspaces with their states */
+	result := make(map[string]srv.WorkspaceProps, len(workspaces)+len(instances))
+	for i, val := range workspaces {
+		if inst, ok := instances[i]; !ok {
+			/* We only have a file no instance */
+			val.State = util.Inactive
+		} else {
+			/* Both a file and instance exists */
+			val.State = inst.State
+			delete(instances, i)
+		}
+		result[i] = val
+	}
+
+	/* Now, instances contains only orphaned workspaces, i.e. no file */
+	for i, val := range instances {
+		val.State = util.Orphaned
+		result[i] = val
+	}
+
+	return result, nil
+}
+
+func (w *Project) enumWorkspaceFiles() (map[string]srv.WorkspaceProps, error) {
 	files, err := afero.ReadDir(w.fs, w.Path)
 	if err != nil {
 		return nil, err
@@ -110,7 +146,6 @@ func (w *Project) EnumWorkspaces() (map[string]srv.WorkspaceProps, error) {
 
 	var workspaces = make(map[string]srv.WorkspaceProps, len(files))
 
-	/* (1) Find all the project's workspace files */
 	for _, info := range files {
 		if info.IsDir() {
 			continue
@@ -118,15 +153,18 @@ func (w *Project) EnumWorkspaces() (map[string]srv.WorkspaceProps, error) {
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces[names[1]] = srv.WorkspaceProps{Name: names[1], FileName: util.ToFileName(names[1])}
+			workspaces[names[1]] = srv.WorkspaceProps{Name: names[1]}
 		}
 	}
-
-	/* (2) List all the project's instances */
-
-	/* (3) Merge both lists from (1) and (2) to build a list of workspaces with their statuses */
-
 	return workspaces, nil
+}
+
+func (w *Project) enumWorkspaceInstances() (map[string]srv.WorkspaceProps, error) {
+	instances, err := w.server.GetWorkspaces(srv.NewWorkspaceFilter("user.workspace.project-id", w.GetProjectId()))
+	if err != nil {
+		return instances, err
+	}
+	return instances, nil
 }
 
 func (w *Project) EnumAllWorkspaces() (map[string]srv.WorkspaceProps, error) {
@@ -135,5 +173,4 @@ func (w *Project) EnumAllWorkspaces() (map[string]srv.WorkspaceProps, error) {
 		return nil, err
 	}
 	return workspaces, err
-
 }

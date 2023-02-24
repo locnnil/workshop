@@ -43,9 +43,8 @@ func (s *LaunchTestSuite) createTestFile(filename string, data []byte) string {
 }
 
 func (s *LaunchTestSuite) createTestWorkspace(name string, data []byte) srv.WorkspaceProps {
-	return srv.WorkspaceProps{Name: name,
-		FileName: s.createTestFile(filepath.Join(s.Project.GetProjectDirectory(), util.ToFileName(name)),
-			data)}
+	s.createTestFile(filepath.Join(s.Project.GetProjectDirectory(), util.ToFileName(name)), data)
+	return srv.WorkspaceProps{Name: name}
 }
 
 var dataNoSDK = []byte(`name: translation
@@ -112,8 +111,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 		On("LaunchWorkspaceInstance", name, "ubuntu@20.04").Return(nil).
 		On("AddWorkspaceConfig", name, mock.Anything).Return(nil).
 		On("AddWorkspaceDevice", name, project).Return(nil).
-		On("SetWorkspaceState", name, "start").Return(nil).
-		On("AddWorkspaceConfig", name, &srv.WorkspaceConfig{Name: "user.workspace.state", Value: "ready"}).Return(nil)
+		On("SetWorkspaceState", name, "start").Return(nil)
 
 	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
 	assert.ErrorIs(s.T(), err, nil)
@@ -154,8 +152,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 			filepath.Join("/root", filename),
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
 			"--no-same-owner"}).Return(done, nil).
-		On("RemoveWorkspaceDevice", name, blob.Name).Return(nil).
-		On("AddWorkspaceConfig", name, &srv.WorkspaceConfig{Name: "user.workspace.state", Value: "ready"}).Return(nil)
+		On("RemoveWorkspaceDevice", name, blob.Name).Return(nil)
 
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)
 

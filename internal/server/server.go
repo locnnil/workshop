@@ -36,8 +36,8 @@ type WorkspaceConfig struct {
 }
 
 type WorkspaceProps struct {
-	Name     string
-	FileName string
+	Name  string
+	State util.WorkspaceState
 }
 
 type WorkspaceFilter func(config map[string]string) bool
@@ -363,8 +363,7 @@ func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceP
 		if filter(i.Config) {
 			if err == nil {
 				ws[i.Name] = WorkspaceProps{
-					Name:     i.Name,
-					FileName: util.ToFileName(i.Name),
+					Name: i.Name,
 				}
 			}
 		}

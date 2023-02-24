@@ -20,6 +20,19 @@ var (
 	DataDir, SdksDir, WorkspaceSdksDir string
 )
 
+type WorkspaceState int
+
+const (
+	Inactive WorkspaceState = iota
+	Ready
+	Stopped
+	Orphaned
+)
+
+func (s WorkspaceState) String() string {
+	return [...]string{"inactive", "ready", "stopped", "orphaned"}[s]
+}
+
 func ToFileName(name string) string {
 	return fmt.Sprintf(".workspace.%s.yaml", name)
 }

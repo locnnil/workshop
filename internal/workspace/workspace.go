@@ -31,17 +31,6 @@ type WorkspaceInstance struct {
 	fs     afero.Fs
 }
 
-type WorkspaceState int
-
-const (
-	Inactive WorkspaceState = iota
-	Ready
-)
-
-func (s WorkspaceState) String() string {
-	return [...]string{"inactive", "ready"}[s]
-}
-
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
@@ -55,7 +44,7 @@ func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws 
 		fs:      fs,
 	}
 
-	buf, err := afero.ReadFile(fs, filepath.Join(project.GetProjectDirectory(), ws.FileName))
+	buf, err := afero.ReadFile(fs, filepath.Join(project.GetProjectDirectory(), util.ToFileName(ws.Name)))
 
 	if err != nil {
 		return nil, err
@@ -75,7 +64,7 @@ func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws 
 	}
 
 	if inst.Name != ws.Name {
-		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, ws.FileName)
+		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, util.ToFileName(ws.Name))
 	}
 
 	for i, k := range inst.SDKs {
@@ -144,15 +133,6 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		}
 
 		/* TODO: Run lifecycle hooks */
-	}
-
-	/* Configure workspace core properties: state field */
-	var state = srv.WorkspaceConfig{
-		Name:  "user.workspace.state",
-		Value: Ready.String(),
-	}
-	if err = w.server.AddWorkspaceConfig(w.Name, &state); err != nil {
-		return err
 	}
 
 	fmt.Printf("Workspace \"%s\" started.\n", w.Name)
