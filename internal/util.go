@@ -26,11 +26,12 @@ const (
 	Inactive WorkspaceState = iota
 	Ready
 	Stopped
+	Pending
 	Orphaned
 )
 
 func (s WorkspaceState) String() string {
-	return [...]string{"inactive", "ready", "stopped", "orphaned"}[s]
+	return [...]string{"inactive", "ready", "stopped", "pending", "orphaned"}[s]
 }
 
 func ToFileName(name string) string {

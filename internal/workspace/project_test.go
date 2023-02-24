@@ -2,12 +2,14 @@ package workspace
 
 import (
 	"math/rand"
+	"net/http"
 	"path/filepath"
 	"testing"
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/server"
+	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -84,6 +86,26 @@ func (s *ProjectTestSuite) TestEnumInstancesNoFilesNoInstances() {
 
 	assert.Empty(s.T(), result)
 	assert.NoError(s.T(), err)
+}
+
+func (s *ProjectTestSuite) TestEnumInstancesErrorFromServer() {
+	project, _ := NewProject(s.Srv, s.Fs, "/")
+	s.Srv.On("GetWorkspaces", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
+
+	result, err := project.EnumWorkspaces()
+
+	assert.Nil(s.T(), result)
+	assert.Error(s.T(), err)
+}
+
+func (s *ProjectTestSuite) TestEnumInstancesErrorReadingProjectDirectory() {
+	project, _ := NewProject(s.Srv, s.Fs, "/")
+	s.Fs.RemoveAll("/")
+
+	result, err := project.EnumWorkspaces()
+
+	assert.Nil(s.T(), result)
+	assert.Error(s.T(), err)
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesFilesOnly() {

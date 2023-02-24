@@ -70,12 +70,13 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\n")
+	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
 
-	for i := range wsList {
+	for i, val := range wsList {
 		line := []string{
 			contractHomeDirectory(project.GetProjectDirectory()),
 			i,
+			val.State.String(),
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}

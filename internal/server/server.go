@@ -361,11 +361,21 @@ func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceP
 	var ws map[string]WorkspaceProps = make(map[string]WorkspaceProps, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			if err == nil {
-				ws[i.Name] = WorkspaceProps{
-					Name: i.Name,
-				}
+			var state util.WorkspaceState
+			switch i.StatusCode {
+			case api.Running, api.Ready:
+				state = util.Ready
+			case api.Stopped:
+				state = util.Stopped
+			default:
+				state = util.Pending
 			}
+
+			ws[i.Name] = WorkspaceProps{
+				Name:  i.Name,
+				State: state,
+			}
+
 		}
 	}
 
