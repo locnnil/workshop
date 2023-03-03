@@ -8,6 +8,7 @@ import (
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	srv "github.com/canonical/workspace/internal/server"
+	"github.com/canonical/workspace/internal/state"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
@@ -87,6 +88,39 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	var err error
 
 	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
+
+	st := state.New(&state.FakeBackend{})
+	launch := st.NewChange("launch", fmt.Sprintf("Launch workspace \"%s\"", w.Name))
+
+	downloads := state.NewTaskSet()
+	installs := state.NewTaskSet()
+	for name, sdk := range w.SDKs {
+		download := st.NewTask("download-sdk", fmt.Sprintf("Download SDK \"%s\"", name))
+		download.Set("sdk-props", sdk)
+		downloads.AddTask(download)
+
+		install := st.NewTask("install-sdk", fmt.Sprintf("Install SDK \"%s\"", name))
+		install.Set("download-sdk-task", download.ID())
+		installs.AddTask(install)
+	}
+
+	start := st.NewTask("start-workspace-base", fmt.Sprintf("Start workspace \"%s\" base", w.Name))
+	start.Set("workspace-props", w)
+	start.WaitAll(downloads)
+
+	project := st.NewTask("add-device", fmt.Sprintf("Mount project directory \"%s\"", w.project.GetProjectDirectory()))
+	project.Set("mount-props", srv.WorkspaceDevice{
+		Name: srv.PROJECT_DEVICE_NAME,
+		Properties: map[string]string{"type": "disk",
+			"source": w.project.GetProjectDirectory(),
+			"path":   "/project"},
+	})
+	project.WaitFor(start)
+	installs.WaitFor(project)
+
+	ready := st.NewTask("set-workspace-state", "Set \"%s\" to a Ready state")
+	ready.Set("state", util.Ready)
+	ready.WaitAll(installs)
 
 	/* Launch a workspace with the required base */
 	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base, w.project.GetProjectId()); err != nil {
