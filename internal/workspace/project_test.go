@@ -36,16 +36,16 @@ func (s *ProjectTestSuite) SetupTest() {
 
 func (s *ProjectTestSuite) TestEnumWorkspacesInACWD() {
 	t := s.T()
-	fs := afero.NewMemMapFs()
-	project, _ := NewProject(nil, fs, "/")
-	afero.WriteFile(fs, ".workspace.project1.yaml", []byte(""), 0644)
-	afero.WriteFile(fs, ".workspace.project2.yaml", []byte(""), 0644)
-	afero.WriteFile(fs, "workspace.project3.yaml", []byte(""), 0644)
+	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
+	afero.WriteFile(s.Fs, ".workspace.project2.yaml", []byte(""), 0644)
+	afero.WriteFile(s.Fs, "workspace.project3.yaml", []byte(""), 0644)
+	s.Fs.Mkdir(".workspace.project2dir.yaml", 0755)
+	afero.WriteFile(s.Fs, ".workspace.yaml", []byte(""), 0644)
+	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
-	fs.Mkdir(".workspace.project2dir.yaml", 0755)
-	afero.WriteFile(fs, ".workspace.yaml", []byte(""), 0644)
-
+	project := &Project{fs: s.Fs}
 	ws, err := project.enumWorkspaceFiles()
+
 	assert.Contains(t, ws, "project1")
 	assert.Equal(t, ws["project1"].Name, "project1")
 	assert.Contains(t, ws, "project2")
@@ -63,12 +63,12 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInAGivenProject() {
 	fs.MkdirAll("/tmp/experiments", 0755)
 	defer fs.RemoveAll("/tmp/experiments")
 
-	project, err := NewProject(nil, fs, "/tmp/experiments")
-	assert.NoError(t, err)
+	project := &Project{fs: s.Fs, Path: "/tmp/experiments"}
+
 	afero.WriteFile(fs, filepath.Join(project.GetProjectDirectory(), ".workspace.project1.yaml"), []byte(""), 0755)
 
 	/* No relative paths are allowed */
-	project, err = NewProject(nil, fs, "../tmp/experiments")
+	project, err := NewProject(nil, fs, "../tmp/experiments")
 	assert.Nil(t, project)
 	assert.Error(t, ErrNoRelativePathsAllowed, err)
 
@@ -79,8 +79,8 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInAGivenProject() {
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesNoFilesNoInstances() {
+	s.Srv.On("GetWorkspaces", mock.Anything).Twice().Return(map[string]*server.WorkspaceProps{}, nil)
 	project, _ := NewProject(s.Srv, s.Fs, "/")
-	s.Srv.On("GetWorkspaces", mock.Anything).Return(map[string]server.WorkspaceProps{}, nil)
 
 	result, err := project.EnumWorkspaces()
 
@@ -89,29 +89,30 @@ func (s *ProjectTestSuite) TestEnumInstancesNoFilesNoInstances() {
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesErrorFromServer() {
-	project, _ := NewProject(s.Srv, s.Fs, "/")
-	s.Srv.On("GetWorkspaces", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
+	s.Srv.
+		On("GetWorkspaces", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
 
-	result, err := project.EnumWorkspaces()
+	project, err := NewProject(s.Srv, s.Fs, "/")
 
-	assert.Nil(s.T(), result)
+	assert.Nil(s.T(), project)
 	assert.Error(s.T(), err)
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesErrorReadingProjectDirectory() {
+	s.Srv.On("GetWorkspaces", mock.Anything).Return(map[string]*server.WorkspaceProps{}, nil)
 	project, _ := NewProject(s.Srv, s.Fs, "/")
 	s.Fs.RemoveAll("/")
 
-	result, err := project.EnumWorkspaces()
+	result, err := project.enumWorkspaceFiles()
 
 	assert.Nil(s.T(), result)
 	assert.Error(s.T(), err)
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesFilesOnly() {
+	s.Srv.On("GetWorkspaces", mock.Anything).Twice().Return(map[string]*server.WorkspaceProps{}, nil)
 	project, _ := NewProject(s.Srv, s.Fs, "/")
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
-	s.Srv.On("GetWorkspaces", mock.Anything).Return(map[string]server.WorkspaceProps{}, nil)
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
@@ -121,26 +122,24 @@ func (s *ProjectTestSuite) TestEnumInstancesFilesOnly() {
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesInstancesOnly() {
-	project, _ := NewProject(s.Srv, s.Fs, "/")
-	instances := map[string]server.WorkspaceProps{
+	instances := map[string]*server.WorkspaceProps{
 		"instance1": {
 			Name:  "instance1",
 			State: util.Ready,
 		},
 	}
-	s.Srv.On("GetWorkspaces", mock.Anything).Return(instances, nil)
+	s.Srv.On("GetWorkspaces", mock.Anything).Twice().Return(instances, nil)
+	project, _ := NewProject(s.Srv, s.Fs, "/")
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
 	assert.Contains(s.T(), result, "instance1")
-	assert.Equal(s.T(), util.Orphaned, result["instance1"].State)
+	assert.Equal(s.T(), util.Error, result["instance1"].State)
 	assert.Equal(s.T(), "instance1", result["instance1"].Name)
 }
 
 func (s *ProjectTestSuite) TestEnumInstancesSomeOrphanedInstances() {
-	project, _ := NewProject(s.Srv, s.Fs, "/")
-	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
-	instances := map[string]server.WorkspaceProps{
+	instances := map[string]*server.WorkspaceProps{
 		"instance1": {
 			Name:  "instance1",
 			State: util.Ready,
@@ -150,12 +149,14 @@ func (s *ProjectTestSuite) TestEnumInstancesSomeOrphanedInstances() {
 			State: util.Ready,
 		},
 	}
-	s.Srv.On("GetWorkspaces", mock.Anything).Return(instances, nil)
+	s.Srv.On("GetWorkspaces", mock.Anything).Twice().Return(instances, nil)
+	project, _ := NewProject(s.Srv, s.Fs, "/")
+	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
 	assert.Contains(s.T(), result, "instance1")
-	assert.Equal(s.T(), util.Orphaned, result["instance1"].State)
+	assert.Equal(s.T(), util.Error, result["instance1"].State)
 	assert.Equal(s.T(), "instance1", result["instance1"].Name)
 
 	assert.Contains(s.T(), result, "project1")

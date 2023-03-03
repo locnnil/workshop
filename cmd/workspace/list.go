@@ -33,7 +33,7 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	var wsList map[string]srv.WorkspaceProps
+	var wsList map[string]*srv.WorkspaceProps
 	var err error
 	var server srv.WorkspaceServer
 	var fs = afero.NewOsFs()

@@ -35,7 +35,7 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws srv.WorkspaceProps) (Workspace, error) {
+func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws *srv.WorkspaceProps) (Workspace, error) {
 	var err error
 
 	var inst = WorkspaceInstance{
@@ -95,11 +95,17 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 
 	/* Configure workspace core properties: project directory */
 	var prjMount = srv.WorkspaceDevice{
-		Name:       srv.PROJECT_DEVICE_NAME,
+		Name:       srv.PROJECT_DEVICE,
 		Properties: map[string]string{"type": "disk", "source": w.project.GetProjectDirectory(), "path": "/project"},
 	}
 
 	if err = w.server.AddWorkspaceDevice(w.Name, w.project.GetProjectId(), prjMount); err != nil {
+		return err
+	}
+
+	/* Configure workspace core properties: project directory */
+	var path = srv.WorkspaceConfigValue{Name: "user.workspace.project", Value: w.project.GetProjectDirectory()}
+	if err = w.server.AddWorkspaceConfig(w.Name, w.project.GetProjectId(), &path); err != nil {
 		return err
 	}
 

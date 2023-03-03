@@ -47,7 +47,7 @@ func (s *LxdServerTestSuite) TestLaunchLocalImageExists() {
 	}
 
 	s.InstMock.
-		On("GetInstance", util.ToInstanceName(name, project)).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetInstance", "test-12345").Return((*api.Instance)(nil), "", ApiErrNotFound).
 		On("GetImageAlias", "ubuntu@20.04").Return(&alias, "", nil).
 		On("GetImage", fingerprint).Return(&image, "", nil).
 		On("CreateInstanceFromImage", &s.Srv, image, mock.Anything).Return(op, nil)
@@ -81,7 +81,7 @@ func (s *LxdServerTestSuite) TestLaunchNoLocalImage() {
 	image.Fingerprint = fingerprint
 
 	s.InstMock.
-		On("GetInstance", util.ToInstanceName(name, project)).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetInstance", "test-12345").Return((*api.Instance)(nil), "", ApiErrNotFound).
 		On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "", ApiErrNotFound).
 		On("CreateImageAlias", localImageAlias).Return(nil).
 		On("CreateInstanceFromImage", s.ImgMock, image, mock.Anything).Return(op, nil)

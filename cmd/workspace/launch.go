@@ -76,7 +76,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	/* We are officially launching here, so whatever happens, the project should persist */
+	/* We are officially launching here, so whatever happens, the project should persist if still not */
 	defer project.SaveProject()
 
 	if err = ws.Launch(storeClient); err != nil {
@@ -87,7 +87,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	return err
 }
 
-func printWorkspaces(wsList map[string]srv.WorkspaceProps) {
+func printWorkspaces(wsList map[string]*srv.WorkspaceProps) {
 	if len(wsList) > 0 {
 		fmt.Printf("Available workspaces:\n")
 		for _, k := range wsList {

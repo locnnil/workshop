@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 
 	"path/filepath"
 
@@ -27,7 +28,7 @@ const (
 	Ready
 	Stopped
 	Pending
-	Orphaned
+	Error
 )
 
 func (s WorkspaceState) String() string {
@@ -39,7 +40,17 @@ func ToFileName(name string) string {
 }
 
 func ToInstanceName(name string, project_id string) string {
-	return fmt.Sprintf("workspace-%s-%s", name, project_id)
+	return fmt.Sprintf("%s-%s", name, project_id)
+}
+
+func ToWorkspaceName(instance string) string {
+	idx := strings.LastIndex(instance, "-")
+	if idx == -1 {
+		return ""
+	}
+
+	// drop the project id from the name
+	return instance[:idx]
 }
 
 func init() {

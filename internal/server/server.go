@@ -36,8 +36,10 @@ type WorkspaceConfigValue struct {
 }
 
 type WorkspaceProps struct {
-	Name  string
-	State util.WorkspaceState
+	Name    string
+	State   util.WorkspaceState
+	Devices map[string]map[string]string
+	Config  map[string]string
 }
 
 type WorkspaceFilter func(config map[string]string) bool
@@ -48,7 +50,7 @@ func NewWorkspaceFilter(key string, value string) WorkspaceFilter {
 	}
 }
 
-func NoWorkspaceFilter() WorkspaceFilter {
+func EveryWorkspace() WorkspaceFilter {
 	return func(config map[string]string) bool {
 		return true
 	}
@@ -66,7 +68,7 @@ type WorkspaceServer interface {
 	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
-	GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error)
+	GetWorkspaces(filter WorkspaceFilter) (map[string]*WorkspaceProps, error)
 
 	Exec(name, project_id, user string, command []string) (chan bool, error)
 }
@@ -78,7 +80,7 @@ type LxdServer struct {
 
 const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
 
-const PROJECT_DEVICE_NAME = "workspace.project"
+const PROJECT_DEVICE = "workspace.project"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
@@ -172,7 +174,6 @@ func (s *LxdServer) launchInstance(name, project_id string, imageServer *lxd.Ima
 			Config: map[string]string{
 				"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
 				"security.nesting":          "true",
-				"user.workspace.name":       name,
 				"user.workspace.project-id": project_id,
 			},
 		},
@@ -359,12 +360,12 @@ func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device Workspace
 	return nil
 }
 
-func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error) {
+func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]*WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]WorkspaceProps = make(map[string]WorkspaceProps, len(instances))
+	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
 			var state util.WorkspaceState
@@ -376,10 +377,12 @@ func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceP
 			default:
 				state = util.Pending
 			}
-			name := i.Config["user.workspace.name"]
-			ws[name] = WorkspaceProps{
-				Name:  name,
-				State: state,
+			name := util.ToWorkspaceName(i.Name)
+			ws[name] = &WorkspaceProps{
+				Name:    name,
+				State:   state,
+				Devices: i.Devices,
+				Config:  i.Config,
 			}
 
 		}
