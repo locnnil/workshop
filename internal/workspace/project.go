@@ -114,12 +114,14 @@ func (w *Project) UpdateProjectDirectory(path string) error {
 }
 
 func (w *Project) ReadProject(path string) error {
-	if buf, err := afero.ReadFile(w.fs, filepath.Join(path, PROJECT_FILE_NAME)); err == nil {
+	var err error
+	var buf []byte
+	if buf, err = afero.ReadFile(w.fs, filepath.Join(path, PROJECT_FILE_NAME)); err == nil {
 		if err = yaml.Unmarshal(buf, w); err != nil {
 			return nil
 		}
 	}
-	return nil
+	return err
 }
 
 func (w *Project) SaveProject() error {

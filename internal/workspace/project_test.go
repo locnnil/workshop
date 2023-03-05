@@ -164,3 +164,15 @@ func (s *ProjectTestSuite) TestEnumInstancesSomeOrphanedInstances() {
 	assert.Equal(s.T(), "project1", result["project1"].Name)
 	assert.Len(s.T(), result, 2)
 }
+
+func (s *ProjectTestSuite) TestReadProject() {
+	project := Project{fs: s.Fs}
+
+	err := project.ReadProject("/project")
+	assert.Error(s.T(), err)
+
+	afero.WriteFile(s.Fs, "/.workspace.lock", []byte(""), 0644)
+
+	err = project.ReadProject("/")
+	assert.NoError(s.T(), err)
+}
