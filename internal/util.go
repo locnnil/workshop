@@ -1,7 +1,9 @@
 package util
 
 import (
+	"encoding/binary"
 	"fmt"
+
 	"os"
 	"os/signal"
 	"strings"
@@ -10,6 +12,10 @@ import (
 
 	"github.com/adrg/xdg"
 	lxd "github.com/lxc/lxd/client"
+
+	"math/rand"
+
+	crypto_rand "crypto/rand"
 )
 
 var (
@@ -54,6 +60,13 @@ func ToWorkspaceName(instance string) string {
 }
 
 func init() {
+	var b [8]byte
+	_, err := crypto_rand.Read(b[:])
+	if err != nil {
+		panic("cannot seed math/rand package")
+	}
+	rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")
 	SdksDir = filepath.Join(DataDir, "sdks")

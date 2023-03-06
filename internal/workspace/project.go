@@ -1,8 +1,8 @@
 package workspace
 
 import (
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/rand"
 	"path/filepath"
 	"regexp"
@@ -82,7 +82,10 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 			/* The project did not exist before, initialise, but do not create a project file here
 			   We might just be running for a list of available workspaces here is a newly checked out directory
 			*/
-			project.projectId = fmt.Sprintf("%d", rand.Int63())
+			project.projectId, err = newProjectId()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	} else {
@@ -194,4 +197,13 @@ func (w *Project) EnumAllWorkspaces() (map[string]*srv.WorkspaceProps, error) {
 		return nil, err
 	}
 	return workspaces, err
+}
+
+func newProjectId() (string, error) {
+	bytes := make([]byte, 4)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
