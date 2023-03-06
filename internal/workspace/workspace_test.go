@@ -108,7 +108,6 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 	s.Srv.
 		On("LaunchWorkspaceInstance", name, "ubuntu@20.04", mock.Anything).Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, project).Return(nil).
-		On("AddWorkspaceConfig", name, s.Project.GetProjectId(), &srv.WorkspaceConfigValue{Name: "user.workspace.project", Value: s.Project.GetProjectDirectory()}).Return(nil).
 		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil)
 
 	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
@@ -141,7 +140,6 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 	s.Srv.
 		On("LaunchWorkspaceInstance", name, "ubuntu@20.04", mock.Anything).Return(nil).
 		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil).
-		On("AddWorkspaceConfig", name, s.Project.GetProjectId(), &srv.WorkspaceConfigValue{Name: "user.workspace.project", Value: s.Project.GetProjectDirectory()}).Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, mock.Anything).Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, device).Return(nil).
 		On("Exec", name, mock.Anything, "root", []string{"tar",

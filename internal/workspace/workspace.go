@@ -103,12 +103,6 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 		return err
 	}
 
-	/* Configure workspace core properties: project directory */
-	var path = srv.WorkspaceConfigValue{Name: "user.workspace.project", Value: w.project.GetProjectDirectory()}
-	if err = w.server.AddWorkspaceConfig(w.Name, w.project.GetProjectId(), &path); err != nil {
-		return err
-	}
-
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
 	if err = w.Start(); err != nil {
 		return err

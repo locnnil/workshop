@@ -59,12 +59,19 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 					Name:       srv.PROJECT_DEVICE,
 					Properties: map[string]string{"type": "disk", "source": path, "path": "/project"},
 				}
-				server.AddWorkspacesDevice(srv.NewWorkspaceFilter("user.workspace.project-id", project.GetProjectId()), mount)
+				server.AddWorkspacesDevice(srv.NewWorkspaceConfigFilter("user.workspace.project-id", project.GetProjectId()), mount)
 			}
 		}
 	} else if errors.Is(err, afero.ErrFileNotFound) {
 		/* See if the project DID exist at this directory path and if so, try to recover it */
-		instances, err := server.GetWorkspaces(srv.NewWorkspaceFilter("user.workspace.project", path))
+		instances, err := server.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
+			if mount, ok := devices["workspace.project"]; ok {
+				if mount["source"] == project.path {
+					return true
+				}
+			}
+			return false
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +191,7 @@ func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
 }
 
 func (w *Project) enumWorkspaceInstances() (map[string]*srv.WorkspaceProps, error) {
-	instances, err := w.server.GetWorkspaces(srv.NewWorkspaceFilter("user.workspace.project-id", w.GetProjectId()))
+	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter("user.workspace.project-id", w.GetProjectId()))
 	if err != nil {
 		return instances, err
 	}
@@ -192,7 +199,7 @@ func (w *Project) enumWorkspaceInstances() (map[string]*srv.WorkspaceProps, erro
 }
 
 func (w *Project) EnumAllWorkspaces() (map[string]*srv.WorkspaceProps, error) {
-	workspaces, err := w.server.GetWorkspaces(srv.EveryWorkspace())
+	workspaces, err := w.server.GetWorkspacesByConfig(srv.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}

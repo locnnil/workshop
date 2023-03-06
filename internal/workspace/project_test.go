@@ -73,7 +73,7 @@ func (s *ProjectTestSuite) TestNewProject() {
 	assert.Error(t, err)
 
 	/* Project exists, no workspace instances */
-	h := s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
+	h := s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("PROJECTID"), 0644)
 	project, err = NewProject(s.Srv, s.Fs, "/")
 	assert.NotNil(t, project)
@@ -90,7 +90,7 @@ func (s *ProjectTestSuite) TestNewProject() {
 		},
 	}
 	h.Unset()
-	s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(instances, nil)
+	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project, err = NewProject(s.Srv, s.Fs, "/")
 	assert.NotNil(t, project)
 	assert.Equal(t, "/", project.GetProjectDirectory())
@@ -98,7 +98,7 @@ func (s *ProjectTestSuite) TestNewProject() {
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
-	s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
+	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 
 	result, err := project.EnumWorkspaces()
@@ -109,7 +109,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
 
 func (s *ProjectTestSuite) TestEnumInstancesErrorFromServer() {
 	s.Srv.
-		On("GetWorkspaces", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
+		On("GetWorkspacesByDevices", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
 
 	project, err := NewProject(s.Srv, s.Fs, "/")
 
@@ -128,7 +128,7 @@ func (s *ProjectTestSuite) TestEnumFilesErrorReadingProjectDirectory() {
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
-	s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
+	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
@@ -146,7 +146,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 			State: util.Ready,
 		},
 	}
-	s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(instances, nil)
+	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 
 	result, err := project.EnumWorkspaces()
@@ -167,7 +167,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
 			State: util.Ready,
 		},
 	}
-	s.Srv.On("GetWorkspaces", mock.Anything).Once().Return(instances, nil)
+	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 

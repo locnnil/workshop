@@ -41,11 +41,11 @@ func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, project_id string
 }
 
 // AddWorkspacesDevice provides a mock function with given fields: filter, props
-func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceFilter, props server.WorkspaceDevice) error {
+func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceConfigFilter, props server.WorkspaceDevice) error {
 	ret := _m.Called(filter, props)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter, server.WorkspaceDevice) error); ok {
+	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter, server.WorkspaceDevice) error); ok {
 		r0 = rf(filter, props)
 	} else {
 		r0 = ret.Error(0)
@@ -77,12 +77,12 @@ func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string,
 	return r0, r1
 }
 
-// GetWorkspaces provides a mock function with given fields: filter
-func (_m *MockWorkspaceServer) GetWorkspaces(filter server.WorkspaceFilter) (map[string]*server.WorkspaceProps, error) {
+// GetWorkspacesByConfig provides a mock function with given fields: filter
+func (_m *MockWorkspaceServer) GetWorkspacesByConfig(filter server.WorkspaceConfigFilter) (map[string]*server.WorkspaceProps, error) {
 	ret := _m.Called(filter)
 
 	var r0 map[string]*server.WorkspaceProps
-	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter) map[string]*server.WorkspaceProps); ok {
+	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter) map[string]*server.WorkspaceProps); ok {
 		r0 = rf(filter)
 	} else {
 		if ret.Get(0) != nil {
@@ -91,7 +91,30 @@ func (_m *MockWorkspaceServer) GetWorkspaces(filter server.WorkspaceFilter) (map
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(server.WorkspaceFilter) error); ok {
+	if rf, ok := ret.Get(1).(func(server.WorkspaceConfigFilter) error); ok {
+		r1 = rf(filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspacesByDevices provides a mock function with given fields: filter
+func (_m *MockWorkspaceServer) GetWorkspacesByDevices(filter server.WorkspaceDeviceFilter) (map[string]*server.WorkspaceProps, error) {
+	ret := _m.Called(filter)
+
+	var r0 map[string]*server.WorkspaceProps
+	if rf, ok := ret.Get(0).(func(server.WorkspaceDeviceFilter) map[string]*server.WorkspaceProps); ok {
+		r0 = rf(filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]*server.WorkspaceProps)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(server.WorkspaceDeviceFilter) error); ok {
 		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)

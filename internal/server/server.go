@@ -42,15 +42,16 @@ type WorkspaceProps struct {
 	Config  map[string]string
 }
 
-type WorkspaceFilter func(config map[string]string) bool
+type WorkspaceConfigFilter func(config map[string]string) bool
+type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
 
-func NewWorkspaceFilter(key string, value string) WorkspaceFilter {
+func NewWorkspaceConfigFilter(key string, value string) WorkspaceConfigFilter {
 	return func(config map[string]string) bool {
 		return config[key] == value
 	}
 }
 
-func EveryWorkspace() WorkspaceFilter {
+func EveryWorkspace() WorkspaceConfigFilter {
 	return func(config map[string]string) bool {
 		return true
 	}
@@ -60,7 +61,7 @@ type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
-	AddWorkspacesDevice(filter WorkspaceFilter, props WorkspaceDevice) error
+	AddWorkspacesDevice(filter WorkspaceConfigFilter, props WorkspaceDevice) error
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
 
 	RemoveWorkspaceDevice(name, project_id, device string) error
@@ -68,7 +69,8 @@ type WorkspaceServer interface {
 	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
-	GetWorkspaces(filter WorkspaceFilter) (map[string]*WorkspaceProps, error)
+	GetWorkspacesByConfig(filter WorkspaceConfigFilter) (map[string]*WorkspaceProps, error)
+	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
 	Exec(name, project_id, user string, command []string) (chan bool, error)
 }
@@ -344,7 +346,7 @@ func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan 
 	return done, nil
 }
 
-func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device WorkspaceDevice) error {
+func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceConfigFilter, device WorkspaceDevice) error {
 	inst, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return err
@@ -360,7 +362,7 @@ func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device Workspace
 	return nil
 }
 
-func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]*WorkspaceProps, error) {
+func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) (map[string]*WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
@@ -368,19 +370,32 @@ func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]*Workspace
 	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			var state util.WorkspaceState
-			switch i.StatusCode {
-			case api.Running, api.Ready:
-				state = util.Ready
-			case api.Stopped:
-				state = util.Stopped
-			default:
-				state = util.Pending
-			}
 			name := util.ToWorkspaceName(i.Name)
 			ws[name] = &WorkspaceProps{
 				Name:    name,
-				State:   state,
+				State:   getWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			}
+
+		}
+	}
+
+	return ws, nil
+}
+
+func (s *LxdServer) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	instances, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	for _, i := range instances {
+		if filter(i.Devices) {
+			name := util.ToWorkspaceName(i.Name)
+			ws[name] = &WorkspaceProps{
+				Name:    name,
+				State:   getWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
 				Config:  i.Config,
 			}
@@ -413,4 +428,17 @@ func SignalHandler(control *websocket.Conn) {
 			}
 		}
 	}
+}
+
+func getWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
+	var state util.WorkspaceState
+	switch lxdStatus {
+	case api.Running, api.Ready:
+		state = util.Ready
+	case api.Stopped:
+		state = util.Stopped
+	default:
+		state = util.Pending
+	}
+	return state
 }
