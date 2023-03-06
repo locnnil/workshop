@@ -28,7 +28,7 @@ func (s *LaunchTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
 	s.Srv = mocks.NewMockWorkspaceServer(s.T())
 	s.Store = mocks.NewMockStoreClient(s.T())
-	s.Project = &Project{server: s.Srv, fs: s.Fs, Path: "/", ProjectId: "12345"}
+	s.Project = &Project{server: s.Srv, fs: s.Fs, path: "/", projectId: "12345"}
 	s.Fs.MkdirAll(util.DataDir, 0755)
 	s.Fs.MkdirAll(util.SdksDir, 0755)
 	rand.Seed(1)
@@ -90,7 +90,7 @@ func (s *LaunchTestSuite) TestNewWorkspaceWithSDKsWithProject() {
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
 	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv, fs: s.Fs,
-		project: &Project{Path: "/project", fs: s.Fs}}
+		project: &Project{path: "/project", fs: s.Fs}}
 
 	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04", mock.Anything).Return(api.StatusErrorf(404, "Not found"))
 	ws.Launch(s.Store)

@@ -32,7 +32,7 @@ const (
 )
 
 func (s WorkspaceState) String() string {
-	return [...]string{"inactive", "ready", "stopped", "pending", "orphaned"}[s]
+	return [...]string{"Inactive", "Ready", "Stopped", "Pending", "Error"}[s]
 }
 
 func ToFileName(name string) string {

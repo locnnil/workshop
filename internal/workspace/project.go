@@ -11,12 +11,11 @@ import (
 	srv "github.com/canonical/workspace/internal/server"
 
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v2"
 )
 
 type Project struct {
-	Path      string `yaml:"path"`
-	ProjectId string `yaml:"project-id"`
+	path      string
+	projectId string
 
 	fs     afero.Fs
 	server srv.WorkspaceServer
@@ -33,15 +32,16 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	var project Project
 	project.fs = fs
 	project.server = server
+	project.path = path
+
+	if !filepath.IsAbs(path) {
+		return nil, ErrNoRelativePathsAllowed
+	}
 
 	/* Make sure the path is canonicalised */
 	path, err = filepath.EvalSymlinks(path)
 	if err != nil {
 		return nil, err
-	}
-
-	if !filepath.IsAbs(path) {
-		return nil, ErrNoRelativePathsAllowed
 	}
 
 	/* Is there an existing project file? */
@@ -54,7 +54,7 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 		}
 		/* TODO: make sure we compare apples to apples in terms of paths here */
 		for _, i := range instances {
-			if i.Devices[srv.PROJECT_DEVICE]["source"] != project.Path {
+			if i.Devices[srv.PROJECT_DEVICE]["source"] != project.path {
 				var mount = srv.WorkspaceDevice{
 					Name:       srv.PROJECT_DEVICE,
 					Properties: map[string]string{"type": "disk", "source": path, "path": "/project"},
@@ -72,9 +72,7 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 		if len(instances) > 0 {
 			for _, i := range instances {
 				if id, ok := i.Config["user.workspace.project-id"]; ok {
-					project.ProjectId = id
-					project.Path = path
-
+					project.projectId = id
 					/* Found a previous .lock file, restore it */
 					project.SaveProject()
 					break
@@ -84,8 +82,7 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 			/* The project did not exist before, initialise, but do not create a project file here
 			   We might just be running for a list of available workspaces here is a newly checked out directory
 			*/
-			project.Path = path
-			project.ProjectId = fmt.Sprintf("%d", rand.Int63())
+			project.projectId = fmt.Sprintf("%d", rand.Int63())
 		}
 
 	} else {
@@ -96,20 +93,20 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 }
 
 func (w *Project) GetProjectId() string {
-	return w.ProjectId
+	return w.projectId
 }
 
 func (w *Project) GetProjectDirectory() string {
-	return w.Path
+	return w.path
 }
 
 func (w *Project) Exists() bool {
-	ok, _ := afero.Exists(w.fs, filepath.Join(w.Path, PROJECT_FILE_NAME))
+	ok, _ := afero.Exists(w.fs, filepath.Join(w.path, PROJECT_FILE_NAME))
 	return ok
 }
 
 func (w *Project) UpdateProjectDirectory(path string) error {
-	w.Path = path
+	w.path = path
 	return w.SaveProject()
 }
 
@@ -117,21 +114,13 @@ func (w *Project) ReadProject(path string) error {
 	var err error
 	var buf []byte
 	if buf, err = afero.ReadFile(w.fs, filepath.Join(path, PROJECT_FILE_NAME)); err == nil {
-		if err = yaml.Unmarshal(buf, w); err != nil {
-			return nil
-		}
+		w.projectId = string(buf)
 	}
 	return err
 }
 
 func (w *Project) SaveProject() error {
-	var buf []byte
-	var err error
-	if buf, err = yaml.Marshal(w); err != nil {
-		return err
-	}
-
-	return afero.WriteFile(w.fs, filepath.Join(w.Path, PROJECT_FILE_NAME), buf, 0644)
+	return afero.WriteFile(w.fs, filepath.Join(w.path, PROJECT_FILE_NAME), []byte(w.projectId), 0644)
 }
 
 func (w *Project) EnumWorkspaces() (map[string]*srv.WorkspaceProps, error) {
@@ -171,7 +160,7 @@ func (w *Project) EnumWorkspaces() (map[string]*srv.WorkspaceProps, error) {
 }
 
 func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
-	files, err := afero.ReadDir(w.fs, w.Path)
+	files, err := afero.ReadDir(w.fs, w.path)
 	if err != nil {
 		return nil, err
 	}
