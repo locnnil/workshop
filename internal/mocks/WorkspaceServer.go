@@ -40,13 +40,13 @@ func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, project_id string
 	return r0
 }
 
-// AddWorkspacesDevice provides a mock function with given fields: filter, props
-func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceConfigFilter, props server.WorkspaceDevice) error {
-	ret := _m.Called(filter, props)
+// AddWorkspacesConfig provides a mock function with given fields: filter, item
+func (_m *MockWorkspaceServer) AddWorkspacesConfig(filter server.WorkspaceConfigFilter, item *server.WorkspaceConfigValue) error {
+	ret := _m.Called(filter, item)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter, server.WorkspaceDevice) error); ok {
-		r0 = rf(filter, props)
+	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter, *server.WorkspaceConfigValue) error); ok {
+		r0 = rf(filter, item)
 	} else {
 		r0 = ret.Error(0)
 	}

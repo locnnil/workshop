@@ -55,11 +55,23 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 		/* TODO: make sure we compare apples to apples in terms of paths here */
 		for _, i := range instances {
 			if i.Devices[srv.PROJECT_DEVICE]["source"] != project.path {
+				/* If the old .lock exists at the old location, it means the directory was copied */
+				if ok, _ := afero.Exists(project.fs, filepath.Join(i.Devices[srv.PROJECT_DEVICE]["source"], PROJECT_FILE_NAME)); ok {
+					/* Regenerate a project-id */
+					project.projectId, err = newProjectId()
+					if err != nil {
+						return nil, err
+					}
+					/* Update .lock file with a new project-id */
+					project.SaveProject()
+					break
+				}
+				/* Update the project mount path */
 				var mount = srv.WorkspaceDevice{
 					Name:       srv.PROJECT_DEVICE,
-					Properties: map[string]string{"type": "disk", "source": path, "path": "/project"},
+					Properties: map[string]string{"type": "disk", "source": project.path, "path": "/project"},
 				}
-				server.AddWorkspacesDevice(srv.NewWorkspaceConfigFilter("user.workspace.project-id", project.GetProjectId()), mount)
+				server.AddWorkspaceDevice(i.Name, project.projectId, mount)
 			}
 		}
 	} else if errors.Is(err, afero.ErrFileNotFound) {

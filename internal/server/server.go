@@ -61,12 +61,11 @@ type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
-	AddWorkspacesDevice(filter WorkspaceConfigFilter, props WorkspaceDevice) error
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
-
 	RemoveWorkspaceDevice(name, project_id, device string) error
 
 	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
+	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) (map[string]*WorkspaceProps, error)
@@ -346,7 +345,7 @@ func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan 
 	return done, nil
 }
 
-func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceConfigFilter, device WorkspaceDevice) error {
+func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
 	inst, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return err
@@ -354,7 +353,7 @@ func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceConfigFilter, device Wor
 
 	for _, i := range inst {
 		if filter(i.Config) {
-			i.Devices[device.Name] = device.Properties
+			i.Config[item.Name] = item.Value
 			s.UpdateInstance(i.Name, i.InstancePut, "")
 		}
 	}
