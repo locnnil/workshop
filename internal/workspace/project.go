@@ -120,16 +120,16 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	var err error
 	var project Project
 
-	/* Make sure the path is canonicalised */
-	if path, err = cleanPath(path); err != nil {
-		return nil, err
-	}
-
 	if ok, err := afero.Exists(fs, path); err == nil {
 		if !ok {
 			return nil, ErrProjectDirectoryNotFound
 		}
 	} else {
+		return nil, err
+	}
+
+	/* Make sure the path is canonicalised */
+	if path, err = cleanPath(path); err != nil {
 		return nil, err
 	}
 
@@ -350,7 +350,7 @@ func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]
 }
 
 func newProjectId() (string, error) {
-	bytes := make([]byte, 0, 4)
+	bytes := make([]byte, 4)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err

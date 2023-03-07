@@ -1,11 +1,9 @@
 project: workspace
 
 backends:
-  qemu:
+  lxd:
     systems:
-      - ubuntu-22.10-64:
-          username: ubuntu
-          password: ubuntu
+      - ubuntu-22.04
 suites:
   tests/core/:
     summary: Core workspace scenarios

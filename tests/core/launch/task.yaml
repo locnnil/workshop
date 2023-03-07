@@ -2,7 +2,7 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
   WS_NAME: launch-test
   PROJECT: /home/ubuntu/translation
-  PROJECT_ID: 1
+  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
 execute: |
   function assert_workspace_config() {
     echo Validate project directory mount
@@ -16,22 +16,12 @@ execute: |
 
   sudo -u ubuntu -i -- mkdir -p $PROJECT
 
-  # create a project for validating results
-  sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.lock
-  path: $PROJECT
-  project-id: $PROJECT_ID
-  EOF
-
-  for base in ubuntu@20.04 ubuntu@22.04
-  do
-    sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.$WS_NAME.yaml
-    name: $WS_NAME
-    base: $base 
-  EOF
-    echo Launch $WS_NAME with a $base base from a working directory
+  for path in $WORKSPACES/*
     # using su instead of sudo -s here as in some distros the latter would result in error
-    su - ubuntu -c "cd $PROJECT; workspace launch $WS_NAME" | MATCH started
+    su - ubuntu -c "workspace --project $path launch ws" | MATCH started
     lxc project switch workspace.ubuntu
+
+    PROJECT_ID=`cat $path/.workspace.lock`
 
     assert_workspace_config
     lxc delete $WS_NAME --force

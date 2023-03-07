@@ -57,6 +57,19 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInACWD() {
 
 func (s *ProjectTestSuite) TestNewProject() {
 	t := s.T()
+
+	project, err := NewProject(s.Srv, s.Fs, "/")
+	assert.Equal(t, "52fdfc07", project.ProjectId())
+	assert.NoError(t, err)
+	assert.Equal(t, "/", project.ProjectDirectory())
+
+	project, err = NewProject(s.Srv, s.Fs, "/doesnotexist")
+	assert.Nil(t, project)
+	assert.ErrorIs(t, err, ErrProjectDirectoryNotFound)
+}
+
+func (s *ProjectTestSuite) TestLoadProject() {
+	t := s.T()
 	fs := afero.NewOsFs()
 	fs.MkdirAll("/tmp/experiments", 0755)
 	defer fs.RemoveAll("/tmp/experiments")
