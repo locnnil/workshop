@@ -68,7 +68,7 @@ type WorkspaceServer interface {
 	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
-	GetWorkspacesByConfig(filter WorkspaceConfigFilter) (map[string]*WorkspaceProps, error)
+	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
 	Exec(name, project_id, user string, command []string) (chan bool, error)
@@ -359,22 +359,20 @@ func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *Work
 	return nil
 }
 
-func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) (map[string]*WorkspaceProps, error) {
+func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			name := util.ToWorkspaceName(i.Name)
-			ws[name] = &WorkspaceProps{
-				Name:    name,
+			ws = append(ws, &WorkspaceProps{
+				Name:    util.ToWorkspaceName(i.Name),
 				State:   getWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
 				Config:  i.Config,
-			}
-
+			})
 		}
 	}
 

@@ -33,7 +33,6 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	var wsList []*srv.WorkspaceProps
 	var err error
 	var server srv.WorkspaceServer
 	var fs = afero.NewOsFs()
@@ -48,33 +47,33 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	project, err := workspace.LoadProject(server, fs, Project)
-	if err == workspace.ErrProjectFileNotFound {
-		project, err = workspace.NewProject(server, fs, Project)
-		if err != nil {
+	if !c.all {
+		project, err := workspace.LoadProject(server, fs, Project)
+		if err == workspace.ErrProjectFileNotFound {
+			project, err = workspace.NewProject(server, fs, Project)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
 			return err
 		}
-	} else if err != nil {
-		return err
-	}
 
-	if !c.all {
 		/* List all workspaces for the current project */
-		wsList, err = project.EnumWorkspaces()
+		wsList, err := project.EnumWorkspaces()
+		if len(wsList) != 0 && err == nil {
+			listWorkspaces(wsList, project)
+		} else {
+			return err
+		}
+
 	} else {
 		/* List all workspaces in all projects */
-		/* This is a naive approach that works with all the workspaces by
-		   enumerating them and their project mounts. It does not handle cases
-		   when a directory of the project was (re)moved, for example. To be substituted
-		   with a more decent implementation in the next iteration */
-		// wsList, err = project.EnumAllWorkspaces()
+		wsList, err := workspace.EnumAllWorkspaces(server, fs)
+		if err != nil || len(wsList) == 0 {
+			return err
+		}
+		listAllWorkspaces(wsList)
 	}
-
-	if err != nil || len(wsList) == 0 {
-		return err
-	}
-
-	listWorkspaces(wsList, project)
 
 	return nil
 }
@@ -90,6 +89,23 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
 			val.State.String(),
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))
+	}
+	w.Flush()
+}
+
+func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
+	w := tabWriter()
+	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
+
+	for project, ws := range list {
+		for _, j := range ws {
+			line := []string{
+				contractHomeDirectory(project.ProjectDirectory()),
+				j.Name,
+				j.State.String(),
+			}
+			fmt.Fprintln(w, strings.Join(line, "\t"))
+		}
 	}
 	w.Flush()
 }

@@ -9,7 +9,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	srv "github.com/canonical/workspace/internal/server"
-	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 
 	"github.com/spf13/afero"
 )
@@ -157,12 +157,13 @@ func cleanPath(path string) (string, error) {
 	return path, nil
 }
 
-func (p *Project) validateProjectDirectory(instances map[string]*srv.WorkspaceProps) error {
+func (p *Project) validateProjectDirectory(instances []*srv.WorkspaceProps) error {
 	var err error
 	for _, i := range instances {
-		if i.Devices[ProjectDevice]["source"] != p.path {
+		source := i.Devices[ProjectDevice]["source"]
+		if source != p.path {
 			/* The directory was copied elsewhere, we need to generate a new project-id to let the old project-id persist */
-			if ok, _ := afero.Exists(p.fs, LockPath(i.Devices[ProjectDevice]["source"])); ok {
+			if ok, _ := afero.Exists(p.fs, LockPath(source)); ok {
 				p.projectId, err = newProjectId()
 				if err != nil {
 					return err
@@ -262,35 +263,37 @@ func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 	}
 
 	/* (3) Merge both lists from (1) and (2) to build a list of workspaces with their states */
-	result := make(map[string]*srv.WorkspaceProps, len(workspaces)+len(instances))
-	for i, val := range workspaces {
-		if inst, ok := instances[i]; !ok {
+	result := make([]*srv.WorkspaceProps, 0, len(workspaces)+len(instances))
+	for _, ws := range workspaces {
+		finder := func(p *srv.WorkspaceProps) bool { return p.Name == ws.Name }
+		idx := slices.IndexFunc(instances, finder)
+		if idx == -1 {
 			/* We only have a file no instance */
-			val.State = util.Inactive
+			ws.State = util.Inactive
 		} else {
 			/* Both a file and instance exists */
-			val.State = inst.State
-			delete(instances, i)
+			ws.State = instances[idx].State
+			instances = slices.Delete(instances, idx, idx+1)
 		}
-		result[i] = val
+		result = append(result, ws)
 	}
 
 	/* Now, instances contains only orphaned workspaces, i.e. no file */
-	for i, val := range instances {
-		val.State = util.Error
-		result[i] = val
+	for _, ws := range instances {
+		ws.State = util.Error
+		result = append(result, ws)
 	}
 
-	return maps.Values(result), nil
+	return result, nil
 }
 
-func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
+func (w *Project) enumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
 	files, err := afero.ReadDir(w.fs, w.path)
 	if err != nil {
 		return nil, err
 	}
 
-	var workspaces = make(map[string]*srv.WorkspaceProps, len(files))
+	var workspaces = make([]*srv.WorkspaceProps, 0, len(files))
 
 	for _, info := range files {
 		if info.IsDir() {
@@ -299,13 +302,13 @@ func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces[names[1]] = &srv.WorkspaceProps{Name: names[1], State: util.Inactive}
+			workspaces = append(workspaces, &srv.WorkspaceProps{Name: names[1], State: util.Inactive})
 		}
 	}
 	return workspaces, nil
 }
 
-func (w *Project) enumWorkspaceInstances() (map[string]*srv.WorkspaceProps, error) {
+func (w *Project) enumWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
 	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter("user.workspace.project-id", w.ProjectId()))
 	if err != nil {
 		return instances, err
@@ -330,14 +333,19 @@ func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
 	for path, instances := range projects {
 		if project, err := LoadProjectFromInstances(server, fs, instances, path); err == nil {
-			fullList[project] = instances
+			/* we have to rerun EnumWorkspaces here to list not only workspace instances,
+			but also workspace files in these project directory */
+			final, err := project.EnumWorkspaces()
+			if err == nil {
+				fullList[project] = final
+			}
 		}
 	}
 	return fullList, nil
 }
 
 func newProjectId() (string, error) {
-	bytes := make([]byte, 4)
+	bytes := make([]byte, 0, 4)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err
