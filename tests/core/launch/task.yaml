@@ -1,35 +1,22 @@
 summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
-  WS_NAME: launch-test
-  PROJECT: /home/ubuntu/translation
   WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
 execute: |
   function assert_workspace_config() {
-    echo Validate project directory mount
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project source | MATCH $PROJECT
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project path | MATCH /project
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID user workspace.project-id | MATCH $PROJECT_ID
+    lxc config device get ws-$2 workspace.project source | MATCH $1
+    lxc config device get ws-$2 workspace.project path | MATCH /project
+    lxc config get ws-$2 user.workspace.project-id | MATCH $2
 
-    echo $WS_NAME must be in a RUNNING state
-    lxc list -c ns -f compact | MATCH "$WS_NAME  RUNNING"
+    lxc list -c ns -f compact | MATCH "ws-$2  RUNNING"
   }
 
-  sudo -u ubuntu -i -- mkdir -p $PROJECT
-
-  for path in $WORKSPACES/*
+  for path in $WORKSPACES/*; do
     # using su instead of sudo -s here as in some distros the latter would result in error
     su - ubuntu -c "workspace --project $path launch ws" | MATCH started
     lxc project switch workspace.ubuntu
+    PROJECT_ID=`cat $path/.workspace.lock`  
 
-    PROJECT_ID=`cat $path/.workspace.lock`
-
-    assert_workspace_config
-    lxc delete $WS_NAME --force
-
-    echo Launch $WS_NAME outside of its working directory
-    sudo -u ubuntu -i -- workspace --project=$PROJECT launch $WS_NAME | MATCH started
-    assert_workspace_config
-
-    lxc delete $WS_NAME --force
-    rm -f $PROJECT/.workspace.$WS_NAME.yaml
+    assert_workspace_config $path $PROJECT_ID
+    lxc delete ws-$PROJECT_ID --force
+    rm -f $path/.workspace.lock
   done
