@@ -251,7 +251,7 @@ func (w *Project) SaveProject() error {
 
 func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 	/* (1) Find all the project's workspace files */
-	workspaces, err := w.enumWorkspaceFiles()
+	files, err := w.enumWorkspaceFiles()
 	if err != nil {
 		return nil, err
 	}
@@ -262,9 +262,15 @@ func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 		return nil, err
 	}
 
-	/* (3) Merge both lists from (1) and (2) to build a list of workspaces with their states */
-	result := make([]*srv.WorkspaceProps, 0, len(workspaces)+len(instances))
-	for _, ws := range workspaces {
+	result := mergeInstancesAndFiles(files, instances)
+
+	return result, nil
+}
+
+func mergeInstancesAndFiles(files []*srv.WorkspaceProps, instances []*srv.WorkspaceProps) []*srv.WorkspaceProps {
+	/* Merge both lists from to build a list of workspaces with their states */
+	result := make([]*srv.WorkspaceProps, 0, len(files)+len(instances))
+	for _, ws := range files {
 		finder := func(p *srv.WorkspaceProps) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(instances, finder)
 		if idx == -1 {
@@ -283,8 +289,7 @@ func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 		ws.State = util.Error
 		result = append(result, ws)
 	}
-
-	return result, nil
+	return result
 }
 
 func (w *Project) enumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
@@ -333,11 +338,11 @@ func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
 	for path, instances := range projects {
 		if project, err := LoadProjectFromInstances(server, fs, instances, path); err == nil {
-			/* we have to rerun EnumWorkspaces here to list not only workspace instances,
-			but also workspace files in these project directory */
-			final, err := project.EnumWorkspaces()
+			/* we have a list of instances from a call above already, now just get the list
+			of workspace files in the directory and merget them togeter for the final result */
+			files, err := project.enumWorkspaceFiles()
 			if err == nil {
-				fullList[project] = final
+				fullList[project] = mergeInstancesAndFiles(files, instances)
 			}
 		}
 	}
