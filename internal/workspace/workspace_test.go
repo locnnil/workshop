@@ -43,7 +43,7 @@ func (s *LaunchTestSuite) createTestFile(filename string, data []byte) string {
 }
 
 func (s *LaunchTestSuite) createTestWorkspace(name string, data []byte) *srv.WorkspaceProps {
-	s.createTestFile(filepath.Join(s.Project.GetProjectDirectory(), util.ToFileName(name)), data)
+	s.createTestFile(filepath.Join(s.Project.ProjectDirectory(), util.ToFileName(name)), data)
 	return &srv.WorkspaceProps{Name: name}
 }
 
@@ -102,7 +102,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 	var file = s.createTestWorkspace(name, dataNoSDK)
 	var project = srv.WorkspaceDevice{
 		Name:       "workspace.project",
-		Properties: map[string]string{"type": "disk", "source": s.Project.GetProjectDirectory(), "path": filepath.Join("/project")},
+		Properties: map[string]string{"type": "disk", "source": s.Project.ProjectDirectory(), "path": filepath.Join("/project")},
 	}
 
 	s.Srv.

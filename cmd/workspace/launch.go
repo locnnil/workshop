@@ -9,6 +9,7 @@ import (
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -38,35 +39,45 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	project, err := workspace.NewProject(server, fs, Project)
-	if err != nil {
+	project, err := workspace.LoadProject(server, fs, Project)
+	if err == workspace.ErrProjectFileNotFound {
+		project, err = workspace.NewProject(server, fs, Project)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 
 	wsList, err := project.EnumWorkspaces()
-	if err != nil || len(wsList) == 0 && wsName == "" {
+	if err != nil || len(wsList) == 0 {
 		return err
-	} else if len(wsList) > 1 && wsName == "" {
-		/* If there are multiple workspaces and no names provided - ask a user to resolve */
-		printWorkspaces(wsList)
-		fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
-		return nil
-	} else if len(wsList) == 1 && wsName == "" {
-		/* If no names provided and there is only one workspace - run it */
-		for i := range wsList {
-			wsName = i
-			break
+	}
+
+	/* if no name provided, try to see if we can disambiguate */
+	if wsName == "" {
+		if len(wsList) == 1 {
+			/* If no names provided and there is only one workspace - run it */
+			wsName = wsList[0].Name
+		} else if len(wsList) > 1 {
+			/* If there are multiple workspaces and no names provided - ask a user to resolve */
+			printWorkspaces(wsList)
+			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
+			return nil
 		}
 	}
 
+	finder := func(p *srv.WorkspaceProps) bool { return p.Name == wsName }
+	idx := slices.IndexFunc(wsList, finder)
+
 	/* If the name was provided by the user, test if we have such a workspace */
-	if _, ok := wsList[wsName]; !ok {
+	if idx == -1 {
 		fmt.Printf("workspace \"\033[1m%s\033[0m\" not found.\n", wsName)
 		printWorkspaces(wsList)
 		os.Exit(1)
 	}
 
-	ws, err := workspace.NewWorkspace(server, project, fs, wsList[wsName])
+	ws, err := workspace.NewWorkspace(server, project, fs, wsList[idx])
 	if err != nil {
 		return err
 	}
@@ -87,7 +98,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	return err
 }
 
-func printWorkspaces(wsList map[string]*srv.WorkspaceProps) {
+func printWorkspaces(wsList []*srv.WorkspaceProps) {
 	if len(wsList) > 0 {
 		fmt.Printf("Available workspaces:\n")
 		for _, k := range wsList {

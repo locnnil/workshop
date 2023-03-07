@@ -79,9 +79,7 @@ type LxdServer struct {
 	Fs afero.Fs
 }
 
-const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
-
-const PROJECT_DEVICE = "workspace.project"
+const LXDSock = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
@@ -90,10 +88,10 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := afero.Exists(s.Fs, LXD_SOCK); err != nil {
+	if ok, err := afero.Exists(s.Fs, LXDSock); err != nil {
 		return nil, err
 	} else if ok {
-		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
+		if srv, err := lxd.ConnectLXDUnix(LXDSock, nil); err != nil {
 			return nil, err
 		} else {
 			return srv.UseProject(project), nil

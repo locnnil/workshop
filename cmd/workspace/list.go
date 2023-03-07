@@ -33,7 +33,7 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	var wsList map[string]*srv.WorkspaceProps
+	var wsList []*srv.WorkspaceProps
 	var err error
 	var server srv.WorkspaceServer
 	var fs = afero.NewOsFs()
@@ -48,8 +48,13 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	project, err := workspace.NewProject(server, fs, Project)
-	if err != nil {
+	project, err := workspace.LoadProject(server, fs, Project)
+	if err == workspace.ErrProjectFileNotFound {
+		project, err = workspace.NewProject(server, fs, Project)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 
@@ -62,27 +67,31 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		   enumerating them and their project mounts. It does not handle cases
 		   when a directory of the project was (re)moved, for example. To be substituted
 		   with a more decent implementation in the next iteration */
-		wsList, err = project.EnumAllWorkspaces()
+		// wsList, err = project.EnumAllWorkspaces()
 	}
 
 	if err != nil || len(wsList) == 0 {
 		return err
 	}
 
+	listWorkspaces(wsList, project)
+
+	return nil
+}
+
+func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
 
-	for i, val := range wsList {
+	for _, val := range wsList {
 		line := []string{
-			contractHomeDirectory(project.GetProjectDirectory()),
-			i,
+			contractHomeDirectory(project.ProjectDirectory()),
+			val.Name,
 			val.State.String(),
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
-
-	return nil
 }
 
 /*

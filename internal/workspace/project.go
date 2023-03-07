@@ -9,6 +9,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	srv "github.com/canonical/workspace/internal/server"
+	"golang.org/x/exp/maps"
 
 	"github.com/spf13/afero"
 )
@@ -21,28 +22,74 @@ type Project struct {
 	server srv.WorkspaceServer
 }
 
-const PROJECT_FILE_NAME = ".workspace.lock"
+const ProjectLock = ".workspace.lock"
+const ProjectDevice = "workspace.project"
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 var ErrNoRelativePathsAllowed = errors.New("relative paths are not allowed to refer to a project")
+var ErrProjectDirectoryNotFound = errors.New("project directory does not exist")
+var ErrProjectFileNotFound = errors.New(".lock file does not exist")
 
-func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
-	var err error
+func LoadProjectFromInstances(server srv.WorkspaceServer, fs afero.Fs, workspaces []*srv.WorkspaceProps, path string) (*Project, error) {
 	var project Project
+
 	project.fs = fs
 	project.server = server
 	project.path = path
 
-	if !filepath.IsAbs(path) {
-		return nil, ErrNoRelativePathsAllowed
+	if dirOk, err := afero.Exists(fs, path); err == nil {
+		if !dirOk {
+			/* Check the project bind-mount of the workspace
+			to see whether the project was moved, renamed or deleted */
+			for _, i := range workspaces {
+				if i.State == util.Ready {
+					done, err := server.Exec(i.Name, i.Devices[ProjectDevice]["source"], "root", []string{})
+					if err != nil {
+						continue
+					}
+					<-done
+				}
+			}
+		} else {
+			/* if .lock exists then just load normally and move on */
+			if err = project.ReadProject(path); err == ErrProjectFileNotFound {
+				/* .lock file does not exist but should. Attempt to recover */
+				for _, i := range workspaces {
+					if id, ok := i.Config["user.workspace.project-id"]; ok {
+						project.projectId = id
+						if err = project.SaveProject(); err != nil {
+							return nil, err
+						}
+					}
+				}
+			}
+		}
 	}
 
+	return &project, nil
+}
+
+func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
+	var err error
+	var project Project
+
 	/* Make sure the path is canonicalised */
-	path, err = filepath.EvalSymlinks(path)
-	if err != nil {
+	if path, err = cleanPath(path); err != nil {
 		return nil, err
 	}
+
+	if ok, err := afero.Exists(fs, path); err == nil {
+		if !ok {
+			return nil, ErrProjectDirectoryNotFound
+		}
+	} else {
+		return nil, err
+	}
+
+	project.fs = fs
+	project.server = server
+	project.path = path
 
 	/* Is there an existing project file? */
 	if err = project.ReadProject(path); err == nil {
@@ -52,61 +99,16 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 		if err != nil {
 			return nil, err
 		}
-		/* TODO: make sure we compare apples to apples in terms of paths here */
-		for _, i := range instances {
-			if i.Devices[srv.PROJECT_DEVICE]["source"] != project.path {
-				/* If the old .lock exists at the old location, it means the directory was copied */
-				if ok, _ := afero.Exists(project.fs, filepath.Join(i.Devices[srv.PROJECT_DEVICE]["source"], PROJECT_FILE_NAME)); ok {
-					/* Regenerate a project-id */
-					project.projectId, err = newProjectId()
-					if err != nil {
-						return nil, err
-					}
-					/* Update .lock file with a new project-id */
-					project.SaveProject()
-					break
-				}
-				/* Update the project mount path */
-				var mount = srv.WorkspaceDevice{
-					Name:       srv.PROJECT_DEVICE,
-					Properties: map[string]string{"type": "disk", "source": project.path, "path": "/project"},
-				}
-				server.AddWorkspaceDevice(i.Name, project.projectId, mount)
-			}
-		}
-	} else if errors.Is(err, afero.ErrFileNotFound) {
-		/* See if the project DID exist at this directory path and if so, try to recover it */
-		instances, err := server.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
-			if mount, ok := devices["workspace.project"]; ok {
-				if mount["source"] == project.path {
-					return true
-				}
-			}
-			return false
-		})
-		if err != nil {
+		if err = project.validateProjectDirectory(instances); err != nil {
 			return nil, err
 		}
-
-		if len(instances) > 0 {
-			for _, i := range instances {
-				if id, ok := i.Config["user.workspace.project-id"]; ok {
-					project.projectId = id
-					/* Found a previous .lock file, restore it */
-					project.SaveProject()
-					break
-				}
-			}
-		} else {
-			/* The project did not exist before, initialise, but do not create a project file here
-			   We might just be running for a list of available workspaces here is a newly checked out directory
-			*/
-			project.projectId, err = newProjectId()
-			if err != nil {
-				return nil, err
-			}
+	} else if errors.Is(err, ErrProjectFileNotFound) {
+		if ok, err := project.tryToRecover(); err != nil {
+			return nil, err
+		} else if !ok && err == nil {
+			/* There is no project at a given location, perhaps never was */
+			return nil, ErrProjectFileNotFound
 		}
-
 	} else {
 		return nil, err
 	}
@@ -114,17 +116,116 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	return &project, nil
 }
 
-func (w *Project) GetProjectId() string {
+func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
+	var err error
+	var project Project
+
+	/* Make sure the path is canonicalised */
+	if path, err = cleanPath(path); err != nil {
+		return nil, err
+	}
+
+	if ok, err := afero.Exists(fs, path); err == nil {
+		if !ok {
+			return nil, ErrProjectDirectoryNotFound
+		}
+	} else {
+		return nil, err
+	}
+
+	project.fs = fs
+	project.server = server
+	project.path = path
+
+	if project.projectId, err = newProjectId(); err != nil {
+		return nil, err
+	}
+
+	return &project, nil
+}
+
+func cleanPath(path string) (string, error) {
+	var err error
+	if !filepath.IsAbs(path) {
+		return "", ErrNoRelativePathsAllowed
+	}
+
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (p *Project) validateProjectDirectory(instances map[string]*srv.WorkspaceProps) error {
+	var err error
+	for _, i := range instances {
+		if i.Devices[ProjectDevice]["source"] != p.path {
+			/* The directory was copied elsewhere, we need to generate a new project-id to let the old project-id persist */
+			if ok, _ := afero.Exists(p.fs, LockPath(i.Devices[ProjectDevice]["source"])); ok {
+				p.projectId, err = newProjectId()
+				if err != nil {
+					return err
+				}
+				return p.SaveProject()
+			}
+
+			/* The directory was moved, update all instances project mounts */
+			var mount = srv.WorkspaceDevice{
+				Name:       ProjectDevice,
+				Properties: map[string]string{"type": "disk", "source": p.path, "path": "/project"},
+			}
+			p.server.AddWorkspaceDevice(i.Name, p.projectId, mount)
+		}
+	}
+	return nil
+}
+
+/*
+Check if the project DID exist at this directory path and if so, try to recover it.
+
+	We generate .lock file in the projects directory which could be easily deleted by a user
+	after running smth like make clean given .lock is supposed to not be tracked by VCS. If such
+	an accident happens the integrity of the previously created workspaces must not suffer. Here
+	we attempt to recover a previously created .lock
+*/
+func (p *Project) tryToRecover() (bool, error) {
+	instances, err := p.server.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
+		if mount, ok := devices["workspace.project"]; ok {
+			if mount["source"] == p.path {
+				return true
+			}
+		}
+		return false
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	if len(instances) > 0 {
+		/* Found a previous .lock file, restore it */
+		for _, i := range instances {
+			if id, ok := i.Config["user.workspace.project-id"]; ok {
+				p.projectId = id
+				p.SaveProject()
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func LockPath(path string) string {
+	return filepath.Join(path, ProjectLock)
+}
+
+func (w *Project) ProjectId() string {
 	return w.projectId
 }
 
-func (w *Project) GetProjectDirectory() string {
+func (w *Project) ProjectDirectory() string {
 	return w.path
-}
-
-func (w *Project) Exists() bool {
-	ok, _ := afero.Exists(w.fs, filepath.Join(w.path, PROJECT_FILE_NAME))
-	return ok
 }
 
 func (w *Project) UpdateProjectDirectory(path string) error {
@@ -135,17 +236,19 @@ func (w *Project) UpdateProjectDirectory(path string) error {
 func (w *Project) ReadProject(path string) error {
 	var err error
 	var buf []byte
-	if buf, err = afero.ReadFile(w.fs, filepath.Join(path, PROJECT_FILE_NAME)); err == nil {
+	if buf, err = afero.ReadFile(w.fs, filepath.Join(path, ProjectLock)); err == nil {
 		w.projectId = string(buf)
+	} else if errors.Is(err, afero.ErrFileNotFound) {
+		return ErrProjectFileNotFound
 	}
 	return err
 }
 
 func (w *Project) SaveProject() error {
-	return afero.WriteFile(w.fs, filepath.Join(w.path, PROJECT_FILE_NAME), []byte(w.projectId), 0644)
+	return afero.WriteFile(w.fs, filepath.Join(w.path, ProjectLock), []byte(w.projectId), 0644)
 }
 
-func (w *Project) EnumWorkspaces() (map[string]*srv.WorkspaceProps, error) {
+func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 	/* (1) Find all the project's workspace files */
 	workspaces, err := w.enumWorkspaceFiles()
 	if err != nil {
@@ -178,7 +281,7 @@ func (w *Project) EnumWorkspaces() (map[string]*srv.WorkspaceProps, error) {
 		result[i] = val
 	}
 
-	return result, nil
+	return maps.Values(result), nil
 }
 
 func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
@@ -203,19 +306,34 @@ func (w *Project) enumWorkspaceFiles() (map[string]*srv.WorkspaceProps, error) {
 }
 
 func (w *Project) enumWorkspaceInstances() (map[string]*srv.WorkspaceProps, error) {
-	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter("user.workspace.project-id", w.GetProjectId()))
+	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter("user.workspace.project-id", w.ProjectId()))
 	if err != nil {
 		return instances, err
 	}
 	return instances, nil
 }
 
-func (w *Project) EnumAllWorkspaces() (map[string]*srv.WorkspaceProps, error) {
-	workspaces, err := w.server.GetWorkspacesByConfig(srv.EveryWorkspace())
+func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]*srv.WorkspaceProps, error) {
+	all, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}
-	return workspaces, err
+
+	/* Get a project path for every project */
+	var projects = make(map[string][]*srv.WorkspaceProps, len(all))
+	for _, i := range all {
+		projectPath := i.Devices[ProjectDevice]["source"]
+		projects[projectPath] = append(projects[projectPath], i)
+	}
+
+	/* Get a list of Project objects with workspaces */
+	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
+	for path, instances := range projects {
+		if project, err := LoadProjectFromInstances(server, fs, instances, path); err == nil {
+			fullList[project] = instances
+		}
+	}
+	return fullList, nil
 }
 
 func newProjectId() (string, error) {

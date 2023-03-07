@@ -63,21 +63,21 @@ func (s *ProjectTestSuite) TestNewProject() {
 	defer fs.RemoveAll("/tmp/experiments")
 
 	/* No relative paths are allowed */
-	project, err := NewProject(nil, fs, "../tmp/experiments")
+	project, err := LoadProject(nil, fs, "../tmp/experiments")
 	assert.Nil(t, project)
 	assert.Error(t, ErrNoRelativePathsAllowed, err)
 
 	/* Could not read the project directory */
-	project, err = NewProject(nil, fs, "/invalid&")
+	project, err = LoadProject(nil, fs, "/invalid&")
 	assert.Nil(t, project)
 	assert.Error(t, err)
 
 	/* Project exists, no workspace instances */
 	h := s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(map[string]*server.WorkspaceProps{}, nil)
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("PROJECTID"), 0644)
-	project, err = NewProject(s.Srv, s.Fs, "/")
+	project, err = LoadProject(s.Srv, s.Fs, "/")
 	assert.NotNil(t, project)
-	assert.Equal(t, "/", project.GetProjectDirectory())
+	assert.Equal(t, "/", project.ProjectDirectory())
 	assert.NoError(t, err)
 
 	/* Project exists, some workspace instances running */
@@ -91,9 +91,9 @@ func (s *ProjectTestSuite) TestNewProject() {
 	}
 	h.Unset()
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project, err = NewProject(s.Srv, s.Fs, "/")
+	project, err = LoadProject(s.Srv, s.Fs, "/")
 	assert.NotNil(t, project)
-	assert.Equal(t, "/", project.GetProjectDirectory())
+	assert.Equal(t, "/", project.ProjectDirectory())
 	assert.NoError(t, err)
 }
 
@@ -111,7 +111,7 @@ func (s *ProjectTestSuite) TestEnumInstancesErrorFromServer() {
 	s.Srv.
 		On("GetWorkspacesByDevices", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
 
-	project, err := NewProject(s.Srv, s.Fs, "/")
+	project, err := LoadProject(s.Srv, s.Fs, "/")
 
 	assert.Nil(s.T(), project)
 	assert.Error(s.T(), err)
@@ -134,9 +134,9 @@ func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
-	assert.Contains(s.T(), result, "project1")
-	assert.Equal(s.T(), util.Inactive, result["project1"].State)
-	assert.Equal(s.T(), "project1", result["project1"].Name)
+	assert.Len(s.T(), result, 1)
+	assert.Equal(s.T(), util.Inactive, result[0].State)
+	assert.Equal(s.T(), "project1", result[0].Name)
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
@@ -151,9 +151,10 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
-	assert.Contains(s.T(), result, "instance1")
-	assert.Equal(s.T(), util.Error, result["instance1"].State)
-	assert.Equal(s.T(), "instance1", result["instance1"].Name)
+	assert.Len(s.T(), result, 1)
+	/* the workspace does not have a corresponding file, hence, an error state */
+	assert.Equal(s.T(), util.Error, result[0].State)
+	assert.Equal(s.T(), "instance1", result[0].Name)
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
@@ -173,13 +174,11 @@ func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
 
 	result, err := project.EnumWorkspaces()
 	assert.NoError(s.T(), err)
-	assert.Contains(s.T(), result, "instance1")
-	assert.Equal(s.T(), util.Error, result["instance1"].State)
-	assert.Equal(s.T(), "instance1", result["instance1"].Name)
+	assert.Equal(s.T(), util.Error, result[1].State)
+	assert.Equal(s.T(), "instance1", result[1].Name)
 
-	assert.Contains(s.T(), result, "project1")
-	assert.Equal(s.T(), util.Ready, result["project1"].State)
-	assert.Equal(s.T(), "project1", result["project1"].Name)
+	assert.Equal(s.T(), util.Ready, result[0].State)
+	assert.Equal(s.T(), "project1", result[0].Name)
 	assert.Len(s.T(), result, 2)
 }
 
