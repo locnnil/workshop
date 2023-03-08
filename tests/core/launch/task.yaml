@@ -2,13 +2,7 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 environment:
   WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
 execute: |
-  function assert_workspace_config() {
-    lxc config device get ws-$2 workspace.project source | MATCH $1
-    lxc config device get ws-$2 workspace.project path | MATCH /project
-    lxc config get ws-$2 user.workspace.project-id | MATCH $2
-
-    lxc list -c ns -f compact | MATCH "ws-$2  RUNNING"
-  }
+  . $SPREAD_PATH/tests/lib/utils.sh
 
   for path in $WORKSPACES/*; do
     # using su instead of sudo -s here as in some distros the latter would result in error

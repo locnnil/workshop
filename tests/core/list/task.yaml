@@ -1,35 +1,55 @@
 summary: Ensure that workspace list renders a list of active workspaces correctly
 
 environment:
-  FIRST_WS_NAME: xbert
-  SECOND_WS_NAME: xbert-gpu
+  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
 
 prepare: |
-  function generate_workspace_file() {
-    sudo -i -u ubuntu -- cat <<-EOF > $1/.workspace.$2.yaml
-    name: $2
-    base: ubuntu@20.04 
-  EOF
-  }
-
-  generate_workspace_file /home/ubuntu $FIRST_WS_NAME
-  sudo -i -u ubuntu workspace launch $FIRST_WS_NAME
-  generate_workspace_file /tmp $SECOND_WS_NAME
-  sudo -i -u ubuntu -- workspace --project /tmp launch $SECOND_WS_NAME
+  for path in $WORKSPACES/*; do
+    sudo -u ubuntu -- workspace --project $path launch ws | MATCH started
+  done
+  lxc project switch workspace.ubuntu
 
 restore: |
   lxc project switch workspace.ubuntu
-  lxc delete $FIRST_WS_NAME $SECOND_WS_NAME --force
-  rm -f /home/ubuntu/$FIRST_WS_NAME /tmp/$SECOND_WS_NAME
+  for path in $WORKSPACES/*; do
+    project_id=`cat $path/.workspace.lock`
+    lxc delete ws-$project_id --force
+    rm -f $path/.workspace.lock
+  done
 
 execute: |
-  echo $FIRST_WS_NAME must present in the list of a projects workspaces but not $SECOND_WS_NAME
-  sudo -i -u ubuntu -- workspace --project /home/ubuntu list | MATCH "^~[[:space:]]+xbert[[:space:]]+ready$"
-  sudo -i -u ubuntu workspace list | NOMATCH "^~[[:space:]]+xbert-gpu[[:space:]]+ready$"
+  echo `whoami`
+  . $SPREAD_PATH/tests/lib/utils.sh
+  for path in $WORKSPACES/*; do
+   sudo -u ubuntu workspace --project $path list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
+    [[ -f $path/.workspace.lock ]] || echo ".lock does not exist"
+  done
+  for path in $WORKSPACES/*; do
+    # the directory was moved, its instances must update configuration with a new path
+    sudo -u ubuntu mv $path $path-new
+    project_id=`cat $path-new/.workspace.lock`
+    sudo -u ubuntu workspace --project $path-new list | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config $path-new $project_id
 
-  echo $FIRST_WS_NAME and $SECOND_WS_NAME must present in the list of all workspaces
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert[[:space:]]+ready$"
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert-gpu[[:space:]]+ready$"
+    # since the directory was copied, its projects instances should still stay available at the old path
+    sudo -u ubuntu cp -R $path-new $path-copied
+    sudo -u ubuntu workspace --project $path-copied list | MATCH "^${path}-copied[[:space:]]+ws[[:space:]]+Inactive$"
+    project_id_copied=`cat $path-copied/.workspace.lock`
+    [[ $project_id_copied != $project_id ]] || false
+    rm -rf $path-copied
+
+    #TODO: there is a case when we can break the above bahaviour:
+    # mv dir dir-1
+    # workspace --project /dir1 list
+    # mv dir-1 dir
+    # cp -R dir dir-copy
+    # workspace --project /dir-copy list <- this will execute move semantics and old instances will be
+    # moved to the /dir-copy which is wrong
+  done
+
+
+
+  
 
 
 
