@@ -9,6 +9,8 @@ suites:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
+      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
+      TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |
       apt-get update
       apt-get install -y --no-install-recommends gcc libc6-dev snapd

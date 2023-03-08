@@ -1,42 +1,48 @@
 summary: Ensure that workspace list renders a list of active workspaces correctly
 
-environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
-
 prepare: |
+  . "$TESTSLIB"/utils.sh
+
   for path in $WORKSPACES/*; do
-    sudo -u ubuntu -- workspace --project $path launch ws | MATCH started
+    launch $path ws | MATCH started
   done
   lxc project switch workspace.ubuntu
 
 restore: |
-  lxc project switch workspace.ubuntu
-  for path in $WORKSPACES/*; do
-    project_id=`cat $path/.workspace.lock`
-    lxc delete ws-$project_id --force
-    rm -f $path/.workspace.lock
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree $WORKSPACES
+  for path in $WORKSPACES/{*-copy,*-new}; do
+    rm -rf $path
   done
 
 execute: |
-  echo `whoami`
-  . $SPREAD_PATH/tests/lib/utils.sh
+  . "$TESTSLIB"/utils.sh
+  # project-specific workspace list
   for path in $WORKSPACES/*; do
-   sudo -u ubuntu workspace --project $path list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
-    [[ -f $path/.workspace.lock ]] || echo ".lock does not exist"
+   list $path | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
+    test -f $path/.workspace.lock
   done
+
   for path in $WORKSPACES/*; do
     # the directory was moved, its instances must update configuration with a new path
     sudo -u ubuntu mv $path $path-new
     project_id=`cat $path-new/.workspace.lock`
-    sudo -u ubuntu workspace --project $path-new list | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
+    list $path-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
     assert_workspace_config $path-new $project_id
 
     # since the directory was copied, its projects instances should still stay available at the old path
     sudo -u ubuntu cp -R $path-new $path-copied
-    sudo -u ubuntu workspace --project $path-copied list | MATCH "^${path}-copied[[:space:]]+ws[[:space:]]+Inactive$"
+    list $path-copied | MATCH "^${path}-copied[[:space:]]+ws[[:space:]]+Inactive$"
     project_id_copied=`cat $path-copied/.workspace.lock`
-    [[ $project_id_copied != $project_id ]] || false
-    rm -rf $path-copied
+    test $project_id_copied != $project_id 
+
+    # make sure the instance at the old path still configured properly
+    assert_workspace_config $path-new $project_id
+
+    # launch from a new directory successfully 
+    launch $path-copied ws | MATCH started
+    list $path-copied | MATCH "^${path}-copied[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config $path-copied $project_id_copied
 
     #TODO: there is a case when we can break the above bahaviour:
     # mv dir dir-1
@@ -46,6 +52,8 @@ execute: |
     # workspace --project /dir-copy list <- this will execute move semantics and old instances will be
     # moved to the /dir-copy which is wrong
   done
+
+  # list --all
 
 
 

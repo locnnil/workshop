@@ -1,16 +1,14 @@
 summary: Ensure that 'workspace launch' creates a core LXD config correctly
-environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree $WORKSPACES
+
 execute: |
-  . $SPREAD_PATH/tests/lib/utils.sh
+  . "$TESTSLIB"/utils.sh
 
   for path in $WORKSPACES/*; do
-    # using su instead of sudo -s here as in some distros the latter would result in error
-    su - ubuntu -c "workspace --project $path launch ws" | MATCH started
-    lxc project switch workspace.ubuntu
-    PROJECT_ID=`cat $path/.workspace.lock`  
-
-    assert_workspace_config $path $PROJECT_ID
-    lxc delete ws-$PROJECT_ID --force
-    rm -f $path/.workspace.lock
+    launch $path ws | MATCH started
+    test -f $path/.workspace.lock
+    assert_workspace_config $path `cat $path/.workspace.lock`
   done
