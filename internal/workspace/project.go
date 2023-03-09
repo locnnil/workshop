@@ -31,45 +31,6 @@ var ErrNoRelativePathsAllowed = errors.New("relative paths are not allowed to re
 var ErrProjectDirectoryNotFound = errors.New("project directory does not exist")
 var ErrProjectFileNotFound = errors.New(".lock file does not exist")
 
-func LoadProjectFromInstances(server srv.WorkspaceServer, fs afero.Fs, workspaces []*srv.WorkspaceProps, path string) (*Project, error) {
-	var project Project
-
-	project.fs = fs
-	project.server = server
-	project.path = path
-
-	if dirOk, err := afero.Exists(fs, path); err == nil {
-		if !dirOk {
-			/* Check the project bind-mount of the workspace
-			to see whether the project was moved, renamed or deleted */
-			for _, i := range workspaces {
-				if i.State == util.Ready {
-					done, err := server.Exec(i.Name, i.Devices[ProjectDevice]["source"], "root", []string{})
-					if err != nil {
-						continue
-					}
-					<-done
-				}
-			}
-		} else {
-			/* if .lock exists then just load normally and move on */
-			if err = project.ReadProject(path); err == ErrProjectFileNotFound {
-				/* .lock file does not exist but should. Attempt to recover */
-				for _, i := range workspaces {
-					if id, ok := i.Config["user.workspace.project-id"]; ok {
-						project.projectId = id
-						if err = project.SaveProject(); err != nil {
-							return nil, err
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return &project, nil
-}
-
 func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
 	var err error
 	var project Project
@@ -144,19 +105,6 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	return &project, nil
 }
 
-func cleanPath(path string) (string, error) {
-	var err error
-	if !filepath.IsAbs(path) {
-		return "", ErrNoRelativePathsAllowed
-	}
-
-	path, err = filepath.EvalSymlinks(path)
-	if err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
 func (p *Project) validateProjectDirectory(instances []*srv.WorkspaceProps) error {
 	var err error
 	for _, i := range instances {
@@ -215,10 +163,6 @@ func (p *Project) tryToRecover() (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-func LockPath(path string) string {
-	return filepath.Join(path, ProjectLock)
 }
 
 func (w *Project) ProjectId() string {
@@ -322,27 +266,27 @@ func (w *Project) enumWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
 }
 
 func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]*srv.WorkspaceProps, error) {
+	UpdateConfigFromBindMounts(server, fs)
+
 	all, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}
 
 	/* Get a project path for every project */
-	var projects = make(map[string][]*srv.WorkspaceProps, len(all))
+	var projects = make(map[string]bool, len(all))
 	for _, i := range all {
 		projectPath := i.Devices[ProjectDevice]["source"]
-		projects[projectPath] = append(projects[projectPath], i)
+		projects[projectPath] = true
 	}
 
 	/* Get a list of Project objects with workspaces */
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
-	for path, instances := range projects {
-		if project, err := LoadProjectFromInstances(server, fs, instances, path); err == nil {
-			/* we have a list of instances from a call above already, now just get the list
-			of workspace files in the directory and merget them togeter for the final result */
-			files, err := project.enumWorkspaceFiles()
+	for path := range projects {
+		if project, err := LoadProject(server, fs, path); err == nil {
+			workspaces, err := project.EnumWorkspaces()
 			if err == nil {
-				fullList[project] = mergeInstancesAndFiles(files, instances)
+				fullList[project] = workspaces
 			}
 		}
 	}
@@ -356,4 +300,62 @@ func newProjectId() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func cleanPath(path string) (string, error) {
+	var err error
+	if !filepath.IsAbs(path) {
+		return "", ErrNoRelativePathsAllowed
+	}
+
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func LockPath(path string) string {
+	return filepath.Join(path, ProjectLock)
+}
+
+func UpdateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) error {
+	workspaces, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
+	if err != nil {
+		return err
+	}
+
+	memFs := afero.NewMemMapFs()
+	for _, i := range workspaces {
+		if projectId, ok := i.Config["user.workspace.project-id"]; ok && i.State == util.Ready {
+			stdout, err := memFs.Create(util.ToInstanceName(i.Name, projectId))
+			if err != nil {
+				return err
+			}
+
+			args := srv.ExecArgs{User: "root", Command: []string{"bash", "-c",
+				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+				Stdin: nil, Stdout: stdout, Stderr: nil}
+			done, err := server.Exec(i.Name, projectId, &args)
+			if err != nil {
+				continue
+			}
+			<-done
+
+			if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(i.Name, projectId)); err == nil {
+				if ok, _ := afero.Exists(fs, string(currentPath)); ok {
+					if lxdPath, ok := i.Devices["workspace.project"]["source"]; ok {
+						if lxdPath != string(currentPath) {
+							server.AddWorkspaceDevice(i.Name, projectId, srv.WorkspaceDevice{
+								Name:       ProjectDevice,
+								Properties: map[string]string{"type": "disk", "source": string(currentPath), "path": "/project"},
+							})
+						}
+					}
+				}
+			}
+
+		}
+	}
+	return nil
 }

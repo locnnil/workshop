@@ -54,13 +54,13 @@ func (_m *MockWorkspaceServer) AddWorkspacesConfig(filter server.WorkspaceConfig
 	return r0
 }
 
-// Exec provides a mock function with given fields: name, project_id, user, command
-func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string, command []string) (chan bool, error) {
-	ret := _m.Called(name, project_id, user, command)
+// Exec provides a mock function with given fields: name, project_id, args
+func (_m *MockWorkspaceServer) Exec(name string, project_id string, args *server.ExecArgs) (chan bool, error) {
+	ret := _m.Called(name, project_id, args)
 
 	var r0 chan bool
-	if rf, ok := ret.Get(0).(func(string, string, string, []string) chan bool); ok {
-		r0 = rf(name, project_id, user, command)
+	if rf, ok := ret.Get(0).(func(string, string, *server.ExecArgs) chan bool); ok {
+		r0 = rf(name, project_id, args)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(chan bool)
@@ -68,8 +68,8 @@ func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, []string) error); ok {
-		r1 = rf(name, project_id, user, command)
+	if rf, ok := ret.Get(1).(func(string, string, *server.ExecArgs) error); ok {
+		r1 = rf(name, project_id, args)
 	} else {
 		r1 = ret.Error(1)
 	}

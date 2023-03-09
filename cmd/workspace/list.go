@@ -12,6 +12,8 @@ import (
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 type CmdList struct {
@@ -97,8 +99,12 @@ func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
 
-	for project, ws := range list {
-		for _, j := range ws {
+	keys := maps.Keys(list)
+	slices.SortFunc(keys,
+		func(i, j *workspace.Project) bool { return i.ProjectDirectory() > j.ProjectDirectory() })
+
+	for _, project := range keys {
+		for _, j := range list[project] {
 			line := []string{
 				contractHomeDirectory(project.ProjectDirectory()),
 				j.Name,

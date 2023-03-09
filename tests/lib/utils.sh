@@ -23,6 +23,10 @@ function list() {
     sudo -u ubuntu -- workspace --project $1 list
 }
 
+function list_all() {
+    sudo -u ubuntu -- workspace list --all
+}
+
 function delete() {
     lxc delete $1 --force --project workspace.ubuntu
 }

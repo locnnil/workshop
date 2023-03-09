@@ -142,12 +142,12 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, mock.Anything).Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, device).Return(nil).
-		On("Exec", name, mock.Anything, "root", []string{"tar",
+		On("Exec", name, mock.Anything, &srv.ExecArgs{User: "root", Command: []string{"tar",
 			"--extract",
 			"--file",
 			filepath.Join("/root", filename),
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
-			"--no-same-owner"}).Return(done, nil).
+			"--no-same-owner"}}).Return(done, nil).
 		On("RemoveWorkspaceDevice", name, mock.Anything, blob.Name).Return(nil)
 
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)

@@ -146,14 +146,16 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	done, err := w.server.Exec(w.Name, w.project.ProjectId(), "root", []string{
+
+	args := srv.ExecArgs{User: "root", Command: []string{
 		"tar",
 		"--extract",
 		"--file",
 		sdkMount.Properties["path"],
 		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
 		"--no-same-owner",
-	})
+	}, Stdin: nil, Stdout: nil, Stderr: nil}
+	done, err := w.server.Exec(w.Name, w.project.ProjectId(), &args)
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done

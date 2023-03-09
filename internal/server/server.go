@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -42,6 +43,14 @@ type WorkspaceProps struct {
 	Config  map[string]string
 }
 
+type ExecArgs struct {
+	User    string
+	Command []string
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+}
+
 type WorkspaceConfigFilter func(config map[string]string) bool
 type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
 
@@ -71,7 +80,7 @@ type WorkspaceServer interface {
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
-	Exec(name, project_id, user string, command []string) (chan bool, error)
+	Exec(name, project_id string, args *ExecArgs) (chan bool, error)
 }
 
 type LxdServer struct {
@@ -318,9 +327,9 @@ func (s *LxdServer) RemoveWorkspaceDevice(name, project_id, device string) error
 	return op.Wait()
 }
 
-func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan bool, error) {
+func (s *LxdServer) Exec(name, project_id string, args *ExecArgs) (chan bool, error) {
 	req := api.InstanceExecPost{
-		Command: command, WaitForWS: true,
+		Command: args.Command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: "/",
 		Interactive: false,
 	}
@@ -328,7 +337,7 @@ func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan 
 	done := make(chan bool)
 
 	arg := lxd.InstanceExecArgs{
-		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
 		Control: SignalHandler, DataDone: done,
 	}
 
