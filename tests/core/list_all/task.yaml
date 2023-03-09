@@ -3,7 +3,7 @@ summary: Ensure that workspace list renders a list of active workspaces for all 
 prepare: |
   . "$TESTSLIB"/utils.sh
 
-  for path in $WORKSPACES/*; do
+  for path in "$WORKSPACES"/*; do
     launch $path ws | MATCH started
   done
   lxc project switch workspace.ubuntu
@@ -17,22 +17,24 @@ restore: |
 
 execute: |
   . "$TESTSLIB"/utils.sh
-  # project-specific workspace list
   for path in $WORKSPACES/*; do
    list_all | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
   done
 
   # move a directory and validate it has an updated path in the output
   for path in $WORKSPACES/*; do
-   mv $path $path-new
+   sudo -u ubuntu mv $path $path-new
    list_all | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready$"
    list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
   done
 
-  # delete a directory and validate it has a corres state in the output
+  # delete a directory and validate it has a correct state in the output
   for path in $WORKSPACES/*; do
-   rm -rf $path-new
-   list_all | NOMATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready$"
+   sudo -u ubuntu cp -R $path $path-copy
+   launch $path-copy ws
+   rm -rf $path-copy
+   list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
+   list_all | MATCH "^-[[:space:]]+ws[[:space:]]+Error"
   done
 
   # stop a workspace, move the directory, validate the correct list

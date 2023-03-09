@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/rand"
 	"path/filepath"
 	"regexp"
@@ -22,8 +23,11 @@ type Project struct {
 	server srv.WorkspaceServer
 }
 
-const ProjectLock = ".workspace.lock"
-const ProjectDevice = "workspace.project"
+const (
+	ProjectLock   = ".workspace.lock"
+	ProjectDevice = "workspace.project"
+	ProjectId     = "user.workspace.project-id"
+)
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
@@ -35,16 +39,16 @@ func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project
 	var err error
 	var project Project
 
-	/* Make sure the path is canonicalised */
-	if path, err = cleanPath(path); err != nil {
-		return nil, err
-	}
-
 	if ok, err := afero.Exists(fs, path); err == nil {
 		if !ok {
 			return nil, ErrProjectDirectoryNotFound
 		}
 	} else {
+		return nil, err
+	}
+
+	/* Make sure the path is canonicalised */
+	if path, err = cleanPath(path); err != nil {
 		return nil, err
 	}
 
@@ -140,7 +144,7 @@ Check if the project DID exist at this directory path and if so, try to recover 
 */
 func (p *Project) tryToRecover() (bool, error) {
 	instances, err := p.server.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
-		if mount, ok := devices["workspace.project"]; ok {
+		if mount, ok := devices[ProjectDevice]; ok {
 			if mount["source"] == p.path {
 				return true
 			}
@@ -155,7 +159,7 @@ func (p *Project) tryToRecover() (bool, error) {
 	if len(instances) > 0 {
 		/* Found a previous .lock file, restore it */
 		for _, i := range instances {
-			if id, ok := i.Config["user.workspace.project-id"]; ok {
+			if id, ok := i.Config[ProjectId]; ok {
 				p.projectId = id
 				p.SaveProject()
 				return true, nil
@@ -258,7 +262,7 @@ func (w *Project) enumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
 }
 
 func (w *Project) enumWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
-	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter("user.workspace.project-id", w.ProjectId()))
+	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter(ProjectId, w.ProjectId()))
 	if err != nil {
 		return instances, err
 	}
@@ -273,19 +277,36 @@ func EnumAllWorkspaces(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]
 		return nil, err
 	}
 
+	type ProjectProps struct {
+		path      string
+		projectId string
+	}
+
 	/* Get a project path for every project */
-	var projects = make(map[string]bool, len(all))
+	var projects = make(map[ProjectProps]bool, len(all))
 	for _, i := range all {
 		projectPath := i.Devices[ProjectDevice]["source"]
-		projects[projectPath] = true
+		projects[ProjectProps{path: projectPath, projectId: i.Config[ProjectId]}] = true
 	}
 
 	/* Get a list of Project objects with workspaces */
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
-	for path := range projects {
-		if project, err := LoadProject(server, fs, path); err == nil {
+	for props := range projects {
+		if project, err := LoadProject(server, fs, props.path); err == nil {
 			workspaces, err := project.EnumWorkspaces()
 			if err == nil {
+				fullList[project] = workspaces
+			}
+		} else if err == ErrProjectDirectoryNotFound {
+			// all the workspaces of this project are unreachable and the directory
+			// does not exist anymore. However, there could be stopped instances that are orphaned
+			// we make sure these are not skipped in the output
+			project = &Project{path: fmt.Sprintf("(%s)", props.path), projectId: props.projectId, server: server, fs: fs}
+			workspaces, err := project.enumWorkspaceInstances()
+			if len(workspaces) > 0 && err == nil {
+				for _, i := range workspaces {
+					i.State = util.Error
+				}
 				fullList[project] = workspaces
 			}
 		}
@@ -327,7 +348,7 @@ func UpdateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) error {
 
 	memFs := afero.NewMemMapFs()
 	for _, i := range workspaces {
-		if projectId, ok := i.Config["user.workspace.project-id"]; ok && i.State == util.Ready {
+		if projectId, ok := i.Config[ProjectId]; ok && i.State == util.Ready {
 			stdout, err := memFs.Create(util.ToInstanceName(i.Name, projectId))
 			if err != nil {
 				return err
@@ -344,7 +365,7 @@ func UpdateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) error {
 
 			if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(i.Name, projectId)); err == nil {
 				if ok, _ := afero.Exists(fs, string(currentPath)); ok {
-					if lxdPath, ok := i.Devices["workspace.project"]["source"]; ok {
+					if lxdPath, ok := i.Devices[ProjectDevice]["source"]; ok {
 						if lxdPath != string(currentPath) {
 							server.AddWorkspaceDevice(i.Name, projectId, srv.WorkspaceDevice{
 								Name:       ProjectDevice,

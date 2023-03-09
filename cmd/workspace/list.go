@@ -97,7 +97,14 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
 
 func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
+
+	commentNeeded := false
+	if slices.IndexFunc(maps.Keys(list), func(p *workspace.Project) bool { return strings.HasPrefix(p.ProjectDirectory(), "(") }) == -1 {
+		fmt.Fprintf(w, "Project\tWorkspace\tState\n")
+	} else {
+		fmt.Fprintf(w, "Project\tWorkspace\tState\tComment\n")
+		commentNeeded = true
+	}
 
 	keys := maps.Keys(list)
 	slices.SortFunc(keys,
@@ -105,12 +112,26 @@ func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 
 	for _, project := range keys {
 		for _, j := range list[project] {
-			line := []string{
-				contractHomeDirectory(project.ProjectDirectory()),
-				j.Name,
-				j.State.String(),
+			if !commentNeeded {
+				line := []string{
+					contractHomeDirectory(project.ProjectDirectory()),
+					j.Name,
+					j.State.String(),
+				}
+				fmt.Fprintln(w, strings.Join(line, "\t"))
+			} else {
+				comment := ""
+				if strings.HasPrefix(project.ProjectDirectory(), "(") {
+					comment = fmt.Sprintf("not found %s", project.ProjectDirectory())
+				}
+				line := []string{
+					contractHomeDirectory(project.ProjectDirectory()),
+					j.Name,
+					j.State.String(),
+					comment,
+				}
+				fmt.Fprintln(w, strings.Join(line, "\t"))
 			}
-			fmt.Fprintln(w, strings.Join(line, "\t"))
 		}
 	}
 	w.Flush()
@@ -125,6 +146,8 @@ func contractHomeDirectory(path string) string {
 	if home, err := os.UserHomeDir(); err == nil {
 		if filepath.HasPrefix(path, home) {
 			return strings.Replace(path, home, "~", 1)
+		} else if filepath.HasPrefix(path, "(") {
+			return "-"
 		}
 	}
 	return path
