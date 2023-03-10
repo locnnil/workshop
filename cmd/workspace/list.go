@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 )
 
 type CmdList struct {
-	all bool
+	global bool
 }
 
 func (c *CmdList) Command() *cobra.Command {
@@ -29,7 +30,7 @@ func (c *CmdList) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.all, "all", false, "list workspaces from all projects")
+	cmd.Flags().BoolVar(&c.global, "global", false, "list workspaces from all projects")
 
 	return cmd
 }
@@ -37,11 +38,12 @@ func (c *CmdList) Command() *cobra.Command {
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	var err error
 	var server srv.WorkspaceServer
+	var project *workspace.Project
 	var fs = afero.NewOsFs()
 
-	/* check if both --project and --all were provided */
-	if cmd.Parent().Flag("project").Changed && cmd.Flag("all").Changed {
-		return fmt.Errorf("flags --project and --all are mutually exclusive")
+	/* check if both --project and --global were provided */
+	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
+		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
 	server, err = srv.NewServer(fs)
@@ -49,34 +51,40 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if !c.all {
-		project, err := workspace.LoadProject(server, fs, Project)
-		if err == workspace.ErrProjectFileNotFound {
-			project, err = workspace.NewProject(server, fs, Project)
-			if err != nil {
+	if !c.global {
+		project, err = workspace.LoadProject(server, fs, Project)
+
+		if err == nil {
+			/* List all workspaces for the current project */
+			wsList, err := project.EnumWorkspaces()
+			if len(wsList) != 0 && err == nil {
+				listWorkspaces(wsList, project)
+			} else {
 				return err
 			}
-		} else if err != nil {
 			return err
+		} else if errors.Is(err, afero.ErrFileNotFound) {
+			/* .lock file was not found in the current directory (or in its parents)
+			   hence, we execute a global list command to view all the workspaces */
+			listGlobal(server, fs)
 		}
-
-		/* List all workspaces for the current project */
-		wsList, err := project.EnumWorkspaces()
-		if len(wsList) != 0 && err == nil {
-			listWorkspaces(wsList, project)
-		} else {
-			return err
-		}
-
 	} else {
 		/* List all workspaces in all projects */
-		wsList, err := workspace.EnumAllWorkspaces(server, fs)
-		if err != nil || len(wsList) == 0 {
+		err = listGlobal(server, fs)
+		if err != nil {
 			return err
 		}
-		listAllWorkspaces(wsList)
 	}
 
+	return nil
+}
+
+func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
+	wsList, err := workspace.EnumWorkspacesGlobal(server, fs)
+	if err != nil || len(wsList) == 0 {
+		return err
+	}
+	listAllWorkspaces(wsList)
 	return nil
 }
 
@@ -98,13 +106,7 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
 func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 	w := tabWriter()
 
-	commentNeeded := false
-	if slices.IndexFunc(maps.Keys(list), func(p *workspace.Project) bool { return strings.HasPrefix(p.ProjectDirectory(), "(") }) == -1 {
-		fmt.Fprintf(w, "Project\tWorkspace\tState\n")
-	} else {
-		fmt.Fprintf(w, "Project\tWorkspace\tState\tComment\n")
-		commentNeeded = true
-	}
+	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
 
 	keys := maps.Keys(list)
 	slices.SortFunc(keys,
@@ -112,26 +114,17 @@ func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 
 	for _, project := range keys {
 		for _, j := range list[project] {
-			if !commentNeeded {
-				line := []string{
-					contractHomeDirectory(project.ProjectDirectory()),
-					j.Name,
-					j.State.String(),
-				}
-				fmt.Fprintln(w, strings.Join(line, "\t"))
-			} else {
-				comment := ""
-				if strings.HasPrefix(project.ProjectDirectory(), "(") {
-					comment = fmt.Sprintf("not found %s", project.ProjectDirectory())
-				}
-				line := []string{
-					contractHomeDirectory(project.ProjectDirectory()),
-					j.Name,
-					j.State.String(),
-					comment,
-				}
-				fmt.Fprintln(w, strings.Join(line, "\t"))
+			comment := "-"
+			if !project.Exists() {
+				comment = "missing-project"
 			}
+			line := []string{
+				contractHomeDirectory(project.ProjectDirectory()),
+				j.Name,
+				j.State.String(),
+				comment,
+			}
+			fmt.Fprintln(w, strings.Join(line, "\t"))
 		}
 	}
 	w.Flush()

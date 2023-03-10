@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"os"
@@ -19,8 +20,9 @@ import (
 )
 
 var (
-	ErrCancelled    = fmt.Errorf("LXD operation cancelled by user")
-	ErrForcedCancel = fmt.Errorf("LXD operation forcefully cancelled by user")
+	ErrCancelled              = fmt.Errorf("LXD operation cancelled by user")
+	ErrForcedCancel           = fmt.Errorf("LXD operation forcefully cancelled by user")
+	ErrNoRelativePathsAllowed = errors.New("an absolute path must be used to refer to a project")
 )
 
 var (
@@ -57,6 +59,19 @@ func ToWorkspaceName(instance string) string {
 
 	// drop the project id from the name
 	return instance[:idx]
+}
+
+func CleanProjectPath(path string) (string, error) {
+	var err error
+	if !filepath.IsAbs(path) {
+		return "", ErrNoRelativePathsAllowed
+	}
+
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func init() {

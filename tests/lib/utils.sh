@@ -23,8 +23,12 @@ function list() {
     sudo -u ubuntu -- workspace --project $1 list
 }
 
+function list_cwd() {
+  sudo -u ubuntu -- workspace list
+}
+
 function list_all() {
-    sudo -u ubuntu -- workspace list --all
+    sudo -u ubuntu -- workspace list --global
 }
 
 function delete() {

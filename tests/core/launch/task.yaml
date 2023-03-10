@@ -4,6 +4,12 @@ restore: |
   . "$TESTSLIB"/utils.sh
   cleanup_workspaces_in_tree $WORKSPACES
 
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls $WORKSPACES/*
+
 execute: |
   . "$TESTSLIB"/utils.sh
 

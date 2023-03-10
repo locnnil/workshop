@@ -8,6 +8,12 @@ prepare: |
   done
   lxc project switch workspace.ubuntu
 
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls $WORKSPACES/*
+
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup_workspaces_in_tree $WORKSPACES
@@ -18,14 +24,14 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
   for path in $WORKSPACES/*; do
-   list_all | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
+   list_all | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   done
 
   # move a directory and validate it has an updated path in the output
   for path in $WORKSPACES/*; do
    sudo -u ubuntu mv $path $path-new
-   list_all | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready$"
-   list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
+   list_all | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+   list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   done
 
   # delete a directory and validate it has a correct state in the output
@@ -33,8 +39,7 @@ execute: |
    sudo -u ubuntu cp -R $path $path-copy
    launch $path-copy ws
    rm -rf $path-copy
-   list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready$"
-   list_all | MATCH "^-[[:space:]]+ws[[:space:]]+Error"
+   list_all | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
   done
 
   # stop a workspace, move the directory, validate the correct list

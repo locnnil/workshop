@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -40,7 +41,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	project, err := workspace.LoadProject(server, fs, Project)
-	if err == workspace.ErrProjectFileNotFound {
+	if errors.Is(err, afero.ErrFileNotFound) {
 		project, err = workspace.NewProject(server, fs, Project)
 		if err != nil {
 			return err
@@ -49,7 +50,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	wsList, err := project.EnumWorkspaces()
+	wsList, err := project.EnumWorkspaceFiles()
 	if err != nil || len(wsList) == 0 {
 		return err
 	}

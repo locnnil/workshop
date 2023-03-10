@@ -1,4 +1,10 @@
-summary: Ensure that workspace list renders a list of active workspaces correctly
+summary: | 
+  List command covering the following use cases:
+  - Project-specific list from a project directory
+  - Project-specific list from a nested directory
+  - List from a moved directory
+  - List from a copied directory
+  - List turning into list --global if executed outside of a project directory
 
 prepare: |
   . "$TESTSLIB"/utils.sh
@@ -7,6 +13,11 @@ prepare: |
     launch $path ws | MATCH started
   done
   lxc project switch workspace.ubuntu
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls $WORKSPACES/*
 
 restore: |
   . "$TESTSLIB"/utils.sh
@@ -18,9 +29,18 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
   # project-specific workspace list
+  
+  # try launching from a no project directory, an empty list expected
+  list_cwd | MATCH "^$"
+
   for path in $WORKSPACES/*; do
    list $path | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
-    test -f $path/.workspace.lock
+   test -f $path/.workspace.lock
+
+   # list from a nested directory must work similarly as if run from a project directory
+   pushd ./; mkdir $path/nested; cd $path/nested
+   list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$" 
+   rm -rf $path/nested; popd 
   done
 
   for path in $WORKSPACES/*; do
@@ -32,7 +52,7 @@ execute: |
 
     # since the directory was copied, its projects instances should still stay available at the old path
     sudo -u ubuntu cp -R $path-new $path-copied
-    list $path-copied | MATCH "^${path}-copied[[:space:]]+ws[[:space:]]+Inactive$"
+    list $path-copied | MATCH "^$"
     project_id_copied=`cat $path-copied/.workspace.lock`
     test $project_id_copied != $project_id 
 
@@ -52,6 +72,9 @@ execute: |
     # workspace --project /dir-copy list <- this will execute move semantics and old instances will be
     # moved to the /dir-copy which is wrong
   done
+
+  # running list from a non-project directory causes list --global to be executed
+  # list | MATCH
 
 
   

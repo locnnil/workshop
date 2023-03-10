@@ -2,13 +2,11 @@ package workspace
 
 import (
 	"math/rand"
-	"net/http"
 	"testing"
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/server"
-	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,7 +41,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInACWD() {
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
 	project := &Project{fs: s.Fs}
-	ws, err := project.enumWorkspaceFiles()
+	ws, err := project.EnumWorkspaceFiles()
 
 	assert.Len(t, ws, 2)
 	assert.Equal(t, ws[0].Name, "project1")
@@ -65,7 +63,7 @@ func (s *ProjectTestSuite) TestNewProject() {
 
 	project, err = NewProject(s.Srv, s.Fs, "/doesnotexist")
 	assert.Nil(t, project)
-	assert.ErrorIs(t, err, ErrProjectDirectoryNotFound)
+	assert.ErrorIs(t, err, afero.ErrFileNotFound)
 }
 
 func (s *ProjectTestSuite) TestLoadProject() {
@@ -77,7 +75,7 @@ func (s *ProjectTestSuite) TestLoadProject() {
 	/* No relative paths are allowed */
 	project, err := LoadProject(nil, fs, "../tmp/experiments")
 	assert.Nil(t, project)
-	assert.Error(t, ErrNoRelativePathsAllowed, err)
+	assert.Error(t, util.ErrNoRelativePathsAllowed, err)
 
 	/* Could not read the project directory */
 	project, err = LoadProject(nil, fs, "/invalid&")
@@ -119,21 +117,11 @@ func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
 	assert.NoError(s.T(), err)
 }
 
-func (s *ProjectTestSuite) TestEnumInstancesErrorFromServer() {
-	s.Srv.
-		On("GetWorkspacesByDevices", mock.Anything).Return(nil, api.StatusErrorf(http.StatusNotFound, ""))
-
-	project, err := LoadProject(s.Srv, s.Fs, "/")
-
-	assert.Nil(s.T(), project)
-	assert.Error(s.T(), err)
-}
-
 func (s *ProjectTestSuite) TestEnumFilesErrorReadingProjectDirectory() {
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	s.Fs.RemoveAll("/")
 
-	result, err := project.enumWorkspaceFiles()
+	result, err := project.EnumWorkspaceFiles()
 
 	assert.Nil(s.T(), result)
 	assert.Error(s.T(), err)
@@ -143,12 +131,12 @@ func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*server.WorkspaceProps{}, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
+	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
 	result, err := project.EnumWorkspaces()
+	/* Make sure files without instances are not returned */
 	assert.NoError(s.T(), err)
-	assert.Len(s.T(), result, 1)
-	assert.Equal(s.T(), util.Inactive, result[0].State)
-	assert.Equal(s.T(), "project1", result[0].Name)
+	assert.Len(s.T(), result, 0)
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
