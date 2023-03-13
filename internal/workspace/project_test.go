@@ -111,7 +111,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*server.WorkspaceProps{}, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 
-	result, err := project.EnumWorkspaces()
+	result, err := project.RetrieveWorkspaces()
 
 	assert.Empty(s.T(), result)
 	assert.NoError(s.T(), err)
@@ -133,7 +133,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
-	result, err := project.EnumWorkspaces()
+	result, err := project.RetrieveWorkspaces()
 	/* Make sure files without instances are not returned */
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), result, 0)
@@ -149,7 +149,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 
-	result, err := project.EnumWorkspaces()
+	result, err := project.RetrieveWorkspaces()
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), result, 1)
 	/* the workspace does not have a corresponding file, hence, an error state */
@@ -172,7 +172,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
-	result, err := project.EnumWorkspaces()
+	result, err := project.RetrieveWorkspaces()
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), util.Error, result[1].State)
 	assert.Equal(s.T(), "instance1", result[1].Name)

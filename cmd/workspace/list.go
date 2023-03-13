@@ -56,7 +56,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 		if err == nil {
 			/* List all workspaces for the current project */
-			wsList, err := project.EnumWorkspaces()
+			wsList, err := project.RetrieveWorkspaces()
 			if len(wsList) != 0 && err == nil {
 				listWorkspaces(wsList, project)
 			} else {
@@ -80,7 +80,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 }
 
 func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
-	wsList, err := workspace.EnumWorkspacesGlobal(server, fs)
+	wsList, err := workspace.RetrieveWorkspacesGlobal(server, fs)
 	if err != nil || len(wsList) == 0 {
 		return err
 	}

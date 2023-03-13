@@ -34,4 +34,3 @@ function list_all() {
 function delete() {
     lxc delete $1 --force --project workspace.ubuntu
 }
-  

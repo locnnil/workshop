@@ -23,18 +23,19 @@ restore: |
 
 execute: |
   . "$TESTSLIB"/utils.sh
+  echo "(1) make sure every required workspace present in the global list output"
   for path in $WORKSPACES/*; do
    list_all | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   done
 
-  # move a directory and validate it has an updated path in the output
+  echo "(2) move a directory and validate it has an updated path in the output"
   for path in $WORKSPACES/*; do
    sudo -u ubuntu mv $path $path-new
    list_all | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
    list_all | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   done
 
-  # delete a directory and validate it has a correct state in the output
+  echo "(3) delete a directory and validate it has a correct state in the output"
   for path in $WORKSPACES/*; do
    sudo -u ubuntu cp -R $path $path-copy
    launch $path-copy ws

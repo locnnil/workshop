@@ -14,6 +14,11 @@ import (
 	"github.com/spf13/afero"
 )
 
+type ProjectKey struct {
+	path      string
+	projectId string
+}
+
 type Project struct {
 	path      string
 	projectId string
@@ -47,15 +52,11 @@ func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project
 	if err = project.ReadProject(path); err == nil {
 		/* See if the project's directory was changed. We need to update its file and the instances' configuration
 		to maintain integrity */
-		instances, err := project.enumWorkspaceInstances()
-		if err != nil {
-			return nil, err
-		}
-		if err = project.validateProjectDirectory(instances); err != nil {
+		if err = project.validateProjectDirectory(); err != nil {
 			return nil, err
 		}
 	} else if errors.Is(err, afero.ErrFileNotFound) {
-		UpdateConfigFromBindMounts(server, fs)
+		updateConfigFromBindMounts(server, fs)
 		if ok := project.recorverProjectId(); ok {
 			/* recovered project-id successfully, recreate .lock */
 			return &project, project.SaveProject()
@@ -90,10 +91,48 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	return &project, nil
 }
 
-func (p *Project) validateProjectDirectory(instances []*srv.WorkspaceProps) error {
+func (p *Project) validateProjectDirectory() error {
 	var err error
+	var updated bool
+
+	instances, err := p.retrieveWorkspaceInstances()
+	if err != nil {
+		return err
+	}
+
+	/* see if any of the project's workspace has an incorrect config
+	   to save on any unnecessary API calls to the server
+	*/
+	idx := slices.IndexFunc(instances, func(w *srv.WorkspaceProps) bool { return w.Devices[ProjectDevice]["source"] != p.path })
+	if idx == -1 {
+		return nil
+	}
+
+	/* possibly, the original directory still exists due to, for example:
+	   mv dir dir-1
+	   workspace list --project dir-1
+	   mv dir-1 dir                       <-- workspace will be blind to this
+	   cp -R dir dir-copy
+	   workspace list --project dir-copy
+
+	   We should examine running workspaces (if any) to see if that's the case
+	*/
+	if updated, err = updateConfigFromBindMounts(p.server, p.fs); err != nil {
+		return err
+	}
+
+	if updated {
+		/* the workspaces' configuration was updated, so re-fetch the instances of the project */
+		instances, err = p.retrieveWorkspaceInstances()
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, i := range instances {
 		source := i.Devices[ProjectDevice]["source"]
+		/* if some of the workspaces do not have a correct configuration
+		after running an update from bind-mounts, e.g. all of them were stopped */
 		if source != p.path {
 			/* The directory was copied elsewhere, we need to generate a new project-id to let the old project-id persist */
 			if ok, _ := afero.Exists(p.fs, LockPath(source)); ok {
@@ -104,13 +143,14 @@ func (p *Project) validateProjectDirectory(instances []*srv.WorkspaceProps) erro
 				return p.SaveProject()
 			}
 
-			/* The directory was moved, update all instances project mounts */
+			/* The directory was moved, update the project mount */
 			var mount = srv.WorkspaceDevice{
 				Name:       ProjectDevice,
 				Properties: map[string]string{"type": "disk", "source": p.path, "path": "/project"},
 			}
 			p.server.AddWorkspaceDevice(i.Name, p.projectId, mount)
 		}
+
 	}
 	return nil
 }
@@ -174,7 +214,7 @@ func (w *Project) SaveProject() error {
 	return afero.WriteFile(w.fs, filepath.Join(w.path, ProjectLock), []byte(w.projectId), 0644)
 }
 
-func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
+func (w *Project) RetrieveWorkspaces() ([]*srv.WorkspaceProps, error) {
 	/* (1) Find all the project's workspace files */
 	files, err := w.EnumWorkspaceFiles()
 	if err != nil {
@@ -182,7 +222,7 @@ func (w *Project) EnumWorkspaces() ([]*srv.WorkspaceProps, error) {
 	}
 
 	/* (2) List all the project's instances */
-	instances, err := w.enumWorkspaceInstances()
+	instances, err := w.retrieveWorkspaceInstances()
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +281,7 @@ func (w *Project) EnumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
 	return workspaces, nil
 }
 
-func (w *Project) enumWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
+func (w *Project) retrieveWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
 	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter(ProjectId, w.ProjectId()))
 	if err != nil {
 		return instances, err
@@ -249,31 +289,26 @@ func (w *Project) enumWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
 	return instances, nil
 }
 
-func EnumWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]*srv.WorkspaceProps, error) {
-	UpdateConfigFromBindMounts(server, fs)
+func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]*srv.WorkspaceProps, error) {
+	updateConfigFromBindMounts(server, fs)
 
 	all, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}
 
-	type ProjectProps struct {
-		path      string
-		projectId string
-	}
-
-	/* Get a project path for every project */
-	var projects = make(map[ProjectProps]bool, len(all))
+	/* Group by instances by project-id and project directory  */
+	var projects = make(map[ProjectKey]bool, len(all))
 	for _, i := range all {
 		projectPath := i.Devices[ProjectDevice]["source"]
-		projects[ProjectProps{path: projectPath, projectId: i.Config[ProjectId]}] = true
+		projects[ProjectKey{projectPath, i.Config[ProjectId]}] = true
 	}
 
 	/* Get a list of Project objects with workspaces */
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
 	for props := range projects {
 		if project, err := LoadProject(server, fs, props.path); err == nil {
-			workspaces, err := project.EnumWorkspaces()
+			workspaces, err := project.RetrieveWorkspaces()
 			if err == nil {
 				fullList[project] = workspaces
 			}
@@ -282,7 +317,7 @@ func EnumWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Project
 			// does not exist anymore. However, there could be stopped instances that are orphaned
 			// we make sure these are not skipped in the output
 			project = &Project{path: props.path, projectId: props.projectId, server: server, fs: fs}
-			workspaces, err := project.enumWorkspaceInstances()
+			workspaces, err := project.retrieveWorkspaceInstances()
 			if len(workspaces) > 0 && err == nil {
 				for _, i := range workspaces {
 					i.State = util.Error
@@ -307,43 +342,63 @@ func LockPath(path string) string {
 	return filepath.Join(path, ProjectLock)
 }
 
-func UpdateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) error {
+func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (updated bool, err error) {
 	workspaces, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	memFs := afero.NewMemMapFs()
+	/* Group by instances by project-id and project directory  */
+	var grouped = make(map[ProjectKey][]*srv.WorkspaceProps, len(workspaces))
 	for _, i := range workspaces {
-		if projectId, ok := i.Config[ProjectId]; ok && i.State == util.Ready {
-			stdout, err := memFs.Create(util.ToInstanceName(i.Name, projectId))
-			if err != nil {
-				return err
-			}
+		if i.State == util.Ready {
+			projectPath := i.Devices[ProjectDevice]["source"]
+			key := ProjectKey{projectPath, i.Config[ProjectId]}
+			grouped[key] = append(grouped[key], i)
+		}
+	}
 
-			args := srv.ExecArgs{User: "root", Command: []string{"bash", "-c",
-				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-				Stdin: nil, Stdout: stdout, Stderr: nil}
-			done, err := server.Exec(i.Name, projectId, &args)
-			if err != nil {
-				continue
-			}
-			<-done
+	/* memFs to story temporary results of the commands execution output */
+	memFs := afero.NewMemMapFs()
+	for key, i := range grouped {
 
-			if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(i.Name, projectId)); err == nil {
-				if ok, _ := afero.Exists(fs, string(currentPath)); ok {
-					if lxdPath, ok := i.Devices[ProjectDevice]["source"]; ok {
-						if lxdPath != string(currentPath) {
-							server.AddWorkspaceDevice(i.Name, projectId, srv.WorkspaceDevice{
+		/* Take the first instance from the group, we need any running
+		and ready to execute commands to validate the directory */
+		instance := i[0]
+		stdout, err := memFs.Create(util.ToInstanceName(instance.Name, key.projectId))
+		if err != nil {
+			return false, err
+		}
+
+		/* Get the mount point device/directory from findmnt and extract the path without a device
+		using awk */
+		args := srv.ExecArgs{User: "root", Command: []string{"bash", "-c",
+			"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+			Stdin: nil, Stdout: stdout, Stderr: nil}
+		done, err := server.Exec(instance.Name, key.projectId, &args)
+		if err != nil {
+			continue
+		}
+		<-done
+
+		/* Process the findmnt results */
+		if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(instance.Name, key.projectId)); err == nil {
+			/* check if the path is not //deleted */
+			if ok, _ := afero.Exists(fs, string(currentPath)); ok {
+				if lxdPath, ok := instance.Devices[ProjectDevice]["source"]; ok {
+					if lxdPath != string(currentPath) {
+						/* now, update LXD configuration for all the group's instances */
+						for _, inst := range i {
+							server.AddWorkspaceDevice(inst.Name, key.projectId, srv.WorkspaceDevice{
 								Name:       ProjectDevice,
 								Properties: map[string]string{"type": "disk", "source": string(currentPath), "path": "/project"},
 							})
 						}
+						updated = true
 					}
 				}
 			}
-
 		}
 	}
-	return nil
+	return updated, err
 }
