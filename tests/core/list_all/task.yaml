@@ -18,7 +18,7 @@ restore: |
   . "$TESTSLIB"/utils.sh
   cleanup_workspaces_in_tree $WORKSPACES
   for path in $WORKSPACES/{*-copy,*-new}; do
-    rm -rf $path
+    rm -rf "$path"
   done
 
 execute: |
@@ -39,7 +39,7 @@ execute: |
   for path in $WORKSPACES/*; do
    sudo -u ubuntu cp -R $path $path-copy
    launch $path-copy ws
-   rm -rf $path-copy
+   rm -rf "$path-copy"
    list_all | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
   done
 
