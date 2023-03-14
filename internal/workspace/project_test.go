@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/exp/slices"
 )
 
 type ProjectTestSuite struct {
@@ -93,12 +94,12 @@ func (s *ProjectTestSuite) TestLoadProject() {
 	/* Project exists, some workspace instances running */
 	instances := []*server.WorkspaceProps{
 		{
-			Name:  "instance1",
-			State: util.Ready,
+			Name: "instance1",
 			Devices: map[string]map[string]string{"workspace.project": {
 				"type": "disk", "source": "/", "path": "/project"}},
 		},
 	}
+	instances[0].SetState(util.Ready, util.None)
 	h.Unset()
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project, err = LoadProject(s.Srv, s.Fs, "/")
@@ -136,16 +137,19 @@ func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
 	result, err := project.RetrieveWorkspaces()
 	/* Make sure files without instances are not returned */
 	assert.NoError(s.T(), err)
-	assert.Len(s.T(), result, 0)
+	assert.Len(s.T(), result, 1)
+	assert.Equal(s.T(), result[0].State(), util.Inactive)
+	assert.Equal(s.T(), util.None, result[0].Reason())
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 	instances := []*server.WorkspaceProps{
 		{
-			Name:  "instance1",
-			State: util.Ready,
+			Name: "instance1",
 		},
 	}
+	instances[0].SetState(util.Ready, util.None)
+
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 
@@ -153,31 +157,36 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), result, 1)
 	/* the workspace does not have a corresponding file, hence, an error state */
-	assert.Equal(s.T(), util.Error, result[0].State)
+	assert.Equal(s.T(), util.Error, result[0].State())
+	assert.Equal(s.T(), util.MissingFile, result[0].Reason())
 	assert.Equal(s.T(), "instance1", result[0].Name)
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
 	instances := []*server.WorkspaceProps{
 		{
-			Name:  "instance1",
-			State: util.Ready,
+			Name: "instance1",
 		},
 		{
-			Name:  "project1",
-			State: util.Ready,
+			Name: "project1",
 		},
 	}
+	instances[0].SetState(util.Ready, util.None)
+	instances[1].SetState(util.Ready, util.None)
+
 	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
 	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
 	result, err := project.RetrieveWorkspaces()
+	// Make sure the order is always predictable
+	slices.SortFunc(result, func(i, j *server.WorkspaceProps) bool { return i.Name > j.Name })
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), util.Error, result[1].State)
+	assert.Equal(s.T(), util.Error, result[1].State())
+	assert.Equal(s.T(), util.MissingFile, result[1].Reason())
 	assert.Equal(s.T(), "instance1", result[1].Name)
 
-	assert.Equal(s.T(), util.Ready, result[0].State)
+	assert.Equal(s.T(), util.Ready, result[0].State())
 	assert.Equal(s.T(), "project1", result[0].Name)
 	assert.Len(s.T(), result, 2)
 }

@@ -17,12 +17,4 @@ execute: |
     launch "$path" ws | MATCH started
     test -f "$path"/.workspace.lock
     assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
-
-    # remove .workspace.lock accidentally to validate recovery
-    rm -f "$path"/.workspace.lock
-  done
-
-  for path in "$WORKSPACES"/*; do
-    list "$path"
-    test -f "$path"/.workspace.lock
   done

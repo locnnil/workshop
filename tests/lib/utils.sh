@@ -9,7 +9,7 @@ function assert_workspace_config() {
 }
 
 function cleanup_workspaces_in_tree() {
-  lxc delete `lxc list -c n -f csv --project workspace.ubuntu` --force --project workspace.ubuntu
+  lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
   for i in $1/*; do
     rm -f "$i"/.workspace.lock
   done

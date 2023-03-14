@@ -235,26 +235,23 @@ func (w *Project) RetrieveWorkspaces() ([]*srv.WorkspaceProps, error) {
 func mergeInstancesAndFiles(files []*srv.WorkspaceProps, instances []*srv.WorkspaceProps) []*srv.WorkspaceProps {
 	/* Merge both lists from to build a list of workspaces with their states */
 	result := make([]*srv.WorkspaceProps, 0, len(files)+len(instances))
-	for _, ws := range files {
+	for _, ws := range instances {
 		finder := func(p *srv.WorkspaceProps) bool { return p.Name == ws.Name }
-		idx := slices.IndexFunc(instances, finder)
+		idx := slices.IndexFunc(files, finder)
 		if idx == -1 {
-			/* We only have a file no instance which
-			we won't include in the final output
-			*/
-			ws.State = util.Inactive
-			continue
+			/* We only have an instance, no file
+			 */
+			ws.SetState(util.Error, util.MissingFile)
 		} else {
-			/* Both a file and instance exists */
-			ws.State = instances[idx].State
-			instances = slices.Delete(instances, idx, idx+1)
+			/* Both a file and instance exist */
+			files = slices.Delete(files, idx, idx+1)
 		}
 		result = append(result, ws)
 	}
 
-	/* Now, instances contains only orphaned workspaces, i.e. no file */
-	for _, ws := range instances {
-		ws.State = util.Error
+	/* Now, files contains only inactive workspaces */
+	for _, ws := range files {
+		ws.SetState(util.Inactive, util.None)
 		result = append(result, ws)
 	}
 	return result
@@ -275,7 +272,7 @@ func (w *Project) EnumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces = append(workspaces, &srv.WorkspaceProps{Name: names[1], State: util.Inactive})
+			workspaces = append(workspaces, &srv.WorkspaceProps{Name: names[1]})
 		}
 	}
 	return workspaces, nil
@@ -320,7 +317,7 @@ func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Pro
 			workspaces, err := project.retrieveWorkspaceInstances()
 			if len(workspaces) > 0 && err == nil {
 				for _, i := range workspaces {
-					i.State = util.Error
+					i.SetState(util.Error, util.MissingProject)
 				}
 				fullList[project] = workspaces
 			}
@@ -351,7 +348,7 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 	/* Group by instances by project-id and project directory  */
 	var grouped = make(map[ProjectKey][]*srv.WorkspaceProps, len(workspaces))
 	for _, i := range workspaces {
-		if i.State == util.Ready {
+		if i.State() == util.Ready {
 			projectPath := i.Devices[ProjectDevice]["source"]
 			key := ProjectKey{projectPath, i.Config[ProjectId]}
 			grouped[key] = append(grouped[key], i)
