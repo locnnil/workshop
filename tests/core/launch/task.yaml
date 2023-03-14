@@ -2,27 +2,27 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup_workspaces_in_tree $WORKSPACES
+  cleanup_workspaces_in_tree "$WORKSPACES"
 
 
 debug: |
   lxc project switch workspace.ubuntu
   lxc list -f compact
-  ls $WORKSPACES/*
+  ls "$WORKSPACES"/*
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  for path in $WORKSPACES/*; do
-    launch $path ws | MATCH started
-    test -f $path/.workspace.lock
-    assert_workspace_config $path `cat $path/.workspace.lock`
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
+    test -f "$path"/.workspace.lock
+    assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
 
     # remove .workspace.lock accidentally to validate recovery
-    rm -f $path/.workspace.lock
+    rm -f "$path"/.workspace.lock
   done
 
-  for path in $WORKSPACES/*; do
-    list $path
-    test -f $path/.workspace.lock
+  for path in "$WORKSPACES"/*; do
+    list "$path"
+    test -f "$path"/.workspace.lock
   done

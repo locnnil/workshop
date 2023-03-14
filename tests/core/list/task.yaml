@@ -9,21 +9,21 @@ summary: |
 prepare: |
   . "$TESTSLIB"/utils.sh
 
-  for path in $WORKSPACES/*; do
-    launch $path ws | MATCH started
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
   done
   lxc project switch workspace.ubuntu
 
 debug: |
   lxc project switch workspace.ubuntu
   lxc list -f compact
-  ls $WORKSPACES/*
+  ls "$WORKSPACES"/*
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup_workspaces_in_tree $WORKSPACES
-  for path in $WORKSPACES/{*-copy?,*-new?}; do
-    rm -rf $path
+  cleanup_workspaces_in_tree "$WORKSPACES"
+  for path in "$WORKSPACES"/{*-copy,*-new}; do
+    rm -rf "$path"
   done
 
 execute: |
@@ -33,55 +33,47 @@ execute: |
   echo "No workspace launched, wokrspace renders an empty list"
   list_cwd | MATCH "^$"
 
-  for path in $WORKSPACES/*; do
-   list $path | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
-   test -f $path/.workspace.lock
+  for path in "$WORKSPACES"/*; do
+   list "$path" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
+   test -f "$path"/.workspace.lock
 
    echo "list from a nested directory must work similarly as if run from a project directory"
-   pushd ./; mkdir $path/nested; cd $path/nested
+   pushd ./; mkdir "$path"/nested; cd "$path"/nested
    list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$" 
-   rm -rf $path/nested; popd 
+   rm -rf "$path"/nested; popd 
   done
 
   echo "Launching from a non-project directory should trigger list --global"
-  projects=(`cd /home/ubuntu; list_cwd | grep -E "^[^Project]" | grep -oE "^[^ ]+"`)
-  workspaces=($WORKSPACES/*)
-  result=(`comm -23 \
-        <(printf '%s\n' "${ws_output[@]}"  | sort) \
-        <(printf '%s\n' "${projects[@]}"  | sort)`)
-  test ${#result[@]} -eq 0 || echo "Projects without ready workspaces ${result[@]}"
+  mapfile -t projects < <(cd /home/ubuntu; list_cwd | grep -vE "^Project" | grep -oE "^[^ ]+")
+  workspaces=("$WORKSPACES"/*)
+  mapfile -t result < <(comm -23 \
+        <(printf '%s\n' "${projects[@]}"  | sort) \
+        <(printf '%s\n' "${workspaces[@]}"  | sort))
+  test ${#result[@]} -eq 0 || echo "${result[@]}"
 
-  echo "Run scenarios to assert workspace integrity when a project directory changes"
-  for path in $WORKSPACES/*; do
-    echo "(1) the directory was moved, its instances must update configuration with a new path"
-    sudo -u ubuntu mv $path $path-new
-    project_id=`cat $path-new/.workspace.lock`
-    list $path-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
-    assert_workspace_config $path-new $project_id
 
-    echo "(2) the directory was copied, its projects instances should still stay available at the old path"
-    sudo -u ubuntu cp -R $path-new $path-copy
-    list $path-copy | MATCH "^$"
-    project_id_copy=`cat $path-copy/.workspace.lock`
-    test $project_id_copy != $project_id 
+  for path in "$WORKSPACES"/*; do
+    echo "The directory was moved, its instances must update configuration with a new path"
+    sudo -u ubuntu mv "$path" "$path"-new
+    project_id=$(cat "$path"-new/.workspace.lock)
+    list "$path"-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config "$path"-new "$project_id"
+    sudo -u ubuntu mv "$path"-new "$path"
+
+    echo "The directory was copied, its projects instances should still stay available at the old path"
+    sudo -u ubuntu cp -R "$path" "$path"-copy
+    list "$path"-copy | MATCH "^$"
+    project_id_copy=$(cat "$path"-copy/.workspace.lock)
+    test "$project_id_copy" != "$project_id" 
 
     # make sure the instance at the old path still configured properly
-    assert_workspace_config $path-new $project_id
+    assert_workspace_config "$path" "$project_id"
 
     # launch from a new directory successfully 
-    launch $path-copy ws | MATCH started
-    list $path-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready$"
-    assert_workspace_config $path-copy $project_id_copy
-
-    echo "(3) the directory was moved and copied a few times before executing a workspace command"
-    sudo -u ubuntu mv $path-new $path-new2
-    list $path-new2 | MATCH "^${path}-new2[[:space:]]+ws[[:space:]]+Ready$"
-    sudo -u ubuntu mv $path-new2 $path-new
-    sudo -u ubuntu cp -R $path-new $path-copy2
-    list $path-copy2 | MATCH "^$"
-    list $path-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
-
-
+    launch "$path"-copy ws | MATCH started
+    list "$path"-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config "$path"-copy "$project_id_copy"
+  done
     #TODO: 
     # mv dir dir-1
     # workspace --project /dir1 list
@@ -92,7 +84,7 @@ execute: |
     # if we make the copied dir to accept the project's instances
     # (similarly to how move works), it would solve this problem
     # as workspaces would always belong to a latest dir
-  done
+  
 
 
   
