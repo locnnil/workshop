@@ -34,12 +34,12 @@ execute: |
   list_cwd | MATCH "^$"
 
   for path in "$WORKSPACES"/*; do
-   list "$path" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
+   list "$path" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
    test -f "$path"/.workspace.lock
 
    echo "list from a nested directory must work similarly as if run from a project directory"
    pushd ./; mkdir "$path"/nested; cd "$path"/nested
-   list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$" 
+   list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$" 
    rm -rf "$path"/nested; popd 
   done
 
@@ -56,7 +56,7 @@ execute: |
     echo "The directory was moved, its instances must update configuration with a new path"
     sudo -u ubuntu mv "$path" "$path"-new
     project_id=$(cat "$path"-new/.workspace.lock)
-    list "$path"-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
+    list "$path"-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
     assert_workspace_config "$path"-new "$project_id"
     sudo -u ubuntu mv "$path"-new "$path"
 
@@ -71,7 +71,7 @@ execute: |
 
     # launch from a new directory successfully 
     launch "$path"-copy ws | MATCH started
-    list "$path"-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready$"
+    list "$path"-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
     assert_workspace_config "$path"-copy "$project_id_copy"
   done
     #TODO: 

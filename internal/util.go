@@ -30,6 +30,7 @@ var (
 )
 
 type WorkspaceState int
+type WorkspaceStateReason int
 
 const (
 	Inactive WorkspaceState = iota
@@ -41,6 +42,17 @@ const (
 
 func (s WorkspaceState) String() string {
 	return [...]string{"Inactive", "Ready", "Stopped", "Pending", "Error"}[s]
+}
+
+const (
+	None WorkspaceStateReason = iota
+	Unknown
+	MissingProject
+	MissingFile
+)
+
+func (s WorkspaceStateReason) String() string {
+	return [...]string{"", "", "missing-project", "missing-file"}[s]
 }
 
 func ToFileName(name string) string {

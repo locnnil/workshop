@@ -1,0 +1,30 @@
+summary: Error states tracking and recovery for the .workspace.lock
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree "$WORKSPACES"
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
+    test -f "$path"/.workspace.lock
+    assert_workspace_config "$path" "$(cat "$path"/.workspace.lock)"
+
+    # remove .workspace.lock accidentally to validate recovery
+    rm -f "$path"/.workspace.lock
+    list "$path"
+    test -f "$path"/.workspace.lock
+
+    # delete the workspace file and check its state
+    mv "$path"/.workspace.ws.yaml "$path"/.workspace.ws.yaml.bak
+    list "$path" | MATCH "^$path[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
+    mv "$path"/.workspace.ws.yaml.bak "$path"/.workspace.ws.yaml
+    list "$path" | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  done

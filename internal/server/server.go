@@ -38,9 +38,11 @@ type WorkspaceConfigValue struct {
 
 type WorkspaceProps struct {
 	Name    string
-	State   util.WorkspaceState
 	Devices map[string]map[string]string
 	Config  map[string]string
+
+	state  util.WorkspaceState
+	reason util.WorkspaceStateReason
 }
 
 type ExecArgs struct {
@@ -378,7 +380,7 @@ func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*Work
 		if filter(i.Config) {
 			ws = append(ws, &WorkspaceProps{
 				Name:    util.ToWorkspaceName(i.Name),
-				State:   getWorkspaceState(i.StatusCode),
+				state:   fromLxdToWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
 				Config:  i.Config,
 			})
@@ -399,7 +401,7 @@ func (s *LxdServer) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[st
 			name := util.ToWorkspaceName(i.Name)
 			ws[name] = &WorkspaceProps{
 				Name:    name,
-				State:   getWorkspaceState(i.StatusCode),
+				state:   fromLxdToWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
 				Config:  i.Config,
 			}
@@ -434,7 +436,7 @@ func SignalHandler(control *websocket.Conn) {
 	}
 }
 
-func getWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
+func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 	var state util.WorkspaceState
 	switch lxdStatus {
 	case api.Running, api.Ready:
@@ -445,4 +447,16 @@ func getWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 		state = util.Pending
 	}
 	return state
+}
+
+func (w *WorkspaceProps) State() util.WorkspaceState {
+	return w.state
+}
+
+func (w *WorkspaceProps) Reason() util.WorkspaceStateReason {
+	return w.reason
+}
+
+func (w *WorkspaceProps) SetState(s util.WorkspaceState, r util.WorkspaceStateReason) {
+	w.state, w.reason = s, r
 }

@@ -9,6 +9,7 @@ import (
 
 	"text/tabwriter"
 
+	util "github.com/canonical/workspace/internal"
 	srv "github.com/canonical/workspace/internal/server"
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
@@ -53,7 +54,6 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 	if !c.global {
 		project, err = workspace.LoadProject(server, fs, Project)
-
 		if err == nil {
 			/* List all workspaces for the current project */
 			wsList, err := project.RetrieveWorkspaces()
@@ -80,30 +80,10 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 }
 
 func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
-	wsList, err := workspace.RetrieveWorkspacesGlobal(server, fs)
-	if err != nil || len(wsList) == 0 {
+	list, err := workspace.RetrieveWorkspacesGlobal(server, fs)
+	if err != nil || len(list) == 0 {
 		return err
 	}
-	listAllWorkspaces(wsList)
-	return nil
-}
-
-func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
-	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
-
-	for _, val := range wsList {
-		line := []string{
-			contractHomeDirectory(project.ProjectDirectory()),
-			val.Name,
-			val.State.String(),
-		}
-		fmt.Fprintln(w, strings.Join(line, "\t"))
-	}
-	w.Flush()
-}
-
-func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 	w := tabWriter()
 
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
@@ -114,20 +94,52 @@ func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
 
 	for _, project := range keys {
 		for _, j := range list[project] {
-			comment := "-"
-			if !project.Exists() {
-				comment = "missing-project"
+			if j.State() == util.Inactive {
+				continue
 			}
-			line := []string{
-				contractHomeDirectory(project.ProjectDirectory()),
-				j.Name,
-				j.State.String(),
-				comment,
-			}
+			line := listWorkspace(j, project)
 			fmt.Fprintln(w, strings.Join(line, "\t"))
 		}
 	}
 	w.Flush()
+	return nil
+}
+
+func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
+	/* if all workspaces are inactive, we do not list them */
+	isAllInactive := func(i *srv.WorkspaceProps) bool { return i.State() != util.Inactive }
+	if slices.IndexFunc(wsList, isAllInactive) == -1 {
+		return
+	}
+
+	w := tabWriter()
+	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
+
+	slices.SortFunc(wsList,
+		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
+
+	for _, val := range wsList {
+		if val.State() == util.Inactive {
+			continue
+		}
+		line := listWorkspace(val, project)
+		fmt.Fprintln(w, strings.Join(line, "\t"))
+	}
+	w.Flush()
+}
+
+func listWorkspace(j *srv.WorkspaceProps, project *workspace.Project) []string {
+	comment := "-"
+	if j.State() == util.Error {
+		comment = j.Reason().String()
+	}
+	line := []string{
+		contractHomeDirectory(project.ProjectDirectory()),
+		j.Name,
+		j.State().String(),
+		comment,
+	}
+	return line
 }
 
 /*
