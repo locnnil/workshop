@@ -10,7 +10,7 @@ import (
 	srv "github.com/canonical/workspace/internal/server"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type Workspace interface {
@@ -21,15 +21,11 @@ type SDK struct {
 	Channel string `yaml:"channel"`
 }
 
-type Project struct {
-	Path string
-}
-
 type WorkspaceInstance struct {
-	Name string          `yaml:"name"`
-	Base string          `yaml:"base"`
-	SDKs map[string]*SDK `yaml:"sdks"`
-	Prj  Project
+	Name    string          `yaml:"name"`
+	Base    string          `yaml:"base"`
+	SDKs    map[string]*SDK `yaml:"sdks"`
+	project *Project
 
 	server srv.WorkspaceServer
 	fs     afero.Fs
@@ -39,13 +35,16 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile) (Workspace, error) {
+func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws *srv.WorkspaceProps) (Workspace, error) {
+	var err error
+
 	var inst = WorkspaceInstance{
-		Prj:    Project{Path: ws.Project},
-		server: server,
-		fs:     fs,
+		project: project,
+		server:  server,
+		fs:      fs,
 	}
-	buf, err := afero.ReadFile(fs, filepath.Join(ws.Project, ws.File.Name()))
+
+	buf, err := afero.ReadFile(fs, filepath.Join(project.ProjectDirectory(), util.ToFileName(ws.Name)))
 
 	if err != nil {
 		return nil, err
@@ -55,6 +54,7 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 		return nil, err
 	}
 
+	/* Validate workspace properties */
 	if !validName.MatchString(inst.Name) {
 		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
@@ -64,7 +64,7 @@ func NewWorkspace(server srv.WorkspaceServer, fs afero.Fs, ws srv.WorkspaceFile)
 	}
 
 	if inst.Name != ws.Name {
-		return nil, fmt.Errorf("the %s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, ws.File.Name())
+		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", inst.Name, inst.Name, util.ToFileName(ws.Name))
 	}
 
 	for i, k := range inst.SDKs {
@@ -89,21 +89,21 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	fmt.Printf("Setting up workspace \"%s\"...\n", w.Name)
 
 	/* Launch a workspace with the required base */
-	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base); err != nil {
+	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base, w.project.ProjectId()); err != nil {
 		return err
 	}
 
-	/* Configure workspace core properties: (1) project directory */
+	/* Configure workspace core properties: project directory */
 	var prjMount = srv.WorkspaceDevice{
-		Name:       srv.PROJECT_DEVICE_NAME,
-		Properties: map[string]string{"type": "disk", "source": w.Prj.Path, "path": "/project"},
+		Name:       ProjectDevice,
+		Properties: map[string]string{"type": "disk", "source": w.project.ProjectDirectory(), "path": "/project"},
 	}
 
-	if err = w.server.AddWorkspaceDevice(w.Name, prjMount); err != nil {
+	if err = w.server.AddWorkspaceDevice(w.Name, w.project.ProjectId(), prjMount); err != nil {
 		return err
 	}
 
-	/* Start the workspace. TODO: make sure that we have it completed before attempting to change the state */
+	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
 	if err = w.Start(); err != nil {
 		return err
 	}
@@ -139,27 +139,29 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 			"path": filepath.Join("/root", filepath.Base(blob.Filename))},
 	}
 
-	err := w.server.AddWorkspaceDevice(w.Name, sdkMount)
+	err := w.server.AddWorkspaceDevice(w.Name, w.project.ProjectId(), sdkMount)
 	if err != nil {
 		return err
 	}
 
-	/* Unpack the SDK to the desired location in the workspace */
-	/* Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	done, err := w.server.Exec(w.Name, "root", []string{
+	/* Unpack the SDK to the desired location in the workspace
+	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
+
+	args := srv.ExecArgs{User: "root", Command: []string{
 		"tar",
 		"--extract",
 		"--file",
 		sdkMount.Properties["path"],
 		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
 		"--no-same-owner",
-	})
+	}, Stdin: nil, Stdout: nil, Stderr: nil}
+	done, err := w.server.Exec(w.Name, w.project.ProjectId(), &args)
 
-	/* The server will close this channel when exec is finished and no i/o remains outstanding*/
+	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
 
 	/* Make sure the SDK file will be unmounted once installed into the workspace */
-	w.server.RemoveWorkspaceDevice(w.Name, sdkMount.Name)
+	w.server.RemoveWorkspaceDevice(w.Name, w.project.ProjectId(), sdkMount.Name)
 
 	if err != nil {
 		fmt.Printf("could not install \"%s\": %v", blob.Name, err)
@@ -168,5 +170,5 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 }
 
 func (w *WorkspaceInstance) Start() error {
-	return w.server.SetWorkspaceState(w.Name, "start")
+	return w.server.SetWorkspaceState(w.Name, w.project.ProjectId(), "start")
 }

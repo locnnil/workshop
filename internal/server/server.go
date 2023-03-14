@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -31,21 +31,56 @@ type WorkspaceDevice struct {
 	Properties map[string]string
 }
 
-type WorkspaceFile struct {
+type WorkspaceConfigValue struct {
+	Name  string
+	Value string
+}
+
+type WorkspaceProps struct {
 	Name    string
-	Project string
-	File    os.FileInfo
+	State   util.WorkspaceState
+	Devices map[string]map[string]string
+	Config  map[string]string
+}
+
+type ExecArgs struct {
+	User    string
+	Command []string
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+}
+
+type WorkspaceConfigFilter func(config map[string]string) bool
+type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
+
+func NewWorkspaceConfigFilter(key string, value string) WorkspaceConfigFilter {
+	return func(config map[string]string) bool {
+		return config[key] == value
+	}
+}
+
+func EveryWorkspace() WorkspaceConfigFilter {
+	return func(config map[string]string) bool {
+		return true
+	}
 }
 
 type WorkspaceServer interface {
-	LaunchWorkspaceInstance(name, base string) error
-	SetWorkspaceState(name, action string) error
-	AddWorkspaceDevice(name string, props WorkspaceDevice) error
-	RemoveWorkspaceDevice(name string, device string) error
+	LaunchWorkspaceInstance(name, base, project_id string) error
+	SetWorkspaceState(name, action, project_id string) error
 
-	GetAllWorkspaces() (map[string]WorkspaceFile, error)
+	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
+	RemoveWorkspaceDevice(name, project_id, device string) error
 
-	Exec(name, user string, command []string) (chan bool, error)
+	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
+	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
+	RemoveWorkspaceConfig(name, project_id string, key string) error
+
+	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
+	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
+
+	Exec(name, project_id string, args *ExecArgs) (chan bool, error)
 }
 
 type LxdServer struct {
@@ -53,9 +88,7 @@ type LxdServer struct {
 	Fs afero.Fs
 }
 
-const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
-
-const PROJECT_DEVICE_NAME = "workspace.project"
+const LXDSock = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
@@ -64,10 +97,10 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := afero.Exists(s.Fs, LXD_SOCK); err != nil {
+	if ok, err := afero.Exists(s.Fs, LXDSock); err != nil {
 		return nil, err
 	} else if ok {
-		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
+		if srv, err := lxd.ConnectLXDUnix(LXDSock, nil); err != nil {
 			return nil, err
 		} else {
 			return srv.UseProject(project), nil
@@ -96,14 +129,14 @@ func NewServer(fs afero.Fs) (WorkspaceServer, error) {
 	return &server, nil
 }
 
-func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
+func (s *LxdServer) LaunchWorkspaceInstance(name, base, project_id string) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
 
 	/* Skip if the instance exists already */
-	if _, _, err := s.GetInstance(name); err == nil {
-		return fmt.Errorf("%s already exists", name)
+	if _, _, err := s.getLxdInstance(name, project_id); err == nil {
+		return fmt.Errorf("workspace \"%s\" already exists", name)
 	}
 
 	/* Check if we have the base image stored locally */
@@ -126,7 +159,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 		}})
 	}
 
-	err = s.launchInstance(name, &imageSrv, image)
+	err = s.launchInstance(name, project_id, &imageSrv, image)
 	if err != nil {
 		return err
 	}
@@ -134,7 +167,7 @@ func (s *LxdServer) LaunchWorkspaceInstance(name, base string) error {
 	return nil
 }
 
-func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, image *api.Image) error {
+func (s *LxdServer) launchInstance(name, project_id string, imageServer *lxd.ImageServer, image *api.Image) error {
 	projectName, err := GetLXDProjectName()
 	if err != nil {
 		return err
@@ -147,11 +180,12 @@ func (s *LxdServer) launchInstance(name string, imageServer *lxd.ImageServer, im
 				"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 			},
 			Config: map[string]string{
-				"raw.idmap":        fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
-				"security.nesting": "true",
+				"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+				"security.nesting":          "true",
+				"user.workspace.project-id": project_id,
 			},
 		},
-		Name: name,
+		Name: util.ToInstanceName(name, project_id),
 		Type: api.InstanceType("container"),
 		Source: api.InstanceSource{
 			Type:        "image",
@@ -216,8 +250,8 @@ func ProgressHandler(o api.Operation) {
 	}
 }
 
-func (s *LxdServer) SetWorkspaceState(name string, action string) error {
-	inst, etag, err := s.GetInstance(name)
+func (s *LxdServer) SetWorkspaceState(name, project_id, action string) error {
+	inst, etag, err := s.getLxdInstance(name, project_id)
 	if err != nil {
 		return err
 	}
@@ -234,7 +268,7 @@ func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 		Force:   false,
 	}
 
-	op, err := s.UpdateInstanceState(name, req, etag)
+	op, err := s.UpdateInstanceState(inst.Name, req, etag)
 	if err != nil {
 		return err
 	}
@@ -242,33 +276,60 @@ func (s *LxdServer) SetWorkspaceState(name string, action string) error {
 	return op.Wait()
 }
 
-func (s *LxdServer) AddWorkspaceDevice(name string, device WorkspaceDevice) error {
-	inst, etag, err := s.GetInstance(name)
+func (s *LxdServer) AddWorkspaceConfig(name, project_id string, item *WorkspaceConfigValue) error {
+	inst, etag, err := s.getLxdInstance(name, project_id)
+	if err != nil {
+		return err
+	}
+	inst.Config[item.Name] = item.Value
+	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdServer) RemoveWorkspaceConfig(name, project_id string, key string) error {
+	inst, etag, err := s.getLxdInstance(name, project_id)
 	if err != nil {
 		return err
 	}
 
+	delete(inst.Config, key)
+	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdServer) getLxdInstance(name, project_id string) (instance *api.Instance, ETag string, err error) {
+	instanceName := util.ToInstanceName(name, project_id)
+	return s.GetInstance(instanceName)
+}
+
+func (s *LxdServer) AddWorkspaceDevice(name, project_id string, device WorkspaceDevice) error {
+	inst, etag, err := s.getLxdInstance(name, project_id)
+	if err != nil {
+		return err
+	}
 	inst.Devices[device.Name] = device.Properties
-	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
+	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
 
 	return op.Wait()
 }
 
-func (s *LxdServer) RemoveWorkspaceDevice(name string, device string) error {
-	inst, etag, err := s.GetInstance(name)
+func (s *LxdServer) RemoveWorkspaceDevice(name, project_id, device string) error {
+	inst, etag, err := s.getLxdInstance(name, project_id)
 	if err != nil {
 		return err
 	}
 
 	delete(inst.Devices, device)
-	op, _ := s.UpdateInstance(name, inst.InstancePut, etag)
+	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
 
 	return op.Wait()
 }
 
-func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error) {
+func (s *LxdServer) Exec(name, project_id string, args *ExecArgs) (chan bool, error) {
 	req := api.InstanceExecPost{
-		Command: command, WaitForWS: true,
+		Command: args.Command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: "/",
 		Interactive: false,
 	}
@@ -276,11 +337,11 @@ func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error)
 	done := make(chan bool)
 
 	arg := lxd.InstanceExecArgs{
-		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
 		Control: SignalHandler, DataDone: done,
 	}
 
-	if op, err := s.ExecInstance(name, req, &arg); err != nil {
+	if op, err := s.ExecInstance(util.ToInstanceName(name, project_id), req, &arg); err != nil {
 		return done, err
 	} else if err := op.Wait(); err != nil {
 		return done, err
@@ -291,27 +352,62 @@ func (s *LxdServer) Exec(name, user string, command []string) (chan bool, error)
 	return done, nil
 }
 
-func (s *LxdServer) GetAllWorkspaces() (map[string]WorkspaceFile, error) {
+func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
+	inst, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range inst {
+		if filter(i.Config) {
+			i.Config[item.Name] = item.Value
+			s.UpdateInstance(i.Name, i.InstancePut, "")
+		}
+	}
+
+	return nil
+}
+
+func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]WorkspaceFile = make(map[string]WorkspaceFile)
+	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
 	for _, i := range instances {
-		wsfile, err := s.Fs.Stat(filepath.Join(i.Devices[PROJECT_DEVICE_NAME]["source"],
-			fmt.Sprintf(".workspace.%s.yaml", i.Name)))
-
-		if err == nil {
-			ws[i.Name] = WorkspaceFile{
-				Name:    i.Name,
-				Project: i.Devices[PROJECT_DEVICE_NAME]["source"],
-				File:    wsfile,
-			}
+		if filter(i.Config) {
+			ws = append(ws, &WorkspaceProps{
+				Name:    util.ToWorkspaceName(i.Name),
+				State:   getWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			})
 		}
 	}
 
 	return ws, nil
+}
 
+func (s *LxdServer) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	instances, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	for _, i := range instances {
+		if filter(i.Devices) {
+			name := util.ToWorkspaceName(i.Name)
+			ws[name] = &WorkspaceProps{
+				Name:    name,
+				State:   getWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			}
+
+		}
+	}
+
+	return ws, nil
 }
 
 func SignalHandler(control *websocket.Conn) {
@@ -336,4 +432,17 @@ func SignalHandler(control *websocket.Conn) {
 			}
 		}
 	}
+}
+
+func getWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
+	var state util.WorkspaceState
+	switch lxdStatus {
+	case api.Running, api.Ready:
+		state = util.Ready
+	case api.Stopped:
+		state = util.Stopped
+	default:
+		state = util.Pending
+	}
+	return state
 }

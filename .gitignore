@@ -1,3 +1,5 @@
 .vscode/
 workspace
 !workspace/
+.spread-reuse.yaml
+.workspace.lock

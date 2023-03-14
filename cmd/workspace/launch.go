@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -33,45 +35,61 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		wsName = av[0]
 	}
 
-	wsList, err := workspace.EnumWorkspaces(fs, Project)
-	if err != nil || len(wsList) == 0 && wsName == "" {
+	server, err := srv.NewServer(fs)
+	if err != nil {
 		return err
-	} else if len(wsList) > 1 && wsName == "" {
-		printWorkspaces(wsList)
-		fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
-		return nil
-	} else if len(wsList) == 1 && wsName == "" {
-		/* Handle the case with a single workspace found but no args provided to the command,
-		   it's a map, so iterate to the first element */
-		for i := range wsList {
-			wsName = i
-			break
+	}
+
+	project, err := workspace.LoadProject(server, fs, Project)
+	if errors.Is(err, afero.ErrFileNotFound) {
+		project, err = workspace.NewProject(server, fs, Project)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	wsList, err := project.EnumWorkspaceFiles()
+	if err != nil || len(wsList) == 0 {
+		return err
+	}
+
+	/* if no name provided, try to see if we can disambiguate */
+	if wsName == "" {
+		if len(wsList) == 1 {
+			/* If no names provided and there is only one workspace - run it */
+			wsName = wsList[0].Name
+		} else if len(wsList) > 1 {
+			/* If there are multiple workspaces and no names provided - ask a user to resolve */
+			printWorkspaces(wsList)
+			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
+			return nil
 		}
 	}
 
+	finder := func(p *srv.WorkspaceProps) bool { return p.Name == wsName }
+	idx := slices.IndexFunc(wsList, finder)
+
 	/* If the name was provided by the user, test if we have such a workspace */
-	if _, ok := wsList[wsName]; !ok {
+	if idx == -1 {
 		fmt.Printf("workspace \"\033[1m%s\033[0m\" not found.\n", wsName)
 		printWorkspaces(wsList)
 		os.Exit(1)
 	}
 
-	server, err := srv.NewServer(fs)
+	ws, err := workspace.NewWorkspace(server, project, fs, wsList[idx])
 	if err != nil {
-		fmt.Printf("%v", err)
-		os.Exit(1)
-	}
-
-	ws, err := workspace.NewWorkspace(server, fs, wsList[wsName])
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	storeClient, err := store.NewStoreClient(fs)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
+
+	/* We are officially launching here, so whatever happens, the project should persist if still not */
+	defer project.SaveProject()
 
 	if err = ws.Launch(storeClient); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -81,7 +99,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	return err
 }
 
-func printWorkspaces(wsList map[string]srv.WorkspaceFile) {
+func printWorkspaces(wsList []*srv.WorkspaceProps) {
 	if len(wsList) > 0 {
 		fmt.Printf("Available workspaces:\n")
 		for _, k := range wsList {

@@ -1,16 +1,21 @@
 project: workspace
 
 backends:
+  # lxd:
+  #   systems:
+  #     - ubuntu-22.04
   qemu:
     systems:
-      - ubuntu-22.10-64:
-          username: ubuntu
-          password: ubuntu
+        - ubuntu-22.10-64:
+            username: ubuntu
+            password: ubuntu
 suites:
   tests/core/:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
+      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
+      TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |
       apt-get update
       apt-get install -y --no-install-recommends gcc libc6-dev snapd

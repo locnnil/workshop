@@ -1,37 +1,93 @@
-summary: Ensure that workspace list renders a list of active workspaces correctly
-
-environment:
-  FIRST_WS_NAME: xbert
-  SECOND_WS_NAME: xbert-gpu
+summary: | 
+  List command covering the following use cases:
+  - Project-specific list from a project directory
+  - Project-specific list from a nested directory
+  - List from a moved directory
+  - List from a copied directory
+  - List turning into list --global if executed outside of a project directory
 
 prepare: |
-  function generate_workspace_file() {
-    cat <<-EOF > $1/.workspace.$2.yaml
-    name: $2
-    base: ubuntu@20.04 
-  EOF
-  }
+  . "$TESTSLIB"/utils.sh
 
-  generate_workspace_file /home/ubuntu $FIRST_WS_NAME
-  sudo -i -u ubuntu workspace launch $FIRST_WS_NAME
-  generate_workspace_file /tmp $SECOND_WS_NAME
-  sudo -i -u ubuntu -- workspace --project /tmp launch $SECOND_WS_NAME
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
+  done
+  lxc project switch workspace.ubuntu
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
 
 restore: |
-  lxc project switch workspace.ubuntu
-  lxc delete $FIRST_WS_NAME $SECOND_WS_NAME --force
-  rm -f /home/ubuntu/$FIRST_WS_NAME /tmp/$SECOND_WS_NAME
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree "$WORKSPACES"
+  for path in "$WORKSPACES"/{*-copy,*-new}; do
+    rm -rf "$path"
+  done
 
 execute: |
-  echo $FIRST_WS_NAME must present in the list of a project\'s workspaces (but not $SECOND_WS_NAME)
-  sudo -i -u ubuntu -- workspace --project ~ list | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu workspace list | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu workspace list | NOMATCH "^~[[:space:]]+xbert-gpu$"
+  . "$TESTSLIB"/utils.sh
+  # project-specific workspace list
+  
+  echo "No workspace launched, wokrspace renders an empty list"
+  list_cwd | MATCH "^$"
+
+  for path in "$WORKSPACES"/*; do
+   list "$path" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$"
+   test -f "$path"/.workspace.lock
+
+   echo "list from a nested directory must work similarly as if run from a project directory"
+   pushd ./; mkdir "$path"/nested; cd "$path"/nested
+   list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready$" 
+   rm -rf "$path"/nested; popd 
+  done
+
+  echo "Launching from a non-project directory should trigger list --global"
+  mapfile -t projects < <(cd /home/ubuntu; list_cwd | grep -vE "^Project" | grep -oE "^[^ ]+")
+  workspaces=("$WORKSPACES"/*)
+  mapfile -t result < <(comm -23 \
+        <(printf '%s\n' "${projects[@]}"  | sort) \
+        <(printf '%s\n' "${workspaces[@]}"  | sort))
+  test ${#result[@]} -eq 0 || echo "${result[@]}"
 
 
-  echo $FIRST_WS_NAME and $SECOND_WS_NAME must present in the list of all workspaces
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^~[[:space:]]+xbert$"
-  sudo -i -u ubuntu -- workspace list --all | MATCH "^/tmp[[:space:]]+xbert-gpu$"
+  for path in "$WORKSPACES"/*; do
+    echo "The directory was moved, its instances must update configuration with a new path"
+    sudo -u ubuntu mv "$path" "$path"-new
+    project_id=$(cat "$path"-new/.workspace.lock)
+    list "$path"-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config "$path"-new "$project_id"
+    sudo -u ubuntu mv "$path"-new "$path"
+
+    echo "The directory was copied, its projects instances should still stay available at the old path"
+    sudo -u ubuntu cp -R "$path" "$path"-copy
+    list "$path"-copy | MATCH "^$"
+    project_id_copy=$(cat "$path"-copy/.workspace.lock)
+    test "$project_id_copy" != "$project_id" 
+
+    # make sure the instance at the old path still configured properly
+    assert_workspace_config "$path" "$project_id"
+
+    # launch from a new directory successfully 
+    launch "$path"-copy ws | MATCH started
+    list "$path"-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready$"
+    assert_workspace_config "$path"-copy "$project_id_copy"
+  done
+    #TODO: 
+    # mv dir dir-1
+    # workspace --project /dir1 list
+    # mv dir-1 dir
+    # cp -R dir dir-copy
+    # workspace --project /dir-copy list <- this will execute move semantics and old instances will be
+    # moved to the /dir-copy if there are no workspace instances running which is wrong
+    # if we make the copied dir to accept the project's instances
+    # (similarly to how move works), it would solve this problem
+    # as workspaces would always belong to a latest dir
+  
+
+
+  
 
 
 

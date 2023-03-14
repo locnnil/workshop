@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,10 +13,12 @@ import (
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 type CmdList struct {
-	all bool
+	global bool
 }
 
 func (c *CmdList) Command() *cobra.Command {
@@ -27,57 +30,104 @@ func (c *CmdList) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.all, "all", false, "list workspaces from all projects")
+	cmd.Flags().BoolVar(&c.global, "global", false, "list workspaces from all projects")
 
 	return cmd
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-
-	/* check if both --project and --all were provided */
-	if cmd.Parent().Flag("project").Changed && cmd.Flag("all").Changed {
-		return fmt.Errorf("flags --project and --all are mutually exclusive")
-	}
-
-	fs := afero.NewOsFs()
-
-	var wsList map[string]srv.WorkspaceFile
 	var err error
-	if !c.all {
-		/* List all workspaces for the current project */
-		wsList, err = workspace.EnumWorkspaces(fs, Project)
-	} else {
-		/* List all workspaces in all projects */
-		/* This is a naive approach that works with all the workspaces by
-		   enumerating them and their project mounts. It does not handle cases
-		   when a directory of the project was (re)moved, for example. To be substituted
-		   with a more decent implementation in the next iteration */
-		var server srv.WorkspaceServer
-		server, err = srv.NewServer(fs)
-		if err != nil {
-			fmt.Printf("%v", err)
-			os.Exit(1)
-		}
-		wsList, err = workspace.EnumAllWorkspaces(server)
+	var server srv.WorkspaceServer
+	var project *workspace.Project
+	var fs = afero.NewOsFs()
+
+	/* check if both --project and --global were provided */
+	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
+		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	if err != nil || len(wsList) == 0 {
+	server, err = srv.NewServer(fs)
+	if err != nil {
 		return err
 	}
 
-	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\n")
+	if !c.global {
+		project, err = workspace.LoadProject(server, fs, Project)
 
-	for i, k := range wsList {
+		if err == nil {
+			/* List all workspaces for the current project */
+			wsList, err := project.RetrieveWorkspaces()
+			if len(wsList) != 0 && err == nil {
+				listWorkspaces(wsList, project)
+			} else {
+				return err
+			}
+			return err
+		} else if errors.Is(err, afero.ErrFileNotFound) {
+			/* .lock file was not found in the current directory (or in its parents)
+			   hence, we execute a global list command to view all the workspaces */
+			listGlobal(server, fs)
+		}
+	} else {
+		/* List all workspaces in all projects */
+		err = listGlobal(server, fs)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
+	wsList, err := workspace.RetrieveWorkspacesGlobal(server, fs)
+	if err != nil || len(wsList) == 0 {
+		return err
+	}
+	listAllWorkspaces(wsList)
+	return nil
+}
+
+func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
+	w := tabWriter()
+	fmt.Fprintf(w, "Project\tWorkspace\tState\n")
+
+	for _, val := range wsList {
 		line := []string{
-			contractHomeDirectory(k.Project),
-			i,
+			contractHomeDirectory(project.ProjectDirectory()),
+			val.Name,
+			val.State.String(),
 		}
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
+}
 
-	return nil
+func listAllWorkspaces(list map[*workspace.Project][]*srv.WorkspaceProps) {
+	w := tabWriter()
+
+	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
+
+	keys := maps.Keys(list)
+	slices.SortFunc(keys,
+		func(i, j *workspace.Project) bool { return i.ProjectDirectory() > j.ProjectDirectory() })
+
+	for _, project := range keys {
+		for _, j := range list[project] {
+			comment := "-"
+			if !project.Exists() {
+				comment = "missing-project"
+			}
+			line := []string{
+				contractHomeDirectory(project.ProjectDirectory()),
+				j.Name,
+				j.State.String(),
+				comment,
+			}
+			fmt.Fprintln(w, strings.Join(line, "\t"))
+		}
+	}
+	w.Flush()
 }
 
 /*
@@ -89,6 +139,8 @@ func contractHomeDirectory(path string) string {
 	if home, err := os.UserHomeDir(); err == nil {
 		if filepath.HasPrefix(path, home) {
 			return strings.Replace(path, home, "~", 1)
+		} else if filepath.HasPrefix(path, "(") {
+			return "-"
 		}
 	}
 	return path
