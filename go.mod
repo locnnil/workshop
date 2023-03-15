@@ -5,6 +5,7 @@ go 1.19
 require (
 	cloud.google.com/go/storage v1.27.0
 	github.com/adrg/xdg v0.4.0
+	github.com/canonical/x-go v0.0.0-20230113154138-0ccdb0b57a43
 	github.com/gorilla/websocket v1.5.0
 	github.com/lxc/lxd v0.0.0-20221215165925-aa3cdeaec9a5
 	github.com/pkg/sftp v1.13.5
@@ -12,6 +13,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6
+	golang.org/x/sys v0.3.0
 	google.golang.org/api v0.103.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
@@ -52,7 +54,6 @@ require (
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
-	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect

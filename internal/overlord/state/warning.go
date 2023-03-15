@@ -23,7 +23,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/canonical/workspace/internal/logger"
+
 	"sort"
 	"strings"
 	"time"
@@ -197,7 +199,7 @@ func (s *State) addWarning(w Warning, t time.Time) {
 		w.firstAdded = t
 		if err := w.validate(); err != nil {
 			// programming error!
-			log.Panicf("internal error, please report: attempted to add invalid warning: %v", err)
+			logger.Panicf("internal error, please report: attempted to add invalid warning: %v", err)
 			return
 		}
 		s.warnings[w.message] = &w

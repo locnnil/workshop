@@ -25,12 +25,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/canonical/workspace/internal/logger"
 )
 
 // A Backend is used by State to checkpoint on every unlock operation
@@ -38,17 +39,6 @@ import (
 type Backend interface {
 	Checkpoint(data []byte) error
 	EnsureBefore(d time.Duration)
-}
-
-type FakeBackend struct {
-}
-
-func (mb FakeBackend) Checkpoint(data []byte) error {
-	return nil
-}
-
-func (mb FakeBackend) EnsureBefore(d time.Duration) {
-
 }
 
 type customData map[string]*json.RawMessage
@@ -76,7 +66,7 @@ func (data customData) set(key string, value interface{}) {
 	}
 	serialized, err := json.Marshal(value)
 	if err != nil {
-		log.Panicf("internal error: could not marshal value for state entry %q: %v", key, err)
+		logger.Panicf("internal error: could not marshal value for state entry %q: %v", key, err)
 	}
 	entryJSON := json.RawMessage(serialized)
 	data[key] = &entryJSON
@@ -207,7 +197,7 @@ func (s *State) checkpointData() []byte {
 	data, err := json.Marshal(s)
 	if err != nil {
 		// this shouldn't happen, because the actual delicate serializing happens at various Set()s
-		log.Panicf("internal error: could not marshal state for checkpointing: %v", err)
+		logger.Panicf("internal error: could not marshal state for checkpointing: %v", err)
 	}
 	return data
 }
@@ -238,7 +228,7 @@ func (s *State) Unlock() {
 		}
 		time.Sleep(unlockCheckpointRetryInterval)
 	}
-	log.Panicf("cannot checkpoint even after %v of retries every %v: %v", unlockCheckpointRetryMaxTime, unlockCheckpointRetryInterval, err)
+	logger.Panicf("cannot checkpoint even after %v of retries every %v: %v", unlockCheckpointRetryMaxTime, unlockCheckpointRetryInterval, err)
 }
 
 // EnsureBefore asks for an ensure pass to happen sooner within duration from now.

@@ -22,7 +22,9 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/canonical/workspace/internal/logger"
+
 	"time"
 )
 
@@ -333,7 +335,7 @@ func (t *Task) addLog(kind, format string, args []interface{}) {
 	tstr := timeNow().Format(time.RFC3339)
 	msg := fmt.Sprintf(tstr+" "+kind+" "+format, args...)
 	t.log = append(t.log, msg)
-	log.Print(msg)
+	logger.Debugf(msg)
 }
 
 // Log returns the most recent messages logged into the task.

@@ -20,11 +20,12 @@
 package state
 
 import (
-	"log"
 	"sync"
 	"time"
 
 	"gopkg.in/tomb.v2"
+
+	"github.com/canonical/workspace/internal/logger"
 )
 
 // HandlerFunc is the type of function for the handlers
@@ -290,7 +291,7 @@ func (r *TaskRunner) clean(t *Task) {
 		delete(r.tombs, t.ID())
 
 		if tomb.Err() != nil {
-			log.Printf("Cleaning task %s: %s", t.ID(), tomb.Err())
+			logger.Debugf("Cleaning task %s: %s", t.ID(), tomb.Err())
 		} else {
 			t.SetClean()
 		}
@@ -422,7 +423,7 @@ ConsiderTasks:
 			}
 		}
 
-		log.Printf("Running task %s on %s: %s", t.ID(), t.Status(), t.Summary())
+		logger.Debugf("Running task %s on %s: %s", t.ID(), t.Status(), t.Summary())
 		r.run(t)
 
 		running = append(running, t)

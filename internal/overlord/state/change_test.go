@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/state"
+	"github.com/canonical/workspace/internal/overlord/state"
 	. "gopkg.in/check.v1"
 )
 
