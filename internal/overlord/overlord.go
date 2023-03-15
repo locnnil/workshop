@@ -27,10 +27,13 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
+	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/osutil"
 	"github.com/canonical/workspace/internal/overlord/patch"
 	"github.com/canonical/workspace/internal/overlord/restart"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/server"
+	"github.com/canonical/workspace/internal/workspace"
 )
 
 var (
@@ -59,26 +62,27 @@ type Overlord struct {
 	pruneTicker *time.Ticker
 
 	// managers
-	inited bool
-	runner *state.TaskRunner
+	inited    bool
+	runner    *state.TaskRunner
+	workspace *workspace.WorkspaceManager
 }
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(pebbleDir string, restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
+func New(srv server.WorkspaceServer, restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
 	o := &Overlord{
-		pebbleDir: pebbleDir,
+		pebbleDir: util.StateDir,
 		loopTomb:  new(tomb.Tomb),
 		inited:    true,
 	}
 
-	if !filepath.IsAbs(pebbleDir) {
-		return nil, fmt.Errorf("directory %q must be absolute", pebbleDir)
+	if !filepath.IsAbs(util.StateDir) {
+		return nil, fmt.Errorf("directory %q must be absolute", util.StateDir)
 	}
-	if !osutil.IsDir(pebbleDir) {
-		return nil, fmt.Errorf("directory %q does not exist", pebbleDir)
+	if !osutil.IsDir(util.StateDir) {
+		return nil, fmt.Errorf("directory %q does not exist", util.StateDir)
 	}
-	statePath := filepath.Join(pebbleDir, ".pebble.state")
+	statePath := filepath.Join(util.StateDir, ".workspace.state")
 
 	backend := &overlordStateBackend{
 		path:         statePath,
@@ -97,6 +101,9 @@ func New(pebbleDir string, restartHandler restart.Handler, serviceOutput io.Writ
 		return true
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
+
+	o.workspace = workspace.NewWorkspaceManager(o.runner, srv)
+	o.addManager(o.workspace)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)

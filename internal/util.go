@@ -26,7 +26,7 @@ var (
 )
 
 var (
-	DataDir, SdksDir, WorkspaceSdksDir string
+	DataDir, SdksDir, StateDir, WorkspaceSdksDir string
 )
 
 type WorkspaceState int
@@ -96,11 +96,17 @@ func init() {
 
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")
+	StateDir = filepath.Join(xdg.StateHome, "workspace")
 	SdksDir = filepath.Join(DataDir, "sdks")
 
 	WorkspaceSdksDir = "/var/lib/workspace/sdks/"
 
-	if err := os.MkdirAll(SdksDir, 0700); err != nil {
+	if err := os.MkdirAll(SdksDir, 0755); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
+
+	if err := os.MkdirAll(StateDir, 0755); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}

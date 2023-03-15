@@ -4,8 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	store "github.com/canonical/workspace/internal/fakestore"
+	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord"
 	srv "github.com/canonical/workspace/internal/server"
 	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
@@ -46,6 +50,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		if err != nil {
 			return err
 		}
+		project.SaveProject()
 	} else if err != nil {
 		return err
 	}
@@ -63,40 +68,64 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		} else if len(wsList) > 1 {
 			/* If there are multiple workspaces and no names provided - ask a user to resolve */
 			printWorkspaces(wsList)
-			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
+			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate\n")
 			return nil
 		}
 	}
 
+	/* If the name was provided by the user, test if we have such a workspace */
 	finder := func(p *srv.WorkspaceProps) bool { return p.Name == wsName }
 	idx := slices.IndexFunc(wsList, finder)
-
-	/* If the name was provided by the user, test if we have such a workspace */
 	if idx == -1 {
-		fmt.Printf("workspace \"\033[1m%s\033[0m\" not found.\n", wsName)
-		printWorkspaces(wsList)
-		os.Exit(1)
+		return fmt.Errorf("workspace \"\033[1m%s\033[0m\" not found", util.ToFileName(wsName))
 	}
 
-	ws, err := workspace.NewWorkspace(server, project, fs, wsList[idx])
+	file, err := workspace.ReadWorkspace(project, wsName)
 	if err != nil {
 		return err
 	}
 
-	storeClient, err := store.NewStoreClient(fs)
+	overlord, err := overlord.New(server, nil, os.Stdout)
 	if err != nil {
 		return err
 	}
 
-	/* We are officially launching here, so whatever happens, the project should persist if still not */
-	defer project.SaveProject()
+	overlord.Loop()
 
-	if err = ws.Launch(storeClient); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+	st := overlord.State()
+	st.Lock()
+
+	taskset, err := workspace.Launch(st, project, file)
+	if err != nil {
+		return err
+	}
+	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", wsName))
+	projectKey := workspace.ProjectKey{
+		Path:      project.ProjectDirectory(),
+		ProjectId: project.ProjectId(),
 	}
 
-	return err
+	change.Set("project-key", projectKey)
+	change.Set("workspace", wsName)
+
+	change.AddAll(taskset)
+	st.EnsureBefore(0)
+	st.Unlock()
+
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+out:
+	for {
+		select {
+		case sig := <-sigs:
+			logger.Noticef("Exiting on %s signal.\n", sig)
+			break out
+		case <-change.Ready():
+			break out
+		}
+	}
+
+	return overlord.Stop()
 }
 
 func printWorkspaces(wsList []*srv.WorkspaceProps) {

@@ -15,8 +15,8 @@ import (
 )
 
 type ProjectKey struct {
-	path      string
-	projectId string
+	Path      string
+	ProjectId string
 }
 
 type Project struct {
@@ -304,7 +304,7 @@ func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Pro
 	/* Get a list of Project objects with workspaces */
 	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
 	for props := range projects {
-		if project, err := LoadProject(server, fs, props.path); err == nil {
+		if project, err := LoadProject(server, fs, props.Path); err == nil {
 			workspaces, err := project.RetrieveWorkspaces()
 			if err == nil {
 				fullList[project] = workspaces
@@ -313,7 +313,7 @@ func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Pro
 			// all the workspaces of this project are unreachable and the directory
 			// does not exist anymore. However, there could be stopped instances that are orphaned
 			// we make sure these are not skipped in the output
-			project = &Project{path: props.path, projectId: props.projectId, server: server, fs: fs}
+			project = &Project{path: props.Path, projectId: props.ProjectId, server: server, fs: fs}
 			workspaces, err := project.retrieveWorkspaceInstances()
 			if len(workspaces) > 0 && err == nil {
 				for _, i := range workspaces {
@@ -362,7 +362,7 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 		/* Take the first instance from the group, we need any running
 		and ready to execute commands to validate the directory */
 		instance := i[0]
-		stdout, err := memFs.Create(util.ToInstanceName(instance.Name, key.projectId))
+		stdout, err := memFs.Create(util.ToInstanceName(instance.Name, key.ProjectId))
 		if err != nil {
 			return false, err
 		}
@@ -372,21 +372,21 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 		args := srv.ExecArgs{User: "root", Command: []string{"bash", "-c",
 			"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
 			Stdin: nil, Stdout: stdout, Stderr: nil}
-		done, err := server.Exec(instance.Name, key.projectId, &args)
+		done, err := server.Exec(instance.Name, key.ProjectId, &args)
 		if err != nil {
 			continue
 		}
 		<-done
 
 		/* Process the findmnt results */
-		if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(instance.Name, key.projectId)); err == nil {
+		if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(instance.Name, key.ProjectId)); err == nil {
 			/* check if the path is not //deleted */
 			if ok, _ := afero.Exists(fs, string(currentPath)); ok {
 				if lxdPath, ok := instance.Devices[ProjectDevice]["source"]; ok {
 					if lxdPath != string(currentPath) {
 						/* now, update LXD configuration for all the group's instances */
 						for _, inst := range i {
-							server.AddWorkspaceDevice(inst.Name, key.projectId, srv.WorkspaceDevice{
+							server.AddWorkspaceDevice(inst.Name, key.ProjectId, srv.WorkspaceDevice{
 								Name:       ProjectDevice,
 								Properties: map[string]string{"type": "disk", "source": string(currentPath), "path": "/project"},
 							})

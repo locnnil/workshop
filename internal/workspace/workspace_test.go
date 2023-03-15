@@ -58,33 +58,33 @@ sdks:
 
 func (s *LaunchTestSuite) TestNewWorkspaceEmptyNoProject() {
 	var file = s.createTestWorkspace("translation", dataNoSDK)
-	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
+	ws, err := NewWorkspace(s.Srv, s.Project, file)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
 	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
-	assert.Empty(s.T(), ws.(*WorkspaceInstance).SDKs)
+	assert.Empty(s.T(), ws.(*WorkspaceInstance).Sdks)
 	assert.NotNil(s.T(), ws)
 }
 
 func (s *LaunchTestSuite) TestNewWorkspaceEmptyWithProject() {
 	var file = s.createTestWorkspace("translation", dataNoSDK)
-	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
+	ws, err := NewWorkspace(s.Srv, s.Project, file)
 
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
 	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
-	assert.Empty(s.T(), ws.(*WorkspaceInstance).SDKs)
+	assert.Empty(s.T(), ws.(*WorkspaceInstance).Sdks)
 	assert.NotNil(s.T(), ws)
 }
 
 func (s *LaunchTestSuite) TestNewWorkspaceWithSDKsWithProject() {
 	var file = s.createTestWorkspace("translation", dataWithSDK)
-	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
+	ws, err := NewWorkspace(s.Srv, s.Project, file)
 
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
 	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
-	assert.Equal(s.T(), &SDK{Channel: "latest/stable"}, ws.(*WorkspaceInstance).SDKs["huggingface"])
+	assert.Equal(s.T(), &Sdk{Channel: "latest/stable"}, ws.(*WorkspaceInstance).Sdks["huggingface"])
 	assert.NotNil(s.T(), ws)
 }
 
@@ -110,7 +110,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 		On("AddWorkspaceDevice", name, mock.Anything, project).Return(nil).
 		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil)
 
-	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
+	ws, err := NewWorkspace(s.Srv, s.Project, file)
 	assert.ErrorIs(s.T(), err, nil)
 
 	err = ws.Launch(s.Store)
@@ -152,7 +152,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)
 
-	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs,
+	ws, err := NewWorkspace(s.Srv, s.Project,
 		s.createTestWorkspace(name, dataWithSDK))
 	assert.ErrorIs(s.T(), err, nil)
 

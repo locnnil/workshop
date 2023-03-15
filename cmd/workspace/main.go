@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/logger"
 	project "github.com/canonical/workspace/internal/workspace"
 
 	"github.com/spf13/afero"
@@ -66,6 +67,8 @@ func main() {
 		fmt.Println(err)
 		panic("cannot get project directory")
 	}
+
+	logger.SetLogger(logger.New(os.Stderr, "[workspace] "))
 
 	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "specify a project's directory path")
 
