@@ -9,6 +9,53 @@ backends:
         - ubuntu-22.10-64:
             username: ubuntu
             password: ubuntu
+  
+  multipass:
+    type: adhoc
+    allocate: |
+      if [ "$SPREAD_SYSTEM" = "ubuntu-24.04-64" ]; then
+          image="daily:devel"
+          instance_name=spread-devel
+      else
+          # SPREAD_SYSTEM has the following format here 'ubuntu-XX.YY-64' and gets
+          # translated to an image XX.YY.
+          image=$(echo $SPREAD_SYSTEM | sed -e 's/ubuntu-\(.*\)-64/\1/')
+          instance_name="spread-${image/./}"
+      fi
+      if [ -z "${image}" ]; then
+        FATAL "$SPREAD_SYSTEM is not supported!"
+      fi
+      multipass launch --disk 20G --memory 8G --name "$instance_name" "$image"
+      # Get the IP from the instance
+      ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d\, -f3)
+      # Enable PasswordAuthertication for root over SSH.
+      multipass exec "$instance_name" -- \
+        sudo sh -c "echo root:ubuntu | sudo chpasswd"
+      multipass exec "$instance_name" -- \
+        sudo sh -c \
+        "sed -i /etc/ssh/sshd_config -e 's/^PasswordAuthentication.*/PasswordAuthentication yes/' -e 's/^#PermitRootLogin.*/PermitRootLogin yes/'"
+      multipass exec "$instance_name" -- \
+        sudo systemctl restart ssh
+      ADDRESS "$ip:22"
+    discard: |
+      if [ "$SPREAD_SYSTEM" = "ubuntu-24.04-64" ]; then
+          image="daily:devel"
+          instance_name=spread-devel
+      else
+          # SPREAD_SYSTEM has the following format here 'ubuntu-XX.YY-64' and gets
+          # translated to an image XX.YY.
+          image=$(echo $SPREAD_SYSTEM | sed -e 's/ubuntu-\(.*\)-64/\1/')
+          instance_name="spread-${image/./}"
+      fi
+      if [ -z "${image}" ]; then
+        FATAL "$SPREAD_SYSTEM is not supported!"
+      fi
+      multipass delete --purge "$instance_name"
+    systems:
+      - ubuntu-22.04-64:
+          workers: 1
+          username: root
+          password: ubuntu
 suites:
   tests/core/:
     summary: Core workspace scenarios
