@@ -40,13 +40,13 @@ func (_m *MockWorkspaceServer) AddWorkspaceDevice(name string, project_id string
 	return r0
 }
 
-// AddWorkspacesDevice provides a mock function with given fields: filter, props
-func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceFilter, props server.WorkspaceDevice) error {
-	ret := _m.Called(filter, props)
+// AddWorkspacesConfig provides a mock function with given fields: filter, item
+func (_m *MockWorkspaceServer) AddWorkspacesConfig(filter server.WorkspaceConfigFilter, item *server.WorkspaceConfigValue) error {
+	ret := _m.Called(filter, item)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter, server.WorkspaceDevice) error); ok {
-		r0 = rf(filter, props)
+	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter, *server.WorkspaceConfigValue) error); ok {
+		r0 = rf(filter, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -54,13 +54,13 @@ func (_m *MockWorkspaceServer) AddWorkspacesDevice(filter server.WorkspaceFilter
 	return r0
 }
 
-// Exec provides a mock function with given fields: name, project_id, user, command
-func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string, command []string) (chan bool, error) {
-	ret := _m.Called(name, project_id, user, command)
+// Exec provides a mock function with given fields: name, project_id, args
+func (_m *MockWorkspaceServer) Exec(name string, project_id string, args *server.ExecArgs) (chan bool, error) {
+	ret := _m.Called(name, project_id, args)
 
 	var r0 chan bool
-	if rf, ok := ret.Get(0).(func(string, string, string, []string) chan bool); ok {
-		r0 = rf(name, project_id, user, command)
+	if rf, ok := ret.Get(0).(func(string, string, *server.ExecArgs) chan bool); ok {
+		r0 = rf(name, project_id, args)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(chan bool)
@@ -68,8 +68,8 @@ func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, []string) error); ok {
-		r1 = rf(name, project_id, user, command)
+	if rf, ok := ret.Get(1).(func(string, string, *server.ExecArgs) error); ok {
+		r1 = rf(name, project_id, args)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -77,21 +77,44 @@ func (_m *MockWorkspaceServer) Exec(name string, project_id string, user string,
 	return r0, r1
 }
 
-// GetWorkspaces provides a mock function with given fields: filter
-func (_m *MockWorkspaceServer) GetWorkspaces(filter server.WorkspaceFilter) (map[string]server.WorkspaceProps, error) {
+// GetWorkspacesByConfig provides a mock function with given fields: filter
+func (_m *MockWorkspaceServer) GetWorkspacesByConfig(filter server.WorkspaceConfigFilter) ([]*server.WorkspaceProps, error) {
 	ret := _m.Called(filter)
 
-	var r0 map[string]server.WorkspaceProps
-	if rf, ok := ret.Get(0).(func(server.WorkspaceFilter) map[string]server.WorkspaceProps); ok {
+	var r0 []*server.WorkspaceProps
+	if rf, ok := ret.Get(0).(func(server.WorkspaceConfigFilter) []*server.WorkspaceProps); ok {
 		r0 = rf(filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]server.WorkspaceProps)
+			r0 = ret.Get(0).([]*server.WorkspaceProps)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(server.WorkspaceFilter) error); ok {
+	if rf, ok := ret.Get(1).(func(server.WorkspaceConfigFilter) error); ok {
+		r1 = rf(filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspacesByDevices provides a mock function with given fields: filter
+func (_m *MockWorkspaceServer) GetWorkspacesByDevices(filter server.WorkspaceDeviceFilter) (map[string]*server.WorkspaceProps, error) {
+	ret := _m.Called(filter)
+
+	var r0 map[string]*server.WorkspaceProps
+	if rf, ok := ret.Get(0).(func(server.WorkspaceDeviceFilter) map[string]*server.WorkspaceProps); ok {
+		r0 = rf(filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]*server.WorkspaceProps)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(server.WorkspaceDeviceFilter) error); ok {
 		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)

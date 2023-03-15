@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/server"
 	lxd "github.com/lxc/lxd/client"
@@ -47,7 +46,7 @@ func (s *LxdServerTestSuite) TestLaunchLocalImageExists() {
 	}
 
 	s.InstMock.
-		On("GetInstance", util.ToInstanceName(name, project)).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetInstance", "test-12345").Return((*api.Instance)(nil), "", ApiErrNotFound).
 		On("GetImageAlias", "ubuntu@20.04").Return(&alias, "", nil).
 		On("GetImage", fingerprint).Return(&image, "", nil).
 		On("CreateInstanceFromImage", &s.Srv, image, mock.Anything).Return(op, nil)
@@ -81,7 +80,7 @@ func (s *LxdServerTestSuite) TestLaunchNoLocalImage() {
 	image.Fingerprint = fingerprint
 
 	s.InstMock.
-		On("GetInstance", util.ToInstanceName(name, project)).Return((*api.Instance)(nil), "", ApiErrNotFound).
+		On("GetInstance", "test-12345").Return((*api.Instance)(nil), "", ApiErrNotFound).
 		On("GetImageAlias", "ubuntu@20.04").Return((*api.ImageAliasesEntry)(nil), "", ApiErrNotFound).
 		On("CreateImageAlias", localImageAlias).Return(nil).
 		On("CreateInstanceFromImage", s.ImgMock, image, mock.Anything).Return(op, nil)
@@ -99,44 +98,6 @@ func (s *LxdServerTestSuite) TestLaunchNoLocalImage() {
 	assert.NoError(s.T(), err)
 	s.InstMock.AssertExpectations(s.T())
 	s.ImgMock.AssertExpectations(s.T())
-}
-
-func (s *LxdServerTestSuite) TestExecCommandStatusCodes() {
-	var name, project = "translation", "12345"
-	var metadata = map[error]api.Operation{
-		nil:                        {Metadata: map[string]any{"return": 0.0}},
-		&server.ErrExec{Status: 2}: {Metadata: map[string]any{"return": 2.0}},
-	}
-
-	var op = mocks.NewMockOperation(s.T())
-
-	s.InstMock.On("ExecInstance", util.ToInstanceName(name, project), mock.Anything,
-		mock.Anything).Return(op, nil)
-
-	op.On("Wait").Return(nil)
-
-	// Test the command's error code handling (success and fail)
-	for i, k := range metadata {
-		c := op.On("Get").Return(k)
-
-		_, err := s.Srv.Exec(name, project, "root", []string{"id"})
-		assert.Equal(s.T(), err, i)
-		s.InstMock.AssertExpectations(s.T())
-		c.Unset()
-	}
-}
-
-func (s *LxdServerTestSuite) TestExecCommandLxdOpFails() {
-	var name, project = "translation", "12345"
-
-	var op = mocks.NewMockOperation(s.T())
-
-	s.InstMock.On("ExecInstance", util.ToInstanceName(name, project), mock.Anything,
-		mock.Anything).Return(op, nil)
-	op.On("Wait").Return(ApiErrCancelled)
-	_, err := s.Srv.Exec(name, project, "root", []string{"id"})
-	assert.Equal(s.T(), err, ApiErrCancelled)
-	s.InstMock.AssertExpectations(s.T())
 }
 
 func TestRunLxdServerTests(t *testing.T) {

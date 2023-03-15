@@ -28,7 +28,7 @@ func (s *LaunchTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
 	s.Srv = mocks.NewMockWorkspaceServer(s.T())
 	s.Store = mocks.NewMockStoreClient(s.T())
-	s.Project, _ = NewProject(s.Srv, s.Fs, "/")
+	s.Project = &Project{server: s.Srv, fs: s.Fs, path: "/", projectId: "12345"}
 	s.Fs.MkdirAll(util.DataDir, 0755)
 	s.Fs.MkdirAll(util.SdksDir, 0755)
 	rand.Seed(1)
@@ -42,9 +42,9 @@ func (s *LaunchTestSuite) createTestFile(filename string, data []byte) string {
 	return file.Name()
 }
 
-func (s *LaunchTestSuite) createTestWorkspace(name string, data []byte) srv.WorkspaceProps {
-	s.createTestFile(filepath.Join(s.Project.GetProjectDirectory(), util.ToFileName(name)), data)
-	return srv.WorkspaceProps{Name: name}
+func (s *LaunchTestSuite) createTestWorkspace(name string, data []byte) *srv.WorkspaceProps {
+	s.createTestFile(filepath.Join(s.Project.ProjectDirectory(), util.ToFileName(name)), data)
+	return &srv.WorkspaceProps{Name: name}
 }
 
 var dataNoSDK = []byte(`name: translation
@@ -71,7 +71,6 @@ func (s *LaunchTestSuite) TestNewWorkspaceEmptyWithProject() {
 	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "5577006791947779410", ws.(*WorkspaceInstance).project.ProjectId)
 	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
 	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
 	assert.Empty(s.T(), ws.(*WorkspaceInstance).SDKs)
@@ -83,7 +82,6 @@ func (s *LaunchTestSuite) TestNewWorkspaceWithSDKsWithProject() {
 	ws, err := NewWorkspace(s.Srv, s.Project, s.Fs, file)
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "5577006791947779410", ws.(*WorkspaceInstance).project.ProjectId)
 	assert.Equal(s.T(), "translation", ws.(*WorkspaceInstance).Name)
 	assert.Equal(s.T(), "ubuntu@20.04", ws.(*WorkspaceInstance).Base)
 	assert.Equal(s.T(), &SDK{Channel: "latest/stable"}, ws.(*WorkspaceInstance).SDKs["huggingface"])
@@ -92,7 +90,7 @@ func (s *LaunchTestSuite) TestNewWorkspaceWithSDKsWithProject() {
 
 func (s *LaunchTestSuite) TestWorkspaceLaunchFailed() {
 	var ws = &WorkspaceInstance{Name: "noname", Base: "ubuntu@20.04", server: s.Srv, fs: s.Fs,
-		project: &Project{Path: "/project", fs: s.Fs}}
+		project: &Project{path: "/project", fs: s.Fs}}
 
 	s.Srv.On("LaunchWorkspaceInstance", "noname", "ubuntu@20.04", mock.Anything).Return(api.StatusErrorf(404, "Not found"))
 	ws.Launch(s.Store)
@@ -104,7 +102,7 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchEmpty() {
 	var file = s.createTestWorkspace(name, dataNoSDK)
 	var project = srv.WorkspaceDevice{
 		Name:       "workspace.project",
-		Properties: map[string]string{"type": "disk", "source": s.Project.GetProjectDirectory(), "path": filepath.Join("/project")},
+		Properties: map[string]string{"type": "disk", "source": s.Project.ProjectDirectory(), "path": filepath.Join("/project")},
 	}
 
 	s.Srv.
@@ -144,12 +142,12 @@ func (s *LaunchTestSuite) TestWorkspaceLaunchWithAnSDK() {
 		On("SetWorkspaceState", name, mock.Anything, "start").Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, mock.Anything).Return(nil).
 		On("AddWorkspaceDevice", name, mock.Anything, device).Return(nil).
-		On("Exec", name, mock.Anything, "root", []string{"tar",
+		On("Exec", name, mock.Anything, &srv.ExecArgs{User: "root", Command: []string{"tar",
 			"--extract",
 			"--file",
 			filepath.Join("/root", filename),
 			"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
-			"--no-same-owner"}).Return(done, nil).
+			"--no-same-owner"}}).Return(done, nil).
 		On("RemoveWorkspaceDevice", name, mock.Anything, blob.Name).Return(nil)
 
 	s.Store.On("FetchSDK", blob.Name, "latest/stable", util.SdksDir).Return(blob, nil)

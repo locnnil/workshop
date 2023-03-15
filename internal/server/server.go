@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -36,19 +37,32 @@ type WorkspaceConfigValue struct {
 }
 
 type WorkspaceProps struct {
-	Name  string
-	State util.WorkspaceState
+	Name    string
+	Devices map[string]map[string]string
+	Config  map[string]string
+
+	state  util.WorkspaceState
+	reason util.WorkspaceStateReason
 }
 
-type WorkspaceFilter func(config map[string]string) bool
+type ExecArgs struct {
+	User    string
+	Command []string
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+}
 
-func NewWorkspaceFilter(key string, value string) WorkspaceFilter {
+type WorkspaceConfigFilter func(config map[string]string) bool
+type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
+
+func NewWorkspaceConfigFilter(key string, value string) WorkspaceConfigFilter {
 	return func(config map[string]string) bool {
 		return config[key] == value
 	}
 }
 
-func NoWorkspaceFilter() WorkspaceFilter {
+func EveryWorkspace() WorkspaceConfigFilter {
 	return func(config map[string]string) bool {
 		return true
 	}
@@ -58,17 +72,17 @@ type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
-	AddWorkspacesDevice(filter WorkspaceFilter, props WorkspaceDevice) error
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
-
 	RemoveWorkspaceDevice(name, project_id, device string) error
 
 	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
+	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
-	GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error)
+	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
+	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
-	Exec(name, project_id, user string, command []string) (chan bool, error)
+	Exec(name, project_id string, args *ExecArgs) (chan bool, error)
 }
 
 type LxdServer struct {
@@ -76,9 +90,7 @@ type LxdServer struct {
 	Fs afero.Fs
 }
 
-const LXD_SOCK = "/var/snap/lxd/common/lxd/unix.socket"
-
-const PROJECT_DEVICE_NAME = "workspace.project"
+const LXDSock = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
@@ -87,10 +99,10 @@ func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := afero.Exists(s.Fs, LXD_SOCK); err != nil {
+	if ok, err := afero.Exists(s.Fs, LXDSock); err != nil {
 		return nil, err
 	} else if ok {
-		if srv, err := lxd.ConnectLXDUnix(LXD_SOCK, nil); err != nil {
+		if srv, err := lxd.ConnectLXDUnix(LXDSock, nil); err != nil {
 			return nil, err
 		} else {
 			return srv.UseProject(project), nil
@@ -172,7 +184,6 @@ func (s *LxdServer) launchInstance(name, project_id string, imageServer *lxd.Ima
 			Config: map[string]string{
 				"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
 				"security.nesting":          "true",
-				"user.workspace.name":       name,
 				"user.workspace.project-id": project_id,
 			},
 		},
@@ -318,9 +329,9 @@ func (s *LxdServer) RemoveWorkspaceDevice(name, project_id, device string) error
 	return op.Wait()
 }
 
-func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan bool, error) {
+func (s *LxdServer) Exec(name, project_id string, args *ExecArgs) (chan bool, error) {
 	req := api.InstanceExecPost{
-		Command: command, WaitForWS: true,
+		Command: args.Command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: "/",
 		Interactive: false,
 	}
@@ -328,7 +339,7 @@ func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan 
 	done := make(chan bool)
 
 	arg := lxd.InstanceExecArgs{
-		Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
 		Control: SignalHandler, DataDone: done,
 	}
 
@@ -343,7 +354,7 @@ func (s *LxdServer) Exec(name, project_id, user string, command []string) (chan 
 	return done, nil
 }
 
-func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device WorkspaceDevice) error {
+func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
 	inst, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return err
@@ -351,7 +362,7 @@ func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device Workspace
 
 	for _, i := range inst {
 		if filter(i.Config) {
-			i.Devices[device.Name] = device.Properties
+			i.Config[item.Name] = item.Value
 			s.UpdateInstance(i.Name, i.InstancePut, "")
 		}
 	}
@@ -359,27 +370,40 @@ func (s *LxdServer) AddWorkspacesDevice(filter WorkspaceFilter, device Workspace
 	return nil
 }
 
-func (s *LxdServer) GetWorkspaces(filter WorkspaceFilter) (map[string]WorkspaceProps, error) {
+func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
 	instances, err := s.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]WorkspaceProps = make(map[string]WorkspaceProps, len(instances))
+	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			var state util.WorkspaceState
-			switch i.StatusCode {
-			case api.Running, api.Ready:
-				state = util.Ready
-			case api.Stopped:
-				state = util.Stopped
-			default:
-				state = util.Pending
-			}
-			name := i.Config["user.workspace.name"]
-			ws[name] = WorkspaceProps{
-				Name:  name,
-				State: state,
+			ws = append(ws, &WorkspaceProps{
+				Name:    util.ToWorkspaceName(i.Name),
+				state:   fromLxdToWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			})
+		}
+	}
+
+	return ws, nil
+}
+
+func (s *LxdServer) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	instances, err := s.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	for _, i := range instances {
+		if filter(i.Devices) {
+			name := util.ToWorkspaceName(i.Name)
+			ws[name] = &WorkspaceProps{
+				Name:    name,
+				state:   fromLxdToWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
 			}
 
 		}
@@ -410,4 +434,29 @@ func SignalHandler(control *websocket.Conn) {
 			}
 		}
 	}
+}
+
+func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
+	var state util.WorkspaceState
+	switch lxdStatus {
+	case api.Running, api.Ready:
+		state = util.Ready
+	case api.Stopped:
+		state = util.Stopped
+	default:
+		state = util.Pending
+	}
+	return state
+}
+
+func (w *WorkspaceProps) State() util.WorkspaceState {
+	return w.state
+}
+
+func (w *WorkspaceProps) Reason() util.WorkspaceStateReason {
+	return w.reason
+}
+
+func (w *WorkspaceProps) SetState(s util.WorkspaceState, r util.WorkspaceStateReason) {
+	w.state, w.reason = s, r
 }

@@ -1,45 +1,20 @@
 summary: Ensure that 'workspace launch' creates a core LXD config correctly
-environment:
-  WS_NAME: launch-test
-  PROJECT: /home/ubuntu/translation
-  PROJECT_ID: 1
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree "$WORKSPACES"
+
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
+
 execute: |
-  function assert_workspace_config() {
-    echo Validate project directory mount
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project source | MATCH $PROJECT
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID workspace.project path | MATCH /project
-    lxc config device get workspace-$WS_NAME-$PROJECT_ID user workspace.project-id | MATCH $PROJECT_ID
+  . "$TESTSLIB"/utils.sh
 
-    echo $WS_NAME must be in a RUNNING state
-    lxc list -c ns -f compact | MATCH "$WS_NAME  RUNNING"
-  }
-
-  sudo -u ubuntu -i -- mkdir -p $PROJECT
-
-  # create a project for validating results
-  sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.lock
-  path: $PROJECT
-  project-id: $PROJECT_ID
-  EOF
-
-  for base in ubuntu@20.04 ubuntu@22.04
-  do
-    sudo -u ubuntu -i -- cat <<-EOF > $PROJECT/.workspace.$WS_NAME.yaml
-    name: $WS_NAME
-    base: $base 
-  EOF
-    echo Launch $WS_NAME with a $base base from a working directory
-    # using su instead of sudo -s here as in some distros the latter would result in error
-    su - ubuntu -c "cd $PROJECT; workspace launch $WS_NAME" | MATCH started
-    lxc project switch workspace.ubuntu
-
-    assert_workspace_config
-    lxc delete $WS_NAME --force
-
-    echo Launch $WS_NAME outside of its working directory
-    sudo -u ubuntu -i -- workspace --project=$PROJECT launch $WS_NAME | MATCH started
-    assert_workspace_config
-
-    lxc delete $WS_NAME --force
-    rm -f $PROJECT/.workspace.$WS_NAME.yaml
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
+    test -f "$path"/.workspace.lock
+    assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
   done

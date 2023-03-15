@@ -36,7 +36,7 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws srv.WorkspaceProps) (Workspace, error) {
+func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws *srv.WorkspaceProps) (Workspace, error) {
 	var err error
 
 	var inst = WorkspaceInstance{
@@ -45,7 +45,7 @@ func NewWorkspace(server srv.WorkspaceServer, project *Project, fs afero.Fs, ws 
 		fs:      fs,
 	}
 
-	buf, err := afero.ReadFile(fs, filepath.Join(project.GetProjectDirectory(), util.ToFileName(ws.Name)))
+	buf, err := afero.ReadFile(fs, filepath.Join(project.ProjectDirectory(), util.ToFileName(ws.Name)))
 
 	if err != nil {
 		return nil, err
@@ -123,17 +123,17 @@ func (w *WorkspaceInstance) Launch(client store.StoreClient) error {
 	ready.WaitAll(installs)
 
 	/* Launch a workspace with the required base */
-	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base, w.project.GetProjectId()); err != nil {
+	if err := w.server.LaunchWorkspaceInstance(w.Name, w.Base, w.project.ProjectId()); err != nil {
 		return err
 	}
 
 	/* Configure workspace core properties: project directory */
 	var prjMount = srv.WorkspaceDevice{
-		Name:       srv.PROJECT_DEVICE_NAME,
-		Properties: map[string]string{"type": "disk", "source": w.project.GetProjectDirectory(), "path": "/project"},
+		Name:       ProjectDevice,
+		Properties: map[string]string{"type": "disk", "source": w.project.ProjectDirectory(), "path": "/project"},
 	}
 
-	if err = w.server.AddWorkspaceDevice(w.Name, w.project.GetProjectId(), prjMount); err != nil {
+	if err = w.server.AddWorkspaceDevice(w.Name, w.project.ProjectId(), prjMount); err != nil {
 		return err
 	}
 
@@ -173,27 +173,29 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 			"path": filepath.Join("/root", filepath.Base(blob.Filename))},
 	}
 
-	err := w.server.AddWorkspaceDevice(w.Name, w.project.GetProjectId(), sdkMount)
+	err := w.server.AddWorkspaceDevice(w.Name, w.project.ProjectId(), sdkMount)
 	if err != nil {
 		return err
 	}
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	done, err := w.server.Exec(w.Name, w.project.GetProjectId(), "root", []string{
+
+	args := srv.ExecArgs{User: "root", Command: []string{
 		"tar",
 		"--extract",
 		"--file",
 		sdkMount.Properties["path"],
 		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
 		"--no-same-owner",
-	})
+	}, Stdin: nil, Stdout: nil, Stderr: nil}
+	done, err := w.server.Exec(w.Name, w.project.ProjectId(), &args)
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
 
 	/* Make sure the SDK file will be unmounted once installed into the workspace */
-	w.server.RemoveWorkspaceDevice(w.Name, w.project.GetProjectId(), sdkMount.Name)
+	w.server.RemoveWorkspaceDevice(w.Name, w.project.ProjectId(), sdkMount.Name)
 
 	if err != nil {
 		fmt.Printf("could not install \"%s\": %v", blob.Name, err)
@@ -202,5 +204,5 @@ func (w *WorkspaceInstance) installSDK(blob store.SDKFile) error {
 }
 
 func (w *WorkspaceInstance) Start() error {
-	return w.server.SetWorkspaceState(w.Name, w.project.GetProjectId(), "start")
+	return w.server.SetWorkspaceState(w.Name, w.project.ProjectId(), "start")
 }
