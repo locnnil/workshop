@@ -1,0 +1,7 @@
+name: ws
+base: ubuntu@22.04
+sdks:
+    huggingface:
+        channel: latest/stable
+    cuda:
+        channel: latest/stable

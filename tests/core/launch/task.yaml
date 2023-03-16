@@ -3,7 +3,7 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup_workspaces_in_tree "$WORKSPACES"
-
+  rm -rf /home/ubuntu/.local/share/workspace/sdks
 
 debug: |
   lxc project switch workspace.ubuntu
@@ -13,8 +13,10 @@ debug: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  echo "Test running workspaces with different bases without an SDK"
   for path in "$WORKSPACES"/*; do
     launch "$path" ws | MATCH started
     test -f "$path"/.workspace.lock
     assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
   done
+

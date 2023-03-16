@@ -61,7 +61,8 @@ suites:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
-      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
+      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+      WORKSPACES_SDK: $SPREAD_PATH/tests/lib/workspaces-sdk
       TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |
       apt-get update
