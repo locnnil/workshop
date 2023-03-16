@@ -7,7 +7,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
-	project "github.com/canonical/workspace/internal/workspace"
+	project "github.com/canonical/workspace/internal/overlord/workspacestate"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"

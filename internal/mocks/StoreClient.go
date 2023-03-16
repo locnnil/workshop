@@ -13,14 +13,14 @@ type MockStoreClient struct {
 }
 
 // FetchSDK provides a mock function with given fields: name, channel, destination
-func (_m *MockStoreClient) FetchSDK(name string, channel string, destination string) (store.SDKFile, error) {
+func (_m *MockStoreClient) FetchSDK(name string, channel string, destination string) (store.SdkBlob, error) {
 	ret := _m.Called(name, channel, destination)
 
-	var r0 store.SDKFile
-	if rf, ok := ret.Get(0).(func(string, string, string) store.SDKFile); ok {
+	var r0 store.SdkBlob
+	if rf, ok := ret.Get(0).(func(string, string, string) store.SdkBlob); ok {
 		r0 = rf(name, channel, destination)
 	} else {
-		r0 = ret.Get(0).(store.SDKFile)
+		r0 = ret.Get(0).(store.SdkBlob)
 	}
 
 	var r1 error

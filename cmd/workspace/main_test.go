@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	project "github.com/canonical/workspace/internal/workspace"
+	project "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )

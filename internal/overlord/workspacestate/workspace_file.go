@@ -8,12 +8,23 @@ import (
 	util "github.com/canonical/workspace/internal"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+
+type workspaceFile struct {
+	Name string          `yaml:"name"`
+	Base string          `yaml:"base"`
+	Sdks map[string]*Sdk `yaml:"sdks"`
+}
+
+type Sdk struct {
+	Name    string
+	Channel string `yaml:"channel"`
+}
 
 func ReadWorkspace(project *Project, name string) (*workspaceFile, error) {
 	var err error
@@ -45,6 +56,7 @@ func ReadWorkspace(project *Project, name string) (*workspaceFile, error) {
 	}
 
 	for i, k := range file.Sdks {
+		k.Name = i
 		if matches := validChannel.FindStringSubmatch(k.Channel); matches != nil {
 			track := matches[validChannel.SubexpIndex("track")]
 			risk := matches[validChannel.SubexpIndex("risk")]

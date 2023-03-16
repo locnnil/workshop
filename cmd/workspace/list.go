@@ -10,8 +10,8 @@ import (
 	"text/tabwriter"
 
 	util "github.com/canonical/workspace/internal"
+	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	srv "github.com/canonical/workspace/internal/server"
-	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"

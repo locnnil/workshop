@@ -9,31 +9,36 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	util "github.com/canonical/workspace/internal"
 	"github.com/spf13/afero"
 	"google.golang.org/api/option"
 )
 
 type StoreClient interface {
-	FetchSDK(name, channel, destination string) (SDKFile, error)
+	RetrieveSdk(name, channel string) (SdkBlob, error)
 }
 
-type SDKFile struct {
+type SdkBlob struct {
 	Name     string
-	Filename string
+	Channel  string
 	Revision int64
 }
 
-func NewStoreClient(fs afero.Fs) (StoreClient, error) {
-	return &ObjectStoreClient{Fs: fs}, nil
+func ToSdkFilename(name string, revision int64) string {
+	return filepath.Join(util.SdksDir, fmt.Sprintf("%s_%d.sdk", name, revision))
+}
+
+func NewStoreClient() (StoreClient, error) {
+	return &ObjectStoreClient{Fs: afero.NewOsFs()}, nil
 }
 
 type ObjectStoreClient struct {
 	Fs afero.Fs
 }
 
-func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile, error) {
+func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
 	var track, risk string
-	var sdk SDKFile
+	var sdk SdkBlob
 	var revision int64
 
 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
@@ -60,7 +65,7 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 		} else {
 			defer r.Close()
 
-			filename := filepath.Join(destination, fmt.Sprintf("%s_%d.sdk", name, revision))
+			filename := ToSdkFilename(name, revision)
 
 			file, err := c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0600)
 			if err != nil && !os.IsExist(err) {
@@ -68,7 +73,7 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 			} else if os.IsExist(err) {
 				/* Reuse the existing blob if present */
 				sdk.Name = name
-				sdk.Filename = filename
+				sdk.Channel = channel
 				sdk.Revision = revision
 				return sdk, nil
 			}
@@ -78,7 +83,7 @@ func (c *ObjectStoreClient) FetchSDK(name, channel, destination string) (SDKFile
 				return sdk, err
 			}
 			sdk.Name = name
-			sdk.Filename = filename
+			sdk.Channel = channel
 			sdk.Revision = revision
 		}
 	}

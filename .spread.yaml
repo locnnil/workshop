@@ -4,11 +4,11 @@ backends:
   # lxd:
   #   systems:
   #     - ubuntu-22.04
-  qemu:
-    systems:
-        - ubuntu-22.10-64:
-            username: ubuntu
-            password: ubuntu
+  # qemu:
+  #   systems:
+  #       - ubuntu-22.10-64:
+  #           username: ubuntu
+  #           password: ubuntu
   
   multipass:
     type: adhoc

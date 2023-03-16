@@ -10,8 +10,8 @@ import (
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord"
+	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	srv "github.com/canonical/workspace/internal/server"
-	workspace "github.com/canonical/workspace/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
@@ -121,6 +121,7 @@ out:
 			logger.Noticef("Exiting on %s signal.\n", sig)
 			break out
 		case <-change.Ready():
+			fmt.Printf("Workspace \"%s\" started.\n", wsName)
 			break out
 		}
 	}
