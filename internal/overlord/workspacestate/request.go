@@ -19,14 +19,14 @@ func Launch(st *state.State, project *Project, file *workspaceFile) (*state.Task
 	}
 	downloads, installs := state.NewTaskSet(download_tasks...), state.NewTaskSet(install_tasks...)
 
-	create := st.NewTask("create-base", fmt.Sprintf("Create workspace %q base", file.Name))
-	create.Set("workspace-base", file.Base)
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q base", file.Name))
+	create.Set("base", file.Base)
 	create.WaitAll(downloads)
 
-	addProjectDir := st.NewTask("add-device", fmt.Sprintf("Mount project directory %q ", project.ProjectId()))
+	addProjectDir := st.NewTask("add-workspace-device", fmt.Sprintf("Mount project directory %q ", project.ProjectId()))
 	addProjectDir.WaitFor(create)
 
-	start := st.NewTask("set-state", fmt.Sprintf("Start workspace %q", project.ProjectId()))
+	start := st.NewTask("set-workspace-state", fmt.Sprintf("Start workspace %q", project.ProjectId()))
 	start.Set("workspace-state", "start")
 	start.WaitFor(addProjectDir)
 
