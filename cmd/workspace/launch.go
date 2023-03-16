@@ -126,6 +126,12 @@ out:
 		}
 	}
 
+	if change.Status().Ready() {
+		if change.Err() != nil {
+			fmt.Print(change.Err())
+		}
+	}
+
 	return overlord.Stop()
 }
 

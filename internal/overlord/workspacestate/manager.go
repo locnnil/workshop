@@ -110,18 +110,24 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 
 	st.Lock()
 	err = task.Get("sdk-retrieve-task", &retrieveId)
+	st.Unlock()
+
 	if err != nil {
 		return err
 	}
+	st.Lock()
 	retrieve := task.State().Task(retrieveId)
+	st.Unlock()
+
 	if retrieve == nil {
 		return fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
 	}
 
+	st.Lock()
+	defer st.Unlock()
 	if err = retrieve.Get("sdk-blob", &blob); err != nil {
 		return err
 	}
-	st.Unlock()
 
 	fmt.Printf("Setting up SDK \"%s\" from %s revision %d...\n", blob.Name, blob.Channel, blob.Revision)
 
