@@ -84,7 +84,7 @@ func New(srv server.WorkspaceServer, restartHandler restart.Handler, serviceOutp
 	if !osutil.IsDir(util.StateDir) {
 		return nil, fmt.Errorf("directory %q does not exist", util.StateDir)
 	}
-	statePath := filepath.Join(util.StateDir, ".workspace.state")
+	statePath := filepath.Join(util.StateDir, "state.json")
 
 	backend := &overlordStateBackend{
 		path:         statePath,

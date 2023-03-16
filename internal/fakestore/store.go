@@ -19,9 +19,9 @@ type StoreClient interface {
 }
 
 type SdkBlob struct {
-	Name     string
-	Channel  string
-	Revision int64
+	Name     string `json:"name"`
+	Channel  string `json:"channel"`
+	Revision int64  `json:"revision"`
 }
 
 func ToSdkFilename(name string, revision int64) string {

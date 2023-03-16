@@ -16,14 +16,14 @@ var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 type workspaceFile struct {
-	Name string          `yaml:"name"`
-	Base string          `yaml:"base"`
-	Sdks map[string]*Sdk `yaml:"sdks"`
+	Name string          `yaml:"name" json:"name"`
+	Base string          `yaml:"base" json:"base"`
+	Sdks map[string]*Sdk `yaml:"sdks" json:"sdks"`
 }
 
 type Sdk struct {
-	Name    string
-	Channel string `yaml:"channel"`
+	Name    string `yaml:"name" json:"name"`
+	Channel string `yaml:"channel" json:"channel"`
 }
 
 func ReadWorkspace(project *Project, name string) (*workspaceFile, error) {

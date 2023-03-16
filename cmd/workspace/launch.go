@@ -50,14 +50,17 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		if err != nil {
 			return err
 		}
-		project.SaveProject()
 	} else if err != nil {
 		return err
 	}
 
 	wsList, err := project.EnumWorkspaceFiles()
-	if err != nil || len(wsList) == 0 {
+	if err != nil {
 		return err
+	}
+
+	if len(wsList) == 0 {
+		return fmt.Errorf("no workspaces found")
 	}
 
 	/* if no name provided, try to see if we can disambiguate */
@@ -79,6 +82,8 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	if idx == -1 {
 		return fmt.Errorf("workspace \"\033[1m%s\033[0m\" not found", util.ToFileName(wsName))
 	}
+
+	project.SaveProject()
 
 	file, err := workspace.ReadWorkspace(project, wsName)
 	if err != nil {
