@@ -124,6 +124,7 @@ out:
 		select {
 		case sig := <-sigs:
 			logger.Noticef("Exiting on %s signal.\n", sig)
+			change.Abort()
 			break out
 		case <-change.Ready():
 			fmt.Printf("Workspace \"%s\" started.\n", wsName)

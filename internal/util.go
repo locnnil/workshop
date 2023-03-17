@@ -97,9 +97,9 @@ func init() {
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")
 	StateDir = filepath.Join(xdg.StateHome, "workspace")
-	SdksDir = filepath.Join(DataDir, "sdks")
+	SdksDir = filepath.Join(DataDir, "sdk")
 
-	WorkspaceSdksDir = "/var/lib/workspace/sdks/"
+	WorkspaceSdksDir = "/var/lib/workspace/sdk/"
 
 	if err := os.MkdirAll(SdksDir, 0755); err != nil {
 		fmt.Printf("%v", err)
