@@ -86,7 +86,7 @@ func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
 	}
 	w := tabWriter()
 
-	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
+	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
 	keys := maps.Keys(list)
 	slices.SortFunc(keys,
@@ -113,7 +113,7 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *workspace.Project) {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\tState\tNote\n")
+	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
 	slices.SortFunc(wsList,
 		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
