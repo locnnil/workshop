@@ -45,13 +45,12 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func ReadWorkspace(project *Project, name string) (*WorkspaceFile, error) {
+func ReadWorkspace(fs afero.Fs, pathname string) (*WorkspaceFile, error) {
 	var err error
 
 	var file = &WorkspaceFile{}
 
-	buf, err := afero.ReadFile(project.fs, filepath.Join(project.ProjectDirectory(),
-		util.ToFileName(name)))
+	buf, err := afero.ReadFile(fs, pathname)
 
 	if err != nil {
 		return nil, err
@@ -70,8 +69,8 @@ func ReadWorkspace(project *Project, name string) (*WorkspaceFile, error) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 
-	if file.Name != name {
-		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, util.ToFileName(name))
+	if util.ToFileName(file.Name) != filepath.Base(pathname) {
+		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 
 	for _, k := range file.Sdks {

@@ -12,9 +12,9 @@ import (
 	"github.com/canonical/workspace/internal/overlord"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	srv "github.com/canonical/workspace/internal/server"
+
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -22,8 +22,8 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch [workspace-name]",
-		Args:  cobra.MaximumNArgs(1),
+		Use:   "launch workspace-name",
+		Args:  cobra.MinimumNArgs(1),
 		Short: "Launch a workspace",
 		RunE:  c.Run,
 	}
@@ -35,9 +35,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	var wsName string
 	fs := afero.NewOsFs()
 
-	if len(av) == 1 {
-		wsName = av[0]
-	}
+	wsName = av[0]
 
 	server, err := srv.NewServer(fs)
 	if err != nil {
@@ -54,41 +52,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	wsList, err := project.EnumWorkspaceFiles()
+	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, wsName))
 	if err != nil {
 		return err
-	}
-
-	if len(wsList) == 0 {
-		return fmt.Errorf("no workspaces found")
-	}
-
-	/* if no name provided, try to see if we can disambiguate */
-	if wsName == "" {
-		if len(wsList) == 1 {
-			/* If no names provided and there is only one workspace - run it */
-			wsName = wsList[0].Name
-		} else if len(wsList) > 1 {
-			/* If there are multiple workspaces and no names provided - ask a user to resolve */
-			printWorkspaces(wsList)
-			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate\n")
-			return nil
-		}
-	}
-
-	/* If the name was provided by the user, test if we have such a workspace */
-	finder := func(p *srv.WorkspaceProps) bool { return p.Name == wsName }
-	idx := slices.IndexFunc(wsList, finder)
-	if idx == -1 {
-		return fmt.Errorf("workspace \"\033[1m%s\033[0m\" not found", util.ToFileName(wsName))
 	}
 
 	project.SaveProject()
-
-	file, err := workspace.ReadWorkspace(project, wsName)
-	if err != nil {
-		return err
-	}
 
 	overlord, err := overlord.New(server, nil, os.Stdout)
 	if err != nil {

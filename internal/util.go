@@ -57,6 +57,10 @@ func (s WorkspaceStateReason) String() string {
 	return [...]string{"", "", "missing-project", "missing-file"}[s]
 }
 
+func ToPathname(dir, name string) string {
+	return filepath.Join(dir, ToFileName(name))
+}
+
 func ToFileName(name string) string {
 	return fmt.Sprintf(".workspace.%s.yaml", name)
 }
