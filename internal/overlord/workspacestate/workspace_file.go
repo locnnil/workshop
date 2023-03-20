@@ -15,15 +15,34 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-type WorkspaceFile struct {
-	Name string          `yaml:"name" json:"name"`
-	Base string          `yaml:"base" json:"base"`
-	Sdks map[string]*Sdk `yaml:"sdks" json:"sdks"`
+type Sdk struct {
+	Name    string
+	Channel string
 }
 
-type Sdk struct {
-	Name    string `yaml:"name" json:"name"`
-	Channel string `yaml:"channel" json:"channel"`
+type SdkList []Sdk
+
+type WorkspaceFile struct {
+	Name string `yaml:"name" json:"name"`
+	Base string `yaml:"base" json:"base"`
+	Sdks SdkList
+}
+
+func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("`sdks` must contain YAML mapping, has %v", value.Kind)
+	}
+	*p = make([]Sdk, len(value.Content)/2)
+	for i := 0; i < len(value.Content); i += 2 {
+		var res = &(*p)[i/2]
+		if err := value.Content[i].Decode(&res.Name); err != nil {
+			return err
+		}
+		if err := value.Content[i+1].Decode(&res); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ReadWorkspace(project *Project, name string) (*WorkspaceFile, error) {
@@ -55,17 +74,16 @@ func ReadWorkspace(project *Project, name string) (*WorkspaceFile, error) {
 		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, util.ToFileName(name))
 	}
 
-	for i, k := range file.Sdks {
-		k.Name = i
+	for _, k := range file.Sdks {
 		if matches := validChannel.FindStringSubmatch(k.Channel); matches != nil {
 			track := matches[validChannel.SubexpIndex("track")]
 			risk := matches[validChannel.SubexpIndex("risk")]
 			if risk != "stable" {
-				file.Sdks[i].Channel = fmt.Sprintf("%s/stable", track)
-				fmt.Printf("Only stable risk levels are supported. Switching to %s for \"%s\"\n", file.Sdks[i].Channel, i)
+				k.Channel = fmt.Sprintf("%s/stable", track)
+				fmt.Printf("Only stable risk levels are supported. Switching to %s for \"%s\"\n", k.Channel, k.Name)
 			}
 		} else {
-			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, i)
+			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, k.Name)
 		}
 	}
 

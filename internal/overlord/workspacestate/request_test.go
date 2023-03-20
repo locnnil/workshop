@@ -91,7 +91,7 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	file := &workspace.WorkspaceFile{
 		Name: "test",
 		Base: "ubuntu@22.04",
-		Sdks: map[string]*workspace.Sdk{"sdk": &sdk, "sdk_2": &sdk_2}}
+		Sdks: workspace.SdkList{sdk, sdk_2}}
 
 	ts, err := workspace.Launch(s.state, s.project, file)
 
