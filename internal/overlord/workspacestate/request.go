@@ -3,10 +3,11 @@ package workspace
 import (
 	"fmt"
 
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 )
 
-func Launch(st *state.State, project *Project, file *WorkspaceFile) (*state.TaskSet, error) {
+func Launch(st *state.State, project *projectstate.Project, file *WorkspaceFile) (*state.TaskSet, error) {
 	download_tasks, install_tasks := []*state.Task{}, []*state.Task{}
 	for _, sdk := range file.Sdks {
 		download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q", sdk.Name))

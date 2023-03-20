@@ -1,4 +1,4 @@
-package workspace
+package projectstate
 
 import (
 	"math/rand"

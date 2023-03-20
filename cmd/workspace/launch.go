@@ -10,6 +10,7 @@ import (
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	srv "github.com/canonical/workspace/internal/server"
 
@@ -32,19 +33,19 @@ func (c *CmdLaunch) Command() *cobra.Command {
 }
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
-	var wsName string
+	var ws string
 	fs := afero.NewOsFs()
 
-	wsName = av[0]
+	ws = av[0]
 
 	server, err := srv.NewServer(fs)
 	if err != nil {
 		return err
 	}
 
-	project, err := workspace.LoadProject(server, fs, Project)
+	project, err := projectstate.LoadProject(server, fs, Project)
 	if errors.Is(err, afero.ErrFileNotFound) {
-		project, err = workspace.NewProject(server, fs, Project)
+		project, err = projectstate.NewProject(server, fs, Project)
 		if err != nil {
 			return err
 		}
@@ -52,7 +53,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, wsName))
+	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, ws))
 	if err != nil {
 		return err
 	}
@@ -73,14 +74,14 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	if err != nil {
 		return err
 	}
-	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", wsName))
-	projectKey := workspace.ProjectKey{
+	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
+	projectKey := projectstate.ProjectKey{
 		Path:      project.ProjectDirectory(),
 		ProjectId: project.ProjectId(),
 	}
 
 	change.Set("project-key", projectKey)
-	change.Set("workspace", wsName)
+	change.Set("workspace", ws)
 
 	change.AddAll(taskset)
 	st.EnsureBefore(0)
@@ -96,7 +97,7 @@ out:
 			change.Abort()
 			break out
 		case <-change.Ready():
-			fmt.Printf("Workspace \"%s\" started.\n", wsName)
+			fmt.Printf("Workspace \"%s\" started.\n", ws)
 			break out
 		}
 	}

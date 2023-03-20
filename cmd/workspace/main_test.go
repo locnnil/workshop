@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	project "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,7 +40,7 @@ func TestGetProjectDirectory(t *testing.T) {
 		fs.MkdirAll(i.project, 0755)
 		fs.MkdirAll(i.cwd, 0755)
 		if i.lockFile == true {
-			fs.Create(project.LockPath(i.project))
+			fs.Create(projectstate.LockPath(i.project))
 		}
 
 		path, err := getProjectDirectory(fs, i.cwd)

@@ -1,4 +1,4 @@
-package workspace
+package projectstate
 
 import (
 	"encoding/hex"
@@ -16,7 +16,7 @@ import (
 
 type ProjectKey struct {
 	Path      string `json:"path"`
-	ProjectId string `json:"project-id"`
+	ProjectId string
 }
 
 type Project struct {

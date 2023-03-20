@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/server"
@@ -14,7 +15,7 @@ import (
 )
 
 type S struct {
-	project *workspace.Project
+	project *projectstate.Project
 	state   *state.State
 }
 
@@ -30,7 +31,7 @@ func (s *S) SetUpTest(c *C) {
 	util.EvalSymlinks = fakeEvalSymlinks
 	fs := afero.NewMemMapFs()
 	server := server.WorkspaceServer(nil)
-	s.project, _ = workspace.NewProject(server, fs, "/")
+	s.project, _ = projectstate.NewProject(server, fs, "/")
 	s.state = state.New(nil)
 }
 

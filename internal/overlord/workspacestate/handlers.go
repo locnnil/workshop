@@ -7,6 +7,7 @@ import (
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	srv "github.com/canonical/workspace/internal/server"
 	"gopkg.in/tomb.v2"
@@ -47,7 +48,7 @@ func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error 
 
 	/* Configure workspace core properties: project directory */
 	var prjMount = srv.WorkspaceDevice{
-		Name:       ProjectDevice,
+		Name:       projectstate.ProjectDevice,
 		Properties: map[string]string{"type": "disk", "source": project.Path, "path": "/project"},
 	}
 
@@ -169,9 +170,9 @@ func (m *WorkspaceManager) undoInstallSDK(task *state.Task, tomb *tomb.Tomb) err
 	return nil
 }
 
-func changeData(task *state.Task) (*ProjectKey, string, error) {
+func changeData(task *state.Task) (*projectstate.ProjectKey, string, error) {
 	st := task.State()
-	var project ProjectKey
+	var project projectstate.ProjectKey
 	var name string
 
 	st.Lock()

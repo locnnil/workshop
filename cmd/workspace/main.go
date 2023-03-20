@@ -7,7 +7,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
-	project "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -32,7 +32,7 @@ func getProjectDirectory(fs afero.Fs, cwd string) (string, error) {
 		var err error
 		var ok bool
 		if ok, err = afero.Exists(fs, path); err == nil && ok {
-			if ok, err = afero.Exists(fs, project.LockPath(path)); err == nil && ok {
+			if ok, err = afero.Exists(fs, projectstate.LockPath(path)); err == nil && ok {
 				return path, nil
 			}
 		}
