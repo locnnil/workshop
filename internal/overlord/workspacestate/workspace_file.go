@@ -16,8 +16,8 @@ var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 type Sdk struct {
-	Name    string
-	Channel string
+	Name    string `json:"name"`
+	Channel string `json:"channel"`
 }
 
 type SdkList []Sdk

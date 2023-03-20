@@ -8,12 +8,12 @@ import (
 
 func Launch(st *state.State, project *Project, file *WorkspaceFile) (*state.TaskSet, error) {
 	download_tasks, install_tasks := []*state.Task{}, []*state.Task{}
-	for i, sdk := range file.Sdks {
-		download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q", i))
+	for _, sdk := range file.Sdks {
+		download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q", sdk.Name))
 		download.Set("sdk", sdk)
 		download_tasks = append(download_tasks, download)
 
-		install := st.NewTask("install-sdk", fmt.Sprintf("Install SDK %q", i))
+		install := st.NewTask("install-sdk", fmt.Sprintf("Install SDK %q", sdk.Name))
 		install.Set("sdk-retrieve-task", download.ID())
 		install_tasks = append(install_tasks, install)
 	}
