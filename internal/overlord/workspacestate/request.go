@@ -6,7 +6,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 )
 
-func Launch(st *state.State, project *Project, file *workspaceFile) (*state.TaskSet, error) {
+func Launch(st *state.State, project *Project, file *WorkspaceFile) (*state.TaskSet, error) {
 	download_tasks, install_tasks := []*state.Task{}, []*state.Task{}
 	for i, sdk := range file.Sdks {
 		download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q", i))

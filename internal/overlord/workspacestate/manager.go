@@ -163,7 +163,7 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 	m.server.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name)
 
 	if err != nil {
-		fmt.Printf("could not install SDK \"%s\": %v", blob.Name, err)
+		return fmt.Errorf("could not install SDK \"%s\": %v", blob.Name, err)
 	}
 	return nil
 }

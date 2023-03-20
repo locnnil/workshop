@@ -40,6 +40,8 @@ const (
 	Error
 )
 
+var EvalSymlinks = filepath.EvalSymlinks
+
 func (s WorkspaceState) String() string {
 	return [...]string{"Inactive", "Ready", "Stopped", "Pending", "Error"}[s]
 }
@@ -79,7 +81,7 @@ func CleanProjectPath(path string) (string, error) {
 		return "", ErrNoRelativePathsAllowed
 	}
 
-	path, err = filepath.EvalSymlinks(path)
+	path, err = EvalSymlinks(path)
 	if err != nil {
 		return "", err
 	}

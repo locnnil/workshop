@@ -15,7 +15,7 @@ var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
-type workspaceFile struct {
+type WorkspaceFile struct {
 	Name string          `yaml:"name" json:"name"`
 	Base string          `yaml:"base" json:"base"`
 	Sdks map[string]*Sdk `yaml:"sdks" json:"sdks"`
@@ -26,10 +26,10 @@ type Sdk struct {
 	Channel string `yaml:"channel" json:"channel"`
 }
 
-func ReadWorkspace(project *Project, name string) (*workspaceFile, error) {
+func ReadWorkspace(project *Project, name string) (*WorkspaceFile, error) {
 	var err error
 
-	var file = &workspaceFile{}
+	var file = &WorkspaceFile{}
 
 	buf, err := afero.ReadFile(project.fs, filepath.Join(project.ProjectDirectory(),
 		util.ToFileName(name)))

@@ -51,8 +51,8 @@ var (
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
-	pebbleDir string
-	stateEng  *StateEngine
+	stateDir string
+	stateEng *StateEngine
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -73,9 +73,9 @@ type Overlord struct {
 // It can be provided with an optional restart.Handler.
 func New(srv server.WorkspaceServer, restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
 	o := &Overlord{
-		pebbleDir: util.StateDir,
-		loopTomb:  new(tomb.Tomb),
-		inited:    true,
+		stateDir: util.StateDir,
+		loopTomb: new(tomb.Tomb),
+		inited:   true,
 	}
 
 	if !filepath.IsAbs(util.StateDir) {
@@ -125,7 +125,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	if err != nil {
 		return nil, fmt.Errorf("fatal: cannot find current boot ID: %v", err)
 	}
-	// If pebble is PID 1 we don't care about /proc/sys/kernel/random/boot_id
+	// If workspace is PID 1 we don't care about /proc/sys/kernel/random/boot_id
 	// as we are most likely running in a container. LXD mounts it's own boot_id
 	// to correctly emulate the boot_id behaviour of non-containerized systems.
 	// Within containerd/docker, boot_id is consistent with the host, which provides
@@ -138,7 +138,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	}
 
 	if !osutil.CanStat(statePath) {
-		// fail fast, mostly interesting for tests, this dir is set up by pebble
+		// fail fast, mostly interesting for tests, this dir is set up by workspace
 		stateDir := filepath.Dir(statePath)
 		if !osutil.IsDir(stateDir) {
 			return nil, fmt.Errorf("fatal: directory %q must be present", stateDir)

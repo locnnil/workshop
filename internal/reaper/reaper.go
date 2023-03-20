@@ -80,7 +80,7 @@ func Stop() error {
 
 // setChildSubreaper sets the current process as a "child subreaper" so we
 // become the parent of dead child processes rather than PID 1. This allows us
-// to wait for processes that are started by a Pebble service but then die, to
+// to wait for processes that are started by a Workspac service but then die, to
 // "reap" them (see https://unix.stackexchange.com/a/250156/73491).
 //
 // The function returns true if sub-reaping is available (Linux 3.4+) along

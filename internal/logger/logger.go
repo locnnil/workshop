@@ -91,9 +91,9 @@ type defaultLogger struct {
 	mu  sync.Mutex
 }
 
-// Debug only prints if PEBBLE_DEBUG is set.
+// Debug only prints if WORKSPACE_DEBUG is set.
 func (l *defaultLogger) Debug(msg string) {
-	if os.Getenv("PEBBLE_DEBUG") == "1" {
+	if os.Getenv("WORKSPACE_DEBUG") == "1" {
 		l.Notice("DEBUG " + msg)
 	}
 }
