@@ -107,4 +107,22 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 
 	c.Assert(err, Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
+
+	var s1, s2 workspace.Sdk
+	err = tasks[3].Get("sdk", &s1)
+	c.Assert(err, Equals, nil)
+	c.Assert(s1, Equals, sdk)
+
+	err = tasks[4].Get("sdk", &s2)
+	c.Assert(err, Equals, nil)
+	c.Assert(s2, Equals, sdk_2)
+
+	var id1, id2 string
+	err = tasks[5].Get("sdk-retrieve-task", &id1)
+	c.Assert(err, Equals, nil)
+	c.Assert(id1, Equals, tasks[3].ID())
+
+	err = tasks[6].Get("sdk-retrieve-task", &id2)
+	c.Assert(err, Equals, nil)
+	c.Assert(id2, Equals, tasks[4].ID())
 }
