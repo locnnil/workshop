@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -43,22 +42,10 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	project, err := projectstate.LoadProject(server, fs, Project)
-	if errors.Is(err, afero.ErrFileNotFound) {
-		project, err = projectstate.NewProject(server, fs, Project)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
 	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, ws))
 	if err != nil {
 		return err
 	}
-
-	project.SaveProject()
 
 	overlord, err := overlord.New(server, nil, os.Stdout)
 	if err != nil {
@@ -70,19 +57,24 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	st := overlord.State()
 	st.Lock()
 
-	taskset, err := workspace.Launch(st, project, file)
+	task, err := projectstate.LoadOrCreate(st, Project)
 	if err != nil {
 		return err
 	}
-	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
-	projectKey := projectstate.ProjectKey{
-		Path:      project.ProjectDirectory(),
-		ProjectId: project.ProjectId(),
+
+	taskset, err := workspace.Launch(st, file)
+	if err != nil {
+		return err
 	}
 
-	change.Set("project-key", projectKey)
+	/* a project must be loaded before doing anything else */
+
+	taskset.WaitFor(task)
+
+	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
 	change.Set("workspace", ws)
 
+	change.AddTask(task)
 	change.AddAll(taskset)
 	st.EnsureBefore(0)
 	st.Unlock()

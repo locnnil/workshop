@@ -16,7 +16,7 @@ import (
 
 type ProjectKey struct {
 	Path      string `json:"path"`
-	ProjectId string
+	ProjectId string `json:"project-id"`
 }
 
 type Project struct {
@@ -85,6 +85,10 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	project.path = path
 
 	if project.projectId, err = newProjectId(); err != nil {
+		return nil, err
+	}
+
+	if err = project.SaveProject(); err != nil {
 		return nil, err
 	}
 

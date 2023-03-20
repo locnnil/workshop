@@ -30,6 +30,7 @@ import (
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/osutil"
 	"github.com/canonical/workspace/internal/overlord/patch"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/restart"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -66,6 +67,7 @@ type Overlord struct {
 	inited    bool
 	sdk       *sdkstate.SdkManager
 	workspace *workspace.WorkspaceManager
+	project   *projectstate.ProjectManager
 	runner    *state.TaskRunner
 }
 
@@ -109,6 +111,9 @@ func New(srv server.WorkspaceServer, restartHandler restart.Handler, serviceOutp
 
 	o.sdk = sdkstate.NewManager(o.runner)
 	o.addManager(o.sdk)
+
+	o.project = projectstate.NewProjectManager(o.runner, srv)
+	o.addManager(o.project)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)

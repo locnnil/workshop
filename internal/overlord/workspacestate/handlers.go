@@ -14,7 +14,7 @@ import (
 )
 
 func (m *WorkspaceManager) doStartBase(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := changeData(task)
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (m *WorkspaceManager) doStartBase(task *state.Task, tomb *tomb.Tomb) error 
 }
 
 func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := changeData(task)
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error 
 }
 
 func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := changeData(task)
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := changeData(task)
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -132,8 +132,8 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 	return nil
 }
 
-func (m *WorkspaceManager) undoInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := changeData(task)
+func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -168,30 +168,6 @@ func (m *WorkspaceManager) undoInstallSDK(task *state.Task, tomb *tomb.Tomb) err
 		return err
 	}
 	return nil
-}
-
-func changeData(task *state.Task) (*projectstate.ProjectKey, string, error) {
-	st := task.State()
-	var project projectstate.ProjectKey
-	var name string
-
-	st.Lock()
-	err := task.Change().Get("project-key", &project)
-	st.Unlock()
-
-	if err != nil {
-		return nil, "", fmt.Errorf("cannot get project for task %q: %v", task.ID(), err)
-	}
-
-	st.Lock()
-	err = task.Change().Get("workspace", &name)
-	st.Unlock()
-
-	if err != nil {
-		return nil, "", fmt.Errorf("cannot get workspace for task %q: %v", task.ID(), err)
-	}
-
-	return &project, name, nil
 }
 
 func sdkData(task *state.Task) (*store.SdkBlob, error) {

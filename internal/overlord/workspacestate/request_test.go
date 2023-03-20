@@ -1,42 +1,24 @@
 package workspace_test
 
 import (
-	"path/filepath"
 	"testing"
 
-	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	"github.com/canonical/workspace/internal/server"
-	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	. "gopkg.in/check.v1"
 )
 
 type S struct {
-	project *projectstate.Project
-	state   *state.State
+	state *state.State
 }
 
 var _ = Suite(&S{})
 
 func Test(t *testing.T) { TestingT(t) }
 
-func fakeEvalSymlinks(path string) (string, error) {
-	return path, nil
-}
-
 func (s *S) SetUpTest(c *C) {
-	util.EvalSymlinks = fakeEvalSymlinks
-	fs := afero.NewMemMapFs()
-	server := server.WorkspaceServer(nil)
-	s.project, _ = projectstate.NewProject(server, fs, "/")
 	s.state = state.New(nil)
-}
-
-func (s *S) TearDownTest(c *C) {
-	util.EvalSymlinks = filepath.EvalSymlinks
 }
 
 func verifyExpectedTasks(c *C, ts []*state.Task, tasks []string) {
@@ -63,7 +45,7 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	file := &workspace.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
-	ts, err := workspace.Launch(s.state, s.project, file)
+	ts, err := workspace.Launch(s.state, file)
 
 	expected := []string{"create-workspace",
 		"add-workspace-device",
@@ -94,7 +76,7 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspace.SdkList{sdk, sdk_2}}
 
-	ts, err := workspace.Launch(s.state, s.project, file)
+	ts, err := workspace.Launch(s.state, file)
 
 	expected := []string{"create-workspace",
 		"add-workspace-device",

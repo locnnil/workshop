@@ -3,11 +3,10 @@ package workspace
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 )
 
-func Launch(st *state.State, project *projectstate.Project, file *WorkspaceFile) (*state.TaskSet, error) {
+func Launch(st *state.State, file *WorkspaceFile) (*state.TaskSet, error) {
 	download_tasks, install_tasks := []*state.Task{}, []*state.Task{}
 	for _, sdk := range file.Sdks {
 		download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q", sdk.Name))
@@ -20,14 +19,14 @@ func Launch(st *state.State, project *projectstate.Project, file *WorkspaceFile)
 	}
 	downloads, installs := state.NewTaskSet(download_tasks...), state.NewTaskSet(install_tasks...)
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q base", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(downloads)
 
-	addProjectDir := st.NewTask("add-workspace-device", fmt.Sprintf("Mount project directory %q ", project.ProjectId()))
+	addProjectDir := st.NewTask("add-workspace-device", "Mount project directory")
 	addProjectDir.WaitFor(create)
 
-	start := st.NewTask("set-workspace-state", fmt.Sprintf("Start workspace %q", project.ProjectId()))
+	start := st.NewTask("set-workspace-state", fmt.Sprintf("Start workspace %q", file.Name))
 	start.Set("workspace-state", "start")
 	start.WaitFor(addProjectDir)
 
