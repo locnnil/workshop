@@ -123,6 +123,20 @@ func (_m *MockWorkspaceServer) GetWorkspacesByDevices(filter server.WorkspaceDev
 	return r0, r1
 }
 
+func (_m *MockWorkspaceServer) DeleteWorkspaceInstance(name, project_id string) error {
+	ret := _m.Called(name, project_id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(name, project_id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+
 // LaunchWorkspaceInstance provides a mock function with given fields: name, base, project_id
 func (_m *MockWorkspaceServer) LaunchWorkspaceInstance(name string, base string, project_id string) error {
 	ret := _m.Called(name, base, project_id)

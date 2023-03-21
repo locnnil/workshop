@@ -13,7 +13,16 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-func (m *WorkspaceManager) doStartBase(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	return m.server.DeleteWorkspaceInstance(workspace, project.ProjectId)
+}
+
+func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := projectstate.ProjectAndWorkspace(task)
 	if err != nil {
 		return err
@@ -32,12 +41,8 @@ func (m *WorkspaceManager) doStartBase(task *state.Task, tomb *tomb.Tomb) error 
 
 	fmt.Printf("Setting up workspace \"%s\"...\n", workspace)
 	/* Launch a workspace with the required base */
-	if err := m.server.LaunchWorkspaceInstance(workspace,
-		base, project.ProjectId); err != nil {
-		return err
-	}
-
-	return nil
+	return m.server.LaunchWorkspaceInstance(workspace,
+		base, project.ProjectId)
 }
 
 func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error {
@@ -103,6 +108,15 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 		return err
 	}
 
+	cleanup := func() {
+		/* Make sure the SDK file will be unmounted once installed into the workspace */
+		if err := m.server.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name); err != nil {
+			logger.Debugf("cannot unmount SDK blob %q from workspace %q: %v", sdkMount.Name, workspace, err)
+		}
+	}
+
+	defer cleanup()
+
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
 	args := srv.ExecArgs{User: "root", Command: []string{
@@ -118,18 +132,7 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
 
-	if err != nil {
-		return err
-	}
-
-	/* Make sure the SDK file will be unmounted once installed into the workspace */
-	err = m.server.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name)
-	if err != nil {
-		logger.Debugf("cannot unmount SDK blob %q from workspace %q", sdkMount.Name, workspace)
-		return fmt.Errorf("could not install SDK \"%s\": %v", blob.Name, err)
-	}
-
-	return nil
+	return err
 }
 
 func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -155,18 +158,14 @@ func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) err
 		filepath.Join(util.WorkspaceSdksDir, blob.Name),
 	}, Stdin: nil, Stdout: nil, Stderr: nil}
 	done, err := m.server.Exec(workspace, project.ProjectId, &args)
+
 	<-done
 
 	if err != nil {
 		logger.Debugf("cannot remove SDK %q from workspace %q, reason: %v", sdkMount.Name, workspace, err)
-		return err
+		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
 
-	err = m.server.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name)
-	if err != nil {
-		logger.Debugf("cannot unmount SDK blob %q from workspace %q, reason: %v", sdkMount.Name, workspace, err)
-		return err
-	}
 	return nil
 }
 

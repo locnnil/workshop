@@ -70,6 +70,7 @@ func EveryWorkspace() WorkspaceConfigFilter {
 
 type WorkspaceServer interface {
 	LaunchWorkspaceInstance(name, base, project_id string) error
+	DeleteWorkspaceInstance(name, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
@@ -410,6 +411,38 @@ func (s *LxdServer) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[st
 	}
 
 	return ws, nil
+}
+
+func (s *LxdServer) DeleteWorkspaceInstance(name, project_id string) error {
+	inst, _, err := s.getLxdInstance(name, project_id)
+	if err != nil {
+		return err
+	}
+
+	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
+		req := api.InstanceStatePut{
+			Action:  "stop",
+			Timeout: -1,
+			Force:   true,
+		}
+
+		op, err := s.UpdateInstanceState(util.ToInstanceName(name, project_id), req, "")
+		if err != nil {
+			return err
+		}
+
+		err = op.Wait()
+		if err != nil {
+			return fmt.Errorf("stopping the instance failed: %v", err)
+		}
+	}
+
+	op, err := s.DeleteInstance(util.ToInstanceName(name, project_id))
+	if err != nil {
+		return err
+	}
+
+	return op.Wait()
 }
 
 func SignalHandler(control *websocket.Conn) {

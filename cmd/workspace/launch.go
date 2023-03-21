@@ -81,7 +81,6 @@ out:
 			change.Abort()
 			break out
 		case <-change.Ready():
-			fmt.Printf("Workspace \"%s\" started.\n", ws)
 			break out
 		}
 	}
@@ -89,6 +88,8 @@ out:
 	if change.Status().Ready() {
 		if change.Err() != nil {
 			fmt.Print(change.Err())
+		} else {
+			fmt.Printf("Workspace \"%s\" started.\n", ws)
 		}
 	}
 
