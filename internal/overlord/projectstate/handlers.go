@@ -9,6 +9,34 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+func (m *ProjectManager) doLoadProject(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var projectDir string
+
+	err := task.Get("project-directory", &projectDir)
+	if err != nil {
+		return err
+	}
+
+	project, err := LoadProject(m.server, m.fs, projectDir)
+	if err != nil {
+		return err
+	}
+
+	change := task.Change()
+	projectKey := ProjectKey{
+		Path:      project.ProjectDirectory(),
+		ProjectId: project.ProjectId(),
+	}
+
+	change.Set("project-key", projectKey)
+
+	return nil
+}
+
 func (m *ProjectManager) doLoadOrCreateProject(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
 	st.Lock()
@@ -22,6 +50,7 @@ func (m *ProjectManager) doLoadOrCreateProject(task *state.Task, tomb *tomb.Tomb
 	}
 
 	project, err := LoadProject(m.server, m.fs, projectDir)
+
 	if errors.Is(err, afero.ErrFileNotFound) {
 		project, err = NewProject(m.server, m.fs, projectDir)
 		if err != nil {

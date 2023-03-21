@@ -18,6 +18,7 @@ func NewProjectManager(runner *state.TaskRunner, server srv.WorkspaceServer) *Pr
 	}
 
 	runner.AddHandler("load-or-create-project", manager.doLoadOrCreateProject, nil)
+	runner.AddHandler("load-project", manager.doLoadProject, nil)
 
 	return manager
 }

@@ -11,3 +11,9 @@ func LoadOrCreate(st *state.State, projectDir string) (*state.Task, error) {
 	load.Set("project-directory", projectDir)
 	return load, nil
 }
+
+func Load(st *state.State, projectDir string) (*state.Task, error) {
+	load := st.NewTask("load-project", fmt.Sprintf("Load project from %q", projectDir))
+	load.Set("project-directory", projectDir)
+	return load, nil
+}

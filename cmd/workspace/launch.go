@@ -11,8 +11,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	srv "github.com/canonical/workspace/internal/server"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -37,17 +35,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	ws = av[0]
 
-	server, err := srv.NewServer(fs)
-	if err != nil {
-		return err
-	}
-
 	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, ws))
 	if err != nil {
 		return err
 	}
 
-	overlord, err := overlord.New(server, nil, os.Stdout)
+	overlord, err := overlord.New(nil, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -68,7 +61,6 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	/* a project must be loaded before doing anything else */
-
 	taskset.WaitFor(task)
 
 	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
@@ -101,13 +93,4 @@ out:
 	}
 
 	return overlord.Stop()
-}
-
-func printWorkspaces(wsList []*srv.WorkspaceProps) {
-	if len(wsList) > 0 {
-		fmt.Printf("Available workspaces:\n")
-		for _, k := range wsList {
-			fmt.Printf("  \033[1m%s\033[0m\n", k.Name)
-		}
-	}
 }
