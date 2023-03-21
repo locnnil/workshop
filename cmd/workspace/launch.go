@@ -10,6 +10,7 @@ import (
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
+	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -73,25 +74,26 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-out:
-	for {
-		select {
-		case sig := <-sigs:
-			logger.Noticef("Exiting on %s signal.\n", sig)
-			change.Abort()
-			break out
-		case <-change.Ready():
-			break out
-		}
-	}
+	go func() {
+		sig := <-sigs
+		logger.Debugf("Exiting on %s signal.\n", sig)
+		st.Lock()
+		change.Abort()
+		st.EnsureBefore(0)
+		st.Unlock()
+	}()
 
+	<-change.Ready()
+
+	st.Lock()
 	if change.Status().Ready() {
 		if change.Err() != nil {
 			fmt.Print(change.Err())
-		} else {
+		} else if change.Status() == state.DoneStatus {
 			fmt.Printf("Workspace \"%s\" started.\n", ws)
 		}
 	}
+	st.Unlock()
 
 	return overlord.Stop()
 }
