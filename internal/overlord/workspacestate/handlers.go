@@ -29,11 +29,11 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	}
 
 	st := task.State()
-	var base string
-
 	st.Lock()
+	defer st.Unlock()
+
+	var base string
 	err = task.Get("base", &base)
-	st.Unlock()
 
 	if err != nil {
 		return fmt.Errorf("cannot get workspace base for task %q: %v", task.ID(), err)
@@ -57,6 +57,10 @@ func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error 
 		Properties: map[string]string{"type": "disk", "source": project.Path, "path": "/project"},
 	}
 
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
 	if err = m.server.AddWorkspaceDevice(workspace, project.ProjectId, prjMount); err != nil {
 		return err
 	}
@@ -70,11 +74,11 @@ func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	st := task.State()
-	var state string
-
 	st.Lock()
+	defer st.Unlock()
+
+	var state string
 	err = task.Get("workspace-state", &state)
-	st.Unlock()
 
 	if err != nil {
 		return fmt.Errorf("cannot get workspace base for task %q: %v", task.ID(), err)

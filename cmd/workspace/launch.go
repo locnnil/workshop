@@ -87,10 +87,18 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	st.Lock()
 	if change.Status().Ready() {
+		launched := true
+		for _, t := range change.Tasks() {
+			if t.Status() != state.DoneStatus {
+				launched = false
+			}
+		}
 		if change.Err() != nil {
 			fmt.Print(change.Err())
-		} else if change.Status() == state.DoneStatus {
-			fmt.Printf("Workspace \"%s\" started.\n", ws)
+		} else if change.Status() == state.UndoneStatus {
+			fmt.Println("Aborted.")
+		} else if launched {
+			fmt.Printf("Workspace %s started.\n", ws)
 		}
 	}
 	st.Unlock()
