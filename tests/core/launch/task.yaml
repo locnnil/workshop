@@ -20,3 +20,5 @@ execute: |
     assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
   done
 
+  launch "$WORKSPACES"/test-empty-ubuntu20 ws | MATCH "workspace \"ws\" already exists"
+
