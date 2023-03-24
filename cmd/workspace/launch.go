@@ -9,7 +9,6 @@ import (
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/spf13/afero"
@@ -51,7 +50,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	st := overlord.State()
 	st.Lock()
 
-	task, err := projectstate.LoadOrCreate(st, Project)
+	projectKey, err := overlord.ProjectManager().LoadOrCreateProject(Project)
 	if err != nil {
 		return err
 	}
@@ -61,13 +60,10 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	/* a project must be loaded before doing anything else */
-	taskset.WaitFor(task)
-
 	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
 	change.Set("workspace", ws)
+	change.Set("project-key", projectKey)
 
-	change.AddTask(task)
 	change.AddAll(taskset)
 	st.EnsureBefore(0)
 	st.Unlock()

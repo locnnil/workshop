@@ -14,7 +14,7 @@ import (
 )
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 }
 
 func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error 
 }
 
 func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 }
 
 func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := projectstate.ProjectAndWorkspace(task)
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -207,4 +207,28 @@ func sdkBlobDevice(sdk *store.SdkBlob) srv.WorkspaceDevice {
 		Properties: map[string]string{"type": "disk", "source": filename,
 			"path": filepath.Join("/root", filepath.Base(filename))},
 	}
+}
+
+func ProjectAndWorkspace(task *state.Task) (*projectstate.ProjectKey, string, error) {
+	st := task.State()
+	var project projectstate.ProjectKey
+	var name string
+
+	st.Lock()
+	err := task.Change().Get("project-key", &project)
+	st.Unlock()
+
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot get project for task %q: %v", task.ID(), err)
+	}
+
+	st.Lock()
+	err = task.Change().Get("workspace", &name)
+	st.Unlock()
+
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot get workspace for task %q: %v", task.ID(), err)
+	}
+
+	return &project, name, nil
 }

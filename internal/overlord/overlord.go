@@ -371,6 +371,12 @@ func (o *Overlord) StateEngine() *StateEngine {
 	return o.stateEng
 }
 
+// InterfaceManager returns the interface manager maintaining
+// interface connections under the overlord.
+func (o *Overlord) ProjectManager() *projectstate.ProjectManager {
+	return o.project
+}
+
 // TaskRunner returns the shared task runner responsible for running
 // tasks for all managers under the overlord.
 func (o *Overlord) TaskRunner() *state.TaskRunner {
