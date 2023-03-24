@@ -23,11 +23,10 @@ func Launch(st *state.State, file *WorkspaceFile) (*state.TaskSet, error) {
 	create.Set("base", file.Base)
 	create.WaitAll(downloads)
 
-	addProjectDir := st.NewTask("add-workspace-device", "Mount project directory")
+	addProjectDir := st.NewTask("mount-project", "Mount project directory")
 	addProjectDir.WaitFor(create)
 
-	start := st.NewTask("set-workspace-state", fmt.Sprintf("Start workspace %q", file.Name))
-	start.Set("workspace-state", "start")
+	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
 	start.WaitFor(addProjectDir)
 
 	installs.WaitFor(start)

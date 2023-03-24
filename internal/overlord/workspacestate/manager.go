@@ -15,8 +15,8 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceServer) *
 	}
 
 	runner.AddHandler("create-workspace", manager.doCreateWorkspace, manager.undoCreateWorkspace)
-	runner.AddHandler("add-workspace-device", manager.doAddDevice, nil)
-	runner.AddHandler("set-workspace-state", manager.doSetState, nil)
+	runner.AddHandler("mount-project", manager.doMountProject, nil)
+	runner.AddHandler("start-workspace", manager.doStart, manager.doStop)
 	runner.AddHandler("install-sdk", manager.doInstallSDK, manager.undoInstallSdk)
 
 	return manager

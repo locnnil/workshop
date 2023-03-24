@@ -45,7 +45,7 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 		base, project.ProjectId)
 }
 
-func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (m *WorkspaceManager) doAddDevice(task *state.Task, tomb *tomb.Tomb) error 
 	return nil
 }
 
-func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
@@ -77,15 +77,22 @@ func (m *WorkspaceManager) doSetState(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
-	var state string
-	err = task.Get("workspace-state", &state)
+	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
+	return m.server.SetWorkspaceState(workspace, project.ProjectId, "start")
+}
 
+func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
-		return fmt.Errorf("cannot get workspace base for task %q: %v", task.ID(), err)
+		return err
 	}
 
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	return m.server.SetWorkspaceState(workspace, project.ProjectId, state)
+	return m.server.SetWorkspaceState(workspace, project.ProjectId, "stop")
 }
 
 func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
