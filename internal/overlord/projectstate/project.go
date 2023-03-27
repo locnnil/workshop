@@ -373,9 +373,13 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
-		args := srv.ExecArgs{User: "root", Command: []string{"bash", "-c",
-			"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-			Stdin: nil, Stdout: stdout, Stderr: nil}
+		args := srv.ExecArgs{User: "root",
+			Command: []string{"bash", "-c",
+				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+			WorkDir: "/",
+			Stdin:   nil,
+			Stdout:  stdout,
+			Stderr:  nil}
 		done, err := server.Exec(instance.Name, key.ProjectId, &args)
 		if err != nil {
 			continue

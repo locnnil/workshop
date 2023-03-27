@@ -77,6 +77,29 @@ func (_m *MockWorkspaceServer) Exec(name string, project_id string, args *server
 	return r0, r1
 }
 
+func (_m *MockWorkspaceServer) GetWorkspace(name, project_id string) (*server.WorkspaceProps, error) {
+	ret := _m.Called(name, project_id)
+
+	var r0 *server.WorkspaceProps
+	if rf, ok := ret.Get(0).(func(string, string) *server.WorkspaceProps); ok {
+		r0 = rf(name, project_id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*server.WorkspaceProps)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(name, project_id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+
 // GetWorkspacesByConfig provides a mock function with given fields: filter
 func (_m *MockWorkspaceServer) GetWorkspacesByConfig(filter server.WorkspaceConfigFilter) ([]*server.WorkspaceProps, error) {
 	ret := _m.Called(filter)

@@ -71,7 +71,9 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 		"retrieve-sdk",
 		"retrieve-sdk",
 		"install-sdk",
-		"install-sdk"}
+		"install-sdk",
+		"link-sdk",
+		"link-sdk"}
 
 	tasks := ts.Tasks()
 

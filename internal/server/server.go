@@ -48,6 +48,7 @@ type WorkspaceProps struct {
 type ExecArgs struct {
 	User    string
 	Command []string
+	WorkDir string
 	Stdin   io.ReadCloser
 	Stdout  io.WriteCloser
 	Stderr  io.WriteCloser
@@ -76,10 +77,11 @@ type WorkspaceServer interface {
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
 	RemoveWorkspaceDevice(name, project_id, device string) error
 
-	AddWorkspaceConfig(names, project_id string, item *WorkspaceConfigValue) error
+	AddWorkspaceConfig(name, project_id string, item *WorkspaceConfigValue) error
 	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
+	GetWorkspace(name, project_id string) (*WorkspaceProps, error)
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
@@ -333,7 +335,7 @@ func (s *LxdServer) RemoveWorkspaceDevice(name, project_id, device string) error
 func (s *LxdServer) Exec(name, project_id string, args *ExecArgs) (chan bool, error) {
 	req := api.InstanceExecPost{
 		Command: args.Command, WaitForWS: true,
-		User: 0, Group: 0, Cwd: "/",
+		User: 0, Group: 0, Cwd: args.WorkDir,
 		Interactive: false,
 	}
 
@@ -369,6 +371,19 @@ func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *Work
 	}
 
 	return nil
+}
+
+func (s *LxdServer) GetWorkspace(name, project_id string) (*WorkspaceProps, error) {
+	inst, _, err := s.GetInstance(util.ToInstanceName(name, project_id))
+	if err != nil {
+		return nil, err
+	}
+	return &WorkspaceProps{
+		Name:    name,
+		state:   fromLxdToWorkspaceState(inst.StatusCode),
+		Devices: inst.Devices,
+		Config:  inst.Config,
+	}, nil
 }
 
 func (s *LxdServer) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {

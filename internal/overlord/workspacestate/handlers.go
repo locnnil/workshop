@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -135,14 +136,21 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	args := srv.ExecArgs{User: "root", Command: []string{
-		"tar",
-		"--extract",
-		"--file",
-		sdkMount.Properties["path"],
-		"--one-top-level=" + sdkPath,
-		"--no-same-owner",
-	}, Stdin: nil, Stdout: nil, Stderr: nil}
+	args := srv.ExecArgs{
+		User: "root",
+		Command: []string{
+			"tar",
+			"--extract",
+			"--file",
+			sdkMount.Properties["path"],
+			"--one-top-level=" + sdkPath,
+			"--no-same-owner",
+			"--strip-components=1",
+		},
+		WorkDir: "/",
+		Stdin:   nil,
+		Stdout:  nil,
+		Stderr:  nil}
 	done, err := m.server.Exec(workspace, project.ProjectId, &args)
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
@@ -167,12 +175,18 @@ func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) err
 	defer st.Unlock()
 	sdkMount := sdkBlobDevice(blob)
 
-	args := srv.ExecArgs{User: "root", Command: []string{
-		"rm",
-		"-rf",
-		"--",
-		filepath.Join(util.WorkspaceSdksDir, blob.Name),
-	}, Stdin: nil, Stdout: nil, Stderr: nil}
+	args := srv.ExecArgs{
+		User: "root",
+		Command: []string{
+			"rm",
+			"-rf",
+			"--",
+			filepath.Join(util.WorkspaceSdksDir, blob.Name),
+		},
+		WorkDir: "/",
+		Stdin:   nil,
+		Stdout:  nil,
+		Stderr:  nil}
 	done, err := m.server.Exec(workspace, project.ProjectId, &args)
 
 	<-done
@@ -182,6 +196,85 @@ func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) err
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
 
+	return nil
+}
+
+func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := ProjectAndWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	blob, err := sdkData(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	/* Read a sequence record for the SDK (if any) */
+	props, err := m.server.GetWorkspace(workspace, project.ProjectId)
+	if err != nil {
+		return err
+	}
+
+	type SequenceRecord struct {
+		Channel  string `json:"channel"`
+		Revision int64  `json:"revision"`
+	}
+
+	var sequence = make(map[string][]*SequenceRecord, 0)
+	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
+		err = json.Unmarshal([]byte(sdks), &sequence)
+		if err != nil {
+			return err
+		}
+	}
+	sequence[blob.Name] = append(sequence[blob.Name], &SequenceRecord{
+		blob.Channel, blob.Revision,
+	})
+
+	sequenceValue, err := json.Marshal(sequence)
+	if err != nil {
+		return err
+	}
+	/* Make a record in a LXD's key value storage to maintain
+	the sequence of the SDK's revisions */
+	err = m.server.AddWorkspaceConfig(workspace, project.ProjectId,
+		&srv.WorkspaceConfigValue{
+			Name:  "user.workspace.sdk",
+			Value: string(sequenceValue),
+		})
+
+	if err != nil {
+		return err
+	}
+
+	/* Update the current link to point out to the newly installed SDK */
+	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name)
+
+	args := srv.ExecArgs{
+		User: "root",
+		Command: []string{
+			"ln",
+			"-sf",
+			strconv.Itoa(int(blob.Revision)),
+			filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
+		},
+		WorkDir: sdkPath,
+		Stdin:   nil,
+		Stdout:  nil,
+		Stderr:  nil}
+	done, err := m.server.Exec(workspace, project.ProjectId, &args)
+
+	<-done
+
+	return err
+}
+
+func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 

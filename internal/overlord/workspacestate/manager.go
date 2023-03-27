@@ -18,6 +18,7 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceServer) *
 	runner.AddHandler("mount-project", manager.doMountProject, nil)
 	runner.AddHandler("start-workspace", manager.doStart, manager.doStop)
 	runner.AddHandler("install-sdk", manager.doInstallSDK, manager.undoInstallSdk)
+	runner.AddHandler("link-sdk", manager.doLinkSdk, manager.undoLinkSdk)
 
 	return manager
 }

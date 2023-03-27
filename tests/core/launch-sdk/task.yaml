@@ -26,7 +26,8 @@ execute: |
   test -f "$lock_file"
   assert_workspace_config "$WORKSPACES_SDK"/test-sdks-ubuntu22 $(cat "$lock_file")
 
-  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk | MATCH huggingface
-  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk | MATCH cuda
+  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk/huggingface | MATCH "^[0-9]+$"
+  lxc exec "$instance_name" -- test -h /var/lib/workspace/sdk/huggingface/current || echo "current must be a symbolic link"
+  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk/cuda | MATCH "^[0-9]+$"
 
 
