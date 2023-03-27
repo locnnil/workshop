@@ -3,6 +3,7 @@ package workspace
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
@@ -128,6 +129,10 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 
 	defer cleanup()
 
+	/* example: /var/lib/workspace/sdk/cuda/712/ */
+	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name,
+		strconv.Itoa(int(blob.Revision)))
+
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
 	args := srv.ExecArgs{User: "root", Command: []string{
@@ -135,7 +140,7 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 		"--extract",
 		"--file",
 		sdkMount.Properties["path"],
-		"--one-top-level=" + filepath.Join(util.WorkspaceSdksDir, blob.Name),
+		"--one-top-level=" + sdkPath,
 		"--no-same-owner",
 	}, Stdin: nil, Stdout: nil, Stderr: nil}
 	done, err := m.server.Exec(workspace, project.ProjectId, &args)

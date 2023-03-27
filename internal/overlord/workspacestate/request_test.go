@@ -21,24 +21,15 @@ func (s *S) SetUpTest(c *C) {
 	s.state = state.New(nil)
 }
 
-func verifyExpectedTasks(c *C, ts []*state.Task, tasks []string) {
-	taskset, expected := make([]*state.Task, 0), make([]string, 0)
-	copy(taskset, ts)
-	copy(expected, tasks)
-	slices.SortFunc(taskset, func(t, t1 *state.Task) bool {
-		return t.Kind() < t1.Kind()
-	})
-
+func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
+	actual := make([]string, 0, len(ts))
+	for _, i := range ts {
+		actual = append(actual, i.Kind())
+	}
+	slices.Sort(actual)
 	slices.Sort(expected)
 
-	compare := func(t *state.Task, t1 string) int {
-		if t.Kind() != t1 {
-			return 1
-		}
-		return 0
-
-	}
-	c.Assert(slices.CompareFunc(taskset, expected, compare), Equals, 0)
+	c.Assert(actual, DeepEquals, expected)
 }
 
 func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
@@ -48,21 +39,17 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	ts, err := workspace.Launch(s.state, file)
 
 	expected := []string{"create-workspace",
-		"add-workspace-device",
-		"set-workspace-state"}
+		"mount-project",
+		"start-workspace"}
 	tasks := ts.Tasks()
 
 	c.Assert(err, Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
-	var base, wstate string
+	var base string
 	err = tasks[0].Get("base", &base)
 	c.Assert(err, Equals, nil)
 	c.Assert(base, Equals, "ubuntu@22.04")
-
-	err = tasks[2].Get("workspace-state", &wstate)
-	c.Assert(err, Equals, nil)
-	c.Assert(wstate, Equals, "start")
 }
 
 func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
@@ -79,8 +66,8 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	ts, err := workspace.Launch(s.state, file)
 
 	expected := []string{"create-workspace",
-		"add-workspace-device",
-		"set-workspace-state",
+		"mount-project",
+		"start-workspace",
 		"retrieve-sdk",
 		"retrieve-sdk",
 		"install-sdk",
