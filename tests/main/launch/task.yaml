@@ -13,12 +13,12 @@ debug: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Test running workspaces with different bases without an SDK"
+  echo "Launch empty workspaces with various bases should succeed"
   for path in "$WORKSPACES"/*; do
     launch "$path" ws | MATCH started
-    test -f "$path"/.workspace.lock
-    assert_workspace_config "$path" $(cat "$path"/.workspace.lock)
+    assert_workspace_config "$path"
   done
 
+  echo "Launch an existing workspace should fail"
   launch "$WORKSPACES"/test-empty-ubuntu20 ws | MATCH "workspace \"ws\" already exists"
 

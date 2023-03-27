@@ -19,15 +19,10 @@ debug: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Test running workspaces with an SDK installed"
+  echo "Launch a test workspace with SDKs should succeed"
   launch "$WORKSPACES_SDK"/test-sdks-ubuntu22 ws | MATCH started
-  lock_file="$WORKSPACES_SDK"/test-sdks-ubuntu22/.workspace.lock
-  instance_name=ws-$(cat "$lock_file")
-  test -f "$lock_file"
-  assert_workspace_config "$WORKSPACES_SDK"/test-sdks-ubuntu22 $(cat "$lock_file")
-
-  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk/huggingface | MATCH "^[0-9]+$"
-  lxc exec "$instance_name" -- test -h /var/lib/workspace/sdk/huggingface/current || echo "current must be a symbolic link"
-  lxc exec "$instance_name" -- ls -1 /var/lib/workspace/sdk/cuda | MATCH "^[0-9]+$"
-
-
+  assert_workspace_config "$WORKSPACES_SDK"/test-sdks-ubuntu22 
+  
+  echo "SDKs must be configured correctly"
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 huggingface
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 cuda

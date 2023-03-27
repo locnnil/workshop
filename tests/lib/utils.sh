@@ -1,12 +1,31 @@
 #!/bin/bash
 
-function assert_workspace_config() {
-  lxc config device get ws-$2 workspace.project source --project workspace.ubuntu | MATCH $1
-  lxc config device get ws-$2 workspace.project path --project workspace.ubuntu | MATCH /project
-  lxc config get ws-$2 user.workspace.project-id --project workspace.ubuntu | MATCH $2
+# Functions to assert required LXD state
 
-  lxc list -c ns -f compact --project workspace.ubuntu | MATCH "ws-$2  RUNNING"
+function assert_workspace_config() {
+  project_id=$(cat "$1"/.workspace.lock)
+  lxc config device get ws-"$project_id" workspace.project source --project workspace.ubuntu | MATCH "$1"
+  lxc config device get ws-"$project_id" workspace.project path --project workspace.ubuntu | MATCH /project
+  lxc config get ws-"$project_id" user.workspace.project-id --project workspace.ubuntu | MATCH "$project_id"
+
+  lxc list -c ns -f compact --project workspace.ubuntu | MATCH "ws-$project_id  RUNNING"
 }
+
+function assert_workspace_sdk() {
+  project_id=$(cat "$1"/.workspace.lock)
+  workspace=ws-"$project_id"
+  base=/var/lib/workspace/sdk
+  sdk_config=$(lxc config get "$workspace" user.workspace.sdk --project workspace.ubuntu)
+
+  rev=$(lxc exec "$workspace" -- ls -1 "$base"/"$2" | sort | grep -E "^[0-9]+$")
+  echo "$sdk_config" | jq ".$2[0].revision" | MATCH "$rev"
+  echo "$sdk_config" | jq ".$2[0].channel" | MATCH "latest/stable"
+
+  lxc exec "$workspace" -- test -h "$base"/"$2"/current || echo "current must be a symbolic link"
+  lxc exec "$workspace" -- test "$base"/"$2"/"$rev" = "$(readlink -f "$base"/"$2"/current)" || echo "current does not point to $rev"
+}
+
+# General functions
 
 function cleanup_workspaces_in_tree() {
   lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
@@ -14,6 +33,17 @@ function cleanup_workspaces_in_tree() {
     rm -f "$i"/.workspace.lock
   done
 }
+
+function assert_arrays_equal() {
+  local -n one=$1
+  local -n two=$2
+  mapfile -t result < <(comm -3  \
+        <(printf '%s\n' "${one[@]}"  | sort) \
+        <(printf '%s\n' "${two[@]}"  | sort))
+  test ${#result[@]} -eq 0
+}
+
+# Workspace sub-command wrappers
 
 function launch() {
   sudo -u ubuntu -- workspace --project $1 launch $2

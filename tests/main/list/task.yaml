@@ -30,14 +30,14 @@ execute: |
   . "$TESTSLIB"/utils.sh
   # project-specific workspace list
   
-  echo "No workspace launched, wokrspace renders an empty list"
+  echo "Renders an empty list if no workspace exists"
   list_cwd | MATCH "^$"
 
   for path in "$WORKSPACES"/*; do
    list "$path" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
    test -f "$path"/.workspace.lock
 
-   echo "list from a nested directory must work similarly as if run from a project directory"
+   echo "workspace list from a nested directory must work similarly as if run from a project directory"
    pushd ./; mkdir "$path"/nested; cd "$path"/nested
    list_cwd | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$" 
    rm -rf "$path"/nested; popd 
@@ -57,7 +57,7 @@ execute: |
     sudo -u ubuntu mv "$path" "$path"-new
     project_id=$(cat "$path"-new/.workspace.lock)
     list "$path"-new | MATCH "^${path}-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-    assert_workspace_config "$path"-new "$project_id"
+    assert_workspace_config "$path"-new
     sudo -u ubuntu mv "$path"-new "$path"
 
     echo "The directory was copied, its projects instances should still stay available at the old path"
@@ -67,12 +67,12 @@ execute: |
     test "$project_id_copy" != "$project_id" 
 
     # make sure the instance at the old path still configured properly
-    assert_workspace_config "$path" "$project_id"
+    assert_workspace_config "$path"
 
     # launch from a new directory successfully 
     launch "$path"-copy ws | MATCH started
     list "$path"-copy | MATCH "^${path}-copy[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-    assert_workspace_config "$path"-copy "$project_id_copy"
+    assert_workspace_config "$path"-copy
   done
     #TODO: 
     # mv dir dir-1

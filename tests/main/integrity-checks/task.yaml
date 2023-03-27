@@ -14,15 +14,14 @@ execute: |
 
   for path in "$WORKSPACES"/*; do
     launch "$path" ws | MATCH started
-    test -f "$path"/.workspace.lock
-    assert_workspace_config "$path" "$(cat "$path"/.workspace.lock)"
+    assert_workspace_config "$path" 
 
-    # remove .workspace.lock accidentally to validate recovery
+    echo "Should recover .lock file if removed for an existing project"
     rm -f "$path"/.workspace.lock
     list "$path"
     test -f "$path"/.workspace.lock
 
-    # delete the workspace file and check its state
+    echo "Should report a workspace state as Error if there is no workspace file"
     mv "$path"/.workspace.ws.yaml "$path"/.workspace.ws.yaml.bak
     list "$path" | MATCH "^$path[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
     mv "$path"/.workspace.ws.yaml.bak "$path"/.workspace.ws.yaml

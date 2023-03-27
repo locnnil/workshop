@@ -57,7 +57,7 @@ backends:
           username: root
           password: ubuntu
 suites:
-  tests/core/:
+  tests/main/:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
@@ -66,7 +66,7 @@ suites:
       TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |
       apt-get update
-      apt-get install -y --no-install-recommends gcc libc6-dev snapd
+      apt-get install -y --no-install-recommends gcc libc6-dev snapd jq
       snap install go --classic
 
       snap install lxd --classic
