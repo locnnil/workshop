@@ -11,7 +11,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
-	srv "github.com/canonical/workspace/internal/server"
+	srv "github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -38,7 +38,7 @@ func (c *CmdList) Command() *cobra.Command {
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	var err error
-	var server srv.WorkspaceServer
+	var server srv.WorkspaceBackend
 	var project *projectstate.Project
 	var fs = afero.NewOsFs()
 
@@ -47,7 +47,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	server, err = srv.NewServer(fs)
+	server, err = srv.New()
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func listGlobal(server srv.WorkspaceServer, fs afero.Fs) error {
+func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 	list, err := projectstate.RetrieveWorkspacesGlobal(server, fs)
 	if err != nil || len(list) == 0 {
 		return err

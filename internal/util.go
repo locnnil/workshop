@@ -6,13 +6,11 @@ import (
 	"fmt"
 
 	"os"
-	"os/signal"
 	"strings"
 
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	lxd "github.com/lxc/lxd/client"
 
 	"math/rand"
 
@@ -115,33 +113,5 @@ func init() {
 	if err := os.MkdirAll(StateDir, 0755); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
-	}
-}
-
-func CancellableWait(op lxd.RemoteOperation) error {
-	sch := make(chan os.Signal, 1)
-	och := make(chan error)
-
-	signal.Notify(sch, os.Interrupt)
-
-	go func() {
-		och <- op.Wait()
-		close(och)
-	}()
-
-	count := 0
-	for {
-		select {
-		case err := <-och:
-			return err
-		case <-sch:
-			if err := op.CancelTarget(); err == nil {
-				return ErrCancelled
-			}
-
-			if count += 1; count >= 3 {
-				return ErrForcedCancel
-			}
-		}
 	}
 }

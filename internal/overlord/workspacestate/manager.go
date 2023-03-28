@@ -2,16 +2,16 @@ package workspace
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
-	srv "github.com/canonical/workspace/internal/server"
+	srv "github.com/canonical/workspace/internal/workspacebackend"
 )
 
 type WorkspaceManager struct {
-	server srv.WorkspaceServer
+	backend srv.WorkspaceBackend
 }
 
-func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceServer) *WorkspaceManager {
+func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) *WorkspaceManager {
 	manager := &WorkspaceManager{
-		server: server,
+		backend: server,
 	}
 
 	runner.AddHandler("create-workspace", manager.doCreateWorkspace, manager.undoCreateWorkspace)

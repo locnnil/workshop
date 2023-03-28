@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	util "github.com/canonical/workspace/internal"
-	srv "github.com/canonical/workspace/internal/server"
+	backend "github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 
 	"github.com/spf13/afero"
@@ -23,8 +23,8 @@ type Project struct {
 	path      string
 	projectId string
 
-	fs     afero.Fs
-	server srv.WorkspaceServer
+	fs      afero.Fs
+	backend backend.WorkspaceBackend
 }
 
 const (
@@ -35,7 +35,7 @@ const (
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
-func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
+func LoadProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
 	var err error
 	var project Project
 
@@ -45,7 +45,7 @@ func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project
 	}
 
 	project.fs = fs
-	project.server = server
+	project.backend = backend
 	project.path = path
 
 	/* Is there an existing project file? */
@@ -56,7 +56,7 @@ func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project
 			return nil, err
 		}
 	} else if errors.Is(err, afero.ErrFileNotFound) {
-		updateConfigFromBindMounts(server, fs)
+		updateConfigFromBindMounts(backend, fs)
 		if ok := project.recorverProjectId(); ok {
 			/* recovered project-id successfully, recreate .lock */
 			return &project, project.SaveProject()
@@ -71,7 +71,7 @@ func LoadProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project
 	return &project, nil
 }
 
-func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project, error) {
+func NewProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
 	var err error
 	var project Project
 
@@ -81,7 +81,7 @@ func NewProject(server srv.WorkspaceServer, fs afero.Fs, path string) (*Project,
 	}
 
 	project.fs = fs
-	project.server = server
+	project.backend = backend
 	project.path = path
 
 	if project.projectId, err = newProjectId(); err != nil {
@@ -107,7 +107,7 @@ func (p *Project) validateProjectDirectory() error {
 	/* see if any of the project's workspace has an incorrect config
 	   to save on any unnecessary API calls to the server
 	*/
-	idx := slices.IndexFunc(instances, func(w *srv.WorkspaceProps) bool { return w.Devices[ProjectDevice]["source"] != p.path })
+	idx := slices.IndexFunc(instances, func(w *backend.WorkspaceProps) bool { return w.Devices[ProjectDevice]["source"] != p.path })
 	if idx == -1 {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (p *Project) validateProjectDirectory() error {
 
 	   We should examine running workspaces (if any) to see if that's the case
 	*/
-	if updated, err = updateConfigFromBindMounts(p.server, p.fs); err != nil {
+	if updated, err = updateConfigFromBindMounts(p.backend, p.fs); err != nil {
 		return err
 	}
 
@@ -148,11 +148,11 @@ func (p *Project) validateProjectDirectory() error {
 			}
 
 			/* The directory was moved, update the project mount */
-			var mount = srv.WorkspaceDevice{
+			var mount = backend.WorkspaceDevice{
 				Name:       ProjectDevice,
 				Properties: map[string]string{"type": "disk", "source": p.path, "path": "/project"},
 			}
-			p.server.AddWorkspaceDevice(i.Name, p.projectId, mount)
+			p.backend.AddWorkspaceDevice(i.Name, p.projectId, mount)
 		}
 
 	}
@@ -168,7 +168,7 @@ Check if the project DID exist at this directory path and if so, try to recover 
 	we attempt to recover a previously created .lock
 */
 func (p *Project) recorverProjectId() bool {
-	instances, _ := p.server.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
+	instances, _ := p.backend.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
 		if mount, ok := devices[ProjectDevice]; ok {
 			if mount["source"] == p.path {
 				return true
@@ -218,7 +218,7 @@ func (w *Project) SaveProject() error {
 	return afero.WriteFile(w.fs, filepath.Join(w.path, ProjectLock), []byte(w.projectId), 0644)
 }
 
-func (w *Project) RetrieveWorkspaces() ([]*srv.WorkspaceProps, error) {
+func (w *Project) RetrieveWorkspaces() ([]*backend.WorkspaceProps, error) {
 	/* (1) Find all the project's workspace files */
 	files, err := w.EnumWorkspaceFiles()
 	if err != nil {
@@ -236,11 +236,11 @@ func (w *Project) RetrieveWorkspaces() ([]*srv.WorkspaceProps, error) {
 	return result, nil
 }
 
-func mergeInstancesAndFiles(files []*srv.WorkspaceProps, instances []*srv.WorkspaceProps) []*srv.WorkspaceProps {
+func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backend.WorkspaceProps) []*backend.WorkspaceProps {
 	/* Merge both lists from to build a list of workspaces with their states */
-	result := make([]*srv.WorkspaceProps, 0, len(files)+len(instances))
+	result := make([]*backend.WorkspaceProps, 0, len(files)+len(instances))
 	for _, ws := range instances {
-		finder := func(p *srv.WorkspaceProps) bool { return p.Name == ws.Name }
+		finder := func(p *backend.WorkspaceProps) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
 		if idx == -1 {
 			/* We only have an instance, no file
@@ -261,13 +261,13 @@ func mergeInstancesAndFiles(files []*srv.WorkspaceProps, instances []*srv.Worksp
 	return result
 }
 
-func (w *Project) EnumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
+func (w *Project) EnumWorkspaceFiles() ([]*backend.WorkspaceProps, error) {
 	files, err := afero.ReadDir(w.fs, w.path)
 	if err != nil {
 		return nil, err
 	}
 
-	var workspaces = make([]*srv.WorkspaceProps, 0, len(files))
+	var workspaces = make([]*backend.WorkspaceProps, 0, len(files))
 
 	for _, info := range files {
 		if info.IsDir() {
@@ -276,24 +276,24 @@ func (w *Project) EnumWorkspaceFiles() ([]*srv.WorkspaceProps, error) {
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces = append(workspaces, &srv.WorkspaceProps{Name: names[1]})
+			workspaces = append(workspaces, &backend.WorkspaceProps{Name: names[1]})
 		}
 	}
 	return workspaces, nil
 }
 
-func (w *Project) retrieveWorkspaceInstances() ([]*srv.WorkspaceProps, error) {
-	instances, err := w.server.GetWorkspacesByConfig(srv.NewWorkspaceConfigFilter(ProjectId, w.ProjectId()))
+func (w *Project) retrieveWorkspaceInstances() ([]*backend.WorkspaceProps, error) {
+	instances, err := w.backend.GetWorkspacesByConfig(backend.NewWorkspaceConfigFilter(ProjectId, w.ProjectId()))
 	if err != nil {
 		return instances, err
 	}
 	return instances, nil
 }
 
-func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Project][]*srv.WorkspaceProps, error) {
-	updateConfigFromBindMounts(server, fs)
+func RetrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
+	updateConfigFromBindMounts(be, fs)
 
-	all, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
+	all, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}
@@ -306,9 +306,9 @@ func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Pro
 	}
 
 	/* Get a list of Project objects with workspaces */
-	var fullList = make(map[*Project][]*srv.WorkspaceProps, len(projects))
+	var fullList = make(map[*Project][]*backend.WorkspaceProps, len(projects))
 	for props := range projects {
-		if project, err := LoadProject(server, fs, props.Path); err == nil {
+		if project, err := LoadProject(be, fs, props.Path); err == nil {
 			workspaces, err := project.RetrieveWorkspaces()
 			if err == nil {
 				fullList[project] = workspaces
@@ -317,7 +317,7 @@ func RetrieveWorkspacesGlobal(server srv.WorkspaceServer, fs afero.Fs) (map[*Pro
 			// all the workspaces of this project are unreachable and the directory
 			// does not exist anymore. However, there could be stopped instances that are orphaned
 			// we make sure these are not skipped in the output
-			project = &Project{path: props.Path, projectId: props.ProjectId, server: server, fs: fs}
+			project = &Project{path: props.Path, projectId: props.ProjectId, backend: be, fs: fs}
 			workspaces, err := project.retrieveWorkspaceInstances()
 			if len(workspaces) > 0 && err == nil {
 				for _, i := range workspaces {
@@ -343,14 +343,14 @@ func LockPath(path string) string {
 	return filepath.Join(path, ProjectLock)
 }
 
-func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (updated bool, err error) {
-	workspaces, err := server.GetWorkspacesByConfig(srv.EveryWorkspace())
+func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updated bool, err error) {
+	workspaces, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
 	if err != nil {
 		return false, err
 	}
 
 	/* Group by instances by project-id and project directory  */
-	var grouped = make(map[ProjectKey][]*srv.WorkspaceProps, len(workspaces))
+	var grouped = make(map[ProjectKey][]*backend.WorkspaceProps, len(workspaces))
 	for _, i := range workspaces {
 		if i.State() == util.Ready {
 			projectPath := i.Devices[ProjectDevice]["source"]
@@ -373,14 +373,14 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
-		args := srv.ExecArgs{User: "root",
+		args := backend.ExecArgs{User: "root",
 			Command: []string{"bash", "-c",
 				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
 			WorkDir: "/",
 			Stdin:   nil,
 			Stdout:  stdout,
 			Stderr:  nil}
-		done, err := server.Exec(instance.Name, key.ProjectId, &args)
+		done, err := be.Exec(instance.Name, key.ProjectId, &args)
 		if err != nil {
 			continue
 		}
@@ -394,7 +394,7 @@ func updateConfigFromBindMounts(server srv.WorkspaceServer, fs afero.Fs) (update
 					if lxdPath != string(currentPath) {
 						/* now, update LXD configuration for all the group's instances */
 						for _, inst := range i {
-							server.AddWorkspaceDevice(inst.Name, key.ProjectId, srv.WorkspaceDevice{
+							be.AddWorkspaceDevice(inst.Name, key.ProjectId, backend.WorkspaceDevice{
 								Name:       ProjectDevice,
 								Properties: map[string]string{"type": "disk", "source": string(currentPath), "path": "/project"},
 							})

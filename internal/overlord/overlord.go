@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/canonical/x-go/randutil"
-	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
 
 	util "github.com/canonical/workspace/internal"
@@ -36,7 +35,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	"github.com/canonical/workspace/internal/server"
+	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
 var (
@@ -75,9 +74,7 @@ type Overlord struct {
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
 func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
-	fs := afero.NewOsFs()
-
-	server, err := server.NewServer(fs)
+	workspaceBackend, err := workspacebackend.New()
 	if err != nil {
 		return nil, err
 	}
@@ -114,13 +111,13 @@ func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, er
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
 
-	o.workspace = workspace.NewWorkspaceManager(o.runner, server)
+	o.workspace = workspace.NewWorkspaceManager(o.runner, workspaceBackend)
 	o.addManager(o.workspace)
 
 	o.sdk = sdkstate.NewManager(o.runner)
 	o.addManager(o.sdk)
 
-	o.project = projectstate.NewProjectManager(o.runner, server)
+	o.project = projectstate.NewProjectManager(o.runner, workspaceBackend)
 	o.addManager(o.project)
 
 	// the shared task runner should be added last!

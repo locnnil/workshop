@@ -1,11 +1,11 @@
-package server_test
+package workspacebackend_test
 
 import (
 	"net/http"
 	"testing"
 
 	"github.com/canonical/workspace/internal/mocks"
-	"github.com/canonical/workspace/internal/server"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
@@ -17,7 +17,7 @@ import (
 type LxdServerTestSuite struct {
 	suite.Suite
 	Fs       afero.Fs
-	Srv      server.LxdServer
+	Srv      workspacebackend.LxdBackend
 	InstMock *mocks.MockInstanceServer
 	ImgMock  *mocks.MockImageServer
 }
@@ -27,7 +27,7 @@ var ApiErrCancelled = api.StatusErrorf(int(api.Cancelled), "")
 
 func (s *LxdServerTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Srv = server.LxdServer{Fs: s.Fs}
+	s.Srv = workspacebackend.LxdBackend{}
 	s.InstMock = mocks.NewMockInstanceServer(s.T())
 	s.Srv.InstanceServer = s.InstMock
 	s.ImgMock = mocks.NewMockImageServer(s.T())
@@ -51,9 +51,7 @@ func (s *LxdServerTestSuite) TestLaunchLocalImageExists() {
 		On("GetImage", fingerprint).Return(&image, "", nil).
 		On("CreateInstanceFromImage", &s.Srv, image, mock.Anything).Return(op, nil)
 
-	op.
-		On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil).
-		On("Wait").Return(nil)
+	op.On("Wait").Return(nil)
 
 	err := s.Srv.LaunchWorkspaceInstance(name, base, project)
 	assert.Equal(s.T(), err, nil)
@@ -68,11 +66,11 @@ func (s *LxdServerTestSuite) TestLaunchNoLocalImage() {
 	var op = mocks.NewMockRemoteOperation(s.T())
 	var err error
 
-	oldSimpleStreams := server.ConnectSimpleStreams
-	server.ConnectSimpleStreams = func(url string, args *lxd.ConnectionArgs) (lxd.ImageServer, error) {
+	oldSimpleStreams := workspacebackend.ConnectSimpleStreams
+	workspacebackend.ConnectSimpleStreams = func(url string, args *lxd.ConnectionArgs) (lxd.ImageServer, error) {
 		return s.ImgMock, nil
 	}
-	defer func() { server.ConnectSimpleStreams = oldSimpleStreams }()
+	defer func() { workspacebackend.ConnectSimpleStreams = oldSimpleStreams }()
 
 	remoteImageAlias.Target = fingerprint
 	localImageAlias.Name = base
@@ -90,9 +88,7 @@ func (s *LxdServerTestSuite) TestLaunchNoLocalImage() {
 		On("GetImageAlias", "20.04/amd64").Return(&remoteImageAlias, "", nil).
 		On("GetImage", fingerprint).Return(&image, "", nil)
 
-	op.
-		On("AddHandler", mock.Anything).Return((*lxd.EventTarget)(nil), nil).
-		On("Wait").Return(nil)
+	op.On("Wait").Return(nil)
 
 	err = s.Srv.LaunchWorkspaceInstance(name, base, project)
 	assert.NoError(s.T(), err)

@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	server "github.com/canonical/workspace/internal/server"
+	server "github.com/canonical/workspace/internal/workspacebackend"
 	mock "github.com/stretchr/testify/mock"
 )
 

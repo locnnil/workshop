@@ -6,7 +6,7 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/mocks"
-	"github.com/canonical/workspace/internal/server"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,8 +16,8 @@ import (
 
 type ProjectTestSuite struct {
 	suite.Suite
-	Fs  afero.Fs
-	Srv *mocks.MockWorkspaceServer
+	Fs      afero.Fs
+	Backend *mocks.MockWorkspaceServer
 }
 
 func TestRunProjectTests(t *testing.T) {
@@ -26,7 +26,7 @@ func TestRunProjectTests(t *testing.T) {
 
 func (s *ProjectTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Srv = mocks.NewMockWorkspaceServer(s.T())
+	s.Backend = mocks.NewMockWorkspaceServer(s.T())
 	s.Fs.MkdirAll(util.DataDir, 0755)
 	s.Fs.MkdirAll(util.SdksDir, 0755)
 	rand.Seed(1)
@@ -57,12 +57,12 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInACWD() {
 func (s *ProjectTestSuite) TestNewProject() {
 	t := s.T()
 
-	project, err := NewProject(s.Srv, s.Fs, "/")
+	project, err := NewProject(s.Backend, s.Fs, "/")
 	assert.Equal(t, "52fdfc07", project.ProjectId())
 	assert.NoError(t, err)
 	assert.Equal(t, "/", project.ProjectDirectory())
 
-	project, err = NewProject(s.Srv, s.Fs, "/doesnotexist")
+	project, err = NewProject(s.Backend, s.Fs, "/doesnotexist")
 	assert.Nil(t, project)
 	assert.ErrorIs(t, err, afero.ErrFileNotFound)
 }
@@ -84,15 +84,15 @@ func (s *ProjectTestSuite) TestLoadProject() {
 	assert.Error(t, err)
 
 	/* Project exists, no workspace instances */
-	h := s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*server.WorkspaceProps{}, nil)
+	h := s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("PROJECTID"), 0644)
-	project, err = LoadProject(s.Srv, s.Fs, "/")
+	project, err = LoadProject(s.Backend, s.Fs, "/")
 	assert.NotNil(t, project)
 	assert.Equal(t, "/", project.ProjectDirectory())
 	assert.NoError(t, err)
 
 	/* Project exists, some workspace instances running */
-	instances := []*server.WorkspaceProps{
+	instances := []*workspacebackend.WorkspaceProps{
 		{
 			Name: "instance1",
 			Devices: map[string]map[string]string{"workspace.project": {
@@ -101,16 +101,16 @@ func (s *ProjectTestSuite) TestLoadProject() {
 	}
 	instances[0].SetState(util.Ready, util.None)
 	h.Unset()
-	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project, err = LoadProject(s.Srv, s.Fs, "/")
+	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
+	project, err = LoadProject(s.Backend, s.Fs, "/")
 	assert.NotNil(t, project)
 	assert.Equal(t, "/", project.ProjectDirectory())
 	assert.NoError(t, err)
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
-	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*server.WorkspaceProps{}, nil)
-	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
+	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 
 	result, err := project.RetrieveWorkspaces()
 
@@ -119,7 +119,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
 }
 
 func (s *ProjectTestSuite) TestEnumFilesErrorReadingProjectDirectory() {
-	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 	s.Fs.RemoveAll("/")
 
 	result, err := project.EnumWorkspaceFiles()
@@ -129,8 +129,8 @@ func (s *ProjectTestSuite) TestEnumFilesErrorReadingProjectDirectory() {
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
-	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*server.WorkspaceProps{}, nil)
-	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
+	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
@@ -143,15 +143,15 @@ func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
-	instances := []*server.WorkspaceProps{
+	instances := []*workspacebackend.WorkspaceProps{
 		{
 			Name: "instance1",
 		},
 	}
 	instances[0].SetState(util.Ready, util.None)
 
-	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
+	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 
 	result, err := project.RetrieveWorkspaces()
 	assert.NoError(s.T(), err)
@@ -163,7 +163,7 @@ func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
 }
 
 func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
-	instances := []*server.WorkspaceProps{
+	instances := []*workspacebackend.WorkspaceProps{
 		{
 			Name: "instance1",
 		},
@@ -174,13 +174,13 @@ func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
 	instances[0].SetState(util.Ready, util.None)
 	instances[1].SetState(util.Ready, util.None)
 
-	s.Srv.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project := Project{fs: s.Fs, server: s.Srv, path: "/"}
+	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
 	result, err := project.RetrieveWorkspaces()
 	// Make sure the order is always predictable
-	slices.SortFunc(result, func(i, j *server.WorkspaceProps) bool { return i.Name > j.Name })
+	slices.SortFunc(result, func(i, j *workspacebackend.WorkspaceProps) bool { return i.Name > j.Name })
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), util.Error, result[1].State())
 	assert.Equal(s.T(), util.MissingFile, result[1].Reason())

@@ -4,29 +4,29 @@ import (
 	"errors"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	srv "github.com/canonical/workspace/internal/server"
+	backend "github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 )
 
 type ProjectManager struct {
-	server srv.WorkspaceServer
-	fs     afero.Fs
+	backend backend.WorkspaceBackend
+	fs      afero.Fs
 }
 
-func NewProjectManager(runner *state.TaskRunner, server srv.WorkspaceServer) *ProjectManager {
+func NewProjectManager(runner *state.TaskRunner, be backend.WorkspaceBackend) *ProjectManager {
 	manager := &ProjectManager{
-		server: server,
-		fs:     afero.NewOsFs(),
+		backend: be,
+		fs:      afero.NewOsFs(),
 	}
 
 	return manager
 }
 
 func (m *ProjectManager) LoadOrCreateProject(projectDir string) (*ProjectKey, error) {
-	project, err := LoadProject(m.server, m.fs, projectDir)
+	project, err := LoadProject(m.backend, m.fs, projectDir)
 
 	if errors.Is(err, afero.ErrFileNotFound) {
-		project, err = NewProject(m.server, m.fs, projectDir)
+		project, err = NewProject(m.backend, m.fs, projectDir)
 		if err != nil {
 			return nil, err
 		}

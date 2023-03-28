@@ -11,7 +11,7 @@ import (
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	srv "github.com/canonical/workspace/internal/server"
+	srv "github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
 
@@ -26,7 +26,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 		return err
 	}
 
-	return m.server.DeleteWorkspaceInstance(workspace, project.ProjectId)
+	return m.backend.DeleteWorkspaceInstance(workspace, project.ProjectId)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -48,7 +48,7 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 
 	fmt.Printf("Setting up workspace \"%s\"...\n", workspace)
 	/* Launch a workspace with the required base */
-	return m.server.LaunchWorkspaceInstance(workspace,
+	return m.backend.LaunchWorkspaceInstance(workspace,
 		base, project.ProjectId)
 }
 
@@ -68,7 +68,7 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	st.Lock()
 	defer st.Unlock()
 
-	if err = m.server.AddWorkspaceDevice(workspace, project.ProjectId, prjMount); err != nil {
+	if err = m.backend.AddWorkspaceDevice(workspace, project.ProjectId, prjMount); err != nil {
 		return err
 	}
 	return nil
@@ -85,7 +85,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	return m.server.SetWorkspaceState(workspace, project.ProjectId, "start")
+	return m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
 }
 
 func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
@@ -99,7 +99,7 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	return m.server.SetWorkspaceState(workspace, project.ProjectId, "stop")
+	return m.backend.SetWorkspaceState(workspace, project.ProjectId, "stop")
 }
 
 func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
@@ -121,14 +121,14 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 
 	sdkMount := sdkBlobDevice(blob)
 
-	err = m.server.AddWorkspaceDevice(workspace, project.ProjectId, sdkMount)
+	err = m.backend.AddWorkspaceDevice(workspace, project.ProjectId, sdkMount)
 	if err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		/* Make sure the SDK file will be unmounted once installed into the workspace */
-		if err := m.server.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name); err != nil {
+		if err := m.backend.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK blob %q from workspace %q: %v", sdkMount.Name, workspace, err)
 		}
 	}
@@ -156,7 +156,7 @@ func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error
 		Stdin:   nil,
 		Stdout:  nil,
 		Stderr:  nil}
-	done, err := m.server.Exec(workspace, project.ProjectId, &args)
+	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
@@ -192,7 +192,7 @@ func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) err
 		Stdin:   nil,
 		Stdout:  nil,
 		Stderr:  nil}
-	done, err := m.server.Exec(workspace, project.ProjectId, &args)
+	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
 
 	<-done
 
@@ -220,7 +220,7 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 
 	/* Read a sequence record for the SDK (if any) */
-	props, err := m.server.GetWorkspace(workspace, project.ProjectId)
+	props, err := m.backend.GetWorkspace(workspace, project.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	/* Make a record in a LXD's key value storage to maintain
 	the sequence of the SDK's revisions */
-	err = m.server.AddWorkspaceConfig(workspace, project.ProjectId,
+	err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
 		&srv.WorkspaceConfigValue{
 			Name:  "user.workspace.sdk",
 			Value: string(sequenceValue),
@@ -267,7 +267,7 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		Stdin:   nil,
 		Stdout:  nil,
 		Stderr:  nil}
-	done, err := m.server.Exec(workspace, project.ProjectId, &args)
+	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
 
 	<-done
 
@@ -290,7 +290,7 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 	defer st.Unlock()
 
 	/* Read a sequence record for the SDK (if any) */
-	props, err := m.server.GetWorkspace(workspace, project.ProjectId)
+	props, err := m.backend.GetWorkspace(workspace, project.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 		}
 
 		/* Update the workspace config */
-		err = m.server.AddWorkspaceConfig(workspace, project.ProjectId,
+		err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
 			&srv.WorkspaceConfigValue{
 				Name:  "user.workspace.sdk",
 				Value: string(newSequence),
@@ -354,7 +354,7 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 			}
 		}
 
-		done, err := m.server.Exec(workspace, project.ProjectId, &args)
+		done, err := m.backend.Exec(workspace, project.ProjectId, &args)
 
 		<-done
 
