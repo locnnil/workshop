@@ -17,7 +17,7 @@ import (
 type ProjectTestSuite struct {
 	suite.Suite
 	Fs      afero.Fs
-	Backend *mocks.MockWorkspaceServer
+	Backend *mocks.MockWorkspaceBackend
 }
 
 func TestRunProjectTests(t *testing.T) {
@@ -26,7 +26,7 @@ func TestRunProjectTests(t *testing.T) {
 
 func (s *ProjectTestSuite) SetupTest() {
 	s.Fs = afero.NewMemMapFs()
-	s.Backend = mocks.NewMockWorkspaceServer(s.T())
+	s.Backend = mocks.NewMockWorkspaceBackend(s.T())
 	s.Fs.MkdirAll(util.DataDir, 0755)
 	s.Fs.MkdirAll(util.SdksDir, 0755)
 	rand.Seed(1)
