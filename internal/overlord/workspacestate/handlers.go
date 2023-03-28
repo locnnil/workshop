@@ -15,6 +15,11 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+type SdkSequenceRecord struct {
+	Channel  string `json:"channel"`
+	Revision int64  `json:"revision"`
+}
+
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
@@ -220,19 +225,14 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	type SequenceRecord struct {
-		Channel  string `json:"channel"`
-		Revision int64  `json:"revision"`
-	}
-
-	var sequence = make(map[string][]*SequenceRecord, 0)
+	var sequence = make(map[string][]*SdkSequenceRecord, 0)
 	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
 		err = json.Unmarshal([]byte(sdks), &sequence)
 		if err != nil {
 			return err
 		}
 	}
-	sequence[blob.Name] = append(sequence[blob.Name], &SequenceRecord{
+	sequence[blob.Name] = append(sequence[blob.Name], &SdkSequenceRecord{
 		blob.Channel, blob.Revision,
 	})
 
@@ -275,6 +275,92 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := ProjectAndWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	blob, err := sdkData(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	/* Read a sequence record for the SDK (if any) */
+	props, err := m.server.GetWorkspace(workspace, project.ProjectId)
+	if err != nil {
+		return err
+	}
+
+	var sequence = make(map[string][]*SdkSequenceRecord, 0)
+	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
+		err = json.Unmarshal([]byte(sdks), &sequence)
+		if err != nil {
+			return err
+		}
+
+		/* Remove the latest sequence record */
+		seqLen := len(sequence[blob.Name])
+		if seqLen > 0 {
+			sequence[blob.Name] = sequence[blob.Name][:seqLen-1]
+		}
+
+		newSeqLen := len(sequence[blob.Name])
+		if newSeqLen > 0 {
+			delete(sequence, blob.Name)
+		}
+
+		newSequence, err := json.Marshal(sequence)
+		if err != nil {
+			return err
+		}
+
+		/* Update the workspace config */
+		err = m.server.AddWorkspaceConfig(workspace, project.ProjectId,
+			&srv.WorkspaceConfigValue{
+				Name:  "user.workspace.sdk",
+				Value: string(newSequence),
+			})
+		if err != nil {
+			return err
+		}
+
+		args := srv.ExecArgs{
+			User:    "root",
+			WorkDir: filepath.Join(util.WorkspaceSdksDir, blob.Name),
+			Stdin:   nil,
+			Stdout:  nil,
+			Stderr:  nil}
+
+		/* Update the 'current' link */
+		if newSeqLen > 0 {
+			/* There is another revision available, shift the link to it */
+			args.Command = []string{
+				"ln",
+				"-sf",
+				strconv.Itoa(int(sequence[blob.Name][newSeqLen-1].Revision)),
+				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
+			}
+		} else {
+			/* It was the only revision, remove the link */
+			args.Command = []string{
+				"rm",
+				"-f",
+				"--",
+				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
+			}
+		}
+
+		done, err := m.server.Exec(workspace, project.ProjectId, &args)
+
+		<-done
+
+		return err
+	}
+
 	return nil
 }
 

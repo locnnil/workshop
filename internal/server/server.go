@@ -54,6 +54,15 @@ type ExecArgs struct {
 	Stderr  io.WriteCloser
 }
 
+type LxdServer struct {
+	lxd.InstanceServer
+	Fs afero.Fs
+}
+
+const LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+
+var ConnectSimpleStreams = lxd.ConnectSimpleStreams
+
 type WorkspaceConfigFilter func(config map[string]string) bool
 type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
 
@@ -88,24 +97,15 @@ type WorkspaceServer interface {
 	Exec(name, project_id string, args *ExecArgs) (chan bool, error)
 }
 
-type LxdServer struct {
-	lxd.InstanceServer
-	Fs afero.Fs
-}
-
-const LXDSock = "/var/snap/lxd/common/lxd/unix.socket"
-
-var ConnectSimpleStreams = lxd.ConnectSimpleStreams
-
 func (s *LxdServer) connect() (lxd.InstanceServer, error) {
 	project, err := GetLXDProjectName()
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := afero.Exists(s.Fs, LXDSock); err != nil {
+	if ok, err := afero.Exists(s.Fs, LxdSock); err != nil {
 		return nil, err
 	} else if ok {
-		if srv, err := lxd.ConnectLXDUnix(LXDSock, nil); err != nil {
+		if srv, err := lxd.ConnectLXDUnix(LxdSock, nil); err != nil {
 			return nil, err
 		} else {
 			return srv.UseProject(project), nil
@@ -374,7 +374,7 @@ func (s *LxdServer) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *Work
 }
 
 func (s *LxdServer) GetWorkspace(name, project_id string) (*WorkspaceProps, error) {
-	inst, _, err := s.GetInstance(util.ToInstanceName(name, project_id))
+	inst, _, err := s.getLxdInstance(name, project_id)
 	if err != nil {
 		return nil, err
 	}
