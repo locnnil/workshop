@@ -3,12 +3,20 @@ package main
 import (
 	"testing"
 
+	. "gopkg.in/check.v1"
+
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestGetProjectDirectory(t *testing.T) {
+type Main struct {
+}
+
+var _ = Suite(&Main{})
+
+func Test(t *testing.T) { TestingT(t) }
+
+func (m *Main) TestGetProjectDirectory(c *C) {
 	cases := []struct {
 		project  string
 		lockFile bool
@@ -45,8 +53,7 @@ func TestGetProjectDirectory(t *testing.T) {
 
 		path, err := getProjectDirectory(fs, i.cwd)
 
-		assert.Equal(t, i.expected, path)
-		assert.ErrorIs(t, i.err, err)
-
+		c.Check(path, Equals, i.expected)
+		c.Check(err, Equals, i.err)
 	}
 }

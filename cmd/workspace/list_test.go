@@ -3,21 +3,20 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "gopkg.in/check.v1"
 )
 
-func TestHomeDirectoryPathContraction(t *testing.T) {
+func (m *Main) TestHomeDirectoryPathContraction(c *C) {
 	home, _ := os.UserHomeDir()
 	r := contractHomeDirectory(filepath.Join(home, "test"))
-	assert.Equal(t, "~/test", r)
+	c.Assert(r, Equals, "~/test")
 	r = contractHomeDirectory(filepath.Join(home, "///test"))
-	assert.Equal(t, "~/test", r)
+	c.Assert(r, Equals, "~/test")
 	r = contractHomeDirectory(home)
-	assert.Equal(t, "~", r)
+	c.Assert(r, Equals, "~")
 	r = contractHomeDirectory("/sys")
-	assert.Equal(t, "/sys", r)
+	c.Assert(r, Equals, "/sys")
 
 	/* This will fail because of how filepath handles path prefixes (not path aware)
 	r = contractHomeDirectory(home + "4")
