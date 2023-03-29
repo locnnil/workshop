@@ -308,24 +308,33 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 			sequence[blob.Name] = sequence[blob.Name][:seqLen-1]
 		}
 
+		/* If no records in the SDK's sequence -- remove the SDK */
 		newSeqLen := len(sequence[blob.Name])
-		if newSeqLen > 0 {
+		if newSeqLen == 0 {
 			delete(sequence, blob.Name)
 		}
 
-		newSequence, err := json.Marshal(sequence)
-		if err != nil {
-			return err
-		}
+		if len(sequence) > 0 {
+			newSequence, err := json.Marshal(sequence)
+			if err != nil {
+				return err
+			}
 
-		/* Update the workspace config */
-		err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
-			&srv.WorkspaceConfigValue{
-				Name:  "user.workspace.sdk",
-				Value: string(newSequence),
-			})
-		if err != nil {
-			return err
+			/* Update the workspace config */
+			err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
+				&srv.WorkspaceConfigValue{
+					Name:  "user.workspace.sdk",
+					Value: string(newSequence),
+				})
+			if err != nil {
+				return err
+			}
+		} else {
+			err = m.backend.RemoveWorkspaceConfig(workspace, project.ProjectId,
+				"user.workspace.sdk")
+			if err != nil {
+				return nil
+			}
 		}
 
 		args := srv.ExecArgs{

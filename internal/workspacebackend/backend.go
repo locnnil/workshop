@@ -44,6 +44,18 @@ type WorkspaceProps struct {
 	reason util.WorkspaceStateReason
 }
 
+func (w *WorkspaceProps) State() util.WorkspaceState {
+	return w.state
+}
+
+func (w *WorkspaceProps) Reason() util.WorkspaceStateReason {
+	return w.reason
+}
+
+func (w *WorkspaceProps) SetState(s util.WorkspaceState, r util.WorkspaceStateReason) {
+	w.state, w.reason = s, r
+}
+
 type ExecArgs struct {
 	User    string
 	Command []string
@@ -169,15 +181,8 @@ func (s *LxdBackend) LaunchWorkspaceInstance(name, base, project_id string) erro
 
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
-			Devices: map[string]map[string]string{
-				"root":              {"type": "disk", "pool": "default", "path": "/"},
-				"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-			},
-			Config: map[string]string{
-				"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
-				"security.nesting":          "true",
-				"user.workspace.project-id": project_id,
-			},
+			Devices: defaultDevices(),
+			Config:  defaultConfig(project_id),
 		},
 		Name: util.ToInstanceName(name, project_id),
 		Type: api.InstanceType("container"),
@@ -193,6 +198,21 @@ func (s *LxdBackend) LaunchWorkspaceInstance(name, base, project_id string) erro
 	}
 
 	return op.Wait()
+}
+
+func defaultDevices() map[string]map[string]string {
+	return map[string]map[string]string{
+		"root":              {"type": "disk", "pool": "default", "path": "/"},
+		"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+	}
+}
+
+func defaultConfig(projectId string) map[string]string {
+	return map[string]string{
+		"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+		"security.nesting":          "true",
+		"user.workspace.project-id": projectId,
+	}
 }
 
 func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
@@ -462,14 +482,83 @@ func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 	return state
 }
 
-func (w *WorkspaceProps) State() util.WorkspaceState {
-	return w.state
+/* Fake backend implementation for tests */
+
+type FakeWorkspaceBackend struct {
+	workspaces map[string]map[string]*WorkspaceProps
 }
 
-func (w *WorkspaceProps) Reason() util.WorkspaceStateReason {
-	return w.reason
+func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
+	var be FakeWorkspaceBackend
+	be.workspaces = make(map[string]map[string]*WorkspaceProps)
+	return &be
 }
 
-func (w *WorkspaceProps) SetState(s util.WorkspaceState, r util.WorkspaceStateReason) {
-	w.state, w.reason = s, r
+func (f *FakeWorkspaceBackend) LaunchWorkspaceInstance(name string, base string, project_id string) error {
+	if f.workspaces[project_id] == nil {
+		f.workspaces[project_id] = make(map[string]*WorkspaceProps)
+	}
+	f.workspaces[project_id][name] = &WorkspaceProps{
+		Name:    name,
+		Devices: defaultDevices(),
+		Config:  defaultConfig(project_id),
+		state:   util.Ready,
+	}
+	return nil
+}
+
+func (f *FakeWorkspaceBackend) DeleteWorkspaceInstance(name string, project_id string) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) SetWorkspaceState(name string, action string, project_id string) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) AddWorkspaceDevice(name string, project_id string, props WorkspaceDevice) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(name string, project_id string, device string) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) AddWorkspaceConfig(name string, project_id string, item *WorkspaceConfigValue) error {
+	f.workspaces[project_id][name].Config[item.Name] = item.Value
+	return nil
+}
+
+func (f *FakeWorkspaceBackend) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(name string, project_id string, key string) error {
+	delete(f.workspaces[project_id][name].Config, key)
+	return nil
+}
+
+func (f *FakeWorkspaceBackend) GetWorkspace(name string, project_id string) (*WorkspaceProps, error) {
+	return f.workspaces[project_id][name], nil
+}
+
+func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
+	res := make([]*WorkspaceProps, 0)
+	for _, i := range f.workspaces {
+		for _, j := range i {
+			if filter(j.Config) {
+				res = append(res, j)
+			}
+		}
+	}
+	return res, nil
+}
+
+func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (f *FakeWorkspaceBackend) Exec(name string, project_id string, args *ExecArgs) (chan bool, error) {
+	done := make(chan bool)
+	close(done)
+	return done, nil
 }

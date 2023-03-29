@@ -49,7 +49,7 @@ func LoadProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*P
 	project.path = path
 
 	/* Is there an existing project file? */
-	if err = project.ReadProject(path); err == nil {
+	if err = project.ReadProject(); err == nil {
 		/* See if the project's directory was changed. We need to update its file and the instances' configuration
 		to maintain integrity */
 		if err = project.validateProjectDirectory(); err != nil {
@@ -204,10 +204,10 @@ func (w *Project) Exists() bool {
 	return false
 }
 
-func (w *Project) ReadProject(path string) error {
+func (w *Project) ReadProject() error {
 	var err error
 	var buf []byte
-	if buf, err = afero.ReadFile(w.fs, filepath.Join(path, ProjectLock)); err == nil {
+	if buf, err = afero.ReadFile(w.fs, filepath.Join(w.path, ProjectLock)); err == nil {
 		w.projectId = string(buf)
 		return nil
 	}

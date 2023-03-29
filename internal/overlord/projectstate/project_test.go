@@ -1,204 +1,166 @@
 package projectstate
 
 import (
+	"errors"
 	"math/rand"
 	"testing"
 
 	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/mocks"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
 	"golang.org/x/exp/slices"
+
+	. "gopkg.in/check.v1"
 )
 
-type ProjectTestSuite struct {
-	suite.Suite
+type P struct {
 	Fs      afero.Fs
-	Backend *mocks.MockWorkspaceBackend
+	Backend workspacebackend.WorkspaceBackend
 }
 
-func TestRunProjectTests(t *testing.T) {
-	suite.Run(t, &ProjectTestSuite{})
-}
+var _ = Suite(&P{})
 
-func (s *ProjectTestSuite) SetupTest() {
-	s.Fs = afero.NewMemMapFs()
-	s.Backend = mocks.NewMockWorkspaceBackend(s.T())
-	s.Fs.MkdirAll(util.DataDir, 0755)
-	s.Fs.MkdirAll(util.SdksDir, 0755)
+func Test(t *testing.T) { TestingT(t) }
+
+func (p *P) SetUpTest(c *C) {
+	p.Fs = afero.NewMemMapFs()
+	p.Backend = workspacebackend.NewFakeWorkspaceBackend()
+	p.Fs.MkdirAll(util.DataDir, 0755)
+	p.Fs.MkdirAll(util.SdksDir, 0755)
 	rand.Seed(1)
 }
 
-func (s *ProjectTestSuite) TestEnumWorkspacesInACWD() {
-	t := s.T()
-	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
-	afero.WriteFile(s.Fs, ".workspace.project2.yaml", []byte(""), 0644)
-	afero.WriteFile(s.Fs, "workspace.project3.yaml", []byte(""), 0644)
-	s.Fs.Mkdir(".workspace.project2dir.yaml", 0755)
-	afero.WriteFile(s.Fs, ".workspace.yaml", []byte(""), 0644)
-	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
+func (p *P) TestEnumWorkspacesInACWD(c *C) {
+	afero.WriteFile(p.Fs, ".workspace.project1.yaml", []byte(""), 0644)
+	afero.WriteFile(p.Fs, ".workspace.project2.yaml", []byte(""), 0644)
+	afero.WriteFile(p.Fs, "workspace.project3.yaml", []byte(""), 0644)
+	p.Fs.Mkdir(".workspace.project2dir.yaml", 0755)
+	afero.WriteFile(p.Fs, ".workspace.yaml", []byte(""), 0644)
+	afero.WriteFile(p.Fs, ".workspace.lock", []byte(""), 0644)
 
-	project := &Project{fs: s.Fs}
+	project := &Project{fs: p.Fs}
 	ws, err := project.EnumWorkspaceFiles()
 
-	assert.Len(t, ws, 2)
-	assert.Equal(t, ws[0].Name, "project1")
-	assert.Equal(t, ws[1].Name, "project2")
-	assert.NotContains(t, ws, "")
-	assert.NotContains(t, ws, "project2dir")
-	assert.NotContains(t, ws, "project3")
+	c.Check(ws, HasLen, 2)
 
-	assert.NoError(t, err)
+	c.Check(ws[0].Name, Equals, "project1")
+	c.Check(ws[1].Name, Equals, "project2")
+	c.Check(err, Equals, nil)
 }
 
-func (s *ProjectTestSuite) TestNewProject() {
-	t := s.T()
-
+func (s *P) TestNewProject(c *C) {
 	project, err := NewProject(s.Backend, s.Fs, "/")
-	assert.Equal(t, "52fdfc07", project.ProjectId())
-	assert.NoError(t, err)
-	assert.Equal(t, "/", project.ProjectDirectory())
+	c.Check(project.ProjectId(), Equals, "52fdfc07")
+	c.Check(err, Equals, nil)
 
-	project, err = NewProject(s.Backend, s.Fs, "/doesnotexist")
-	assert.Nil(t, project)
-	assert.ErrorIs(t, err, afero.ErrFileNotFound)
+	c.Check(project.ProjectDirectory(), Equals, "/")
+
+	_, err = NewProject(s.Backend, s.Fs, "/doesnotexist")
+	c.Check(errors.Is(err, afero.ErrFileNotFound), Equals, true)
 }
 
-func (s *ProjectTestSuite) TestLoadProject() {
-	t := s.T()
+func (s *P) TestLoadProject(c *C) {
 	fs := afero.NewOsFs()
 	fs.MkdirAll("/tmp/experiments", 0755)
 	defer fs.RemoveAll("/tmp/experiments")
 
 	/* No relative paths are allowed */
-	project, err := LoadProject(nil, fs, "../tmp/experiments")
-	assert.Nil(t, project)
-	assert.Error(t, util.ErrNoRelativePathsAllowed, err)
+	_, err := LoadProject(nil, fs, "../tmp/experiments")
+	c.Check(errors.Is(err, util.ErrNoRelativePathsAllowed), Equals, true)
 
 	/* Could not read the project directory */
-	project, err = LoadProject(nil, fs, "/invalid&")
-	assert.Nil(t, project)
-	assert.Error(t, err)
+	_, err = LoadProject(nil, fs, "/invalid&")
+	c.Check(err, NotNil)
 
 	/* Project exists, no workspace instances */
-	h := s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("PROJECTID"), 0644)
-	project, err = LoadProject(s.Backend, s.Fs, "/")
-	assert.NotNil(t, project)
-	assert.Equal(t, "/", project.ProjectDirectory())
-	assert.NoError(t, err)
+	project, err := LoadProject(s.Backend, s.Fs, "/")
+	c.Check(project.ProjectDirectory(), Equals, "/")
+	c.Check(project.ProjectId(), Equals, "PROJECTID")
+	c.Check(err, IsNil)
 
 	/* Project exists, some workspace instances running */
-	instances := []*workspacebackend.WorkspaceProps{
-		{
-			Name: "instance1",
-			Devices: map[string]map[string]string{"workspace.project": {
-				"type": "disk", "source": "/", "path": "/project"}},
-		},
-	}
-	instances[0].SetState(util.Ready, util.None)
-	h.Unset()
-	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
+	s.Backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
 	project, err = LoadProject(s.Backend, s.Fs, "/")
-	assert.NotNil(t, project)
-	assert.Equal(t, "/", project.ProjectDirectory())
-	assert.NoError(t, err)
+	c.Check(project.ProjectDirectory(), Equals, "/")
+	c.Check(err, IsNil)
 }
 
-func (s *ProjectTestSuite) TestEnumWorkspacesNoFilesNoInstances() {
-	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
+func (s *P) TestEnumWorkspacesNoFilesNoInstances(c *C) {
 	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 
 	result, err := project.RetrieveWorkspaces()
 
-	assert.Empty(s.T(), result)
-	assert.NoError(s.T(), err)
+	c.Check(result, HasLen, 0)
+	c.Check(err, IsNil)
 }
 
-func (s *ProjectTestSuite) TestEnumFilesErrorReadingProjectDirectory() {
+func (s *P) TestEnumFilesErrorReadingProjectDirectory(c *C) {
 	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 	s.Fs.RemoveAll("/")
 
-	result, err := project.EnumWorkspaceFiles()
+	_, err := project.EnumWorkspaceFiles()
 
-	assert.Nil(s.T(), result)
-	assert.Error(s.T(), err)
+	c.Check(err, NotNil)
 }
 
-func (s *ProjectTestSuite) TestEnumWorkspacesFilesOnly() {
-	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return([]*workspacebackend.WorkspaceProps{}, nil)
+func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
 	result, err := project.RetrieveWorkspaces()
-	/* Make sure files without instances are not returned */
-	assert.NoError(s.T(), err)
-	assert.Len(s.T(), result, 1)
-	assert.Equal(s.T(), result[0].State(), util.Inactive)
-	assert.Equal(s.T(), util.None, result[0].Reason())
+	c.Check(err, IsNil)
+	c.Check(result, HasLen, 1)
+	c.Check(result[0].State(), Equals, util.Inactive)
+	c.Check(result[0].Reason(), Equals, util.None)
 }
 
-func (s *ProjectTestSuite) TestEnumWorkspacesInstancesOnly() {
-	instances := []*workspacebackend.WorkspaceProps{
-		{
-			Name: "instance1",
-		},
-	}
-	instances[0].SetState(util.Ready, util.None)
-
-	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
+func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
+	s.Backend.LaunchWorkspaceInstance("instance1", "ubuntu@20.04", "projectId")
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
 
 	result, err := project.RetrieveWorkspaces()
-	assert.NoError(s.T(), err)
-	assert.Len(s.T(), result, 1)
+	c.Check(err, IsNil)
+	c.Assert(result, HasLen, 1)
 	/* the workspace does not have a corresponding file, hence, an error state */
-	assert.Equal(s.T(), util.Error, result[0].State())
-	assert.Equal(s.T(), util.MissingFile, result[0].Reason())
-	assert.Equal(s.T(), "instance1", result[0].Name)
+	c.Check(result[0].Name, Equals, "instance1")
+	c.Check(result[0].State(), Equals, util.Error)
+	c.Check(result[0].Reason(), Equals, util.MissingFile)
 }
 
-func (s *ProjectTestSuite) TestEnumWorkspacesSomeOrphanedInstances() {
-	instances := []*workspacebackend.WorkspaceProps{
-		{
-			Name: "instance1",
-		},
-		{
-			Name: "project1",
-		},
-	}
-	instances[0].SetState(util.Ready, util.None)
-	instances[1].SetState(util.Ready, util.None)
+func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
+	s.Backend.LaunchWorkspaceInstance("instance1", "ubuntu@20.04", "projectId")
+	s.Backend.LaunchWorkspaceInstance("project1", "ubuntu@20.04", "projectId")
 
-	s.Backend.On("GetWorkspacesByConfig", mock.Anything).Once().Return(instances, nil)
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
+	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
 	result, err := project.RetrieveWorkspaces()
 	// Make sure the order is always predictable
-	slices.SortFunc(result, func(i, j *workspacebackend.WorkspaceProps) bool { return i.Name > j.Name })
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), util.Error, result[1].State())
-	assert.Equal(s.T(), util.MissingFile, result[1].Reason())
-	assert.Equal(s.T(), "instance1", result[1].Name)
+	slices.SortFunc(result, func(i, j *workspacebackend.WorkspaceProps) bool { return i.Name < j.Name })
+	c.Check(err, IsNil)
+	c.Assert(result, HasLen, 2)
 
-	assert.Equal(s.T(), util.Ready, result[0].State())
-	assert.Equal(s.T(), "project1", result[0].Name)
-	assert.Len(s.T(), result, 2)
+	c.Check(result[0].Name, Equals, "instance1")
+	c.Check(result[0].State(), Equals, util.Error)
+	c.Check(result[0].Reason(), Equals, util.MissingFile)
+
+	c.Check(result[1].Name, Equals, "project1")
+	c.Check(result[1].State(), Equals, util.Ready)
+	c.Check(result[1].Reason(), Equals, util.None)
 }
 
-func (s *ProjectTestSuite) TestReadProject() {
-	project := Project{fs: s.Fs}
+func (s *P) TestReadProject(c *C) {
+	project := Project{fs: s.Fs, path: "/project"}
 
-	err := project.ReadProject("/project")
-	assert.Error(s.T(), err)
+	err := project.ReadProject()
+	c.Check(err, NotNil)
 
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("23451S"), 0644)
 
-	err = project.ReadProject("/")
-	assert.NoError(s.T(), err)
+	project = Project{fs: s.Fs, path: "/"}
+	err = project.ReadProject()
+	c.Check(err, IsNil)
+	c.Check(project.ProjectId(), Equals, "23451S")
 }

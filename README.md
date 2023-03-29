@@ -36,25 +36,15 @@ $ workspace launch
 
 ### Unit tests
 
-Mocks boilerplate can be updated or created with mockery. Use _--dry-run_ if in doubt.
+workspace uses a "go test"-compatible [gocheck](https://pkg.go.dev/gopkg.in/check.v1#section-readme)
 ```
-go install github.com/vektra/mockery/v2@v2.20.0
-mockery --name=WorkspaceServer --structname=MockWorkspaceServer --dir=./internal/server/ --output=./internal/mocks/
+go test ./...
+go test -check.f SuiteName
 ```
 
 ### Functional and integrational testing
-
-See [QEMU backend](https://github.com/snapcore/spread#qemu-backend) for prerequisites.
 
 ```
 go install github.com/snapcore/spread/cmd/spread@latest
 spread 
 ```
-
-## TODO
-
-- Validate bases used for the workspace and SDKs (must be the same)
-- Avoid potential conflicts for SDK blobs if used concurrently
-- Create a separate network for the workspace's instances
-- Tests for the workspace YAML validation
-- Use logger and logging levels instead of fmt

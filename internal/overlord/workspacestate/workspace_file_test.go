@@ -1,8 +1,6 @@
 package workspace_test
 
 import (
-	"testing"
-
 	util "github.com/canonical/workspace/internal"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/spf13/afero"
@@ -14,8 +12,6 @@ type F struct {
 }
 
 var _ = Suite(&F{})
-
-func TestFile(t *testing.T) { TestingT(t) }
 
 func (f *F) SetUpTest(c *C) {
 	f.fs = afero.NewMemMapFs()
