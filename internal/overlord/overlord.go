@@ -74,11 +74,6 @@ type Overlord struct {
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
 func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
-	workspaceBackend, err := workspacebackend.New()
-	if err != nil {
-		return nil, err
-	}
-
 	o := &Overlord{
 		stateDir: util.StateDir,
 		loopTomb: new(tomb.Tomb),
@@ -110,6 +105,11 @@ func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, er
 		return true
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
+
+	workspaceBackend, err := workspacebackend.New()
+	if err != nil {
+		return nil, err
+	}
 
 	o.workspace = workspace.NewWorkspaceManager(o.runner, workspaceBackend)
 	o.addManager(o.workspace)

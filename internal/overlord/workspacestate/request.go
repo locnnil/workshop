@@ -19,7 +19,6 @@ func Launch(st *state.State, file *WorkspaceFile) (*state.TaskSet, error) {
 
 		link := st.NewTask("link-sdk", fmt.Sprintf("Link SDK %q", sdk.Name))
 		link.Set("sdk-retrieve-task", download.ID())
-		link.WaitFor(install)
 		link_tasks = append(link_tasks, link)
 	}
 	downloads, installs, links := state.NewTaskSet(download_tasks...),
@@ -36,6 +35,7 @@ func Launch(st *state.State, file *WorkspaceFile) (*state.TaskSet, error) {
 	start.WaitFor(mountProject)
 
 	installs.WaitFor(start)
+	links.WaitAll(installs)
 
 	set := state.NewTaskSet(create, mountProject, start)
 	set.AddAll(downloads)

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/pkg/sftp"
 
 	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
@@ -101,6 +102,7 @@ type WorkspaceBackend interface {
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
 	GetWorkspace(name, project_id string) (*WorkspaceProps, error)
+	GetWorkspaceFs(name, projec_id string) (*sftp.Client, error)
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
@@ -242,7 +244,7 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 }
 
 func (s *LxdBackend) SetWorkspaceState(name, project_id, action string) error {
-	inst, etag, err := s.getLxdInstance(name, project_id)
+	inst, _, err := s.getLxdInstance(name, project_id)
 	if err != nil {
 		return err
 	}
@@ -255,16 +257,20 @@ func (s *LxdBackend) SetWorkspaceState(name, project_id, action string) error {
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: -1,
+		Timeout: 5,
 		Force:   false,
 	}
 
-	op, err := s.UpdateInstanceState(inst.Name, req, etag)
+	op, err := s.UpdateInstanceState(inst.Name, req, "")
 	if err != nil {
 		return err
 	}
 
-	return op.Wait()
+	err = op.Wait()
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 func (s *LxdBackend) AddWorkspaceConfig(name, project_id string, item *WorkspaceConfigValue) error {
@@ -420,21 +426,7 @@ func (s *LxdBackend) DeleteWorkspaceInstance(name, project_id string) error {
 	}
 
 	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
-		req := api.InstanceStatePut{
-			Action:  "stop",
-			Timeout: -1,
-			Force:   true,
-		}
-
-		op, err := s.UpdateInstanceState(util.ToInstanceName(name, project_id), req, "")
-		if err != nil {
-			return err
-		}
-
-		err = op.Wait()
-		if err != nil {
-			return fmt.Errorf("stopping the instance failed: %v", err)
-		}
+		return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
 	}
 
 	op, err := s.DeleteInstance(util.ToInstanceName(name, project_id))
@@ -443,6 +435,15 @@ func (s *LxdBackend) DeleteWorkspaceInstance(name, project_id string) error {
 	}
 
 	return op.Wait()
+}
+
+func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (*sftp.Client, error) {
+	sftp, err := s.GetInstanceFileSFTP(util.ToInstanceName(name, project_id))
+	if err != nil {
+		return nil, err
+	}
+
+	return sftp, nil
 }
 
 func SignalHandler(control *websocket.Conn) {
@@ -486,11 +487,13 @@ func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 
 type FakeWorkspaceBackend struct {
 	workspaces map[string]map[string]*WorkspaceProps
+	fs         *sftp.Client
 }
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
 	be.workspaces = make(map[string]map[string]*WorkspaceProps)
+	be.fs = &sftp.Client{}
 	return &be
 }
 
@@ -555,6 +558,10 @@ func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilte
 
 func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
 	panic("not implemented") // TODO: Implement
+}
+
+func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (*sftp.Client, error) {
+	return s.fs, nil
 }
 
 func (f *FakeWorkspaceBackend) Exec(name string, project_id string, args *ExecArgs) (chan bool, error) {

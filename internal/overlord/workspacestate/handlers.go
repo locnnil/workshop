@@ -2,7 +2,9 @@ package workspace
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -25,6 +27,10 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	if err != nil {
 		return err
 	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
 
 	return m.backend.DeleteWorkspaceInstance(workspace, project.ProjectId)
 }
@@ -74,6 +80,10 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	return nil
 }
 
+func (m *WorkspaceManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
+	return nil
+}
+
 func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
@@ -88,7 +98,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	return m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
 }
 
-func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
 	project, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
@@ -99,7 +109,12 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	return m.backend.SetWorkspaceState(workspace, project.ProjectId, "stop")
+	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "stop")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *WorkspaceManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
@@ -255,21 +270,35 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	/* Update the current link to point out to the newly installed SDK */
 	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name)
 
-	args := srv.ExecArgs{
-		User: "root",
-		Command: []string{
-			"ln",
-			"-sf",
-			strconv.Itoa(int(blob.Revision)),
-			filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
-		},
-		WorkDir: sdkPath,
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
-	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
+	fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
 
-	<-done
+	err = fs.Remove(filepath.Join(sdkPath, "current"))
+	if errors.Is(err, os.ErrNotExist) {
+		err = fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(blob.Revision))),
+			filepath.Join(sdkPath, "current"))
+	} else {
+		return err
+	}
+
+	// args := srv.ExecArgs{
+	// 	User: "root",
+	// 	Command: []string{
+	// 		"ln",
+	// 		"-sf",
+	// 		strconv.Itoa(int(blob.Revision)),
+	// 		filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
+	// 	},
+	// 	WorkDir: sdkPath,
+	// 	Stdin:   nil,
+	// 	Stdout:  nil,
+	// 	Stderr:  nil}
+	// done, err := m.backend.Exec(workspace, project.ProjectId, &args)
+
+	// <-done
 
 	return err
 }
@@ -330,12 +359,19 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 				return err
 			}
 		} else {
+			/* If no SDKs left in the sequence record, remove it fully */
 			err = m.backend.RemoveWorkspaceConfig(workspace, project.ProjectId,
 				"user.workspace.sdk")
 			if err != nil {
 				return nil
 			}
 		}
+		/* Update the 'current' link */
+		fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
+		if err != nil {
+			return err
+		}
+		defer fs.Close()
 
 		args := srv.ExecArgs{
 			User:    "root",
@@ -344,7 +380,6 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 			Stdout:  nil,
 			Stderr:  nil}
 
-		/* Update the 'current' link */
 		if newSeqLen > 0 {
 			/* There is another revision available, shift the link to it */
 			args.Command = []string{
@@ -353,19 +388,14 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 				strconv.Itoa(int(sequence[blob.Name][newSeqLen-1].Revision)),
 				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
 			}
+			var done chan bool
+			done, err = m.backend.Exec(workspace, project.ProjectId, &args)
+
+			<-done
 		} else {
 			/* It was the only revision, remove the link */
-			args.Command = []string{
-				"rm",
-				"-f",
-				"--",
-				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
-			}
+			err = fs.Remove(filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"))
 		}
-
-		done, err := m.backend.Exec(workspace, project.ProjectId, &args)
-
-		<-done
 
 		return err
 	}

@@ -65,7 +65,6 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	change.Set("project-key", projectKey)
 
 	change.AddAll(taskset)
-	st.EnsureBefore(0)
 	st.Unlock()
 
 	sigs := make(chan os.Signal, 2)

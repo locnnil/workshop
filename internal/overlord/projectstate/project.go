@@ -134,12 +134,12 @@ func (p *Project) validateProjectDirectory() error {
 	}
 
 	for _, i := range instances {
-		source := i.Devices[ProjectDevice]["source"]
+		source, deviceOk := i.Devices[ProjectDevice]["source"]
 		/* if some of the workspaces do not have a correct configuration
 		after running an update from bind-mounts, e.g. all of them were stopped */
 		if source != p.path {
 			/* The directory was copied elsewhere, we need to generate a new project-id to let the old project-id persist */
-			if ok, _ := afero.Exists(p.fs, LockPath(source)); ok {
+			if ok, _ := afero.Exists(p.fs, LockPath(source)); ok && deviceOk {
 				p.projectId, err = newProjectId()
 				if err != nil {
 					return err

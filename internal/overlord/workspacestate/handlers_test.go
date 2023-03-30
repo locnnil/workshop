@@ -124,4 +124,5 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace("ws", "projectId")
 	_, ok := props.Config["user.workspace.sdk"]
 	c.Check(ok, Equals, false)
+	c.Log(chg.Err())
 }
