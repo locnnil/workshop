@@ -29,6 +29,7 @@ var (
 
 type WorkspaceState int
 type WorkspaceStateReason int
+type WorkspaceHookType int
 
 const (
 	Inactive WorkspaceState = iota
@@ -55,6 +56,14 @@ func (s WorkspaceStateReason) String() string {
 	return [...]string{"", "", "missing-project", "missing-file"}[s]
 }
 
+const (
+	SetupBase WorkspaceHookType = iota
+)
+
+func (s WorkspaceHookType) String() string {
+	return [...]string{"setup-base"}[s]
+}
+
 func ToPathname(dir, name string) string {
 	return filepath.Join(dir, ToFileName(name))
 }
@@ -75,6 +84,14 @@ func ToWorkspaceName(instance string) string {
 
 	// drop the project id from the name
 	return instance[:idx]
+}
+
+func ToCurrentPath(sdkName string) string {
+	return filepath.Join(WorkspaceSdksDir, sdkName, "current")
+}
+
+func ToHooksPath(sdkName string) string {
+	return filepath.Join(WorkspaceSdksDir, sdkName, "current", "hooks")
 }
 
 func CleanProjectPath(path string) (string, error) {

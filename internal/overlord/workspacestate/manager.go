@@ -1,4 +1,4 @@
-package workspace
+package workspacestate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -14,11 +14,10 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) 
 		backend: server,
 	}
 
+	/* Workspace management */
 	runner.AddHandler("create-workspace", manager.doCreateWorkspace, manager.undoCreateWorkspace)
-	runner.AddHandler("mount-project", manager.doMountProject, manager.undoMountProject)
 	runner.AddHandler("start-workspace", manager.doStart, manager.undoStart)
-	runner.AddHandler("install-sdk", manager.doInstallSDK, manager.undoInstallSdk)
-	runner.AddHandler("link-sdk", manager.doLinkSdk, manager.undoLinkSdk)
+	runner.AddHandler("mount-project", manager.doMountProject, manager.undoMountProject)
 
 	return manager
 }

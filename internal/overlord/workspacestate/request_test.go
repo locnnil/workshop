@@ -1,10 +1,11 @@
-package workspace_test
+package workspacestate_test
 
 import (
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 	. "gopkg.in/check.v1"
 )
@@ -35,7 +36,7 @@ func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
 func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	file := &workspace.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
+	file := &workspacebackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
 	ts, err := workspace.Launch(s.state, file)
 
 	expected := []string{"create-workspace",
@@ -55,13 +56,13 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	sdk := workspace.Sdk{Name: "sdk", Channel: "latest/stable"}
-	sdk_2 := workspace.Sdk{Name: "sdk_2", Channel: "latest/stable"}
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	sdk_2 := workspacebackend.Sdk{Name: "sdk_2", Channel: "latest/stable"}
 
-	file := &workspace.WorkspaceFile{
+	file := &workspacebackend.WorkspaceFile{
 		Name: "test",
 		Base: "ubuntu@22.04",
-		Sdks: workspace.SdkList{sdk, sdk_2}}
+		Sdks: workspacebackend.SdkList{sdk, sdk_2}}
 
 	ts, err := workspace.Launch(s.state, file)
 
@@ -73,14 +74,16 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 		"install-sdk",
 		"install-sdk",
 		"link-sdk",
-		"link-sdk"}
+		"link-sdk",
+		"run-hook",
+		"run-hook"}
 
 	tasks := ts.Tasks()
 
 	c.Assert(err, Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
-	var s1, s2 workspace.Sdk
+	var s1, s2 workspacebackend.Sdk
 	err = tasks[3].Get("sdk", &s1)
 	c.Assert(err, Equals, nil)
 	c.Assert(s1, Equals, sdk)

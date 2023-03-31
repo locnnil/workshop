@@ -1,51 +1,29 @@
 package sdkstate
 
 import (
-	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/state"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	"gopkg.in/tomb.v2"
+	backend "github.com/canonical/workspace/internal/workspacebackend"
 )
 
 type SdkManager struct {
+	backend backend.WorkspaceBackend
 }
 
-func NewManager(runner *state.TaskRunner) *SdkManager {
-	manager := &SdkManager{}
+type SdkSequenceRecord struct {
+	Channel  string `json:"channel"`
+	Revision int64  `json:"revision"`
+}
+
+func NewSdkManager(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
+	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", manager.doRetrieveSdk, nil)
+	runner.AddHandler("install-sdk", manager.doInstallSDK, manager.undoInstallSdk)
+	runner.AddHandler("link-sdk", manager.doLinkSdk, manager.undoLinkSdk)
+
 	return manager
 }
 
 func (w *SdkManager) Ensure() error {
-	return nil
-}
-
-func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
-	st := task.State()
-	var sdk workspace.Sdk
-
-	st.Lock()
-	err := task.Get("sdk", &sdk)
-	st.Unlock()
-
-	if err != nil {
-		return err
-	}
-
-	client, err := store.NewStoreClient()
-	if err != nil {
-		return nil
-	}
-
-	blob, err := client.RetrieveSdk(sdk.Name, sdk.Channel)
-	if err != nil {
-		return err
-	}
-
-	st.Lock()
-	task.Set("sdk-blob", blob)
-	st.Unlock()
-
 	return nil
 }

@@ -1,13 +1,14 @@
-package workspace_test
+package sdkstate_test
 
 import (
 	"errors"
+	"testing"
 
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
+	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -21,10 +22,12 @@ type H struct {
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
-	wsmgr   *workspace.WorkspaceManager
+	wsmgr   *sdkstate.SdkManager
 }
 
 var _ = Suite(&H{})
+
+func Test(t *testing.T) { TestingT(t) }
 
 func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
@@ -41,7 +44,7 @@ func (s *H) SetUpTest(c *C) {
 
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wsmgr = workspace.NewWorkspaceManager(s.runner, s.backend)
+	s.wsmgr = sdkstate.NewSdkManager(s.runner, s.backend)
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
@@ -65,7 +68,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 
 	newSdk := store.SdkBlob{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-blob", newSdk)
+	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
@@ -100,7 +103,7 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 
 	newSdk := store.SdkBlob{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-blob", newSdk)
+	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
 	link.Set("sdk-retrieve-task", t.ID())
 

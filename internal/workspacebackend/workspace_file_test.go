@@ -1,8 +1,8 @@
-package workspace_test
+package workspacebackend_test
 
 import (
 	util "github.com/canonical/workspace/internal"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	. "gopkg.in/check.v1"
 )
@@ -27,7 +27,7 @@ sdks:
     channel: latest/stable
 `)
 	afero.WriteFile(f.fs, "/.workspace.xbert-gpu.yaml", buf, 0644)
-	file, err := workspace.ReadWorkspace(f.fs, util.ToPathname("/", "xbert-gpu"))
+	file, err := workspacebackend.ReadWorkspace(f.fs, util.ToPathname("/", "xbert-gpu"))
 	c.Assert(err, Equals, nil)
 	c.Assert(file.Name, Equals, "xbert-gpu")
 	c.Assert(file.Base, Equals, "ubuntu@20.04")

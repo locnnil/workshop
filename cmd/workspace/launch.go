@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	ws = av[0]
 
-	file, err := workspace.ReadWorkspace(fs, util.ToPathname(Project, ws))
+	file, err := workspacebackend.ReadWorkspace(fs, util.ToPathname(Project, ws))
 	if err != nil {
 		return err
 	}
