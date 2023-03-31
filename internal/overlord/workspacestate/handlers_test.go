@@ -30,6 +30,8 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
+var ErrTrigger = errors.New("error out")
+
 func (s *H) SetUpTest(c *C) {
 	s.fs = afero.NewMemMapFs()
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
@@ -43,7 +45,7 @@ func (s *H) SetUpTest(c *C) {
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
-		return errors.New("error out")
+		return ErrTrigger
 	}
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
 
@@ -124,5 +126,5 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace("ws", "projectId")
 	_, ok := props.Config["user.workspace.sdk"]
 	c.Check(ok, Equals, false)
-	c.Log(chg.Err())
+	c.Check(link.Status(), Equals, state.UndoneStatus)
 }

@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
-	"github.com/pkg/sftp"
 
 	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
@@ -102,7 +101,7 @@ type WorkspaceBackend interface {
 	RemoveWorkspaceConfig(name, project_id string, key string) error
 
 	GetWorkspace(name, project_id string) (*WorkspaceProps, error)
-	GetWorkspaceFs(name, projec_id string) (*sftp.Client, error)
+	GetWorkspaceFs(name, projec_id string) (WorkspaceFs, error)
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
@@ -437,13 +436,13 @@ func (s *LxdBackend) DeleteWorkspaceInstance(name, project_id string) error {
 	return op.Wait()
 }
 
-func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (*sftp.Client, error) {
+func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
 	sftp, err := s.GetInstanceFileSFTP(util.ToInstanceName(name, project_id))
 	if err != nil {
 		return nil, err
 	}
 
-	return sftp, nil
+	return NewWorkspaceFs(sftp), nil
 }
 
 func SignalHandler(control *websocket.Conn) {
@@ -487,13 +486,13 @@ func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 
 type FakeWorkspaceBackend struct {
 	workspaces map[string]map[string]*WorkspaceProps
-	fs         *sftp.Client
+	fs         WorkspaceFs
 }
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
 	be.workspaces = make(map[string]map[string]*WorkspaceProps)
-	be.fs = &sftp.Client{}
+	be.fs = NewFakeWorkspaceFs()
 	return &be
 }
 
@@ -560,7 +559,7 @@ func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilt
 	panic("not implemented") // TODO: Implement
 }
 
-func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (*sftp.Client, error) {
+func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
 	return s.fs, nil
 }
 

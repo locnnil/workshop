@@ -2,9 +2,7 @@ package workspace
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -195,24 +193,14 @@ func (m *WorkspaceManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) err
 	defer st.Unlock()
 	sdkMount := sdkBlobDevice(blob)
 
-	args := srv.ExecArgs{
-		User: "root",
-		Command: []string{
-			"rm",
-			"-rf",
-			"--",
-			filepath.Join(util.WorkspaceSdksDir, blob.Name),
-		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
-	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
-
-	<-done
-
+	fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
 	if err != nil {
-		logger.Debugf("cannot remove SDK %q from workspace %q, reason: %v", sdkMount.Name, workspace, err)
+		return err
+	}
+	defer fs.Close()
+
+	err = fs.RemoveAll(filepath.Join(util.WorkspaceSdksDir, blob.Name))
+	if err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
 
@@ -276,31 +264,13 @@ func (m *WorkspaceManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	defer fs.Close()
 
-	err = fs.Remove(filepath.Join(sdkPath, "current"))
-	if errors.Is(err, os.ErrNotExist) {
-		err = fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(blob.Revision))),
-			filepath.Join(sdkPath, "current"))
-	} else {
+	err = fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(blob.Revision))),
+		filepath.Join(sdkPath, "current"), true)
+	if err != nil {
 		return err
 	}
 
-	// args := srv.ExecArgs{
-	// 	User: "root",
-	// 	Command: []string{
-	// 		"ln",
-	// 		"-sf",
-	// 		strconv.Itoa(int(blob.Revision)),
-	// 		filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
-	// 	},
-	// 	WorkDir: sdkPath,
-	// 	Stdin:   nil,
-	// 	Stdout:  nil,
-	// 	Stderr:  nil}
-	// done, err := m.backend.Exec(workspace, project.ProjectId, &args)
-
-	// <-done
-
-	return err
+	return nil
 }
 
 func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -373,25 +343,10 @@ func (m *WorkspaceManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error 
 		}
 		defer fs.Close()
 
-		args := srv.ExecArgs{
-			User:    "root",
-			WorkDir: filepath.Join(util.WorkspaceSdksDir, blob.Name),
-			Stdin:   nil,
-			Stdout:  nil,
-			Stderr:  nil}
-
 		if newSeqLen > 0 {
 			/* There is another revision available, shift the link to it */
-			args.Command = []string{
-				"ln",
-				"-sf",
-				strconv.Itoa(int(sequence[blob.Name][newSeqLen-1].Revision)),
-				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"),
-			}
-			var done chan bool
-			done, err = m.backend.Exec(workspace, project.ProjectId, &args)
-
-			<-done
+			err = fs.Symlink(strconv.Itoa(int(sequence[blob.Name][newSeqLen-1].Revision)),
+				filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"), true)
 		} else {
 			/* It was the only revision, remove the link */
 			err = fs.Remove(filepath.Join(util.WorkspaceSdksDir, blob.Name, "current"))
