@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/logger"
 
-	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
 
 	"github.com/lxc/lxd/shared/api"
@@ -334,7 +331,7 @@ func (s *LxdBackend) Exec(name, project_id string, args *ExecArgs) (chan bool, e
 
 	arg := lxd.InstanceExecArgs{
 		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
-		Control: SignalHandler, DataDone: done,
+		Control: nil, DataDone: done,
 	}
 
 	op, err := s.ExecInstance(util.ToInstanceName(name, project_id), req, &arg)
@@ -453,30 +450,6 @@ func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error
 	}
 
 	return NewWorkspaceFs(sftp), nil
-}
-
-func SignalHandler(control *websocket.Conn) {
-	signals := make(chan os.Signal, 10)
-	signal.Notify(signals, syscall.SIGINT)
-
-	closeMessage := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-	defer control.WriteMessage(websocket.CloseMessage, closeMessage)
-
-	for {
-		signal := <-signals
-
-		switch signal {
-		case syscall.SIGINT:
-			err := control.WriteJSON(api.InstanceExecControl{
-				Command: "signal",
-				Signal:  int(syscall.SIGINT),
-			})
-			if err != nil {
-				fmt.Printf("Failed to interrupt command execution: %v\n", err)
-				return
-			}
-		}
-	}
 }
 
 func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {

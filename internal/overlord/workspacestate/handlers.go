@@ -94,7 +94,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	args := backend.ExecArgs{
 		User: "root",
 		Command: []string{
-			"bash", "-c", "while " +
+			"bash", "-eu", "-c", "while " +
 				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
 				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
 		},
