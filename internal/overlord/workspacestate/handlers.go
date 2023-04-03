@@ -85,7 +85,30 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	return m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
+	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
+	if err != nil {
+		return err
+	}
+
+	/* Wait until system is up an running before returning */
+	args := backend.ExecArgs{
+		User: "root",
+		Command: []string{
+			"bash", "-c", "while " +
+				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
+				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+		},
+		WorkDir: "/",
+		Stdin:   nil,
+		Stdout:  nil,
+		Stderr:  nil}
+
+	if done, err := m.backend.Exec(workspace, project.ProjectId, &args); err != nil {
+		return err
+	} else {
+		<-done
+	}
+	return nil
 }
 
 func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
