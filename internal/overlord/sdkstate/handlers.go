@@ -21,7 +21,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	var sdk backend.Sdk
 
 	st.Lock()
-	err := task.Get("sdk", &sdk)
+	err := task.Get("sdk-setup", &sdk)
 	st.Unlock()
 
 	if err != nil {
@@ -104,7 +104,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			sdkMount.Properties["path"],
 			"--one-top-level=" + sdkPath,
 			"--no-same-owner",
-			"--strip-components=1",
+			"--strip-components=2",
 		},
 		WorkDir: "/",
 		Stdin:   nil,

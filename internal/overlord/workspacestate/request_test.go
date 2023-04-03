@@ -84,20 +84,42 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	verifyExpectedTasks(c, tasks, expected)
 
 	var s1, s2 workspacebackend.Sdk
-	err = tasks[3].Get("sdk", &s1)
+	err = tasks[3].Get("sdk-setup", &s1)
 	c.Assert(err, Equals, nil)
 	c.Assert(s1, Equals, sdk)
 
-	err = tasks[4].Get("sdk", &s2)
+	err = tasks[4].Get("sdk-setup", &s2)
 	c.Assert(err, Equals, nil)
 	c.Assert(s2, Equals, sdk_2)
 
+	// install-sdk task for sdk
 	var id1, id2 string
 	err = tasks[5].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, Equals, nil)
 	c.Assert(id1, Equals, tasks[3].ID())
 
+	// link-sdk task for sdk
 	err = tasks[6].Get("sdk-retrieve-task", &id2)
+	c.Assert(err, Equals, nil)
+	c.Assert(id2, Equals, tasks[3].ID())
+
+	// install-sdk task for sdk_2
+	err = tasks[7].Get("sdk-retrieve-task", &id1)
+	c.Assert(err, Equals, nil)
+	c.Assert(id1, Equals, tasks[4].ID())
+
+	// link-sdk task for sdk_2
+	err = tasks[8].Get("sdk-retrieve-task", &id2)
+	c.Assert(err, Equals, nil)
+	c.Assert(id2, Equals, tasks[4].ID())
+
+	// run-hook task for sdk
+	err = tasks[9].Get("sdk-retrieve-task", &id1)
+	c.Assert(err, Equals, nil)
+	c.Assert(id1, Equals, tasks[3].ID())
+
+	// run-hook task for sdk_2
+	err = tasks[10].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, Equals, nil)
 	c.Assert(id2, Equals, tasks[4].ID())
 }

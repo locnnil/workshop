@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -52,6 +51,7 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
 		return sdk, err
 	} else {
 		bkt := client.Bucket("sdk-store")
+		defer client.Close()
 		var obj *storage.ObjectHandle = bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
 		if atr, err := obj.Attrs(ctx); err != nil {
 			return sdk, err
@@ -67,24 +67,33 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
 
 			filename := ToSdkFilename(name, revision)
 
-			file, err := c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0600)
-			if err != nil && !os.IsExist(err) {
+			exist, err := afero.Exists(c.Fs, filename)
+			if err != nil {
 				return sdk, err
-			} else if os.IsExist(err) {
+			}
+
+			if exist {
 				/* Reuse the existing blob if present */
 				sdk.Name = name
 				sdk.Channel = channel
 				sdk.Revision = revision
 				return sdk, nil
-			}
-			defer file.Close()
+			} else {
+				file, err := c.Fs.Create(filename)
+				//c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0600)
+				if err != nil {
+					return sdk, err
+				}
+				defer file.Close()
 
-			if _, err = io.Copy(file, r); err != nil {
-				return sdk, err
+				if _, err = io.Copy(file, r); err != nil {
+					return sdk, err
+				}
+				sdk.Name = name
+				sdk.Channel = channel
+				sdk.Revision = revision
 			}
-			sdk.Name = name
-			sdk.Channel = channel
-			sdk.Revision = revision
+
 		}
 	}
 
