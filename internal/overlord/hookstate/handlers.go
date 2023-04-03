@@ -44,6 +44,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		User: "root",
 		Command: []string{
 			"bash",
+			"-xue",
+			"-o",
+			"pipefail",
 			"-c",
 			filepath.Join(util.ToHooksPath(blob.Name), hook.String()),
 		},
@@ -54,8 +57,8 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	done, err := h.backend.Exec(workspace, project.ProjectId, &args)
 	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
+	task.Logf(string(hookLog))
 	if err != nil {
-		task.Logf(string(hookLog))
 		return err
 	}
 

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/logger"
 
 	"github.com/gorilla/websocket"
 	lxd "github.com/lxc/lxd/client"
@@ -336,12 +337,21 @@ func (s *LxdBackend) Exec(name, project_id string, args *ExecArgs) (chan bool, e
 		Control: SignalHandler, DataDone: done,
 	}
 
-	if op, err := s.ExecInstance(util.ToInstanceName(name, project_id), req, &arg); err != nil {
+	op, err := s.ExecInstance(util.ToInstanceName(name, project_id), req, &arg)
+
+	if err != nil {
 		return done, err
-	} else if err := op.Wait(); err != nil {
+	}
+
+	if err := op.Wait(); err != nil {
 		return done, err
-	} else if status := int(op.Get().Metadata["return"].(float64)); status != 0 {
-		return done, &ErrExec{Status: status}
+	}
+
+	if status, ok := op.Get().Metadata["return"].(float64); ok {
+		if status != 0 {
+			logger.Debugf("command execution failed with %v", int(status))
+			return done, &ErrExec{Status: int(status)}
+		}
 	}
 
 	return done, nil
