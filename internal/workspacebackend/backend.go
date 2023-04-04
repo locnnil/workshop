@@ -467,16 +467,27 @@ func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
 
 /* Fake backend implementation for tests */
 
+type ExecFunc func(name string, project_id string, args *ExecArgs) (chan bool, error)
+
 type FakeWorkspaceBackend struct {
 	workspaces map[string]map[string]*WorkspaceProps
-	fs         WorkspaceFs
+	Fs         WorkspaceFs
+
+	DoExec ExecFunc
 }
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
 	be.workspaces = make(map[string]map[string]*WorkspaceProps)
-	be.fs = NewFakeWorkspaceFs()
+	be.Fs = NewFakeWorkspaceFs()
+
+	be.DoExec = DoExecDefault
+
 	return &be
+}
+
+func (f *FakeWorkspaceBackend) workspace(name, project string) *WorkspaceProps {
+	return f.workspaces[project][name]
 }
 
 func (f *FakeWorkspaceBackend) LaunchWorkspaceInstance(name string, base string, project_id string) error {
@@ -501,11 +512,13 @@ func (f *FakeWorkspaceBackend) SetWorkspaceState(name string, action string, pro
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceDevice(name string, project_id string, props WorkspaceDevice) error {
-	panic("not implemented") // TODO: Implement
+	f.workspaces[project_id][name].Devices[props.Name] = props.Properties
+	return nil
 }
 
 func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(name string, project_id string, device string) error {
-	panic("not implemented") // TODO: Implement
+	delete(f.workspaces[project_id][name].Devices, device)
+	return nil
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceConfig(name string, project_id string, item *WorkspaceConfigValue) error {
@@ -543,10 +556,14 @@ func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilt
 }
 
 func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
-	return s.fs, nil
+	return s.Fs, nil
 }
 
 func (f *FakeWorkspaceBackend) Exec(name string, project_id string, args *ExecArgs) (chan bool, error) {
+	return f.DoExec(name, project_id, args)
+}
+
+func DoExecDefault(name string, project_id string, args *ExecArgs) (chan bool, error) {
 	done := make(chan bool)
 	close(done)
 	return done, nil

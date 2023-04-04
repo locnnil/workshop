@@ -12,6 +12,7 @@ import (
 	. "github.com/canonical/workspace/internal/overlord/sharedstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/spf13/afero"
 
 	"gopkg.in/tomb.v2"
 )
@@ -93,6 +94,13 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name,
 		strconv.Itoa(int(blob.Revision)))
 
+	/* create a memory out/err to log the hook output into the task's log */
+	memFs := afero.NewMemMapFs()
+	outerr, err := memFs.Create(util.ToInstanceName(workspace, project.ProjectId))
+	if err != nil {
+		return err
+	}
+
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
 	args := backend.ExecArgs{
@@ -108,9 +116,14 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		},
 		WorkDir: "/",
 		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
+		Stdout:  outerr,
+		Stderr:  outerr}
 	done, err := m.backend.Exec(workspace, project.ProjectId, &args)
+
+	if err != nil {
+		hookLog, _ := afero.ReadFile(memFs, outerr.Name())
+		task.Logf(string(hookLog))
+	}
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done

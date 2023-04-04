@@ -2,8 +2,12 @@ package sdkstate_test
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
@@ -57,12 +61,144 @@ func (s *H) SetUpTest(c *C) {
 	s.se.AddManager(s.runner)
 }
 
+func (s *H) TestDoInstallSdkSuccess(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	projectKey := projectstate.ProjectKey{
+		Path:      "/project/Path",
+		ProjectId: "projectId",
+	}
+
+	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("workspace", "ws")
+	chg.Set("project-key", &projectKey)
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
+		c.Assert(args.Command, DeepEquals, []string{
+			"tar",
+			"--extract",
+			"--file",
+			"/root/new_2.sdk",
+			"--one-top-level=/var/lib/workspace/sdk/new/2",
+			"--no-same-owner",
+			"--strip-components=2",
+		})
+		return workspacebackend.DoExecDefault(name, project_id, args)
+	}
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	/* Install must be successful */
+	c.Check(chg.Err(), Equals, nil)
+	props, _ := s.backend.GetWorkspace("ws", "projectId")
+	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
+}
+
+func (s *H) TestDoInstallSdkExecFail(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	projectKey := projectstate.ProjectKey{
+		Path:      "/project/Path",
+		ProjectId: "projectId",
+	}
+
+	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("workspace", "ws")
+	chg.Set("project-key", &projectKey)
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
+		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
+		done := make(chan bool)
+		close(done)
+		return done, os.ErrDeadlineExceeded
+	}
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	/* Install must be successful */
+	props, _ := s.backend.GetWorkspace("ws", "projectId")
+	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
+	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), Equals, true)
+}
+
+func (s *H) TestunDoInstallSdk(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	projectKey := projectstate.ProjectKey{
+		Path:      "/project/Path",
+		ProjectId: "projectId",
+	}
+
+	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(t1)
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("workspace", "ws")
+	chg.Set("project-key", &projectKey)
+	chg.AddTask(t1)
+	chg.AddTask(t)
+	chg.AddTask(terr)
+
+	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	/* emulate install behaviour that unpacks an SDK to a certain directory */
+	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
+		s.backend.Fs.MkdirAll(filepath.Join(util.WorkspaceSdksDir, "new"), 0755)
+		return workspacebackend.DoExecDefault(name, project_id, args)
+	}
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	props, _ := s.backend.GetWorkspace("ws", "projectId")
+	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
+	/* make sure SDK dir was removed */
+	exist, _ := afero.Exists(s.backend.Fs, filepath.Join(util.WorkspaceSdksDir, "new"))
+	c.Check(exist, Equals, false)
+}
+
 func (s *H) TestDoLinkSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
 	projectKey := projectstate.ProjectKey{
-		Path:      "projectPath",
+		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
 
@@ -97,7 +233,7 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	defer s.state.Unlock()
 
 	projectKey := projectstate.ProjectKey{
-		Path:      "projectPath",
+		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
 
