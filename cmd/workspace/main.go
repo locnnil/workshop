@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -52,7 +51,6 @@ func getProjectDirectory(fs afero.Fs, cwd string) (string, error) {
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
 		panic(err)
 	}
 
@@ -64,8 +62,7 @@ func main() {
 	fs := afero.NewOsFs()
 	cwd, err = getProjectDirectory(fs, cwd)
 	if err != nil {
-		fmt.Println(err)
-		panic("cannot get project directory")
+		panic(err)
 	}
 
 	logger.SetLogger(logger.New(os.Stderr, "[workspace] "))
@@ -74,5 +71,8 @@ func main() {
 
 	rootCmd.AddCommand((&CmdLaunch{}).Command())
 	rootCmd.AddCommand((&CmdList{}).Command())
+	rootCmd.AddCommand((&CmdChanges{}).Command())
+	rootCmd.AddCommand((&CmdTasks{}).Command())
+
 	rootCmd.Execute()
 }

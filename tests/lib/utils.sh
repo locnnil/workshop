@@ -27,11 +27,13 @@ function assert_workspace_sdk() {
 
 # General functions
 
-function cleanup_workspaces_in_tree() {
+function cleanup() {
   lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
   for i in $1/*; do
     rm -f "$i"/.workspace.lock
   done
+  rm -rf /home/ubuntu/.local/share/workspace/sdks
+  rm -rf -- /home/ubuntu/.local/share/workspace /home/ubuntu/.local/state/workspace/state.json
 }
 
 function assert_arrays_equal() {
@@ -58,9 +60,18 @@ function list_cwd() {
 }
 
 function list_all() {
-    sudo -u ubuntu -- workspace list --global
+  sudo -u ubuntu -- workspace list --global
 }
 
 function delete() {
     lxc delete $1 --force --project workspace.ubuntu
 }
+
+function changes() {
+  sudo -u ubuntu -- workspace changes --project $1
+}
+
+function changes_global() {
+  sudo -u ubuntu -- workspace changes
+}
+

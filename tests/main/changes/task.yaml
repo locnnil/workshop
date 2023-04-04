@@ -1,0 +1,26 @@
+summary: Ensure the changes command output correctness
+prepare: |
+  # make sure there is no existing changes 
+  rm -f /home/ubuntu/.local/state/workspace/state.json
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Changes list is empty on a new system"
+  changes_global | MATCH "^$"
+
+  echo "Must reflect the latest change after the launch"
+  project="$WORKSPACES"/test-empty-ubuntu20
+  launch $project ws
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+$project[[:space:]]+Launch workspace \"ws\"$"
+
+
