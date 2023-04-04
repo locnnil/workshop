@@ -1,0 +1,28 @@
+summary: Ensure that 'workspace launch' creates a core LXD config correctly
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree "$WORKSPACES"
+  rm -rf /home/ubuntu/.local/share/workspace/sdk
+
+prepare: |
+  # install the required SDKs manually, so these will be fetched from host
+  sdks=/home/ubuntu/.local/share/workspace/sdk/
+  sudo -u ubuntu mkdir -p "$sdks"
+  sudo -u ubuntu cp -R "$WORKSPACES_SDK"/test-data/*.sdk "$sdks"
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a test workspace with SDKs should succeed"
+  launch "$WORKSPACES_SDK"/test-sdks-ubuntu22 ws | MATCH started
+  assert_workspace_config "$WORKSPACES_SDK"/test-sdks-ubuntu22 
+  
+  echo "SDKs must be configured correctly"
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 huggingface
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 cuda

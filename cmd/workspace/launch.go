@@ -1,16 +1,19 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	store "github.com/canonical/workspace/internal/fakestore"
-	srv "github.com/canonical/workspace/internal/server"
-	workspace "github.com/canonical/workspace/internal/workspace"
+	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord"
+	"github.com/canonical/workspace/internal/overlord/state"
+	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -18,8 +21,8 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch [workspace-name]",
-		Args:  cobra.MaximumNArgs(1),
+		Use:   "launch workspace-name",
+		Args:  cobra.MinimumNArgs(1),
 		Short: "Launch a workspace",
 		RunE:  c.Run,
 	}
@@ -28,82 +31,73 @@ func (c *CmdLaunch) Command() *cobra.Command {
 }
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
-	var wsName string
+	var ws string
 	fs := afero.NewOsFs()
 
-	if len(av) == 1 {
-		wsName = av[0]
-	}
+	ws = av[0]
 
-	server, err := srv.NewServer(fs)
+	file, err := workspacebackend.ReadWorkspace(fs, util.ToPathname(Project, ws))
 	if err != nil {
 		return err
 	}
 
-	project, err := workspace.LoadProject(server, fs, Project)
-	if errors.Is(err, afero.ErrFileNotFound) {
-		project, err = workspace.NewProject(server, fs, Project)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
-	wsList, err := project.EnumWorkspaceFiles()
-	if err != nil || len(wsList) == 0 {
-		return err
-	}
-
-	/* if no name provided, try to see if we can disambiguate */
-	if wsName == "" {
-		if len(wsList) == 1 {
-			/* If no names provided and there is only one workspace - run it */
-			wsName = wsList[0].Name
-		} else if len(wsList) > 1 {
-			/* If there are multiple workspaces and no names provided - ask a user to resolve */
-			printWorkspaces(wsList)
-			fmt.Printf("\nUse \"workspace launch \033[3mname\033[0m\" to disambiguate.\n")
-			return nil
-		}
-	}
-
-	finder := func(p *srv.WorkspaceProps) bool { return p.Name == wsName }
-	idx := slices.IndexFunc(wsList, finder)
-
-	/* If the name was provided by the user, test if we have such a workspace */
-	if idx == -1 {
-		fmt.Printf("workspace \"\033[1m%s\033[0m\" not found.\n", wsName)
-		printWorkspaces(wsList)
-		os.Exit(1)
-	}
-
-	ws, err := workspace.NewWorkspace(server, project, fs, wsList[idx])
+	overlord, err := overlord.New(nil, os.Stdout)
 	if err != nil {
 		return err
 	}
 
-	storeClient, err := store.NewStoreClient(fs)
+	overlord.Loop()
+
+	st := overlord.State()
+	st.Lock()
+
+	projectKey, err := overlord.ProjectManager().LoadOrCreateProject(Project)
 	if err != nil {
 		return err
 	}
 
-	/* We are officially launching here, so whatever happens, the project should persist if still not */
-	defer project.SaveProject()
-
-	if err = ws.Launch(storeClient); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+	taskset, err := workspace.Launch(st, file)
+	if err != nil {
+		return err
 	}
 
-	return err
-}
+	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
+	change.Set("workspace", ws)
+	change.Set("project-key", projectKey)
 
-func printWorkspaces(wsList []*srv.WorkspaceProps) {
-	if len(wsList) > 0 {
-		fmt.Printf("Available workspaces:\n")
-		for _, k := range wsList {
-			fmt.Printf("  \033[1m%s\033[0m\n", k.Name)
+	change.AddAll(taskset)
+	st.Unlock()
+
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		sig := <-sigs
+		logger.Debugf("Exiting on %s signal.\n", sig)
+		st.Lock()
+		change.Abort()
+		st.EnsureBefore(0)
+		st.Unlock()
+	}()
+
+	<-change.Ready()
+
+	st.Lock()
+	if change.Status().Ready() {
+		launched := true
+		for _, t := range change.Tasks() {
+			if t.Status() != state.DoneStatus {
+				launched = false
+			}
+		}
+		if change.Err() != nil {
+			fmt.Print(change.Err())
+		} else if change.Status() == state.UndoneStatus {
+			fmt.Println("Aborted.")
+		} else if launched {
+			fmt.Printf("Workspace %s started.\n", ws)
 		}
 	}
+	st.Unlock()
+
+	return overlord.Stop()
 }

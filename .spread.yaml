@@ -4,11 +4,11 @@ backends:
   # lxd:
   #   systems:
   #     - ubuntu-22.04
-  qemu:
-    systems:
-        - ubuntu-22.10-64:
-            username: ubuntu
-            password: ubuntu
+  # qemu:
+  #   systems:
+  #       - ubuntu-22.10-64:
+  #           username: ubuntu
+  #           password: ubuntu
   
   multipass:
     type: adhoc
@@ -57,15 +57,16 @@ backends:
           username: root
           password: ubuntu
 suites:
-  tests/core/:
+  tests/main/:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
-      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces
+      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+      WORKSPACES_SDK: $SPREAD_PATH/tests/lib/workspaces-sdk
       TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |
       apt-get update
-      apt-get install -y --no-install-recommends gcc libc6-dev snapd
+      apt-get install -y --no-install-recommends gcc libc6-dev snapd jq
       snap install go --classic
 
       snap install lxd --classic

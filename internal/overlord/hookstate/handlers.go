@@ -1,0 +1,68 @@
+package hookstate
+
+import (
+	"path/filepath"
+
+	util "github.com/canonical/workspace/internal"
+	. "github.com/canonical/workspace/internal/overlord/sharedstate"
+	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/workspacebackend"
+
+	"github.com/spf13/afero"
+	"gopkg.in/tomb.v2"
+)
+
+func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
+	project, workspace, err := ProjectAndWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	blob, err := SdkSetup(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var hook util.WorkspaceHookType
+	err = task.Get("hook-setup", &hook)
+	if err != nil {
+		return err
+	}
+
+	/* create a memory out/err to log the hook output into the task's log */
+	memFs := afero.NewMemMapFs()
+	outerr, err := memFs.Create(util.ToInstanceName(workspace, project.ProjectId))
+	if err != nil {
+		return err
+	}
+
+	args := workspacebackend.ExecArgs{
+		User: "root",
+		Command: []string{
+			"bash",
+			"-xue",
+			"-o",
+			"pipefail",
+			"-c",
+			filepath.Join(util.ToHooksPath(blob.Name), hook.String()),
+		},
+		WorkDir: util.ToHooksPath(blob.Name),
+		Stdin:   nil,
+		Stdout:  outerr,
+		Stderr:  outerr}
+
+	done, err := h.backend.Exec(workspace, project.ProjectId, &args)
+	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
+	task.Logf(string(hookLog))
+	if err != nil {
+		return err
+	}
+
+	<-done
+
+	return nil
+}

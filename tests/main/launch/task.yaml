@@ -1,0 +1,24 @@
+summary: Ensure that 'workspace launch' creates a core LXD config correctly
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup_workspaces_in_tree "$WORKSPACES"
+  rm -rf /home/ubuntu/.local/share/workspace/sdks
+
+debug: |
+  lxc project switch workspace.ubuntu
+  lxc list -f compact
+  ls "$WORKSPACES"/*
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch empty workspaces with various bases should succeed"
+  for path in "$WORKSPACES"/*; do
+    launch "$path" ws | MATCH started
+    assert_workspace_config "$path"
+  done
+
+  echo "Launch an existing workspace should fail"
+  launch "$WORKSPACES"/test-empty-ubuntu20 ws | MATCH "workspace \"ws\" already exists"
+

@@ -6,13 +6,11 @@ import (
 	"fmt"
 
 	"os"
-	"os/signal"
 	"strings"
 
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	lxd "github.com/lxc/lxd/client"
 
 	"math/rand"
 
@@ -26,11 +24,12 @@ var (
 )
 
 var (
-	DataDir, SdksDir, WorkspaceSdksDir string
+	DataDir, SdksDir, StateDir, WorkspaceSdksDir string
 )
 
 type WorkspaceState int
 type WorkspaceStateReason int
+type WorkspaceHookType int
 
 const (
 	Inactive WorkspaceState = iota
@@ -39,6 +38,8 @@ const (
 	Pending
 	Error
 )
+
+var EvalSymlinks = filepath.EvalSymlinks
 
 func (s WorkspaceState) String() string {
 	return [...]string{"Inactive", "Ready", "Stopped", "Pending", "Error"}[s]
@@ -53,6 +54,18 @@ const (
 
 func (s WorkspaceStateReason) String() string {
 	return [...]string{"", "", "missing-project", "missing-file"}[s]
+}
+
+const (
+	SetupBase WorkspaceHookType = iota
+)
+
+func (s WorkspaceHookType) String() string {
+	return [...]string{"setup-base"}[s]
+}
+
+func ToPathname(dir, name string) string {
+	return filepath.Join(dir, ToFileName(name))
 }
 
 func ToFileName(name string) string {
@@ -73,13 +86,21 @@ func ToWorkspaceName(instance string) string {
 	return instance[:idx]
 }
 
+func ToCurrentPath(sdkName string) string {
+	return filepath.Join(WorkspaceSdksDir, sdkName, "current")
+}
+
+func ToHooksPath(sdkName string) string {
+	return filepath.Join(WorkspaceSdksDir, sdkName, "current", "hooks")
+}
+
 func CleanProjectPath(path string) (string, error) {
 	var err error
 	if !filepath.IsAbs(path) {
 		return "", ErrNoRelativePathsAllowed
 	}
 
-	path, err = filepath.EvalSymlinks(path)
+	path, err = EvalSymlinks(path)
 	if err != nil {
 		return "", err
 	}
@@ -96,40 +117,18 @@ func init() {
 
 	xdg.Reload()
 	DataDir = filepath.Join(xdg.DataHome, "workspace")
-	SdksDir = filepath.Join(DataDir, "sdks")
+	StateDir = filepath.Join(xdg.StateHome, "workspace")
+	SdksDir = filepath.Join(DataDir, "sdk")
 
-	WorkspaceSdksDir = "/var/lib/workspace/sdks/"
+	WorkspaceSdksDir = "/var/lib/workspace/sdk/"
 
-	if err := os.MkdirAll(SdksDir, 0700); err != nil {
+	if err := os.MkdirAll(SdksDir, 0755); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}
-}
 
-func CancellableWait(op lxd.RemoteOperation) error {
-	sch := make(chan os.Signal, 1)
-	och := make(chan error)
-
-	signal.Notify(sch, os.Interrupt)
-
-	go func() {
-		och <- op.Wait()
-		close(och)
-	}()
-
-	count := 0
-	for {
-		select {
-		case err := <-och:
-			return err
-		case <-sch:
-			if err := op.CancelTarget(); err == nil {
-				return ErrCancelled
-			}
-
-			if count += 1; count >= 3 {
-				return ErrForcedCancel
-			}
-		}
+	if err := os.MkdirAll(StateDir, 0755); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
 	}
 }

@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 
 	util "github.com/canonical/workspace/internal"
-	project "github.com/canonical/workspace/internal/workspace"
+	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -31,7 +32,7 @@ func getProjectDirectory(fs afero.Fs, cwd string) (string, error) {
 		var err error
 		var ok bool
 		if ok, err = afero.Exists(fs, path); err == nil && ok {
-			if ok, err = afero.Exists(fs, project.LockPath(path)); err == nil && ok {
+			if ok, err = afero.Exists(fs, projectstate.LockPath(path)); err == nil && ok {
 				return path, nil
 			}
 		}
@@ -66,6 +67,8 @@ func main() {
 		fmt.Println(err)
 		panic("cannot get project directory")
 	}
+
+	logger.SetLogger(logger.New(os.Stderr, "[workspace] "))
 
 	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "specify a project's directory path")
 
