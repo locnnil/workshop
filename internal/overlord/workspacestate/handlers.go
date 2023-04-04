@@ -121,7 +121,6 @@ func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
-	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
 	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "stop")
 	if err != nil {
 		return err
