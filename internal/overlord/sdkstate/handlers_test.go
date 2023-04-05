@@ -1,6 +1,7 @@
 package sdkstate_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,6 +28,7 @@ type H struct {
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
 	wsmgr   *sdkstate.SdkManager
+	ctx     context.Context
 }
 
 var _ = Suite(&H{})
@@ -41,6 +43,8 @@ var ErrTrigger = errors.New("error out")
 
 func (s *H) SetUpTest(c *C) {
 	s.fs = afero.NewMemMapFs()
+	s.ctx = context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
+
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
 
 	s.state = state.New(nil)
@@ -82,7 +86,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		c.Assert(args.Command, DeepEquals, []string{
 			"tar",
@@ -128,7 +132,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
 		done := make(chan bool)
@@ -172,7 +176,7 @@ func (s *H) TestunDoInstallSdk(c *C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		s.backend.Fs.MkdirAll(filepath.Join(util.WorkspaceSdksDir, "new"), 0755)
@@ -214,7 +218,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 
 	s.state.Unlock()
 	s.se.Ensure()
@@ -253,7 +257,7 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {

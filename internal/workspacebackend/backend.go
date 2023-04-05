@@ -1,6 +1,7 @@
 package workspacebackend
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -71,6 +72,10 @@ const LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
+type ContextKeyProjectId string
+
+const ContextProjectId = ContextKeyProjectId("project-id")
+
 type WorkspaceConfigFilter func(config map[string]string) bool
 type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
 
@@ -87,7 +92,7 @@ func EveryWorkspace() WorkspaceConfigFilter {
 }
 
 type WorkspaceBackend interface {
-	LaunchWorkspaceInstance(name, base, project_id string) error
+	LaunchWorkspace(ctx context.Context, name, base string) error
 	DeleteWorkspaceInstance(name, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
@@ -143,13 +148,18 @@ func New() (WorkspaceBackend, error) {
 	return &server, nil
 }
 
-func (s *LxdBackend) LaunchWorkspaceInstance(name, base, project_id string) error {
+func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
 
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
 	/* Skip if the instance exists already */
-	if _, _, err := s.getLxdInstance(name, project_id); err == nil {
+	if _, _, err := s.getLxdInstance(name, projectId); err == nil {
 		return fmt.Errorf("workspace \"%s\" already exists", name)
 	}
 
@@ -181,9 +191,9 @@ func (s *LxdBackend) LaunchWorkspaceInstance(name, base, project_id string) erro
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: defaultDevices(),
-			Config:  defaultConfig(project_id),
+			Config:  defaultConfig(projectId),
 		},
-		Name: util.ToInstanceName(name, project_id),
+		Name: util.ToInstanceName(name, projectId),
 		Type: api.InstanceType("container"),
 		Source: api.InstanceSource{
 			Type:        "image",
@@ -490,14 +500,15 @@ func (f *FakeWorkspaceBackend) workspace(name, project string) *WorkspaceProps {
 	return f.workspaces[project][name]
 }
 
-func (f *FakeWorkspaceBackend) LaunchWorkspaceInstance(name string, base string, project_id string) error {
-	if f.workspaces[project_id] == nil {
-		f.workspaces[project_id] = make(map[string]*WorkspaceProps)
+func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
+	projectId := ctx.Value(ContextProjectId).(string)
+	if f.workspaces[projectId] == nil {
+		f.workspaces[projectId] = make(map[string]*WorkspaceProps)
 	}
-	f.workspaces[project_id][name] = &WorkspaceProps{
+	f.workspaces[projectId][name] = &WorkspaceProps{
 		Name:    name,
 		Devices: defaultDevices(),
-		Config:  defaultConfig(project_id),
+		Config:  defaultConfig(projectId),
 		state:   util.Ready,
 	}
 	return nil

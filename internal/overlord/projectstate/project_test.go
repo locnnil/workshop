@@ -1,6 +1,7 @@
 package projectstate
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"testing"
@@ -16,6 +17,7 @@ import (
 type P struct {
 	Fs      afero.Fs
 	Backend workspacebackend.WorkspaceBackend
+	ctx     context.Context
 }
 
 var _ = Suite(&P{})
@@ -27,6 +29,7 @@ func (p *P) SetUpTest(c *C) {
 	p.Backend = workspacebackend.NewFakeWorkspaceBackend()
 	p.Fs.MkdirAll(util.DataDir, 0755)
 	p.Fs.MkdirAll(util.SdksDir, 0755)
+	p.ctx = context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
 	rand.Seed(1)
 }
 
@@ -73,14 +76,14 @@ func (s *P) TestLoadProject(c *C) {
 	c.Check(err, NotNil)
 
 	/* Project exists, no workspace instances */
-	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("PROJECTID"), 0644)
+	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("projectId"), 0644)
 	project, err := LoadProject(s.Backend, s.Fs, "/")
 	c.Check(project.ProjectDirectory(), Equals, "/")
-	c.Check(project.ProjectId(), Equals, "PROJECTID")
+	c.Check(project.ProjectId(), Equals, "projectId")
 	c.Check(err, IsNil)
 
 	/* Project exists, some workspace instances running */
-	s.Backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.Backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	project, err = LoadProject(s.Backend, s.Fs, "/")
 	c.Check(project.ProjectDirectory(), Equals, "/")
 	c.Check(err, IsNil)
@@ -117,7 +120,7 @@ func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 }
 
 func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
-	s.Backend.LaunchWorkspaceInstance("instance1", "ubuntu@20.04", "projectId")
+	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
 	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
 
 	result, err := project.RetrieveWorkspaces()
@@ -130,8 +133,8 @@ func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
 }
 
 func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
-	s.Backend.LaunchWorkspaceInstance("instance1", "ubuntu@20.04", "projectId")
-	s.Backend.LaunchWorkspaceInstance("project1", "ubuntu@20.04", "projectId")
+	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
+	s.Backend.LaunchWorkspace(s.ctx, "project1", "ubuntu@20.04")
 
 	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)

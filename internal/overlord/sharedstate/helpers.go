@@ -1,11 +1,14 @@
 package sharedstate
 
 import (
+	"context"
 	"fmt"
 
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/workspacebackend"
+	"gopkg.in/tomb.v2"
 )
 
 func SdkSetup(task *state.Task) (*store.SdkBlob, error) {
@@ -55,4 +58,11 @@ func ProjectAndWorkspace(task *state.Task) (*projectstate.ProjectKey, string, er
 	}
 
 	return &project, name, nil
+}
+
+func BackendContext(tomb *tomb.Tomb, project *projectstate.ProjectKey) (context.Context, context.CancelFunc) {
+	ctx := tomb.Context(context.TODO())
+	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
+	ctxCancel, cancel := context.WithCancel(ctxProject)
+	return ctxCancel, cancel
 }
