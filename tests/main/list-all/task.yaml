@@ -16,7 +16,7 @@ debug: |
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup_workspaces_in_tree "$WORKSPACES"
+  cleanup "$WORKSPACES"
   for path in "$WORKSPACES"/{*-copy,*-new}; do
     rm -rf "$path"
   done

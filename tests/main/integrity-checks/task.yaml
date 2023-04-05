@@ -2,7 +2,7 @@ summary: Error states tracking and recovery for the .workspace.lock
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup_workspaces_in_tree "$WORKSPACES"
+  cleanup "$WORKSPACES"
 
 debug: |
   lxc project switch workspace.ubuntu

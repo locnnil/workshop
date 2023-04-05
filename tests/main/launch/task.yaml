@@ -2,7 +2,7 @@ summary: Ensure that 'workspace launch' creates a core LXD config correctly
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup_workspaces_in_tree "$WORKSPACES"
+  cleanup "$WORKSPACES"
   rm -rf /home/ubuntu/.local/share/workspace/sdks
 
 debug: |
