@@ -1,6 +1,7 @@
 package projectstate
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"math/rand"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 
@@ -380,7 +382,9 @@ func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updat
 			Stdin:   nil,
 			Stdout:  stdout,
 			Stderr:  nil}
-		done, err := be.Exec(instance.Name, key.ProjectId, &args)
+
+		ctx := context.WithValue(context.Background(), workspacebackend.ContextProjectId, key.ProjectId)
+		done, err := be.Exec(ctx, instance.Name, &args)
 		if err != nil {
 			continue
 		}

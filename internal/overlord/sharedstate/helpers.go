@@ -61,7 +61,7 @@ func ProjectAndWorkspace(task *state.Task) (*projectstate.ProjectKey, string, er
 }
 
 func BackendContext(tomb *tomb.Tomb, project *projectstate.ProjectKey) (context.Context, context.CancelFunc) {
-	ctx := tomb.Context(context.TODO())
+	ctx := tomb.Context(context.Background())
 	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
 	ctxCancel, cancel := context.WithCancel(ctxProject)
 	return ctxCancel, cancel

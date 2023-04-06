@@ -108,7 +108,7 @@ type WorkspaceBackend interface {
 	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
-	Exec(name, project_id string, args *ExecArgs) (chan bool, error)
+	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 }
 
 func (s *LxdBackend) connect(fs afero.Fs) (lxd.InstanceServer, error) {
@@ -330,7 +330,12 @@ func (s *LxdBackend) RemoveWorkspaceDevice(name, project_id, device string) erro
 	return op.Wait()
 }
 
-func (s *LxdBackend) Exec(name, project_id string, args *ExecArgs) (chan bool, error) {
+func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
+	}
+
 	req := api.InstanceExecPost{
 		Command: args.Command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: args.WorkDir,
@@ -344,15 +349,17 @@ func (s *LxdBackend) Exec(name, project_id string, args *ExecArgs) (chan bool, e
 		Control: nil, DataDone: done,
 	}
 
-	op, err := s.ExecInstance(util.ToInstanceName(name, project_id), req, &arg)
+	op, err := s.ExecInstance(util.ToInstanceName(name, projectId), req, &arg)
 
 	if err != nil {
 		return done, err
 	}
 
-	if err := op.Wait(); err != nil {
+	logger.Debugf("Start waiting")
+	if err := op.WaitContext(ctx); err != nil {
 		return done, err
 	}
+	logger.Debugf("End waiting")
 
 	if status, ok := op.Get().Metadata["return"].(float64); ok {
 		if status != 0 {
@@ -570,8 +577,9 @@ func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (Workspac
 	return s.Fs, nil
 }
 
-func (f *FakeWorkspaceBackend) Exec(name string, project_id string, args *ExecArgs) (chan bool, error) {
-	return f.DoExec(name, project_id, args)
+func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+	projectId := ctx.Value(ContextProjectId).(string)
+	return f.DoExec(name, projectId, args)
 }
 
 func DoExecDefault(name string, project_id string, args *ExecArgs) (chan bool, error) {

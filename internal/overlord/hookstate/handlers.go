@@ -27,6 +27,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
+	ctx, cancel := BackendContext(tomb, project)
+	defer cancel()
+
 	var hook util.WorkspaceHookType
 	err = task.Get("hook-setup", &hook)
 	if err != nil {
@@ -55,7 +58,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		Stdout:  outerr,
 		Stderr:  outerr}
 
-	done, err := h.backend.Exec(workspace, project.ProjectId, &args)
+	done, err := h.backend.Exec(ctx, workspace, &args)
 	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
 	task.Logf(string(hookLog))
 	if err != nil {
