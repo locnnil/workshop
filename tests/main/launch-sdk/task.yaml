@@ -24,5 +24,5 @@ execute: |
   assert_workspace_config "$WORKSPACES_SDK"/test-sdks-ubuntu22 
   
   echo "SDKs must be configured correctly"
-  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 huggingface
-  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 cuda
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 sdk-1
+  assert_workspace_sdk "$WORKSPACES_SDK"/test-sdks-ubuntu22 sdk-2

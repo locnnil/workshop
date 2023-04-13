@@ -84,21 +84,22 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 
 	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		c.Assert(args.Command, DeepEquals, []string{
+		c.Check(args.Command, DeepEquals, []string{
 			"tar",
 			"--extract",
 			"--file",
 			"/root/new_2.sdk",
 			"--one-top-level=/var/lib/workspace/sdk/new/2",
 			"--no-same-owner",
-			"--strip-components=2",
 		})
 		return workspacebackend.DoExecDefault(name, project_id, args)
 	}
 
 	s.state.Unlock()
-	s.se.Ensure()
-	s.se.Wait()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
 	s.state.Lock()
 
 	/* Install must be successful */
