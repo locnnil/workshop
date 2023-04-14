@@ -1,6 +1,7 @@
 package hookstate
 
 import (
+	"fmt"
 	"path/filepath"
 
 	util "github.com/canonical/workspace/internal"
@@ -43,6 +44,8 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	fmt.Printf("Running hook \"%s\" for \"%s\"...\n", hook.String(), blob.Name)
+
 	args := workspacebackend.ExecArgs{
 		User: "root",
 		Command: []string{
@@ -60,8 +63,8 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	done, err := h.backend.Exec(ctx, workspace, &args)
 	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
-	task.Logf(string(hookLog))
 	if err != nil {
+		task.Logf(string(hookLog))
 		return err
 	}
 

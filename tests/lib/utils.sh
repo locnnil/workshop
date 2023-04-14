@@ -18,8 +18,8 @@ function assert_workspace_sdk() {
   sdk_config=$(lxc config get "$workspace" user.workspace.sdk --project workspace.ubuntu)
 
   rev=$(lxc exec "$workspace" -- ls -1 "$base"/"$2" | sort | grep -E "^[0-9]+$")
-  echo "$sdk_config" | jq ".$2[0].revision" | MATCH "$rev"
-  echo "$sdk_config" | jq ".$2[0].channel" | MATCH "latest/stable"
+  echo "$sdk_config" | jq ".\"$2\"[0].revision" | MATCH "$rev"
+  echo "$sdk_config" | jq ".\"$2\"[0].channel" | MATCH "latest/stable"
 
   lxc exec "$workspace" -- test -h "$base"/"$2"/current || echo "current must be a symbolic link"
   lxc exec "$workspace" -- test "$base"/"$2"/"$rev" = "$(readlink -f "$base"/"$2"/current)" || echo "current does not point to $rev"

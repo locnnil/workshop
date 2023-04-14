@@ -115,7 +115,6 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			sdkMount.Properties["path"],
 			"--one-top-level=" + sdkPath,
 			"--no-same-owner",
-			"--strip-components=2",
 		},
 		WorkDir: "/",
 		Stdin:   nil,
