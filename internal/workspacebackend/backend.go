@@ -13,7 +13,6 @@ import (
 	lxd "github.com/lxc/lxd/client"
 
 	"github.com/lxc/lxd/shared/api"
-	"github.com/spf13/afero"
 )
 
 type ErrExec struct {
@@ -65,7 +64,6 @@ type ExecArgs struct {
 }
 
 type LxdBackend struct {
-	lxd.InstanceServer
 }
 
 const LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
@@ -111,38 +109,15 @@ type WorkspaceBackend interface {
 	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 }
 
-func (s *LxdBackend) connect(fs afero.Fs) (lxd.InstanceServer, error) {
-	project, err := GetLXDProjectName()
-	if err != nil {
-		return nil, err
-	}
-	if ok, err := afero.Exists(fs, LxdSock); err != nil {
-		return nil, err
-	} else if ok {
-		if srv, err := lxd.ConnectLXDUnix(LxdSock, nil); err != nil {
-			return nil, err
-		} else {
-			return srv.UseProject(project), nil
-		}
-	} else {
-		if srv, err := lxd.ConnectLXDUnix("", nil); err != nil {
-			return nil, err
-		} else {
-			return srv.UseProject(project), nil
-		}
-	}
-}
-
 func New() (WorkspaceBackend, error) {
 	server := LxdBackend{}
-	fs := afero.NewOsFs()
-	if lxdInst, err := server.connect(fs); err != nil {
+
+	if lxdInst, err := server.getLxdClient(context.Background()); err != nil {
 		return nil, err
 	} else {
 		if err = InitProject(lxdInst); err != nil {
 			return nil, err
 		}
-		server.InstanceServer = lxdInst
 	}
 
 	return &server, nil
@@ -153,29 +128,34 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 	var imageSrv lxd.ImageServer
 	var image *api.Image
 
+	conn, err := s.getLxdClient(ctx)
+	if err != nil {
+		return err
+	}
+
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
 	/* Skip if the instance exists already */
-	if _, _, err := s.getLxdInstance(name, projectId); err == nil {
+	if _, _, err := conn.GetInstance(util.ToInstanceName(name, projectId)); err == nil {
 		return fmt.Errorf("workspace \"%s\" already exists", name)
 	}
 
 	/* Check if we have the base image stored locally */
-	if alias, _, err := s.GetImageAlias(base); err == nil {
-		if image, _, err = s.GetImage(alias.Target); err != nil {
+	if alias, _, err := conn.GetImageAlias(base); err == nil {
+		if image, _, err = conn.GetImage(alias.Target); err != nil {
 			return err
 		}
-		imageSrv = s
+		imageSrv = conn
 	} else {
 		imageSrv, image, err = s.fetchRemoteImage(base)
 		if err != nil {
 			return err
 		}
 
-		defer s.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
+		defer conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
 			Name: base,
 			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
 				Target: image.Fingerprint,
@@ -201,12 +181,310 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 			Project:     projectName,
 		},
 	}
-	op, err := s.CreateInstanceFromImage(imageSrv, *image, req)
+	op, err := conn.CreateInstanceFromImage(imageSrv, *image, req)
 	if err != nil {
 		return err
 	}
 
 	return op.Wait()
+}
+
+func (s *LxdBackend) SetWorkspaceState(name, projectId, action string) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	/* Do nothing if the instance is already in the desired state */
+	if (inst.StatusCode == api.Running && action == "start") ||
+		(inst.StatusCode == api.Stopped && action == "stop") {
+		return nil
+	}
+
+	req := api.InstanceStatePut{
+		Action:  action,
+		Timeout: 5,
+		Force:   false,
+	}
+
+	op, err := conn.UpdateInstanceState(inst.Name, req, "")
+	if err != nil {
+		return err
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (s *LxdBackend) AddWorkspaceConfig(name, projectId string, item *WorkspaceConfigValue) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+	inst.Config[item.Name] = item.Value
+	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdBackend) RemoveWorkspaceConfig(name, projectId string, key string) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	delete(inst.Config, key)
+	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdBackend) AddWorkspaceDevice(name, projectId string, device WorkspaceDevice) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+	inst.Devices[device.Name] = device.Properties
+	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdBackend) RemoveWorkspaceDevice(name, projectId, device string) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	delete(inst.Devices, device)
+	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+
+	return op.Wait()
+}
+
+func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+	conn, err := s.getLxdClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
+	}
+
+	req := api.InstanceExecPost{
+		Command: args.Command, WaitForWS: true,
+		User: 0, Group: 0, Cwd: args.WorkDir,
+		Interactive: false,
+	}
+
+	done := make(chan bool)
+
+	arg := lxd.InstanceExecArgs{
+		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
+		Control: nil, DataDone: done,
+	}
+
+	op, err := conn.ExecInstance(util.ToInstanceName(name, projectId), req, &arg)
+
+	if err != nil {
+		return done, err
+	}
+
+	if err := op.WaitContext(ctx); err != nil {
+		return done, err
+	}
+
+	if status, ok := op.Get().Metadata["return"].(float64); ok {
+		if status != 0 {
+			logger.Debugf("command execution failed with %v", int(status))
+			return done, &ErrExec{Status: int(status)}
+		}
+	}
+
+	return done, nil
+}
+
+func (s *LxdBackend) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, err := conn.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range inst {
+		if filter(i.Config) {
+			i.Config[item.Name] = item.Value
+			conn.UpdateInstance(i.Name, i.InstancePut, "")
+		}
+	}
+
+	return nil
+}
+
+func (s *LxdBackend) GetWorkspace(name, projectId string) (*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return nil, err
+	}
+	return &WorkspaceProps{
+		Name:    name,
+		state:   fromLxdToWorkspaceState(inst.StatusCode),
+		Devices: inst.Devices,
+		Config:  inst.Config,
+	}, nil
+}
+
+func (s *LxdBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	instances, err := conn.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
+	for _, i := range instances {
+		if filter(i.Config) {
+			ws = append(ws, &WorkspaceProps{
+				Name:    util.ToWorkspaceName(i.Name),
+				state:   fromLxdToWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			})
+		}
+	}
+
+	return ws, nil
+}
+
+func (s *LxdBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	instances, err := conn.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, err
+	}
+	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	for _, i := range instances {
+		if filter(i.Devices) {
+			name := util.ToWorkspaceName(i.Name)
+			ws[name] = &WorkspaceProps{
+				Name:    name,
+				state:   fromLxdToWorkspaceState(i.StatusCode),
+				Devices: i.Devices,
+				Config:  i.Config,
+			}
+
+		}
+	}
+
+	return ws, nil
+}
+
+func (s *LxdBackend) DeleteWorkspaceInstance(name, projectId string) error {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return err
+	}
+
+	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
+		return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
+	}
+
+	op, err := conn.DeleteInstance(util.ToInstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	return op.Wait()
+}
+
+func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
+	conn, err := s.getLxdClient(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	sftp, err := conn.GetInstanceFileSFTP(util.ToInstanceName(name, project_id))
+	if err != nil {
+		return nil, err
+	}
+
+	return NewWorkspaceFs(sftp), nil
+}
+
+func (s *LxdBackend) getLxdClient(ctx context.Context) (lxd.InstanceServer, error) {
+	project, err := GetLXDProjectName()
+	if err != nil {
+		return nil, err
+	}
+	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
+		return nil, err
+	} else {
+		return srv.UseProject(project), nil
+	}
+}
+
+func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
+	var state util.WorkspaceState
+	switch lxdStatus {
+	case api.Running, api.Ready:
+		state = util.Ready
+	case api.Stopped:
+		state = util.Stopped
+	default:
+		state = util.Pending
+	}
+	return state
 }
 
 func defaultDevices() map[string]map[string]string {
@@ -248,238 +526,6 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 	}
 
 	return imageServer, image, nil
-}
-
-func (s *LxdBackend) SetWorkspaceState(name, project_id, action string) error {
-	inst, _, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-
-	/* Do nothing if the instance is already in the desired state */
-	if (inst.StatusCode == api.Running && action == "start") ||
-		(inst.StatusCode == api.Stopped && action == "stop") {
-		return nil
-	}
-
-	req := api.InstanceStatePut{
-		Action:  action,
-		Timeout: 5,
-		Force:   false,
-	}
-
-	op, err := s.UpdateInstanceState(inst.Name, req, "")
-	if err != nil {
-		return err
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return err
-	}
-	return err
-}
-
-func (s *LxdBackend) AddWorkspaceConfig(name, project_id string, item *WorkspaceConfigValue) error {
-	inst, etag, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-	inst.Config[item.Name] = item.Value
-	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
-
-	return op.Wait()
-}
-
-func (s *LxdBackend) RemoveWorkspaceConfig(name, project_id string, key string) error {
-	inst, etag, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-
-	delete(inst.Config, key)
-	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
-
-	return op.Wait()
-}
-
-func (s *LxdBackend) getLxdInstance(name, project_id string) (instance *api.Instance, ETag string, err error) {
-	return s.GetInstance(util.ToInstanceName(name, project_id))
-}
-
-func (s *LxdBackend) AddWorkspaceDevice(name, project_id string, device WorkspaceDevice) error {
-	inst, etag, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-	inst.Devices[device.Name] = device.Properties
-	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
-
-	return op.Wait()
-}
-
-func (s *LxdBackend) RemoveWorkspaceDevice(name, project_id, device string) error {
-	inst, etag, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-
-	delete(inst.Devices, device)
-	op, _ := s.UpdateInstance(inst.Name, inst.InstancePut, etag)
-
-	return op.Wait()
-}
-
-func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	projectId, ok := ctx.Value(ContextProjectId).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
-	}
-
-	req := api.InstanceExecPost{
-		Command: args.Command, WaitForWS: true,
-		User: 0, Group: 0, Cwd: args.WorkDir,
-		Interactive: false,
-	}
-
-	done := make(chan bool)
-
-	arg := lxd.InstanceExecArgs{
-		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
-		Control: nil, DataDone: done,
-	}
-
-	op, err := s.ExecInstance(util.ToInstanceName(name, projectId), req, &arg)
-
-	if err != nil {
-		return done, err
-	}
-
-	logger.Debugf("Start waiting")
-	if err := op.WaitContext(ctx); err != nil {
-		return done, err
-	}
-	logger.Debugf("End waiting")
-
-	if status, ok := op.Get().Metadata["return"].(float64); ok {
-		if status != 0 {
-			logger.Debugf("command execution failed with %v", int(status))
-			return done, &ErrExec{Status: int(status)}
-		}
-	}
-
-	return done, nil
-}
-
-func (s *LxdBackend) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
-	inst, err := s.GetInstances(api.InstanceTypeContainer)
-	if err != nil {
-		return err
-	}
-
-	for _, i := range inst {
-		if filter(i.Config) {
-			i.Config[item.Name] = item.Value
-			s.UpdateInstance(i.Name, i.InstancePut, "")
-		}
-	}
-
-	return nil
-}
-
-func (s *LxdBackend) GetWorkspace(name, project_id string) (*WorkspaceProps, error) {
-	inst, _, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return nil, err
-	}
-	return &WorkspaceProps{
-		Name:    name,
-		state:   fromLxdToWorkspaceState(inst.StatusCode),
-		Devices: inst.Devices,
-		Config:  inst.Config,
-	}, nil
-}
-
-func (s *LxdBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
-	instances, err := s.GetInstances(api.InstanceTypeContainer)
-	if err != nil {
-		return nil, err
-	}
-	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
-	for _, i := range instances {
-		if filter(i.Config) {
-			ws = append(ws, &WorkspaceProps{
-				Name:    util.ToWorkspaceName(i.Name),
-				state:   fromLxdToWorkspaceState(i.StatusCode),
-				Devices: i.Devices,
-				Config:  i.Config,
-			})
-		}
-	}
-
-	return ws, nil
-}
-
-func (s *LxdBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
-	instances, err := s.GetInstances(api.InstanceTypeContainer)
-	if err != nil {
-		return nil, err
-	}
-	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
-	for _, i := range instances {
-		if filter(i.Devices) {
-			name := util.ToWorkspaceName(i.Name)
-			ws[name] = &WorkspaceProps{
-				Name:    name,
-				state:   fromLxdToWorkspaceState(i.StatusCode),
-				Devices: i.Devices,
-				Config:  i.Config,
-			}
-
-		}
-	}
-
-	return ws, nil
-}
-
-func (s *LxdBackend) DeleteWorkspaceInstance(name, project_id string) error {
-	inst, _, err := s.getLxdInstance(name, project_id)
-	if err != nil {
-		return err
-	}
-
-	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
-		return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
-	}
-
-	op, err := s.DeleteInstance(util.ToInstanceName(name, project_id))
-	if err != nil {
-		return err
-	}
-
-	return op.Wait()
-}
-
-func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
-	sftp, err := s.GetInstanceFileSFTP(util.ToInstanceName(name, project_id))
-	if err != nil {
-		return nil, err
-	}
-
-	return NewWorkspaceFs(sftp), nil
-}
-
-func fromLxdToWorkspaceState(lxdStatus api.StatusCode) util.WorkspaceState {
-	var state util.WorkspaceState
-	switch lxdStatus {
-	case api.Running, api.Ready:
-		state = util.Ready
-	case api.Stopped:
-		state = util.Stopped
-	default:
-		state = util.Pending
-	}
-	return state
 }
 
 /* Fake backend implementation for tests */

@@ -69,8 +69,6 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, project)
 	defer cancel()
@@ -124,7 +122,9 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	if err != nil {
 		hookLog, _ := afero.ReadFile(memFs, outerr.Name())
+		st.Lock()
 		task.Logf(string(hookLog))
+		st.Unlock()
 	}
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
