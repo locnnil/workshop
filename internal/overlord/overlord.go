@@ -71,6 +71,9 @@ type Overlord struct {
 	project   *projectstate.ProjectManager
 	hook      *hookstate.HookManager
 	runner    *state.TaskRunner
+
+	// exclusive file lock for the state to avoid multiple running workspaces (temporary)
+	stateFileLock *osutil.FileLock
 }
 
 // New creates a new Overlord with all its state managers.
@@ -82,12 +85,34 @@ func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, er
 		inited:   true,
 	}
 
+	var err error
+
 	if !filepath.IsAbs(util.StateDir) {
 		return nil, fmt.Errorf("directory %q must be absolute", util.StateDir)
 	}
 	if !osutil.IsDir(util.StateDir) {
 		return nil, fmt.Errorf("directory %q does not exist", util.StateDir)
 	}
+
+	/* We use file locking here as multiple clients can try access the state file now,
+	this will be removed once moved to a client-server arch */
+	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(util.StateDir, ".lock"))
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		err = o.stateFileLock.TryLock()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Cannot start, could another workspace be running?")
+			fmt.Fprintln(os.Stderr, "Retry in 5 seconds...")
+
+			time.Sleep(5 * time.Second)
+		} else {
+			break
+		}
+	}
+
 	statePath := filepath.Join(util.StateDir, "state.json")
 
 	backend := &overlordStateBackend{

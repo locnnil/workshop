@@ -94,7 +94,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		} else if change.Status() == state.UndoneStatus {
 			fmt.Println("Aborted.")
 		} else if launched {
-			fmt.Printf("Workspace %s started.\n", ws)
+			fmt.Printf("Workspace \"%s\" started.\n", ws)
 		}
 	}
 	st.Unlock()
