@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 )
 
@@ -55,16 +55,25 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 
 	if len(changes) > 0 {
 		w := tabWriter()
-		fmt.Fprintf(w, "ID\tStatus\tProject\tSummary\n")
+		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tProject\tSummary\n")
 
 		for _, chg := range changes {
 			var project = projectstate.ProjectKey{Path: "-", ProjectId: "-"}
 			chg.Get("project-key", &project)
-			fmt.Fprintln(w, strings.Join([]string{
+
+			spawnTime := timeutil.Human(chg.SpawnTime())
+			readyTime := timeutil.Human(chg.ReadyTime())
+			if chg.ReadyTime().IsZero() {
+				readyTime = "-"
+			}
+
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				chg.ID(),
 				chg.Status().String(),
+				spawnTime,
+				readyTime,
 				contractHomeDirectory(project.Path),
-				chg.Summary()}, "\t"))
+				chg.Summary())
 		}
 		w.Flush()
 	}

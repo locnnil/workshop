@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/canonical/workspace/internal/overlord"
+	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 )
 
@@ -39,12 +40,20 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 
 		if len(tasks) > 0 {
 			w := tabWriter()
-			fmt.Fprintf(w, "ID\tStatus\tSummary\n")
+			fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
 
 			for _, tsk := range tasks {
+				spawnTime := timeutil.Human(tsk.SpawnTime())
+				readyTime := timeutil.Human(tsk.ReadyTime())
+				if tsk.ReadyTime().IsZero() {
+					readyTime = "-"
+				}
+
 				fmt.Fprintln(w, strings.Join([]string{
 					tsk.ID(),
 					tsk.Status().String(),
+					spawnTime,
+					readyTime,
 					tsk.Summary()}, "\t"))
 			}
 			w.Flush()
