@@ -152,7 +152,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), Equals, true)
 }
 
-func (s *H) TestunDoInstallSdk(c *C) {
+func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -233,7 +233,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 		"{\"new\":[{\"channel\":\"latest/stable\",\"revision\":2}]}")
 }
 
-func (s *H) TestunDoLinkSdkSuccess(c *C) {
+func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -270,5 +270,51 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace("ws", "projectId")
 	_, ok := props.Config["user.workspace.sdk"]
 	c.Check(ok, Equals, false)
+	c.Check(link.Status(), Equals, state.UndoneStatus)
+}
+
+func (s *H) TestUndoLinkToPreviousSdk(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	projectKey := projectstate.ProjectKey{
+		Path:      "/project/Path",
+		ProjectId: "projectId",
+	}
+
+	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	link := s.state.NewTask("link-sdk", "test")
+	link.Set("sdk-retrieve-task", t.ID())
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(link)
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("workspace", "ws")
+	chg.Set("project-key", &projectKey)
+	chg.AddTask(link)
+	chg.AddTask(t)
+	chg.AddTask(terr)
+
+	previousSdkRev := "{\"new\":[{\"channel\":\"latest/stable\",\"revision\":277}]}"
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	s.backend.AddWorkspaceConfig("ws", "projectId", &workspacebackend.WorkspaceConfigValue{
+		Name:  "user.workspace.sdk",
+		Value: previousSdkRev,
+	})
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	props, _ := s.backend.GetWorkspace("ws", "projectId")
+	_, ok := props.Config["user.workspace.sdk"]
+	c.Check(ok, Equals, true)
+	c.Check(props.Config["user.workspace.sdk"], Equals, previousSdkRev)
 	c.Check(link.Status(), Equals, state.UndoneStatus)
 }
