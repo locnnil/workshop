@@ -64,9 +64,9 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 			}
 			return err
 		} else if errors.Is(err, afero.ErrFileNotFound) {
-			/* .lock file was not found in the current directory (or in its parents)
-			   hence, we execute a global list command to view all the workspaces */
-			listGlobal(server, fs)
+			/* Project was not found at the path provided, hence
+			return an error */
+			return fmt.Errorf("not a project directory. Try --global to see all projects or launch your first workspace")
 		}
 	} else {
 		/* List all workspaces in all projects */
