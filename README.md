@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-Workspace relies on LXD to orchestrate contatainers. To install and configure LXD:
+Workspace relies on LXD to orchestrate containers. To install and configure LXD:
 
 ```sh
 sudo snap install lxd
@@ -42,7 +42,7 @@ go test ./...
 go test -check.f SuiteName
 ```
 
-### Functional and integrational testing
+### Functional and integrational tests
 
 ```
 go install github.com/snapcore/spread/cmd/spread@latest
