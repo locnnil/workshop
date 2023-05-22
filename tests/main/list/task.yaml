@@ -43,13 +43,8 @@ execute: |
    rm -rf "$path"/nested; popd 
   done
 
-  echo "Launching from a non-project directory should trigger list --global"
-  mapfile -t projects < <(cd /home/ubuntu; list_cwd | grep -vE "^Project" | grep -oE "^[^ ]+")
-  workspaces=("$WORKSPACES"/*)
-  mapfile -t result < <(comm -23 \
-        <(printf '%s\n' "${projects[@]}"  | sort) \
-        <(printf '%s\n' "${workspaces[@]}"  | sort))
-  test ${#result[@]} -eq 0 || echo "${result[@]}"
+  echo "Launching outside of a project should trigger an error"
+  list_cwd 2>&1 | MATCH "^Error: not a project directory. Try --global to see all projects or launch your first workspace$"
 
 
   for path in "$WORKSPACES"/*; do
@@ -62,7 +57,7 @@ execute: |
 
     echo "The directory was copied, its projects instances should still stay available at the old path"
     sudo -u ubuntu cp -R "$path" "$path"-copy
-    list "$path"-copy | MATCH "^$"
+    list "$path"-copy | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
     project_id_copy=$(cat "$path"-copy/.workspace.lock)
     test "$project_id_copy" != "$project_id" 
 

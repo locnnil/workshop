@@ -115,7 +115,7 @@ func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 	result, err := project.RetrieveWorkspaces()
 	c.Check(err, IsNil)
 	c.Check(result, HasLen, 1)
-	c.Check(result[0].State(), Equals, util.Inactive)
+	c.Check(result[0].State(), Equals, util.Off)
 	c.Check(result[0].Reason(), Equals, util.None)
 }
 

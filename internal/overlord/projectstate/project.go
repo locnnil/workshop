@@ -257,7 +257,7 @@ func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backen
 
 	/* Now, files contains only inactive workspaces */
 	for _, ws := range files {
-		ws.SetState(util.Inactive, util.None)
+		ws.SetState(util.Off, util.None)
 		result = append(result, ws)
 	}
 	return result

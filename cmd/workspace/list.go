@@ -94,7 +94,7 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 
 	for _, project := range keys {
 		for _, j := range list[project] {
-			if j.State() == util.Inactive {
+			if j.State() == util.Off {
 				continue
 			}
 			line := listWorkspace(j, project)
@@ -106,12 +106,6 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 }
 
 func listWorkspaces(wsList []*srv.WorkspaceProps, project *projectstate.Project) {
-	/* if all workspaces are inactive, we do not list them */
-	isAllInactive := func(i *srv.WorkspaceProps) bool { return i.State() != util.Inactive }
-	if slices.IndexFunc(wsList, isAllInactive) == -1 {
-		return
-	}
-
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
@@ -119,9 +113,6 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *projectstate.Project)
 		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
-		if val.State() == util.Inactive {
-			continue
-		}
 		line := listWorkspace(val, project)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
