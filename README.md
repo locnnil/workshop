@@ -20,13 +20,13 @@ go install github.com/canonical/workspace/cmd/workspace
 ## Use
 
 ```
-$ cat > .workspace.finbert.yaml <<EOF -
-name: finbert
-base: ubuntu@20.04
+$ cat > .workspace.nimble.yaml <<EOF -
+name: nimble
+base: ubuntu@22.04
 sdks:
-  huggingface:
+  go:
     channel: latest/stable
-  cuda:
+  openjdk:
     channel: latest/stable
 EOF
 $ workspace launch
