@@ -32,7 +32,7 @@ type WorkspaceStateReason int
 type WorkspaceHookType int
 
 const (
-	Inactive WorkspaceState = iota
+	Off WorkspaceState = iota
 	Ready
 	Stopped
 	Pending
@@ -42,7 +42,7 @@ const (
 var EvalSymlinks = filepath.EvalSymlinks
 
 func (s WorkspaceState) String() string {
-	return [...]string{"Inactive", "Ready", "Stopped", "Pending", "Error"}[s]
+	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
 }
 
 const (
