@@ -22,7 +22,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	st.Lock()
 	defer st.Unlock()
 
-	return m.backend.DeleteWorkspaceInstance(workspace, project.ProjectId)
+	return m.backend.DeleteWorkspace(workspace, project.ProjectId)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {

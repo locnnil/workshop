@@ -91,7 +91,7 @@ func EveryWorkspace() WorkspaceConfigFilter {
 
 type WorkspaceBackend interface {
 	LaunchWorkspace(ctx context.Context, name, base string) error
-	DeleteWorkspaceInstance(name, project_id string) error
+	DeleteWorkspace(name, project_id string) error
 	SetWorkspaceState(name, action, project_id string) error
 
 	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
@@ -425,7 +425,7 @@ func (s *LxdBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[s
 	return ws, nil
 }
 
-func (s *LxdBackend) DeleteWorkspaceInstance(name, projectId string) error {
+func (s *LxdBackend) DeleteWorkspace(name, projectId string) error {
 	conn, err := s.getLxdClient(context.Background())
 	if err != nil {
 		return err
@@ -567,7 +567,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspaceInstance(name string, project_id string) error {
+func (f *FakeWorkspaceBackend) DeleteWorkspace(name string, project_id string) error {
 	panic("not implemented") // TODO: Implement
 }
 
