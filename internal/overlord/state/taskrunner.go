@@ -367,8 +367,8 @@ ConsiderTasks:
 		}
 
 		tb := r.tombs[t.ID()]
-
 		if t.Status() == AbortStatus {
+			logger.Debugf("%v %v", t.Summary(), t.Status())
 			if tb != nil {
 				tb.Kill(nil)
 				continue

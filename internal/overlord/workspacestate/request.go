@@ -14,13 +14,30 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile) (*state.TaskS
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
 
+	prevInstall := (*state.TaskSet)(nil)
+	prevSetup := (*state.Task)(nil)
 	for _, sdk := range file.Sdks {
 		r := sdkstate.Retrieve(st, &sdk)
 		retrieve.AddTask(r)
 
-		install.AddAll(sdkstate.Install(st, &sdk, r.ID()))
+		/* install task sets must not run concurrently as exec ops are not allowed
+		by LXD to be run concurrently */
+		installTaskSet := sdkstate.Install(st, &sdk, r.ID())
+		if prevInstall != nil {
+			installTaskSet.WaitAll(prevInstall)
+		} else {
+			prevInstall = installTaskSet
+		}
+		install.AddAll(installTaskSet)
 
-		setupHook.AddTask(hookstate.SetupHook(st, &sdk, r.ID()))
+		/* Make sure that the hook tasks are not concurrent */
+		setupHookTask := hookstate.SetupHook(st, &sdk, r.ID())
+		if prevSetup != nil {
+			setupHookTask.WaitFor(prevSetup)
+		} else {
+			prevSetup = setupHookTask
+		}
+		setupHook.AddTask(setupHookTask)
 	}
 
 	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))

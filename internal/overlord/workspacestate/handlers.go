@@ -22,7 +22,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	st.Lock()
 	defer st.Unlock()
 
-	return m.backend.DeleteWorkspaceInstance(workspace, project.ProjectId)
+	return m.backend.DeleteWorkspace(workspace, project.ProjectId)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -35,6 +35,9 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	st.Lock()
 	defer st.Unlock()
 
+	ctx, cancel := BackendContext(tomb, project)
+	defer cancel()
+
 	var base string
 	err = task.Get("base", &base)
 
@@ -43,9 +46,10 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	}
 
 	fmt.Printf("Setting up workspace \"%s\"...\n", workspace)
+
 	/* Launch a workspace with the required base */
-	return m.backend.LaunchWorkspaceInstance(workspace,
-		base, project.ProjectId)
+	return m.backend.LaunchWorkspace(ctx, workspace,
+		base)
 }
 
 func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
@@ -82,10 +86,13 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 
 	st := task.State()
 	st.Lock()
-	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, project)
+	defer cancel()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
 	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
+	st.Unlock()
 	if err != nil {
 		return err
 	}
@@ -103,7 +110,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 		Stdout:  nil,
 		Stderr:  nil}
 
-	if done, err := m.backend.Exec(workspace, project.ProjectId, &args); err != nil {
+	if done, err := m.backend.Exec(ctx, workspace, &args); err != nil {
 		return err
 	} else {
 		<-done

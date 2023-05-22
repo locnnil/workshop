@@ -1,6 +1,7 @@
 package sdkstate_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,6 +28,7 @@ type H struct {
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
 	wsmgr   *sdkstate.SdkManager
+	ctx     context.Context
 }
 
 var _ = Suite(&H{})
@@ -41,6 +43,8 @@ var ErrTrigger = errors.New("error out")
 
 func (s *H) SetUpTest(c *C) {
 	s.fs = afero.NewMemMapFs()
+	s.ctx = context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
+
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
 
 	s.state = state.New(nil)
@@ -82,7 +86,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		c.Check(args.Command, DeepEquals, []string{
 			"tar",
@@ -129,7 +133,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
 		done := make(chan bool)
@@ -148,7 +152,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), Equals, true)
 }
 
-func (s *H) TestunDoInstallSdk(c *C) {
+func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -173,7 +177,7 @@ func (s *H) TestunDoInstallSdk(c *C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(name, project_id string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		s.backend.Fs.MkdirAll(filepath.Join(util.WorkspaceSdksDir, "new"), 0755)
@@ -215,7 +219,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 
 	s.state.Unlock()
 	s.se.Ensure()
@@ -229,7 +233,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 		"{\"new\":[{\"channel\":\"latest/stable\",\"revision\":2}]}")
 }
 
-func (s *H) TestunDoLinkSdkSuccess(c *C) {
+func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -254,7 +258,7 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspaceInstance("ws", "ubuntu@20.04", "projectId")
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -266,5 +270,51 @@ func (s *H) TestunDoLinkSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace("ws", "projectId")
 	_, ok := props.Config["user.workspace.sdk"]
 	c.Check(ok, Equals, false)
+	c.Check(link.Status(), Equals, state.UndoneStatus)
+}
+
+func (s *H) TestUndoLinkToPreviousSdk(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	projectKey := projectstate.ProjectKey{
+		Path:      "/project/Path",
+		ProjectId: "projectId",
+	}
+
+	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	link := s.state.NewTask("link-sdk", "test")
+	link.Set("sdk-retrieve-task", t.ID())
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(link)
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("workspace", "ws")
+	chg.Set("project-key", &projectKey)
+	chg.AddTask(link)
+	chg.AddTask(t)
+	chg.AddTask(terr)
+
+	previousSdkRev := "{\"new\":[{\"channel\":\"latest/stable\",\"revision\":277}]}"
+	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	s.backend.AddWorkspaceConfig("ws", "projectId", &workspacebackend.WorkspaceConfigValue{
+		Name:  "user.workspace.sdk",
+		Value: previousSdkRev,
+	})
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	props, _ := s.backend.GetWorkspace("ws", "projectId")
+	_, ok := props.Config["user.workspace.sdk"]
+	c.Check(ok, Equals, true)
+	c.Check(props.Config["user.workspace.sdk"], Equals, previousSdkRev)
 	c.Check(link.Status(), Equals, state.UndoneStatus)
 }
