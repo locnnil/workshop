@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ func (c *CmdTasks) Command() *cobra.Command {
 }
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	overlord, err := overlord.New(nil, os.Stdout)
+	overlord, err := overlord.New(util.StateDir, nil, os.Stdout)
 	if err != nil {
 		return err
 	}

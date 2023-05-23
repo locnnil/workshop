@@ -78,9 +78,9 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
+func New(dir string, restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
 	o := &Overlord{
-		stateDir: util.StateDir,
+		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
 		inited:   true,
 	}

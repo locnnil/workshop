@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -26,7 +27,7 @@ func (c *CmdChanges) Command() *cobra.Command {
 }
 
 func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
-	overlord, err := overlord.New(nil, os.Stdout)
+	overlord, err := overlord.New(util.StateDir, nil, os.Stdout)
 	if err != nil {
 		return err
 	}

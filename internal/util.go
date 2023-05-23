@@ -1,20 +1,16 @@
 package util
 
 import (
+	crypto_rand "crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
-
+	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"path/filepath"
-
 	"github.com/adrg/xdg"
-
-	"math/rand"
-
-	crypto_rand "crypto/rand"
 )
 
 var (

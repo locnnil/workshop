@@ -42,6 +42,21 @@ func (m *ProjectManager) LoadOrCreateProject(projectDir string) (*ProjectKey, er
 	return &projectKey, nil
 }
 
+func (m *ProjectManager) LoadProject(projectDir string) (*ProjectKey, error) {
+	project, err := LoadProject(m.backend, m.fs, projectDir)
+
+	if err != nil {
+		return nil, err
+	}
+
+	projectKey := ProjectKey{
+		Path:      project.ProjectDirectory(),
+		ProjectId: project.ProjectId(),
+	}
+
+	return &projectKey, nil
+}
+
 func (w *ProjectManager) Ensure() error {
 	return nil
 }
