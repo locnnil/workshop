@@ -88,15 +88,15 @@ func New(dir string, restartHandler restart.Handler, serviceOutput io.Writer) (*
 	var err error
 
 	if !filepath.IsAbs(util.StateDir) {
-		return nil, fmt.Errorf("directory %q must be absolute", util.StateDir)
+		return nil, fmt.Errorf("directory %q must be absolute", dir)
 	}
 	if !osutil.IsDir(util.StateDir) {
-		return nil, fmt.Errorf("directory %q does not exist", util.StateDir)
+		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
 
 	/* We use file locking here as multiple clients can try access the state file now,
 	this will be removed once moved to a client-server arch */
-	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(util.StateDir, ".lock"))
+	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(dir, ".lock"))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func New(dir string, restartHandler restart.Handler, serviceOutput io.Writer) (*
 		}
 	}
 
-	statePath := filepath.Join(util.StateDir, "state.json")
+	statePath := filepath.Join(dir, "state.json")
 
 	backend := &overlordStateBackend{
 		path:         statePath,

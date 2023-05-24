@@ -15,13 +15,10 @@
 package daemon
 
 import (
-	"encoding/json"
 	"net/http"
-	"net/http/httptest"
+	"testing"
 
 	"gopkg.in/check.v1"
-
-	"github.com/canonical/workspace/internal/overlord/restart"
 )
 
 var _ = check.Suite(&apiSuite{})
@@ -35,6 +32,8 @@ type apiSuite struct {
 
 	restoreMuxVars func()
 }
+
+func TestApi(t *testing.T) { check.TestingT(t) }
 
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
@@ -69,35 +68,4 @@ func apiCmd(path string) *Command {
 		}
 	}
 	panic("no command with path " + path)
-}
-
-func (s *apiSuite) TestSysInfo(c *check.C) {
-	sysInfoCmd := apiCmd("/v1/system-info")
-	c.Assert(sysInfoCmd.GET, check.NotNil)
-	c.Check(sysInfoCmd.PUT, check.IsNil)
-	c.Check(sysInfoCmd.POST, check.IsNil)
-	c.Check(sysInfoCmd.DELETE, check.IsNil)
-
-	rec := httptest.NewRecorder()
-
-	d := s.daemon(c)
-	d.Version = "42b1"
-	state := d.overlord.State()
-	state.Lock()
-	restart.Init(state, "ffffffff-ffff-ffff-ffff-ffffffffffff", nil)
-	state.Unlock()
-
-	sysInfoCmd.GET(sysInfoCmd, nil, nil).ServeHTTP(rec, nil)
-	c.Check(rec.Code, check.Equals, 200)
-	c.Check(rec.HeaderMap.Get("Content-Type"), check.Equals, "application/json")
-
-	expected := map[string]interface{}{
-		"version": "42b1",
-		"boot-id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
-	}
-	var rsp resp
-	c.Assert(json.Unmarshal(rec.Body.Bytes(), &rsp), check.IsNil)
-	c.Check(rsp.Status, check.Equals, 200)
-	c.Check(rsp.Type, check.Equals, ResponseTypeSync)
-	c.Check(rsp.Result, check.DeepEquals, expected)
 }

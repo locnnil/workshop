@@ -17,10 +17,12 @@ package daemon
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"golang.org/x/exp/slices"
 )
 
 type changeInfo struct {
@@ -117,9 +119,14 @@ func change2changeInfo(chg *state.Change) *changeInfo {
 
 func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 	query := r.URL.Query()
+
+	if query.Has("workspaces") && !query.Has("project-id") {
+		return statusBadRequest("project-id must be provided if workspaces are specified")
+	}
+
 	qselect := query.Get("select")
 	if qselect == "" {
-		qselect = "in-progress"
+		qselect = "all"
 	}
 	var filter func(*state.Change) bool
 	switch qselect {
@@ -133,26 +140,33 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("select should be one of: all,in-progress,ready")
 	}
 
-	if wantedName := query.Get("for"); wantedName != "" {
+	projectId := query.Get("project-id")
+	if projectId != "" {
 		outerFilter := filter
 		filter = func(chg *state.Change) bool {
 			if !outerFilter(chg) {
 				return false
 			}
 
-			var serviceNames []string
-			if err := chg.Get("service-names", &serviceNames); err != nil {
-				logger.Noticef("Cannot get service-name for change %v", chg.ID())
+			var projectKey projectstate.ProjectKey
+			if err := chg.Get("project-key", &projectKey); err != nil {
+				return false
+			}
+			if projectKey.ProjectId != projectId {
 				return false
 			}
 
-			for _, serviceName := range serviceNames {
-				if serviceName == wantedName {
-					return true
+			if query.Has("workspaces") {
+				var workspaces []string = strings.Split(query.Get("workspaces"), ",")
+				var workspace string
+				if err := chg.Get("workspace", &workspace); err != nil {
+					return false
+				}
+				if !slices.Contains(workspaces, workspace) {
+					return false
 				}
 			}
-
-			return false
+			return true
 		}
 	}
 

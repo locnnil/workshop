@@ -26,7 +26,9 @@ func (c *CmdTasks) Command() *cobra.Command {
 }
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	overlord, err := overlord.New(util.StateDir, nil, os.Stdout)
+	workspaceDir, _ := util.GetEnvPaths()
+
+	overlord, err := overlord.New(workspaceDir, nil, os.Stdout)
 	if err != nil {
 		return err
 	}

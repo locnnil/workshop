@@ -23,6 +23,11 @@ var (
 	DataDir, SdksDir, StateDir, WorkspaceSdksDir string
 )
 
+// defaultWorkspaceDir is the Workspace directory used if $PEBBLE is not set. It is
+// created by the daemon ("workspaced run") if it doesn't exist, and also used by
+// the workspace client.
+const defaultWorkspaceDir = "/var/lib/workspace/default"
+
 type WorkspaceState int
 type WorkspaceStateReason int
 type WorkspaceHookType int
@@ -101,6 +106,18 @@ func CleanProjectPath(path string) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+func GetEnvPaths() (workspaceDir string, socketPath string) {
+	workspaceDir = os.Getenv("WORKSPACE")
+	if workspaceDir == "" {
+		workspaceDir = defaultWorkspaceDir
+	}
+	socketPath = os.Getenv("WORKSPACE_SOCKET")
+	if socketPath == "" {
+		socketPath = filepath.Join(workspaceDir, ".workspace.socket")
+	}
+	return workspaceDir, socketPath
 }
 
 func init() {

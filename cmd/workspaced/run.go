@@ -18,22 +18,18 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/canonical/workspace/client"
+	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/daemon"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/systemd"
+
 	"github.com/spf13/cobra"
 )
-
-// defaultWorkspaceDir is the Workspace directory used if $PEBBLE is not set. It is
-// created by the daemon ("workspaced run") if it doesn't exist, and also used by
-// the workspace client.
-const defaultWorkspaceDir = "/var/lib/workspace/default"
 
 var shortRunHelp = "Run the workspace daemon"
 var longRunHelp = `
@@ -42,14 +38,12 @@ The run command workspace and starts accepting clients requests
 
 type sharedRunEnterOpts struct {
 	CreateDirs bool   `long:"create-dirs"`
-	Hold       bool   `long:"hold"`
 	HTTP       string `long:"http"`
 	Verbose    bool   `short:"v" long:"verbose"`
 }
 
 var sharedRunEnterOptsHelp = map[string]string{
 	"create-dirs": "Create workspace directory on startup if it doesn't exist",
-	"hold":        "Do not start default services automatically",
 	"http":        `Start HTTP API listening on this address (e.g., ":4000")`,
 	"verbose":     "Log all output from services to stdout",
 }
@@ -69,7 +63,6 @@ func (c *cmdRun) Command() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&c.sharedRunEnterOpts.CreateDirs, "create-dirs", false, sharedRunEnterOptsHelp["create-dirs"])
-	cmd.Flags().BoolVar(&c.sharedRunEnterOpts.Hold, "hold", false, sharedRunEnterOptsHelp["hold"])
 	cmd.Flags().String(c.sharedRunEnterOpts.HTTP, "http", sharedRunEnterOptsHelp["http"])
 	cmd.Flags().BoolVar(&c.sharedRunEnterOpts.Verbose, "verbose", false, sharedRunEnterOptsHelp["verbose"])
 
@@ -77,6 +70,15 @@ func (c *cmdRun) Command() *cobra.Command {
 }
 
 func (c *cmdRun) Run(cmd *cobra.Command, av []string) error {
+	var clientConfig client.Config
+	var err error
+	_, clientConfig.Socket = util.GetEnvPaths()
+
+	c.client, err = client.New(&clientConfig)
+	if err != nil {
+		return fmt.Errorf("cannot create client: %v", err)
+	}
+
 	c.run(nil)
 	return nil
 }
@@ -136,7 +138,7 @@ func sanityCheck() error {
 func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	t0 := time.Now().Truncate(time.Millisecond)
 
-	workspaceDir, socketPath := getEnvPaths()
+	workspaceDir, socketPath := util.GetEnvPaths()
 	if rcmd.CreateDirs {
 		err := os.MkdirAll(workspaceDir, 0755)
 		if err != nil {
@@ -186,16 +188,6 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 
 	logger.Debugf("activation done in %v", time.Now().Truncate(time.Millisecond).Sub(t0))
 
-	if !rcmd.Hold {
-		servopts := client.ServiceOptions{}
-		changeID, err := rcmd.client.AutoStart(&servopts)
-		if err != nil {
-			logger.Noticef("Cannot start default services: %v", err)
-		} else {
-			logger.Noticef("Started default services with change %s.", changeID)
-		}
-	}
-
 	var stop chan struct{}
 	if ready != nil {
 		stop = make(chan struct{}, 1)
@@ -227,16 +219,4 @@ out:
 	rcmd.client.CloseIdleConnections()
 
 	return d.Stop(ch)
-}
-
-func getEnvPaths() (workspaceDir string, socketPath string) {
-	workspaceDir = os.Getenv("WORKSPACE")
-	if workspaceDir == "" {
-		workspaceDir = defaultWorkspaceDir
-	}
-	socketPath = os.Getenv("WORKSPACE_SOCKET")
-	if socketPath == "" {
-		socketPath = filepath.Join(workspaceDir, ".workspace.socket")
-	}
-	return workspaceDir, socketPath
 }

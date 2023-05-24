@@ -22,7 +22,7 @@ type P struct {
 
 var _ = Suite(&P{})
 
-func Test(t *testing.T) { TestingT(t) }
+func TestProject(t *testing.T) { TestingT(t) }
 
 func (p *P) SetUpTest(c *C) {
 	p.Fs = afero.NewMemMapFs()

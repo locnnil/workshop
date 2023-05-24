@@ -22,12 +22,6 @@ var (
 	Jctl = jctl
 )
 
-// Error is returned if the systemd action failed
-type Error struct {
-	msg      []byte
-	exitCode int
-}
-
 func FakeServicesDir(dir string) (restore func()) {
 	old := ServicesDir
 	ServicesDir = dir

@@ -20,12 +20,15 @@
 package timeutil_test
 
 import (
+	"testing"
 	"time"
 
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workspace/internal/timeutil"
 )
+
+func TestTimeUtil(t *testing.T) { check.TestingT(t) }
 
 type humanSuite struct {
 	beforeDSTbegins, afterDSTbegins, beforeDSTends, afterDSTends time.Time

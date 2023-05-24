@@ -28,7 +28,7 @@ type Opinionator interface {
 	CanStandby() bool
 }
 
-// StandbyOpinions tracks if pebble can go into socket activation mode
+// StandbyOpinions tracks if workspace can go into socket activation mode
 type StandbyOpinions struct {
 	state     *state.State
 	startTime time.Time
