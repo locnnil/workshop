@@ -37,6 +37,8 @@ type changeInfo struct {
 	SpawnTime time.Time  `json:"spawn-time,omitempty"`
 	ReadyTime *time.Time `json:"ready-time,omitempty"`
 
+	Project string `json:"path,omitempty"`
+
 	Data map[string]*json.RawMessage `json:"data,omitempty"`
 }
 
@@ -108,6 +110,11 @@ func change2changeInfo(chg *state.Change) *changeInfo {
 		taskInfos[j] = taskInfo
 	}
 	chgInfo.Tasks = taskInfos
+
+	var prj project.Project
+	if chg.Get("project-key", &prj) == nil {
+		chgInfo.Project = prj.Path
+	}
 
 	var data map[string]*json.RawMessage
 	if chg.Get("api-data", &data) == nil {

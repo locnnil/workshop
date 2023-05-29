@@ -5,7 +5,6 @@ import (
 
 	"github.com/canonical/workspace/client"
 	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 )
@@ -53,9 +52,6 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tProject\tSummary\n")
 
 		for _, chg := range chngs {
-			var prj = project.Project{Path: "-", ProjectId: "-"}
-			chg.Get("project-key", &prj)
-
 			spawnTime := timeutil.Human(chg.SpawnTime)
 			readyTime := timeutil.Human(chg.ReadyTime)
 			if chg.ReadyTime.IsZero() {
@@ -67,7 +63,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 				chg.Status,
 				spawnTime,
 				readyTime,
-				contractHomeDirectory(prj.Path),
+				contractHomeDirectory(chg.Project),
 				chg.Summary)
 		}
 		w.Flush()
