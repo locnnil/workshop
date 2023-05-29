@@ -7,7 +7,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
 
@@ -18,9 +17,7 @@ func (s *apiSuite) TestProjectsWithPathProvided(c *check.C) {
 	// Setup
 	s.daemon(c)
 	id, pth := "2345gtfs", "/home/user/project"
-	project.LoadProject = func(backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*project.Project, error) {
-		return &project.Project{ProjectId: id, Path: pth}, nil
-	}
+	defer project.FakeLoadProject(id, pth)()
 	projectsCmd := apiCmd("/v1/projects")
 
 	// Execute
@@ -43,6 +40,10 @@ func (s *apiSuite) TestProjectsNoPathProvided(c *check.C) {
 
 	// Setup
 	s.daemon(c)
+	defer project.FakeRetrieveWorkspacesGlobal(map[*project.Project][]*workspacebackend.WorkspaceProps{
+		{ProjectId: "2345gtfs", Path: "/home/user/project"}:  nil,
+		{ProjectId: "6789gtfs", Path: "/home/user/project2"}: nil,
+	}, nil)()
 	projectsCmd := apiCmd("/v1/projects")
 
 	// Execute
@@ -56,5 +57,5 @@ func (s *apiSuite) TestProjectsNoPathProvided(c *check.C) {
 
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(string(res), check.Matches, `.*\[\].*`)
+	c.Check(string(res), check.Matches, `.*\[{"path":"/home/user/project","project-id":"2345gtfs"},{"path":"/home/user/project2","project-id":"6789gtfs"}\].*`)
 }

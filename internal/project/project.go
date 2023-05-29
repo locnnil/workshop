@@ -11,6 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -32,7 +33,8 @@ const (
 
 // for testing purposes
 var (
-	LoadProject = loadProject
+	LoadProject              = loadProject
+	RetrieveWorkspacesGlobal = retrieveWorkspacesGlobal
 )
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
@@ -284,7 +286,7 @@ func (w *Project) retrieveWorkspaceInstances() ([]*backend.WorkspaceProps, error
 	return instances, nil
 }
 
-func RetrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
+func retrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
 	updateConfigFromBindMounts(be, fs)
 
 	all, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
@@ -418,4 +420,24 @@ func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updat
 		}
 	}
 	return updated, err
+}
+
+func FakeLoadProject(id, pth string) (restore func()) {
+	oldLoad := LoadProject
+	LoadProject = func(backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
+		return &Project{ProjectId: id, Path: pth}, nil
+	}
+	return func() {
+		LoadProject = oldLoad
+	}
+}
+
+func FakeRetrieveWorkspacesGlobal(projects map[*Project][]*workspacebackend.WorkspaceProps, err error) (restore func()) {
+	oldRetrieve := RetrieveWorkspacesGlobal
+	RetrieveWorkspacesGlobal = func(be workspacebackend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*workspacebackend.WorkspaceProps, error) {
+		return projects, err
+	}
+	return func() {
+		RetrieveWorkspacesGlobal = oldRetrieve
+	}
 }
