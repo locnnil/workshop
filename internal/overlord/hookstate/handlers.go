@@ -14,7 +14,7 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	prj, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, project)
+	ctx, cancel := BackendContext(tomb, prj)
 	defer cancel()
 
 	st := task.State()
@@ -38,7 +38,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(util.ToInstanceName(workspace, project.ProjectId))
+	outerr, err := memFs.Create(util.ToInstanceName(workspace, prj.ProjectId))
 	if err != nil {
 		return err
 	}

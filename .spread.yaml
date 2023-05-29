@@ -61,7 +61,9 @@ suites:
     summary: Core workspace scenarios
     environment: 
       PATH: $PATH:~/go/bin
+      # a list of empty workspaces with all the supported bases
       WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+      # a list of workspaces with SDKs
       WORKSPACES_SDK: $SPREAD_PATH/tests/lib/workspaces-sdk
       TESTSLIB: $SPREAD_PATH/tests/lib
     prepare: |

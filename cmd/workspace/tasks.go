@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	util "github.com/canonical/workspace/internal"
@@ -28,7 +27,7 @@ func (c *CmdTasks) Command() *cobra.Command {
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	workspaceDir, _ := util.GetEnvPaths()
 
-	overlord, err := overlord.New(workspaceDir, nil, os.Stdout)
+	overlord, err := overlord.New(workspaceDir, nil)
 	if err != nil {
 		return err
 	}

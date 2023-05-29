@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	workspaceDir, _ := util.GetEnvPaths()
 
-	overlord, err := overlord.New(workspaceDir, nil, os.Stdout)
+	overlord, err := overlord.New(workspaceDir, nil)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	st := overlord.State()
 	st.Lock()
 
-	projectKey, err := overlord.ProjectManager().LoadOrCreateProject(Project)
+	projectKey, err := project.LoadProject(overlord.WorkspaceBackend(), fs, Project)
 	if err != nil {
 		return err
 	}

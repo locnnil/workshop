@@ -1,4 +1,4 @@
-package projectstate
+package project
 
 import (
 	"context"
@@ -52,11 +52,11 @@ func (p *P) TestEnumWorkspacesInACWD(c *C) {
 }
 
 func (s *P) TestNewProject(c *C) {
-	project, err := NewProject(s.Backend, s.Fs, "/")
-	c.Check(project.ProjectId(), Equals, "52fdfc07")
+	prj, err := NewProject(s.Backend, s.Fs, "/")
+	c.Check(prj.ProjectId, Equals, "52fdfc07")
 	c.Check(err, Equals, nil)
 
-	c.Check(project.ProjectDirectory(), Equals, "/")
+	c.Check(prj.Path, Equals, "/")
 
 	_, err = NewProject(s.Backend, s.Fs, "/doesnotexist")
 	c.Check(errors.Is(err, afero.ErrFileNotFound), Equals, true)
@@ -77,20 +77,20 @@ func (s *P) TestLoadProject(c *C) {
 
 	/* Project exists, no workspace instances */
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("projectId"), 0644)
-	project, err := LoadProject(s.Backend, s.Fs, "/")
-	c.Check(project.ProjectDirectory(), Equals, "/")
-	c.Check(project.ProjectId(), Equals, "projectId")
+	prj, err := LoadProject(s.Backend, s.Fs, "/")
+	c.Check(prj.Path, Equals, "/")
+	c.Check(prj.ProjectId, Equals, "projectId")
 	c.Check(err, IsNil)
 
 	/* Project exists, some workspace instances running */
 	s.Backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	project, err = LoadProject(s.Backend, s.Fs, "/")
-	c.Check(project.ProjectDirectory(), Equals, "/")
+	prj, err = LoadProject(s.Backend, s.Fs, "/")
+	c.Check(prj.Path, Equals, "/")
 	c.Check(err, IsNil)
 }
 
 func (s *P) TestEnumWorkspacesNoFilesNoInstances(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
+	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
 
 	result, err := project.RetrieveWorkspaces()
 
@@ -99,7 +99,7 @@ func (s *P) TestEnumWorkspacesNoFilesNoInstances(c *C) {
 }
 
 func (s *P) TestEnumFilesErrorReadingProjectDirectory(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
+	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
 	s.Fs.RemoveAll("/")
 
 	_, err := project.EnumWorkspaceFiles()
@@ -108,7 +108,7 @@ func (s *P) TestEnumFilesErrorReadingProjectDirectory(c *C) {
 }
 
 func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/"}
+	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
@@ -121,7 +121,7 @@ func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 
 func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
 	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
+	project := Project{fs: s.Fs, backend: s.Backend, Path: "/", ProjectId: "projectId"}
 
 	result, err := project.RetrieveWorkspaces()
 	c.Check(err, IsNil)
@@ -136,7 +136,7 @@ func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
 	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
 	s.Backend.LaunchWorkspace(s.ctx, "project1", "ubuntu@20.04")
 
-	project := Project{fs: s.Fs, backend: s.Backend, path: "/", projectId: "projectId"}
+	project := Project{fs: s.Fs, backend: s.Backend, Path: "/", ProjectId: "projectId"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
 	result, err := project.RetrieveWorkspaces()
@@ -155,15 +155,15 @@ func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
 }
 
 func (s *P) TestReadProject(c *C) {
-	project := Project{fs: s.Fs, path: "/project"}
+	prj := Project{fs: s.Fs, Path: "/project"}
 
-	err := project.ReadProject()
+	err := prj.ReadProject()
 	c.Check(err, NotNil)
 
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("23451S"), 0644)
 
-	project = Project{fs: s.Fs, path: "/"}
-	err = project.ReadProject()
+	prj = Project{fs: s.Fs, Path: "/"}
+	err = prj.ReadProject()
 	c.Check(err, IsNil)
-	c.Check(project.ProjectId(), Equals, "23451S")
+	c.Check(prj.ProjectId, Equals, "23451S")
 }

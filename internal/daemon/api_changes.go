@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/project"
 	"golang.org/x/exp/slices"
 )
 
@@ -148,7 +148,7 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 				return false
 			}
 
-			var projectKey projectstate.ProjectKey
+			var projectKey project.Project
 			if err := chg.Get("project-key", &projectKey); err != nil {
 				return false
 			}

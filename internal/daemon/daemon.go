@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -66,10 +65,6 @@ type Options struct {
 	// ":4000" to listen on any address, port 4000. If not set, the HTTP API
 	// server is not started.
 	HTTPAddress string
-
-	// ServiceOuput is an optional io.Writer for the service log output, if set, all services
-	// log output will be written to the writer.
-	ServiceOutput io.Writer
 }
 
 // A Daemon listens for requests and routes them to the right command
@@ -742,7 +737,7 @@ func New(opts *Options) (*Daemon, error) {
 		httpAddress:         opts.HTTPAddress,
 	}
 
-	ovld, err := overlord.New(opts.Dir, d, opts.ServiceOutput)
+	ovld, err := overlord.New(opts.Dir, d)
 	if err == errExpectedReboot {
 		// we proceed without overlord until we reach Stop
 		// where we will schedule and wait again for a system restart.

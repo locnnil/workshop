@@ -22,8 +22,8 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/project"
 
 	"gopkg.in/check.v1"
 )
@@ -31,7 +31,7 @@ import (
 func setupChanges(st *state.State) []string {
 	chg1 := st.NewChange("launch", "launch...")
 	chg1.Set("workspace", "one")
-	chg1.Set("project-key", &projectstate.ProjectKey{ProjectId: "123"})
+	chg1.Set("project-key", &project.Project{ProjectId: "123"})
 	t1 := st.NewTask("create-workspace", "1...")
 	t2 := st.NewTask("start-workspace", "2...")
 	chg1.AddAll(state.NewTaskSet(t1, t2))
@@ -39,7 +39,7 @@ func setupChanges(st *state.State) []string {
 	t1.Logf("l12")
 	chg2 := st.NewChange("remove", "remove...")
 	chg2.Set("workspace", "two")
-	chg2.Set("project-key", &projectstate.ProjectKey{ProjectId: "123"})
+	chg2.Set("project-key", &project.Project{ProjectId: "123"})
 	t3 := st.NewTask("unlink-sdk", "1...")
 	chg2.AddTask(t3)
 	t3.SetStatus(state.ErrorStatus)

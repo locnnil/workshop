@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -141,7 +142,8 @@ const (
 )
 
 type ChangesOptions struct {
-	ServiceName string // if empty, no filtering by service is done
+	Workspaces  []string // if empty, no filtering by service is done
+	ProjectPath string
 	Selector    ChangeSelector
 }
 
@@ -152,8 +154,14 @@ func (client *Client) Changes(opts *ChangesOptions) ([]*Change, error) {
 		if opts.Selector != 0 {
 			query.Set("select", opts.Selector.String())
 		}
-		if opts.ServiceName != "" {
-			query.Set("for", opts.ServiceName)
+		if len(opts.Workspaces) > 0 {
+			query.Set("workspaces", strings.Join(opts.Workspaces, ","))
+		}
+		if opts.ProjectPath != "" {
+			projectId, err := client.ProjectId(opts.ProjectPath)
+			if err == nil {
+				query.Set("project-id", projectId)
+			}
 		}
 	}
 

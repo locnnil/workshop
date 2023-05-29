@@ -11,9 +11,9 @@ import (
 	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -69,7 +69,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -116,7 +116,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -156,7 +156,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -202,7 +202,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -237,7 +237,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -277,7 +277,7 @@ func (s *H) TestUndoLinkToPreviousSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := projectstate.ProjectKey{
+	projectKey := project.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}

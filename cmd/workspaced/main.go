@@ -4,22 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/canonical/workspace/client"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/spf13/cobra"
 )
-
-type clientSetter interface {
-	setClient(*client.Client)
-}
-
-type clientMixin struct {
-	client *client.Client
-}
-
-func (ch *clientMixin) setClient(cli *client.Client) {
-	ch.client = cli
-}
 
 // exitStatus can be used in panic(&exitStatus{code}) to cause Workspaces's main
 // function to exit with a given exit code, for the rare cases when you want

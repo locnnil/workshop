@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	store "github.com/canonical/workspace/internal/fakestore"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
@@ -36,13 +36,13 @@ func SdkSetup(task *state.Task) (*store.SdkBlob, error) {
 	return &blob, nil
 }
 
-func ProjectAndWorkspace(task *state.Task) (*projectstate.ProjectKey, string, error) {
+func ProjectAndWorkspace(task *state.Task) (*project.Project, string, error) {
 	st := task.State()
-	var project projectstate.ProjectKey
+	var prj project.Project
 	var name string
 
 	st.Lock()
-	err := task.Change().Get("project-key", &project)
+	err := task.Change().Get("project-key", &prj)
 	st.Unlock()
 
 	if err != nil {
@@ -57,12 +57,12 @@ func ProjectAndWorkspace(task *state.Task) (*projectstate.ProjectKey, string, er
 		return nil, "", fmt.Errorf("cannot get workspace for task %q: %v", task.ID(), err)
 	}
 
-	return &project, name, nil
+	return &prj, name, nil
 }
 
-func BackendContext(tomb *tomb.Tomb, project *projectstate.ProjectKey) (context.Context, context.CancelFunc) {
+func BackendContext(tomb *tomb.Tomb, prj *project.Project) (context.Context, context.CancelFunc) {
 	ctx := tomb.Context(context.Background())
-	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
+	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, prj.ProjectId)
 	ctxCancel, cancel := context.WithCancel(ctxProject)
 	return ctxCancel, cancel
 }

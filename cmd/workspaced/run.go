@@ -22,7 +22,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/canonical/workspace/client"
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/daemon"
 	"github.com/canonical/workspace/internal/logger"
@@ -49,7 +48,6 @@ var sharedRunEnterOptsHelp = map[string]string{
 }
 
 type cmdRun struct {
-	clientMixin
 	sharedRunEnterOpts
 }
 
@@ -70,15 +68,6 @@ func (c *cmdRun) Command() *cobra.Command {
 }
 
 func (c *cmdRun) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
-	var err error
-	_, clientConfig.Socket = util.GetEnvPaths()
-
-	c.client, err = client.New(&clientConfig)
-	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
-	}
-
 	c.run(nil)
 	return nil
 }
@@ -149,9 +138,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 		Dir:        workspaceDir,
 		SocketPath: socketPath,
 	}
-	if rcmd.Verbose {
-		dopts.ServiceOutput = os.Stdout
-	}
+
 	dopts.HTTPAddress = rcmd.HTTP
 
 	d, err := daemon.New(&dopts)
@@ -214,9 +201,6 @@ out:
 			break out
 		}
 	}
-
-	// Close our own self-connection, otherwise it prevents fast and clean termination.
-	rcmd.client.CloseIdleConnections()
 
 	return d.Stop(ch)
 }

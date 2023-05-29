@@ -3,17 +3,18 @@ package workspacestate
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	. "github.com/canonical/workspace/internal/overlord/sharedstate"
+	"github.com/canonical/workspace/internal/project"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 
 	"gopkg.in/tomb.v2"
 )
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	prj, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -22,7 +23,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	st.Lock()
 	defer st.Unlock()
 
-	return m.backend.DeleteWorkspace(workspace, project.ProjectId)
+	return m.backend.DeleteWorkspace(workspace, prj.ProjectId)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -53,22 +54,22 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 }
 
 func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	prj, workspace, err := ProjectAndWorkspace(task)
 	if err != nil {
 		return err
 	}
 
 	/* Configure workspace core properties: project directory */
 	var prjMount = backend.WorkspaceDevice{
-		Name:       projectstate.ProjectDevice,
-		Properties: map[string]string{"type": "disk", "source": project.Path, "path": "/project"},
+		Name:       project.ProjectDeviceField,
+		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
 	}
 
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
-	if err = m.backend.AddWorkspaceDevice(workspace, project.ProjectId, prjMount); err != nil {
+	if err = m.backend.AddWorkspaceDevice(workspace, prj.ProjectId, prjMount); err != nil {
 		return err
 	}
 	return nil

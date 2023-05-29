@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 
 	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
+	"github.com/canonical/workspace/internal/project"
 	srv "github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -39,7 +39,7 @@ func (c *CmdList) Command() *cobra.Command {
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	var err error
 	var server srv.WorkspaceBackend
-	var project *projectstate.Project
+	var prj *project.Project
 	var fs = afero.NewOsFs()
 
 	/* check if both --project and --global were provided */
@@ -53,12 +53,12 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if !c.global {
-		project, err = projectstate.LoadProject(server, fs, Project)
+		prj, err = project.LoadProject(server, fs, Project)
 		if err == nil {
 			/* List all workspaces for the current project */
-			wsList, err := project.RetrieveWorkspaces()
+			wsList, err := prj.RetrieveWorkspaces()
 			if len(wsList) != 0 && err == nil {
-				listWorkspaces(wsList, project)
+				listWorkspaces(wsList, prj)
 			} else {
 				return err
 			}
@@ -80,7 +80,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 }
 
 func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
-	list, err := projectstate.RetrieveWorkspacesGlobal(server, fs)
+	list, err := project.RetrieveWorkspacesGlobal(server, fs)
 	if err != nil || len(list) == 0 {
 		return err
 	}
@@ -90,7 +90,7 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 
 	keys := maps.Keys(list)
 	slices.SortFunc(keys,
-		func(i, j *projectstate.Project) bool { return i.ProjectDirectory() > j.ProjectDirectory() })
+		func(i, j *project.Project) bool { return i.Path > j.Path })
 
 	for _, project := range keys {
 		for _, j := range list[project] {
@@ -105,7 +105,7 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 	return nil
 }
 
-func listWorkspaces(wsList []*srv.WorkspaceProps, project *projectstate.Project) {
+func listWorkspaces(wsList []*srv.WorkspaceProps, prj *project.Project) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
@@ -113,19 +113,19 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, project *projectstate.Project)
 		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
-		line := listWorkspace(val, project)
+		line := listWorkspace(val, prj)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
 }
 
-func listWorkspace(j *srv.WorkspaceProps, project *projectstate.Project) []string {
+func listWorkspace(j *srv.WorkspaceProps, prj *project.Project) []string {
 	comment := "-"
 	if j.State() == util.Error {
 		comment = j.Reason().String()
 	}
 	line := []string{
-		contractHomeDirectory(project.ProjectDirectory()),
+		contractHomeDirectory(prj.Path),
 		j.Name,
 		j.State().String(),
 		comment,

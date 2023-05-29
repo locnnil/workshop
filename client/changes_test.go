@@ -17,6 +17,7 @@ package client_test
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -193,7 +194,7 @@ func (cs *clientSuite) TestClientChanges(c *check.C) {
 		{Selector: client.ChangesAll},
 		{Selector: client.ChangesReady},
 		{Selector: client.ChangesInProgress},
-		{ServiceName: "foo"},
+		{Workspaces: []string{"foo"}},
 		nil,
 	} {
 		chg, err := cs.cli.Changes(i)
@@ -211,7 +212,7 @@ func (cs *clientSuite) TestClientChanges(c *check.C) {
 			if i.Selector != 0 {
 				c.Check(cs.req.URL.RawQuery, check.Equals, "select="+i.Selector.String())
 			} else {
-				c.Check(cs.req.URL.RawQuery, check.Equals, "for="+i.ServiceName)
+				c.Check(cs.req.URL.RawQuery, check.Equals, "workspaces="+strings.Join(i.Workspaces, ","))
 			}
 		}
 	}

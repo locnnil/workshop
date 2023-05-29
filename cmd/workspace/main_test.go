@@ -5,7 +5,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/projectstate"
+	"github.com/canonical/workspace/internal/project"
 	"github.com/spf13/afero"
 )
 
@@ -48,7 +48,7 @@ func (m *Main) TestGetProjectDirectory(c *C) {
 		fs.MkdirAll(i.project, 0755)
 		fs.MkdirAll(i.cwd, 0755)
 		if i.lockFile == true {
-			fs.Create(projectstate.LockPath(i.project))
+			fs.Create(project.LockPath(i.project))
 		}
 
 		path, err := getProjectDirectory(fs, i.cwd)
