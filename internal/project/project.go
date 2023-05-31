@@ -193,7 +193,9 @@ func (w *Project) EnumWorkspaceFiles() ([]*backend.WorkspaceProps, error) {
 func (w *Project) RetrieveWorkspaces(ctx context.Context, be backend.WorkspaceBackend) ([]*backend.WorkspaceProps, error) {
 	/* (1) Find all the project's workspace files */
 	files, err := w.EnumWorkspaceFiles()
-	if err != nil {
+	// we handle the case when a project directory was removed, but there still could be
+	// workspaces referring to it
+	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return nil, err
 	}
 
@@ -203,7 +205,7 @@ func (w *Project) RetrieveWorkspaces(ctx context.Context, be backend.WorkspaceBa
 		return nil, err
 	}
 
-	result := mergeInstancesAndFiles(files, instances)
+	result := mergeInstancesAndFiles(w.fs, files, instances)
 
 	return result, nil
 }
@@ -243,16 +245,21 @@ func recorverProjectId(ctx context.Context, be backend.WorkspaceBackend, fs afer
 	return ""
 }
 
-func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backend.WorkspaceProps) []*backend.WorkspaceProps {
+func mergeInstancesAndFiles(fs afero.Fs, files []*backend.WorkspaceProps, instances []*backend.WorkspaceProps) []*backend.WorkspaceProps {
 	/* Merge both lists from to build a list of workspaces with their states */
 	result := make([]*backend.WorkspaceProps, 0, len(files)+len(instances))
 	for _, ws := range instances {
 		finder := func(p *backend.WorkspaceProps) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
 		if idx == -1 {
-			/* We only have an instance, no file
+			/* We only have an instance, no file (perhaps, there is no project directory)
 			 */
-			ws.SetState(util.Error, util.MissingFile)
+			projectPath := ws.Devices[ProjectDeviceField]["source"]
+			if exists, _ := afero.DirExists(fs, projectPath); exists {
+				ws.SetState(util.Error, util.MissingFile)
+			} else {
+				ws.SetState(util.Error, util.MissingProject)
+			}
 		} else {
 			/* Both a file and instance exist */
 			files = slices.Delete(files, idx, idx+1)
@@ -269,6 +276,7 @@ func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backen
 }
 
 func retrieveAllProjects(ctx context.Context, be backend.WorkspaceBackend, fs afero.Fs) ([]*Project, error) {
+	updateConfigFromBindMounts(ctx, be, fs)
 	all, err := be.GetWorkspacesByConfig(ctx, backend.EveryWorkspace())
 	if err != nil {
 		return nil, err
@@ -278,8 +286,12 @@ func retrieveAllProjects(ctx context.Context, be backend.WorkspaceBackend, fs af
 	for _, i := range all {
 		id := i.Config[ProjectIdField]
 		if _, ok := projects[id]; !ok {
-			prj, err := retrieveProject(ctx, be, fs, i.Devices[ProjectDeviceField]["source"])
-			if err != nil {
+			path := i.Devices[ProjectDeviceField]["source"]
+			prj, err := retrieveProject(ctx, be, fs, path)
+			if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+				continue
+			} else if errors.Is(err, afero.ErrFileNotFound) {
+				projects[id] = &Project{ProjectId: id, Path: path, fs: fs}
 				continue
 			}
 			projects[id] = prj
