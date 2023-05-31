@@ -71,8 +71,12 @@ const LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 var ConnectSimpleStreams = lxd.ConnectSimpleStreams
 
 type ContextKeyProjectId string
+type ContextKeyUser string
 
-const ContextProjectId = ContextKeyProjectId("project-id")
+const (
+	ContextProjectId = ContextKeyProjectId("project-id")
+	ContextUser      = ContextKeyUser("user")
+)
 
 type WorkspaceConfigFilter func(config map[string]string) bool
 type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
@@ -91,36 +95,30 @@ func EveryWorkspace() WorkspaceConfigFilter {
 
 type WorkspaceBackend interface {
 	LaunchWorkspace(ctx context.Context, name, base string) error
-	DeleteWorkspace(name, project_id string) error
-	SetWorkspaceState(name, action, project_id string) error
+	DeleteWorkspace(ctx context.Context, name string) error
+	SetWorkspaceState(ctx context.Context, name, action string) error
 
-	AddWorkspaceDevice(name, project_id string, props WorkspaceDevice) error
-	RemoveWorkspaceDevice(name, project_id, device string) error
+	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error
+	RemoveWorkspaceDevice(ctx context.Context, name string, props string) error
 
-	AddWorkspaceConfig(name, project_id string, item *WorkspaceConfigValue) error
-	AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error
-	RemoveWorkspaceConfig(name, project_id string, key string) error
+	AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error
+	RemoveWorkspaceConfig(ctx context.Context, name string, key string) error
 
-	GetWorkspace(name, project_id string) (*WorkspaceProps, error)
-	GetWorkspaceFs(name, projec_id string) (WorkspaceFs, error)
-	GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
-	GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
+	GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error)
+	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
+	GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
+	GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 
 	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 }
 
-func New() (WorkspaceBackend, error) {
+func New() WorkspaceBackend {
 	server := LxdBackend{}
+	return &server
+}
 
-	if lxdInst, err := server.getLxdClient(context.Background()); err != nil {
-		return nil, err
-	} else {
-		if err = InitProject(lxdInst); err != nil {
-			return nil, err
-		}
-	}
-
-	return &server, nil
+func lxdProjectName(user string) string {
+	return "workspace." + user
 }
 
 func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
@@ -136,6 +134,11 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
+	}
+
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key user not found")
 	}
 
 	/* Skip if the instance exists already */
@@ -163,11 +166,6 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		}})
 	}
 
-	projectName, err := GetLXDProjectName()
-	if err != nil {
-		return err
-	}
-
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: defaultDevices(),
@@ -178,7 +176,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: image.Fingerprint,
-			Project:     projectName,
+			Project:     lxdProjectName(user),
 		},
 	}
 	op, err := conn.CreateInstanceFromImage(imageSrv, *image, req)
@@ -189,10 +187,15 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 	return op.Wait()
 }
 
-func (s *LxdBackend) SetWorkspaceState(name, projectId, action string) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -224,10 +227,15 @@ func (s *LxdBackend) SetWorkspaceState(name, projectId, action string) error {
 	return err
 }
 
-func (s *LxdBackend) AddWorkspaceConfig(name, projectId string, item *WorkspaceConfigValue) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -240,10 +248,15 @@ func (s *LxdBackend) AddWorkspaceConfig(name, projectId string, item *WorkspaceC
 	return op.Wait()
 }
 
-func (s *LxdBackend) RemoveWorkspaceConfig(name, projectId string, key string) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -257,10 +270,15 @@ func (s *LxdBackend) RemoveWorkspaceConfig(name, projectId string, key string) e
 	return op.Wait()
 }
 
-func (s *LxdBackend) AddWorkspaceDevice(name, projectId string, device WorkspaceDevice) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) AddWorkspaceDevice(ctx context.Context, name string, device WorkspaceDevice) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -273,10 +291,15 @@ func (s *LxdBackend) AddWorkspaceDevice(name, projectId string, device Workspace
 	return op.Wait()
 }
 
-func (s *LxdBackend) RemoveWorkspaceDevice(name, projectId, device string) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, etag, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -334,31 +357,15 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (cha
 	return done, nil
 }
 
-func (s *LxdBackend) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
-	conn, err := s.getLxdClient(context.Background())
-	if err != nil {
-		return err
-	}
-
-	inst, err := conn.GetInstances(api.InstanceTypeContainer)
-	if err != nil {
-		return err
-	}
-
-	for _, i := range inst {
-		if filter(i.Config) {
-			i.Config[item.Name] = item.Value
-			conn.UpdateInstance(i.Name, i.InstancePut, "")
-		}
-	}
-
-	return nil
-}
-
-func (s *LxdBackend) GetWorkspace(name, projectId string) (*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
 	}
 
 	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -373,8 +380,8 @@ func (s *LxdBackend) GetWorkspace(name, projectId string) (*WorkspaceProps, erro
 	}, nil
 }
 
-func (s *LxdBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +405,8 @@ func (s *LxdBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*Wor
 	return ws, nil
 }
 
-func (s *LxdBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -425,10 +432,15 @@ func (s *LxdBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[s
 	return ws, nil
 }
 
-func (s *LxdBackend) DeleteWorkspace(name, projectId string) error {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	inst, _, err := conn.GetInstance(util.ToInstanceName(name, projectId))
@@ -448,13 +460,18 @@ func (s *LxdBackend) DeleteWorkspace(name, projectId string) error {
 	return op.Wait()
 }
 
-func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
-	conn, err := s.getLxdClient(context.Background())
+func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
+	conn, err := s.getLxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	sftp, err := conn.GetInstanceFileSFTP(util.ToInstanceName(name, project_id))
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
+	}
+
+	sftp, err := conn.GetInstanceFileSFTP(util.ToInstanceName(name, projectId))
 	if err != nil {
 		return nil, err
 	}
@@ -463,14 +480,18 @@ func (s *LxdBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error
 }
 
 func (s *LxdBackend) getLxdClient(ctx context.Context) (lxd.InstanceServer, error) {
-	project, err := GetLXDProjectName()
-	if err != nil {
-		return nil, err
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", ContextUser)
 	}
+
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
 		return nil, err
 	} else {
-		return srv.UseProject(project), nil
+		if err = InitProject(srv, lxdProjectName(user)); err != nil {
+			return nil, err
+		}
+		return srv.UseProject(lxdProjectName(user)), nil
 	}
 }
 
@@ -530,7 +551,7 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 
 /* Fake backend implementation for tests */
 
-type ExecFunc func(name string, project_id string, args *ExecArgs) (chan bool, error)
+type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 
 type FakeWorkspaceBackend struct {
 	workspaces map[string]map[string]*WorkspaceProps
@@ -549,10 +570,6 @@ func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	return &be
 }
 
-func (f *FakeWorkspaceBackend) workspace(name, project string) *WorkspaceProps {
-	return f.workspaces[project][name]
-}
-
 func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
 	projectId := ctx.Value(ContextProjectId).(string)
 	if f.workspaces[projectId] == nil {
@@ -567,43 +584,44 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspace(name string, project_id string) error {
+func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string) error {
 	panic("not implemented") // TODO: Implement
 }
 
-func (f *FakeWorkspaceBackend) SetWorkspaceState(name string, action string, project_id string) error {
+func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
 	panic("not implemented") // TODO: Implement
 }
 
-func (f *FakeWorkspaceBackend) AddWorkspaceDevice(name string, project_id string, props WorkspaceDevice) error {
-	f.workspaces[project_id][name].Devices[props.Name] = props.Properties
+func (f *FakeWorkspaceBackend) AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error {
+	projectId := ctx.Value(ContextProjectId).(string)
+	f.workspaces[projectId][name].Devices[props.Name] = props.Properties
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(name string, project_id string, device string) error {
-	delete(f.workspaces[project_id][name].Devices, device)
+func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
+	projectId := ctx.Value(ContextProjectId).(string)
+	delete(f.workspaces[projectId][name].Devices, device)
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) AddWorkspaceConfig(name string, project_id string, item *WorkspaceConfigValue) error {
-	f.workspaces[project_id][name].Config[item.Name] = item.Value
+func (f *FakeWorkspaceBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
+	projectId := ctx.Value(ContextProjectId).(string)
+	f.workspaces[projectId][name].Config[item.Name] = item.Value
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) AddWorkspacesConfig(filter WorkspaceConfigFilter, item *WorkspaceConfigValue) error {
-	panic("not implemented") // TODO: Implement
-}
-
-func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(name string, project_id string, key string) error {
-	delete(f.workspaces[project_id][name].Config, key)
+func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
+	projectId := ctx.Value(ContextProjectId).(string)
+	delete(f.workspaces[projectId][name].Config, key)
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspace(name string, project_id string) (*WorkspaceProps, error) {
-	return f.workspaces[project_id][name], nil
+func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
+	projectId := ctx.Value(ContextProjectId).(string)
+	return f.workspaces[projectId][name], nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
 	res := make([]*WorkspaceProps, 0)
 	for _, i := range f.workspaces {
 		for _, j := range i {
@@ -615,20 +633,19 @@ func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(filter WorkspaceConfigFilte
 	return res, nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
 	panic("not implemented") // TODO: Implement
 }
 
-func (s *FakeWorkspaceBackend) GetWorkspaceFs(name, project_id string) (WorkspaceFs, error) {
+func (s *FakeWorkspaceBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
 	return s.Fs, nil
 }
 
 func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	projectId := ctx.Value(ContextProjectId).(string)
-	return f.DoExec(name, projectId, args)
+	return f.DoExec(ctx, name, args)
 }
 
-func DoExecDefault(name string, project_id string, args *ExecArgs) (chan bool, error) {
+func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
 	done := make(chan bool)
 	close(done)
 	return done, nil

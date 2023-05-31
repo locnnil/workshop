@@ -2,9 +2,14 @@ package daemon
 
 import (
 	"net/http"
+	"os/user"
+	"strconv"
 
 	"github.com/canonical/workspace/internal/project"
+	"github.com/canonical/workspace/internal/workspacebackend"
+
 	"github.com/spf13/afero"
+	"golang.org/x/net/context"
 )
 
 func v1Projects(c *Command, r *http.Request, _ *userState) Response {
@@ -14,8 +19,20 @@ func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 	st.Lock()
 	defer st.Unlock()
 
+	_, uid, _, err := ucrednetGet(r.RemoteAddr)
+	if err != nil {
+		return statusInternalError("cannot get an associated uid: %v", err)
+	}
+
+	username, err := user.LookupId(strconv.FormatUint(uint64(uid), 10))
+	if err != nil {
+		return statusInternalError("cannot get an associated user name: %v", err)
+	}
+
+	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username)
+
 	if projectPath != "" {
-		project, err := project.LoadProject(c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), projectPath)
+		project, err := project.RetrieveProject(userCtx, c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), projectPath)
 		if err != nil {
 			return statusNotFound("project not found: %q, %v", projectPath, err)
 		}
@@ -29,17 +46,10 @@ func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 	// In this scenario, we will have go walk all projects in the system
 	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
 	// and returns a list of workspaces for every project found in the system
-	projects, err := project.RetrieveWorkspacesGlobal(c.d.overlord.WorkspaceBackend(), afero.NewOsFs())
+	projects, err := project.RetrieveAllProjects(userCtx, c.d.overlord.WorkspaceBackend(), afero.NewOsFs())
 	if err != nil {
 		return statusInternalError("cannot get a full list of projects: %v", err)
 	}
 
-	keys := make([]map[string]string, 0, len(projects))
-	for p := range projects {
-		keys = append(keys, map[string]string{
-			"project-id": p.ProjectId, "path": p.Path,
-		})
-	}
-
-	return SyncResponse(keys)
+	return SyncResponse(projects)
 }

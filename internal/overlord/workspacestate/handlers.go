@@ -14,7 +14,7 @@ import (
 )
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	prj, workspace, err := ProjectAndWorkspace(task)
+	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -23,11 +23,14 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	st.Lock()
 	defer st.Unlock()
 
-	return m.backend.DeleteWorkspace(workspace, prj.ProjectId)
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	return m.backend.DeleteWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -36,7 +39,7 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	st.Lock()
 	defer st.Unlock()
 
-	ctx, cancel := BackendContext(tomb, project)
+	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
 	var base string
@@ -54,7 +57,7 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 }
 
 func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
-	prj, workspace, err := ProjectAndWorkspace(task)
+	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -69,7 +72,10 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	st.Lock()
 	defer st.Unlock()
 
-	if err = m.backend.AddWorkspaceDevice(workspace, prj.ProjectId, prjMount); err != nil {
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	if err = m.backend.AddWorkspaceDevice(ctx, workspace, prjMount); err != nil {
 		return err
 	}
 	return nil
@@ -80,7 +86,7 @@ func (m *WorkspaceManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) e
 }
 
 func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -88,11 +94,11 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
 	st.Lock()
 
-	ctx, cancel := BackendContext(tomb, project)
+	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
 	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "start")
+	err = m.backend.SetWorkspaceState(ctx, workspace, "start")
 	st.Unlock()
 	if err != nil {
 		return err
@@ -120,7 +126,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -129,7 +135,10 @@ func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
-	err = m.backend.SetWorkspaceState(workspace, project.ProjectId, "stop")
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
 	if err != nil {
 		return err
 	}

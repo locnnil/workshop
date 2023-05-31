@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
+	"os/user"
 	"syscall"
 
 	util "github.com/canonical/workspace/internal"
@@ -54,7 +56,14 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	st := overlord.State()
 	st.Lock()
 
-	projectKey, err := project.LoadProject(overlord.WorkspaceBackend(), fs, Project)
+	username, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	userCtx := context.WithValue(context.Background(), workspacebackend.ContextUser, username.Username)
+
+	projectKey, err := project.RetrieveProject(userCtx, overlord.WorkspaceBackend(), fs, Project)
 	if err != nil {
 		return err
 	}
@@ -67,6 +76,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	change := st.NewChange("launch", fmt.Sprintf("Launch workspace %q", ws))
 	change.Set("workspace", ws)
 	change.Set("project-key", projectKey)
+	change.Set("user", username.Username)
 
 	change.AddAll(taskset)
 	st.Unlock()

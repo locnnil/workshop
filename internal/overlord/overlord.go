@@ -131,10 +131,7 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
 
-	o.workspaceBackend, err = workspacebackend.New()
-	if err != nil {
-		return nil, err
-	}
+	o.workspaceBackend = workspacebackend.New()
 
 	o.workspace = workspace.NewWorkspaceManager(o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)

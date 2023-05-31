@@ -14,7 +14,7 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	prj, workspace, err := ProjectAndWorkspace(task)
+	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, prj)
+	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
 	st := task.State()

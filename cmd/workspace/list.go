@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -11,10 +13,10 @@ import (
 
 	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/project"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	srv "github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -47,16 +49,20 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	server, err = srv.New()
+	server = srv.New()
+
+	username, err := user.Current()
 	if err != nil {
 		return err
 	}
 
+	userCtx := context.WithValue(context.Background(), workspacebackend.ContextUser, username.Username)
+
 	if !c.global {
-		prj, err = project.LoadProject(server, fs, Project)
+		prj, err = project.RetrieveProject(userCtx, server, fs, Project)
 		if err == nil {
 			/* List all workspaces for the current project */
-			wsList, err := prj.RetrieveWorkspaces()
+			wsList, err := prj.RetrieveWorkspaces(userCtx, server)
 			if len(wsList) != 0 && err == nil {
 				listWorkspaces(wsList, prj)
 			} else {
@@ -80,7 +86,14 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 }
 
 func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
-	list, err := project.RetrieveWorkspacesGlobal(server, fs)
+	username, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	userCtx := context.WithValue(context.Background(), workspacebackend.ContextUser, username.Username)
+
+	list, err := project.RetrieveAllProjects(userCtx, server, fs)
 	if err != nil || len(list) == 0 {
 		return err
 	}
@@ -88,12 +101,16 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
-	keys := maps.Keys(list)
-	slices.SortFunc(keys,
+	slices.SortFunc(list,
 		func(i, j *project.Project) bool { return i.Path > j.Path })
 
-	for _, project := range keys {
-		for _, j := range list[project] {
+	for _, project := range list {
+
+		wsList, err := project.RetrieveWorkspaces(userCtx, server)
+		if err != nil {
+			continue
+		}
+		for _, j := range wsList {
 			if j.State() == util.Off {
 				continue
 			}

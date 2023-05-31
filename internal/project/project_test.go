@@ -52,13 +52,13 @@ func (p *P) TestEnumWorkspacesInACWD(c *C) {
 }
 
 func (s *P) TestNewProject(c *C) {
-	prj, err := NewProject(s.Backend, s.Fs, "/")
+	prj, err := New(s.Fs, "/")
 	c.Check(prj.ProjectId, Equals, "52fdfc07")
 	c.Check(err, Equals, nil)
 
 	c.Check(prj.Path, Equals, "/")
 
-	_, err = NewProject(s.Backend, s.Fs, "/doesnotexist")
+	_, err = New(s.Fs, "/doesnotexist")
 	c.Check(errors.Is(err, afero.ErrFileNotFound), Equals, true)
 }
 
@@ -68,38 +68,38 @@ func (s *P) TestLoadProject(c *C) {
 	defer fs.RemoveAll("/tmp/experiments")
 
 	/* No relative paths are allowed */
-	_, err := LoadProject(nil, fs, "../tmp/experiments")
+	_, err := RetrieveProject(s.ctx, nil, fs, "../tmp/experiments")
 	c.Check(errors.Is(err, util.ErrNoRelativePathsAllowed), Equals, true)
 
 	/* Could not read the project directory */
-	_, err = LoadProject(nil, fs, "/invalid&")
+	_, err = RetrieveProject(s.ctx, nil, fs, "/invalid&")
 	c.Check(err, NotNil)
 
 	/* Project exists, no workspace instances */
 	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("projectId"), 0644)
-	prj, err := LoadProject(s.Backend, s.Fs, "/")
+	prj, err := RetrieveProject(s.ctx, s.Backend, s.Fs, "/")
 	c.Check(prj.Path, Equals, "/")
 	c.Check(prj.ProjectId, Equals, "projectId")
 	c.Check(err, IsNil)
 
 	/* Project exists, some workspace instances running */
 	s.Backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	prj, err = LoadProject(s.Backend, s.Fs, "/")
+	prj, err = RetrieveProject(s.ctx, s.Backend, s.Fs, "/")
 	c.Check(prj.Path, Equals, "/")
 	c.Check(err, IsNil)
 }
 
 func (s *P) TestEnumWorkspacesNoFilesNoInstances(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
+	project := Project{fs: s.Fs, Path: "/"}
 
-	result, err := project.RetrieveWorkspaces()
+	result, err := project.RetrieveWorkspaces(s.ctx, s.Backend)
 
 	c.Check(result, HasLen, 0)
 	c.Check(err, IsNil)
 }
 
 func (s *P) TestEnumFilesErrorReadingProjectDirectory(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
+	project := Project{fs: s.Fs, Path: "/"}
 	s.Fs.RemoveAll("/")
 
 	_, err := project.EnumWorkspaceFiles()
@@ -108,11 +108,11 @@ func (s *P) TestEnumFilesErrorReadingProjectDirectory(c *C) {
 }
 
 func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
-	project := Project{fs: s.Fs, backend: s.Backend, Path: "/"}
+	project := Project{fs: s.Fs, Path: "/"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 	afero.WriteFile(s.Fs, ".workspace.lock", []byte(""), 0644)
 
-	result, err := project.RetrieveWorkspaces()
+	result, err := project.RetrieveWorkspaces(s.ctx, s.Backend)
 	c.Check(err, IsNil)
 	c.Check(result, HasLen, 1)
 	c.Check(result[0].State(), Equals, util.Off)
@@ -121,9 +121,9 @@ func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 
 func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
 	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
-	project := Project{fs: s.Fs, backend: s.Backend, Path: "/", ProjectId: "projectId"}
+	project := Project{fs: s.Fs, Path: "/", ProjectId: "projectId"}
 
-	result, err := project.RetrieveWorkspaces()
+	result, err := project.RetrieveWorkspaces(s.ctx, s.Backend)
 	c.Check(err, IsNil)
 	c.Assert(result, HasLen, 1)
 	/* the workspace does not have a corresponding file, hence, an error state */
@@ -136,10 +136,10 @@ func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
 	s.Backend.LaunchWorkspace(s.ctx, "instance1", "ubuntu@20.04")
 	s.Backend.LaunchWorkspace(s.ctx, "project1", "ubuntu@20.04")
 
-	project := Project{fs: s.Fs, backend: s.Backend, Path: "/", ProjectId: "projectId"}
+	project := Project{fs: s.Fs, Path: "/", ProjectId: "projectId"}
 	afero.WriteFile(s.Fs, ".workspace.project1.yaml", []byte(""), 0644)
 
-	result, err := project.RetrieveWorkspaces()
+	result, err := project.RetrieveWorkspaces(s.ctx, s.Backend)
 	// Make sure the order is always predictable
 	slices.SortFunc(result, func(i, j *workspacebackend.WorkspaceProps) bool { return i.Name < j.Name })
 	c.Check(err, IsNil)
@@ -152,18 +152,4 @@ func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
 	c.Check(result[1].Name, Equals, "project1")
 	c.Check(result[1].State(), Equals, util.Ready)
 	c.Check(result[1].Reason(), Equals, util.None)
-}
-
-func (s *P) TestReadProject(c *C) {
-	prj := Project{fs: s.Fs, Path: "/project"}
-
-	err := prj.ReadProject()
-	c.Check(err, NotNil)
-
-	afero.WriteFile(s.Fs, "/.workspace.lock", []byte("23451S"), 0644)
-
-	prj = Project{fs: s.Fs, Path: "/"}
-	err = prj.ReadProject()
-	c.Check(err, IsNil)
-	c.Check(prj.ProjectId, Equals, "23451S")
 }

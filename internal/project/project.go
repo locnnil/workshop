@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
 	util "github.com/canonical/workspace/internal"
@@ -21,8 +22,7 @@ type Project struct {
 	Path      string `json:"path"`
 	ProjectId string `json:"project-id"`
 
-	fs      afero.Fs
-	backend backend.WorkspaceBackend
+	fs afero.Fs
 }
 
 const (
@@ -33,13 +33,13 @@ const (
 
 // for testing purposes
 var (
-	LoadProject              = loadProject
-	RetrieveWorkspacesGlobal = retrieveWorkspacesGlobal
+	RetrieveProject     = retrieveProject
+	RetrieveAllProjects = retrieveAllProjects
 )
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
-func loadProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
+func New(fs afero.Fs, path string) (*Project, error) {
 	var err error
 	var project Project
 
@@ -49,43 +49,6 @@ func loadProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*P
 	}
 
 	project.fs = fs
-	project.backend = backend
-	project.Path = path
-
-	/* Is there an existing project file? */
-	if err = project.ReadProject(); err == nil {
-		/* See if the project's directory was changed. We need to update its file and the instances' configuration
-		to maintain integrity */
-		if err = project.validateProjectDirectory(); err != nil {
-			return nil, err
-		}
-	} else if errors.Is(err, afero.ErrFileNotFound) {
-		updateConfigFromBindMounts(backend, fs)
-		if ok := project.recorverProjectId(); ok {
-			/* recovered project-id successfully, recreate .lock */
-			return &project, project.SaveProject()
-		} else {
-			/* There is no project at a given location, perhaps never was */
-			return nil, err
-		}
-	} else {
-		return nil, err
-	}
-
-	return &project, nil
-}
-
-func NewProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
-	var err error
-	var project Project
-
-	/* Make sure the path is canonicalised */
-	if path, err = util.CleanProjectPath(path); err != nil {
-		return nil, err
-	}
-
-	project.fs = fs
-	project.backend = backend
 	project.Path = path
 
 	if project.ProjectId, err = newProjectId(); err != nil {
@@ -99,11 +62,49 @@ func NewProject(backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Pr
 	return &project, nil
 }
 
-func (p *Project) validateProjectDirectory() error {
+func retrieveProject(ctx context.Context, backend backend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
 	var err error
-	var updated bool
+	var project = Project{Path: path, fs: fs}
 
-	instances, err := p.retrieveWorkspaceInstances()
+	/* Make sure the path is canonicalised */
+	if path, err = util.CleanProjectPath(path); err != nil {
+		return nil, err
+	}
+
+	/* Now let's find the project-id for the path */
+
+	/* Is there an existing project file? */
+	if buf, err := afero.ReadFile(fs, filepath.Join(path, ProjectLock)); err == nil {
+		/* See if the project's directory was changed (thus, workspace config may be incorrect).
+		We need to update its instances' configuration to maintain integrity */
+		if err = project.validateWorkspaceConfiguration(ctx, backend); err != nil {
+			return nil, err
+		}
+		project.ProjectId = string(buf)
+	} else if errors.Is(err, afero.ErrFileNotFound) {
+		/* no .lock file found, let's see if we ever had a lock file here */
+		if id := recorverProjectId(ctx, backend, fs, path); id != "" {
+			/* recovered project-id successfully, recreate .lock */
+			if err = project.SaveProject(); err != nil {
+				return nil, err
+			}
+			project.ProjectId = id
+		} else {
+			/* There is no project in the given location, perhaps never was */
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+
+	return &project, nil
+}
+
+func (p *Project) validateWorkspaceConfiguration(ctx context.Context, be backend.WorkspaceBackend) error {
+	var err error
+
+	/* list all the workspaces for this project */
+	instances, err := be.GetWorkspacesByConfig(ctx, backend.NewWorkspaceConfigFilter(ProjectIdField, p.ProjectId))
 	if err != nil {
 		return err
 	}
@@ -125,13 +126,13 @@ func (p *Project) validateProjectDirectory() error {
 
 	   We should examine running workspaces (if any) to see if that's the case
 	*/
-	if updated, err = updateConfigFromBindMounts(p.backend, p.fs); err != nil {
-		return err
-	}
 
-	if updated {
+	/* let's inspect all the workspaces' bind-mounts and update configs if required */
+	if updated, err := updateConfigFromBindMounts(ctx, be, p.fs); err != nil {
+		return err
+	} else if updated {
 		/* the workspaces' configuration was updated, so re-fetch the instances of the project */
-		instances, err = p.retrieveWorkspaceInstances()
+		instances, err = be.GetWorkspacesByConfig(ctx, backend.NewWorkspaceConfigFilter(ProjectIdField, p.ProjectId))
 		if err != nil {
 			return err
 		}
@@ -151,30 +152,80 @@ func (p *Project) validateProjectDirectory() error {
 				return p.SaveProject()
 			}
 
-			/* The directory was moved, update the project mount */
+			/* The directory was moved, or there is no project device for the workspace. Update the project mount */
 			var mount = backend.WorkspaceDevice{
 				Name:       ProjectDeviceField,
 				Properties: map[string]string{"type": "disk", "source": p.Path, "path": "/project"},
 			}
-			p.backend.AddWorkspaceDevice(i.Name, p.ProjectId, mount)
+			prjCtx := context.WithValue(ctx, backend.ContextProjectId, p.ProjectId)
+			be.AddWorkspaceDevice(prjCtx, i.Name, mount)
 		}
 
 	}
 	return nil
 }
 
+func (w *Project) SaveProject() error {
+	return afero.WriteFile(w.fs, LockPath(w.Path), []byte(w.ProjectId), 0644)
+}
+
+func (w *Project) EnumWorkspaceFiles() ([]*backend.WorkspaceProps, error) {
+	files, err := afero.ReadDir(w.fs, w.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	var workspaces = make([]*backend.WorkspaceProps, 0, len(files))
+
+	for _, info := range files {
+		if info.IsDir() {
+			continue
+		}
+
+		/* The first element in names will contain the workspace name if matched */
+		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
+			workspaces = append(workspaces, &backend.WorkspaceProps{Name: names[1]})
+		}
+	}
+	return workspaces, nil
+}
+
+func (w *Project) RetrieveWorkspaces(ctx context.Context, be backend.WorkspaceBackend) ([]*backend.WorkspaceProps, error) {
+	/* (1) Find all the project's workspace files */
+	files, err := w.EnumWorkspaceFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	/* (2) List all the project's instances */
+	instances, err := be.GetWorkspacesByConfig(ctx, backend.NewWorkspaceConfigFilter(ProjectIdField, w.ProjectId))
+	if err != nil {
+		return nil, err
+	}
+
+	result := mergeInstancesAndFiles(files, instances)
+
+	return result, nil
+}
+
 /*
-Check if the project DID exist at this directory path and if so, try to recover it.
+Check if the project DID exist in this directory path and if so, try to recover it.
 
 	We generate .lock file in the projects directory which could be easily deleted by a user
-	after running smth like make clean given .lock is supposed to not be tracked by VCS. If such
+	after running smth like make clean given .lock is supposed to not be tracked by a VCS. If such
 	an accident happens the integrity of the previously created workspaces must not suffer. Here
 	we attempt to recover a previously created .lock
 */
-func (p *Project) recorverProjectId() bool {
-	instances, _ := p.backend.GetWorkspacesByDevices(func(devices map[string]map[string]string) bool {
+func recorverProjectId(ctx context.Context, be backend.WorkspaceBackend, fs afero.Fs, path string) string {
+	// first, check all the workspaces to see if we can use
+	// the existing bind mounts to update the workspaces' project configuration
+	updateConfigFromBindMounts(ctx, be, fs)
+
+	// now, when we have updated workspaces' configurations, let's see
+	// if our path, and, thus, project-id can be found in the configuration
+	instances, _ := be.GetWorkspacesByDevices(ctx, func(devices map[string]map[string]string) bool {
 		if mount, ok := devices[ProjectDeviceField]; ok {
-			if mount["source"] == p.Path {
+			if mount["source"] == path {
 				return true
 			}
 		}
@@ -185,51 +236,11 @@ func (p *Project) recorverProjectId() bool {
 		/* Found a previous .lock file, restore it */
 		for _, i := range instances {
 			if id, ok := i.Config[ProjectIdField]; ok {
-				p.ProjectId = id
-				return true
+				return id
 			}
 		}
 	}
-	return false
-}
-
-func (w *Project) Exists() bool {
-	if ok, err := afero.Exists(w.fs, w.Path); err == nil {
-		return ok
-	}
-	return false
-}
-
-func (w *Project) ReadProject() error {
-	var err error
-	var buf []byte
-	if buf, err = afero.ReadFile(w.fs, filepath.Join(w.Path, ProjectLock)); err == nil {
-		w.ProjectId = string(buf)
-		return nil
-	}
-	return err
-}
-
-func (w *Project) SaveProject() error {
-	return afero.WriteFile(w.fs, filepath.Join(w.Path, ProjectLock), []byte(w.ProjectId), 0644)
-}
-
-func (w *Project) RetrieveWorkspaces() ([]*backend.WorkspaceProps, error) {
-	/* (1) Find all the project's workspace files */
-	files, err := w.EnumWorkspaceFiles()
-	if err != nil {
-		return nil, err
-	}
-
-	/* (2) List all the project's instances */
-	instances, err := w.retrieveWorkspaceInstances()
-	if err != nil {
-		return nil, err
-	}
-
-	result := mergeInstancesAndFiles(files, instances)
-
-	return result, nil
+	return ""
 }
 
 func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backend.WorkspaceProps) []*backend.WorkspaceProps {
@@ -257,81 +268,73 @@ func mergeInstancesAndFiles(files []*backend.WorkspaceProps, instances []*backen
 	return result
 }
 
-func (w *Project) EnumWorkspaceFiles() ([]*backend.WorkspaceProps, error) {
-	files, err := afero.ReadDir(w.fs, w.Path)
+func retrieveAllProjects(ctx context.Context, be backend.WorkspaceBackend, fs afero.Fs) ([]*Project, error) {
+	all, err := be.GetWorkspacesByConfig(ctx, backend.EveryWorkspace())
 	if err != nil {
 		return nil, err
 	}
 
-	var workspaces = make([]*backend.WorkspaceProps, 0, len(files))
-
-	for _, info := range files {
-		if info.IsDir() {
-			continue
-		}
-
-		/* The first element in names will contain the workspace name if matched */
-		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces = append(workspaces, &backend.WorkspaceProps{Name: names[1]})
-		}
-	}
-	return workspaces, nil
-}
-
-func (w *Project) retrieveWorkspaceInstances() ([]*backend.WorkspaceProps, error) {
-	instances, err := w.backend.GetWorkspacesByConfig(backend.NewWorkspaceConfigFilter(ProjectIdField, w.ProjectId))
-	if err != nil {
-		return instances, err
-	}
-	return instances, nil
-}
-
-func retrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
-	updateConfigFromBindMounts(be, fs)
-
-	all, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
-	if err != nil {
-		return nil, err
-	}
-
-	/* Group by instances by project-id and project directory  */
-	type projectKey struct {
-		path, id string
-	}
-	var projects = make(map[projectKey]bool, len(all))
+	var projects = make(map[string]*Project, len(all))
 	for _, i := range all {
-		projectPath := i.Devices[ProjectDeviceField]["source"]
-		projectId := i.Config[ProjectIdField]
-		projects[projectKey{path: projectPath, id: projectId}] = true
-	}
-
-	/* Get a list of Project objects with workspaces */
-	var fullList = make(map[*Project][]*backend.WorkspaceProps, len(projects))
-	for props := range projects {
-		// in this case a .lock file is in the project directory and the project can be
-		// loaded, which means, there are workspaces for this project and
-		// the project directory exists
-		if project, err := LoadProject(be, fs, props.path); err == nil {
-			workspaces, err := project.RetrieveWorkspaces()
-			if err == nil {
-				fullList[project] = workspaces
+		id := i.Config[ProjectIdField]
+		if _, ok := projects[id]; !ok {
+			prj, err := retrieveProject(ctx, be, fs, i.Devices[ProjectDeviceField]["source"])
+			if err != nil {
+				continue
 			}
-		} else if errors.Is(err, afero.ErrFileNotFound) {
-			// all the workspaces of this project are unreachable and the directory
-			// does not exist anymore. However, there could be stopped instances that are orphaned
-			// we make sure these are not skipped in the output
-			project = &Project{Path: props.path, ProjectId: props.id, backend: be, fs: fs}
-			workspaces, err := project.retrieveWorkspaceInstances()
-			if len(workspaces) > 0 && err == nil {
-				for _, i := range workspaces {
-					i.SetState(util.Error, util.MissingProject)
-				}
-				fullList[project] = workspaces
-			}
+			projects[id] = prj
 		}
 	}
-	return fullList, nil
+
+	return maps.Values(projects), nil
 }
+
+/*
+	func retrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
+		updateConfigFromBindMounts(be, fs)
+
+		all, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
+		if err != nil {
+			return nil, err
+		}
+
+		type projectKey struct {
+			path, id string
+		}
+		var projects = make(map[projectKey]bool, len(all))
+		for _, i := range all {
+			projectPath := i.Devices[ProjectDeviceField]["source"]
+			projectId := i.Config[ProjectIdField]
+			projects[projectKey{path: projectPath, id: projectId}] = true
+		}
+
+		// Get a list of Project objects with workspaces
+		var fullList = make(map[*Project][]*backend.WorkspaceProps, len(projects))
+		for props := range projects {
+			// in this case a .lock file is in the project directory and the project can be
+			// found
+			if project, err := RetrieveProject(be, fs, props.path); err == nil {
+				workspaces, err := project.RetrieveWorkspaces()
+				if err == nil {
+					fullList[project] = workspaces
+				}
+			} else if errors.Is(err, afero.ErrFileNotFound) {
+				// all the workspaces of this project are unreachable and the directory
+				// does not exist anymore. However, there could be stopped instances that are orphaned
+				// we make sure these are not skipped in the output
+				project = &Project{Path: props.path, ProjectId: props.id, backend: be, fs: fs}
+				workspaces, err := project.retrieveWorkspaceInstances()
+				if len(workspaces) > 0 && err == nil {
+					for _, i := range workspaces {
+						i.SetState(util.Error, util.MissingProject)
+					}
+					fullList[project] = workspaces
+				}
+			}
+		}
+		return fullList, nil
+	}
+*/
 
 func newProjectId() (string, error) {
 	bytes := make([]byte, 4)
@@ -352,8 +355,8 @@ actual bind-mounts and updating the configuration accordingly to avoid a situati
 a project directory listed in the instance configuration is different from the actual
 bind mount because a directory was deleted, moved or copied.
 */
-func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updated bool, err error) {
-	workspaces, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
+func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend, fs afero.Fs) (updated bool, err error) {
+	workspaces, err := be.GetWorkspacesByConfig(ctx, backend.EveryWorkspace())
 	if err != nil {
 		return false, err
 	}
@@ -393,8 +396,8 @@ func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updat
 			Stdout:  stdout,
 			Stderr:  nil}
 
-		ctx := context.WithValue(context.Background(), backend.ContextProjectId, key.id)
-		done, err := be.Exec(ctx, instance.Name, &args)
+		prjCtx := context.WithValue(ctx, backend.ContextProjectId, key.id)
+		done, err := be.Exec(prjCtx, instance.Name, &args)
 		if err != nil {
 			continue
 		}
@@ -408,7 +411,7 @@ func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updat
 					if lxdPath != string(currentPath) {
 						/* now, update LXD configuration for all the group's instances */
 						for _, inst := range i {
-							be.AddWorkspaceDevice(inst.Name, key.id, backend.WorkspaceDevice{
+							be.AddWorkspaceDevice(prjCtx, inst.Name, backend.WorkspaceDevice{
 								Name:       ProjectDeviceField,
 								Properties: map[string]string{"type": "disk", "source": string(currentPath), "path": "/project"},
 							})
@@ -423,21 +426,21 @@ func updateConfigFromBindMounts(be backend.WorkspaceBackend, fs afero.Fs) (updat
 }
 
 func FakeLoadProject(id, pth string) (restore func()) {
-	oldLoad := LoadProject
-	LoadProject = func(backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
+	oldLoad := RetrieveProject
+	RetrieveProject = func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
 		return &Project{ProjectId: id, Path: pth}, nil
 	}
 	return func() {
-		LoadProject = oldLoad
+		RetrieveProject = oldLoad
 	}
 }
 
-func FakeRetrieveWorkspacesGlobal(projects map[*Project][]*workspacebackend.WorkspaceProps, err error) (restore func()) {
-	oldRetrieve := RetrieveWorkspacesGlobal
-	RetrieveWorkspacesGlobal = func(be workspacebackend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*workspacebackend.WorkspaceProps, error) {
+func FakeRetrieveAllProjects(projects []*Project, err error) (restore func()) {
+	oldLoad := RetrieveAllProjects
+	RetrieveAllProjects = func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs) ([]*Project, error) {
 		return projects, err
 	}
 	return func() {
-		RetrieveWorkspacesGlobal = oldRetrieve
+		RetrieveAllProjects = oldLoad
 	}
 }

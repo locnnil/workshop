@@ -6,7 +6,6 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/project"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
 )
 
@@ -23,6 +22,7 @@ func (s *apiSuite) TestProjectsWithPathProvided(c *check.C) {
 	// Execute
 	req, err := http.NewRequest("GET", "/v1/projects?path=/home/user/project", nil)
 	c.Assert(err, check.IsNil)
+	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workspace/.socket);"
 	rsp := v1Projects(projectsCmd, req, nil).(*resp)
 
 	// Verify
@@ -40,15 +40,16 @@ func (s *apiSuite) TestProjectsNoPathProvided(c *check.C) {
 
 	// Setup
 	s.daemon(c)
-	defer project.FakeRetrieveWorkspacesGlobal(map[*project.Project][]*workspacebackend.WorkspaceProps{
-		{ProjectId: "2345gtfs", Path: "/home/user/project"}:  nil,
-		{ProjectId: "6789gtfs", Path: "/home/user/project2"}: nil,
-	}, nil)()
+	defer project.FakeRetrieveAllProjects([]*project.Project{
+		{ProjectId: "2345gtfs", Path: "/home/user/project"},
+		{ProjectId: "6789gtfs", Path: "/home/user/project2"}}, nil)()
 	projectsCmd := apiCmd("/v1/projects")
 
 	// Execute
 	req, err := http.NewRequest("GET", "/v1/projects", nil)
 	c.Assert(err, check.IsNil)
+	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workspace/.socket);"
+
 	rsp := v1Projects(projectsCmd, req, nil).(*resp)
 
 	// Verify
