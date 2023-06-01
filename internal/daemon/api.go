@@ -23,8 +23,15 @@ import (
 var api = []*Command{{
 	// See daemon.go:canAccess for details how the access is controlled.
 	Path:    "/v1/projects",
-	GuestOK: true,
+	GuestOK: false,
+	UserOK:  true,
 	GET:     v1Projects,
+}, {
+	Path:    "/v1/projects/{id}/workspaces/{name}",
+	GuestOK: false,
+	UserOK:  true,
+	GET:     v1GetProjectWorkspace,
+	// POST:    v1PostProjectWorkspace,
 }, /*{
 		Path:    "/v1/projects/{project-id}/workspaces/{name}",
 		GuestOK: true,

@@ -12,7 +12,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -51,12 +50,12 @@ func New(fs afero.Fs, path string) (*Project, error) {
 	project.fs = fs
 	project.Path = path
 
-	if project.ProjectId, err = newProjectId(); err != nil {
+	if projectId, err := allocateProjectId(); err != nil {
 		return nil, err
-	}
-
-	if err = project.SaveProject(); err != nil {
-		return nil, err
+	} else {
+		if err = project.UpdateLockFile(projectId); err != nil {
+			return nil, err
+		}
 	}
 
 	return &project, nil
@@ -85,10 +84,9 @@ func retrieveProject(ctx context.Context, backend backend.WorkspaceBackend, fs a
 		/* no .lock file found, let's see if we ever had a lock file here */
 		if id := recorverProjectId(ctx, backend, fs, path); id != "" {
 			/* recovered project-id successfully, recreate .lock */
-			if err = project.SaveProject(); err != nil {
+			if err = project.UpdateLockFile(id); err != nil {
 				return nil, err
 			}
-			project.ProjectId = id
 		} else {
 			/* There is no project in the given location, perhaps never was */
 			return nil, err
@@ -145,11 +143,11 @@ func (p *Project) validateWorkspaceConfiguration(ctx context.Context, be backend
 		if source != p.Path {
 			/* The directory was copied elsewhere, we need to generate a new project-id to let the old project-id persist */
 			if ok, _ := afero.Exists(p.fs, LockPath(source)); ok && deviceOk {
-				p.ProjectId, err = newProjectId()
+				projectId, err := allocateProjectId()
 				if err != nil {
 					return err
 				}
-				return p.SaveProject()
+				return p.UpdateLockFile(projectId)
 			}
 
 			/* The directory was moved, or there is no project device for the workspace. Update the project mount */
@@ -165,8 +163,9 @@ func (p *Project) validateWorkspaceConfiguration(ctx context.Context, be backend
 	return nil
 }
 
-func (w *Project) SaveProject() error {
-	return afero.WriteFile(w.fs, LockPath(w.Path), []byte(w.ProjectId), 0644)
+func (w *Project) UpdateLockFile(projectId string) error {
+	w.ProjectId = projectId
+	return afero.WriteFile(w.fs, LockPath(w.Path), []byte(projectId), 0644)
 }
 
 func (w *Project) EnumWorkspaceFiles() ([]*backend.WorkspaceProps, error) {
@@ -348,7 +347,7 @@ func retrieveAllProjects(ctx context.Context, be backend.WorkspaceBackend, fs af
 	}
 */
 
-func newProjectId() (string, error) {
+func allocateProjectId() (string, error) {
 	bytes := make([]byte, 4)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -435,24 +434,4 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 		}
 	}
 	return updated, err
-}
-
-func FakeLoadProject(id, pth string) (restore func()) {
-	oldLoad := RetrieveProject
-	RetrieveProject = func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*Project, error) {
-		return &Project{ProjectId: id, Path: pth}, nil
-	}
-	return func() {
-		RetrieveProject = oldLoad
-	}
-}
-
-func FakeRetrieveAllProjects(projects []*Project, err error) (restore func()) {
-	oldLoad := RetrieveAllProjects
-	RetrieveAllProjects = func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs) ([]*Project, error) {
-		return projects, err
-	}
-	return func() {
-		RetrieveAllProjects = oldLoad
-	}
 }

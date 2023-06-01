@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var LookupUsername = user.LookupId
+
 func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 	query := r.URL.Query()
 	projectPath := query.Get("path")
@@ -24,12 +26,12 @@ func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot get an associated uid: %v", err)
 	}
 
-	username, err := user.LookupId(strconv.FormatUint(uint64(uid), 10))
+	username, err := LookupUsername(strconv.FormatUint(uint64(uid), 10))
 	if err != nil {
 		return statusInternalError("cannot get an associated user name: %v", err)
 	}
 
-	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username)
+	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username.Username)
 
 	if projectPath != "" {
 		project, err := project.RetrieveProject(userCtx, c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), projectPath)
@@ -52,4 +54,8 @@ func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	return SyncResponse(projects)
+}
+
+func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+	return SyncResponse([]string{})
 }
