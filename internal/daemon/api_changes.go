@@ -188,7 +188,7 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 		}
 		chgInfos = append(chgInfos, change2changeInfo(chg))
 	}
-	return SyncResponse(chgInfos)
+	return SyncResponse(chgInfos, http.StatusOK)
 }
 
 func v1GetChange(c *Command, r *http.Request, _ *userState) Response {
@@ -201,7 +201,7 @@ func v1GetChange(c *Command, r *http.Request, _ *userState) Response {
 		return statusNotFound("cannot find change with id %q", changeID)
 	}
 
-	return SyncResponse(change2changeInfo(chg))
+	return SyncResponse(change2changeInfo(chg), http.StatusOK)
 }
 
 func v1PostChange(c *Command, r *http.Request, _ *userState) Response {
@@ -237,5 +237,5 @@ func v1PostChange(c *Command, r *http.Request, _ *userState) Response {
 	// actually ask to proceed with the abort
 	stateEnsureBefore(state, 0)
 
-	return SyncResponse(change2changeInfo(chg))
+	return SyncResponse(change2changeInfo(chg), http.StatusOK)
 }

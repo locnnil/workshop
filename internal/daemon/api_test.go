@@ -16,8 +16,10 @@ package daemon
 
 import (
 	"net/http"
+	"os/user"
 	"testing"
 
+	"github.com/canonical/workspace/internal/testutil"
 	"gopkg.in/check.v1"
 )
 
@@ -27,10 +29,12 @@ type apiSuite struct {
 	d *Daemon
 
 	workspaceDir string
+	username     string
 
 	vars map[string]string
 
-	restoreMuxVars func()
+	restoreMuxVars    func()
+	restoreUserLookup func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -38,12 +42,18 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workspaceDir = c.MkDir()
+	s.username = "testuser"
+
+	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
+		return &user.User{Username: s.username}, nil
+	}, &LookupUsername)
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workspaceDir = ""
 	s.restoreMuxVars()
+	s.restoreUserLookup()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {

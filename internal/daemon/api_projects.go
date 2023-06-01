@@ -1,47 +1,61 @@
 package daemon
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
-	"os/user"
-	"strconv"
 
 	"github.com/canonical/workspace/internal/project"
-	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
-	"golang.org/x/net/context"
 )
 
-var LookupUsername = user.LookupId
-
-func v1Projects(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
 
-	_, uid, _, err := ucrednetGet(r.RemoteAddr)
-	if err != nil {
-		return statusInternalError("cannot get an associated uid: %v", err)
-	}
-
-	username, err := LookupUsername(strconv.FormatUint(uint64(uid), 10))
-	if err != nil {
-		return statusInternalError("cannot get an associated user name: %v", err)
-	}
-
-	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username.Username)
-
 	// In this scenario, we will have go walk all projects in the system
 	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
 	// and returns a list of workspaces for every project found in the system
-	projects, err := project.RetrieveAllProjects(userCtx, c.d.overlord.WorkspaceBackend(), afero.NewOsFs())
+	projects, err := project.RetrieveAllProjects(r.Context(), c.d.overlord.WorkspaceBackend(), afero.NewOsFs())
 	if err != nil {
-		return statusInternalError("cannot get a full list of projects: %v", err)
+		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	return SyncResponse(projects)
+	return SyncResponse(projects, http.StatusOK)
+}
+
+func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
+	state := c.d.overlord.State()
+	state.Lock()
+	defer state.Unlock()
+
+	var reqData struct {
+		Path string `json:"path"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&reqData); err != nil {
+		return statusBadRequest("cannot decode data from request body: %v", err)
+	}
+
+	prj, err := project.RetrieveProject(r.Context(), c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), reqData.Path)
+	if err != nil && !errors.Is(err, project.ErrProjectNotFound) {
+		return statusBadRequest("cannot load project: %v", err)
+	}
+
+	if errors.Is(err, project.ErrProjectNotFound) {
+		// create a new project as the end user expects CreateOrLoad behaviour from this endpoint
+		prj, err = project.NewProject(afero.NewOsFs(), reqData.Path)
+		if err != nil {
+			return statusInternalError("cannot create project: %v", err)
+		}
+	}
+
+	return SyncResponse(prj, http.StatusCreated)
 }
 
 func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
-	return SyncResponse([]string{})
+	return SyncResponse([]string{}, http.StatusOK)
 }

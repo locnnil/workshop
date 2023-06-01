@@ -134,7 +134,7 @@ type errorResult struct {
 	Value   errorValue `json:"value,omitempty"`
 }
 
-func SyncResponse(result interface{}) Response {
+func SyncResponse(result interface{}, status int) Response {
 	if err, ok := result.(error); ok {
 		return statusInternalError("internal error: %v", err)
 	}
@@ -145,7 +145,7 @@ func SyncResponse(result interface{}) Response {
 
 	return &resp{
 		Type:   ResponseTypeSync,
-		Status: 200,
+		Status: status,
 		Result: result,
 	}
 }

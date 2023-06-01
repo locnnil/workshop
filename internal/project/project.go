@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/rand"
 	"path/filepath"
 	"regexp"
@@ -19,7 +20,7 @@ import (
 
 type Project struct {
 	Path      string `json:"path"`
-	ProjectId string `json:"project-id"`
+	ProjectId string `json:"id"`
 
 	fs afero.Fs
 }
@@ -34,6 +35,9 @@ const (
 var (
 	RetrieveProject     = retrieveProject
 	RetrieveAllProjects = retrieveAllProjects
+	NewProject          = New
+
+	ErrProjectNotFound = errors.New("project not found")
 )
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
@@ -89,10 +93,10 @@ func retrieveProject(ctx context.Context, backend backend.WorkspaceBackend, fs a
 			}
 		} else {
 			/* There is no project in the given location, perhaps never was */
-			return nil, err
+			return nil, fmt.Errorf("%v: %v", ErrProjectNotFound, path)
 		}
 	} else {
-		return nil, err
+		return nil, fmt.Errorf("%v: %v", ErrProjectNotFound, path)
 	}
 
 	return &project, nil

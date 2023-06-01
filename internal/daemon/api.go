@@ -25,7 +25,8 @@ var api = []*Command{{
 	Path:    "/v1/projects",
 	GuestOK: false,
 	UserOK:  true,
-	GET:     v1Projects,
+	GET:     v1GetProjects,
+	POST:    v1PostProjects,
 }, {
 	Path:    "/v1/projects/{id}/workspaces/{name}",
 	GuestOK: false,

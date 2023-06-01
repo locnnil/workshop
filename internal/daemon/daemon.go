@@ -24,7 +24,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -42,6 +44,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/standby"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/systemd"
+	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
 var (
@@ -49,6 +52,7 @@ var (
 
 	systemdSdNotify = systemd.SdNotify
 	sysGetuid       = sys.Getuid
+	LookupUsername  = user.LookupId
 )
 
 // Options holds the daemon setup required for the initialization of a new daemon.
@@ -249,8 +253,22 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rspf = c.DELETE
 	}
 
+	_, uid, _, err := ucrednetGet(r.RemoteAddr)
+	if err != nil {
+		statusInternalError("cannot get an associated uid: %v", err).ServeHTTP(w, r)
+		return
+	}
+
+	username, err := LookupUsername(strconv.FormatUint(uint64(uid), 10))
+	if err != nil {
+		statusInternalError("cannot get an associated user name: %v", err).ServeHTTP(w, r)
+		return
+	}
+
+	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username.Username)
+
 	if rspf != nil {
-		rsp = rspf(c, r, user)
+		rsp = rspf(c, r.WithContext(userCtx), user)
 	}
 
 	if rsp, ok := rsp.(*resp); ok {
