@@ -300,53 +300,6 @@ func retrieveAllProjects(ctx context.Context, be backend.WorkspaceBackend, fs af
 	return maps.Values(projects), nil
 }
 
-/*
-	func retrieveWorkspacesGlobal(be backend.WorkspaceBackend, fs afero.Fs) (map[*Project][]*backend.WorkspaceProps, error) {
-		updateConfigFromBindMounts(be, fs)
-
-		all, err := be.GetWorkspacesByConfig(backend.EveryWorkspace())
-		if err != nil {
-			return nil, err
-		}
-
-		type projectKey struct {
-			path, id string
-		}
-		var projects = make(map[projectKey]bool, len(all))
-		for _, i := range all {
-			projectPath := i.Devices[ProjectDeviceField]["source"]
-			projectId := i.Config[ProjectIdField]
-			projects[projectKey{path: projectPath, id: projectId}] = true
-		}
-
-		// Get a list of Project objects with workspaces
-		var fullList = make(map[*Project][]*backend.WorkspaceProps, len(projects))
-		for props := range projects {
-			// in this case a .lock file is in the project directory and the project can be
-			// found
-			if project, err := RetrieveProject(be, fs, props.path); err == nil {
-				workspaces, err := project.RetrieveWorkspaces()
-				if err == nil {
-					fullList[project] = workspaces
-				}
-			} else if errors.Is(err, afero.ErrFileNotFound) {
-				// all the workspaces of this project are unreachable and the directory
-				// does not exist anymore. However, there could be stopped instances that are orphaned
-				// we make sure these are not skipped in the output
-				project = &Project{Path: props.path, ProjectId: props.id, backend: be, fs: fs}
-				workspaces, err := project.retrieveWorkspaceInstances()
-				if len(workspaces) > 0 && err == nil {
-					for _, i := range workspaces {
-						i.SetState(util.Error, util.MissingProject)
-					}
-					fullList[project] = workspaces
-				}
-			}
-		}
-		return fullList, nil
-	}
-*/
-
 func allocateProjectId() (string, error) {
 	bytes := make([]byte, 4)
 	_, err := rand.Read(bytes)

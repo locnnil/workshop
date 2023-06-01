@@ -15,8 +15,6 @@ import (
 var LookupUsername = user.LookupId
 
 func v1Projects(c *Command, r *http.Request, _ *userState) Response {
-	query := r.URL.Query()
-	projectPath := query.Get("path")
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
@@ -32,18 +30,6 @@ func v1Projects(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username.Username)
-
-	if projectPath != "" {
-		project, err := project.RetrieveProject(userCtx, c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), projectPath)
-		if err != nil {
-			return statusNotFound("project not found: %q, %v", projectPath, err)
-		}
-
-		result := []map[string]string{
-			{"project-id": project.ProjectId, "path": projectPath},
-		}
-		return SyncResponse(result)
-	}
 
 	// In this scenario, we will have go walk all projects in the system
 	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
