@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/canonical/workspace/client"
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/project"
 
@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	cwd, err = util.CleanProjectPath(cwd)
+	cwd, err = project.CleanProjectPath(cwd)
 	if err != nil {
 		panic(err)
 	}
@@ -75,6 +75,10 @@ func main() {
 	fs := afero.NewOsFs()
 	cwd, err = getProjectDirectory(fs, cwd)
 	if err != nil {
+		panic(err)
+	}
+
+	if err = dirs.CreateDirs(); err != nil {
 		panic(err)
 	}
 

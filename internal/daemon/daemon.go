@@ -651,7 +651,7 @@ func (d *Daemon) rebootDelay() (time.Duration, error) {
 	if err == nil {
 		rebootDelay = rebootAt.Sub(now)
 	} else {
-		ovr := os.Getenv("PEBBLE_REBOOT_DELAY") // for tests
+		ovr := os.Getenv("WORKSPACE_REBOOT_DELAY") // for tests
 		if ovr != "" {
 			d, err := time.ParseDuration(ovr)
 			if err == nil {

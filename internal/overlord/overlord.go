@@ -26,7 +26,6 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/osutil"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/patch"
@@ -85,14 +84,14 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 
 	var err error
 
-	if !filepath.IsAbs(util.StateDir) {
+	if !filepath.IsAbs(dir) {
 		return nil, fmt.Errorf("directory %q must be absolute", dir)
 	}
-	if !osutil.IsDir(util.StateDir) {
+	if !osutil.IsDir(dir) {
 		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
 
-	/* We use file locking here as multiple clients can try access the state file now,
+	/* We use file locking hereutil.StateDir as multiple clients can try access the state file now,
 	this will be removed once moved to a client-server arch */
 	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(dir, ".lock"))
 	if err != nil {
@@ -110,6 +109,8 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 			break
 		}
 	}
+
+	o.workspaceBackend = workspacebackend.New()
 
 	statePath := filepath.Join(dir, "state.json")
 
@@ -130,8 +131,6 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 		return true
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
-
-	o.workspaceBackend = workspacebackend.New()
 
 	o.workspace = workspace.NewWorkspaceManager(o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)

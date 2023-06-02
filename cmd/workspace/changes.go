@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +29,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 	var clientOpts client.ChangesOptions
 	var err error
 
-	_, clientConfig.Socket = util.GetEnvPaths()
+	_, clientConfig.Socket = dirs.GetEnvPaths()
 	cli, err := client.New(&clientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)

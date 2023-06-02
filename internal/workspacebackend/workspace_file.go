@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
@@ -69,7 +68,7 @@ func ReadWorkspace(fs afero.Fs, pathname string) (*WorkspaceFile, error) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 
-	if util.ToFileName(file.Name) != filepath.Base(pathname) {
+	if WorkspaceFileName(file.Name) != filepath.Base(pathname) {
 		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 

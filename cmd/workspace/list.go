@@ -11,7 +11,6 @@ import (
 
 	"text/tabwriter"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	srv "github.com/canonical/workspace/internal/workspacebackend"
@@ -111,7 +110,7 @@ func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
 			continue
 		}
 		for _, j := range wsList {
-			if j.State() == util.Off {
+			if j.State() == workspacebackend.Off {
 				continue
 			}
 			line := listWorkspace(j, project)
@@ -138,7 +137,7 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, prj *project.Project) {
 
 func listWorkspace(j *srv.WorkspaceProps, prj *project.Project) []string {
 	comment := "-"
-	if j.State() == util.Error {
+	if j.State() == workspacebackend.Error {
 		comment = j.Reason().String()
 	}
 	line := []string{

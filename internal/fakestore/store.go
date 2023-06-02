@@ -8,23 +8,23 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	util "github.com/canonical/workspace/internal"
 	"github.com/spf13/afero"
 	"google.golang.org/api/option"
 )
 
 type StoreClient interface {
-	RetrieveSdk(name, channel string) (SdkBlob, error)
+	RetrieveSdk(name, channel, localSdkDir string) (SdkBlob, error)
 }
 
 type SdkBlob struct {
 	Name     string `json:"name"`
 	Channel  string `json:"channel"`
+	Filename string `json:"filename"`
 	Revision int64  `json:"revision"`
 }
 
-func ToSdkFilename(name string, revision int64) string {
-	return filepath.Join(util.SdksDir, fmt.Sprintf("%s_%d.sdk", name, revision))
+func ToSdkFilename(sdkDir, name string, revision int64) string {
+	return filepath.Join(sdkDir, fmt.Sprintf("%s_%d.sdk", name, revision))
 }
 
 func NewStoreClient() (StoreClient, error) {
@@ -35,7 +35,7 @@ type ObjectStoreClient struct {
 	Fs afero.Fs
 }
 
-func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
+func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (SdkBlob, error) {
 	var track, risk string
 	var sdk SdkBlob
 	var revision int64
@@ -65,22 +65,14 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
 		} else {
 			defer r.Close()
 
-			filename := ToSdkFilename(name, revision)
-
+			filename := ToSdkFilename(localSdkDir, name, revision)
 			exist, err := afero.Exists(c.Fs, filename)
 			if err != nil {
 				return sdk, err
 			}
 
-			if exist {
-				/* Reuse the existing blob if present */
-				sdk.Name = name
-				sdk.Channel = channel
-				sdk.Revision = revision
-				return sdk, nil
-			} else {
+			if !exist {
 				file, err := c.Fs.Create(filename)
-				//c.Fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0600)
 				if err != nil {
 					return sdk, err
 				}
@@ -89,10 +81,12 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel string) (SdkBlob, error) {
 				if _, err = io.Copy(file, r); err != nil {
 					return sdk, err
 				}
-				sdk.Name = name
-				sdk.Channel = channel
-				sdk.Revision = revision
 			}
+
+			sdk.Name = name
+			sdk.Channel = channel
+			sdk.Revision = revision
+			sdk.Filename = filename
 
 		}
 	}

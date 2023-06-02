@@ -12,7 +12,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -25,6 +25,11 @@ type Project struct {
 	fs afero.Fs
 }
 
+var (
+	ErrProjectNotFound        = errors.New("project not found")
+	ErrNoRelativePathsAllowed = errors.New("absolute project path must be used")
+)
+
 const (
 	ProjectLock        = ".workspace.lock"
 	ProjectDeviceField = "workspace.project"
@@ -36,8 +41,7 @@ var (
 	RetrieveProject     = retrieveProject
 	RetrieveAllProjects = retrieveAllProjects
 	NewProject          = New
-
-	ErrProjectNotFound = errors.New("project not found")
+	EvalSymlinks        = filepath.EvalSymlinks
 )
 
 var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
@@ -47,7 +51,7 @@ func New(fs afero.Fs, path string) (*Project, error) {
 	var project Project
 
 	/* Make sure the path is canonicalised */
-	if path, err = util.CleanProjectPath(path); err != nil {
+	if path, err = CleanProjectPath(path); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +74,7 @@ func retrieveProject(ctx context.Context, backend backend.WorkspaceBackend, fs a
 	var project = Project{Path: path, fs: fs}
 
 	/* Make sure the path is canonicalised */
-	if path, err = util.CleanProjectPath(path); err != nil {
+	if path, err = CleanProjectPath(path); err != nil {
 		return nil, err
 	}
 
@@ -259,9 +263,9 @@ func mergeInstancesAndFiles(fs afero.Fs, files []*backend.WorkspaceProps, instan
 			 */
 			projectPath := ws.Devices[ProjectDeviceField]["source"]
 			if exists, _ := afero.DirExists(fs, projectPath); exists {
-				ws.SetState(util.Error, util.MissingFile)
+				ws.SetState(workspacebackend.Error, workspacebackend.MissingFile)
 			} else {
-				ws.SetState(util.Error, util.MissingProject)
+				ws.SetState(workspacebackend.Error, workspacebackend.MissingProject)
 			}
 		} else {
 			/* Both a file and instance exist */
@@ -272,7 +276,7 @@ func mergeInstancesAndFiles(fs afero.Fs, files []*backend.WorkspaceProps, instan
 
 	/* Now, files contains only inactive workspaces */
 	for _, ws := range files {
-		ws.SetState(util.Off, util.None)
+		ws.SetState(workspacebackend.Off, workspacebackend.None)
 		result = append(result, ws)
 	}
 	return result
@@ -335,7 +339,7 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 	}
 	var grouped = make(map[projectKey][]*backend.WorkspaceProps, len(workspaces))
 	for _, i := range workspaces {
-		if i.State() == util.Ready {
+		if i.State() == workspacebackend.Ready {
 			projectPath := i.Devices[ProjectDeviceField]["source"]
 			key := projectKey{projectPath, i.Config[ProjectIdField]}
 			grouped[key] = append(grouped[key], i)
@@ -349,7 +353,7 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 		/* Take the first instance from the group, we need any running
 		and ready to execute commands to validate the project directory */
 		instance := i[0]
-		stdout, err := memFs.Create(util.ToInstanceName(instance.Name, key.id))
+		stdout, err := memFs.Create(workspacebackend.InstanceName(instance.Name, key.id))
 		if err != nil {
 			return false, err
 		}
@@ -372,7 +376,7 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 		<-done
 
 		/* Process the findmnt results */
-		if currentPath, err := afero.ReadFile(memFs, util.ToInstanceName(instance.Name, key.id)); err == nil {
+		if currentPath, err := afero.ReadFile(memFs, workspacebackend.InstanceName(instance.Name, key.id)); err == nil {
 			/* check if the path is not //deleted */
 			if ok, _ := afero.Exists(fs, string(currentPath)); ok {
 				if lxdPath, ok := instance.Devices[ProjectDeviceField]["source"]; ok {
@@ -391,4 +395,17 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 		}
 	}
 	return updated, err
+}
+
+func CleanProjectPath(path string) (string, error) {
+	var err error
+	if !filepath.IsAbs(path) {
+		return "", ErrNoRelativePathsAllowed
+	}
+
+	path, err = EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }

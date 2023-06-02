@@ -3,7 +3,7 @@ package workspacestate
 import (
 	"fmt"
 
-	. "github.com/canonical/workspace/internal/overlord/sharedstate"
+	. "github.com/canonical/workspace/internal/overlord/sthelper"
 	"github.com/canonical/workspace/internal/project"
 
 	"github.com/canonical/workspace/internal/overlord/state"

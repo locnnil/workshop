@@ -26,6 +26,15 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	return SyncResponse(projects, http.StatusOK)
 }
 
+func v1GetProject(c *Command, r *http.Request, _ *userState) Response {
+	projectId := muxVars(r)["id"]
+	state := c.d.overlord.State()
+	state.Lock()
+	defer state.Unlock()
+
+	return SyncResponse([]string{projectId}, http.StatusOK)
+}
+
 func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	state := c.d.overlord.State()
 	state.Lock()
@@ -43,6 +52,8 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	prj, err := project.RetrieveProject(r.Context(), c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), reqData.Path)
 	if err != nil && !errors.Is(err, project.ErrProjectNotFound) {
 		return statusBadRequest("cannot load project: %v", err)
+	} else if err == nil {
+		return SyncResponse(prj, http.StatusOK)
 	}
 
 	if errors.Is(err, project.ErrProjectNotFound) {

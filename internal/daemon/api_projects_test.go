@@ -81,3 +81,28 @@ func (s *apiSuite) TestProjectsPostProjectDoesNotExist(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"3j5h6g3t"}.*`)
 }
+
+func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects")
+	defer testutil.FakeFunc(func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*project.Project, error) {
+		return &project.Project{ProjectId: "3j5h6g3t", Path: "/home/testuser/project"}, nil
+	}, &project.RetrieveProject)()
+
+	// Execute
+	buf := bytes.NewBufferString(`{"path": "/home/test/project"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects", buf)
+	c.Assert(err, check.IsNil)
+
+	rsp := v1PostProjects(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	res, err := rsp.MarshalJSON()
+	c.Assert(err, check.IsNil)
+	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"3j5h6g3t"}..*`)
+}

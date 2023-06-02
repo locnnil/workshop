@@ -8,7 +8,7 @@ import (
 	"os/user"
 	"syscall"
 
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -39,12 +39,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	ws = av[0]
 
-	file, err := workspacebackend.ReadWorkspace(fs, util.ToPathname(Project, ws))
+	file, err := workspacebackend.ReadWorkspace(fs, workspacebackend.WorkspaceFilePath(Project, ws))
 	if err != nil {
 		return err
 	}
 
-	workspaceDir, _ := util.GetEnvPaths()
+	workspaceDir, _ := dirs.GetEnvPaths()
 
 	overlord, err := overlord.New(workspaceDir, nil)
 	if err != nil {

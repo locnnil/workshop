@@ -22,8 +22,8 @@ import (
 	"syscall"
 	"time"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/daemon"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/systemd"
 
@@ -127,10 +127,9 @@ func sanityCheck() error {
 func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	t0 := time.Now().Truncate(time.Millisecond)
 
-	workspaceDir, socketPath := util.GetEnvPaths()
+	workspaceDir, socketPath := dirs.GetEnvPaths()
 	if rcmd.CreateDirs {
-		err := os.MkdirAll(workspaceDir, 0755)
-		if err != nil {
+		if err := dirs.CreateDirs(); err != nil {
 			return err
 		}
 	}

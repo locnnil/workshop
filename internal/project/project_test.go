@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
@@ -27,8 +27,7 @@ func TestProject(t *testing.T) { TestingT(t) }
 func (p *P) SetUpTest(c *C) {
 	p.Fs = afero.NewMemMapFs()
 	p.Backend = workspacebackend.NewFakeWorkspaceBackend()
-	p.Fs.MkdirAll(util.DataDir, 0755)
-	p.Fs.MkdirAll(util.SdksDir, 0755)
+	p.Fs.MkdirAll(dirs.SdkDir, 0755)
 	p.ctx = context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
 	rand.Seed(1)
 }
@@ -69,7 +68,7 @@ func (s *P) TestLoadProject(c *C) {
 
 	/* No relative paths are allowed */
 	_, err := RetrieveProject(s.ctx, nil, fs, "../tmp/experiments")
-	c.Check(errors.Is(err, util.ErrNoRelativePathsAllowed), Equals, true)
+	c.Check(errors.Is(err, ErrNoRelativePathsAllowed), Equals, true)
 
 	/* Could not read the project directory */
 	_, err = RetrieveProject(s.ctx, nil, fs, "/invalid&")
@@ -115,8 +114,8 @@ func (s *P) TestEnumWorkspacesFilesOnly(c *C) {
 	result, err := project.RetrieveWorkspaces(s.ctx, s.Backend)
 	c.Check(err, IsNil)
 	c.Check(result, HasLen, 1)
-	c.Check(result[0].State(), Equals, util.Off)
-	c.Check(result[0].Reason(), Equals, util.None)
+	c.Check(result[0].State(), Equals, workspacebackend.Off)
+	c.Check(result[0].Reason(), Equals, workspacebackend.None)
 }
 
 func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
@@ -128,8 +127,8 @@ func (s *P) TestEnumWorkspacesInstancesOnly(c *C) {
 	c.Assert(result, HasLen, 1)
 	/* the workspace does not have a corresponding file, hence, an error state */
 	c.Check(result[0].Name, Equals, "instance1")
-	c.Check(result[0].State(), Equals, util.Error)
-	c.Check(result[0].Reason(), Equals, util.MissingFile)
+	c.Check(result[0].State(), Equals, workspacebackend.Error)
+	c.Check(result[0].Reason(), Equals, workspacebackend.MissingFile)
 }
 
 func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
@@ -146,10 +145,10 @@ func (s *P) TestEnumWorkspacesSomeOrphanedInstances(c *C) {
 	c.Assert(result, HasLen, 2)
 
 	c.Check(result[0].Name, Equals, "instance1")
-	c.Check(result[0].State(), Equals, util.Error)
-	c.Check(result[0].Reason(), Equals, util.MissingFile)
+	c.Check(result[0].State(), Equals, workspacebackend.Error)
+	c.Check(result[0].Reason(), Equals, workspacebackend.MissingFile)
 
 	c.Check(result[1].Name, Equals, "project1")
-	c.Check(result[1].State(), Equals, util.Ready)
-	c.Check(result[1].Reason(), Equals, util.None)
+	c.Check(result[1].State(), Equals, workspacebackend.Ready)
+	c.Check(result[1].Reason(), Equals, workspacebackend.None)
 }

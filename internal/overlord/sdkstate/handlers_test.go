@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	util "github.com/canonical/workspace/internal"
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
@@ -75,7 +74,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -123,7 +122,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -163,7 +162,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -183,7 +182,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		s.backend.Fs.MkdirAll(filepath.Join(util.WorkspaceSdksDir, "new"), 0755)
+		s.backend.WsFs.MkdirAll(filepath.Join(workspacebackend.WorkspaceSdksDir, "new"), 0755)
 		return workspacebackend.DoExecDefault(ctx, name, args)
 	}
 
@@ -197,7 +196,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
 	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	exist, _ := afero.Exists(s.backend.Fs, filepath.Join(util.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(s.backend.WsFs, filepath.Join(workspacebackend.WorkspaceSdksDir, "new"))
 	c.Check(exist, Equals, false)
 }
 
@@ -210,7 +209,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
@@ -246,7 +245,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
@@ -287,7 +286,7 @@ func (s *H) TestUndoLinkToPreviousSdk(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", 2}
+	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
