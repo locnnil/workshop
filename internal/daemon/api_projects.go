@@ -3,11 +3,16 @@ package daemon
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
+	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 )
 
@@ -24,6 +29,8 @@ type WorkspaceInfo struct {
 	Content   []*SdkInfo `json:"content,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
+
+var ensureStateSoon = stateEnsureBefore
 
 func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo {
 	var ws WorkspaceInfo
@@ -110,6 +117,12 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	state.Lock()
 	defer state.Unlock()
 
+	query := r.URL.Query()
+	wsState := query.Get("state")
+	if wsState == "" {
+		wsState = "all"
+	}
+
 	wBackend := c.d.overlord.WorkspaceBackend()
 	workspaces, err := wBackend.GetWorkspacesByConfig(r.Context(), workspacebackend.NewWorkspaceConfigFilter(workspacebackend.ProjectIdConfig,
 		projectId))
@@ -119,8 +132,73 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 
 	var wsInfos = make([]*WorkspaceInfo, 0)
 	for _, i := range workspaces {
+		if wsState != "all" {
+			if strings.ToLower(i.State().String()) != wsState {
+				continue
+			}
+		}
 		wsInfos = append(wsInfos, workspacePropsToInfo(i))
 	}
 
 	return SyncResponse(wsInfos, http.StatusOK)
+}
+
+func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+	projectId := muxVars(r)["id"]
+	st := c.d.overlord.State()
+	st.Lock()
+	defer st.Unlock()
+	wBackend := c.d.overlord.WorkspaceBackend()
+
+	var reqData struct {
+		Names  []string `json:"names"`
+		Action string   `json:"action"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&reqData); err != nil {
+		return statusBadRequest("cannot decode data from request body: %v", err)
+	}
+
+	projects, err := wBackend.Projects(r.Context())
+	if err != nil {
+		return statusBadRequest("no project found with \"id\" %v", projectId)
+	}
+
+	prj, ok := projects[projectId]
+	if !ok {
+		return statusBadRequest("no project found with \"id\" %v", projectId)
+	}
+
+	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
+	if !ok {
+		return statusBadRequest("user is not known")
+	}
+
+	var change *state.Change
+	switch reqData.Action {
+	case "launch":
+		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): [%s]", strings.Join(reqData.Names, ",")))
+
+		for _, i := range reqData.Names {
+			file, err := workspacebackend.ReadWorkspace(afero.NewOsFs(), workspacebackend.WorkspaceFilePath(prj.Path, i))
+			if err != nil {
+				return statusInternalError("cannot read workspace \"%s\": %v", i, err)
+			}
+
+			taskset, err := workspacestate.Launch(st, file, prj)
+			if err != nil {
+				return statusBadRequest("cannot launch workspace \"%s\": %v", i, err)
+			}
+			change.AddAll(taskset)
+			change.Set("user", user)
+		}
+	default:
+		return statusBadRequest("unknown action")
+	}
+
+	ensureStateSoon(st, 0)
+
+	return AsyncResponse(nil, change.ID())
+
 }

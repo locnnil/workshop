@@ -12,7 +12,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -36,6 +35,13 @@ func Test(t *testing.T) { TestingT(t) }
 
 func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
+}
+
+func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
+	for _, i := range tasks {
+		i.Set("workspace", w)
+		i.Set("project-key", p)
+	}
 }
 
 var ErrTrigger = errors.New("error out")
@@ -69,7 +75,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -81,8 +87,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
-	chg.Set("project-key", &projectKey)
+	setWorkspaceProject("ws", &projectKey, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -117,7 +122,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -129,8 +134,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
-	chg.Set("project-key", &projectKey)
+	setWorkspaceProject("ws", &projectKey, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -157,7 +161,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -204,7 +208,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -216,8 +220,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
-	chg.Set("project-key", &projectKey)
+	setWorkspaceProject("ws", &projectKey, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -240,7 +243,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -255,8 +258,8 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	terr.WaitFor(link)
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
-	chg.Set("project-key", &projectKey)
+	setWorkspaceProject("ws", &projectKey, link, t)
+
 	chg.Set("user", "testuser")
 	chg.AddTask(link)
 	chg.AddTask(t)
@@ -281,7 +284,7 @@ func (s *H) TestUndoLinkToPreviousSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	projectKey := project.Project{
+	projectKey := workspacebackend.Project{
 		Path:      "/project/Path",
 		ProjectId: "projectId",
 	}
@@ -296,8 +299,7 @@ func (s *H) TestUndoLinkToPreviousSdk(c *C) {
 	terr.WaitFor(link)
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
-	chg.Set("project-key", &projectKey)
+	setWorkspaceProject("ws", &projectKey, link, t)
 	chg.Set("user", "testuser")
 	chg.AddTask(link)
 	chg.AddTask(t)

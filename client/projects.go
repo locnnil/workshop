@@ -32,3 +32,22 @@ func (client *Client) Project(path string) (*ProjectResponse, error) {
 
 	return &project, nil
 }
+
+func (client *Client) doWorkspaceAction(projectId string, actionName string, names []string) (changeId string, err error) {
+	var postData struct {
+		Names  []string `json:"names"`
+		Action string   `json:"action"`
+	}
+	postData.Names = names
+	postData.Action = actionName
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(postData); err != nil {
+		return "", err
+	}
+
+	return client.doAsync("POST", "/v1/projects/"+projectId+"/workspaces", nil, nil, &body)
+}
+
+func (client *Client) Launch(projectId string, names []string) (changeId string, err error) {
+	return client.doWorkspaceAction(projectId, "launch", names)
+}

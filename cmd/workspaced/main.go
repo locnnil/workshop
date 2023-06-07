@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -41,6 +42,10 @@ func main() {
 			panic(v)
 		}
 	}()
+
+	if err := dirs.CreateDirs(); err != nil {
+		panic(err)
+	}
 
 	workspaced.AddCommand((&cmdRun{}).Command())
 	workspaced.Execute()

@@ -22,6 +22,7 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/project"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 )
 
@@ -155,7 +156,7 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 				return false
 			}
 
-			var projectKey project.Project
+			var projectKey workspacebackend.Project
 			if err := chg.Get("project-key", &projectKey); err != nil {
 				return false
 			}

@@ -37,7 +37,7 @@ var api = []*Command{{
 	GuestOK: false,
 	UserOK:  true,
 	GET:     v1GetProjectWorkspaces,
-	// POST:    v1PostProjectWorkspace,
+	POST:    v1PostProjectWorkspace,
 }, /*{
 		Path:    "/v1/projects/{project-id}/workspaces/{name}",
 		GuestOK: true,

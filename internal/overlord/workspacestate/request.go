@@ -9,7 +9,7 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-func Launch(st *state.State, file *workspacebackend.WorkspaceFile) (*state.TaskSet, error) {
+func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *workspacebackend.Project) (*state.TaskSet, error) {
 	retrieve := state.NewTaskSet([]*state.Task{}...)
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
@@ -57,6 +57,11 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile) (*state.TaskS
 	set.AddAll(retrieve)
 	set.AddAll(install)
 	set.AddAll(setupHook)
+
+	for _, i := range set.Tasks() {
+		i.Set("workspace", file.Name)
+		i.Set("project-key", project)
+	}
 
 	return set, nil
 }

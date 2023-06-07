@@ -26,6 +26,7 @@ import (
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/systemd"
+	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/cobra"
 )
@@ -140,7 +141,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 
 	dopts.HTTPAddress = rcmd.HTTP
 
-	d, err := daemon.New(&dopts)
+	d, err := daemon.New(&dopts, workspacebackend.New())
 	if err != nil {
 		return err
 	}

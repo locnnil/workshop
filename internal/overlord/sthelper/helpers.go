@@ -6,7 +6,6 @@ import (
 
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
@@ -36,41 +35,42 @@ func SdkSetup(task *state.Task) (*store.SdkBlob, error) {
 	return &blob, nil
 }
 
-func UserProjectWorkspace(task *state.Task) (string, *project.Project, string, error) {
+func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, string, error) {
 	st := task.State()
-	var prj project.Project
+	var prj workspacebackend.Project
 	var name string
 	var user string
 
 	st.Lock()
-	id := task.Change().ID()
-	err := task.Change().Get("project-key", &prj)
+	id := task.ID()
+	err := task.Get("project-key", &prj)
 	st.Unlock()
 
 	if err != nil {
-		return "", nil, "", fmt.Errorf("cannot get project, change %q: %v", id, err)
+		return "", nil, "", fmt.Errorf("cannot get project, task %q: %v", id, err)
 	}
 
 	st.Lock()
-	err = task.Change().Get("workspace", &name)
+	err = task.Get("workspace", &name)
 	st.Unlock()
 
 	if err != nil {
-		return "", nil, "", fmt.Errorf("cannot get workspace, change %q: %v", id, err)
+		return "", nil, "", fmt.Errorf("cannot get workspace, task %q: %v", id, err)
 	}
 
 	st.Lock()
+	changeId := task.Change().ID()
 	err = task.Change().Get("user", &user)
 	st.Unlock()
 
 	if err != nil {
-		return "", nil, "", fmt.Errorf("cannot get user name, change %q: %v", id, err)
+		return "", nil, "", fmt.Errorf("cannot get user name, change %q: %v", changeId, err)
 	}
 
 	return user, &prj, name, nil
 }
 
-func BackendContext(tomb *tomb.Tomb, user string, prj *project.Project) (context.Context, context.CancelFunc) {
+func BackendContext(tomb *tomb.Tomb, user string, prj *workspacebackend.Project) (context.Context, context.CancelFunc) {
 	ctx := tomb.Context(context.Background())
 	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, prj.ProjectId)
 	ctxUser := context.WithValue(ctxProject, workspacebackend.ContextUser, user)

@@ -5,10 +5,9 @@ import (
 
 	. "github.com/canonical/workspace/internal/overlord/sthelper"
 	"github.com/canonical/workspace/internal/project"
+	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-
-	backend "github.com/canonical/workspace/internal/workspacebackend"
 
 	"gopkg.in/tomb.v2"
 )
@@ -63,7 +62,7 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	}
 
 	/* Configure workspace core properties: project directory */
-	var prjMount = backend.WorkspaceDevice{
+	var prjMount = workspacebackend.WorkspaceDevice{
 		Name:       project.ProjectDeviceField,
 		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
 	}
@@ -105,7 +104,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	/* Wait until system is up an running before returning */
-	args := backend.ExecArgs{
+	args := workspacebackend.ExecArgs{
 		User: "root",
 		Command: []string{
 			"bash", "-eu", "-c", "while " +
