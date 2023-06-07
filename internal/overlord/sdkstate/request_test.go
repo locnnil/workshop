@@ -23,7 +23,7 @@ func (i *SdkStateTasks) TestInstall(c *C) {
 
 	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
 
-	tasks := sdkstate.Install(i.state, &sdk, "retrieve").Tasks()
+	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 
 	c.Check(tasks, HasLen, 2)
 	c.Check(tasks[1].WaitTasks(), HasLen, 1)

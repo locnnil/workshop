@@ -160,9 +160,9 @@ func (client *Client) Changes(opts *ChangesOptions) ([]*Change, error) {
 			query.Set("workspaces", strings.Join(opts.Workspaces, ","))
 		}
 		if opts.ProjectPath != "" {
-			projectId, err := client.ProjectId(opts.ProjectPath)
+			project, err := client.Project(opts.ProjectPath)
 			if err == nil {
-				query.Set("project-id", projectId)
+				query.Set("project-id", project.Id)
 			}
 		}
 	}

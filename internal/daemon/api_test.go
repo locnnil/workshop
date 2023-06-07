@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
 )
 
@@ -27,6 +28,7 @@ var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d *Daemon
+	b workspacebackend.WorkspaceBackend
 
 	workspaceDir string
 	username     string
@@ -64,7 +66,8 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
-	d, err := New(&Options{Dir: s.workspaceDir})
+	s.b = workspacebackend.NewFakeWorkspaceBackend()
+	d, err := New(&Options{Dir: s.workspaceDir}, s.b)
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	s.d = d

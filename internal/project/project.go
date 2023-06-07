@@ -377,7 +377,7 @@ func updateConfigFromBindMounts(ctx context.Context, be backend.WorkspaceBackend
 
 		/* Process the findmnt results */
 		if currentPath, err := afero.ReadFile(memFs, workspacebackend.InstanceName(instance.Name, key.id)); err == nil {
-			/* check if the path is not //deleted */
+			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
 			if ok, _ := afero.Exists(fs, string(currentPath)); ok {
 				if lxdPath, ok := instance.Devices[ProjectDeviceField]["source"]; ok {
 					if lxdPath != string(currentPath) {

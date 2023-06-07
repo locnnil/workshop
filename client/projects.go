@@ -1,7 +1,8 @@
 package client
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
 	"net/url"
 )
 
@@ -10,20 +11,24 @@ type ProjectResponse struct {
 	Path string `json:"path"`
 }
 
-func (client *Client) ProjectId(path string) (string, error) {
-	var projects []ProjectResponse
+func (client *Client) Project(path string) (*ProjectResponse, error) {
+	var project ProjectResponse
 	query := url.Values{}
-	query.Set("path", path)
-	_, err := client.doSync("GET", "/v1/projects", query, nil, nil, &projects)
+
+	var postData struct {
+		Path string `json:"path"`
+	}
+	postData.Path = path
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(postData); err != nil {
+		return nil, err
+	}
+
+	_, err := client.doSync("POST", "/v1/projects", query, nil, &body, &project)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// if everything goes as planned, there will be an array with one element
-	// describing the required project at the path
-	if len(projects) == 1 {
-		return projects[0].Id, nil
-	}
-
-	return "", fmt.Errorf("cannot get an unambigous project id for %q", path)
+	return &project, nil
 }

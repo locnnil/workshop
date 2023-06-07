@@ -75,7 +75,7 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -110,7 +110,7 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 		}
 	}
 
-	o.workspaceBackend = workspacebackend.New()
+	o.workspaceBackend = b
 
 	statePath := filepath.Join(dir, "state.json")
 

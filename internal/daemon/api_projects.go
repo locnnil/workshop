@@ -4,11 +4,50 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
-	"github.com/canonical/workspace/internal/project"
-
-	"github.com/spf13/afero"
+	"github.com/canonical/workspace/internal/overlord/sdkstate"
+	"github.com/canonical/workspace/internal/workspacebackend"
+	"golang.org/x/exp/maps"
 )
+
+type SdkInfo struct {
+	Name     string `json:"name"`
+	Channel  string `json:"channel"`
+	Revision string `json:"revision"`
+}
+
+type WorkspaceInfo struct {
+	Name      string     `json:"name"`
+	ProjectId string     `json:"project-id"`
+	State     string     `json:"state"`
+	Content   []*SdkInfo `json:"content,omitempty"`
+	Notes     []string   `json:"notes,omitempty"`
+}
+
+func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo {
+	var ws WorkspaceInfo
+	ws.Name = props.Name
+	ws.ProjectId = props.Config[workspacebackend.ProjectIdConfig]
+	ws.State = props.State().String()
+
+	var sequence = make(map[string][]*sdkstate.SdkSequenceRecord, 0)
+	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
+		err := json.Unmarshal([]byte(sdks), &sequence)
+		if err != nil {
+			ws.State = workspacebackend.Error.String()
+			return &ws
+		}
+		// TODO: the order of SDK records is undetermined, we need the latest one
+		for i, val := range sequence {
+			ws.Content = append(ws.Content, &SdkInfo{i, val[0].Channel, strconv.FormatInt(val[0].Revision, 10)})
+		}
+	}
+	if props.Reason() != workspacebackend.None {
+		ws.Notes = append(ws.Notes, props.Reason().String())
+	}
+	return &ws
+}
 
 func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	st := c.d.overlord.State()
@@ -18,12 +57,12 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	// In this scenario, we will have go walk all projects in the system
 	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
 	// and returns a list of workspaces for every project found in the system
-	projects, err := project.RetrieveAllProjects(r.Context(), c.d.overlord.WorkspaceBackend(), afero.NewOsFs())
+	projects, err := c.d.overlord.WorkspaceBackend().Projects(r.Context())
 	if err != nil {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	return SyncResponse(projects, http.StatusOK)
+	return SyncResponse(maps.Values(projects), http.StatusOK)
 }
 
 func v1GetProject(c *Command, r *http.Request, _ *userState) Response {
@@ -49,24 +88,39 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
-	prj, err := project.RetrieveProject(r.Context(), c.d.overlord.WorkspaceBackend(), afero.NewOsFs(), reqData.Path)
-	if err != nil && !errors.Is(err, project.ErrProjectNotFound) {
-		return statusBadRequest("cannot load project: %v", err)
-	} else if err == nil {
+	wBackend := c.d.overlord.WorkspaceBackend()
+
+	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
+	if err != nil && !errors.Is(err, workspacebackend.ErrNotAProject) {
+		return statusInternalError("cannot create or load project: %v", err)
+	} else if errors.Is(err, workspacebackend.ErrNotAProject) {
+		return statusBadRequest("%v", err)
+	}
+
+	if created {
+		return SyncResponse(prj, http.StatusCreated)
+	} else {
 		return SyncResponse(prj, http.StatusOK)
 	}
-
-	if errors.Is(err, project.ErrProjectNotFound) {
-		// create a new project as the end user expects CreateOrLoad behaviour from this endpoint
-		prj, err = project.NewProject(afero.NewOsFs(), reqData.Path)
-		if err != nil {
-			return statusInternalError("cannot create project: %v", err)
-		}
-	}
-
-	return SyncResponse(prj, http.StatusCreated)
 }
 
-func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
-	return SyncResponse([]string{}, http.StatusOK)
+func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response {
+	projectId := muxVars(r)["id"]
+	state := c.d.overlord.State()
+	state.Lock()
+	defer state.Unlock()
+
+	wBackend := c.d.overlord.WorkspaceBackend()
+	workspaces, err := wBackend.GetWorkspacesByConfig(r.Context(), workspacebackend.NewWorkspaceConfigFilter(workspacebackend.ProjectIdConfig,
+		projectId))
+	if err != nil {
+		return statusInternalError("cannot list workspaces: %v", projectId, err)
+	}
+
+	var wsInfos = make([]*WorkspaceInfo, 0)
+	for _, i := range workspaces {
+		wsInfos = append(wsInfos, workspacePropsToInfo(i))
+	}
+
+	return SyncResponse(wsInfos, http.StatusOK)
 }

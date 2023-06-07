@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
 
@@ -28,49 +26,50 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	// Setup
 	s.daemon(c)
-	defer testutil.FakeFunc(func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs) ([]*project.Project, error) {
-		c.Assert(ctx.Value(workspacebackend.ContextUser).(string), check.Equals, "testuser")
+	req, err := s.createProjectsRequest("GET", "/v1/projects", nil)
+	c.Assert(err, check.IsNil)
 
-		return []*project.Project{
-			{ProjectId: "2345gtfs", Path: "/home/testuser/project"},
-			{ProjectId: "6789gtfs", Path: "/home/testuser/project2"}}, nil
-	}, &project.RetrieveAllProjects)()
+	b := s.d.overlord.WorkspaceBackend()
+	// will be called when project is created
+	numCalls := 0
+	ids := []string{"b8639dea", "a8639dea"}
+	restoreId := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workspacebackend.NewProjectId)
+	defer restoreId()
+	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
+	b.CreateOrLoadProject(req.Context(), "/home/testuser/project2")
 
 	projectsCmd := apiCmd("/v1/projects")
 
 	// Execute
-	req, err := s.createProjectsRequest("GET", "/v1/projects", nil)
-	c.Assert(err, check.IsNil)
-
 	rsp := v1GetProjects(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Check(rsp.Type, check.Equals, ResponseTypeSync)
 	c.Check(rsp.Status, check.Equals, 200)
 
-	res, err := rsp.MarshalJSON()
+	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(string(res), check.Matches, `.*\[{"path":"/home/testuser/project","id":"2345gtfs"},{"path":"/home/testuser/project2","id":"6789gtfs"}\].*`)
+	c.Check(rsp.Result, check.DeepEquals, []*workspacebackend.Project{
+		{Path: "/home/testuser/project", ProjectId: "b8639dea"},
+		{Path: "/home/testuser/project2", ProjectId: "a8639dea"},
+	})
 }
 
 func (s *apiSuite) TestProjectsPostProjectDoesNotExist(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects")
-	defer testutil.FakeFunc(func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*project.Project, error) {
-		return nil, project.ErrProjectNotFound
-	}, &project.RetrieveProject)()
 
-	defer testutil.FakeFunc(func(fs afero.Fs, path string) (*project.Project, error) {
-		return &project.Project{ProjectId: "3j5h6g3t", Path: "/home/testuser/project"}, nil
-	}, &project.NewProject)()
-
-	// Execute
-	buf := bytes.NewBufferString(`{"path": "/home/test/project"}`)
+	buf := bytes.NewBufferString(`{"path": "/home/testuser/project"}`)
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects", buf)
 	c.Assert(err, check.IsNil)
 
+	// will be called when project is created
+	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
+	defer restore()
+
+	// Execute
 	rsp := v1PostProjects(projectsCmd, req, nil).(*resp)
 
 	// Verify
@@ -79,23 +78,24 @@ func (s *apiSuite) TestProjectsPostProjectDoesNotExist(c *check.C) {
 
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"3j5h6g3t"}.*`)
+	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"b8639dea"}.*`)
 }
 
 func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects")
-	defer testutil.FakeFunc(func(ctx context.Context, backend workspacebackend.WorkspaceBackend, fs afero.Fs, path string) (*project.Project, error) {
-		return &project.Project{ProjectId: "3j5h6g3t", Path: "/home/testuser/project"}, nil
-	}, &project.RetrieveProject)()
-
-	// Execute
-	buf := bytes.NewBufferString(`{"path": "/home/test/project"}`)
+	buf := bytes.NewBufferString(`{"path": "/home/testuser/project"}`)
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects", buf)
 	c.Assert(err, check.IsNil)
+	b := s.d.overlord.WorkspaceBackend()
+	// will be called when project is created
+	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
+	defer restore()
+	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
 
+	// Execute
 	rsp := v1PostProjects(projectsCmd, req, nil).(*resp)
 
 	// Verify
@@ -104,5 +104,47 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"3j5h6g3t"}..*`)
+	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"b8639dea"}.*`)
+}
+
+func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	s.vars = map[string]string{"id": "b8639dea"}
+
+	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces", nil)
+	c.Assert(err, check.IsNil)
+	b := s.d.overlord.WorkspaceBackend()
+	// will be called when project is created
+	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
+	defer restore()
+	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
+	b.LaunchWorkspace(context.WithValue(req.Context(), workspacebackend.ContextProjectId, "b8639dea"), "ws-test", "ubuntu@20.04")
+	fakeBe := b.(*workspacebackend.FakeWorkspaceBackend)
+	fakeBe.Workspaces["b8639dea"]["ws-test"].Config["user.workspace.sdk"] = `{"go":[{"channel":"latest/stable","revision":234}]}`
+
+	// Execute
+	rsp := v1GetProjectWorkspaces(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	_, err = rsp.MarshalJSON()
+	c.Assert(err, check.IsNil)
+	c.Check(rsp.Result, check.DeepEquals, []*WorkspaceInfo{
+		{
+			Name:      "ws-test",
+			ProjectId: "b8639dea",
+			State:     "Ready",
+			Content: []*SdkInfo{
+				{
+					Name:     "go",
+					Channel:  "latest/stable",
+					Revision: "234",
+				},
+			},
+		},
+	})
 }

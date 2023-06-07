@@ -2,9 +2,14 @@ package workspacebackend
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/canonical/workspace/internal/logger"
@@ -27,17 +32,303 @@ type ExecArgs struct {
 type LxdBackend struct {
 }
 
-const LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+const (
+	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+)
 
-var ConnectSimpleStreams = lxd.ConnectSimpleStreams
+var (
+	ConnectSimpleStreams = lxd.ConnectSimpleStreams
+	NewProjectId         = allocateProjectId
+)
 
 func New() WorkspaceBackend {
 	server := LxdBackend{}
 	return &server
 }
 
-func lxdProjectName(user string) string {
+func LxdProjectName(user string) string {
 	return "workspace." + user
+}
+
+func allocateProjectId() (string, error) {
+	bytes := make([]byte, 4)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func (s *LxdBackend) getProject(ctx context.Context, path string) (*Project, error) {
+	client, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	pId, err := projectId(LockPath(path))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
+	if err != nil {
+		return nil, err
+	}
+
+	var projects map[string]*Project = make(map[string]*Project, 0)
+	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
+		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
+			return nil, err
+		}
+	}
+
+	if val, ok := projects[pId]; ok {
+		// the tracked path and the requested path must be the same
+		// otherwise it means that the project directory was moved or copied
+		// If that is the case, we must update the project's configuration
+		return val, nil
+	}
+	return nil, ErrProjectNotFound
+}
+
+func (s *LxdBackend) trackProject(ctx context.Context, prj *Project) error {
+	client, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
+	if err != nil {
+		return err
+	}
+
+	var projects map[string]*Project = make(map[string]*Project, 0)
+	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
+		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
+			return err
+		}
+	}
+
+	projects[prj.ProjectId] = prj
+
+	buf, err := json.Marshal(projects)
+	if err != nil {
+		return err
+	}
+	lxdPrj.ProjectPut.Config["user.workspace.projects"] = string(buf)
+
+	if err = client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag); err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+This function updates an instance's project mount in its config file by analysing its
+actual bind-mounts and updating the configuration accordingly to avoid a situation when
+a project directory listed in the instance configuration is different from the actual
+bind mount because a directory was deleted, moved or copied.
+*/
+func (s *LxdBackend) updateWorkspaceConfigFromBindMounts(ctx context.Context, p *Project) (err error) {
+	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
+	if err != nil {
+		return err
+	}
+
+	/* memFs to story temporary results of the commands execution output */
+	memFs := afero.NewMemMapFs()
+	for _, i := range workspaces {
+		if i.state != Ready {
+			continue
+		}
+
+		/* Take the first instance from the group, we need any running
+		and ready to execute commands to validate the project directory */
+		stdout, err := memFs.Create(InstanceName(i.Name, p.ProjectId))
+		if err != nil {
+			return err
+		}
+
+		/* Get the mount point device/directory from findmnt and extract the path without a device
+		using awk */
+		args := ExecArgs{User: "root",
+			Command: []string{"bash", "-c",
+				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+			WorkDir: "/",
+			Stdin:   nil,
+			Stdout:  stdout,
+			Stderr:  nil}
+
+		done, err := s.Exec(ctx, i.Name, &args)
+		if err != nil {
+			continue
+		}
+		<-done
+
+		/* Process the findmnt results */
+		if actualPath, err := afero.ReadFile(memFs, InstanceName(i.Name, p.ProjectId)); err == nil {
+			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
+			if _, err = os.Stat(string(actualPath)); err == nil {
+				// make sure the instance configuration reflects the actual path
+				if configPath, ok := i.Devices[ProjectPathDevice]["source"]; ok {
+					if configPath != string(actualPath) {
+						/* now, update LXD configuration for this instance */
+						s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
+							Name:       ProjectPathDevice,
+							Properties: map[string]string{"type": "disk", "source": string(actualPath), "path": "/project"},
+						})
+					}
+				}
+			}
+		}
+	}
+	return err
+}
+
+func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
+	var err error
+
+	if !filepath.IsAbs(path) {
+		return nil, false, ErrNoRelativePathsAllowed
+	}
+
+	actualPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// see if we have this project already existing
+	if existingProject, err := s.getProject(ctx, actualPath); err == nil {
+		// the tracked path and the requested path must be the same
+		// otherwise it means that the project directory was moved or copied
+		// If that is the case, we must update the project's configuration
+		// in the LXD user.* key (i.e. track the project path with the existing id)
+		if existingProject.Path != actualPath {
+			// Was the project directory moved or copied?
+			_, err := os.Stat(existingProject.Path)
+			copied := true
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return nil, false, err
+			} else if errors.Is(err, os.ErrNotExist) {
+				copied = false
+			}
+
+			if !copied {
+				// the directory was moved, so we:
+				// 1. Update the new path to the actual and track it
+				// 2. Update all the workspaces to the new project mount
+				existingProject.Path = actualPath
+				err = s.trackProject(ctx, existingProject)
+				if err != nil {
+					return nil, false, err
+				}
+
+				// also, update configuration of all the project's workspaces
+				workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+				if err != nil {
+					return nil, false, err
+				}
+
+				for _, i := range workspaces {
+					s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
+						Name:       ProjectPathDevice,
+						Properties: map[string]string{"type": "disk", "source": string(existingProject.Path), "path": "/project"},
+					})
+				}
+				return existingProject, false, nil
+			} else {
+				// the directory was copied, so we:
+				// 1. Generate a new project id for the actual path and update .lock file
+				// 2. Start tracking the actual path as a new project
+				id, err := NewProjectId()
+				if err != nil {
+					return nil, false, err
+				}
+				var newPrj = Project{Path: actualPath, ProjectId: id}
+
+				if err = newPrj.UpdateLockFile(); err != nil {
+					return nil, false, err
+				}
+				s.trackProject(ctx, &newPrj)
+				return &newPrj, true, nil
+			}
+		}
+		return existingProject, false, nil
+	} else if !errors.Is(err, ErrProjectNotFound) {
+		// if there is some error that is unrelated to the
+		// project loadOrCreate logic (e.g. failed to connect to LXD)
+		// then return the error immediately
+		return nil, false, err
+	}
+
+	// no project found, try to create one, note there is no ID yet at this stage
+	var project = Project{Path: actualPath}
+	workspaces, err := project.EnumWorkspaceFiles()
+	if err != nil {
+		return nil, false, err
+	}
+
+	// no workspaces found in the directory provided
+	// it means we won't be creating a project
+	if len(workspaces) == 0 {
+		return nil, false, ErrNotAProject
+	}
+
+	// If there is at least one workspace, we consider the path
+	// as a project and create a new project id
+	if project.ProjectId, err = NewProjectId(); err != nil {
+		return nil, false, err
+	} else {
+		// if we allocated a new project ID successfully,
+		// we store it in the lock file immediately
+		if err = project.UpdateLockFile(); err != nil {
+			return nil, false, err
+		}
+	}
+
+	// Now, add the project ID to the tracking map
+	// stored in a custom user.* key of the LXD project for this user
+	if err = s.trackProject(ctx, &project); err != nil {
+		return nil, false, err
+	}
+
+	return &project, true, nil
+}
+
+func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) {
+	client, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
+	if err != nil {
+		return nil, err
+	}
+
+	var projects map[string]*Project = make(map[string]*Project, 0)
+	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
+		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
+			return nil, err
+		}
+	}
+
+	return projects, nil
 }
 
 func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
@@ -45,7 +336,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 	var imageSrv lxd.ImageServer
 	var image *api.Image
 
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -95,7 +386,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: image.Fingerprint,
-			Project:     lxdProjectName(user),
+			Project:     LxdProjectName(user),
 		},
 	}
 	op, err := conn.CreateInstanceFromImage(imageSrv, *image, req)
@@ -107,7 +398,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 }
 
 func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -147,7 +438,7 @@ func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string)
 }
 
 func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +459,7 @@ func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *
 }
 
 func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -190,7 +481,7 @@ func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key
 }
 
 func (s *LxdBackend) AddWorkspaceDevice(ctx context.Context, name string, device WorkspaceDevice) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -211,7 +502,7 @@ func (s *LxdBackend) AddWorkspaceDevice(ctx context.Context, name string, device
 }
 
 func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -233,7 +524,7 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 }
 
 func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +568,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (cha
 }
 
 func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +591,7 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceP
 }
 
 func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +616,7 @@ func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter Workspace
 }
 
 func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +643,7 @@ func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter Workspac
 }
 
 func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -380,7 +671,7 @@ func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
 }
 
 func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
-	conn, err := s.getLxdClient(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +689,7 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 	return NewWorkspaceFs(sftp), nil
 }
 
-func (s *LxdBackend) getLxdClient(ctx context.Context) (lxd.InstanceServer, error) {
+func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key %s not found", ContextUser)
@@ -407,10 +698,10 @@ func (s *LxdBackend) getLxdClient(ctx context.Context) (lxd.InstanceServer, erro
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
 		return nil, err
 	} else {
-		if err = InitProject(srv, lxdProjectName(user)); err != nil {
+		if err = InitProject(srv, LxdProjectName(user)); err != nil {
 			return nil, err
 		}
-		return srv.UseProject(lxdProjectName(user)), nil
+		return srv.UseProject(LxdProjectName(user)), nil
 	}
 }
 
@@ -473,7 +764,8 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 
 type FakeWorkspaceBackend struct {
-	workspaces map[string]map[string]*WorkspaceProps
+	Workspaces map[string]map[string]*WorkspaceProps
+	projects   map[string]map[string]*Project
 	WsFs       WorkspaceFs
 	LocalFs    afero.Fs
 
@@ -482,7 +774,8 @@ type FakeWorkspaceBackend struct {
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
-	be.workspaces = make(map[string]map[string]*WorkspaceProps)
+	be.Workspaces = make(map[string]map[string]*WorkspaceProps)
+	be.projects = make(map[string]map[string]*Project)
 	be.WsFs = NewFakeWorkspaceFs()
 	be.LocalFs = afero.NewMemMapFs()
 
@@ -491,12 +784,33 @@ func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	return &be
 }
 
+func (s *FakeWorkspaceBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
+	username := ctx.Value(ContextUser).(string)
+	if val, ok := s.projects[username]; ok {
+		if prj, ok := val[path]; ok {
+			return prj, false, nil
+		}
+	} else {
+		s.projects[username] = make(map[string]*Project)
+	}
+
+	prjId, _ := NewProjectId()
+	newPrj := &Project{ProjectId: prjId, Path: path}
+	s.projects[username][path] = newPrj
+	return newPrj, true, nil
+}
+
+func (s *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string]*Project, error) {
+	username := ctx.Value(ContextUser).(string)
+	return s.projects[username], nil
+}
+
 func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
 	projectId := ctx.Value(ContextProjectId).(string)
-	if f.workspaces[projectId] == nil {
-		f.workspaces[projectId] = make(map[string]*WorkspaceProps)
+	if f.Workspaces[projectId] == nil {
+		f.Workspaces[projectId] = make(map[string]*WorkspaceProps)
 	}
-	f.workspaces[projectId][name] = &WorkspaceProps{
+	f.Workspaces[projectId][name] = &WorkspaceProps{
 		Name:    name,
 		Devices: defaultDevices(),
 		Config:  defaultConfig(projectId),
@@ -515,36 +829,36 @@ func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, acti
 
 func (f *FakeWorkspaceBackend) AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error {
 	projectId := ctx.Value(ContextProjectId).(string)
-	f.workspaces[projectId][name].Devices[props.Name] = props.Properties
+	f.Workspaces[projectId][name].Devices[props.Name] = props.Properties
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
 	projectId := ctx.Value(ContextProjectId).(string)
-	delete(f.workspaces[projectId][name].Devices, device)
+	delete(f.Workspaces[projectId][name].Devices, device)
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
 	projectId := ctx.Value(ContextProjectId).(string)
-	f.workspaces[projectId][name].Config[item.Name] = item.Value
+	f.Workspaces[projectId][name].Config[item.Name] = item.Value
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
 	projectId := ctx.Value(ContextProjectId).(string)
-	delete(f.workspaces[projectId][name].Config, key)
+	delete(f.Workspaces[projectId][name].Config, key)
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
-	return f.workspaces[projectId][name], nil
+	return f.Workspaces[projectId][name], nil
 }
 
 func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
 	res := make([]*WorkspaceProps, 0)
-	for _, i := range f.workspaces {
+	for _, i := range f.Workspaces {
 		for _, j := range i {
 			if filter(j.Config) {
 				res = append(res, j)

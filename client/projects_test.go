@@ -1,31 +1,24 @@
 package client_test
 
 import (
+	"io"
+
+	"github.com/canonical/workspace/client"
 	"gopkg.in/check.v1"
 )
 
-func (cs *clientSuite) TestClientSingleProjectId(c *check.C) {
-	projects := []struct {
-		rsp     string
-		in, out string
-		outerr  string
-	}{
-		{`{"type": "sync", "result": [{
+func (cs *clientSuite) TestClientProject(c *check.C) {
+	cs.rsp = `{"type": "sync", "result": {
 			"id":   "42ws42ws",
-			"path": "/home/francua/workspace"}]
-		  }`, "/home/francua/workspace", "42ws42ws", ""},
-		{`{"type": "sync", "result": []
-		  }`, "/home/francua", "", "cannot get an unambigous project id for \"/home/francua\""},
-	}
+			"path": "/home/francua/workspace"}
+		  }`
+	prj, err := cs.cli.Project("/home/francua/workspace")
+	c.Assert(err, check.IsNil)
+	c.Assert(prj, check.DeepEquals, &client.ProjectResponse{"42ws42ws", "/home/francua/workspace"})
+	c.Check(cs.req.Method, check.Equals, "POST")
 
-	for _, i := range projects {
-		cs.rsp = i.rsp
-		prj, err := cs.cli.ProjectId(i.in)
-		if i.outerr != "" {
-			c.Assert(err, check.ErrorMatches, i.outerr)
-		} else {
-			c.Assert(err, check.IsNil)
-		}
-		c.Assert(prj, check.Equals, i.out)
-	}
+	body, err := io.ReadAll(cs.req.Body)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(string(body), check.Equals, "{\"path\":\"/home/francua/workspace\"}\n")
 }

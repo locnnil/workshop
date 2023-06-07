@@ -747,7 +747,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 	return errExpectedReboot
 }
 
-func New(opts *Options) (*Daemon, error) {
+func New(opts *Options, be workspacebackend.WorkspaceBackend) (*Daemon, error) {
 	d := &Daemon{
 		workspaceDir:        opts.Dir,
 		normalSocketPath:    opts.SocketPath,
@@ -755,7 +755,7 @@ func New(opts *Options) (*Daemon, error) {
 		httpAddress:         opts.HTTPAddress,
 	}
 
-	ovld, err := overlord.New(opts.Dir, d)
+	ovld, err := overlord.New(opts.Dir, be, d)
 	if err == errExpectedReboot {
 		// we proceed without overlord until we reach Stop
 		// where we will schedule and wait again for a system restart.

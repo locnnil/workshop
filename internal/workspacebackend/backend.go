@@ -47,6 +47,9 @@ type WorkspaceConfigValue struct {
 }
 
 type WorkspaceBackend interface {
+	CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error)
+	Projects(ctx context.Context) (map[string]*Project, error)
+
 	LaunchWorkspace(ctx context.Context, name, base string) error
 	DeleteWorkspace(ctx context.Context, name string) error
 	SetWorkspaceState(ctx context.Context, name, action string) error
