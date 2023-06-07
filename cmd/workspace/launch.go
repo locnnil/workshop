@@ -6,6 +6,7 @@ import (
 	"github.com/canonical/workspace/client"
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -51,5 +52,16 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		}
 		return err
 	}
+
+	workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
+	if err != nil {
+		return nil
+	}
+	for _, i := range av {
+		if slices.ContainsFunc(workspaces, func(w *client.Workspace) bool { return w.Name == i && w.State == "Ready" }) {
+			fmt.Fprintf(Stdout, "Workspace %q launched\n", i)
+		}
+	}
+
 	return nil
 }

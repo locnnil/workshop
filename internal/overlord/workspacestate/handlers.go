@@ -48,8 +48,6 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 		return fmt.Errorf("cannot get workspace base for task %q: %v", task.ID(), err)
 	}
 
-	fmt.Printf("Setting up workspace \"%s\"...\n", workspace)
-
 	/* Launch a workspace with the required base */
 	return m.backend.LaunchWorkspace(ctx, workspace,
 		base)

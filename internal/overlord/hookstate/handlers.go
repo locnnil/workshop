@@ -1,7 +1,6 @@
 package hookstate
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -41,8 +40,6 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("Running hook \"%s\" for \"%s\"...\n", hook.String(), blob.Name)
 
 	args := workspacebackend.ExecArgs{
 		User: "root",

@@ -40,14 +40,14 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		setupHook.AddTask(setupHookTask)
 	}
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Creating workspace %q", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
-	mountProject := st.NewTask("mount-project", "Mount project directory")
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mounting project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
+	start := st.NewTask("start-workspace", fmt.Sprintf("Starting workspace %q", file.Name))
 	start.WaitFor(mountProject)
 
 	install.WaitFor(start)

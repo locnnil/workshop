@@ -72,8 +72,6 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	fmt.Printf("Setting up SDK \"%s\" from %s revision %d...\n", blob.Name, blob.Channel, blob.Revision)
-
 	sdkMount := sdkBlobDevice(blob)
 
 	err = m.backend.AddWorkspaceDevice(ctx, workspace, sdkMount)
