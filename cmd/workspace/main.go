@@ -1,11 +1,11 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/project"
 
@@ -32,6 +32,12 @@ var rootCmd = &cobra.Command{
 	TraverseChildren: true,
 }
 
+var (
+	// Standard streams, redirected for testing.
+	Stdin  io.Reader = os.Stdin
+	Stdout io.Writer = os.Stdout
+	Stderr io.Writer = os.Stderr
+)
 var Project string
 
 func getProjectDirectory(fs afero.Fs, cwd string) (string, error) {
@@ -75,10 +81,6 @@ func main() {
 	fs := afero.NewOsFs()
 	cwd, err = getProjectDirectory(fs, cwd)
 	if err != nil {
-		panic(err)
-	}
-
-	if err = dirs.CreateDirs(); err != nil {
 		panic(err)
 	}
 

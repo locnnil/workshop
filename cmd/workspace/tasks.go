@@ -7,6 +7,7 @@ import (
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/timeutil"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,7 @@ func (c *CmdTasks) Command() *cobra.Command {
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	workspaceDir, _ := dirs.GetEnvPaths()
 
-	overlord, err := overlord.New(workspaceDir, nil)
+	overlord, err := overlord.New(workspaceDir, workspacebackend.New(), nil)
 	if err != nil {
 		return err
 	}

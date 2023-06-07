@@ -1,25 +1,22 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 
 	"text/tabwriter"
 
-	"github.com/canonical/workspace/internal/project"
+	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	srv "github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )
 
 type CmdList struct {
+	clientMixin
 	global bool
 }
 
@@ -38,95 +35,50 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	var err error
-	var server srv.WorkspaceBackend
-	var prj *project.Project
-	var fs = afero.NewOsFs()
-
 	/* check if both --project and --global were provided */
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
 		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	server = srv.New()
+	var clientConfig client.Config
+	var err error
 
-	username, err := user.Current()
+	_, clientConfig.Socket = dirs.GetEnvPaths()
+	cli, err := client.New(&clientConfig)
+	if err != nil {
+		return fmt.Errorf("cannot create client: %v", err)
+	}
+
+	c.setClient(cli)
+
+	project, err := c.client.Project(Project)
 	if err != nil {
 		return err
 	}
-
-	userCtx := context.WithValue(context.Background(), workspacebackend.ContextUser, username.Username)
 
 	if !c.global {
-		prj, err = project.RetrieveProject(userCtx, server, fs, Project)
-		if err == nil {
-			/* List all workspaces for the current project */
-			wsList, err := prj.RetrieveWorkspaces(userCtx, server)
-			if len(wsList) != 0 && err == nil {
-				listWorkspaces(wsList, prj)
-			} else {
-				return err
-			}
-			return err
-		} else if errors.Is(err, afero.ErrFileNotFound) {
-			/* Project was not found at the path provided, hence
-			return an error */
-			return fmt.Errorf("not a project directory. Try --global to see all projects or launch your first workspace")
-		}
-	} else {
-		/* List all workspaces in all projects */
-		err = listGlobal(server, fs)
+		workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
+		/* List all workspaces for the current project */
+		if len(workspaces) != 0 {
+			listWorkspaces(workspaces, project)
+		} else {
+			return err
+		}
+		return err
 	}
 
 	return nil
 }
 
-func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
-	username, err := user.Current()
-	if err != nil {
-		return err
-	}
-
-	userCtx := context.WithValue(context.Background(), workspacebackend.ContextUser, username.Username)
-
-	list, err := project.RetrieveAllProjects(userCtx, server, fs)
-	if err != nil || len(list) == 0 {
-		return err
-	}
-	w := tabWriter()
-
-	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
-
-	slices.SortFunc(list,
-		func(i, j *project.Project) bool { return i.Path > j.Path })
-
-	for _, project := range list {
-
-		wsList, err := project.RetrieveWorkspaces(userCtx, server)
-		if err != nil {
-			continue
-		}
-		for _, j := range wsList {
-			if j.State() == workspacebackend.Off {
-				continue
-			}
-			line := listWorkspace(j, project)
-			fmt.Fprintln(w, strings.Join(line, "\t"))
-		}
-	}
-	w.Flush()
-	return nil
-}
-
-func listWorkspaces(wsList []*srv.WorkspaceProps, prj *project.Project) {
+func listWorkspaces(wsList []*client.Workspace, prj *client.ProjectResponse) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
 	slices.SortFunc(wsList,
-		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
+		func(i, j *client.Workspace) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
 		line := listWorkspace(val, prj)
@@ -135,15 +87,15 @@ func listWorkspaces(wsList []*srv.WorkspaceProps, prj *project.Project) {
 	w.Flush()
 }
 
-func listWorkspace(j *srv.WorkspaceProps, prj *project.Project) []string {
+func listWorkspace(j *client.Workspace, prj *client.ProjectResponse) []string {
 	comment := "-"
-	if j.State() == workspacebackend.Error {
-		comment = j.Reason().String()
+	if j.State == workspacebackend.Error.String() {
+		comment = strings.Join(j.Notes, ",")
 	}
 	line := []string{
 		contractHomeDirectory(prj.Path),
 		j.Name,
-		j.State().String(),
+		j.State,
 		comment,
 	}
 	return line
