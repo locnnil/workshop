@@ -51,16 +51,17 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
-	if err != nil {
-		return err
-	}
-
 	if !c.global {
+		project, err := c.client.Project(Project)
+		if err != nil {
+			return err
+		}
+
 		workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
+		slices.SortFunc(workspaces, func(a, b *client.Workspace) bool { return a.Name < b.Name })
 		/* List all workspaces for the current project */
 		if len(workspaces) != 0 {
 			printWorkspaces(workspaces, project)
@@ -73,12 +74,16 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
 		projects, err := c.client.Projects()
+		slices.SortFunc(projects, func(a, b *client.Project) bool { return a.Path < b.Path })
+
 		if err != nil {
 			return err
 		}
 
 		for _, i := range projects {
 			workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
+			slices.SortFunc(workspaces, func(a, b *client.Workspace) bool { return a.Name < b.Name })
+
 			if err != nil {
 				return err
 			}
@@ -103,9 +108,6 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 func printWorkspaces(wsList []*client.Workspace, prj *client.Project) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
-
-	slices.SortFunc(wsList,
-		func(i, j *client.Workspace) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
 		line := printWorkspace(val, prj)
