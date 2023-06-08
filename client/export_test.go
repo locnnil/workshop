@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	ParseErrorInTest  = parseError
-	CalculateFileMode = calculateFileMode
+	ParseErrorInTest = parseError
 )
 
 func (client *Client) SetDoer(d doer) {
