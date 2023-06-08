@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/canonical/workspace/client"
 	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/timeutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/cobra"
 )
 
 type CmdTasks struct {
+	clientMixin
 }
 
 func (c *CmdTasks) Command() *cobra.Command {
@@ -26,38 +26,48 @@ func (c *CmdTasks) Command() *cobra.Command {
 }
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	workspaceDir, _ := dirs.GetEnvPaths()
+	var clientConfig client.Config
+	var clientOpts client.ChangesOptions
+	var err error
 
-	overlord, err := overlord.New(workspaceDir, workspacebackend.New(), nil)
+	_, clientConfig.Socket = dirs.GetEnvPaths()
+	cli, err := client.New(&clientConfig)
+	if err != nil {
+		return fmt.Errorf("cannot create client: %v", err)
+	}
+	c.setClient(cli)
+
+	if cmd.Parent().Flag("project").Changed {
+		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()
+	}
+
+	clientOpts.Selector = client.ChangesAll
+
+	change, err := c.client.Change(av[0])
 	if err != nil {
 		return err
 	}
 
-	st := overlord.State()
-	st.Lock()
-	defer st.Unlock()
-
-	change := st.Change(av[0])
 	if change != nil {
-		tasks := change.Tasks()
+		tasks := change.Tasks
 
 		if len(tasks) > 0 {
 			w := tabWriter()
 			fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
 
 			for _, tsk := range tasks {
-				spawnTime := timeutil.Human(tsk.SpawnTime())
-				readyTime := timeutil.Human(tsk.ReadyTime())
-				if tsk.ReadyTime().IsZero() {
+				spawnTime := timeutil.Human(tsk.SpawnTime)
+				readyTime := timeutil.Human(tsk.ReadyTime)
+				if tsk.ReadyTime.IsZero() {
 					readyTime = "-"
 				}
 
 				fmt.Fprintln(w, strings.Join([]string{
-					tsk.ID(),
-					tsk.Status().String(),
+					tsk.ID,
+					tsk.Status,
 					spawnTime,
 					readyTime,
-					tsk.Summary()}, "\t"))
+					tsk.Summary}, "\t"))
 			}
 			w.Flush()
 		}
