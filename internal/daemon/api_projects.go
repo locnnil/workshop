@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -124,8 +125,11 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	}
 
 	wBackend := c.d.overlord.WorkspaceBackend()
-	workspaces, err := wBackend.GetWorkspacesByConfig(r.Context(), workspacebackend.NewWorkspaceConfigFilter(workspacebackend.ProjectIdConfig,
-		projectId))
+
+	// project-id must be in the context for this query
+	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
+
+	workspaces, err := wBackend.GetAllWorkspaces(ctx)
 	if err != nil {
 		return statusInternalError("cannot list workspaces: %v", projectId, err)
 	}
@@ -178,7 +182,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
-		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): [%s]", strings.Join(reqData.Names, ",")))
+		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
 
 		for _, i := range reqData.Names {
 			file, err := workspacebackend.ReadWorkspace(afero.NewOsFs(), workspacebackend.WorkspaceFilePath(prj.Path, i))
@@ -192,6 +196,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			}
 			change.AddAll(taskset)
 			change.Set("user", user)
+			change.Set("project-key", &prj)
 		}
 	default:
 		return statusBadRequest("unknown action")

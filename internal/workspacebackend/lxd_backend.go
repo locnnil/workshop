@@ -13,7 +13,10 @@ import (
 	"strings"
 
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/osutil"
 	"github.com/spf13/afero"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 
 	lxd "github.com/lxc/lxd/client"
 
@@ -615,6 +618,71 @@ func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter Workspace
 	return ws, nil
 }
 
+func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, error) {
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
+	}
+
+	// get the files for this project
+	var p *Project
+	projects, err := s.Projects(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if p, ok = projects[projectId]; !ok {
+		return nil, fmt.Errorf("project is not available: %v", projectId)
+	}
+
+	files, err := p.EnumWorkspaceFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	// get all the running workspaces for this project
+	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
+	if err != nil {
+		return nil, err
+	}
+
+	// now merge the files and workspaces to have correct notes and statuses in the output
+	return MergeInstancesAndFiles(files, workspaces), nil
+}
+
+func MergeInstancesAndFiles(f []*WorkspaceProps, i []*WorkspaceProps) []*WorkspaceProps {
+	files, instances := make([]*WorkspaceProps, len(f)), make([]*WorkspaceProps, len(i))
+	copy(files, f)
+	copy(instances, i)
+	/* Merge both lists from to build a list of workspaces with their states */
+	result := make([]*WorkspaceProps, 0, len(files)+len(instances))
+	for _, ws := range instances {
+		finder := func(p *WorkspaceProps) bool { return p.Name == ws.Name }
+		idx := slices.IndexFunc(files, finder)
+		if idx == -1 {
+			/* We only have an instance, no file (perhaps, there is no project directory)
+			 */
+			projectPath := ws.Devices[ProjectPathDevice]["source"]
+
+			if exists, isDir, _ := osutil.ExistsIsDir(projectPath); exists && isDir {
+				ws.SetState(Error, MissingFile)
+			} else {
+				ws.SetState(Error, MissingProject)
+			}
+		} else {
+			/* Both a file and instance exist */
+			files = slices.Delete(files, idx, idx+1)
+		}
+		result = append(result, ws)
+	}
+
+	/* Now, files contains only inactive workspaces */
+	for _, ws := range files {
+		ws.SetState(Off, None)
+		result = append(result, ws)
+	}
+	return result
+}
+
 func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -854,6 +922,11 @@ func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name s
 func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
 	return f.Workspaces[projectId][name], nil
+}
+
+func (f *FakeWorkspaceBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, error) {
+	projectId := ctx.Value(ContextProjectId).(string)
+	return maps.Values(f.Workspaces[projectId]), nil
 }
 
 func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {

@@ -62,6 +62,7 @@ type WorkspaceBackend interface {
 
 	GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error)
 	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
+	GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, error)
 	GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
 	GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
 

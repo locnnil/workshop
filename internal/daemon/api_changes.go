@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 )
@@ -112,7 +111,7 @@ func change2changeInfo(chg *state.Change) *changeInfo {
 	}
 	chgInfo.Tasks = taskInfos
 
-	var prj project.Project
+	var prj workspacebackend.Project
 	if chg.Get("project-key", &prj) == nil {
 		chgInfo.Project = prj.Path
 	}
