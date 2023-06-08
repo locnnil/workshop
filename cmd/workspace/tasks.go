@@ -8,6 +8,7 @@ import (
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 type CmdTasks struct {
@@ -50,6 +51,8 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 
 	if change != nil {
 		tasks := change.Tasks
+
+		slices.SortFunc(tasks, func(a, b *client.Task) bool { return a.SpawnTime.Before(b.SpawnTime) })
 
 		if len(tasks) > 0 {
 			w := tabWriter()
