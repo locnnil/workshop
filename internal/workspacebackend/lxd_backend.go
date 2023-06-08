@@ -710,7 +710,7 @@ func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter Workspac
 	return ws, nil
 }
 
-func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string, forceful bool) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -727,7 +727,25 @@ func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
 	}
 
 	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
-		return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
+		if forceful {
+			req := api.InstanceStatePut{
+				Action:  "stop",
+				Timeout: -1,
+				Force:   true,
+			}
+
+			op, err := conn.UpdateInstanceState(inst.Name, req, "")
+			if err != nil {
+				return err
+			}
+
+			err = op.Wait()
+			if err != nil {
+				return fmt.Errorf("stopping the instance failed: %s", err)
+			}
+		} else {
+			return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
+		}
 	}
 
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))
@@ -887,7 +905,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string) error {
+func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string, forceful bool) error {
 	panic("not implemented") // TODO: Implement
 }
 

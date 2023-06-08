@@ -51,7 +51,7 @@ type WorkspaceBackend interface {
 	Projects(ctx context.Context) (map[string]*Project, error)
 
 	LaunchWorkspace(ctx context.Context, name, base string) error
-	DeleteWorkspace(ctx context.Context, name string) error
+	DeleteWorkspace(ctx context.Context, name string, forceful bool) error
 	SetWorkspaceState(ctx context.Context, name, action string) error
 
 	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error
