@@ -6,13 +6,23 @@ import (
 	"net/url"
 )
 
-type ProjectResponse struct {
+type Project struct {
 	Id   string `json:"id"`
 	Path string `json:"path"`
 }
 
-func (client *Client) Project(path string) (*ProjectResponse, error) {
-	var project ProjectResponse
+func (client *Client) Projects() ([]*Project, error) {
+	var projects []*Project
+	_, err := client.doSync("GET", "/v1/projects", nil, nil, nil, &projects)
+	if err != nil {
+		return nil, err
+	}
+
+	return projects, nil
+}
+
+func (client *Client) Project(path string) (*Project, error) {
+	var project Project
 	query := url.Values{}
 
 	var postData struct {

@@ -7,6 +7,16 @@ import (
 	"gopkg.in/check.v1"
 )
 
+func (cs *clientSuite) TestClientProjects(c *check.C) {
+	cs.rsp = `{"type": "sync", "result": 
+			[{"id":   "42ws42ws","path": "/home/francua/workspace"},{"id":"34hg34gh",
+			"path": "/home/francua/test"}]}`
+	prjs, err := cs.cli.Projects()
+	c.Assert(err, check.IsNil)
+	c.Assert(prjs, check.DeepEquals, []*client.Project{{"42ws42ws", "/home/francua/workspace"}, {"34hg34gh", "/home/francua/test"}})
+	c.Check(cs.req.Method, check.Equals, "GET")
+}
+
 func (cs *clientSuite) TestClientProject(c *check.C) {
 	cs.rsp = `{"type": "sync", "result": {
 			"id":   "42ws42ws",
@@ -14,7 +24,7 @@ func (cs *clientSuite) TestClientProject(c *check.C) {
 		  }`
 	prj, err := cs.cli.Project("/home/francua/workspace")
 	c.Assert(err, check.IsNil)
-	c.Assert(prj, check.DeepEquals, &client.ProjectResponse{"42ws42ws", "/home/francua/workspace"})
+	c.Assert(prj, check.DeepEquals, &client.Project{"42ws42ws", "/home/francua/workspace"})
 	c.Check(cs.req.Method, check.Equals, "POST")
 
 	body, err := io.ReadAll(cs.req.Body)

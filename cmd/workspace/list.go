@@ -63,17 +63,44 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		}
 		/* List all workspaces for the current project */
 		if len(workspaces) != 0 {
-			listWorkspaces(workspaces, project)
+			printWorkspaces(workspaces, project)
 		} else {
 			return err
 		}
 		return err
+	} else {
+		w := tabWriter()
+		fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
+
+		projects, err := c.client.Projects()
+		if err != nil {
+			return err
+		}
+
+		for _, i := range projects {
+			workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
+			if err != nil {
+				return err
+			}
+			for _, j := range workspaces {
+				// --global flage would not list Off workspaces for consistency.
+				// We may not be aware of all the project directories on the system
+				// and, thus, will not know all the available Off workspaces (contrary
+				// to the workspace that are in any other state, i.e. running instances, which we always know
+				// about from the workspace backend)
+				if j.State != "Off" {
+					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))
+				}
+			}
+		}
+
+		w.Flush()
 	}
 
 	return nil
 }
 
-func listWorkspaces(wsList []*client.Workspace, prj *client.ProjectResponse) {
+func printWorkspaces(wsList []*client.Workspace, prj *client.Project) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
 
@@ -81,13 +108,13 @@ func listWorkspaces(wsList []*client.Workspace, prj *client.ProjectResponse) {
 		func(i, j *client.Workspace) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
-		line := listWorkspace(val, prj)
+		line := printWorkspace(val, prj)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
 }
 
-func listWorkspace(j *client.Workspace, prj *client.ProjectResponse) []string {
+func printWorkspace(j *client.Workspace, prj *client.Project) []string {
 	comment := "-"
 	if j.State == workspacebackend.Error.String() {
 		comment = strings.Join(j.Notes, ",")
