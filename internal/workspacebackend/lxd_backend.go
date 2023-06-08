@@ -136,68 +136,6 @@ func (s *LxdBackend) trackProject(ctx context.Context, prj *Project) error {
 	return nil
 }
 
-/*
-This function updates an instance's project mount in its config file by analysing its
-actual bind-mounts and updating the configuration accordingly to avoid a situation when
-a project directory listed in the instance configuration is different from the actual
-bind mount because a directory was deleted, moved or copied.
-*/
-func (s *LxdBackend) updateWorkspaceConfigFromBindMounts(ctx context.Context, p *Project) (err error) {
-	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	/* memFs to story temporary results of the commands execution output */
-	memFs := afero.NewMemMapFs()
-	for _, i := range workspaces {
-		if i.state != Ready {
-			continue
-		}
-
-		/* Take the first instance from the group, we need any running
-		and ready to execute commands to validate the project directory */
-		stdout, err := memFs.Create(InstanceName(i.Name, p.ProjectId))
-		if err != nil {
-			return err
-		}
-
-		/* Get the mount point device/directory from findmnt and extract the path without a device
-		using awk */
-		args := ExecArgs{User: "root",
-			Command: []string{"bash", "-c",
-				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-			WorkDir: "/",
-			Stdin:   nil,
-			Stdout:  stdout,
-			Stderr:  nil}
-
-		done, err := s.Exec(ctx, i.Name, &args)
-		if err != nil {
-			continue
-		}
-		<-done
-
-		/* Process the findmnt results */
-		if actualPath, err := afero.ReadFile(memFs, InstanceName(i.Name, p.ProjectId)); err == nil {
-			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
-			if _, err = os.Stat(string(actualPath)); err == nil {
-				// make sure the instance configuration reflects the actual path
-				if configPath, ok := i.Devices[ProjectPathDevice]["source"]; ok {
-					if configPath != string(actualPath) {
-						/* now, update LXD configuration for this instance */
-						s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
-							Name:       ProjectPathDevice,
-							Properties: map[string]string{"type": "disk", "source": string(actualPath), "path": "/project"},
-						})
-					}
-				}
-			}
-		}
-	}
-	return err
-}
-
 func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
 	var err error
 
@@ -231,24 +169,12 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				// 1. Update the new path to the actual and track it
 				// 2. Update all the workspaces to the new project mount
 				existingProject.Path = actualPath
-				err = s.trackProject(ctx, existingProject)
+				err := s.trackProject(ctx, existingProject)
 				if err != nil {
 					return nil, false, err
 				}
-
 				// also, update configuration of all the project's workspaces
-				workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
-				if err != nil {
-					return nil, false, err
-				}
-
-				for _, i := range workspaces {
-					s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
-						Name:       ProjectPathDevice,
-						Properties: map[string]string{"type": "disk", "source": string(existingProject.Path), "path": "/project"},
-					})
-				}
-				return existingProject, false, nil
+				return existingProject, false, s.updateWorkspacesProjectPath(ctx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
@@ -308,6 +234,21 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
+func (s *LxdBackend) updateWorkspacesProjectPath(ctx context.Context, existingProject *Project) error {
+	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+	if err != nil {
+		return err
+	}
+
+	for _, i := range workspaces {
+		s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
+			Name:       ProjectPathDevice,
+			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": "/project"},
+		})
+	}
+	return nil
+}
+
 func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) {
 	client, err := s.LxdClient(ctx)
 	if err != nil {
@@ -331,7 +272,73 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) 
 		}
 	}
 
+	for _, i := range projects {
+		if ok, _, err := osutil.ExistsIsDir(i.Path); !ok && err == nil {
+			// we realised that there is no project directory for the
+			// projectId anymore. It can mean moving or deletion happened in the past
+			// Try to recover the new project path
+			newPath, err := s.findProjectPathFromBindMounts(ctx, i)
+			if err == nil && newPath != "" {
+				// start tracking this project under a new path
+				i.Path = newPath
+				if err = s.trackProject(ctx, i); err == nil {
+					s.updateWorkspacesProjectPath(ctx, i)
+				}
+			}
+		}
+	}
+
 	return projects, nil
+}
+
+func (s *LxdBackend) findProjectPathFromBindMounts(ctx context.Context, p *Project) (path string, err error) {
+	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
+	if err != nil {
+		return "", err
+	}
+
+	/* memFs to story temporary results of the commands execution output */
+	memFs := afero.NewMemMapFs()
+	for _, i := range workspaces {
+		if i.state != Ready {
+			continue
+		}
+
+		/* Take the first instance from the group, we need any running
+		and ready to execute commands to validate the project directory */
+		stdout, err := memFs.Create(InstanceName(i.Name, p.ProjectId))
+		if err != nil {
+			return "", err
+		}
+
+		/* Get the mount point device/directory from findmnt and extract the path without a device
+		using awk */
+		args := ExecArgs{User: "root",
+			Command: []string{"bash", "-c",
+				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+			WorkDir: "/",
+			Stdin:   nil,
+			Stdout:  stdout,
+			Stderr:  nil}
+
+		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
+		done, err := s.Exec(execCtx, i.Name, &args)
+		if err != nil {
+			continue
+		}
+		<-done
+
+		/* Process the findmnt results */
+		if currentPath, err := afero.ReadFile(memFs, InstanceName(i.Name, p.ProjectId)); err == nil {
+			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
+			if ok, isDir, err := osutil.ExistsIsDir(string(currentPath)); ok && isDir {
+				return string(currentPath), nil
+			} else if err != nil && !osutil.IsDirNotExist(err) {
+				return "", nil
+			}
+		}
+	}
+	return "", nil
 }
 
 func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
@@ -635,7 +642,7 @@ func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, e
 	}
 
 	files, err := p.EnumWorkspaceFiles()
-	if err != nil {
+	if err != nil && !osutil.IsDirNotExist(err) {
 		return nil, err
 	}
 
