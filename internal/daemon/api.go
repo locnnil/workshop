@@ -38,25 +38,16 @@ var api = []*Command{{
 	UserOK:  true,
 	GET:     v1GetProjectWorkspaces,
 	POST:    v1PostProjectWorkspace,
-}, /*{
-		Path:    "/v1/projects/{project-id}/workspaces/{name}",
-		GuestOK: true,
-		GET:     v1GetProjectWorkspace,
-		POST:    v1PostProjectWorkspace,
-	}, {
-		Path:    "/v1/projects/{project-id}/workspaces",
-		GuestOK: true,
-		GET:     v1GetProjectWorkspaces,
-	},*/{
-		Path:   "/v1/changes",
-		UserOK: true,
-		GET:    v1GetChanges,
-	}, {
-		Path:   "/v1/changes/{id}",
-		UserOK: true,
-		GET:    v1GetChange,
-		POST:   v1PostChange,
-	}}
+}, {
+	Path:   "/v1/changes",
+	UserOK: true,
+	GET:    v1GetChanges,
+}, {
+	Path:   "/v1/changes/{id}",
+	UserOK: true,
+	GET:    v1GetChange,
+	POST:   v1PostChange,
+}}
 
 var (
 	stateOkayWarnings    = (*state.State).OkayWarnings

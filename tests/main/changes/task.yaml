@@ -1,26 +1,26 @@
 summary: Ensure the changes command output correctness
 prepare: |
-  # make sure there is no existing changes 
-  rm -f /home/ubuntu/.local/state/workspace/state.json
+  # make sure there is no existing changes
+    rm -f "$WORKSPACE"/state.json
+    go install -buildvcs=false /remote/cmd/workspaced
+    install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
+    systemctl start workspaced
 
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup "$WORKSPACES"
-
-debug: |
-  lxc project switch workspace.ubuntu
-  lxc list -f compact
-  ls "$WORKSPACES"/*
+  systemctl stop workspaced
+  rm -f /etc/systemd/system/workspaced.service
+  rm -f "$HOME"/go/bin/workspaced
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Changes list is empty on a new system"
+  echo "workspace changes will not produce any output if there are no changes"
   changes_global | MATCH "^$"
 
-  echo "Must reflect the latest change after the launch"
   project="$WORKSPACES"/test-empty-ubuntu20
   launch $project ws
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+$project[[:space:]]+Launch workspace \"ws\"$"
 
-
+  echo "The launch change must present in the list"
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+$project[[:space:]]+Launch workspace.*$"

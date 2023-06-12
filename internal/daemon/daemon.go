@@ -180,7 +180,11 @@ func (c *Command) canAccess(r *http.Request, user *userState) accessResult {
 	}
 
 	// the !AdminOnly check is redundant, but belt-and-suspenders
-	if r.Method == "GET" && !c.AdminOnly {
+	// earlier is was permissible for the GET queries only. Workspace
+	// allows a user to execute a POST query as it will be bound to their
+	// LXD project and they could only do CRUD to the containers within this
+	// project
+	if !c.AdminOnly {
 		// Guest and user access restricted to GET requests
 		if c.GuestOK {
 			return accessOK
@@ -196,8 +200,8 @@ func (c *Command) canAccess(r *http.Request, user *userState) accessResult {
 		return accessUnauthorized
 	}
 
-	if uid == 0 || sys.UserID(uid) == sysGetuid() {
-		// Superuser and process owner can do anything.
+	if uid == 0 {
+		// Superuser can do anything.
 		return accessOK
 	}
 
@@ -483,7 +487,12 @@ func (d *Daemon) Start() {
 		ConnState: d.connTracker.trackConn,
 	}
 
-	d.initStandbyHandling()
+	// TODO: Return standby handling to the workspaced
+	// when creating an actual distribution which launches
+	// the daemon and can listen to the activation sockets. In
+	// this case we would need to create a workspaced.socket unit
+	// for systemd similarly to how snapd does it.
+	// d.initStandbyHandling()
 
 	d.overlord.Loop()
 

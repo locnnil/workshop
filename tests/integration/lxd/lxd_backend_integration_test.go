@@ -144,6 +144,8 @@ base: ubuntu@22.04
 
 	// Execute
 	projects, err := be.Projects(f.ctx)
+
+	// Validate
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, check.DeepEquals, map[string]*workspacebackend.Project{
 		"b8639dea": {ProjectId: "b8639dea", Path: projectDir},

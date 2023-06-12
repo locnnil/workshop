@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -356,7 +357,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	user, ok := ctx.Value(ContextUser).(string)
+	userName, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key user not found")
 	}
@@ -386,17 +387,22 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		}})
 	}
 
+	usr, err := user.Lookup(userName)
+	if err != nil {
+		return err
+	}
+
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: defaultDevices(),
-			Config:  defaultConfig(projectId),
+			Config:  defaultConfig(projectId, usr.Uid, usr.Gid),
 		},
 		Name: InstanceName(name, projectId),
 		Type: api.InstanceType("container"),
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: image.Fingerprint,
-			Project:     LxdProjectName(user),
+			Project:     LxdProjectName(userName),
 		},
 	}
 	op, err := conn.CreateInstanceFromImage(imageSrv, *image, req)
@@ -818,9 +824,9 @@ func defaultDevices() map[string]map[string]string {
 	}
 }
 
-func defaultConfig(projectId string) map[string]string {
+func defaultConfig(projectId string, userid, groupid string) map[string]string {
 	return map[string]string{
-		"raw.idmap":                 fmt.Sprint("uid ", os.Getuid(), " 1000\ngid ", os.Getgid(), " 1000"),
+		"raw.idmap":                 fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":          "true",
 		"user.workspace.project-id": projectId,
 	}
@@ -900,13 +906,14 @@ func (s *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string]*Projec
 
 func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
 	projectId := ctx.Value(ContextProjectId).(string)
+
 	if f.Workspaces[projectId] == nil {
 		f.Workspaces[projectId] = make(map[string]*WorkspaceProps)
 	}
 	f.Workspaces[projectId][name] = &WorkspaceProps{
 		Name:    name,
 		Devices: defaultDevices(),
-		Config:  defaultConfig(projectId),
+		Config:  defaultConfig(projectId, "1000", "1000"),
 		state:   Ready,
 	}
 	return nil
