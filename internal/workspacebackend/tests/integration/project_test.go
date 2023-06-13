@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package workspacebackend_test
+package lxdbackend_integration_test
 
 import (
 	"context"
@@ -15,27 +15,30 @@ import (
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
+	"github.com/lxc/lxd/shared/api"
 )
 
 type LT struct {
-	ctx    context.Context
-	client lxd.InstanceServer
+	ctx      context.Context
+	client   lxd.InstanceServer
+	username string
 }
 
 var _ = check.Suite(&LT{})
 
 func (f *LT) SetUpTest(c *check.C) {
-	f.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
+	f.username = "testuser"
+	f.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, f.username)
 	be := workspacebackend.LxdBackend{}
 	f.client, _ = be.LxdClient(f.ctx)
-	workspacebackend.InitProject(f.client, workspacebackend.LxdProjectName("testuser"))
+	workspacebackend.InitProject(f.client, workspacebackend.LxdProjectName(f.username))
 }
 
 func (f *LT) TearDownTest(c *check.C) {
-	f.client.DeleteProject(workspacebackend.LxdProjectName("testuser"))
+	f.client.DeleteProject(workspacebackend.LxdProjectName(f.username))
 }
 
-func TestWorkspaceProject(t *testing.T) { check.TestingT(t) }
+func TestWorkspaceBackendProjectIntegration(t *testing.T) { check.TestingT(t) }
 
 func (f *LT) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
 	// Setup
@@ -119,6 +122,73 @@ base: ubuntu@22.04
 	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName("testuser"))
 
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, projectDir))
+}
+
+func (f *LT) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
+	// Setup
+	// We pre-create a project to emulate the scenario when
+	// the directory was moved, but the project's settings were not
+	// yet updated.
+	be := workspacebackend.LxdBackend{}
+	projectDir := c.MkDir()
+	newDir := projectDir + "_moved"
+	f.client.UpdateProject(workspacebackend.LxdProjectName(f.username),
+		api.ProjectPut{
+			Config: map[string]string{
+				"user.workspace.projects": fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, projectDir),
+			},
+		}, "")
+
+	workspace := `name: test
+base: ubuntu@22.04
+`
+	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspace), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workspace.lock"), []byte("b8639dea"), 0644)
+	err := os.Rename(projectDir, newDir)
+	c.Assert(err, check.IsNil)
+
+	prj, created, err := be.CreateOrLoadProject(f.ctx, newDir)
+	c.Assert(prj, check.NotNil)
+	c.Assert(prj.Path, check.Equals, newDir)
+	c.Assert(err, check.IsNil)
+	c.Assert(created, check.Equals, false)
+	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName(f.username))
+	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, newDir))
+}
+
+func (f *LT) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
+	// Setup
+	// We pre-create a project to emulate the scenario when
+	// the directory was copied, but the project's settings were not
+	// yet updated.
+	be := workspacebackend.LxdBackend{}
+	restore := testutil.FakeFunc(func() (string, error) { return "abcdefgi", nil }, &workspacebackend.NewProjectId)
+	defer restore()
+	projectDir := c.MkDir()
+	newDir := c.MkDir()
+	f.client.UpdateProject(workspacebackend.LxdProjectName(f.username),
+		api.ProjectPut{
+			Config: map[string]string{
+				"user.workspace.projects": fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, projectDir),
+			},
+		}, "")
+
+	workspace := `name: test
+base: ubuntu@22.04
+`
+	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspace), 0644)
+	os.WriteFile(filepath.Join(newDir, ".workspace.test.yaml"), []byte(workspace), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workspace.lock"), []byte("b8639dea"), 0644)
+	os.WriteFile(filepath.Join(newDir, ".workspace.lock"), []byte("b8639dea"), 0644)
+
+	prj, created, err := be.CreateOrLoadProject(f.ctx, newDir)
+	c.Assert(prj, check.NotNil)
+	c.Assert(prj.Path, check.Equals, newDir)
+	c.Assert(err, check.IsNil)
+	c.Assert(created, check.Equals, true)
+	c.Assert(filepath.Join(newDir, ".workspace.lock"), testutil.FileEquals, "abcdefgi")
+	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName(f.username))
+	c.Assert(lxdProject.Config["user.workspace.projects"], check.Matches, fmt.Sprintf(`.*"abcdefgi":{"path":"%s","id":"abcdefgi"}.*`, newDir))
 }
 
 func (f *LT) TestLxdBackendListAvailableProjects(c *check.C) {
