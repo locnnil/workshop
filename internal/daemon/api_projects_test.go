@@ -116,10 +116,6 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	// will be called when project is created
-	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
-	defer restore()
-	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
 	b.LaunchWorkspace(context.WithValue(req.Context(), workspacebackend.ContextProjectId, "b8639dea"), "ws-test", "ubuntu@20.04")
 	fakeBe := b.(*workspacebackend.FakeWorkspaceBackend)
 	fakeBe.Workspaces["b8639dea"]["ws-test"].Config["user.workspace.sdk"] = `{"go":[{"channel":"latest/stable","revision":234}]}`
@@ -147,4 +143,67 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 			},
 		},
 	})
+}
+
+func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
+	s.vars = map[string]string{"id": "b8639dea", "name": "ws-test"}
+
+	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
+	c.Assert(err, check.IsNil)
+	b := s.d.overlord.WorkspaceBackend()
+	b.LaunchWorkspace(context.WithValue(req.Context(), workspacebackend.ContextProjectId, "b8639dea"), "ws-test", "ubuntu@20.04")
+
+	// Execute
+	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	_, err = rsp.MarshalJSON()
+	c.Assert(err, check.IsNil)
+	c.Check(rsp.Result, check.DeepEquals, &WorkspaceInfo{
+		Name:      "ws-test",
+		ProjectId: "b8639dea",
+		State:     "Ready",
+	})
+}
+
+func (s *apiSuite) TestProjectsGetWorkspaceNoNameProvided(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
+	s.vars = map[string]string{"id": "b8639dea"}
+
+	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "workspace name must be provided")
+}
+
+func (s *apiSuite) TestProjectsGetWorkspaceNoProjectIdProvided(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
+	s.vars = map[string]string{}
+
+	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "project-id must be provided")
 }

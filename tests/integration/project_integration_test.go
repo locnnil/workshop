@@ -35,7 +35,7 @@ func (f *LT) TearDownTest(c *check.C) {
 	f.client.DeleteProject(workspacebackend.LxdProjectName("testuser"))
 }
 
-func TestLxdBackendIntegration(t *testing.T) { check.TestingT(t) }
+func TestWorkspaceProject(t *testing.T) { check.TestingT(t) }
 
 func (f *LT) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
 	// Setup
@@ -121,7 +121,7 @@ base: ubuntu@22.04
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, projectDir))
 }
 
-func (f *LT) TestLxdBackendProjects(c *check.C) {
+func (f *LT) TestLxdBackendListAvailableProjects(c *check.C) {
 	// Setup
 	be := workspacebackend.LxdBackend{}
 	numCalls := 0

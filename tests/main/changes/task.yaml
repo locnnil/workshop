@@ -1,17 +1,14 @@
 summary: Ensure the changes command output correctness
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
 prepare: |
-  # make sure there is no existing changes
-    rm -f "$WORKSPACE"/state.json
-    go install -buildvcs=false /remote/cmd/workspaced
-    install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
-    systemctl start workspaced
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
 
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup "$WORKSPACES"
-  systemctl stop workspaced
-  rm -f /etc/systemd/system/workspaced.service
-  rm -f "$HOME"/go/bin/workspaced
+  uninstall_workspaced
 
 execute: |
   . "$TESTSLIB"/utils.sh

@@ -207,3 +207,31 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	return AsyncResponse(nil, change.ID())
 
 }
+
+func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+	projectId := muxVars(r)["id"]
+	name := muxVars(r)["name"]
+
+	if projectId == "" {
+		return statusBadRequest("project-id must be provided")
+	}
+
+	if name == "" {
+		return statusBadRequest("workspace name must be provided")
+	}
+
+	state := c.d.overlord.State()
+	state.Lock()
+	defer state.Unlock()
+
+	wBackend := c.d.overlord.WorkspaceBackend()
+
+	// project-id must be in the context for this query
+	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
+	workspace, err := wBackend.GetWorkspace(ctx, name)
+	if err != nil {
+		return statusNotFound("cannot get workspace: %v", err)
+	}
+
+	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)
+}

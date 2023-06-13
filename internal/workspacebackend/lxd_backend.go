@@ -75,8 +75,11 @@ func (s *LxdBackend) getProject(ctx context.Context, path string) (*Project, err
 	}
 
 	pId, err := projectId(LockPath(path))
+	lockNotFound := false
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
+	} else if errors.Is(err, os.ErrNotExist) {
+		lockNotFound = true
 	}
 
 	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
@@ -91,11 +94,21 @@ func (s *LxdBackend) getProject(ctx context.Context, path string) (*Project, err
 		}
 	}
 
-	if val, ok := projects[pId]; ok {
-		// the tracked path and the requested path must be the same
-		// otherwise it means that the project directory was moved or copied
-		// If that is the case, we must update the project's configuration
-		return val, nil
+	// did we find a .workspace.lock in the path?
+	if lockNotFound {
+		// try to recover .workspace.lock file for this project
+		// if it existed before and was accidentally removed
+		for _, i := range projects {
+			if i.Path == path {
+				// save the lock file in the project's location
+				i.UpdateLockFile()
+				return i, nil
+			}
+		}
+	} else {
+		if val, ok := projects[pId]; ok {
+			return val, nil
+		}
 	}
 	return nil, ErrProjectNotFound
 }
@@ -175,7 +188,8 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 					return nil, false, err
 				}
 				// also, update configuration of all the project's workspaces
-				return existingProject, false, s.updateWorkspacesProjectPath(ctx, existingProject)
+				projectCtx := context.WithValue(ctx, ContextProjectId, existingProject.ProjectId)
+				return existingProject, false, s.updateWorkspacesProjectPath(projectCtx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
@@ -242,10 +256,13 @@ func (s *LxdBackend) updateWorkspacesProjectPath(ctx context.Context, existingPr
 	}
 
 	for _, i := range workspaces {
-		s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
+		err = s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
 			Name:       ProjectPathDevice,
 			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": "/project"},
 		})
+		if err != nil {
+			return fmt.Errorf("cannot update workspace \"%v\" project directory", i.Name)
+		}
 	}
 	return nil
 }

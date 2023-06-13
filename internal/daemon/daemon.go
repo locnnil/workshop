@@ -580,7 +580,7 @@ func (d *Daemon) Stop(sigCh chan<- os.Signal) error {
 	d.mu.Unlock()
 
 	d.generalListener.Close()
-	d.standbyOpinions.Stop()
+	// d.standbyOpinions.Stop()
 
 	if d.untrustedListener != nil {
 		d.untrustedListener.Close()
