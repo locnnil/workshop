@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -206,4 +208,50 @@ func (s *apiSuite) TestProjectsGetWorkspaceNoProjectIdProvided(c *check.C) {
 	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
 	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "project-id must be provided")
+}
+
+func (s *apiSuite) TestProjectsPostProjectWorkspace(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	s.vars = map[string]string{"id": "b8639dea"}
+	projectDir := c.MkDir()
+	os.WriteFile(filepath.Join(projectDir, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04`), 0644)
+
+	buf := bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`)
+	req, err := s.createProjectsRequest("POST", "/v1/projects/b8639dea/workspaces", buf)
+	c.Assert(err, check.IsNil)
+
+	// will be called when project is created
+	restoreNewId := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
+	defer restoreNewId()
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) { soon++ }, &ensureStateSoon)
+	defer restoreEnsure()
+
+	b := s.d.overlord.WorkspaceBackend()
+	prj, _, err := b.CreateOrLoadProject(req.Context(), projectDir)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostProjectWorkspace(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Type, check.Equals, ResponseTypeAsync)
+	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
+	c.Assert(soon, check.Equals, 1)
+	c.Assert(rsp.Change, check.Equals, "1")
+
+	st := s.d.overlord.State()
+	st.Lock()
+	defer st.Unlock()
+	var user string
+	var projectKey workspacebackend.Project
+	st.Change("1").Get("user", &user)
+	st.Change("1").Get("project-key", &projectKey)
+
+	c.Assert(user, check.Equals, s.username)
+	c.Assert(&projectKey, check.DeepEquals, prj)
 }

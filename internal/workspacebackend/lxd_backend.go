@@ -903,8 +903,9 @@ func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 func (s *FakeWorkspaceBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
 	username := ctx.Value(ContextUser).(string)
 	if val, ok := s.projects[username]; ok {
-		if prj, ok := val[path]; ok {
-			return prj, false, nil
+		idx := slices.IndexFunc(maps.Values(val), func(p *Project) bool { return p.Path == path })
+		if idx != -1 {
+			return maps.Values(val)[idx], false, nil
 		}
 	} else {
 		s.projects[username] = make(map[string]*Project)
@@ -912,7 +913,7 @@ func (s *FakeWorkspaceBackend) CreateOrLoadProject(ctx context.Context, path str
 
 	prjId, _ := NewProjectId()
 	newPrj := &Project{ProjectId: prjId, Path: path}
-	s.projects[username][path] = newPrj
+	s.projects[username][prjId] = newPrj
 	return newPrj, true, nil
 }
 

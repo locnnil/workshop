@@ -13,7 +13,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 )
 
@@ -46,7 +45,8 @@ func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo
 			ws.State = workspacebackend.Error.String()
 			return &ws
 		}
-		// TODO: the order of SDK records is undetermined, we need the latest one
+		// TODO: the order of SDK records is undetermined, we need the latest SDK revision
+		// if there are multiple revisions
 		for i, val := range sequence {
 			ws.Content = append(ws.Content, &SdkInfo{i, val[0].Channel, strconv.FormatInt(val[0].Revision, 10)})
 		}
@@ -71,15 +71,6 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	return SyncResponse(maps.Values(projects), http.StatusOK)
-}
-
-func v1GetProject(c *Command, r *http.Request, _ *userState) Response {
-	projectId := muxVars(r)["id"]
-	state := c.d.overlord.State()
-	state.Lock()
-	defer state.Unlock()
-
-	return SyncResponse([]string{projectId}, http.StatusOK)
 }
 
 func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
@@ -131,7 +122,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 
 	workspaces, err := wBackend.GetAllWorkspaces(ctx)
 	if err != nil {
-		return statusInternalError("cannot list workspaces: %v", projectId, err)
+		return statusInternalError("cannot list workspaces: %v", err)
 	}
 
 	var wsInfos = make([]*WorkspaceInfo, 0)
@@ -185,14 +176,14 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
 
 		for _, i := range reqData.Names {
-			file, err := workspacebackend.ReadWorkspace(afero.NewOsFs(), workspacebackend.WorkspaceFilePath(prj.Path, i))
+			file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(prj.Path, i))
 			if err != nil {
-				return statusInternalError("cannot read workspace \"%s\": %v", i, err)
+				return statusBadRequest("cannot read workspace \"%s\": %v", i, err)
 			}
 
 			taskset, err := workspacestate.Launch(st, file, prj)
 			if err != nil {
-				return statusBadRequest("cannot launch workspace \"%s\": %v", i, err)
+				return statusInternalError("cannot launch workspace \"%s\": %v", i, err)
 			}
 			change.AddAll(taskset)
 			change.Set("user", user)

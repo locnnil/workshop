@@ -2,10 +2,10 @@ package workspacebackend
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 
-	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
@@ -44,12 +44,12 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func ReadWorkspace(fs afero.Fs, pathname string) (*WorkspaceFile, error) {
+func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 	var err error
 
 	var file = &WorkspaceFile{}
 
-	buf, err := afero.ReadFile(fs, pathname)
+	buf, err := os.ReadFile(pathname)
 
 	if err != nil {
 		return nil, err
