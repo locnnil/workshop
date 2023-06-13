@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	. "github.com/canonical/workspace/internal/overlord/sthelper"
-	"github.com/canonical/workspace/internal/project"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -61,7 +60,7 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 
 	/* Configure workspace core properties: project directory */
 	var prjMount = workspacebackend.WorkspaceDevice{
-		Name:       project.ProjectDeviceField,
+		Name:       workspacebackend.ProjectPathDevice,
 		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
 	}
 

@@ -153,3 +153,48 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingProject(c *check
 	c.Assert(merged[0].State(), check.Equals, workspacebackend.Error)
 	c.Assert(merged[0].Reason(), check.Equals, workspacebackend.MissingProject)
 }
+
+func (f *LxdBeTests) TestProjectDirectory(c *check.C) {
+	root := c.MkDir()
+	cases := []struct {
+		project  string
+		lockFile bool
+		cwd      string
+		expected string
+		err      error
+	}{
+
+		// nested directory
+		{"/home/user/", true, "/home/user/nested", "/home/user", nil},
+
+		// nested directory
+		{"/home/user/", true, "/home/user/test/very/deeply", "/home/user", nil},
+
+		// same level
+		{"/home/user/same", true, "/home/user/same", "/home/user/same", nil},
+
+		// different cwd
+		{"/home/user/different", true, "/home", "/home", nil},
+
+		// project is in root
+		{"/", true, "/home/user/notroot", "/", nil},
+
+		// .lock does not exist
+		{"/home/user/nolock", false, "/home/user/test/nolock", "/home/user/test/nolock", nil},
+	}
+
+	for _, i := range cases {
+		os.MkdirAll(filepath.Join(root, i.project), 0755)
+		os.MkdirAll(filepath.Join(root, i.cwd), 0755)
+		if i.lockFile == true {
+			os.Create(workspacebackend.LockPath(filepath.Join(root, i.project)))
+		}
+
+		path, err := workspacebackend.ProjectPath(filepath.Join(root, i.cwd))
+
+		c.Assert(path, check.Equals, filepath.Join(root, i.expected))
+		c.Assert(err, check.Equals, i.err)
+		os.RemoveAll(filepath.Join(root, i.project))
+		os.RemoveAll(filepath.Join(root, i.cwd))
+	}
+}

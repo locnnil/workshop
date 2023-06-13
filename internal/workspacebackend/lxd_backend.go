@@ -150,6 +150,36 @@ func (s *LxdBackend) trackProject(ctx context.Context, prj *Project) error {
 	return nil
 }
 
+// projectPath returns a project path for the cwd provided
+// if cwd is a sub-directory of the project. Otherwise, cwd
+// is returned unchanged
+func ProjectPath(cwd string) (string, error) {
+	path, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		return "", nil
+	}
+
+	for {
+		var err error
+		var ok, isDir bool
+		if ok, isDir, err = osutil.ExistsIsDir(path); err == nil && ok && isDir {
+			if ok = osutil.CanStat(LockPath(path)); ok {
+				return filepath.Clean(path), nil
+			}
+		}
+		if err != nil {
+			return "", err
+		}
+
+		if path == string(os.PathSeparator) {
+			break
+		}
+		path = filepath.Join(path, "..", string(os.PathSeparator))
+	}
+
+	return cwd, nil
+}
+
 func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
 	var err error
 
@@ -157,18 +187,18 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 		return nil, false, ErrNoRelativePathsAllowed
 	}
 
-	actualPath, err := filepath.EvalSymlinks(path)
+	projectDir, err := ProjectPath(path)
 	if err != nil {
 		return nil, false, err
 	}
 
 	// see if we have this project already existing
-	if existingProject, err := s.getProject(ctx, actualPath); err == nil {
+	if existingProject, err := s.getProject(ctx, projectDir); err == nil {
 		// the tracked path and the requested path must be the same
 		// otherwise it means that the project directory was moved or copied
 		// If that is the case, we must update the project's configuration
 		// in the LXD user.* key (i.e. track the project path with the existing id)
-		if existingProject.Path != actualPath {
+		if existingProject.Path != projectDir {
 			// Was the project directory moved or copied?
 			_, err := os.Stat(existingProject.Path)
 			copied := true
@@ -182,7 +212,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				// the directory was moved, so we:
 				// 1. Update the new path to the actual and track it
 				// 2. Update all the workspaces to the new project mount
-				existingProject.Path = actualPath
+				existingProject.Path = projectDir
 				err := s.trackProject(ctx, existingProject)
 				if err != nil {
 					return nil, false, err
@@ -198,7 +228,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				if err != nil {
 					return nil, false, err
 				}
-				var newPrj = Project{Path: actualPath, ProjectId: id}
+				var newPrj = Project{Path: projectDir, ProjectId: id}
 
 				if err = newPrj.UpdateLockFile(); err != nil {
 					return nil, false, err
@@ -216,7 +246,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	}
 
 	// no project found, try to create one, note there is no ID yet at this stage
-	var project = Project{Path: actualPath}
+	var project = Project{Path: projectDir}
 	workspaces, err := project.EnumWorkspaceFiles()
 	if err != nil {
 		return nil, false, err
