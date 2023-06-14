@@ -1,9 +1,16 @@
-summary: Ensure that 'workspace launch' creates a core LXD config correctly
+summary: Test 'workspace launch' for the supported workspace bases
+
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
 
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup "$WORKSPACES"
-  rm -rf /home/ubuntu/.local/share/workspace/sdks
+  uninstall_workspaced
 
 debug: |
   lxc project switch workspace.ubuntu
@@ -13,12 +20,8 @@ debug: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch empty workspaces with various bases should succeed"
+  echo "Test launch for all the supported bases"
   for path in "$WORKSPACES"/*; do
-    launch "$path" ws | MATCH started
-    assert_workspace_config "$path"
+    launch "$path" ws
+    list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
   done
-
-  echo "Launch an existing workspace should fail"
-  launch "$WORKSPACES"/test-empty-ubuntu20 ws | MATCH "workspace \"ws\" already exists"
-

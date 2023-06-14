@@ -1,15 +1,18 @@
 project: workspace
 
+environment:
+      PATH: $PATH:~/go/bin
+      WORKSPACE: /var/lib/workspace/default
+      TESTSLIB: $SPREAD_PATH/tests/lib
+
+prepare: |
+      apt-get install -y --no-install-recommends gcc libc6-dev snapd jq
+      snap install go --classic
+
+      snap install lxd --classic
+      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workspace/
+      lxd init --auto
 backends:
-  # lxd:
-  #   systems:
-  #     - ubuntu-22.04
-  # qemu:
-  #   systems:
-  #       - ubuntu-22.10-64:
-  #           username: ubuntu
-  #           password: ubuntu
-  
   multipass:
     type: adhoc
     allocate: |
@@ -59,19 +62,7 @@ backends:
 suites:
   tests/main/:
     summary: Core workspace scenarios
-    environment: 
-      PATH: $PATH:~/go/bin
-      WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
-      WORKSPACES_SDK: $SPREAD_PATH/tests/lib/workspaces-sdk
-      TESTSLIB: $SPREAD_PATH/tests/lib
-    prepare: |
-      apt-get update
-      apt-get install -y --no-install-recommends gcc libc6-dev snapd jq
-      snap install go --classic
-
-      snap install lxd --classic
-      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workspace/
-      lxd init --auto
-
 
 path: /remote
+exclude:
+  - .workspace.lock

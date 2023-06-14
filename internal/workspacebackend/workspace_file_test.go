@@ -1,9 +1,10 @@
 package workspacebackend_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
 	. "gopkg.in/check.v1"
@@ -19,7 +20,7 @@ func (f *F) SetUpTest(c *C) {
 	f.fs = afero.NewMemMapFs()
 }
 
-func Test(t *testing.T) { TestingT(t) }
+func TestWorkspaceFile(t *testing.T) { TestingT(t) }
 
 func (f *F) TestWorkspaceFileParseNormal(c *C) {
 	buf := []byte(`name: xbert-gpu
@@ -30,8 +31,9 @@ sdks:
   cuda:
     channel: latest/stable
 `)
-	afero.WriteFile(f.fs, "/.workspace.xbert-gpu.yaml", buf, 0644)
-	file, err := workspacebackend.ReadWorkspace(f.fs, util.ToPathname("/", "xbert-gpu"))
+	dir := c.MkDir()
+	os.WriteFile(filepath.Join(dir, ".workspace.xbert-gpu.yaml"), buf, 0644)
+	file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(dir, "xbert-gpu"))
 	c.Assert(err, Equals, nil)
 	c.Assert(file.Name, Equals, "xbert-gpu")
 	c.Assert(file.Base, Equals, "ubuntu@20.04")

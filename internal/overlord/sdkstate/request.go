@@ -13,14 +13,14 @@ func Retrieve(st *state.State, sdk *workspacebackend.Sdk) *state.Task {
 	return download
 }
 
-func Install(st *state.State, sdk *workspacebackend.Sdk, retrieveId string) *state.TaskSet {
+func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
 	tasks := []*state.Task{}
 
-	install := st.NewTask("install-sdk", fmt.Sprintf("Install SDK %q", sdk.Name))
+	install := st.NewTask("install-sdk", fmt.Sprintf("Install SDK %q", sdk))
 	install.Set("sdk-retrieve-task", retrieveId)
 	tasks = append(tasks, install)
 
-	link := st.NewTask("link-sdk", fmt.Sprintf("Link SDK %q", sdk.Name))
+	link := st.NewTask("link-sdk", fmt.Sprintf("Link SDK %q", sdk))
 	link.Set("sdk-retrieve-task", retrieveId)
 	link.WaitFor(install)
 	tasks = append(tasks, link)

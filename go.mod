@@ -4,8 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/storage v1.27.0
-	github.com/adrg/xdg v0.4.0
-	github.com/canonical/x-go v0.0.0-20230113154138-0ccdb0b57a43
+	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.0
 	github.com/lxc/lxd v0.0.0-20221215165925-aa3cdeaec9a5
 	github.com/spf13/afero v1.9.5
@@ -31,6 +30,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
+	github.com/gorilla/mux v1.8.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/juju/webbrowser v1.0.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
@@ -39,7 +39,7 @@ require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
-	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/pkg/sftp v1.13.5
 	github.com/pkg/xattr v0.4.9 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
@@ -47,7 +47,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
+	golang.org/x/crypto v0.4.0
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/term v0.3.0 // indirect

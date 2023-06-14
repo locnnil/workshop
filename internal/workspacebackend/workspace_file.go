@@ -2,11 +2,10 @@ package workspacebackend
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 
-	util "github.com/canonical/workspace/internal"
-	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
@@ -45,12 +44,12 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func ReadWorkspace(fs afero.Fs, pathname string) (*WorkspaceFile, error) {
+func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 	var err error
 
 	var file = &WorkspaceFile{}
 
-	buf, err := afero.ReadFile(fs, pathname)
+	buf, err := os.ReadFile(pathname)
 
 	if err != nil {
 		return nil, err
@@ -69,7 +68,7 @@ func ReadWorkspace(fs afero.Fs, pathname string) (*WorkspaceFile, error) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 
-	if util.ToFileName(file.Name) != filepath.Base(pathname) {
+	if WorkspaceFileName(file.Name) != filepath.Base(pathname) {
 		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 

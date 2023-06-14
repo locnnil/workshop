@@ -1,12 +1,10 @@
 package hookstate
 
 import (
-	"fmt"
 	"path/filepath"
 
-	util "github.com/canonical/workspace/internal"
-	. "github.com/canonical/workspace/internal/overlord/sharedstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	. "github.com/canonical/workspace/internal/overlord/sthelper"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
@@ -14,7 +12,7 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -24,12 +22,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, project)
+	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
 	st := task.State()
 	st.Lock()
-	var hook util.WorkspaceHookType
+	var hook workspacebackend.WorkspaceHookType
 	err = task.Get("hook-setup", &hook)
 	st.Unlock()
 	if err != nil {
@@ -38,12 +36,10 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(util.ToInstanceName(workspace, project.ProjectId))
+	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, prj.ProjectId))
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("Running hook \"%s\" for \"%s\"...\n", hook.String(), blob.Name)
 
 	args := workspacebackend.ExecArgs{
 		User: "root",
@@ -53,9 +49,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			"-o",
 			"pipefail",
 			"-c",
-			filepath.Join(util.ToHooksPath(blob.Name), hook.String()),
+			filepath.Join(workspacebackend.SdkHooksPath(blob.Name), hook.String()),
 		},
-		WorkDir: util.ToHooksPath(blob.Name),
+		WorkDir: workspacebackend.SdkHooksPath(blob.Name),
 		Stdin:   nil,
 		Stdout:  outerr,
 		Stderr:  outerr}

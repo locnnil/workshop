@@ -7,11 +7,13 @@ import (
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 )
 
 type S struct {
-	state *state.State
+	state   *state.State
+	project *workspacebackend.Project
 }
 
 var _ = Suite(&S{})
@@ -20,6 +22,21 @@ func Test(t *testing.T) { TestingT(t) }
 
 func (s *S) SetUpTest(c *C) {
 	s.state = state.New(nil)
+	s.project = &workspacebackend.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
+}
+
+func (s *S) ensureWorkspaceAndProjectKeys(c *C, w string, ts []*state.Task) {
+	for _, i := range ts {
+		var prj workspacebackend.Project
+		err := i.Get("project-key", &prj)
+		c.Assert(err, check.IsNil)
+		c.Assert(&prj, check.DeepEquals, s.project)
+
+		var workspace string
+		err = i.Get("workspace", &workspace)
+		c.Assert(err, check.IsNil)
+		c.Assert(workspace, check.Equals, w)
+	}
 }
 
 func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
@@ -37,7 +54,7 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	file := &workspacebackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
-	ts, err := workspace.Launch(s.state, file)
+	ts, err := workspace.Launch(s.state, file, s.project)
 
 	expected := []string{"create-workspace",
 		"mount-project",
@@ -51,6 +68,7 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	err = tasks[0].Get("base", &base)
 	c.Assert(err, Equals, nil)
 	c.Assert(base, Equals, "ubuntu@22.04")
+	s.ensureWorkspaceAndProjectKeys(c, "test", ts.Tasks())
 }
 
 func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
@@ -64,7 +82,7 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{sdk, sdk_2}}
 
-	ts, err := workspace.Launch(s.state, file)
+	ts, err := workspace.Launch(s.state, file, s.project)
 
 	expected := []string{"create-workspace",
 		"mount-project",
@@ -122,4 +140,6 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	err = tasks[10].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, Equals, nil)
 	c.Assert(id2, Equals, tasks[4].ID())
+
+	s.ensureWorkspaceAndProjectKeys(c, "test", tasks)
 }

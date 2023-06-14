@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 type CmdChanges struct {
+	clientMixin
 }
 
 func (c *CmdChanges) Command() *cobra.Command {
@@ -26,54 +26,48 @@ func (c *CmdChanges) Command() *cobra.Command {
 }
 
 func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
-	overlord, err := overlord.New(nil, os.Stdout)
+	var clientConfig client.Config
+	var clientOpts client.ChangesOptions
+	var err error
+
+	_, clientConfig.Socket = dirs.GetEnvPaths()
+	cli, err := client.New(&clientConfig)
+	if err != nil {
+		return fmt.Errorf("cannot create client: %v", err)
+	}
+	c.setClient(cli)
+
+	if cmd.Parent().Flag("project").Changed {
+		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()
+	}
+
+	clientOpts.Selector = client.ChangesAll
+
+	chngs, err := c.client.Changes(&clientOpts)
 	if err != nil {
 		return err
 	}
 
-	st := overlord.State()
-	st.Lock()
-	defer st.Unlock()
+	slices.SortFunc(chngs, func(a, b *client.Change) bool { return a.SpawnTime.Before(b.SpawnTime) })
 
-	all_changes := st.Changes()
-	var changes = make([]*state.Change, 0, len(all_changes))
-
-	/* Only report changes for a certain project */
-	if cmd.Parent().Flag("project").Changed {
-		for _, chg := range all_changes {
-			var project = projectstate.ProjectKey{Path: "-", ProjectId: "-"}
-			err := chg.Get("project-key", &project)
-			if err == nil {
-				if project.Path == Project {
-					changes = append(changes, chg)
-				}
-			}
-		}
-	} else {
-		changes = all_changes
-	}
-
-	if len(changes) > 0 {
+	if len(chngs) > 0 {
 		w := tabWriter()
 		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tProject\tSummary\n")
 
-		for _, chg := range changes {
-			var project = projectstate.ProjectKey{Path: "-", ProjectId: "-"}
-			chg.Get("project-key", &project)
-
-			spawnTime := timeutil.Human(chg.SpawnTime())
-			readyTime := timeutil.Human(chg.ReadyTime())
-			if chg.ReadyTime().IsZero() {
+		for _, chg := range chngs {
+			spawnTime := timeutil.Human(chg.SpawnTime)
+			readyTime := timeutil.Human(chg.ReadyTime)
+			if chg.ReadyTime.IsZero() {
 				readyTime = "-"
 			}
 
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-				chg.ID(),
-				chg.Status().String(),
+				chg.ID,
+				chg.Status,
 				spawnTime,
 				readyTime,
-				contractHomeDirectory(project.Path),
-				chg.Summary())
+				contractHomeDirectory(chg.Project),
+				chg.Summary)
 		}
 		w.Flush()
 	}

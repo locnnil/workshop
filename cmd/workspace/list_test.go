@@ -3,9 +3,17 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"testing"
 
 	. "gopkg.in/check.v1"
 )
+
+type Main struct {
+}
+
+var _ = Suite(&Main{})
+
+func TestMain(t *testing.T) { TestingT(t) }
 
 func (m *Main) TestHomeDirectoryPathContraction(c *C) {
 	home, _ := os.UserHomeDir()

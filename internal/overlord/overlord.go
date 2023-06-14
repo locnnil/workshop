@@ -17,7 +17,6 @@ package overlord
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -27,11 +26,9 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
-	util "github.com/canonical/workspace/internal"
 	"github.com/canonical/workspace/internal/osutil"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
 	"github.com/canonical/workspace/internal/overlord/restart"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -53,8 +50,9 @@ var (
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
-	stateDir string
-	stateEng *StateEngine
+	stateDir         string
+	stateEng         *StateEngine
+	workspaceBackend workspacebackend.WorkspaceBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -68,7 +66,6 @@ type Overlord struct {
 	inited    bool
 	sdk       *sdkstate.SdkManager
 	workspace *workspace.WorkspaceManager
-	project   *projectstate.ProjectManager
 	hook      *hookstate.HookManager
 	runner    *state.TaskRunner
 
@@ -78,25 +75,25 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, error) {
+func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
-		stateDir: util.StateDir,
+		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
 		inited:   true,
 	}
 
 	var err error
 
-	if !filepath.IsAbs(util.StateDir) {
-		return nil, fmt.Errorf("directory %q must be absolute", util.StateDir)
+	if !filepath.IsAbs(dir) {
+		return nil, fmt.Errorf("directory %q must be absolute", dir)
 	}
-	if !osutil.IsDir(util.StateDir) {
-		return nil, fmt.Errorf("directory %q does not exist", util.StateDir)
+	if !osutil.IsDir(dir) {
+		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
 
-	/* We use file locking here as multiple clients can try access the state file now,
+	/* We use file locking hereutil.StateDir as multiple clients can try access the state file now,
 	this will be removed once moved to a client-server arch */
-	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(util.StateDir, ".lock"))
+	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(dir, ".lock"))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +110,9 @@ func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, er
 		}
 	}
 
-	statePath := filepath.Join(util.StateDir, "state.json")
+	o.workspaceBackend = b
+
+	statePath := filepath.Join(dir, "state.json")
 
 	backend := &overlordStateBackend{
 		path:         statePath,
@@ -133,21 +132,13 @@ func New(restartHandler restart.Handler, serviceOutput io.Writer) (*Overlord, er
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
 
-	workspaceBackend, err := workspacebackend.New()
-	if err != nil {
-		return nil, err
-	}
-
-	o.workspace = workspace.NewWorkspaceManager(o.runner, workspaceBackend)
+	o.workspace = workspace.NewWorkspaceManager(o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)
 
-	o.sdk = sdkstate.NewSdkManager(o.runner, workspaceBackend)
+	o.sdk = sdkstate.NewSdkManager(o.runner, o.workspaceBackend)
 	o.addManager(o.sdk)
 
-	o.project = projectstate.NewProjectManager(o.runner, workspaceBackend)
-	o.addManager(o.project)
-
-	o.hook = hookstate.NewHookManager(o.runner, workspaceBackend)
+	o.hook = hookstate.NewHookManager(o.runner, o.workspaceBackend)
 	o.addManager(o.hook)
 
 	// the shared task runner should be added last!
@@ -398,16 +389,14 @@ func (o *Overlord) StateEngine() *StateEngine {
 	return o.stateEng
 }
 
-// InterfaceManager returns the interface manager maintaining
-// interface connections under the overlord.
-func (o *Overlord) ProjectManager() *projectstate.ProjectManager {
-	return o.project
-}
-
 // TaskRunner returns the shared task runner responsible for running
 // tasks for all managers under the overlord.
 func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
+}
+
+func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
+	return o.workspaceBackend
 }
 
 // Fake creates an Overlord without any managers and with a backend

@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"strconv"
 
-	util "github.com/canonical/workspace/internal"
+	"github.com/canonical/workspace/internal/dirs"
 	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/logger"
-	. "github.com/canonical/workspace/internal/overlord/sharedstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	backend "github.com/canonical/workspace/internal/workspacebackend"
+	. "github.com/canonical/workspace/internal/overlord/sthelper"
+	"github.com/canonical/workspace/internal/workspacebackend"
+
 	"github.com/spf13/afero"
 
 	"gopkg.in/tomb.v2"
@@ -19,7 +20,7 @@ import (
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
-	var sdk backend.Sdk
+	var sdk workspacebackend.Sdk
 
 	st.Lock()
 	err := task.Get("sdk-setup", &sdk)
@@ -34,7 +35,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return nil
 	}
 
-	blob, err := client.RetrieveSdk(sdk.Name, sdk.Channel)
+	blob, err := client.RetrieveSdk(sdk.Name, sdk.Channel, dirs.SdkDir)
 	if err != nil {
 		return err
 	}
@@ -46,19 +47,17 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk *store.SdkBlob) backend.WorkspaceDevice {
-	filename := store.ToSdkFilename(sdk.Name, sdk.Revision)
-
+func sdkBlobDevice(sdk *store.SdkBlob) workspacebackend.WorkspaceDevice {
 	/* Bind-mount the SDK to the workspace */
-	return backend.WorkspaceDevice{
+	return workspacebackend.WorkspaceDevice{
 		Name: sdk.Name,
-		Properties: map[string]string{"type": "disk", "source": filename,
-			"path": filepath.Join("/root", filepath.Base(filename))},
+		Properties: map[string]string{"type": "disk", "source": sdk.Filename,
+			"path": filepath.Join("/root", filepath.Base(sdk.Filename))},
 	}
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -70,21 +69,19 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	st := task.State()
 
-	ctx, cancel := BackendContext(tomb, project)
+	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
-
-	fmt.Printf("Setting up SDK \"%s\" from %s revision %d...\n", blob.Name, blob.Channel, blob.Revision)
 
 	sdkMount := sdkBlobDevice(blob)
 
-	err = m.backend.AddWorkspaceDevice(workspace, project.ProjectId, sdkMount)
+	err = m.backend.AddWorkspaceDevice(ctx, workspace, sdkMount)
 	if err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		/* Make sure the SDK file will be unmounted once installed into the workspace */
-		if err := m.backend.RemoveWorkspaceDevice(workspace, project.ProjectId, sdkMount.Name); err != nil {
+		if err := m.backend.RemoveWorkspaceDevice(ctx, workspace, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK blob %q from workspace %q: %v", sdkMount.Name, workspace, err)
 		}
 	}
@@ -92,19 +89,19 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	defer cleanup()
 
 	/* example: /var/lib/workspace/sdk/cuda/712/ */
-	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name,
+	sdkPath := filepath.Join(workspacebackend.WorkspaceSdksDir, blob.Name,
 		strconv.Itoa(int(blob.Revision)))
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(util.ToInstanceName(workspace, project.ProjectId))
+	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	args := backend.ExecArgs{
+	args := workspacebackend.ExecArgs{
 		User: "root",
 		Command: []string{
 			"tar",
@@ -134,10 +131,13 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
 
 	blob, err := SdkSetup(task)
 	if err != nil {
@@ -149,13 +149,13 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer st.Unlock()
 	sdkMount := sdkBlobDevice(blob)
 
-	fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
+	fs, err := m.backend.GetWorkspaceFs(ctx, workspace)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(util.WorkspaceSdksDir, blob.Name))
+	err = fs.RemoveAll(filepath.Join(workspacebackend.WorkspaceSdksDir, blob.Name))
 	if err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
@@ -164,7 +164,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -178,8 +178,11 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
+
 	/* Read a sequence record for the SDK (if any) */
-	props, err := m.backend.GetWorkspace(workspace, project.ProjectId)
+	props, err := m.backend.GetWorkspace(ctx, workspace)
 	if err != nil {
 		return err
 	}
@@ -201,8 +204,8 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	/* Make a record in a LXD's key value storage to maintain
 	the sequence of the SDK's revisions */
-	err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
-		&backend.WorkspaceConfigValue{
+	err = m.backend.AddWorkspaceConfig(ctx, workspace,
+		&workspacebackend.WorkspaceConfigValue{
 			Name:  "user.workspace.sdk",
 			Value: string(sequenceValue),
 		})
@@ -212,9 +215,9 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	/* Update the current link to point out to the newly installed SDK */
-	sdkPath := filepath.Join(util.WorkspaceSdksDir, blob.Name)
+	sdkPath := filepath.Join(workspacebackend.WorkspaceSdksDir, blob.Name)
 
-	fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
+	fs, err := m.backend.GetWorkspaceFs(ctx, workspace)
 	if err != nil {
 		return err
 	}
@@ -230,7 +233,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	project, workspace, err := ProjectAndWorkspace(task)
+	user, project, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -244,8 +247,11 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
+
 	/* Read a sequence record for the SDK (if any) */
-	props, err := m.backend.GetWorkspace(workspace, project.ProjectId)
+	props, err := m.backend.GetWorkspace(ctx, workspace)
 	if err != nil {
 		return err
 	}
@@ -276,8 +282,8 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 			}
 
 			/* Update the workspace config */
-			err = m.backend.AddWorkspaceConfig(workspace, project.ProjectId,
-				&backend.WorkspaceConfigValue{
+			err = m.backend.AddWorkspaceConfig(ctx, workspace,
+				&workspacebackend.WorkspaceConfigValue{
 					Name:  "user.workspace.sdk",
 					Value: string(newSequence),
 				})
@@ -286,14 +292,14 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 			}
 		} else {
 			/* If no SDKs left in the sequence record, remove it fully */
-			err = m.backend.RemoveWorkspaceConfig(workspace, project.ProjectId,
+			err = m.backend.RemoveWorkspaceConfig(ctx, workspace,
 				"user.workspace.sdk")
 			if err != nil {
 				return nil
 			}
 		}
 		/* Update the 'current' link */
-		fs, err := m.backend.GetWorkspaceFs(workspace, project.ProjectId)
+		fs, err := m.backend.GetWorkspaceFs(ctx, workspace)
 		if err != nil {
 			return err
 		}
@@ -302,10 +308,10 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		if newSeqLen > 0 {
 			/* There is another revision available, shift the link to it */
 			err = fs.Symlink(strconv.Itoa(int(sequence[blob.Name][newSeqLen-1].Revision)),
-				util.ToCurrentPath(blob.Name), true)
+				workspacebackend.SdkCurrentPath(blob.Name), true)
 		} else {
 			/* It was the only revision, remove the link */
-			err = fs.Remove(util.ToCurrentPath(blob.Name))
+			err = fs.Remove(workspacebackend.SdkCurrentPath(blob.Name))
 		}
 
 		return err

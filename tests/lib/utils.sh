@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Install and uninstall workspaced
+
+function install_workspaced() {
+  # make sure there is no existing changes
+    go install -buildvcs=false /remote/cmd/workspaced
+    install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
+    systemctl start workspaced
+}
+
+function uninstall_workspaced() {
+  systemctl stop workspaced
+  rm -f /etc/systemd/system/workspaced.service
+  rm -f "$HOME"/go/bin/workspaced
+  rm -rf "$WORKSPACE"
+}
 # Functions to assert required LXD state
 
 function assert_workspace_config() {
@@ -29,11 +44,10 @@ function assert_workspace_sdk() {
 
 function cleanup() {
   lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
+  lxc project set workspace.ubuntu user.workspace.projects ""
   for i in $1/*; do
     rm -f "$i"/.workspace.lock
   done
-  rm -rf /home/ubuntu/.local/share/workspace/sdks
-  rm -rf -- /home/ubuntu/.local/share/workspace /home/ubuntu/.local/state/workspace/state.json
 }
 
 function assert_arrays_equal() {
@@ -59,7 +73,7 @@ function list_cwd() {
   sudo -u ubuntu -- workspace list
 }
 
-function list_all() {
+function list_global() {
   sudo -u ubuntu -- workspace list --global
 }
 
@@ -74,4 +88,3 @@ function changes() {
 function changes_global() {
   sudo -u ubuntu -- workspace changes
 }
-

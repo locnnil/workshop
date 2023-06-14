@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,16 +8,15 @@ import (
 
 	"text/tabwriter"
 
-	util "github.com/canonical/workspace/internal"
-	"github.com/canonical/workspace/internal/overlord/projectstate"
-	srv "github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/spf13/afero"
+	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/dirs"
+	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
 type CmdList struct {
+	clientMixin
 	global bool
 }
 
@@ -37,97 +35,96 @@ func (c *CmdList) Command() *cobra.Command {
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	var err error
-	var server srv.WorkspaceBackend
-	var project *projectstate.Project
-	var fs = afero.NewOsFs()
-
 	/* check if both --project and --global were provided */
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
 		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	server, err = srv.New()
+	var clientConfig client.Config
+	var err error
+
+	_, clientConfig.Socket = dirs.GetEnvPaths()
+	cli, err := client.New(&clientConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot create client: %v", err)
 	}
 
+	c.setClient(cli)
+
 	if !c.global {
-		project, err = projectstate.LoadProject(server, fs, Project)
-		if err == nil {
-			/* List all workspaces for the current project */
-			wsList, err := project.RetrieveWorkspaces()
-			if len(wsList) != 0 && err == nil {
-				listWorkspaces(wsList, project)
-			} else {
-				return err
-			}
-			return err
-		} else if errors.Is(err, afero.ErrFileNotFound) {
-			/* Project was not found at the path provided, hence
-			return an error */
-			return fmt.Errorf("not a project directory. Try --global to see all projects or launch your first workspace")
-		}
-	} else {
-		/* List all workspaces in all projects */
-		err = listGlobal(server, fs)
+		project, err := c.client.Project(Project)
 		if err != nil {
 			return err
 		}
-	}
 
-	return nil
-}
-
-func listGlobal(server srv.WorkspaceBackend, fs afero.Fs) error {
-	list, err := projectstate.RetrieveWorkspacesGlobal(server, fs)
-	if err != nil || len(list) == 0 {
-		return err
-	}
-	w := tabWriter()
-
-	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
-
-	keys := maps.Keys(list)
-	slices.SortFunc(keys,
-		func(i, j *projectstate.Project) bool { return i.ProjectDirectory() > j.ProjectDirectory() })
-
-	for _, project := range keys {
-		for _, j := range list[project] {
-			if j.State() == util.Off {
-				continue
-			}
-			line := listWorkspace(j, project)
-			fmt.Fprintln(w, strings.Join(line, "\t"))
+		workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
+		if err != nil {
+			return err
 		}
+		slices.SortFunc(workspaces, func(a, b *client.Workspace) bool { return a.Name < b.Name })
+		/* List all workspaces for the current project */
+		if len(workspaces) != 0 {
+			printWorkspaces(workspaces, project)
+		} else {
+			return err
+		}
+		return err
+	} else {
+		w := tabWriter()
+		fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
+
+		projects, err := c.client.Projects()
+		slices.SortFunc(projects, func(a, b *client.Project) bool { return a.Path < b.Path })
+
+		if err != nil {
+			return err
+		}
+
+		for _, i := range projects {
+			workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
+			slices.SortFunc(workspaces, func(a, b *client.Workspace) bool { return a.Name < b.Name })
+
+			if err != nil {
+				return err
+			}
+			for _, j := range workspaces {
+				// --global flage would not list Off workspaces for consistency.
+				// We may not be aware of all the project directories on the system
+				// and, thus, will not know all the available Off workspaces (contrary
+				// to the workspace that are in any other state, i.e. running instances, which we always know
+				// about from the workspace backend)
+				if j.State != "Off" {
+					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))
+				}
+			}
+		}
+
+		w.Flush()
 	}
-	w.Flush()
+
 	return nil
 }
 
-func listWorkspaces(wsList []*srv.WorkspaceProps, project *projectstate.Project) {
+func printWorkspaces(wsList []*client.Workspace, prj *client.Project) {
 	w := tabWriter()
 	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
-
-	slices.SortFunc(wsList,
-		func(i, j *srv.WorkspaceProps) bool { return i.Name > j.Name })
 
 	for _, val := range wsList {
-		line := listWorkspace(val, project)
+		line := printWorkspace(val, prj)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
 }
 
-func listWorkspace(j *srv.WorkspaceProps, project *projectstate.Project) []string {
+func printWorkspace(j *client.Workspace, prj *client.Project) []string {
 	comment := "-"
-	if j.State() == util.Error {
-		comment = j.Reason().String()
+	if j.State == workspacebackend.Error.String() {
+		comment = strings.Join(j.Notes, ",")
 	}
 	line := []string{
-		contractHomeDirectory(project.ProjectDirectory()),
+		contractHomeDirectory(prj.Path),
 		j.Name,
-		j.State().String(),
+		j.State,
 		comment,
 	}
 	return line
@@ -151,5 +148,5 @@ func contractHomeDirectory(path string) string {
 
 func tabWriter() *tabwriter.Writer {
 	/* Tab writer uses the same formatting as snap list */
-	return tabwriter.NewWriter(os.Stdout, 5, 3, 2, ' ', 0)
+	return tabwriter.NewWriter(os.Stdout, 4, 3, 2, ' ', 0)
 }

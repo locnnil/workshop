@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"testing"
 
 	"gopkg.in/check.v1"
 
@@ -32,6 +33,8 @@ type userSuite struct {
 
 	restorer func()
 }
+
+func TestOsUtil(t *testing.T) { check.TestingT(t) }
 
 var _ = check.Suite(&userSuite{})
 
