@@ -21,7 +21,8 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		retrieve.AddTask(r)
 
 		/* install task sets must not run concurrently as exec ops are not allowed
-		by LXD to be run concurrently */
+		by LXD to be run concurrently and in general case we cannot guarantee safety of
+		concurrent installations */
 		installTaskSet := sdkstate.Install(st, sdk.Name, r.ID())
 		if prevInstall != nil {
 			installTaskSet.WaitAll(prevInstall)
