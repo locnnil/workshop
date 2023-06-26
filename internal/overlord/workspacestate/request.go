@@ -32,7 +32,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		install.AddAll(installTaskSet)
 
 		/* Make sure that the hook tasks are not concurrent */
-		setupHookTask := hookstate.SetupHook(st, &sdk, r.ID())
+		setupHookTask := hookstate.SetupHook(st, &sdk, r.ID(), workspacebackend.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		} else {

@@ -2,14 +2,22 @@ package hookstate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
-	srv "github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-type HookManager struct {
-	backend srv.WorkspaceBackend
+type HookSetup struct {
+	hookType workspacebackend.WorkspaceHookType
 }
 
-func NewHookManager(runner *state.TaskRunner, server srv.WorkspaceBackend) *HookManager {
+func (h HookSetup) Type() string {
+	return h.hookType.String()
+}
+
+type HookManager struct {
+	backend workspacebackend.WorkspaceBackend
+}
+
+func NewHookManager(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *HookManager {
 	manager := &HookManager{
 		backend: server,
 	}

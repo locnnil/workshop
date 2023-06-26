@@ -27,7 +27,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	st := task.State()
 	st.Lock()
-	var hook workspacebackend.WorkspaceHookType
+	var hook HookSetup
 	err = task.Get("hook-setup", &hook)
 	st.Unlock()
 	if err != nil {
@@ -49,7 +49,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			"-o",
 			"pipefail",
 			"-c",
-			filepath.Join(workspacebackend.SdkHooksPath(blob.Name), hook.String()),
+			filepath.Join(workspacebackend.SdkHooksPath(blob.Name), hook.Type()),
 		},
 		WorkDir: workspacebackend.SdkHooksPath(blob.Name),
 		Stdin:   nil,
