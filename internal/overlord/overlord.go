@@ -101,7 +101,7 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	for {
 		err = o.stateFileLock.TryLock()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Cannot start, could another workspace be running?")
+			fmt.Fprintln(os.Stderr, "Cannot start, could another workspaced be running?")
 			fmt.Fprintln(os.Stderr, "Retry in 5 seconds...")
 
 			time.Sleep(5 * time.Second)

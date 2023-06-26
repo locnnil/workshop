@@ -34,14 +34,14 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	}
 
 	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
 	var base string
+	st.Lock()
 	err = task.Get("base", &base)
+	st.Unlock()
 
 	if err != nil {
 		return fmt.Errorf("cannot get workspace base for task %q: %v", task.ID(), err)
