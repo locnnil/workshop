@@ -174,20 +174,16 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	switch reqData.Action {
 	case "launch":
 		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
+		change.Set("user", user)
+		change.Set("project-key", &prj)
 
-		for _, i := range reqData.Names {
-			file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(prj.Path, i))
-			if err != nil {
-				return statusBadRequest("cannot read workspace \"%s\": %v", i, err)
-			}
+		taskset, err := workspacestate.LaunchMany(st, reqData.Names, prj)
+		if err != nil {
+			return statusBadRequest(err.Error())
+		}
 
-			taskset, err := workspacestate.Launch(st, file, prj)
-			if err != nil {
-				return statusInternalError("cannot launch workspace \"%s\": %v", i, err)
-			}
-			change.AddAll(taskset)
-			change.Set("user", user)
-			change.Set("project-key", &prj)
+		for _, i := range taskset {
+			change.AddAll(i)
 		}
 	default:
 		return statusBadRequest("unknown action")

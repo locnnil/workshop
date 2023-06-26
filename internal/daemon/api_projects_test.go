@@ -207,7 +207,7 @@ func (s *apiSuite) TestProjectsGetWorkspaceNoProjectIdProvided(c *check.C) {
 	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "project-id must be provided")
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspace(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectLaunchWorkspace(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")

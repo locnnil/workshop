@@ -9,6 +9,23 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
+func LaunchMany(st *state.State, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+	taskset := make([]*state.TaskSet, 0, len(workspaces))
+	for _, i := range workspaces {
+		file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(project.Path, i))
+		if err != nil {
+			return nil, fmt.Errorf("cannot read workspace \"%s\": %v", i, err)
+		}
+
+		tasks, err := Launch(st, file, project)
+		if err != nil {
+			return nil, fmt.Errorf("cannot launch workspace \"%s\": %v", i, err)
+		}
+		taskset = append(taskset, tasks)
+	}
+	return taskset, nil
+}
+
 func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *workspacebackend.Project) (*state.TaskSet, error) {
 	retrieve := state.NewTaskSet([]*state.Task{}...)
 	install := state.NewTaskSet([]*state.Task{}...)
@@ -20,9 +37,9 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		r := sdkstate.Retrieve(st, &sdk)
 		retrieve.AddTask(r)
 
-		/* install task sets must not run concurrently as exec ops are not allowed
-		by LXD to be run concurrently and in general case we cannot guarantee safety of
-		concurrent installations */
+		// The install task sets must not run concurrently as exec ops are not
+		// allowed by LXD to be run concurrently and in general case we cannot
+		// guarantee safety of concurrent installations
 		installTaskSet := sdkstate.Install(st, sdk.Name, r.ID())
 		if prevInstall != nil {
 			installTaskSet.WaitAll(prevInstall)
@@ -31,7 +48,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		}
 		install.AddAll(installTaskSet)
 
-		/* Make sure that the hook tasks are not concurrent */
+		// Make sure that the hook tasks are not concurrent
 		setupHookTask := hookstate.SetupHook(st, &sdk, r.ID(), workspacebackend.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
@@ -65,4 +82,8 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	}
 
 	return set, nil
+}
+
+func Refresh(st *state.State, file *workspacebackend.WorkspaceFile, project *workspacebackend.Project) (*state.TaskSet, error) {
+	return nil, nil
 }
