@@ -58,10 +58,12 @@ func (s WorkspaceStateReason) String() string {
 
 const (
 	SetupBase WorkspaceHookType = iota
+	SaveState
+	RestoreState
 )
 
 func (s WorkspaceHookType) String() string {
-	return [...]string{"setup-base"}[s]
+	return [...]string{"setup-base", "save-state", "restore-state"}[s]
 }
 
 func WorkspaceFilePath(dir, name string) string {

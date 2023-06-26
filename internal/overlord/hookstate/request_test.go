@@ -28,10 +28,18 @@ func (s *S) TestCreateHook(c *check.C) {
 	defer s.state.Unlock()
 
 	var sdk = workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
-	task := hookstate.SetupHook(s.state, &sdk, "1", workspacebackend.SetupBase)
 
-	var hookSetup hookstate.HookSetup
-	err := task.Get("hook-setup", &hookSetup)
-	c.Assert(err, check.IsNil)
-	c.Assert(hookSetup.Type(), check.Equals, workspacebackend.SetupBase.String())
+	for _, i := range []workspacebackend.WorkspaceHookType{
+		workspacebackend.SetupBase,
+		workspacebackend.SaveState,
+		workspacebackend.RestoreState,
+	} {
+		task := hookstate.SetupHook(s.state, &sdk, "1", i)
+
+		var hookSetup hookstate.HookSetup
+		err := task.Get("hook-setup", &hookSetup)
+		c.Assert(err, check.IsNil)
+		c.Assert(hookSetup.Type(), check.Equals, i.String())
+	}
+
 }

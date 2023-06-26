@@ -6,11 +6,11 @@ import (
 )
 
 type HookSetup struct {
-	hookType workspacebackend.WorkspaceHookType
+	HookType workspacebackend.WorkspaceHookType `json:"type"`
 }
 
-func (h HookSetup) Type() string {
-	return h.hookType.String()
+func (h *HookSetup) Type() string {
+	return h.HookType.String()
 }
 
 type HookManager struct {
