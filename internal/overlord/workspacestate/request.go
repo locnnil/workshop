@@ -1,6 +1,7 @@
 package workspacestate
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/canonical/workspace/internal/overlord/hookstate"
@@ -82,6 +83,24 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	}
 
 	return set, nil
+}
+
+func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+	taskset := make([]*state.TaskSet, 0, len(workspaces))
+
+	for _, i := range workspaces {
+		file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(project.Path, i))
+		if err != nil {
+			return nil, fmt.Errorf("cannot read workspace \"%s\": %v", i, err)
+		}
+
+		tasks, err := Launch(st, file, project)
+		if err != nil {
+			return nil, fmt.Errorf("cannot launch workspace \"%s\": %v", i, err)
+		}
+		taskset = append(taskset, tasks)
+	}
+	return taskset, nil
 }
 
 func Refresh(st *state.State, file *workspacebackend.WorkspaceFile, project *workspacebackend.Project) (*state.TaskSet, error) {

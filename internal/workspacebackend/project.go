@@ -42,22 +42,27 @@ func (w *Project) UpdateLockFile() error {
 	return os.WriteFile(LockPath(w.Path), []byte(w.ProjectId), 0644)
 }
 
-func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceProps, error) {
+func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceFile, error) {
 	files, err := os.ReadDir(w.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	var workspaces = make([]*WorkspaceProps, 0, len(files))
+	var workspaces = make([]*WorkspaceFile, 0, len(files))
 
 	for _, info := range files {
-		if info.IsDir() {
+		if info.IsDir() || !info.Type().IsRegular() {
 			continue
 		}
 
 		/* The first element in names will contain the workspace name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			workspaces = append(workspaces, &WorkspaceProps{Name: names[1]})
+			file, err := ReadWorkspace(filepath.Join(w.Path, info.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			workspaces = append(workspaces, file)
 		}
 	}
 	return workspaces, nil

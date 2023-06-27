@@ -21,8 +21,10 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
 	dir := c.MkDir()
 	project := workspacebackend.Project{ProjectId: "42ws42ws", Path: dir}
 
-	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(""), 0644)
-	os.WriteFile(filepath.Join(dir, ".workspace.t2.yaml"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(`name: t1
+base: ubuntu@20.04`), 0644)
+	os.WriteFile(filepath.Join(dir, ".workspace.t2.yaml"), []byte(`name: t2
+base: ubuntu@20.04`), 0644)
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
@@ -45,7 +47,7 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
 	instances[1].SetState(workspacebackend.Ready, workspacebackend.None)
 
 	// Execute
-	merged := workspacebackend.MergeInstancesAndFiles(files, instances)
+	_, merged := workspacebackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
 	c.Assert(merged, check.HasLen, 2)
@@ -60,7 +62,8 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingFile(c *check.C)
 	dir := c.MkDir()
 	project := workspacebackend.Project{ProjectId: "42ws42ws", Path: dir}
 
-	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(`name: t1
+base: ubuntu@20.04`), 0644)
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
@@ -83,7 +86,7 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingFile(c *check.C)
 	instances[1].SetState(workspacebackend.Ready, workspacebackend.None)
 
 	// Execute
-	merged := workspacebackend.MergeInstancesAndFiles(files, instances)
+	_, merged := workspacebackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
 	c.Assert(merged, check.HasLen, 2)
@@ -93,13 +96,15 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingFile(c *check.C)
 	c.Assert(merged[1].Reason(), check.Equals, workspacebackend.MissingFile)
 }
 
-func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesOffWorkspace(c *check.C) {
+func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesWorkspaceOff(c *check.C) {
 	// Setup
 	dir := c.MkDir()
 	project := workspacebackend.Project{ProjectId: "42ws42ws", Path: dir}
 
-	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(""), 0644)
-	os.WriteFile(filepath.Join(dir, ".workspace.t2.yaml"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, ".workspace.t1.yaml"), []byte(`name: t1
+base: ubuntu@20.04`), 0644)
+	os.WriteFile(filepath.Join(dir, ".workspace.t2.yaml"), []byte(`name: t2
+base: ubuntu@20.04`), 0644)
 
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
@@ -116,14 +121,14 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesOffWorkspace(c *check.C
 	instances[0].SetState(workspacebackend.Ready, workspacebackend.None)
 
 	// Execute
-	merged := workspacebackend.MergeInstancesAndFiles(files, instances)
+	wsFiles, merged := workspacebackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
-	c.Assert(merged, check.HasLen, 2)
+	c.Assert(merged, check.HasLen, 1)
+	c.Assert(wsFiles, check.HasLen, 1)
+
 	c.Assert(merged[0].State(), check.Equals, workspacebackend.Ready)
-	c.Assert(merged[1].State(), check.Equals, workspacebackend.Off)
 	c.Assert(merged[0].Reason(), check.Equals, workspacebackend.None)
-	c.Assert(merged[1].Reason(), check.Equals, workspacebackend.None)
 }
 
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingProject(c *check.C) {
@@ -146,7 +151,7 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingProject(c *check
 	instances[0].SetState(workspacebackend.Ready, workspacebackend.None)
 
 	// Execute
-	merged := workspacebackend.MergeInstancesAndFiles(files, instances)
+	_, merged := workspacebackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
 	c.Assert(merged, check.HasLen, 1)

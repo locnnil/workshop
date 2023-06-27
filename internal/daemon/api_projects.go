@@ -32,6 +32,20 @@ type WorkspaceInfo struct {
 
 var ensureStateSoon = stateEnsureBefore
 
+func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *WorkspaceInfo {
+	var ws WorkspaceInfo
+	ws.Name = file.Name
+	ws.ProjectId = pid
+	ws.State = workspacebackend.Off.String()
+	for _, i := range file.Sdks {
+		ws.Content = append(ws.Content, &SdkInfo{
+			Name:    i.Name,
+			Channel: i.Channel,
+		})
+	}
+	return &ws
+}
+
 func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
@@ -120,7 +134,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	// project-id must be in the context for this query
 	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
 
-	workspaces, err := wBackend.GetAllWorkspaces(ctx)
+	files, workspaces, err := wBackend.GetAllWorkspaces(ctx)
 	if err != nil {
 		return statusInternalError("cannot list workspaces: %v", err)
 	}
@@ -133,6 +147,15 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 			}
 		}
 		wsInfos = append(wsInfos, workspacePropsToInfo(i))
+	}
+
+	// Now, if the client wants only workspace files or just queried everything
+	// available, we add workspace files to the response (note these only exist
+	// as files, not instances)
+	if wsState == "all" || wsState == "off" {
+		for _, j := range files {
+			wsInfos = append(wsInfos, workspaceFileToInfo(j, projectId))
+		}
 	}
 
 	return SyncResponse(wsInfos, http.StatusOK)

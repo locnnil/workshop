@@ -678,45 +678,49 @@ func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter Workspace
 	return ws, nil
 }
 
-func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, error) {
+func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*WorkspaceProps, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
+		return nil, nil, fmt.Errorf("context key project-id not found")
 	}
 
 	// get the files for this project
 	var p *Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if p, ok = projects[projectId]; !ok {
-		return nil, fmt.Errorf("project is not available: %v", projectId)
+		return nil, nil, fmt.Errorf("project is not available: %v", projectId)
 	}
 
 	files, err := p.EnumWorkspaceFiles()
+	// if the dir does not exist it does not mean there are no workspaces. It
+	// could be because the dir was removed with some workspaces still operating
+	// resulting in a missing-project error
 	if err != nil && !osutil.IsDirNotExist(err) {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// get all the running workspaces for this project
 	workspaces, err := s.GetWorkspacesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// now merge the files and workspaces to have correct notes and statuses in the output
-	return MergeInstancesAndFiles(files, workspaces), nil
+	wsFiles, wsInstances := MergeInstancesAndFiles(files, workspaces)
+	return wsFiles, wsInstances, nil
 }
 
-func MergeInstancesAndFiles(f []*WorkspaceProps, i []*WorkspaceProps) []*WorkspaceProps {
-	files, instances := make([]*WorkspaceProps, len(f)), make([]*WorkspaceProps, len(i))
+func MergeInstancesAndFiles(f []*WorkspaceFile, i []*WorkspaceProps) ([]*WorkspaceFile, []*WorkspaceProps) {
+	files, instances := make([]*WorkspaceFile, len(f)), make([]*WorkspaceProps, len(i))
 	copy(files, f)
 	copy(instances, i)
-	/* Merge both lists from to build a list of workspaces with their states */
-	result := make([]*WorkspaceProps, 0, len(files)+len(instances))
+	/* Walk both lists from to build a list of workspaces with their states */
+	result := make([]*WorkspaceProps, 0, len(instances))
 	for _, ws := range instances {
-		finder := func(p *WorkspaceProps) bool { return p.Name == ws.Name }
+		finder := func(p *WorkspaceFile) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
 		if idx == -1 {
 			/* We only have an instance, no file (perhaps, there is no project directory)
@@ -735,12 +739,8 @@ func MergeInstancesAndFiles(f []*WorkspaceProps, i []*WorkspaceProps) []*Workspa
 		result = append(result, ws)
 	}
 
-	/* Now, files contains only inactive workspaces */
-	for _, ws := range files {
-		ws.SetState(Off, None)
-		result = append(result, ws)
-	}
-	return result
+	/* At this point, files contain only inactive workspaces */
+	return files, result
 }
 
 func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
@@ -1004,9 +1004,9 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	return f.Workspaces[projectId][name], nil
 }
 
-func (f *FakeWorkspaceBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*WorkspaceProps, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
-	return maps.Values(f.Workspaces[projectId]), nil
+	return nil, maps.Values(f.Workspaces[projectId]), nil
 }
 
 func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
