@@ -71,7 +71,7 @@ go test ./...
 go test -check.f SuiteName
 ```
 
-### Functional and integrational tests
+### Functional and integration tests
 
 ```
 go install github.com/snapcore/spread/cmd/spread@latest
