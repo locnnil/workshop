@@ -22,6 +22,8 @@ dev
 onboarding
 gocheck
 EdTech
+CLI
+workspaces
 
 accumsan
 adipiscing
