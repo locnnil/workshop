@@ -12,7 +12,6 @@ import sys
 project = 'Workspace'
 author = 'Canonical Group Ltd'
 copyright = "%s, %s" % (datetime.date.today().year, author)
-release = '1.0'
 
 # Open Graph configuration - defines what is displayed in the website preview
 ogp_site_url = "https://canonical-starter-pack.readthedocs-hosted.com/"

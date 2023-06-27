@@ -20,11 +20,10 @@ workspace. It is easier to debug issues in any of the project's supported
 environments, perform code reviews or experiment in a separate light-weight
 container.
 
-It is not rare to have a non-trivial project setup with dependencies on a
-particular OS distro flavour, SDKs from multiple publishers, specific system and
-language packages. Most such projects can organise setup complexity with
-workspace. Examples include AI/ML, Robotics, IoT, EdTech and similar domains.
-
+It is common to have a non-trivial project setup with dependencies on particular
+Linux distributions, SDKs from multiple publishers, and system and language
+packages. Most such projects can organise setup complexity with Workspace.
+Examples include AI/ML, Robotics, IoT, EdTech and similar domains.
 
 .. ---------
 
