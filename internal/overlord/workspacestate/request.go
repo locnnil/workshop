@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -52,7 +51,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.SetupHook(st, &sdk, r.ID(), workspacebackend.SetupBase)
+		setupHookTask := hookstate.SetupHook(st, &sdk, workspacebackend.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		} else {
@@ -90,13 +89,11 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(names))
 
-	st.Unlock()
 	// we are only interested in the existing (launched) workspaces
-	_, workspaces, err := backend.GetAllWorkspaces(ctx)
+	_, workspaces, err := backend.GetProjectWorkspaces(ctx)
 	if err != nil {
 		return nil, err
 	}
-	st.Lock()
 
 	for _, i := range names {
 		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
@@ -105,10 +102,6 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 		}
 
 		workspace := workspaces[idx]
-
-		// see if any refresh is required
-		store := store.NewStoreClient()
-		store.CheckRefresh(ctx, workspace.Content())
 
 		tasks, err := Refresh(st, workspace, project)
 		if err != nil {
@@ -120,7 +113,11 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 }
 
 func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend.Project) (*state.TaskSet, error) {
-	// check if the refresh is available for the provided workspace
+	saveStateHook := state.NewTaskSet([]*state.Task{}...)
+	for _, sdk := range w.File().Sdks {
+		setupHookTask := hookstate.SetupHook(st, &sdk, workspacebackend.SaveState)
+		saveStateHook.AddTask(setupHookTask)
+	}
 
 	return nil, nil
 }

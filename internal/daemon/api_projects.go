@@ -126,7 +126,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	// project-id must be in the context for this query
 	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
 
-	files, workspaces, err := wBackend.GetAllWorkspaces(ctx)
+	files, workspaces, err := wBackend.GetProjectWorkspaces(ctx)
 	if err != nil {
 		return statusInternalError("cannot list workspaces: %v", err)
 	}

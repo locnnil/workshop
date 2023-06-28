@@ -32,14 +32,6 @@ type StoreResult struct {
 	ActionErrors map[string]error
 }
 
-func (s StoreResult) Error() string {
-	var errorStrings = make([]string, 0)
-	for i, j := range s.ActionErrors {
-		errorStrings = append(errorStrings, i+" :"+j.Error())
-	}
-	return strings.Join(errorStrings, "\n")
-}
-
 type StoreClient interface {
 	RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error)
 	CheckRefresh(ctx context.Context, sdks []*sdk.SdkInfo) (*StoreResult, error)

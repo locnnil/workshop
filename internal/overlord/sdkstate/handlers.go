@@ -209,5 +209,5 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return props.UnLinkSdk(ctx, blob)
+	return props.UnlinkSdk(ctx, blob)
 }

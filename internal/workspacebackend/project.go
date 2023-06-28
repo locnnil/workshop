@@ -42,6 +42,14 @@ func (w *Project) UpdateLockFile() error {
 	return os.WriteFile(LockPath(w.Path), []byte(w.ProjectId), 0644)
 }
 
+func (w *Project) WorkspaceFile(workspace string) (*WorkspaceFile, error) {
+	file, err := ReadWorkspace(filepath.Join(w.Path, WorkspaceFileName(workspace)))
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceFile, error) {
 	files, err := os.ReadDir(w.Path)
 	if err != nil {

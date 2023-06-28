@@ -25,7 +25,7 @@ func (s *S) SetUpTest(c *C) {
 	s.project = &workspacebackend.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
 }
 
-func (s *S) ensureWorkspaceAndProjectKeys(c *C, w string, ts []*state.Task) {
+func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *C, w string, ts []*state.Task) {
 	for _, i := range ts {
 		var prj workspacebackend.Project
 		err := i.Get("project-key", &prj)
@@ -68,7 +68,7 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 	err = tasks[0].Get("base", &base)
 	c.Assert(err, Equals, nil)
 	c.Assert(base, Equals, "ubuntu@22.04")
-	s.ensureWorkspaceAndProjectKeys(c, "test", ts.Tasks())
+	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", ts.Tasks())
 }
 
 func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
@@ -131,15 +131,5 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	c.Assert(err, Equals, nil)
 	c.Assert(id2, Equals, tasks[4].ID())
 
-	// run-hook task for sdk
-	err = tasks[9].Get("sdk-retrieve-task", &id1)
-	c.Assert(err, Equals, nil)
-	c.Assert(id1, Equals, tasks[3].ID())
-
-	// run-hook task for sdk_2
-	err = tasks[10].Get("sdk-retrieve-task", &id2)
-	c.Assert(err, Equals, nil)
-	c.Assert(id2, Equals, tasks[4].ID())
-
-	s.ensureWorkspaceAndProjectKeys(c, "test", tasks)
+	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", tasks)
 }

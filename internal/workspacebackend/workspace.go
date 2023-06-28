@@ -23,7 +23,7 @@ type Workspace struct {
 	Name    string
 	Devices map[string]map[string]string
 	content map[string]*sdk.SdkInfo
-	// Config  map[string]string
+	file    *WorkspaceFile
 
 	state  WorkspaceState
 	reason WorkspaceStateReason
@@ -43,6 +43,10 @@ func (w *Workspace) SetState(s WorkspaceState, r WorkspaceStateReason) {
 
 func (w *Workspace) Content() []*sdk.SdkInfo {
 	return maps.Values(w.content)
+}
+
+func (w *Workspace) File() *WorkspaceFile {
+	return w.file
 }
 
 func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
@@ -76,7 +80,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		filepath.Join(sdkPath, "current"), true)
 }
 
-func (w *Workspace) UnLinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 	delete(w.content, s.Name)
 	newSequence, err := json.Marshal(w.content)
 	if err != nil {
@@ -93,14 +97,13 @@ func (w *Workspace) UnLinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		return err
 	}
 
-	/* Update the 'current' link */
+	/* Remove the 'current' link */
 	fs, err := w.backend.GetWorkspaceFs(ctx, s.Name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	/* It was the only revision, remove the link */
 	return fs.Remove(SdkCurrentPath(s.Name))
 }
 

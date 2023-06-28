@@ -34,7 +34,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		workspacebackend.SaveState,
 		workspacebackend.RestoreState,
 	} {
-		task := hookstate.SetupHook(s.state, &sdk, "1", i)
+		task := hookstate.SetupHook(s.state, &sdk, i)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)

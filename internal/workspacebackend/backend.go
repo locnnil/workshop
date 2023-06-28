@@ -62,8 +62,7 @@ type WorkspaceBackend interface {
 
 	GetWorkspace(ctx context.Context, name string) (*Workspace, error)
 	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
-	GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error)
-	GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workspace, error)
+	GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error)
 
 	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 }
