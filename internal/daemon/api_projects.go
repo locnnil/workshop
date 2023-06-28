@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -46,25 +45,18 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	return &ws
 }
 
-func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo {
+func workspacePropsToInfo(props *workspacebackend.Workspace, pid string) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
-	ws.ProjectId = props.Config[workspacebackend.ProjectIdConfig]
+	ws.ProjectId = pid // props.Config[workspacebackend.ProjectIdConfig]
 	ws.State = props.State().String()
 
-	var sequence = make(map[string][]*sdkstate.SdkSequenceRecord, 0)
-	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
-		err := json.Unmarshal([]byte(sdks), &sequence)
-		if err != nil {
-			ws.State = workspacebackend.Error.String()
-			return &ws
-		}
-		// TODO: the order of SDK records is undetermined, we need the latest SDK revision
-		// if there are multiple revisions
-		for i, val := range sequence {
-			ws.Content = append(ws.Content, &SdkInfo{i, val[0].Channel, strconv.FormatInt(val[0].Revision, 10)})
-		}
+	// TODO: the order of SDK records is undetermined, we need the latest SDK revision
+	// if there are multiple revisions
+	for _, val := range props.Content() {
+		ws.Content = append(ws.Content, &SdkInfo{val.Name, val.Channel, strconv.FormatInt(val.Revision, 10)})
 	}
+
 	if props.Reason() != workspacebackend.None {
 		ws.Notes = append(ws.Notes, props.Reason().String())
 	}
@@ -146,7 +138,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 				continue
 			}
 		}
-		wsInfos = append(wsInfos, workspacePropsToInfo(i))
+		wsInfos = append(wsInfos, workspacePropsToInfo(i, projectId))
 	}
 
 	// Now, if the client wants only workspace files or just queried everything
@@ -243,5 +235,5 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 		return statusNotFound("cannot get workspace: %v", err)
 	}
 
-	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)
+	return SyncResponse(workspacePropsToInfo(workspace, projectId), http.StatusOK)
 }

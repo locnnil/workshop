@@ -60,11 +60,10 @@ type WorkspaceBackend interface {
 	AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(ctx context.Context, name string, key string) error
 
-	GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error)
+	GetWorkspace(ctx context.Context, name string) (*Workspace, error)
 	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
-	GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*WorkspaceProps, error)
-	GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error)
-	GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error)
+	GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error)
+	GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workspace, error)
 
 	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 }

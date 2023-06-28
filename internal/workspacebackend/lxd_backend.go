@@ -15,6 +15,7 @@ import (
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -630,7 +631,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (cha
 	return done, nil
 }
 
-func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
+func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -645,15 +646,23 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceP
 	if err != nil {
 		return nil, err
 	}
-	return &WorkspaceProps{
+
+	var workspace = &Workspace{
+		backend: s,
 		Name:    name,
 		state:   fromLxdToWorkspaceState(inst.StatusCode),
 		Devices: inst.Devices,
-		Config:  inst.Config,
-	}, nil
+	}
+
+	// Fetch information about the installed SDKs
+	workspace.content, err = InstalledContent(inst.Config)
+	if err != nil {
+		workspace.SetState(Error, BrokenSdkRecord)
+	}
+	return workspace, nil
 }
 
-func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
+func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*Workspace, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -663,22 +672,27 @@ func (s *LxdBackend) GetWorkspacesByConfig(ctx context.Context, filter Workspace
 	if err != nil {
 		return nil, err
 	}
-	var ws []*WorkspaceProps = make([]*WorkspaceProps, 0, len(instances))
+	var ws []*Workspace = make([]*Workspace, 0, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			ws = append(ws, &WorkspaceProps{
+			var wrkspace = &Workspace{
+				backend: s,
 				Name:    WorkspaceName(i.Name),
 				state:   fromLxdToWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
-				Config:  i.Config,
-			})
+			}
+			wrkspace.content, err = InstalledContent(i.Config)
+			if err != nil {
+				wrkspace.SetState(Error, BrokenSdkRecord)
+			}
+			ws = append(ws, wrkspace)
 		}
 	}
 
 	return ws, nil
 }
 
-func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*WorkspaceProps, error) {
+func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -713,12 +727,12 @@ func (s *LxdBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []
 	return wsFiles, wsInstances, nil
 }
 
-func MergeInstancesAndFiles(f []*WorkspaceFile, i []*WorkspaceProps) ([]*WorkspaceFile, []*WorkspaceProps) {
-	files, instances := make([]*WorkspaceFile, len(f)), make([]*WorkspaceProps, len(i))
+func MergeInstancesAndFiles(f []*WorkspaceFile, i []*Workspace) ([]*WorkspaceFile, []*Workspace) {
+	files, instances := make([]*WorkspaceFile, len(f)), make([]*Workspace, len(i))
 	copy(files, f)
 	copy(instances, i)
 	/* Walk both lists from to build a list of workspaces with their states */
-	result := make([]*WorkspaceProps, 0, len(instances))
+	result := make([]*Workspace, 0, len(instances))
 	for _, ws := range instances {
 		finder := func(p *WorkspaceFile) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
@@ -743,7 +757,7 @@ func MergeInstancesAndFiles(f []*WorkspaceFile, i []*WorkspaceProps) ([]*Workspa
 	return files, result
 }
 
-func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workspace, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -753,17 +767,20 @@ func (s *LxdBackend) GetWorkspacesByDevices(ctx context.Context, filter Workspac
 	if err != nil {
 		return nil, err
 	}
-	var ws map[string]*WorkspaceProps = make(map[string]*WorkspaceProps, len(instances))
+	var ws map[string]*Workspace = make(map[string]*Workspace, len(instances))
 	for _, i := range instances {
 		if filter(i.Devices) {
 			name := WorkspaceName(i.Name)
-			ws[name] = &WorkspaceProps{
+			ws[name] = &Workspace{
+				backend: s,
 				Name:    name,
 				state:   fromLxdToWorkspaceState(i.StatusCode),
 				Devices: i.Devices,
-				Config:  i.Config,
 			}
-
+			ws[name].content, err = InstalledContent(i.Config)
+			if err != nil {
+				ws[name].SetState(Error, BrokenSdkRecord)
+			}
 		}
 	}
 
@@ -909,8 +926,13 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 
 type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
 
+type FakeWorkspace struct {
+	*Workspace
+	Config map[string]string
+}
+
 type FakeWorkspaceBackend struct {
-	Workspaces map[string]map[string]*WorkspaceProps
+	Workspaces map[string]map[string]*FakeWorkspace
 	projects   map[string]map[string]*Project
 	WsFs       WorkspaceFs
 	LocalFs    afero.Fs
@@ -920,7 +942,7 @@ type FakeWorkspaceBackend struct {
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
-	be.Workspaces = make(map[string]map[string]*WorkspaceProps)
+	be.Workspaces = make(map[string]map[string]*FakeWorkspace)
 	be.projects = make(map[string]map[string]*Project)
 	be.WsFs = NewFakeWorkspaceFs()
 	be.LocalFs = afero.NewMemMapFs()
@@ -956,14 +978,17 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	projectId := ctx.Value(ContextProjectId).(string)
 
 	if f.Workspaces[projectId] == nil {
-		f.Workspaces[projectId] = make(map[string]*WorkspaceProps)
+		f.Workspaces[projectId] = make(map[string]*FakeWorkspace)
 	}
-	f.Workspaces[projectId][name] = &WorkspaceProps{
+	ws := &FakeWorkspace{}
+	ws.Config = make(map[string]string)
+	ws.Workspace = &Workspace{backend: f,
 		Name:    name,
 		Devices: defaultDevices(),
-		Config:  defaultConfig(projectId, "1000", "1000"),
 		state:   Ready,
+		content: make(map[string]*sdk.SdkInfo),
 	}
+	f.Workspaces[projectId][name] = ws
 	return nil
 }
 
@@ -999,29 +1024,33 @@ func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
-	return f.Workspaces[projectId][name], nil
+	return f.Workspaces[projectId][name].Workspace, nil
 }
 
-func (f *FakeWorkspaceBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetAllWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
-	return nil, maps.Values(f.Workspaces[projectId]), nil
+	var workspaces = make([]*Workspace, 0)
+	for _, i := range f.Workspaces[projectId] {
+		workspaces = append(workspaces, i.Workspace)
+	}
+	return nil, workspaces, nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*WorkspaceProps, error) {
-	res := make([]*WorkspaceProps, 0)
+func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*Workspace, error) {
+	res := make([]*Workspace, 0)
 	for _, i := range f.Workspaces {
 		for _, j := range i {
 			if filter(j.Config) {
-				res = append(res, j)
+				res = append(res, j.Workspace)
 			}
 		}
 	}
 	return res, nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*WorkspaceProps, error) {
+func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workspace, error) {
 	panic("not implemented") // TODO: Implement
 }
 

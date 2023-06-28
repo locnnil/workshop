@@ -8,13 +8,14 @@ import (
 	"strings"
 	"testing"
 
-	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/afero"
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 )
@@ -81,7 +82,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
+	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -128,7 +129,7 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
+	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -167,7 +168,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
+	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -214,7 +215,7 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
+	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
@@ -235,9 +236,9 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 
 	c.Check(chg.Err(), Equals, nil)
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	c.Check(props.Config["user.workspace.sdk"], NotNil)
-	c.Check(props.Config["user.workspace.sdk"], Equals,
-		"{\"new\":[{\"channel\":\"latest/stable\",\"revision\":2}]}")
+	info := props.Content()
+	c.Check(info, check.HasLen, 1)
+	c.Check(*info[0], check.DeepEquals, newSdk)
 }
 
 func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
@@ -249,7 +250,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 		ProjectId: "projectId",
 	}
 
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
+	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
@@ -276,53 +277,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	s.state.Lock()
 
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	_, ok := props.Config["user.workspace.sdk"]
-	c.Check(ok, Equals, false)
-	c.Check(link.Status(), Equals, state.UndoneStatus)
-}
-
-func (s *H) TestUndoLinkToPreviousSdk(c *C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	projectKey := workspacebackend.Project{
-		Path:      "/project/Path",
-		ProjectId: "projectId",
-	}
-
-	newSdk := store.SdkBlob{"new", "latest/stable", "/var/lib/workspace/sdk/new_2.sdk", 2}
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk)
-	link := s.state.NewTask("link-sdk", "test")
-	link.Set("sdk-retrieve-task", t.ID())
-
-	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(link)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", &projectKey, link, t)
-	chg.Set("user", "testuser")
-	chg.AddTask(link)
-	chg.AddTask(t)
-	chg.AddTask(terr)
-
-	previousSdkRev := "{\"new\":[{\"channel\":\"latest/stable\",\"revision\":277}]}"
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	s.backend.AddWorkspaceConfig(s.ctx, "ws", &workspacebackend.WorkspaceConfigValue{
-		Name:  "user.workspace.sdk",
-		Value: previousSdkRev,
-	})
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	_, ok := props.Config["user.workspace.sdk"]
-	c.Check(ok, Equals, true)
-	c.Check(props.Config["user.workspace.sdk"], Equals, previousSdkRev)
+	info := props.Content()
+	c.Check(info, check.HasLen, 0)
 	c.Check(link.Status(), Equals, state.UndoneStatus)
 }

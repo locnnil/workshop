@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/workspacebackend"
+	"golang.org/x/exp/slices"
 )
 
 func LaunchMany(st *state.State, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
@@ -85,24 +87,40 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	return set, nil
 }
 
-func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
-	taskset := make([]*state.TaskSet, 0, len(workspaces))
+func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+	taskset := make([]*state.TaskSet, 0, len(names))
 
-	for _, i := range workspaces {
-		file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(project.Path, i))
-		if err != nil {
-			return nil, fmt.Errorf("cannot read workspace \"%s\": %v", i, err)
+	st.Unlock()
+	// we are only interested in the existing (launched) workspaces
+	_, workspaces, err := backend.GetAllWorkspaces(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st.Lock()
+
+	for _, i := range names {
+		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
+		if idx == -1 {
+			return nil, fmt.Errorf("workspace %s not found", i)
 		}
 
-		tasks, err := Launch(st, file, project)
+		workspace := workspaces[idx]
+
+		// see if any refresh is required
+		store := store.NewStoreClient()
+		store.CheckRefresh(ctx, workspace.Content())
+
+		tasks, err := Refresh(st, workspace, project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot launch workspace \"%s\": %v", i, err)
+			return nil, fmt.Errorf("cannot refresh workspace \"%s\": %v", i, err)
 		}
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
 }
 
-func Refresh(st *state.State, file *workspacebackend.WorkspaceFile, project *workspacebackend.Project) (*state.TaskSet, error) {
+func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend.Project) (*state.TaskSet, error) {
+	// check if the refresh is available for the provided workspace
+
 	return nil, nil
 }

@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	store "github.com/canonical/workspace/internal/fakestore"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
 
-func SdkSetup(task *state.Task) (*store.SdkBlob, error) {
+func SdkSetup(task *state.Task) (*sdk.SdkInfo, error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
 	var retrieveId string
-	var blob store.SdkBlob
+	var blob sdk.SdkInfo
 
 	err := task.Get("sdk-retrieve-task", &retrieveId)
 

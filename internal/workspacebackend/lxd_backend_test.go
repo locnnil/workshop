@@ -28,7 +28,7 @@ base: ubuntu@20.04`), 0644)
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workspacebackend.WorkspaceProps{
+	instances := []*workspacebackend.Workspace{
 		{
 			Name: "t1",
 			Devices: map[string]map[string]string{
@@ -67,7 +67,7 @@ base: ubuntu@20.04`), 0644)
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workspacebackend.WorkspaceProps{
+	instances := []*workspacebackend.Workspace{
 		{
 			Name: "t1",
 			Devices: map[string]map[string]string{
@@ -109,7 +109,7 @@ base: ubuntu@20.04`), 0644)
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workspacebackend.WorkspaceProps{
+	instances := []*workspacebackend.Workspace{
 		{
 			Name: "t1",
 			Devices: map[string]map[string]string{
@@ -139,7 +139,7 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesMissingProject(c *check
 	files, err := project.EnumWorkspaceFiles()
 	c.Assert(err, check.NotNil)
 
-	instances := []*workspacebackend.WorkspaceProps{
+	instances := []*workspacebackend.Workspace{
 		{
 			Name: "t1",
 			Devices: map[string]map[string]string{

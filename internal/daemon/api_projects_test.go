@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
@@ -115,9 +116,10 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	b.LaunchWorkspace(context.WithValue(req.Context(), workspacebackend.ContextProjectId, "b8639dea"), "ws-test", "ubuntu@20.04")
-	fakeBe := b.(*workspacebackend.FakeWorkspaceBackend)
-	fakeBe.Workspaces["b8639dea"]["ws-test"].Config["user.workspace.sdk"] = `{"go":[{"channel":"latest/stable","revision":234}]}`
+	ctx := context.WithValue(req.Context(), workspacebackend.ContextProjectId, "b8639dea")
+	b.LaunchWorkspace(ctx, "ws-test", "ubuntu@20.04")
+	ws, _ := b.GetWorkspace(ctx, "ws-test")
+	ws.LinkSdk(ctx, &sdk.SdkInfo{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
 	rsp := v1GetProjectWorkspaces(projectsCmd, req, nil).(*resp)
