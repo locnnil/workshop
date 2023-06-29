@@ -6,6 +6,7 @@ import (
 )
 
 type HookSetup struct {
+	Sdk      workspacebackend.Sdk               `json:"sdk"`
 	HookType workspacebackend.WorkspaceHookType `json:"type"`
 }
 

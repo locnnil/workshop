@@ -40,6 +40,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		err := task.Get("hook-setup", &hookSetup)
 		c.Assert(err, check.IsNil)
 		c.Assert(hookSetup.Type(), check.Equals, i.String())
+		c.Assert(hookSetup.Sdk, check.DeepEquals, sdk)
 	}
 
 }

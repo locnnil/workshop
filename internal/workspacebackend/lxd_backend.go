@@ -64,11 +64,7 @@ func allocateProjectId() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (s *LxdBackend) getProject(ctx context.Context, path string) (*Project, error) {
-	client, err := s.LxdClient(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *LxdBackend) getProject(client lxd.InstanceServer, ctx context.Context, path string) (*Project, error) {
 
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
@@ -193,8 +189,13 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 		return nil, false, err
 	}
 
+	client, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+
 	// see if we have this project already existing
-	if existingProject, err := s.getProject(ctx, projectDir); err == nil {
+	if existingProject, err := s.getProject(client, ctx, projectDir); err == nil {
 		// the tracked path and the requested path must be the same
 		// otherwise it means that the project directory was moved or copied
 		// If that is the case, we must update the project's configuration
@@ -220,7 +221,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				}
 				// also, update configuration of all the project's workspaces
 				projectCtx := context.WithValue(ctx, ContextProjectId, existingProject.ProjectId)
-				return existingProject, false, s.updateWorkspacesProjectPath(projectCtx, existingProject)
+				return existingProject, false, s.updateWorkspacesProjectPath(client, projectCtx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
@@ -280,14 +281,14 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
-func (s *LxdBackend) updateWorkspacesProjectPath(ctx context.Context, existingProject *Project) error {
-	workspaces, err := s.getLxdInstancesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
+	workspaces, err := s.filterLxdInstancesByConfig(conn, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	for _, i := range workspaces {
-		err = s.AddWorkspaceDevice(ctx, i.Name, WorkspaceDevice{
+		err = s.AddWorkspaceDevice(ctx, WorkspaceName(i.Name), WorkspaceDevice{
 			Name:       ProjectPathDevice,
 			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": "/project"},
 		})
@@ -326,12 +327,12 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) 
 			// we realised that there is no project directory for the
 			// projectId anymore. It can mean moving or deletion happened in the past
 			// Try to recover the new project path
-			newPath, err := s.findProjectPathFromBindMounts(ctx, i)
+			newPath, err := s.findProjectPathFromBindMounts(client, ctx, i)
 			if err == nil && newPath != "" {
 				// start tracking this project under a new path
 				i.Path = newPath
 				if err = s.trackProject(ctx, i); err == nil {
-					s.updateWorkspacesProjectPath(ctx, i)
+					s.updateWorkspacesProjectPath(client, ctx, i)
 				}
 			}
 		}
@@ -340,8 +341,8 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) 
 	return projects, nil
 }
 
-func (s *LxdBackend) findProjectPathFromBindMounts(ctx context.Context, p *Project) (path string, err error) {
-	workspaces, err := s.getLxdInstancesByConfig(ctx, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
+func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
+	workspaces, err := s.filterLxdInstancesByConfig(conn, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
 	if err != nil {
 		return "", err
 	}
@@ -356,7 +357,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(ctx context.Context, p *Proje
 
 		/* Take the first instance from the group, we need any running
 		and ready to execute commands to validate the project directory */
-		stdout, err := memFs.Create(InstanceName(i.Name, p.ProjectId))
+		stdout, err := memFs.Create(i.Name)
 		if err != nil {
 			return "", err
 		}
@@ -372,14 +373,14 @@ func (s *LxdBackend) findProjectPathFromBindMounts(ctx context.Context, p *Proje
 			Stderr:  nil}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		done, err := s.Exec(execCtx, i.Name, &args)
+		done, err := s.Exec(execCtx, WorkspaceName(i.Name), &args)
 		if err != nil {
 			continue
 		}
 		<-done
 
 		/* Process the findmnt results */
-		if currentPath, err := afero.ReadFile(memFs, InstanceName(i.Name, p.ProjectId)); err == nil {
+		if currentPath, err := afero.ReadFile(memFs, i.Name); err == nil {
 			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
 			if ok, isDir, err := osutil.ExistsIsDir(string(currentPath)); ok && isDir {
 				return string(currentPath), nil
@@ -674,7 +675,7 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) *Workspace {
 	}
 
 	// Load the associated workspace file (if present)
-	workspace.file, err = p.WorkspaceFile(WorkspaceFileName(name))
+	workspace.file, err = p.WorkspaceFile(name)
 	if err != nil {
 		workspace.SetState(Error, MissingFile)
 	}
@@ -687,21 +688,16 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) *Workspace {
 	return workspace
 }
 
-func (s *LxdBackend) getLxdInstancesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*api.Instance, error) {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkspaceConfigFilter) ([]api.Instance, error) {
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
 	}
 
-	toReturn := make([]*api.Instance, len(instances))
+	toReturn := make([]api.Instance, 0, len(instances))
 	for _, i := range instances {
 		if filter(i.Config) {
-			toReturn = append(toReturn, &i)
+			toReturn = append(toReturn, i)
 		}
 	}
 

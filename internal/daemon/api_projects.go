@@ -185,6 +185,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		return statusBadRequest("user is not known")
 	}
 
+	// project-id must be in the context for this query
+	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
+
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
@@ -193,6 +196,19 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		change.Set("project-key", &prj)
 
 		taskset, err := workspacestate.LaunchMany(st, reqData.Names, prj)
+		if err != nil {
+			return statusBadRequest(err.Error())
+		}
+
+		for _, i := range taskset {
+			change.AddAll(i)
+		}
+	case "refresh":
+		change = st.NewChange("launch", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
+		change.Set("user", user)
+		change.Set("project-key", &prj)
+
+		taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
 		if err != nil {
 			return statusBadRequest(err.Error())
 		}

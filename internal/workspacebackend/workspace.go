@@ -98,7 +98,7 @@ func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 	}
 
 	/* Remove the 'current' link */
-	fs, err := w.backend.GetWorkspaceFs(ctx, s.Name)
+	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}

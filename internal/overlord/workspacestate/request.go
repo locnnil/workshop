@@ -45,18 +45,17 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		installTaskSet := sdkstate.Install(st, sdk.Name, r.ID())
 		if prevInstall != nil {
 			installTaskSet.WaitAll(prevInstall)
-		} else {
-			prevInstall = installTaskSet
 		}
+		prevInstall = installTaskSet
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
 		setupHookTask := hookstate.SetupHook(st, &sdk, workspacebackend.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
-		} else {
-			prevSetup = setupHookTask
 		}
+		prevSetup = setupHookTask
+
 		setupHook.AddTask(setupHookTask)
 	}
 
@@ -113,11 +112,30 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 }
 
 func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend.Project) (*state.TaskSet, error) {
-	saveStateHook := state.NewTaskSet([]*state.Task{}...)
+	saveStateHooks := state.NewTaskSet([]*state.Task{}...)
 	for _, sdk := range w.File().Sdks {
-		setupHookTask := hookstate.SetupHook(st, &sdk, workspacebackend.SaveState)
-		saveStateHook.AddTask(setupHookTask)
+		saveStateHook := hookstate.SetupHook(st, &sdk, workspacebackend.SaveState)
+		saveStateHooks.AddTask(saveStateHook)
 	}
 
-	return nil, nil
+	launch, err := Launch(st, w.File(), p)
+	if err != nil {
+		return nil, err
+	}
+
+	restoreStateHooks := state.NewTaskSet([]*state.Task{}...)
+	for _, sdk := range w.File().Sdks {
+		restoreStateHook := hookstate.SetupHook(st, &sdk, workspacebackend.RestoreState)
+		restoreStateHooks.AddTask(restoreStateHook)
+	}
+
+	// save-state -> launch -> restore state
+	restoreStateHooks.WaitAll(launch)
+	launch.WaitAll(saveStateHooks)
+
+	refresh := state.NewTaskSet([]*state.Task{}...)
+	refresh.AddAll(saveStateHooks)
+	refresh.AddAll(launch)
+	refresh.AddAll(restoreStateHooks)
+	return refresh, nil
 }

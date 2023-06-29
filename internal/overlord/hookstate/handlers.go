@@ -17,11 +17,6 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	blob, err := SdkSetup(task)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -49,9 +44,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			"-o",
 			"pipefail",
 			"-c",
-			filepath.Join(workspacebackend.SdkHooksPath(blob.Name), hook.Type()),
+			filepath.Join(workspacebackend.SdkHooksPath(hook.Sdk.Name), hook.Type()),
 		},
-		WorkDir: workspacebackend.SdkHooksPath(blob.Name),
+		WorkDir: workspacebackend.SdkHooksPath(hook.Sdk.Name),
 		Stdin:   nil,
 		Stdout:  outerr,
 		Stderr:  outerr}
