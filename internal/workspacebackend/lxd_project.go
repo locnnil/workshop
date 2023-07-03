@@ -7,7 +7,7 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
-/* Initialise the SDK project namespace. */
+/* Initialise the Workspace project namespace. */
 func InitProject(conn lxd.InstanceServer, projectName string) error {
 	if _, _, err := conn.GetProject(projectName); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {

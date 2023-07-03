@@ -141,3 +141,63 @@ func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
 
 	return nil
 }
+
+func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.DeleteWorkspace(ctx, workspace, true)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doRenameWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.RenameWorkspace(ctx, workspace, RefreshIncumbentPrefix+workspace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
+	if err != nil {
+		return err
+	}
+	return nil
+}

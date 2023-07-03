@@ -170,6 +170,10 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
+	if len(reqData.Names) == 0 {
+		return statusBadRequest("at least one workspace name must be provided")
+	}
+
 	projects, err := wBackend.Projects(r.Context())
 	if err != nil {
 		return statusBadRequest("no project found with \"id\" %v", projectId)
@@ -193,7 +197,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	case "launch":
 		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
 		change.Set("user", user)
-		change.Set("project-key", &prj)
+		change.Set("project-key", prj)
 
 		taskset, err := workspacestate.LaunchMany(st, reqData.Names, prj)
 		if err != nil {
@@ -204,9 +208,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		change = st.NewChange("launch", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
+		change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
 		change.Set("user", user)
-		change.Set("project-key", &prj)
+		change.Set("project-key", prj)
 
 		taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
 		if err != nil {

@@ -496,11 +496,7 @@ func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string)
 		return err
 	}
 
-	err = op.Wait()
-	if err != nil {
-		return err
-	}
-	return err
+	return op.WaitContext(ctx)
 }
 
 func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
@@ -809,7 +805,7 @@ func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string, forceful 
 				return err
 			}
 
-			err = op.Wait()
+			err = op.WaitContext(ctx)
 			if err != nil {
 				return fmt.Errorf("stopping the instance failed: %s", err)
 			}
@@ -823,7 +819,7 @@ func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string, forceful 
 		return err
 	}
 
-	return op.Wait()
+	return op.WaitContext(ctx)
 }
 
 func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
@@ -843,6 +839,25 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 	}
 
 	return NewWorkspaceFs(sftp), nil
+}
+
+func (s *LxdBackend) RenameWorkspace(ctx context.Context, current, new string) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	op, err := conn.RenameInstance(InstanceName(current, projectId), api.InstancePost{Name: InstanceName(new, projectId)})
+	if err != nil {
+		return err
+	}
+
+	return op.WaitContext(ctx)
 }
 
 func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
@@ -1059,4 +1074,8 @@ func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool,
 	done := make(chan bool)
 	close(done)
 	return done, nil
+}
+
+func (s *FakeWorkspaceBackend) RenameWorkspace(ctx context.Context, current, new string) error {
+	return nil
 }

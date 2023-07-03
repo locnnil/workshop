@@ -11,6 +11,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const (
+	RefreshIncumbentPrefix = "refresh-incumbent-"
+)
+
 func LaunchMany(st *state.State, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(workspaces))
 	for _, i := range workspaces {
@@ -112,11 +116,20 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 }
 
 func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend.Project) (*state.TaskSet, error) {
+	// 1. Save previous state
+	// 2. Stop previous workspace
+	// 3. Rename previous workspace (or move to another project)
+	// 4. Launch the new workspace
+	// 5. Run restore state
+	// 6. Delete the old workspace
 	saveStateHooks := state.NewTaskSet([]*state.Task{}...)
 	for _, sdk := range w.File().Sdks {
 		saveStateHook := hookstate.SetupHook(st, &sdk, workspacebackend.SaveState)
 		saveStateHooks.AddTask(saveStateHook)
 	}
+
+	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop workspace %q", w.Name))
+	renameOld := st.NewTask("rename-workspace", fmt.Sprintf("Make workspace %q unavailable", w.Name))
 
 	launch, err := Launch(st, w.File(), p)
 	if err != nil {
@@ -129,13 +142,28 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		restoreStateHooks.AddTask(restoreStateHook)
 	}
 
-	// save-state -> launch -> restore state
+	deleteOld := st.NewTask("delete-workspace", "Delete previous workspace version")
+
+	// save-state -> stop-workspace -> launch -> restore state
+	deleteOld.WaitAll(restoreStateHooks)
 	restoreStateHooks.WaitAll(launch)
-	launch.WaitAll(saveStateHooks)
+	launch.WaitFor(renameOld)
+	renameOld.WaitFor(stopOld)
+	stopOld.WaitAll(saveStateHooks)
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
 	refresh.AddAll(saveStateHooks)
 	refresh.AddAll(launch)
 	refresh.AddAll(restoreStateHooks)
+	refresh.AddTask(stopOld)
+	refresh.AddTask(renameOld)
+	refresh.AddTask(deleteOld)
+
+	for _, i := range refresh.Tasks() {
+		i.Set("workspace", w.Name)
+		i.Set("project-key", *p)
+	}
+
+	deleteOld.Set("workspace", RefreshIncumbentPrefix+w.Name)
 	return refresh, nil
 }

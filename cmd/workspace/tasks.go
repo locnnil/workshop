@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/canonical/workspace/client"
@@ -25,6 +26,8 @@ func (c *CmdTasks) Command() *cobra.Command {
 
 	return cmd
 }
+
+const line = "......................................................................"
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	var clientConfig client.Config
@@ -73,6 +76,19 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 					tsk.Summary}, "\t"))
 			}
 			w.Flush()
+
+			for _, tsk := range tasks {
+				if len(tsk.Log) == 0 {
+					continue
+				}
+				fmt.Fprintln(os.Stdout)
+				fmt.Fprintln(os.Stdout, line)
+				fmt.Fprintln(os.Stdout, tsk.Summary)
+				fmt.Fprintln(os.Stdout)
+				for _, line := range tsk.Log {
+					fmt.Fprintln(os.Stdout, line)
+				}
+			}
 		}
 	} else {
 		return fmt.Errorf("change with id %q not found", av[0])

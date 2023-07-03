@@ -52,6 +52,7 @@ type WorkspaceBackend interface {
 
 	LaunchWorkspace(ctx context.Context, name, base string) error
 	DeleteWorkspace(ctx context.Context, name string, forceful bool) error
+	RenameWorkspace(ctx context.Context, current, new string) error
 	SetWorkspaceState(ctx context.Context, name, action string) error
 
 	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error

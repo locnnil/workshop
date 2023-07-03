@@ -1,6 +1,8 @@
 package hookstate
 
 import (
+	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -29,6 +31,19 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	switch hook.HookType {
+	case workspacebackend.SetupBase:
+		return h.doSetupBase(task, ctx, workspace, prj, &hook)
+	case workspacebackend.SaveState:
+		return h.doSaveState(task, ctx, workspace, prj, &hook)
+	case workspacebackend.RestoreState:
+		return h.doRestoreState(task, ctx, workspace, prj, &hook)
+	default:
+		return fmt.Errorf("unknown hook type %q", hook.HookType.String())
+	}
+}
+
+func (h *HookManager) doSetupBase(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
 	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, prj.ProjectId))
@@ -54,6 +69,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	done, err := h.backend.Exec(ctx, workspace, &args)
 	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
 	if err != nil {
+		st := task.State()
 		st.Lock()
 		task.Logf(string(hookLog))
 		st.Unlock()
@@ -61,6 +77,13 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	<-done
+	return nil
+}
 
+func (h *HookManager) doSaveState(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
+	return nil
+}
+
+func (h *HookManager) doRestoreState(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
 	return nil
 }
