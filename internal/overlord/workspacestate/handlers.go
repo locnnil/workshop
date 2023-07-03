@@ -121,27 +121,6 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workspace, err := UserProjectWorkspace(task)
-	if err != nil {
-		return err
-	}
-
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
-	ctx, cancel := BackendContext(tomb, user, prj)
-	defer cancel()
-
-	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
@@ -162,7 +141,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
-func (m *WorkspaceManager) doRenameWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doDeleteUnavailableWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -175,7 +154,47 @@ func (m *WorkspaceManager) doRenameWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.RenameWorkspace(ctx, workspace, RefreshIncumbentPrefix+workspace)
+	err = m.backend.DeleteUnavailableWorkspace(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doMakeUnavailable(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.MakeWorkspaceUnavailable(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doMakeAvailable(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.MakeWorkspaceAvailable(ctx, workspace)
 	if err != nil {
 		return err
 	}

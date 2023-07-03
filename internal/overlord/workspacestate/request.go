@@ -129,7 +129,7 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 	}
 
 	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop workspace %q", w.Name))
-	renameOld := st.NewTask("rename-workspace", fmt.Sprintf("Make workspace %q unavailable", w.Name))
+	makeUnavail := st.NewTask("make-unavailable", fmt.Sprintf("Make workspace %q unavailable", w.Name))
 
 	launch, err := Launch(st, w.File(), p)
 	if err != nil {
@@ -142,13 +142,13 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		restoreStateHooks.AddTask(restoreStateHook)
 	}
 
-	deleteOld := st.NewTask("delete-workspace", "Delete previous workspace version")
+	deleteUnavail := st.NewTask("delete-unavailable-workspace", "Delete previous workspace version")
 
 	// save-state -> stop-workspace -> launch -> restore state
-	deleteOld.WaitAll(restoreStateHooks)
+	deleteUnavail.WaitAll(restoreStateHooks)
 	restoreStateHooks.WaitAll(launch)
-	launch.WaitFor(renameOld)
-	renameOld.WaitFor(stopOld)
+	launch.WaitFor(makeUnavail)
+	makeUnavail.WaitFor(stopOld)
 	stopOld.WaitAll(saveStateHooks)
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
@@ -156,14 +156,13 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 	refresh.AddAll(launch)
 	refresh.AddAll(restoreStateHooks)
 	refresh.AddTask(stopOld)
-	refresh.AddTask(renameOld)
-	refresh.AddTask(deleteOld)
+	refresh.AddTask(makeUnavail)
+	refresh.AddTask(deleteUnavail)
 
 	for _, i := range refresh.Tasks() {
 		i.Set("workspace", w.Name)
 		i.Set("project-key", *p)
 	}
 
-	deleteOld.Set("workspace", RefreshIncumbentPrefix+w.Name)
 	return refresh, nil
 }

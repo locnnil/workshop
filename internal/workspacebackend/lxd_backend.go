@@ -39,6 +39,8 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	// name prefix for the workspaces that were made unavailable
+	UnavailablePrefix = "unavailable-"
 )
 
 var (
@@ -53,6 +55,10 @@ func New() WorkspaceBackend {
 
 func LxdProjectName(user string) string {
 	return "workspace." + user
+}
+
+func LxdSystemProjectName(user string) string {
+	return LxdProjectName(user) + ".system"
 }
 
 func allocateProjectId() (string, error) {
@@ -841,10 +847,15 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 	return NewWorkspaceFs(sftp), nil
 }
 
-func (s *LxdBackend) RenameWorkspace(ctx context.Context, current, new string) error {
+func (s *LxdBackend) DeleteUnavailableWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key %s not found", ContextUser)
 	}
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
@@ -852,12 +863,70 @@ func (s *LxdBackend) RenameWorkspace(ctx context.Context, current, new string) e
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	op, err := conn.RenameInstance(InstanceName(current, projectId), api.InstancePost{Name: InstanceName(new, projectId)})
+	system := conn.UseProject(LxdSystemProjectName(user))
+	op, err := system.DeleteInstance(InstanceName(UnavailablePrefix+name, projectId))
+	if err != nil {
+		return err
+	}
+	return op.WaitContext(ctx)
+}
+
+func (s *LxdBackend) MakeWorkspaceAvailable(ctx context.Context, name string) error {
+	return s.moveInstanceProject(ctx, name, false)
+}
+
+func (s *LxdBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) error {
+	return s.moveInstanceProject(ctx, name, true)
+}
+
+// Moves the instance between projects. If system is true the project will be
+// moved to the LXD project which is not available to the users (e.g. for
+// hidding a workspace temporarily). Otherwise, the workspace will be move to
+// the regular project visible by the user specified in the ctx context.
+func (s *LxdBackend) moveInstanceProject(ctx context.Context, name string, system bool) error {
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	return op.WaitContext(ctx)
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	var op lxd.Operation
+	instance := InstanceName(name, projectId)
+	if system {
+		// the new name must not be the same, otherwise the LXD's DNS will fail
+		// the new instance creation
+		op, err = conn.MigrateInstance(instance, api.InstancePost{
+			Name:      UnavailablePrefix + instance,
+			Project:   LxdSystemProjectName(user),
+			Migration: true,
+		})
+	} else {
+		// the instance of interest is in the system project now, so let's
+		// switch the project for the connection first to make the reverse
+		// migration successful (i.e. from system -> user project)
+		conn = conn.UseProject(LxdSystemProjectName(user))
+		op, err = conn.MigrateInstance(UnavailablePrefix+instance, api.InstancePost{
+			Name:      instance,
+			Project:   LxdProjectName(user),
+			Migration: true,
+		})
+	}
+
+	if err != nil {
+		return err
+	}
+
+	err = op.WaitContext(ctx)
+	return err
 }
 
 func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
@@ -1076,6 +1145,14 @@ func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool,
 	return done, nil
 }
 
-func (s *FakeWorkspaceBackend) RenameWorkspace(ctx context.Context, current, new string) error {
+func (s *FakeWorkspaceBackend) DeleteUnavailableWorkspace(ctx context.Context, name string) error {
+	return nil
+}
+
+func (s *FakeWorkspaceBackend) MakeWorkspaceAvailable(ctx context.Context, name string) error {
+	return nil
+}
+
+func (s *FakeWorkspaceBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) error {
 	return nil
 }

@@ -16,12 +16,13 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) 
 
 	/* Workspace management */
 	runner.AddHandler("create-workspace", manager.doCreateWorkspace, manager.undoCreateWorkspace)
-	runner.AddHandler("start-workspace", manager.doStart, manager.undoStart)
-	runner.AddHandler("stop-workspace", manager.doStop, nil)
+	runner.AddHandler("start-workspace", manager.doStart, manager.doStop)
+	runner.AddHandler("stop-workspace", manager.doStop, manager.doStart)
 
 	runner.AddHandler("mount-project", manager.doMountProject, manager.undoMountProject)
-	runner.AddHandler("delete-workspace", manager.doDeleteWorkspace, nil)
-	runner.AddHandler("rename-workspace", manager.doRenameWorkspace, nil)
+	runner.AddHandler("delete-unavailable-workspace", manager.doDeleteUnavailableWorkspace, nil)
+	runner.AddHandler("make-unavailable", manager.doMakeUnavailable, manager.doMakeAvailable)
+	runner.AddHandler("make-available", manager.doMakeAvailable, manager.doMakeUnavailable)
 
 	return manager
 }
