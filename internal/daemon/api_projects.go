@@ -163,6 +163,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var reqData struct {
 		Names  []string `json:"names"`
 		Action string   `json:"action"`
+		Hold   bool     `json:"hold-on-error"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -172,6 +173,10 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 
 	if len(reqData.Names) == 0 {
 		return statusBadRequest("at least one workspace name must be provided")
+	}
+
+	if len(reqData.Names) > 1 && reqData.Hold {
+		return statusBadRequest("hold-on-error is not supported for multiple workspaces")
 	}
 
 	projects, err := wBackend.Projects(r.Context())
@@ -211,6 +216,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
 		change.Set("user", user)
 		change.Set("project-key", prj)
+		change.Set("hold-on-error", reqData.Hold)
 
 		taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
 		if err != nil {

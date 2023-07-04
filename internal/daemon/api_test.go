@@ -32,11 +32,13 @@ type apiSuite struct {
 
 	workspaceDir string
 	username     string
+	projectId    string
 
 	vars map[string]string
 
 	restoreMuxVars    func()
 	restoreUserLookup func()
+	restoreProjectId  func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -45,10 +47,14 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workspaceDir = c.MkDir()
 	s.username = "testuser"
+	s.projectId = "b8639dea"
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil
 	}, &LookupUsername)
+
+	// will be called when project is created
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.projectId, nil }, &workspacebackend.NewProjectId)
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -56,6 +62,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.workspaceDir = ""
 	s.restoreMuxVars()
 	s.restoreUserLookup()
+	s.restoreProjectId()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {

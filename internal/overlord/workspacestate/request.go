@@ -118,7 +118,7 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workspace
-	// 3. Rename previous workspace (or move to another project)
+	// 3. Make unavailable
 	// 4. Launch the new workspace
 	// 5. Run restore state
 	// 6. Delete the old workspace

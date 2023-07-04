@@ -1103,14 +1103,19 @@ func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name s
 
 func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
-	return f.Workspaces[projectId][name].Workspace, nil
+	user := ctx.Value(ContextUser).(string)
+	project := f.projects[user][projectId]
+	workspace := f.Workspaces[projectId][name].Workspace
+	workspace.file, _ = project.WorkspaceFile(workspace.Name)
+	return workspace, nil
 }
 
 func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
 	projectId := ctx.Value(ContextProjectId).(string)
 	var workspaces = make([]*Workspace, 0)
 	for _, i := range f.Workspaces[projectId] {
-		workspaces = append(workspaces, i.Workspace)
+		ws, _ := f.GetWorkspace(ctx, i.Name)
+		workspaces = append(workspaces, ws)
 	}
 	return nil, workspaces, nil
 }
