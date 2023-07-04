@@ -15,6 +15,7 @@
 package daemon
 
 import (
+	"context"
 	"net/http"
 	"os/user"
 	"testing"
@@ -32,7 +33,8 @@ type apiSuite struct {
 
 	workspaceDir string
 	username     string
-	projectId    string
+	project      *workspacebackend.Project
+	ctx          context.Context
 
 	vars map[string]string
 
@@ -47,14 +49,23 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workspaceDir = c.MkDir()
 	s.username = "testuser"
-	s.projectId = "b8639dea"
+	s.project = &workspacebackend.Project{
+		Path:      s.workspaceDir,
+		ProjectId: "b8639dea",
+	}
+	s.b = workspacebackend.NewFakeWorkspaceBackend()
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil
 	}, &LookupUsername)
 
 	// will be called when project is created
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.projectId, nil }, &workspacebackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)
+
+	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
+
+	s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -73,7 +84,6 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
-	s.b = workspacebackend.NewFakeWorkspaceBackend()
 	d, err := New(&Options{Dir: s.workspaceDir}, s.b)
 	c.Assert(err, check.IsNil)
 	d.addRoutes()

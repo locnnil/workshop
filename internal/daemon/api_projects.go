@@ -213,19 +213,69 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
-		change.Set("user", user)
-		change.Set("project-key", prj)
-		change.Set("hold-on-error", reqData.Hold)
+		onHoldFound := false
+		for _, chg := range st.Changes() {
+			var chgPrj workspacebackend.Project
+			var chgUsr string
 
-		taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
-		if err != nil {
-			return statusBadRequest(err.Error())
+			if chg.Status().Ready() {
+				continue
+			}
+
+			err = chg.Get("project-key", &chgPrj)
+			if err == state.ErrNoState {
+				continue
+			}
+
+			err = chg.Get("user", &chgUsr)
+			if err == state.ErrNoState || chgUsr != user {
+				continue
+			}
+
+			if chgPrj.ProjectId == prj.ProjectId {
+				// we may already have the refresh change in progress
+				for _, tsk := range chg.Tasks() {
+					if tsk.Status() == state.ErrorStatus {
+						var name string
+						err = tsk.Get("workspace", &name)
+						if err != nil {
+							continue
+						}
+						// this is a conflicting flag given the change is already
+						// in progress
+						if !reqData.Hold {
+							return statusBadRequest("cannot do a transactional refresh, the workspace is already in the hold mode. Finish the current refresh first")
+						}
+						if name == reqData.Names[0] {
+							// this is the change to be continued
+							tsk.SetStatus(state.DoStatus)
+							onHoldFound = true
+						}
+					}
+				}
+				if onHoldFound {
+					change = chg
+					break
+				}
+			}
 		}
 
-		for _, i := range taskset {
-			change.AddAll(i)
+		if !onHoldFound {
+			change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
+			change.Set("user", user)
+			change.Set("project-key", prj)
+			change.Set("hold-on-error", reqData.Hold)
+
+			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
+			if err != nil {
+				return statusBadRequest(err.Error())
+			}
+
+			for _, i := range taskset {
+				change.AddAll(i)
+			}
 		}
+
 	default:
 		return statusBadRequest("unknown action")
 	}

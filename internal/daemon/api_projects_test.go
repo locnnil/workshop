@@ -2,7 +2,7 @@ package daemon
 
 import (
 	"bytes"
-	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -19,9 +19,7 @@ import (
 func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
 	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workspace/.socket);"
-	userCtx := context.WithValue(req.Context(), workspacebackend.ContextUser, s.username)
-	projectCts := context.WithValue(userCtx, workspacebackend.ContextProjectId, s.projectId)
-	return req.WithContext(projectCts), err
+	return req.WithContext(s.ctx), err
 }
 
 func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
@@ -82,13 +80,10 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects")
-	buf := bytes.NewBufferString(`{"path": "/home/testuser/project"}`)
+	buf := bytes.NewBufferString(fmt.Sprintf(`{"path": "%s"}`, s.project.Path))
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects", buf)
 	c.Assert(err, check.IsNil)
-	b := s.d.overlord.WorkspaceBackend()
-
-	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
 
 	// Execute
 	rsp := v1PostProjects(projectsCmd, req, nil).(*resp)
@@ -99,19 +94,19 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"b8639dea"}.*`)
+	c.Check(string(res), check.Matches,
+		fmt.Sprintf(`.*{"path":"%s","id":"%s"}.*`, s.project.Path, s.project.ProjectId))
 }
 
 func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
-	s.vars = map[string]string{"id": s.projectId}
+	s.vars = map[string]string{"id": s.project.ProjectId}
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	b.CreateOrLoadProject(req.Context(), s.workspaceDir)
 
 	b.LaunchWorkspace(req.Context(), "ws-test", "ubuntu@20.04")
 	ws, _ := b.GetWorkspace(req.Context(), "ws-test")
@@ -129,7 +124,7 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	c.Check(rsp.Result, check.DeepEquals, []*WorkspaceInfo{
 		{
 			Name:      "ws-test",
-			ProjectId: "b8639dea",
+			ProjectId: s.project.ProjectId,
 			State:     "Ready",
 			Content: []*SdkInfo{
 				{
@@ -146,9 +141,9 @@ func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
-	s.vars = map[string]string{"id": s.projectId, "name": "ws-test"}
+	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws-test"}
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws-test", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
 	b.CreateOrLoadProject(req.Context(), s.workspaceDir)
@@ -165,54 +160,19 @@ func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(rsp.Result, check.DeepEquals, &WorkspaceInfo{
 		Name:      "ws-test",
-		ProjectId: s.projectId,
+		ProjectId: s.project.ProjectId,
 		State:     "Ready",
 	})
 }
 
-func (s *apiSuite) TestProjectsGetWorkspaceNoNameProvided(c *check.C) {
-	// Setup
-	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
-	s.vars = map[string]string{"id": "b8639dea"}
-
-	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
-
-	// Verify
-	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
-	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
-	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "workspace name must be provided")
-}
-
-func (s *apiSuite) TestProjectsGetWorkspaceNoProjectIdProvided(c *check.C) {
-	// Setup
-	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
-	s.vars = map[string]string{}
-
-	req, err := s.createProjectsRequest("GET", "/v1/projects/b8639dea/workspaces/ws-test", nil)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
-
-	// Verify
-	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
-	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
-	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "project-id must be provided")
-}
-
-func (s *apiSuite) TestProjectsPostProjectRefreshWorkspace(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkspaceAction(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
-	s.vars = map[string]string{"id": s.projectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	s.vars = map[string]string{"id": s.project.ProjectId}
+	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
+	c.Assert(err, check.IsNil)
 
 	soon := 0
 	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) { soon++ }, &ensureStateSoon)
@@ -221,29 +181,100 @@ base: ubuntu@20.04`), 0644)
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
 		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh", "hold-on-error": true}`),
 	}
 
 	requests := []*http.Request{}
 	expected := []*struct {
-		Type       ResponseType
-		Status     int
-		ChangeHold bool
+		Type    ResponseType
+		Status  int
+		Message string
 	}{
 		{
 			Type:   ResponseTypeAsync,
 			Status: http.StatusAccepted,
 		},
 		{
-			Type:   ResponseTypeError,
-			Status: http.StatusBadRequest,
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "at least one workspace name must be provided",
 		},
 		{
 			Type:   ResponseTypeAsync,
 			Status: http.StatusAccepted,
 		},
+		{
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "hold-on-error is not supported for multiple workspaces",
+		},
+	}
+
+	for _, i := range buffers {
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		c.Assert(err, check.IsNil)
+		requests = append(requests, req)
+	}
+
+	b := s.d.overlord.WorkspaceBackend()
+	b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+
+	for num, i := range requests {
+		// Execute
+		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		{
+			// Verify
+			c.Check(rsp.Type, check.Equals, expected[num].Type)
+			c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
+			if rsp.Type == ResponseTypeError {
+				c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+			}
+		}
+	}
+
+	// all successful responses must initiate the ensure call
+	c.Assert(soon, check.Equals, 3)
+}
+
+func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	s.vars = map[string]string{"id": s.project.ProjectId}
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04`), 0644)
+
+	// Execute a chain of refresh calls for the workspace ws. In this scenario
+	// (1) the refresh is executed in a non-transactional mode, then (2) an
+	// attempt to initiate a transactional refresh for the workspace that is in
+	// the hold-on-error state is made (has to be unsuccessful), and, finally, (3)
+	// we finish the refresh for the workspace on hold and validate that the
+	// next transactional refresh will end up initiated successfully
+	buffers := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
+	}
+
+	requests := []*http.Request{}
+	for _, i := range buffers {
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		c.Assert(err, check.IsNil)
+		requests = append(requests, req)
+	}
+
+	expected := []*struct {
+		Type       ResponseType
+		Status     int
+		ChangeHold bool
+	}{
 		{
 			Type:       ResponseTypeAsync,
 			Status:     http.StatusAccepted,
@@ -253,21 +284,50 @@ base: ubuntu@20.04`), 0644)
 			Type:   ResponseTypeError,
 			Status: http.StatusBadRequest,
 		},
+		{
+			Type:       ResponseTypeAsync,
+			Status:     http.StatusAccepted,
+			ChangeHold: true,
+		},
+		{
+			Type:       ResponseTypeAsync,
+			Status:     http.StatusAccepted,
+			ChangeHold: false,
+		},
 	}
 
-	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/b8639dea/workspaces", i)
-		c.Assert(err, check.IsNil)
-		requests = append(requests, req)
+	refreshResults := []*struct {
+		RefreshError error
+	}{
+		{
+			&workspacebackend.ErrExec{Status: 0},
+		}, {
+			nil,
+		},
 	}
 
-	b := s.d.overlord.WorkspaceBackend()
-	prj, _, err := b.CreateOrLoadProject(requests[0].Context(), s.workspaceDir)
-	c.Assert(err, check.IsNil)
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		// the first change is executed in the hold-on-error mode
+		// so we emulate its non-transactional behaviour here
+		// by setting one of its tasks to the Error state
+		chg := st.Change("1")
+		if !chg.Status().Ready() {
+			tsk := chg.Tasks()[0]
+			if refreshResults[soon].RefreshError != nil {
+				tsk.SetStatus(state.ErrorStatus)
+				tsk.Errorf(refreshResults[soon].RefreshError.Error())
+			} else {
+				for _, i := range chg.Tasks() {
+					i.SetStatus(state.DoneStatus)
+				}
+			}
+		}
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
 
-	b.LaunchWorkspace(requests[0].Context(), "ws", "ubuntu@20.04")
-	b.LaunchWorkspace(requests[0].Context(), "ws1", "ubuntu@20.04")
-	st := s.d.overlord.State()
+	s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 
 	for num, i := range requests {
 		// Execute
@@ -275,23 +335,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			// Verify
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
-			c.Assert(rsp.Status, check.Equals, expected[num].Status)
-
-			if rsp.Type != ResponseTypeError {
-				st.Lock()
-				var user string
-				var projectKey workspacebackend.Project
-				var hold bool
-				chg := st.Change(rsp.Change)
-				chg.Get("user", &user)
-				chg.Get("project-key", &projectKey)
-				chg.Get("hold-on-error", &hold)
-
-				c.Assert(user, check.Equals, s.username)
-				c.Assert(&projectKey, check.DeepEquals, prj)
-				c.Assert(hold, check.Equals, expected[num].ChangeHold)
-				st.Unlock()
-			}
+			c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 		}
 	}
 
