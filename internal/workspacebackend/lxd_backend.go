@@ -676,6 +676,8 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) *Workspace {
 		Devices: inst.Devices,
 	}
 
+	workspace.refreshChangeId = inst.Config["user.workspace.refresh-change-id"]
+
 	// Load the associated workspace file (if present)
 	workspace.file, err = p.WorkspaceFile(name)
 	if err != nil {

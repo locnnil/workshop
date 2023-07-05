@@ -15,9 +15,9 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch workspace-name",
+		Use:   "launch <workspace>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Launch a workspace",
+		Short: "Launch one or many workspaces",
 		RunE:  c.Run,
 	}
 
@@ -59,7 +59,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 	for _, i := range av {
 		if slices.ContainsFunc(workspaces, func(w *client.Workspace) bool { return w.Name == i && w.State == "Ready" }) {
-			fmt.Fprintf(Stdout, "Workspace %q launched\n", i)
+			fmt.Fprintf(Stdout, "%q launched\n", i)
 		}
 	}
 

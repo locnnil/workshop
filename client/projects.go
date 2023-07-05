@@ -11,6 +11,12 @@ type Project struct {
 	Path string `json:"path"`
 }
 
+type WorkspaceActionSetup struct {
+	Action      string
+	Names       []string
+	RefreshMode string
+}
+
 func (client *Client) Projects() ([]*Project, error) {
 	var projects []*Project
 	_, err := client.doSync("GET", "/v1/projects", nil, nil, nil, &projects)
@@ -43,13 +49,15 @@ func (client *Client) Project(path string) (*Project, error) {
 	return &project, nil
 }
 
-func (client *Client) doWorkspaceAction(projectId string, actionName string, names []string) (changeId string, err error) {
+func (client *Client) doWorkspaceAction(projectId string, action *WorkspaceActionSetup) (changeId string, err error) {
 	var postData struct {
-		Names  []string `json:"names"`
-		Action string   `json:"action"`
+		Names       []string `json:"names"`
+		Action      string   `json:"action"`
+		RefreshMode string   `json:"refresh-mode,omitempty"`
 	}
-	postData.Names = names
-	postData.Action = actionName
+	postData.Names = action.Names
+	postData.Action = action.Action
+	postData.RefreshMode = action.RefreshMode
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(postData); err != nil {
 		return "", err
@@ -59,5 +67,16 @@ func (client *Client) doWorkspaceAction(projectId string, actionName string, nam
 }
 
 func (client *Client) Launch(projectId string, names []string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, "launch", names)
+	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+		Action: "launch",
+		Names:  names,
+	})
+}
+
+func (client *Client) Refresh(projectId string, names []string, mode string) (changeId string, err error) {
+	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+		Action:      "refresh",
+		Names:       names,
+		RefreshMode: mode,
+	})
 }

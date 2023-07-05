@@ -220,3 +220,26 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	return nil
 }
+
+func (m *WorkspaceManager) doCompleteRefresh(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	wrk, err := m.backend.GetWorkspace(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	if wrk.RefreshChangeId() != "" {
+		return wrk.SetRefreshChangeId(ctx, "")
+	}
+	return nil
+}

@@ -22,11 +22,12 @@ type SdkInfo struct {
 }
 
 type WorkspaceInfo struct {
-	Name      string     `json:"name"`
-	ProjectId string     `json:"project-id"`
-	State     string     `json:"state"`
-	Content   []*SdkInfo `json:"content,omitempty"`
-	Notes     []string   `json:"notes,omitempty"`
+	Name         string     `json:"name"`
+	ProjectId    string     `json:"project-id"`
+	State        string     `json:"state"`
+	Content      []*SdkInfo `json:"content,omitempty"`
+	Notes        []string   `json:"notes,omitempty"`
+	RefreshChgId string     `json:"refresh-change-id,omitempty"`
 }
 
 var ensureStateSoon = stateEnsureBefore
@@ -60,6 +61,8 @@ func workspacePropsToInfo(props *workspacebackend.Workspace, pid string) *Worksp
 	if props.Reason() != workspacebackend.None {
 		ws.Notes = append(ws.Notes, props.Reason().String())
 	}
+
+	ws.RefreshChgId = props.RefreshChangeId()
 	return &ws
 }
 
@@ -163,19 +166,20 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var reqData struct {
 		Names  []string `json:"names"`
 		Action string   `json:"action"`
-		Hold   bool     `json:"hold-on-error"`
+		Mode   string   `json:"refresh-mode"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
+	refreshMode := workspacestate.ParseRefreshMode(reqData.Mode)
 
 	if len(reqData.Names) == 0 {
 		return statusBadRequest("at least one workspace name must be provided")
 	}
 
-	if len(reqData.Names) > 1 && reqData.Hold {
+	if len(reqData.Names) > 1 && refreshMode != workspacestate.RefreshTransactional {
 		return statusBadRequest("hold-on-error is not supported for multiple workspaces")
 	}
 
@@ -213,66 +217,46 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		onHoldFound := false
-		for _, chg := range st.Changes() {
-			var chgPrj workspacebackend.Project
-			var chgUsr string
+		var setup = workspacestate.RefreshSetup{Mode: refreshMode}
 
-			if chg.Status().Ready() {
-				continue
-			}
-
-			err = chg.Get("project-key", &chgPrj)
-			if err == state.ErrNoState {
-				continue
-			}
-
-			err = chg.Get("user", &chgUsr)
-			if err == state.ErrNoState || chgUsr != user {
-				continue
-			}
-
-			if chgPrj.ProjectId == prj.ProjectId {
-				// we may already have the refresh change in progress
-				for _, tsk := range chg.Tasks() {
-					if tsk.Status() == state.ErrorStatus {
-						var name string
-						err = tsk.Get("workspace", &name)
-						if err != nil {
-							continue
-						}
-						// this is a conflicting flag given the change is already
-						// in progress
-						if !reqData.Hold {
-							return statusBadRequest("cannot do a transactional refresh, the workspace is already in the hold mode. Finish the current refresh first")
-						}
-						if name == reqData.Names[0] {
-							// this is the change to be continued
-							tsk.SetStatus(state.DoStatus)
-							onHoldFound = true
-						}
-					}
-				}
-				if onHoldFound {
-					change = chg
-					break
-				}
-			}
-		}
-
-		if !onHoldFound {
+		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshHoldOnError {
 			change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
 			change.Set("user", user)
 			change.Set("project-key", prj)
-			change.Set("hold-on-error", reqData.Hold)
+			change.Set("hold-on-error", false)
 
-			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
+			if refreshMode == workspacestate.RefreshHoldOnError {
+				setup.RefreshChangeId = change.ID()
+				change.Set("hold-on-error", true)
+			}
+			taskset, err := workspacestate.RefreshMany(st, &setup, ctx, wBackend, reqData.Names, prj)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
 
 			for _, i := range taskset {
 				change.AddAll(i)
+			}
+		}
+
+		if refreshMode == workspacestate.RefreshContinue || refreshMode == workspacestate.RefreshAbort {
+			workspace, err := wBackend.GetWorkspace(ctx, reqData.Names[0])
+			if err != nil {
+				return statusBadRequest(err.Error())
+			}
+
+			if workspace.RefreshChangeId() == "" {
+				return statusBadRequest("cannot %s, workspace %q does not have a refresh operation in progress", reqData.Mode, reqData.Names[0])
+			}
+
+			change = st.Change(workspace.RefreshChangeId())
+			if change == nil {
+				return statusInternalError("cannot %s, workspace %q does not have a refresh operation in progress", reqData.Mode, reqData.Names[0])
+			}
+
+			if refreshMode == workspacestate.RefreshAbort {
+				change.Abort()
+				return AsyncResponse(nil, change.ID())
 			}
 		}
 

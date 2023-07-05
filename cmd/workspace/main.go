@@ -55,6 +55,7 @@ func main() {
 	rootCmd.AddCommand((&CmdList{}).Command())
 	rootCmd.AddCommand((&CmdChanges{}).Command())
 	rootCmd.AddCommand((&CmdTasks{}).Command())
+	rootCmd.AddCommand((&CmdRefresh{}).Command())
 
 	rootCmd.Execute()
 }

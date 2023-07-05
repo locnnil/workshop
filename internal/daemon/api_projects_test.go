@@ -181,9 +181,9 @@ base: ubuntu@20.04`), 0644)
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
-		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh", "hold-on-error": true}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode": "hold-on-error"}`),
 	}
 
 	requests := []*http.Request{}
@@ -250,17 +250,24 @@ func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
-	// Execute a chain of refresh calls for the workspace ws. In this scenario
-	// (1) the refresh is executed in a non-transactional mode, then (2) an
-	// attempt to initiate a transactional refresh for the workspace that is in
-	// the hold-on-error state is made (has to be unsuccessful), and, finally, (3)
-	// we finish the refresh for the workspace on hold and validate that the
-	// next transactional refresh will end up initiated successfully
 	buffers := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": true}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "hold-on-error": false}`),
+		// try continue without starting hold-on-error
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+
+		// start - attempt transactional - continue (success) - continue (fail, already finished)
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+
+		// start transactional (success) - attempt abort or continue (failure)
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
+
+		// start - abort (both success)
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
 	}
 
 	requests := []*http.Request{}
@@ -274,25 +281,57 @@ base: ubuntu@20.04`), 0644)
 		Type       ResponseType
 		Status     int
 		ChangeHold bool
+		Message    string
 	}{
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: true,
-		},
-		{
-			Type:   ResponseTypeError,
-			Status: http.StatusBadRequest,
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
 		},
 		{
 			Type:       ResponseTypeAsync,
 			Status:     http.StatusAccepted,
 			ChangeHold: true,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "workspace \"ws\" already has a refresh operation in progress",
+		},
+		{
+			Type:       ResponseTypeAsync,
+			Status:     http.StatusAccepted,
+			ChangeHold: true,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
 		},
 		{
 			Type:       ResponseTypeAsync,
 			Status:     http.StatusAccepted,
 			ChangeHold: false,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot abort, workspace \"ws\" does not have a refresh operation in progress",
+		},
+		{
+			Type:       ResponseTypeAsync,
+			Status:     http.StatusAccepted,
+			ChangeHold: true,
+		},
+		{
+			Type:       ResponseTypeAsync,
+			Status:     http.StatusAccepted,
+			ChangeHold: true,
 		},
 	}
 
@@ -321,6 +360,8 @@ base: ubuntu@20.04`), 0644)
 				for _, i := range chg.Tasks() {
 					i.SetStatus(state.DoneStatus)
 				}
+				w, _ := s.b.GetWorkspace(s.ctx, "ws")
+				w.SetRefreshChangeId(s.ctx, "")
 			}
 		}
 		soon++
@@ -336,9 +377,12 @@ base: ubuntu@20.04`), 0644)
 			// Verify
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
 			c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
+			if rsp.Type == ResponseTypeError {
+				c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+			}
 		}
 	}
 
 	// all successful responses must initiate the ensure call
-	c.Assert(soon, check.Equals, 3)
+	c.Assert(soon, check.Equals, 4)
 }

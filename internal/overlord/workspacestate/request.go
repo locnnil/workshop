@@ -15,6 +15,34 @@ const (
 	RefreshIncumbentPrefix = "refresh-incumbent-"
 )
 
+type RefreshMode int
+
+const (
+	RefreshTransactional RefreshMode = iota
+	RefreshHoldOnError
+	RefreshContinue
+	RefreshAbort
+)
+
+func (s RefreshMode) String() string {
+	return [...]string{"transactional", "hold-on-error", "continue", "abort"}[s]
+}
+
+func ParseRefreshMode(s string) RefreshMode {
+	refreshMap := map[string]RefreshMode{
+		RefreshTransactional.String(): RefreshTransactional,
+		RefreshHoldOnError.String():   RefreshHoldOnError,
+		RefreshContinue.String():      RefreshContinue,
+		RefreshAbort.String():         RefreshAbort,
+	}
+	return refreshMap[s]
+}
+
+type RefreshSetup struct {
+	Mode            RefreshMode
+	RefreshChangeId string
+}
+
 func LaunchMany(st *state.State, workspaces []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(workspaces))
 	for _, i := range workspaces {
@@ -89,7 +117,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	return set, nil
 }
 
-func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+func RefreshMany(st *state.State, setup *RefreshSetup, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(names))
 
 	// we are only interested in the existing (launched) workspaces
@@ -105,6 +133,17 @@ func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.
 		}
 
 		workspace := workspaces[idx]
+		if setup.Mode == RefreshTransactional {
+			if workspace.RefreshChangeId() != "" {
+				return nil, fmt.Errorf("workspace %q already has a refresh operation in progress", workspace.Name)
+			}
+		}
+		if setup.Mode != RefreshTransactional {
+			err = workspace.SetRefreshChangeId(ctx, setup.RefreshChangeId)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		tasks, err := Refresh(st, workspace, project)
 		if err != nil {
@@ -143,8 +182,10 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 	}
 
 	deleteUnavail := st.NewTask("delete-unavailable-workspace", "Delete previous workspace version")
+	complete := st.NewTask("complete-refresh", "Complete refresh operation")
 
 	// save-state -> stop-workspace -> launch -> restore state
+	complete.WaitFor(deleteUnavail)
 	deleteUnavail.WaitAll(restoreStateHooks)
 	restoreStateHooks.WaitAll(launch)
 	launch.WaitFor(makeUnavail)
@@ -158,6 +199,7 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 	refresh.AddTask(stopOld)
 	refresh.AddTask(makeUnavail)
 	refresh.AddTask(deleteUnavail)
+	refresh.AddTask(complete)
 
 	for _, i := range refresh.Tasks() {
 		i.Set("workspace", w.Name)
