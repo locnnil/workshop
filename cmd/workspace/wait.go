@@ -45,7 +45,7 @@ type waitMixin struct {
 
 var noWait = errors.New("no wait for op")
 
-func (wmx waitMixin) wait(id string) (*client.Change, error) {
+func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
 		return nil, noWait
@@ -155,6 +155,10 @@ func (wmx waitMixin) wait(id string) (*client.Change, error) {
 
 		if chg.Ready {
 			if chg.Status == "Done" {
+				return chg, nil
+			}
+
+			if chg.Status == "Undone" && undoneExpected {
 				return chg, nil
 			}
 

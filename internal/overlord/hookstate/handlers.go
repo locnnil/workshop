@@ -2,7 +2,7 @@ package hookstate
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"path/filepath"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -31,22 +31,25 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	switch hook.HookType {
-	case workspacebackend.SetupBase:
-		return h.doSetupBase(task, ctx, workspace, prj, &hook)
-	case workspacebackend.SaveState:
-		return h.doSaveState(task, ctx, workspace, prj, &hook)
-	case workspacebackend.RestoreState:
-		return h.doRestoreState(task, ctx, workspace, prj, &hook)
-	default:
-		return fmt.Errorf("unknown hook type %q", hook.HookType.String())
-	}
+	return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
 }
 
-func (h *HookManager) doSetupBase(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
+func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspace, projectId string, hook *HookSetup) error {
+	wsFs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	defer wsFs.Close()
+
+	hookPath := filepath.Join(workspacebackend.SdkHooksPath(hook.Sdk.Name), hook.Type())
+	info, err := wsFs.Stat(hookPath)
+	if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
+		return nil
+	}
+
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, prj.ProjectId))
+	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, projectId))
 	if err != nil {
 		return err
 	}
@@ -59,31 +62,26 @@ func (h *HookManager) doSetupBase(task *state.Task, ctx context.Context, workspa
 			"-o",
 			"pipefail",
 			"-c",
-			filepath.Join(workspacebackend.SdkHooksPath(hook.Sdk.Name), hook.Type()),
+			hookPath,
 		},
 		WorkDir: workspacebackend.SdkHooksPath(hook.Sdk.Name),
-		Stdin:   nil,
-		Stdout:  outerr,
-		Stderr:  outerr}
+	}
+
+	args.Stdin = nil
+	args.Stdin = outerr
+	args.Stdout = outerr
 
 	done, err := h.backend.Exec(ctx, workspace, &args)
 	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
+	st := task.State()
+	st.Lock()
 	if err != nil {
-		st := task.State()
-		st.Lock()
+		task.Errorf(string(hookLog))
+	} else {
 		task.Logf(string(hookLog))
-		st.Unlock()
-		return err
 	}
-
+	st.Unlock()
 	<-done
-	return nil
-}
 
-func (h *HookManager) doSaveState(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
-	return nil
-}
-
-func (h *HookManager) doRestoreState(task *state.Task, ctx context.Context, workspace string, prj *workspacebackend.Project, hook *HookSetup) error {
-	return nil
+	return err
 }

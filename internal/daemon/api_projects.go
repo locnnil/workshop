@@ -278,13 +278,13 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 				return statusInternalError("cannot %s, no refresh in progress", reqData.Mode)
 			}
 
-			if refreshMode == workspacestate.RefreshContinue {
-				for _, tsk := range change.Tasks() {
-					if tsk.Status() == state.ErrorStatus {
-						tsk.SetStatus(state.DoStatus)
-					}
+			for _, tsk := range change.Tasks() {
+				if tsk.Status() == state.ErrorStatus {
+					tsk.SetStatus(state.DoStatus)
+					tsk.ClearLog()
 				}
 			}
+
 			change.SetStatus(state.DefaultStatus)
 
 			if refreshMode == workspacestate.RefreshAbort {

@@ -26,12 +26,13 @@ import (
 )
 
 type ExecArgs struct {
-	User    string
-	Command []string
-	WorkDir string
-	Stdin   io.ReadCloser
-	Stdout  io.WriteCloser
-	Stderr  io.WriteCloser
+	User        string
+	Command     []string
+	WorkDir     string
+	Environment map[string]string
+	Stdin       io.ReadCloser
+	Stdout      io.WriteCloser
+	Stderr      io.WriteCloser
 }
 
 type LxdBackend struct {
@@ -605,7 +606,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (cha
 	req := api.InstanceExecPost{
 		Command: args.Command, WaitForWS: true,
 		User: 0, Group: 0, Cwd: args.WorkDir,
-		Interactive: false,
+		Interactive: false, Environment: args.Environment,
 	}
 
 	done := make(chan bool)

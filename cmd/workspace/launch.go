@@ -46,7 +46,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(changeId); err != nil {
+	if _, err := c.wait(changeId, false); err != nil {
 		if err == noWait {
 			return nil
 		}

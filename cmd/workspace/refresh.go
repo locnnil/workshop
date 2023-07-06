@@ -81,11 +81,16 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(changeId); err != nil {
+	if _, err := c.wait(changeId, c.Abort); err != nil {
 		if err == noWait {
 			return nil
 		}
 		return err
+	}
+
+	if c.Abort && err == nil {
+		fmt.Fprintf(os.Stdout, "%q refresh aborted\n", av[0])
+		return nil
 	}
 
 	workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})

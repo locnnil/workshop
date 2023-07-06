@@ -8,7 +8,7 @@ import (
 )
 
 func SetupHook(st *state.State, sdk *workspacebackend.Sdk, hook workspacebackend.WorkspaceHookType) *state.Task {
-	setup_hook := st.NewTask("run-hook", fmt.Sprintf("Run hook %q for SDK %q", hook.String(), sdk.Name))
+	setup_hook := st.NewTask("run-hook", fmt.Sprintf("Run hook %q for SDK %q if present", hook.String(), sdk.Name))
 	setup_hook.Set("hook-setup", &HookSetup{HookType: hook, Sdk: *sdk})
 	return setup_hook
 }

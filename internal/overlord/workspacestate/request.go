@@ -42,7 +42,6 @@ func ParseRefreshMode(s string) RefreshMode {
 }
 
 type RefreshSetup struct {
-	Mode            RefreshMode
 	RefreshChangeId string
 }
 
