@@ -12,6 +12,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/maps"
 )
 
@@ -203,7 +204,15 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
-		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
+		var summary string
+		switch len(reqData.Names) {
+		case 1:
+			summary = fmt.Sprintf("Launch workspace %q", reqData.Names[0])
+		default:
+			summary = fmt.Sprintf("Launch workspaces %s", strutil.Quoted(reqData.Names))
+		}
+
+		change = st.NewChange("launch", summary)
 		change.Set("user", user)
 		change.Set("project-key", prj)
 
@@ -229,7 +238,20 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 				return statusBadRequest("refresh operation is already in progress for: %s", strings.Join(inProgress, ","))
 			}
 
-			change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
+			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
+			if err != nil {
+				return statusBadRequest(err.Error())
+			}
+
+			var summary string
+			switch len(reqData.Names) {
+			case 1:
+				summary = fmt.Sprintf("Refresh workspace %q", reqData.Names[0])
+			default:
+				summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
+			}
+
+			change = st.NewChange("refresh", summary)
 			change.Set("user", user)
 			change.Set("project-key", prj)
 
@@ -237,11 +259,6 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 				change.Set("hold-on-error", true)
 			} else {
 				change.Set("hold-on-error", false)
-			}
-
-			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
-			if err != nil {
-				return statusBadRequest(err.Error())
 			}
 
 			for _, i := range taskset {

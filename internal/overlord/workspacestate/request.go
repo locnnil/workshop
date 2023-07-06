@@ -94,7 +94,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		setupHook.AddTask(setupHookTask)
 	}
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create %q", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
