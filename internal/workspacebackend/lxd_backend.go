@@ -676,8 +676,6 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) *Workspace {
 		Devices: inst.Devices,
 	}
 
-	workspace.refreshChangeId = inst.Config["user.workspace.refresh-change-id"]
-
 	// Load the associated workspace file (if present)
 	workspace.file, err = p.WorkspaceFile(name)
 	if err != nil {
@@ -883,7 +881,7 @@ func (s *LxdBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) 
 
 // Moves the instance between projects. If system is true the project will be
 // moved to the LXD project which is not available to the users (e.g. for
-// hidding a workspace temporarily). Otherwise, the workspace will be move to
+// hiding a workspace temporarily). Otherwise, the workspace will be move to
 // the regular project visible by the user specified in the ctx context.
 func (s *LxdBackend) moveInstanceProject(ctx context.Context, name string, system bool) error {
 	conn, err := s.LxdClient(ctx)

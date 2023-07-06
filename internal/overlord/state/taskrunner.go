@@ -294,6 +294,8 @@ func (r *TaskRunner) run(t *Task) {
 		default:
 			if !t.Change().HoldOnError() {
 				r.abortLanes(t.Change(), t.Lanes())
+			} else {
+				t.Change().SetStatus(ErrorStatus)
 			}
 			t.SetStatus(ErrorStatus)
 			t.Errorf("%s", err)

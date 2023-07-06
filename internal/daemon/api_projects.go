@@ -62,7 +62,6 @@ func workspacePropsToInfo(props *workspacebackend.Workspace, pid string) *Worksp
 		ws.Notes = append(ws.Notes, props.Reason().String())
 	}
 
-	ws.RefreshChgId = props.RefreshChangeId()
 	return &ws
 }
 
@@ -217,19 +216,30 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		var setup = workspacestate.RefreshSetup{Mode: refreshMode}
-
+		wm := c.d.overlord.WorkspaceManager()
 		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshHoldOnError {
+			var inProgress = []string{}
+			for _, r := range reqData.Names {
+				if wm.RefreshInProgress(st, r, prj.ProjectId) != "" {
+					inProgress = append(inProgress, r)
+				}
+			}
+
+			if len(inProgress) > 0 {
+				return statusBadRequest("refresh operation is already in progress for: %s", strings.Join(inProgress, ","))
+			}
+
 			change = st.NewChange("refresh", fmt.Sprintf("Refresh workspace(s): %s", strings.Join(reqData.Names, ",")))
 			change.Set("user", user)
 			change.Set("project-key", prj)
-			change.Set("hold-on-error", false)
 
 			if refreshMode == workspacestate.RefreshHoldOnError {
-				setup.RefreshChangeId = change.ID()
 				change.Set("hold-on-error", true)
+			} else {
+				change.Set("hold-on-error", false)
 			}
-			taskset, err := workspacestate.RefreshMany(st, &setup, ctx, wBackend, reqData.Names, prj)
+
+			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
@@ -240,23 +250,28 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 
 		if refreshMode == workspacestate.RefreshContinue || refreshMode == workspacestate.RefreshAbort {
-			workspace, err := wBackend.GetWorkspace(ctx, reqData.Names[0])
-			if err != nil {
-				return statusBadRequest(err.Error())
+			currentRefreshId := wm.RefreshInProgress(st, reqData.Names[0], prj.ProjectId)
+
+			if currentRefreshId == "" {
+				return statusBadRequest("cannot %s, no refresh in progress", reqData.Mode)
 			}
 
-			if workspace.RefreshChangeId() == "" {
-				return statusBadRequest("cannot %s, workspace %q does not have a refresh operation in progress", reqData.Mode, reqData.Names[0])
-			}
-
-			change = st.Change(workspace.RefreshChangeId())
+			change = st.Change(currentRefreshId)
 			if change == nil {
-				return statusInternalError("cannot %s, workspace %q does not have a refresh operation in progress", reqData.Mode, reqData.Names[0])
+				return statusInternalError("cannot %s, no refresh in progress", reqData.Mode)
 			}
+
+			if refreshMode == workspacestate.RefreshContinue {
+				for _, tsk := range change.Tasks() {
+					if tsk.Status() == state.ErrorStatus {
+						tsk.SetStatus(state.DoStatus)
+					}
+				}
+			}
+			change.SetStatus(state.DefaultStatus)
 
 			if refreshMode == workspacestate.RefreshAbort {
 				change.Abort()
-				return AsyncResponse(nil, change.ID())
 			}
 		}
 

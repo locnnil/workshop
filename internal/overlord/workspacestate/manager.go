@@ -21,10 +21,8 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) 
 	runner.AddHandler("delete-workspace", manager.doDeleteWorkspace, nil)
 
 	runner.AddHandler("mount-project", manager.doMountProject, manager.undoMountProject)
-	runner.AddHandler("delete-unavailable-workspace", manager.doDeleteUnavailableWorkspace, nil)
-	runner.AddHandler("make-unavailable", manager.doMakeUnavailable, manager.doMakeAvailable)
-	runner.AddHandler("make-available", manager.doMakeAvailable, manager.doMakeUnavailable)
 	runner.AddHandler("complete-refresh", manager.doCompleteRefresh, nil)
+	runner.AddHandler("start-refresh", manager.doStartRefresh, manager.undoStartRefresh)
 
 	return manager
 }

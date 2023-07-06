@@ -286,7 +286,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
+			Message: "cannot continue, no refresh in progress",
 		},
 		{
 			Type:       ResponseTypeAsync,
@@ -296,7 +296,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "workspace \"ws\" already has a refresh operation in progress",
+			Message: "refresh operation is already in progress for: ws",
 		},
 		{
 			Type:       ResponseTypeAsync,
@@ -306,7 +306,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
+			Message: "cannot continue, no refresh in progress",
 		},
 		{
 			Type:       ResponseTypeAsync,
@@ -316,12 +316,12 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, workspace \"ws\" does not have a refresh operation in progress",
+			Message: "cannot continue, no refresh in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort, workspace \"ws\" does not have a refresh operation in progress",
+			Message: "cannot abort, no refresh in progress",
 		},
 		{
 			Type:       ResponseTypeAsync,
@@ -350,18 +350,27 @@ base: ubuntu@20.04`), 0644)
 		// the first change is executed in the hold-on-error mode
 		// so we emulate its non-transactional behaviour here
 		// by setting one of its tasks to the Error state
+		for _, i := range st.Changes() {
+			hold := false
+			i.Get("hold-on-error", &hold)
+			if hold {
+				s.d.overlord.WorkspaceManager().StartRefresh(st, "ws", s.project.ProjectId, i.ID())
+			}
+		}
+
 		chg := st.Change("1")
 		if !chg.Status().Ready() {
 			tsk := chg.Tasks()[0]
 			if refreshResults[soon].RefreshError != nil {
 				tsk.SetStatus(state.ErrorStatus)
 				tsk.Errorf(refreshResults[soon].RefreshError.Error())
+
 			} else {
 				for _, i := range chg.Tasks() {
 					i.SetStatus(state.DoneStatus)
 				}
-				w, _ := s.b.GetWorkspace(s.ctx, "ws")
-				w.SetRefreshChangeId(s.ctx, "")
+				chg.Set("hold-on-error", false)
+				s.d.overlord.WorkspaceManager().StopRefresh(st, "ws", s.project.ProjectId)
 			}
 		}
 		soon++
@@ -378,11 +387,11 @@ base: ubuntu@20.04`), 0644)
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
 			c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 			if rsp.Type == ResponseTypeError {
-				c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+				c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message, check.Commentf("case: %v", num))
 			}
 		}
 	}
 
 	// all successful responses must initiate the ensure call
-	c.Assert(soon, check.Equals, 4)
+	c.Assert(soon, check.Equals, 5)
 }

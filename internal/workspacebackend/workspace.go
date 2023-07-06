@@ -22,35 +22,11 @@ type Workspace struct {
 	backend WorkspaceBackend
 	file    *WorkspaceFile
 
-	Name            string
-	Devices         map[string]map[string]string
-	content         map[string]*sdk.SdkInfo
-	state           WorkspaceState
-	reason          WorkspaceStateReason
-	refreshChangeId string
-}
-
-func (w *Workspace) SetRefreshChangeId(ctx context.Context, id string) error {
-	val, err := json.Marshal(id)
-	if err != nil {
-		return err
-	}
-
-	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
-		&WorkspaceConfigValue{
-			Name:  "user.workspace.refresh-change-id",
-			Value: string(val),
-		})
-
-	if err != nil {
-		return err
-	}
-	w.refreshChangeId = id
-	return nil
-}
-
-func (w *Workspace) RefreshChangeId() string {
-	return w.refreshChangeId
+	Name    string
+	Devices map[string]map[string]string
+	content map[string]*sdk.SdkInfo
+	state   WorkspaceState
+	reason  WorkspaceStateReason
 }
 
 func (w *Workspace) State() WorkspaceState {

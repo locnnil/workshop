@@ -13,7 +13,10 @@ import (
 
 const (
 	RefreshIncumbentPrefix = "refresh-incumbent-"
+	RefreshStateKey        = "refresh-in-progress"
 )
+
+type RefreshInProgress map[string]RefreshSetup
 
 type RefreshMode int
 
@@ -98,7 +101,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
+	start := st.NewTask("start-workspace", fmt.Sprintf("Start %q", file.Name))
 	start.WaitFor(mountProject)
 
 	install.WaitFor(start)
@@ -117,7 +120,7 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	return set, nil
 }
 
-func RefreshMany(st *state.State, setup *RefreshSetup, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(names))
 
 	// we are only interested in the existing (launched) workspaces
@@ -133,17 +136,6 @@ func RefreshMany(st *state.State, setup *RefreshSetup, ctx context.Context, back
 		}
 
 		workspace := workspaces[idx]
-		if setup.Mode == RefreshTransactional {
-			if workspace.RefreshChangeId() != "" {
-				return nil, fmt.Errorf("workspace %q already has a refresh operation in progress", workspace.Name)
-			}
-		}
-		if setup.Mode != RefreshTransactional {
-			err = workspace.SetRefreshChangeId(ctx, setup.RefreshChangeId)
-			if err != nil {
-				return nil, err
-			}
-		}
 
 		tasks, err := Refresh(st, workspace, project)
 		if err != nil {
@@ -167,8 +159,8 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		saveStateHooks.AddTask(saveStateHook)
 	}
 
-	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop workspace %q", w.Name))
-	makeUnavail := st.NewTask("make-unavailable", fmt.Sprintf("Make workspace %q unavailable", w.Name))
+	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop %q", w.Name))
+	startRefresh := st.NewTask("start-refresh", fmt.Sprintf("Begin refresh for %q", w.Name))
 
 	launch, err := Launch(st, w.File(), p)
 	if err != nil {
@@ -181,15 +173,13 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		restoreStateHooks.AddTask(restoreStateHook)
 	}
 
-	deleteUnavail := st.NewTask("delete-unavailable-workspace", "Delete previous workspace version")
-	complete := st.NewTask("complete-refresh", "Complete refresh operation")
+	completeRefresh := st.NewTask("complete-refresh", fmt.Sprintf("Finish refresh for %q", w.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
-	complete.WaitFor(deleteUnavail)
-	deleteUnavail.WaitAll(restoreStateHooks)
+	completeRefresh.WaitAll(restoreStateHooks)
 	restoreStateHooks.WaitAll(launch)
-	launch.WaitFor(makeUnavail)
-	makeUnavail.WaitFor(stopOld)
+	launch.WaitFor(startRefresh)
+	startRefresh.WaitFor(stopOld)
 	stopOld.WaitAll(saveStateHooks)
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
@@ -197,9 +187,8 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 	refresh.AddAll(launch)
 	refresh.AddAll(restoreStateHooks)
 	refresh.AddTask(stopOld)
-	refresh.AddTask(makeUnavail)
-	refresh.AddTask(deleteUnavail)
-	refresh.AddTask(complete)
+	refresh.AddTask(startRefresh)
+	refresh.AddTask(completeRefresh)
 
 	for _, i := range refresh.Tasks() {
 		i.Set("workspace", w.Name)

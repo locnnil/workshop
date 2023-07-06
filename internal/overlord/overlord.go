@@ -408,6 +408,10 @@ func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
 	return o.workspaceBackend
 }
 
+func (o *Overlord) WorkspaceManager() *workspace.WorkspaceManager {
+	return o.workspace
+}
+
 // Fake creates an Overlord without any managers and with a backend
 // not using disk. Managers can be added with AddManager. For testing.
 func Fake() *Overlord {

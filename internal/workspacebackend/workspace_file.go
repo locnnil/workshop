@@ -74,12 +74,7 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 
 	for _, k := range file.Sdks {
 		if matches := validChannel.FindStringSubmatch(k.Channel); matches != nil {
-			track := matches[validChannel.SubexpIndex("track")]
-			risk := matches[validChannel.SubexpIndex("risk")]
-			if risk != "stable" {
-				k.Channel = fmt.Sprintf("%s/stable", track)
-				fmt.Printf("Only stable risk levels are supported. Switching to %s for \"%s\"\n", k.Channel, k.Name)
-			}
+			continue
 		} else {
 			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, k.Name)
 		}

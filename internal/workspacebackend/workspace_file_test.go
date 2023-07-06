@@ -29,7 +29,7 @@ sdks:
   huggingface:
     channel: latest/stable
   cuda:
-    channel: latest/stable
+    channel: latest/edge
 `)
 	dir := c.MkDir()
 	os.WriteFile(filepath.Join(dir, ".workspace.xbert-gpu.yaml"), buf, 0644)
@@ -40,5 +40,5 @@ sdks:
 	c.Assert(file.Sdks[0].Name, Equals, "huggingface")
 	c.Assert(file.Sdks[0].Channel, Equals, "latest/stable")
 	c.Assert(file.Sdks[1].Name, Equals, "cuda")
-	c.Assert(file.Sdks[1].Channel, Equals, "latest/stable")
+	c.Assert(file.Sdks[1].Channel, Equals, "latest/edge")
 }
