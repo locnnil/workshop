@@ -25,7 +25,26 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/osutil/sys"
+	"github.com/canonical/x-go/strutil"
 )
+
+var ParseRawEnvironment = parseRawEnvironment
+
+// ParseRawExpandableEnv returns a new expandable environment parsed from key=value strings.
+func ParseRawExpandableEnv(entries []string) (ExpandableEnv, error) {
+	om := strutil.NewOrderedMap()
+	for _, entry := range entries {
+		key, value, err := parseEnvEntry(entry)
+		if err != nil {
+			return ExpandableEnv{}, err
+		}
+		if om.Get(key) != "" {
+			return ExpandableEnv{}, fmt.Errorf("cannot overwrite earlier value of %q", key)
+		}
+		om.Set(key, value)
+	}
+	return ExpandableEnv{OrderedMap: om}, nil
+}
 
 func FakeUserCurrent(f func() (*user.User, error)) func() {
 	realUserCurrent := userCurrent

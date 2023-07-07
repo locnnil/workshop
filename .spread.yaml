@@ -6,7 +6,7 @@ environment:
       TESTSLIB: $SPREAD_PATH/tests/lib
 
 prepare: |
-      apt-get install -y --no-install-recommends gcc libc6-dev snapd jq
+      apt-get install -y --no-install-recommends jq
       snap install go --classic
 
       snap install lxd --classic
@@ -28,7 +28,7 @@ backends:
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi
-      multipass launch --disk 20G --memory 8G --name "$instance_name" "$image"
+      multipass launch --disk 20G --memory 8G --cpus 8 --name "$instance_name" "$image"
       # Get the IP from the instance
       ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d\, -f3)
       # Enable PasswordAuthertication for root over SSH.

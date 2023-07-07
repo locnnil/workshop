@@ -67,6 +67,7 @@ func (s *H) SetUpTest(c *C) {
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
 
 	s.se = overlord.NewStateEngine(s.state)
+	s.se.StartUp()
 	s.se.AddManager(s.wsmgr)
 	s.se.AddManager(s.runner)
 }

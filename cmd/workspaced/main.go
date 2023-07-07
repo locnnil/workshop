@@ -33,7 +33,11 @@ var (
 )
 
 func main() {
-	logger.SetLogger(logger.New(os.Stderr, "[workspaced] "))
+	l, err := logger.New(os.Stderr, 0)
+	if err != nil {
+		panic(err)
+	}
+	logger.SetLogger(l)
 	defer func() {
 		if v := recover(); v != nil {
 			if e, ok := v.(*exitStatus); ok {

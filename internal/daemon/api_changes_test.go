@@ -50,7 +50,7 @@ func setupChanges(st *state.State) []string {
 }
 
 func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -75,7 +75,7 @@ func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *
 }
 
 func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -105,7 +105,7 @@ func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangesInProgress(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -134,7 +134,7 @@ func (s *apiSuite) TestStateChangesInProgress(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangesAll(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -163,7 +163,7 @@ func (s *apiSuite) TestStateChangesAll(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangesReady(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -191,7 +191,7 @@ func (s *apiSuite) TestStateChangesReady(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -227,7 +227,7 @@ func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChange(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
@@ -297,7 +297,7 @@ func (s *apiSuite) TestStateChange(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangeAbort(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	soon := 0
@@ -371,7 +371,7 @@ func (s *apiSuite) TestStateChangeAbort(c *check.C) {
 }
 
 func (s *apiSuite) TestStateChangeAbortIsReady(c *check.C) {
-	restore := state.FakeTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
+	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
 	// Setup
