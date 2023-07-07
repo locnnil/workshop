@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (c) 2016-2018 Canonical Ltd
+ * Copyright (C) 2016-2018 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -20,11 +20,12 @@
 package patch
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/canonical/workspace/internal/logger"
-
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/version"
 )
 
 // Level is the current implemented patch level of the state format and content.
@@ -44,12 +45,12 @@ var patches = make(map[int][]PatchFunc)
 func Init(s *state.State) {
 	s.Lock()
 	defer s.Unlock()
-	if s.Get("patch-level", new(int)) != state.ErrNoState {
+	if err := s.Get("patch-level", new(int)); !errors.Is(err, state.ErrNoState) {
 		panic("internal error: expected empty state, attempting to override patch-level without actual patching")
 	}
 	s.Set("patch-level", Level)
 
-	if s.Get("patch-sublevel", new(int)) != state.ErrNoState {
+	if err := s.Get("patch-sublevel", new(int)); !errors.Is(err, state.ErrNoState) {
 		panic("internal error: expected empty state, attempting to override patch-sublevel without actual patching")
 	}
 	s.Set("patch-sublevel", Sublevel)
@@ -71,23 +72,52 @@ func applySublevelPatches(level, firstSublevel int, s *state.State) error {
 	return nil
 }
 
+// maybeResetSublevelForLevel60 checks if we're coming from a different version
+// of snapd and if so, reset sublevel back to 0 to re-apply sublevel patches.
+func maybeResetSublevelForLevel60(s *state.State, sublevel *int) error {
+	s.Lock()
+	defer s.Unlock()
+
+	var lastVersion string
+	err := s.Get("patch-sublevel-last-version", &lastVersion)
+	if err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+	if errors.Is(err, state.ErrNoState) || lastVersion != version.Version {
+		*sublevel = 0
+		s.Set("patch-sublevel", *sublevel)
+		// unset old reset key in case of revert into old version.
+		// TODO: this can go away if we go through a snapd epoch.
+		s.Set("patch-sublevel-reset", nil)
+	}
+
+	return nil
+}
+
 // Apply applies any necessary patches to update the provided state to
 // conventions required by the current patch level of the system.
 func Apply(s *state.State) error {
 	var stateLevel, stateSublevel int
 	s.Lock()
 	err := s.Get("patch-level", &stateLevel)
-	if err == nil || err == state.ErrNoState {
+	if err == nil || errors.Is(err, state.ErrNoState) {
 		err = s.Get("patch-sublevel", &stateSublevel)
 	}
 	s.Unlock()
 
-	if err != nil && err != state.ErrNoState {
+	if err != nil && !errors.Is(err, state.ErrNoState) {
 		return err
 	}
 
 	if stateLevel > Level {
-		return fmt.Errorf("cannot downgrade: software version is too old for the current system state (patch level %d)", stateLevel)
+		return fmt.Errorf("cannot downgrade: snapd is too old for the current system state (patch level %d)", stateLevel)
+	}
+
+	// check if we refreshed from 6.0 which was not aware of sublevels
+	if stateLevel == 6 && stateSublevel > 0 {
+		if err := maybeResetSublevelForLevel60(s, &stateSublevel); err != nil {
+			return err
+		}
 	}
 
 	if stateLevel == Level && stateSublevel == Sublevel {
@@ -117,12 +147,17 @@ func Apply(s *state.State) error {
 		sublevels := patches[level]
 		logger.Noticef("Patching system state from level %d to %d", level-1, level)
 		if sublevels == nil {
-			return fmt.Errorf("cannot upgrade: software version is too new for the current system state (patch level %d)", level-1)
+			return fmt.Errorf("cannot upgrade: snapd is too new for the current system state (patch level %d)", level-1)
 		}
 		if err := applySublevelPatches(level, 0, s); err != nil {
 			return err
 		}
 	}
+
+	s.Lock()
+	// store last snapd version last in case system is restarted before patches are applied
+	s.Set("patch-sublevel-last-version", version.Version)
+	s.Unlock()
 
 	return nil
 }
@@ -141,8 +176,8 @@ func applyOne(patch func(s *state.State) error, s *state.State, newLevel, newSub
 	return nil
 }
 
-// Fake fakes the current patch level and available patches.
-func Fake(level int, sublevel int, p map[int][]PatchFunc) (restore func()) {
+// Mock mocks the current patch level and available patches.
+func Mock(level int, sublevel int, p map[int][]PatchFunc) (restore func()) {
 	oldLevel := Level
 	oldPatches := patches
 	Level = level

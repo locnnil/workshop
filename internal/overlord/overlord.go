@@ -69,6 +69,8 @@ type Overlord struct {
 	hook      *hookstate.HookManager
 	runner    *state.TaskRunner
 
+	startOfOperationTime time.Time
+
 	// exclusive file lock for the state to avoid multiple running workspaces (temporary)
 	stateFileLock *osutil.FileLock
 }
@@ -144,6 +146,13 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
 
+	err = o.stateEng.StartUp()
+	if err != nil {
+		return nil, err
+	}
+
+	o.startOfOperationTime = time.Now()
+
 	return o, nil
 }
 
@@ -168,7 +177,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 		}
 	}
 
-	if !osutil.CanStat(statePath) {
+	if !osutil.FileExists(statePath) {
 		// fail fast, mostly interesting for tests, this dir is set up by workspace
 		stateDir := filepath.Dir(statePath)
 		if !osutil.IsDir(stateDir) {
@@ -268,7 +277,7 @@ func (o *Overlord) Loop() {
 			case <-o.pruneTicker.C:
 				st := o.State()
 				st.Lock()
-				st.Prune(pruneWait, abortWait, pruneMaxChanges)
+				st.Prune(o.startOfOperationTime, pruneWait, abortWait, pruneMaxChanges)
 				st.Unlock()
 			}
 		}

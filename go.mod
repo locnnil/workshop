@@ -17,6 +17,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+require github.com/kisielk/godepgraph v0.0.0-20221115040737-2d0831789458 // indirect
+
 require (
 	cloud.google.com/go v0.105.0 // indirect
 	cloud.google.com/go/compute v1.13.0 // indirect

@@ -42,8 +42,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	l, err := logger.New(os.Stderr, 0)
+	if err != nil {
+		panic(err)
+	}
 
-	logger.SetLogger(logger.New(os.Stderr, "[workspace] "))
+	logger.SetLogger(l)
 
 	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "specify a project's directory path")
 

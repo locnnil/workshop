@@ -23,9 +23,6 @@ func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*h
 }
 
 func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
-	restore := state.FakeTime(time.Date(2023, 04, 21, 1, 2, 3, 0, time.UTC))
-	defer restore()
-
 	// Setup
 	s.daemon(c)
 	req, err := s.createProjectsRequest("GET", "/v1/projects", nil)

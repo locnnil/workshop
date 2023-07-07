@@ -163,7 +163,7 @@ func ProjectPath(cwd string) (string, error) {
 		var err error
 		var ok, isDir bool
 		if ok, isDir, err = osutil.ExistsIsDir(path); err == nil && ok && isDir {
-			if ok = osutil.CanStat(LockPath(path)); ok {
+			if ok = osutil.FileExists(LockPath(path)); ok {
 				return filepath.Clean(path), nil
 			}
 		}

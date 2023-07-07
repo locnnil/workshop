@@ -1,27 +1,41 @@
-// Copyright (c) 2014-2020 Canonical Ltd
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License version 3 as
-// published by the Free Software Foundation.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// -*- Mode: Go; indent-tabs-mode: t -*-
+
+/*
+ * Copyright (C) 2014-2015 Canonical Ltd
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
 package logger_test
 
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workspace/internal/testutil"
 )
 
 // Hook up check.v1 into the "go test" runner
@@ -30,21 +44,100 @@ func Test(t *testing.T) { TestingT(t) }
 var _ = Suite(&LogSuite{})
 
 type LogSuite struct {
+	testutil.BaseTest
 	logbuf        *bytes.Buffer
 	restoreLogger func()
 }
 
 func (s *LogSuite) SetUpTest(c *C) {
-	s.logbuf, s.restoreLogger = logger.MockLogger("PREFIX: ")
+	s.BaseTest.SetUpTest(c)
+	s.logbuf, s.restoreLogger = logger.MockLogger()
 }
 
 func (s *LogSuite) TearDownTest(c *C) {
 	s.restoreLogger()
 }
 
+func (s *LogSuite) TestDefault(c *C) {
+	// env shenanigans
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	oldTerm, hadTerm := os.LookupEnv("TERM")
+	defer func() {
+		if hadTerm {
+			os.Setenv("TERM", oldTerm)
+		} else {
+			os.Unsetenv("TERM")
+		}
+	}()
+
+	if logger.GetLogger() != nil {
+		logger.SetLogger(nil)
+	}
+	c.Check(logger.GetLogger(), IsNil)
+
+	os.Setenv("TERM", "dumb")
+	err := logger.SimpleSetup()
+	c.Assert(err, IsNil)
+	c.Check(logger.GetLogger(), NotNil)
+	c.Check(logger.GetLoggerFlags(), Equals, logger.DefaultFlags)
+
+	os.Unsetenv("TERM")
+	err = logger.SimpleSetup()
+	c.Assert(err, IsNil)
+	c.Check(logger.GetLogger(), NotNil)
+	c.Check(logger.GetLoggerFlags(), Equals, log.Lshortfile)
+}
+
+func (s *LogSuite) TestBootSetup(c *C) {
+	// env shenanigans
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	oldTerm, hadTerm := os.LookupEnv("TERM")
+	defer func() {
+		if hadTerm {
+			os.Setenv("TERM", oldTerm)
+		} else {
+			os.Unsetenv("TERM")
+		}
+	}()
+
+	if logger.GetLogger() != nil {
+		logger.SetLogger(nil)
+	}
+	c.Check(logger.GetLogger(), IsNil)
+
+	cmdlineFile := filepath.Join(c.MkDir(), "cmdline")
+	err := ioutil.WriteFile(cmdlineFile, []byte("mocked panic=-1"), 0644)
+	c.Assert(err, IsNil)
+	restore := osutil.MockProcCmdline(cmdlineFile)
+	defer restore()
+	os.Setenv("TERM", "dumb")
+	err = logger.BootSetup()
+	c.Assert(err, IsNil)
+	c.Check(logger.GetLogger(), NotNil)
+	c.Check(logger.GetLoggerFlags(), Equals, logger.DefaultFlags)
+	c.Check(logger.GetQuiet(), Equals, false)
+
+	cmdlineFile = filepath.Join(c.MkDir(), "cmdline")
+	err = ioutil.WriteFile(cmdlineFile, []byte("mocked panic=-1 quiet"), 0644)
+	c.Assert(err, IsNil)
+	restore = osutil.MockProcCmdline(cmdlineFile)
+	defer restore()
+	os.Unsetenv("TERM")
+	err = logger.BootSetup()
+	c.Assert(err, IsNil)
+	c.Check(logger.GetLogger(), NotNil)
+	c.Check(logger.GetLoggerFlags(), Equals, log.Lshortfile)
+	c.Check(logger.GetQuiet(), Equals, true)
+}
+
 func (s *LogSuite) TestNew(c *C) {
 	var buf bytes.Buffer
-	l := logger.New(&buf, "")
+	l, err := logger.New(&buf, logger.DefaultFlags)
+	c.Assert(err, IsNil)
 	c.Assert(l, NotNil)
 }
 
@@ -54,24 +147,72 @@ func (s *LogSuite) TestDebugf(c *C) {
 }
 
 func (s *LogSuite) TestDebugfEnv(c *C) {
-	os.Setenv("WORKSPACE_DEBUG", "1")
-	defer os.Unsetenv("WORKSPACE_DEBUG")
+	os.Setenv("WORKSPACED_DEBUG", "1")
+	defer os.Unsetenv("WORKSPACED_DEBUG")
 
 	logger.Debugf("xyzzy")
-	c.Check(s.logbuf.String(), Matches, `.* PREFIX: DEBUG xyzzy.*\n`)
+	c.Check(s.logbuf.String(), testutil.Contains, `DEBUG: xyzzy`)
 }
 
 func (s *LogSuite) TestNoticef(c *C) {
 	logger.Noticef("xyzzy")
-	c.Check(s.logbuf.String(), Matches, `20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\dZ PREFIX: xyzzy\n`)
-}
-
-func (s *LogSuite) TestNewline(c *C) {
-	logger.Noticef("with newline\n")
-	c.Check(s.logbuf.String(), Matches, `20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\dZ PREFIX: with newline\n`)
+	c.Check(s.logbuf.String(), Matches, `(?m).*logger_test\.go:\d+: xyzzy`)
 }
 
 func (s *LogSuite) TestPanicf(c *C) {
 	c.Check(func() { logger.Panicf("xyzzy") }, Panics, "xyzzy")
-	c.Check(s.logbuf.String(), Matches, `20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\dZ PREFIX: PANIC xyzzy\n`)
+	c.Check(s.logbuf.String(), Matches, `(?m).*logger_test\.go:\d+: PANIC xyzzy`)
+}
+
+func (s *LogSuite) TestWithLoggerLock(c *C) {
+	logger.Noticef("xyzzy")
+
+	called := false
+	logger.WithLoggerLock(func() {
+		called = true
+		c.Check(s.logbuf.String(), Matches, `(?m).*logger_test\.go:\d+: xyzzy`)
+	})
+	c.Check(called, Equals, true)
+}
+
+func (s *LogSuite) TestNoGuardDebug(c *C) {
+	debugValue, ok := os.LookupEnv("WORKSPACED_DEBUG")
+	if ok {
+		defer func() {
+			os.Setenv("WORKSPACED_DEBUG", debugValue)
+		}()
+		os.Unsetenv("WORKSPACED_DEBUG")
+	}
+
+	logger.NoGuardDebugf("xyzzy")
+	c.Check(s.logbuf.String(), testutil.Contains, `DEBUG: xyzzy`)
+}
+
+func (s *LogSuite) TestStartupTimestampMsg(c *C) {
+	os.Setenv("WORKSPACED_DEBUG", "1")
+	defer os.Unsetenv("WORKSPACED_DEBUG")
+
+	type msgTimestamp struct {
+		Stage string `json:"stage"`
+		Time  string `json:"time"`
+	}
+
+	now := time.Date(2022, time.May, 16, 10, 43, 12, 22312000, time.UTC)
+	logger.MockTimeNow(func() time.Time {
+		return now
+	})
+	logger.StartupStageTimestamp("foo to bar")
+	msg := strings.TrimSpace(s.logbuf.String())
+	c.Assert(msg, Matches, `.* DEBUG: -- snap startup \{"stage":"foo to bar", "time":"1652697792.022312"\}$`)
+
+	var m msgTimestamp
+	start := strings.LastIndex(msg, "{")
+	c.Assert(start, Not(Equals), -1)
+	stamp := msg[start:]
+	err := json.Unmarshal([]byte(stamp), &m)
+	c.Assert(err, IsNil)
+	c.Check(m, Equals, msgTimestamp{
+		Stage: "foo to bar",
+		Time:  "1652697792.022312",
+	})
 }

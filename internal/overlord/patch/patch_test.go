@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (c) 2016 Canonical Ltd
+ * Copyright (C) 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -24,20 +24,30 @@ import (
 	"sort"
 	"testing"
 
+	. "gopkg.in/check.v1"
+
 	"github.com/canonical/workspace/internal/overlord/patch"
 	"github.com/canonical/workspace/internal/overlord/state"
-
-	. "gopkg.in/check.v1"
+	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workspace/internal/version"
 )
 
 func Test(t *testing.T) { TestingT(t) }
 
-type patchSuite struct{}
+type patchSuite struct {
+	restoreSanitize func()
+}
 
 var _ = Suite(&patchSuite{})
 
+func (s *patchSuite) SetUpTest(c *C) {
+}
+
+func (s *patchSuite) TearDownTest(c *C) {
+}
+
 func (s *patchSuite) TestInit(c *C) {
-	restore := patch.Fake(2, 1, nil)
+	restore := patch.Mock(2, 1, nil)
 	defer restore()
 
 	st := state.New(nil)
@@ -56,7 +66,7 @@ func (s *patchSuite) TestInit(c *C) {
 }
 
 func (s *patchSuite) TestNothingToDo(c *C) {
-	restore := patch.Fake(2, 1, nil)
+	restore := patch.Mock(2, 1, nil)
 	defer restore()
 
 	st := state.New(nil)
@@ -68,7 +78,7 @@ func (s *patchSuite) TestNothingToDo(c *C) {
 }
 
 func (s *patchSuite) TestNoDowngrade(c *C) {
-	restore := patch.Fake(2, 0, nil)
+	restore := patch.Mock(2, 0, nil)
 	defer restore()
 
 	st := state.New(nil)
@@ -76,7 +86,7 @@ func (s *patchSuite) TestNoDowngrade(c *C) {
 	st.Set("patch-level", 3)
 	st.Unlock()
 	err := patch.Apply(st)
-	c.Assert(err, ErrorMatches, `cannot downgrade: software version is too old for the current system state \(patch level 3\)`)
+	c.Assert(err, ErrorMatches, `cannot downgrade: snapd is too old for the current system state \(patch level 3\)`)
 }
 
 func (s *patchSuite) TestApply(c *C) {
@@ -100,7 +110,7 @@ func (s *patchSuite) TestApply(c *C) {
 	}
 
 	// patch level 3, sublevel 1
-	restore := patch.Fake(3, 1, map[int][]patch.PatchFunc{
+	restore := patch.Mock(3, 1, map[int][]patch.PatchFunc{
 		2: {p12, p121},
 		3: {p23},
 	})
@@ -140,7 +150,7 @@ func (s *patchSuite) TestApplyLevel6(c *C) {
 	p60 := generatePatchFunc(60, &sequence)
 	p61 := generatePatchFunc(61, &sequence)
 
-	restore := patch.Fake(6, 1, map[int][]patch.PatchFunc{
+	restore := patch.Mock(6, 1, map[int][]patch.PatchFunc{
 		5: {p50},
 		6: {p60, p61},
 	})
@@ -173,7 +183,7 @@ func (s *patchSuite) TestApplyFromSublevel(c *C) {
 	p70 := generatePatchFunc(70, &sequence)
 	p71 := generatePatchFunc(71, &sequence)
 
-	restore := patch.Fake(7, 1, map[int][]patch.PatchFunc{
+	restore := patch.Mock(7, 1, map[int][]patch.PatchFunc{
 		6: {p60, p61, p62},
 		7: {p70, p71},
 	})
@@ -199,7 +209,7 @@ func (s *patchSuite) TestApplyFromSublevel(c *C) {
 	// now patching from 7.1 -> 7.2
 	sequence = []int{}
 	p72 := generatePatchFunc(72, &sequence)
-	patch.Fake(7, 2, map[int][]patch.PatchFunc{
+	patch.Mock(7, 2, map[int][]patch.PatchFunc{
 		6: {p60, p61, p62},
 		7: {p70, p71, p72},
 	})
@@ -218,7 +228,7 @@ func (s *patchSuite) TestApplyFromSublevel(c *C) {
 }
 
 func (s *patchSuite) TestMissing(c *C) {
-	restore := patch.Fake(3, 0, map[int][]patch.PatchFunc{
+	restore := patch.Mock(3, 0, map[int][]patch.PatchFunc{
 		3: {func(s *state.State) error { return nil }},
 	})
 	defer restore()
@@ -228,11 +238,11 @@ func (s *patchSuite) TestMissing(c *C) {
 	st.Set("patch-level", 1)
 	st.Unlock()
 	err := patch.Apply(st)
-	c.Assert(err, ErrorMatches, `cannot upgrade: software version is too new for the current system state \(patch level 1\)`)
+	c.Assert(err, ErrorMatches, `cannot upgrade: snapd is too new for the current system state \(patch level 1\)`)
 }
 
 func (s *patchSuite) TestDowngradeSublevel(c *C) {
-	restore := patch.Fake(3, 1, map[int][]patch.PatchFunc{
+	restore := patch.Mock(3, 1, map[int][]patch.PatchFunc{
 		3: {func(s *state.State) error { return nil }},
 	})
 	defer restore()
@@ -274,7 +284,7 @@ func (s *patchSuite) TestError(c *C) {
 		st.Set("n", n*100)
 		return nil
 	}
-	restore := patch.Fake(3, 0, map[int][]patch.PatchFunc{
+	restore := patch.Mock(3, 0, map[int][]patch.PatchFunc{
 		2: {p12},
 		3: {p23},
 		4: {p34},
@@ -302,7 +312,63 @@ func (s *patchSuite) TestError(c *C) {
 	c.Check(n, Equals, 10)
 }
 
-func (s *patchSuite) TestSanity(c *C) {
+func (s *patchSuite) testMaybeResetPatchLevel6(c *C, snapdVersion, lastVersion string, expectedPatches []int) {
+	var sequence []int
+
+	version.MockVersion(snapdVersion)
+
+	p60 := generatePatchFunc(60, &sequence)
+	p61 := generatePatchFunc(61, &sequence)
+	p62 := generatePatchFunc(62, &sequence)
+
+	restore := patch.Mock(6, 2, map[int][]patch.PatchFunc{
+		6: {p60, p61, p62},
+	})
+
+	defer restore()
+
+	st := state.New(nil)
+	st.Lock()
+
+	if lastVersion != "" {
+		st.Set("patch-sublevel-last-version", lastVersion)
+	}
+	st.Set("patch-level", 6)
+	st.Set("patch-sublevel", 2)
+
+	st.Unlock()
+
+	c.Assert(patch.Apply(st), IsNil)
+	c.Assert(sequence, DeepEquals, expectedPatches)
+
+	st.Lock()
+	defer st.Unlock()
+	var level, sublevel int
+	var ver string
+	var lastRefresh interface{}
+	c.Assert(st.Get("patch-level", &level), IsNil)
+	c.Assert(st.Get("patch-sublevel", &sublevel), IsNil)
+	c.Assert(st.Get("patch-sublevel-last-version", &ver), IsNil)
+	c.Assert(st.Get("patch-sublevel-reset", &lastRefresh), testutil.ErrorIs, state.ErrNoState)
+	c.Check(ver, Equals, "snapd-version-1")
+	c.Check(level, Equals, 6)
+	c.Check(sublevel, Equals, 2)
+}
+
+func (s *patchSuite) TestSameSnapdVersionLvl60PatchesNotApplied(c *C) {
+	// sublevel patches not applied if snapd version is same
+	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "snapd-version-1", nil)
+}
+
+func (s *patchSuite) TestDifferentSnapdVersionPatchLevel6NoLastVersion(c *C) {
+	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "", []int{61, 62})
+}
+
+func (s *patchSuite) TestDifferentSnapdVersionPatchLevel6(c *C) {
+	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "snapd-version-2", []int{61, 62})
+}
+
+func (s *patchSuite) TestValidity(c *C) {
 	patches := patch.PatchesForTest()
 	levels := make([]int, 0, len(patches))
 	for l := range patches {

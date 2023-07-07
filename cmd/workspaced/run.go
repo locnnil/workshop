@@ -26,6 +26,8 @@ import (
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/systemd"
+	"github.com/canonical/workspace/internal/version"
+
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/spf13/cobra"
@@ -162,7 +164,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 		checkTicker = tic.C
 	}
 
-	d.Version = Version
+	d.Version = version.Version
 	d.Start()
 
 	watchdog, err := runWatchdog(d)
