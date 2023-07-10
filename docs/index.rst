@@ -25,16 +25,16 @@ Linux distributions, SDKs from multiple publishers, and system and language
 packages. Most such projects can organise setup complexity with Workspace.
 Examples include AI/ML, Robotics, IoT, EdTech and similar domains.
 
-.. ---------
+---------
 
-.. In this documentation
-.. ---------------------
+In this documentation
+---------------------
 
-.. ..  grid:: 1 1 2 2
+..  grid:: 1 1 2 2
 
-..    ..  grid-item:: :doc:`Tutorial <tutorial/index>`
+   ..  grid-item:: :doc:`Tutorial <tutorial/index>`
 
-..        **Start here**: a hands-on introduction to Example Product for new users
+       **Start here**: a hands-on introduction to Workspace for new users
 
 ..    ..  grid-item:: :doc:`How-to guides <how-to/index>`
 
@@ -51,14 +51,15 @@ Examples include AI/ML, Robotics, IoT, EdTech and similar domains.
 
 ..       **Discussion and clarification** of key topics
 
-.. ---------
+---------
 
-.. .. toctree::
-..    :hidden:
-..    :maxdepth: 2
+.. toctree::
+   :hidden:
+   :maxdepth: 2
 
-..    tutorial/index
+   tutorial/index
+..   ReadMe <readme>
+
 ..    how-to/index
 ..    reference/index
 ..    explanation/index
-..    ReadMe <readme>

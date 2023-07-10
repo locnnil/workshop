@@ -1,18 +1,51 @@
-Launch an instance
+Create your first workspace
 ==================
 
-Malesuada fames ac turpis egestas sed tempus. Volutpat maecenas volutpat
-blandit aliquam etiam erat. At in tellus integer feugiat scelerisque varius
-morbi enim nunc. Nunc faucibus a pellentesque sit amet. Egestas maecenas
-pharetra convallis posuere. Blandit volutpat maecenas volutpat blandit
-aliquam etiam.
+Workspace is a system container that is created, configured and launched from a definition provided in a workspace file. The file is a straightforward YAML specification that describes the container's base and SDKs that will be installed into the workspace. It means to be created and maintained as a single source of truth about the development environment of your project. Thus, on-boarding or reproducing the environment on a new machine would be as simple as ``workspace launch``.
 
-Et pharetra pharetra massa massa ultricies mi quis hendrerit. Nulla aliquet
-porttitor lacus luctus accumsan tortor posuere. Sociis natoque penatibus et
-magnis dis. Pellentesque massa placerat duis ultricies.
+We'll start with exploring the concepts of workspace, SDK and workspace file. These are the most important essentials of the tool.
 
-Mi in nulla posuere sollicitudin aliquam ultrices sagittis. Velit scelerisque
-in dictum non consectetur a. Facilisis leo vel fringilla est ullamcorper. Et
-malesuada fames ac turpis. Pulvinar etiam non quam lacus suspendisse faucibus
-interdum. Eget est lorem ipsum dolor sit amet. Id velit ut tortor pretium
-viverra suspendisse.
+Let's create a project directory ``hello-workspace`` with a simple workspace file ``.workspace.nimble.yaml`` in it:
+
+.. code-block:: yaml
+
+    name: nimble
+    base: ubuntu@22.04
+    sdks:
+        go:
+            channel: latest/stable
+
+.. note::
+    A Workspace file must satisfy the following naming convention .workspace.\ *name*\ .yaml
+
+Our ``nimble`` workspace introduces two concepts: *base* and *SDK*.
+
+*base* can be any of ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a supported OS that will be used to create the workspace container.
+
+*SDK* is a Software Development Kit designed by a publisher and available in the SDK Store. The SDK is a building block for your workspace that installs the required system and language packages, configures the environment and maintains its state throughout the lifetime of the workspace. A workspace can containt multiple SDKs from various publishers. In this example, we use a simple Go language SDK.
+
+The SDKs are distributed via channels, the concept that reproduces the semantics of a `snap channel <https://snapcraft.io/docs/channels#:~:text=Channels%20are%20an%20important%20snap,under%20the%20same%20snap%20name>`_.
+
+Launch
+~~~~~~~~~~~
+
+Now Workspace should be able to find the newly created workspace in an *Off* state. To confirm, run the following command from the project directory:
+
+.. code-block:: bash
+
+    $ workspace list
+    Project                 Workspace    State    Notes
+    ~/Work/hello-workspace  nimble       Off    -
+
+We are ready to launch the ``nimble`` workspace:
+
+.. code-block:: bash
+
+    $ workspace launch nimble
+    "nimble" launched
+
+Done! Once you have launched a workspace, it can be used to build, debug and run code either from your favourite IDE or directly from the command line.
+
+.. note::
+
+    The project directory will be mounted into the container automatically under the ``/project`` pathname. Workspace tracks the project directory changes to keep the container configuration in sync. Thus, if the project directory is moved, copied or deleted, the corresponding workspace container will update its mounts automatically. If the directory was removed, the remaining workspaces that still exist will be moved to the *Error* state and become unavailable for any commands except ``remove``. Try changing the project directory and check the results of the ``workspace list`` output.
