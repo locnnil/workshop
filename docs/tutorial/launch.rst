@@ -1,5 +1,5 @@
 Create your first workspace
-==================
+===========================
 
 Workspace is a system container that is created, configured and launched from a definition provided in a workspace file. The file is a straightforward YAML specification that describes the container's base and SDKs that will be installed into the workspace. It means to be created and maintained as a single source of truth about the development environment of your project. Thus, on-boarding or reproducing the environment on a new machine would be as simple as ``workspace launch``.
 
@@ -34,8 +34,8 @@ Now Workspace should be able to find the newly created workspace in an *Off* sta
 .. code-block:: bash
 
     $ workspace list
-    Project                 Workspace    State    Notes
-    ~/Work/hello-workspace  nimble       Off    -
+    Project                 Workspace  State  Notes
+    ~/Work/hello-workspace  nimble     Off    -
 
 We are ready to launch the ``nimble`` workspace:
 
