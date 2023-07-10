@@ -24,6 +24,10 @@ gocheck
 EdTech
 CLI
 workspaces
+pathname
+yaml
+backend
+distributives
 
 accumsan
 adipiscing

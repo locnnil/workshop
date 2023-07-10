@@ -22,7 +22,7 @@ Our ``nimble`` workspace introduces two concepts: *base* and *SDK*.
 
 *base* can be any of ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a supported OS that will be used to create the workspace container.
 
-*SDK* is a Software Development Kit designed by a publisher and available in the SDK Store. The SDK is a building block for your workspace that installs the required system and language packages, configures the environment and maintains its state throughout the lifetime of the workspace. A workspace can containt multiple SDKs from various publishers. In this example, we use a simple Go language SDK.
+*SDK* is a Software Development Kit designed by a publisher and available in the SDK Store. The SDK is a building block for your workspace that installs the required system and language packages, configures the environment and maintains its state throughout the lifetime of the workspace. A workspace can contain multiple SDKs from various publishers. In this example, we use a simple Go language SDK.
 
 The SDKs are distributed via channels, the concept that reproduces the semantics of a `snap channel <https://snapcraft.io/docs/channels#:~:text=Channels%20are%20an%20important%20snap,under%20the%20same%20snap%20name>`_.
 
