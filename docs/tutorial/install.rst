@@ -10,38 +10,36 @@ LXD
 
 Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every workspace is essentially a system container that is created, started, and configured using LXD REST API. Whilst LXD supports a large set of operating systems, Workspace is currently limited to using Ubuntu as a base system for its containers.
 
-----------------------
-Install LXD on Ubuntu
-----------------------
-There is a chance LXD is already installed on your system, confirm that by
-running:
+.. tabs::
+  .. tab:: Install LXD on Ubuntu
 
-.. code-block:: bash
+    There is a chance LXD is already installed on your system, confirm that by
+    running:
 
-  snap info lxd
+    .. code-block:: bash
 
-If LXD is found, skip the following steps as Workspace will discover and
-configure the required LXD settings automatically. Otherwise, if LXD is not
-present on your system, run:
+      snap info lxd
 
-.. code-block:: bash
+    If LXD is found, skip the following steps as Workspace will discover and
+    configure the required LXD settings automatically. Otherwise, if LXD is not
+    present on your system, run:
 
-  sudo snap install lxd
-  sudo lxd init --auto
+    .. code-block:: bash
 
-Then ensure that the LXD daemon is active and running:
+      sudo snap install lxd
+      sudo lxd init --auto
 
-.. code-block:: bash
+    Then ensure that the LXD daemon is active and running:
 
-  systemctl status snap.lxd.daemon.service
+    .. code-block:: bash
 
-----------------------------------------
-Install LXD on other Linux distributives
-----------------------------------------
+      systemctl status snap.lxd.daemon.service
 
-Check `LXD documentation
-<https://documentation.ubuntu.com/lxd/en/latest/installing/?_ga=2.224594138.1101634201.1688935617-532732205.1687382301>`_
-for the options available for other Linux distributives.
+  .. tab:: Install LXD on other Linux distributions
+
+    Check `LXD documentation
+    <https://documentation.ubuntu.com/lxd/en/latest/installing/?_ga=2.224594138.1101634201.1688935617-532732205.1687382301>`_
+    for the options available for other Linux distributions.
 
 
 Go
@@ -50,27 +48,22 @@ The only option to get Workspace that is currently available is installing from
 the source code. Therefore, Go run-time must be available to install Workspace.
 Run:
 
-----------------------
-Install Go on Ubuntu
-----------------------
+.. tabs::
+  .. tab:: Install Go on Ubuntu
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  sudo snap install --classic --channel=1.20/stable go
+      sudo snap install --classic --channel=1.20/stable go
+  .. tab:: Install Go on other Linux distributions
+    Check the `official documentation <https://go.dev/doc/install>`_ for the options
+    available for other Linux distributions.
 
-----------------------------------------
-Install Go on other Linux distributives
-----------------------------------------
-
-Check the `official documentation <https://go.dev/doc/install>`_ for the options
-available for other Linux distributives.
 
 ======================
 Install Workspace
 ======================
 
-Workspace consists of a daemon and a CLI command ``workspace``. Run the
-following command to install Workspace for your user:
+Workspace consists of a daemon and a CLI command ``workspace``, install both:
 
 .. code-block:: bash
 
@@ -83,8 +76,7 @@ following command to install Workspace for your user:
 ======================
 Run Workspace
 ======================
-To use the CLI command, the daemon should be up and running in a separate
-session:
+To use the CLI command, the daemon should be up and running:
 
 .. code-block:: bash
 

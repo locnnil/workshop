@@ -27,7 +27,7 @@ workspaces
 pathname
 yaml
 backend
-distributives
+distributions
 
 accumsan
 adipiscing
