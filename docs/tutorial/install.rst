@@ -1,18 +1,18 @@
 Installation
 =======================================
 
-===========
+==============
 Prerequisites
-===========
+==============
 
 LXD
 ~~~~~~~~~~~
 
 Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every workspace is essentially a system container that is created, started, and configured using LXD REST API. Whilst LXD supports a large set of operating systems, Workspace is currently limited to using Ubuntu as a base system for its containers.
 
------------
+----------------------
 Install LXD on Ubuntu
------------
+----------------------
 There is a chance LXD is already installed on your system, confirm that by
 running:
 
@@ -35,9 +35,9 @@ Then ensure that the LXD daemon is active and running:
 
   systemctl status snap.lxd.daemon.service
 
-----------------------
+----------------------------------------
 Install LXD on other Linux distributives
-----------------------
+----------------------------------------
 
 Check `LXD documentation
 <https://documentation.ubuntu.com/lxd/en/latest/installing/?_ga=2.224594138.1101634201.1688935617-532732205.1687382301>`_
@@ -73,10 +73,11 @@ Workspace consists of a daemon and a CLI command ``workspace``. Run the
 following command to install Workspace for your user:
 
 .. code-block:: bash
-  # Install the workspaced
+
+  # Install workspaced
   go install github.com/canonical/workspace/cmd/workspaced
 
-  # Install the CLI
+  # Install CLI
   go install github.com/canonical/workspace/cmd/workspace
 
 ======================
@@ -86,6 +87,14 @@ To use the CLI command, the daemon should be up and running in a separate
 session:
 
 .. code-block:: bash
+
   mkdir ~/workspace
   export WORKSPACE=~/workspace
   workspaced run --create-dirs
+
+Now, you should be able to run workspace CLI in a separate session:
+
+.. code-block:: bash
+
+  export WORKSPACE=~/workspace
+  workspace --help
