@@ -22,19 +22,19 @@ type RefreshMode int
 
 const (
 	RefreshTransactional RefreshMode = iota
-	RefreshHoldOnError
+	RefreshWaitOnError
 	RefreshContinue
 	RefreshAbort
 )
 
 func (s RefreshMode) String() string {
-	return [...]string{"transactional", "hold-on-error", "continue", "abort"}[s]
+	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
 }
 
 func ParseRefreshMode(s string) RefreshMode {
 	refreshMap := map[string]RefreshMode{
 		RefreshTransactional.String(): RefreshTransactional,
-		RefreshHoldOnError.String():   RefreshHoldOnError,
+		RefreshWaitOnError.String():   RefreshWaitOnError,
 		RefreshContinue.String():      RefreshContinue,
 		RefreshAbort.String():         RefreshAbort,
 	}

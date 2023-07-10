@@ -2,6 +2,7 @@ package sharedstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -9,6 +10,47 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
+
+type HandlerDecorator func(handler state.HandlerFunc) state.HandlerFunc
+
+func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
+	return func(task *state.Task, tomb *tomb.Tomb) error {
+		err := handler(task, tomb)
+		if err != nil {
+			st := task.State()
+			st.Lock()
+			defer st.Unlock()
+			var waitOnErr = false
+			if errors.Is(task.Change().Get("wait-on-error", &waitOnErr), state.ErrNoState) {
+				return err
+			}
+
+			if waitOnErr {
+				return &state.Wait{
+					WaitedStatus: state.DoingStatus,
+					Reason:       "the change is in the wait-on-error mode and will wait for the user input",
+				}
+			}
+
+		}
+		return err
+	}
+}
+
+func AddHandler(runner *state.TaskRunner, kind string, do, undo state.HandlerFunc, decor HandlerDecorator) {
+	if decor != nil {
+		var doHandler, undoHandler state.HandlerFunc
+		if do != nil {
+			doHandler = decor(do)
+		}
+		if undo != nil {
+			undoHandler = decor(undo)
+		}
+		runner.AddHandler(kind, doHandler, undoHandler)
+	} else {
+		runner.AddHandler(kind, do, undo)
+	}
+}
 
 func SdkSetup(task *state.Task) (*sdk.SdkInfo, error) {
 	st := task.State()

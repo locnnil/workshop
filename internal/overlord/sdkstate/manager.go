@@ -2,6 +2,7 @@ package sdkstate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
+	. "github.com/canonical/workspace/internal/overlord/sthelper"
 	backend "github.com/canonical/workspace/internal/workspacebackend"
 )
 
@@ -17,9 +18,9 @@ type SdkSequenceRecord struct {
 func NewSdkManager(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
-	runner.AddHandler("retrieve-sdk", manager.doRetrieveSdk, nil)
-	runner.AddHandler("install-sdk", manager.doInstallSDK, manager.undoInstallSdk)
-	runner.AddHandler("link-sdk", manager.doLinkSdk, manager.undoLinkSdk)
+	AddHandler(runner, "retrieve-sdk", manager.doRetrieveSdk, nil, WaitOnErrorDecorator)
+	AddHandler(runner, "install-sdk", manager.doInstallSDK, manager.undoInstallSdk, WaitOnErrorDecorator)
+	AddHandler(runner, "link-sdk", manager.doLinkSdk, manager.undoLinkSdk, WaitOnErrorDecorator)
 
 	return manager
 }

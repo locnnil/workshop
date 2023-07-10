@@ -625,15 +625,6 @@ func (c *Change) LaneTasks(lanes ...int) []*Task {
 	return tasks
 }
 
-func (c *Change) HoldOnError() bool {
-	keepOnError := false
-	err := c.Get("hold-on-error", &keepOnError)
-	if err == ErrNoState || !keepOnError {
-		return false
-	}
-	return true
-}
-
 // Abort flags the change for cancellation, whether in progress or not.
 // Cancellation will proceed at the next ensure pass.
 func (c *Change) Abort() {

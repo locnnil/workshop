@@ -182,8 +182,8 @@ base: ubuntu@20.04`), 0644)
 		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
-		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode": "hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode": "wait-on-error"}`),
 	}
 
 	requests := []*http.Request{}
@@ -212,7 +212,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "hold-on-error is not supported for multiple workspaces",
+			Message: "wait-on-error is not supported for multiple workspaces",
 		},
 	}
 
@@ -251,11 +251,11 @@ func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
 base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
-		// try continue without starting hold-on-error
+		// try continue without starting wait-on-error
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
 
 		// start - attempt transactional - continue (success) - continue (fail, already finished)
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
@@ -266,7 +266,7 @@ base: ubuntu@20.04`), 0644)
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
 
 		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"hold-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
 	}
 
@@ -347,12 +347,12 @@ base: ubuntu@20.04`), 0644)
 
 	soon := 0
 	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
-		// the first change is executed in the hold-on-error mode
+		// the first change is executed in the wait-on-error mode
 		// so we emulate its non-transactional behaviour here
 		// by setting one of its tasks to the Error state
 		for _, i := range st.Changes() {
 			hold := false
-			i.Get("hold-on-error", &hold)
+			i.Get("wait-on-error", &hold)
 			if hold {
 				s.d.overlord.WorkspaceManager().StartRefresh(st, "ws", s.project.ProjectId, i.ID())
 			}
@@ -369,7 +369,7 @@ base: ubuntu@20.04`), 0644)
 				for _, i := range chg.Tasks() {
 					i.SetStatus(state.DoneStatus)
 				}
-				chg.Set("hold-on-error", false)
+				chg.Set("wait-on-error", false)
 				s.d.overlord.WorkspaceManager().StopRefresh(st, "ws", s.project.ProjectId)
 			}
 		}

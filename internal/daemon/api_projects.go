@@ -180,7 +180,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	}
 
 	if len(reqData.Names) > 1 && refreshMode != workspacestate.RefreshTransactional {
-		return statusBadRequest("hold-on-error is not supported for multiple workspaces")
+		return statusBadRequest("wait-on-error is not supported for multiple workspaces")
 	}
 
 	projects, err := wBackend.Projects(r.Context())
@@ -226,7 +226,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 	case "refresh":
 		wm := c.d.overlord.WorkspaceManager()
-		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshHoldOnError {
+		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshWaitOnError {
 			var inProgress = []string{}
 			for _, r := range reqData.Names {
 				if wm.RefreshInProgress(st, r, prj.ProjectId) != "" {
@@ -255,10 +255,10 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.Set("user", user)
 			change.Set("project-key", prj)
 
-			if refreshMode == workspacestate.RefreshHoldOnError {
-				change.Set("hold-on-error", true)
+			if refreshMode == workspacestate.RefreshWaitOnError {
+				change.Set("wait-on-error", true)
 			} else {
-				change.Set("hold-on-error", false)
+				change.Set("wait-on-error", false)
 			}
 
 			for _, i := range taskset {
@@ -279,13 +279,12 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			}
 
 			for _, tsk := range change.Tasks() {
-				if tsk.Status() == state.ErrorStatus {
-					tsk.SetStatus(state.DoStatus)
+				if tsk.Status() == state.WaitStatus {
+					waited := tsk.WaitedStatus()
+					tsk.SetStatus(waited)
 					tsk.ClearLog()
 				}
 			}
-
-			change.SetStatus(state.DefaultStatus)
 
 			if refreshMode == workspacestate.RefreshAbort {
 				change.Abort()

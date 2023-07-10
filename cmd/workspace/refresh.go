@@ -12,7 +12,7 @@ import (
 
 type CmdRefresh struct {
 	waitMixin
-	HoldOnError bool
+	WaitOnError bool
 	Continue    bool
 	Abort       bool
 }
@@ -25,7 +25,7 @@ func (c *CmdRefresh) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.PersistentFlags().BoolVar(&c.HoldOnError, "hold-on-error", false, "Stop the refresh operation on error without reverting to the previous state (default behaviour: revert the workspace to the previous state on error)")
+	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error", false, "Stop the refresh operation on error without reverting to the previous state (default behaviour: revert the workspace to the previous state on error)")
 	cmd.PersistentFlags().BoolVar(&c.Continue, "continue", false, "Continue the refresh operation from the last failure")
 	cmd.PersistentFlags().BoolVar(&c.Abort, "abort", false, "Abort the refresh operation and revert the workspace to the pre-refresh state")
 
@@ -40,16 +40,16 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("flags --continue and --abort are incompatible")
 	}
 
-	if c.HoldOnError && c.Abort {
-		return fmt.Errorf("flags --hold-on-error and --abort are incompatible")
+	if c.WaitOnError && c.Abort {
+		return fmt.Errorf("flags --wait-on-error and --abort are incompatible")
 	}
 
-	if c.HoldOnError && c.Continue {
-		return fmt.Errorf("flags --hold-on-error and --continue are incompatible")
+	if c.WaitOnError && c.Continue {
+		return fmt.Errorf("flags --wait-on-error and --continue are incompatible")
 	}
 
-	if (c.Abort || c.Continue || c.HoldOnError) && len(av) > 1 {
-		return fmt.Errorf("the hold-on-error mode can be used with a single workspace only")
+	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
+		return fmt.Errorf("the wait-on-error mode can be used with a single workspace only")
 	}
 
 	_, clientConfig.Socket = dirs.GetEnvPaths()
@@ -66,8 +66,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	mode := "transactional"
-	if c.HoldOnError {
-		mode = "hold-on-error"
+	if c.WaitOnError {
+		mode = "wait-on-error"
 	}
 	if c.Continue {
 		mode = "continue"
@@ -82,8 +82,11 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if _, err := c.wait(changeId, c.Abort); err != nil {
-		if err == noWait {
+		if err == errNoWait {
 			return nil
+		}
+		if err == errWaitOnError && mode != "transactional" {
+			return fmt.Errorf("%q refresh failed", av[0])
 		}
 		return err
 	}

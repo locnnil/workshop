@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
 	"github.com/canonical/workspace/client"
@@ -43,12 +42,13 @@ type waitMixin struct {
 	skipAbort bool
 }
 
-var noWait = errors.New("no wait for op")
+var errNoWait = errors.New("no wait for op")
+var errWaitOnError = errors.New("wait-on-error")
 
 func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
-		return nil, noWait
+		return nil, errNoWait
 	}
 	cli := wmx.client
 	// Intercept sigint
@@ -79,7 +79,6 @@ func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error
 
 	var lastID string
 	lastLog := map[string]string{}
-	var waitCtrlcMsg sync.Once
 	for {
 		var rebootingErr error
 		chg, err := cli.Change(id)
@@ -130,9 +129,7 @@ func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error
 		for _, t := range chg.Tasks {
 			if t.Status == "Wait" {
 				maybeShowLog(t)
-				waitCtrlcMsg.Do(func() {
-					fmt.Fprintf(Stderr, i18n.G("WARNING: pressing ctrl-c will abort the running change.\n"))
-				})
+				return nil, errWaitOnError
 			}
 		}
 

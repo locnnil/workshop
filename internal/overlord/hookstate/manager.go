@@ -2,6 +2,7 @@ package hookstate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
+	. "github.com/canonical/workspace/internal/overlord/sthelper"
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
@@ -23,7 +24,7 @@ func NewHookManager(runner *state.TaskRunner, server workspacebackend.WorkspaceB
 		backend: server,
 	}
 
-	runner.AddHandler("run-hook", manager.doRunHook, nil)
+	AddHandler(runner, "run-hook", manager.doRunHook, nil, WaitOnErrorDecorator)
 
 	return manager
 }

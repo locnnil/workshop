@@ -292,11 +292,7 @@ func (r *TaskRunner) run(t *Task) {
 				r.state.EnsureBefore(0)
 			}
 		default:
-			if !t.Change().HoldOnError() {
-				r.abortLanes(t.Change(), t.Lanes())
-			} else {
-				t.Change().SetStatus(ErrorStatus)
-			}
+			r.abortLanes(t.Change(), t.Lanes())
 			t.SetStatus(ErrorStatus)
 			t.Errorf("%s", err)
 			// ensure the error is available in the global log too
