@@ -1,6 +1,7 @@
 package hookstate_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/hookstate"
@@ -41,6 +42,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		c.Assert(err, check.IsNil)
 		c.Assert(hookSetup.Type(), check.Equals, i.String())
 		c.Assert(hookSetup.Sdk, check.DeepEquals, sdk)
+		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for SDK \"sdk\" if present", hookSetup.Type()))
 	}
 
 }

@@ -93,14 +93,14 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		setupHook.AddTask(setupHookTask)
 	}
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create %q", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start %q", file.Name))
+	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
 	start.WaitFor(mountProject)
 
 	install.WaitFor(start)
@@ -119,7 +119,8 @@ func Launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	return set, nil
 }
 
-func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend, names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
+func RefreshMany(st *state.State, ctx context.Context, backend workspacebackend.WorkspaceBackend,
+	names []string, project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(names))
 
 	// we are only interested in the existing (launched) workspaces
@@ -158,8 +159,8 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		saveStateHooks.AddTask(saveStateHook)
 	}
 
-	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop %q", w.Name))
-	startRefresh := st.NewTask("start-refresh", fmt.Sprintf("Begin refresh for %q", w.Name))
+	stopOld := st.NewTask("stop-workspace", fmt.Sprintf("Stop workspace %q", w.Name))
+	startRefresh := st.NewTask("start-refresh", fmt.Sprintf("Create workspace %q backup", w.Name))
 
 	launch, err := Launch(st, w.File(), p)
 	if err != nil {
@@ -172,7 +173,7 @@ func Refresh(st *state.State, w *workspacebackend.Workspace, p *workspacebackend
 		restoreStateHooks.AddTask(restoreStateHook)
 	}
 
-	completeRefresh := st.NewTask("complete-refresh", fmt.Sprintf("Finish refresh for %q", w.Name))
+	completeRefresh := st.NewTask("complete-refresh", fmt.Sprintf("Remove workspace %q backup", w.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
 	completeRefresh.WaitAll(restoreStateHooks)
