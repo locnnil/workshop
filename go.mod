@@ -17,8 +17,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/kisielk/godepgraph v0.0.0-20221115040737-2d0831789458 // indirect
-
 require (
 	cloud.google.com/go v0.105.0 // indirect
 	cloud.google.com/go/compute v1.13.0 // indirect
@@ -63,5 +61,5 @@ require (
 	gopkg.in/httprequest.v1 v1.2.1 // indirect
 	gopkg.in/macaroon-bakery.v3 v3.0.0 // indirect
 	gopkg.in/macaroon.v2 v2.1.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0
 )

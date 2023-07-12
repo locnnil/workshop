@@ -1,12 +1,10 @@
-package sharedstate
+package statecontext
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/tomb.v2"
 )
@@ -15,23 +13,24 @@ type HandlerDecorator func(handler state.HandlerFunc) state.HandlerFunc
 
 func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
-		err := handler(task, tomb)
+		_, p, ws, err := UserProjectWorkspace(task)
+		if err != nil {
+			return err
+		}
+
+		err = handler(task, tomb)
 		if err != nil {
 			st := task.State()
 			st.Lock()
 			defer st.Unlock()
-			var waitOnErr = false
-			if errors.Is(task.Change().Get("wait-on-error", &waitOnErr), state.ErrNoState) {
-				return err
-			}
 
-			if waitOnErr {
+			op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
+			if inProgress && op.WaitOnError {
 				return &state.Wait{
 					WaitedStatus: state.DoingStatus,
-					Reason:       "the change is in the wait-on-error mode and will wait for the user input",
+					Reason:       fmt.Sprintf("wait to fix %v", err),
 				}
 			}
-
 		}
 		return err
 	}
@@ -52,31 +51,6 @@ func AddHandler(runner *state.TaskRunner, kind string, do, undo state.HandlerFun
 	}
 }
 
-func SdkSetup(task *state.Task) (*sdk.SdkInfo, error) {
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
-	var retrieveId string
-	var blob sdk.SdkInfo
-
-	err := task.Get("sdk-retrieve-task", &retrieveId)
-
-	if err != nil {
-		return nil, err
-	}
-
-	retrieve := task.State().Task(retrieveId)
-	if retrieve == nil {
-		return nil, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
-	}
-
-	if err = retrieve.Get("sdk-setup", &blob); err != nil {
-		return nil, err
-	}
-	return &blob, nil
-}
-
 func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, string, error) {
 	st := task.State()
 	var prj workspacebackend.Project
@@ -85,7 +59,7 @@ func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, 
 
 	st.Lock()
 	id := task.ID()
-	err := task.Get("project-key", &prj)
+	err := task.Get("project", &prj)
 	st.Unlock()
 
 	if err != nil {

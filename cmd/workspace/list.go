@@ -10,7 +10,6 @@ import (
 
 	"github.com/canonical/workspace/client"
 	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )
@@ -118,7 +117,7 @@ func printWorkspaces(wsList []*client.Workspace, prj *client.Project) {
 
 func printWorkspace(j *client.Workspace, prj *client.Project) []string {
 	comment := "-"
-	if j.State == workspacebackend.Error.String() {
+	if len(j.Notes) > 0 {
 		comment = strings.Join(j.Notes, ",")
 	}
 	line := []string{

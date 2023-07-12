@@ -40,7 +40,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workspace", w)
-		i.Set("project-key", p)
+		i.Set("project-id", p.ProjectId)
 	}
 }
 

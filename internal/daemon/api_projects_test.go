@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -48,7 +49,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, check.DeepEquals, []*workspacebackend.Project{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workspacebackend.Project{
 		{Path: "/home/testuser/project", ProjectId: "b8639dea"},
 		{Path: "/home/testuser/project2", ProjectId: "a8639dea"},
 	})
@@ -170,20 +171,20 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceAction(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
+
+	// Mock workspace files
 	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
-	soon := 0
-	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) { soon++ }, &ensureStateSoon)
-	defer restoreEnsure()
+	err = os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws1.yaml"), []byte(`name: ws1
+base: ubuntu@20.04`), 0644)
+	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
-		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode": "wait-on-error"}`),
+		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"launch"}`),
 	}
 
 	requests := []*http.Request{}
@@ -205,15 +206,6 @@ base: ubuntu@20.04`), 0644)
 			Type:   ResponseTypeAsync,
 			Status: http.StatusAccepted,
 		},
-		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "wait-on-error is not supported for multiple workspaces",
-		},
 	}
 
 	for _, i := range buffers {
@@ -222,8 +214,11 @@ base: ubuntu@20.04`), 0644)
 		requests = append(requests, req)
 	}
 
-	b := s.d.overlord.WorkspaceBackend()
-	b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
 
 	for num, i := range requests {
 		// Execute
@@ -239,7 +234,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	// all successful responses must initiate the ensure call
-	c.Assert(soon, check.Equals, 3)
+	c.Assert(soon, check.Equals, 2)
 }
 
 func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
@@ -253,6 +248,12 @@ base: ubuntu@20.04`), 0644)
 	buffers := []*bytes.Buffer{
 		// try continue without starting wait-on-error
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+
+		// a workspace name is a must
+		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
+
+		// non-transactional refresh is only supported for a single workspace
+		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode":"wait-on-error"}`),
 
 		// start - attempt transactional - continue (success) - continue (fail, already finished)
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
@@ -278,20 +279,27 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	expected := []*struct {
-		Type       ResponseType
-		Status     int
-		ChangeHold bool
-		Message    string
+		Type    ResponseType
+		Status  int
+		Message string
 	}{
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: "cannot continue, no refresh in progress",
+		}, {
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "at least one workspace name must be provided",
 		},
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: true,
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "wait-on-error is not supported for multiple workspaces",
+		},
+		{
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -299,9 +307,8 @@ base: ubuntu@20.04`), 0644)
 			Message: "refresh operation is already in progress for: ws",
 		},
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: true,
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -309,9 +316,8 @@ base: ubuntu@20.04`), 0644)
 			Message: "cannot continue, no refresh in progress",
 		},
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: false,
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -324,54 +330,27 @@ base: ubuntu@20.04`), 0644)
 			Message: "cannot abort, no refresh in progress",
 		},
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: true,
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
 		},
 		{
-			Type:       ResponseTypeAsync,
-			Status:     http.StatusAccepted,
-			ChangeHold: true,
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
 		},
 	}
 
-	refreshResults := []*struct {
-		RefreshError error
-	}{
-		{
-			&workspacebackend.ErrExec{Status: 0},
-		}, {
-			nil,
-		},
+	// we expect 4 ensure calls according to the scenarios above
+	mockRefreshChanges := map[int]state.Status{
+		0: state.WaitStatus,
+		1: state.DoneStatus,
+		2: state.DoneStatus,
+		3: state.WaitStatus,
 	}
 
 	soon := 0
 	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
-		// the first change is executed in the wait-on-error mode
-		// so we emulate its non-transactional behaviour here
-		// by setting one of its tasks to the Error state
-		for _, i := range st.Changes() {
-			hold := false
-			i.Get("wait-on-error", &hold)
-			if hold {
-				s.d.overlord.WorkspaceManager().StartRefresh(st, "ws", s.project.ProjectId, i.ID())
-			}
-		}
-
-		chg := st.Change("1")
-		if !chg.Status().Ready() {
-			tsk := chg.Tasks()[0]
-			if refreshResults[soon].RefreshError != nil {
-				tsk.SetStatus(state.ErrorStatus)
-				tsk.Errorf(refreshResults[soon].RefreshError.Error())
-
-			} else {
-				for _, i := range chg.Tasks() {
-					i.SetStatus(state.DoneStatus)
-				}
-				chg.Set("wait-on-error", false)
-				s.d.overlord.WorkspaceManager().StopRefresh(st, "ws", s.project.ProjectId)
-			}
+		if mockRefreshChanges[soon] == state.DoneStatus {
+			statecontext.StopRefresh(st, "ws", s.project.ProjectId)
 		}
 		soon++
 	}, &ensureStateSoon)

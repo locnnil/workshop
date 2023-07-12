@@ -481,7 +481,7 @@ func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string)
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
 	}
@@ -498,7 +498,7 @@ func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string)
 		Force:   false,
 	}
 
-	op, err := conn.UpdateInstanceState(inst.Name, req, "")
+	op, err := conn.UpdateInstanceState(inst.Name, req, etag)
 	if err != nil {
 		return err
 	}
@@ -662,33 +662,52 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace,
 		return nil, err
 	}
 
-	workspace := s.loadWorkspace(inst, p)
+	workspace, err := s.loadWorkspace(inst, p)
+	if err != nil {
+		return nil, err
+	}
 
 	return workspace, nil
 }
 
-func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) *Workspace {
+func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, error) {
 	var err error
+	var running, ok bool
+	var pId string
+
 	name := WorkspaceName(inst.Name)
-	var workspace = &Workspace{
-		backend: s,
-		Name:    name,
-		state:   fromLxdToWorkspaceState(inst.StatusCode),
-		Devices: inst.Devices,
+
+	if pId, ok = inst.Config["user.workspace.project-id"]; !ok {
+		return nil, fmt.Errorf("no project assossiated with the workspace %q", name)
 	}
 
-	// Load the associated workspace file (if present)
+	if inst.StatusCode == api.Running || inst.StatusCode == api.Ready {
+		running = true
+	}
+
+	var workspace = &Workspace{
+		backend:   s,
+		projectId: pId,
+		Name:      name,
+		isRunning: running,
+		Devices:   inst.Devices,
+	}
+
 	workspace.file, err = p.WorkspaceFile(name)
 	if err != nil {
-		workspace.SetState(Error, MissingFile)
+		workspace.AddError(MissingFile)
+	}
+
+	if exists, isDir, _ := osutil.ExistsIsDir(p.Path); !exists || !isDir {
+		workspace.AddError(MissingProject)
 	}
 
 	// Fetch information about the installed SDKs
 	workspace.content, err = InstalledContent(inst.Config)
 	if err != nil {
-		workspace.SetState(Error, BrokenSdkRecord)
+		workspace.AddError(BrokenSdkRecord)
 	}
-	return workspace
+	return workspace, nil
 }
 
 func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkspaceConfigFilter) ([]api.Instance, error) {
@@ -744,11 +763,16 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 	var projectWorkspaces []*Workspace
 	for _, i := range instances {
 		if i.Config[ProjectIdConfig] == p.ProjectId {
-			projectWorkspaces = append(projectWorkspaces, s.loadWorkspace(&i, p))
+			ws, err := s.loadWorkspace(&i, p)
+			if err != nil {
+				logger.Debugf("error loading workspace: %v", err)
+				continue
+			}
+			projectWorkspaces = append(projectWorkspaces, ws)
 		}
 	}
 
-	wsFiles, wsInstances := MergeInstancesAndFiles(files, projectWorkspaces)
+	wsFiles, wsInstances := mergeInstancesAndFiles(files, projectWorkspaces)
 	return wsFiles, wsInstances, nil
 }
 
@@ -756,30 +780,21 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 // lists. The first has *only* the workspace files that do not have any launched
 // workspaces yet, the second contains workspaces that are launched with or
 // without an associated file.
-func MergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*WorkspaceFile, []*Workspace) {
+func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*WorkspaceFile, []*Workspace) {
 	files := make([]*WorkspaceFile, len(f))
 	copy(files, f)
 	/* Walk both lists from to build a list of workspaces with their states */
 	for _, ws := range instances {
 		finder := func(p *WorkspaceFile) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
-		if idx == -1 {
-			/* We only have an instance, no file (perhaps, there is no project directory)
-			 */
-			projectPath := ws.Devices[ProjectPathDevice]["source"]
-
-			if exists, isDir, _ := osutil.ExistsIsDir(projectPath); exists && isDir {
-				ws.SetState(Error, MissingFile)
-			} else {
-				ws.SetState(Error, MissingProject)
-			}
-		} else {
+		if idx != -1 {
 			/* Both a file and instance exist */
 			files = slices.Delete(files, idx, idx+1)
 		}
 	}
 
-	/* At this point, files contain only inactive workspaces */
+	/* At this point, files contain only inactive workspaces and instances
+	contain the workspaces that have workspace files available */
 	return files, instances
 }
 
@@ -873,10 +888,21 @@ func (s *LxdBackend) DeleteUnavailableWorkspace(ctx context.Context, name string
 }
 
 func (s *LxdBackend) MakeWorkspaceAvailable(ctx context.Context, name string) error {
-	return s.moveInstanceProject(ctx, name, false)
+	if err := s.moveInstanceProject(ctx, name, false); err != nil {
+		return err
+	}
+
+	if err := s.SetWorkspaceState(ctx, name, "start"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *LxdBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) error {
+	if err := s.SetWorkspaceState(ctx, name, "stop"); err != nil {
+		return err
+	}
+
 	return s.moveInstanceProject(ctx, name, true)
 }
 
@@ -944,19 +970,6 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 		}
 		return srv.UseProject(LxdProjectName(user)), nil
 	}
-}
-
-func fromLxdToWorkspaceState(lxdStatus api.StatusCode) WorkspaceState {
-	var state WorkspaceState
-	switch lxdStatus {
-	case api.Running, api.Ready:
-		state = Ready
-	case api.Stopped:
-		state = Stopped
-	default:
-		state = Pending
-	}
-	return state
 }
 
 func defaultDevices() map[string]map[string]string {
@@ -1061,10 +1074,11 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	ws := &FakeWorkspace{}
 	ws.Config = make(map[string]string)
 	ws.Workspace = &Workspace{backend: f,
-		Name:    name,
-		Devices: defaultDevices(),
-		state:   Ready,
-		content: make(map[string]*sdk.SdkInfo),
+		Name:      name,
+		Devices:   defaultDevices(),
+		isRunning: true,
+		projectId: projectId,
+		content:   make(map[string]*sdk.SdkInfo),
 	}
 	f.Workspaces[projectId][name] = ws
 	return nil

@@ -36,8 +36,6 @@ type Change struct {
 	SpawnTime time.Time `json:"spawn-time,omitempty"`
 	ReadyTime time.Time `json:"ready-time,omitempty"`
 
-	Project string `json:"path,omitempty"`
-
 	data map[string]*json.RawMessage
 }
 

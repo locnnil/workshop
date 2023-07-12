@@ -52,7 +52,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 
 	if len(chngs) > 0 {
 		w := tabWriter()
-		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tProject\tSummary\n")
+		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
 
 		for _, chg := range chngs {
 			spawnTime := timeutil.Human(chg.SpawnTime)
@@ -61,12 +61,11 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 				readyTime = "-"
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				chg.ID,
 				chg.Status,
 				spawnTime,
 				readyTime,
-				contractHomeDirectory(chg.Project),
 				chg.Summary)
 		}
 		w.Flush()

@@ -2,7 +2,7 @@ package hookstate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/sthelper"
+	. "github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 

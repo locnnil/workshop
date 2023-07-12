@@ -2,15 +2,15 @@ package workspacestate
 
 import (
 	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/sthelper"
-	srv "github.com/canonical/workspace/internal/workspacebackend"
+	. "github.com/canonical/workspace/internal/overlord/statecontext"
+	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
 type WorkspaceManager struct {
-	backend srv.WorkspaceBackend
+	backend workspacebackend.WorkspaceBackend
 }
 
-func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) *WorkspaceManager {
+func NewWorkspaceManager(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *WorkspaceManager {
 	manager := &WorkspaceManager{
 		backend: server,
 	}
@@ -21,8 +21,8 @@ func NewWorkspaceManager(runner *state.TaskRunner, server srv.WorkspaceBackend) 
 	AddHandler(runner, "stop-workspace", manager.doStop, manager.doStart, WaitOnErrorDecorator)
 	AddHandler(runner, "delete-workspace", manager.doDeleteWorkspace, nil, WaitOnErrorDecorator)
 	AddHandler(runner, "mount-project", manager.doMountProject, manager.undoMountProject, WaitOnErrorDecorator)
-	AddHandler(runner, "complete-refresh", manager.doCompleteRefresh, nil, WaitOnErrorDecorator)
-	AddHandler(runner, "start-refresh", manager.doStartRefresh, manager.undoStartRefresh, WaitOnErrorDecorator)
+	AddHandler(runner, "delete-refresh-backup", manager.doDeleteRefreshBackup, nil, WaitOnErrorDecorator)
+	AddHandler(runner, "make-refresh-backup", manager.doMakeRefreshBackup, manager.undoMakeRefreshBackup, WaitOnErrorDecorator)
 
 	return manager
 }

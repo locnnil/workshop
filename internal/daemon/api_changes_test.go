@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 
 	"gopkg.in/check.v1"
@@ -32,7 +31,7 @@ import (
 func setupChanges(st *state.State) []string {
 	chg1 := st.NewChange("launch", "launch...")
 	chg1.Set("workspace", "one")
-	chg1.Set("project-key", &workspacebackend.Project{ProjectId: "123", Path: "/home/user/test"})
+	chg1.Set("project-id", "123")
 	t1 := st.NewTask("create-workspace", "1...")
 	t2 := st.NewTask("start-workspace", "2...")
 	chg1.AddAll(state.NewTaskSet(t1, t2))
@@ -40,7 +39,7 @@ func setupChanges(st *state.State) []string {
 	t1.Logf("l12")
 	chg2 := st.NewChange("remove", "remove...")
 	chg2.Set("workspace", "two")
-	chg2.Set("project-key", &workspacebackend.Project{ProjectId: "123", Path: "/home/user/test"})
+	chg2.Set("project-id", "123")
 	t3 := st.NewTask("unlink-sdk", "1...")
 	chg2.AddTask(t3)
 	t3.SetStatus(state.ErrorStatus)
@@ -100,7 +99,7 @@ func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","path":"/home/user/test"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
@@ -130,7 +129,7 @@ func (s *apiSuite) TestStateChangesInProgress(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","path":"/home/user/test"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 }
 
 func (s *apiSuite) TestStateChangesAll(c *check.C) {
@@ -158,7 +157,7 @@ func (s *apiSuite) TestStateChangesAll(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","path":"/home/user/test"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
@@ -219,8 +218,8 @@ func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
 	c.Assert(res, check.HasLen, 2)
 	c.Check(res[0].Kind, check.Equals, "launch")
 	c.Check(res[1].Kind, check.Equals, "remove")
-	c.Check(res[0].Project, check.Equals, "/home/user/test")
-	c.Check(res[1].Project, check.Equals, "/home/user/test")
+	c.Check(res[0].ProjectId, check.Equals, "123")
+	c.Check(res[1].ProjectId, check.Equals, "123")
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
@@ -267,7 +266,7 @@ func (s *apiSuite) TestStateChange(c *check.C) {
 		"status":     "Do",
 		"ready":      false,
 		"spawn-time": "2016-04-21T01:02:03Z",
-		"path":       "/home/user/test",
+		"project-id": "123",
 		"tasks": []interface{}{
 			map[string]interface{}{
 				"id":         ids[2],
@@ -345,7 +344,7 @@ func (s *apiSuite) TestStateChangeAbort(c *check.C) {
 		"ready":      true,
 		"spawn-time": "2016-04-21T01:02:03Z",
 		"ready-time": "2016-04-21T01:02:03Z",
-		"path":       "/home/user/test",
+		"project-id": "123",
 		"tasks": []interface{}{
 			map[string]interface{}{
 				"id":         ids[2],

@@ -8,7 +8,7 @@ import (
 
 func InstalledContent(lxdConfig map[string]string) (map[string]*sdk.SdkInfo, error) {
 	content := make(map[string]*sdk.SdkInfo)
-	if sdks, ok := lxdConfig["user.workspace.sdk"]; ok {
+	if sdks, ok := lxdConfig["user.workspace.content"]; ok {
 		err := json.Unmarshal([]byte(sdks), &content)
 		if err != nil {
 			return nil, err

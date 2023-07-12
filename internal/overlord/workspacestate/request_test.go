@@ -6,6 +6,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
+
 	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
@@ -22,13 +23,13 @@ func Test(t *testing.T) { TestingT(t) }
 
 func (s *S) SetUpTest(c *C) {
 	s.state = state.New(nil)
-	s.project = &workspacebackend.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
+	s.project = &workspacebackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *C, w string, ts []*state.Task) {
 	for _, i := range ts {
 		var prj workspacebackend.Project
-		err := i.Get("project-key", &prj)
+		err := i.Get("project", &prj)
 		c.Assert(err, check.IsNil)
 		c.Assert(&prj, check.DeepEquals, s.project)
 
@@ -132,4 +133,84 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 	c.Assert(id2, Equals, tasks[4].ID())
 
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", tasks)
+}
+
+func (s *S) TestRefresh(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+
+	file := &workspacebackend.WorkspaceFile{
+		Name: "ws",
+		Base: "ubuntu@22.04",
+		Sdks: workspacebackend.SdkList{sdk}}
+
+	ts, err := workspace.Refresh(s.state, file, s.project)
+	c.Assert(err, check.IsNil)
+
+	expected := []string{
+		"run-hook",
+		"make-refresh-backup",
+		"create-workspace",
+		"mount-project",
+		"start-workspace",
+		"retrieve-sdk",
+		"install-sdk",
+		"link-sdk",
+		"run-hook",
+		"run-hook", // restore state hook
+		"delete-refresh-backup",
+	}
+
+	tasks := ts.Tasks()
+
+	c.Assert(err, Equals, nil)
+	verifyExpectedTasks(c, tasks, expected)
+
+	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
+}
+
+func (s *S) TestRefresMany(c *C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+
+	files := []*workspacebackend.WorkspaceFile{
+		{
+			Name: "ws",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{sdk},
+		},
+		{
+			Name: "ws1",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{sdk},
+		},
+	}
+
+	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	c.Assert(err, check.IsNil)
+
+	expected := []string{
+		"run-hook",
+		"make-refresh-backup",
+		"create-workspace",
+		"mount-project",
+		"start-workspace",
+		"retrieve-sdk",
+		"install-sdk",
+		"link-sdk",
+		"run-hook",
+		"run-hook", // restore state hook
+		"delete-refresh-backup",
+	}
+
+	for i, t := range ts {
+		c.Assert(err, Equals, nil)
+		verifyExpectedTasks(c, t.Tasks(), expected)
+		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
+	}
+
 }

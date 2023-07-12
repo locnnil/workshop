@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/canonical/x-go/strutil"
@@ -37,7 +38,7 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	var ws WorkspaceInfo
 	ws.Name = file.Name
 	ws.ProjectId = pid
-	ws.State = workspacebackend.Off.String()
+	ws.State = workspacebackend.WorkspaceOff.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -47,11 +48,10 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	return &ws
 }
 
-func workspacePropsToInfo(props *workspacebackend.Workspace, pid string) *WorkspaceInfo {
+func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
-	ws.ProjectId = pid // props.Config[workspacebackend.ProjectIdConfig]
-	ws.State = props.State().String()
+	ws.ProjectId = props.ProjectId()
 
 	// TODO: the order of SDK records is undetermined, we need the latest SDK revision
 	// if there are multiple revisions
@@ -59,8 +59,8 @@ func workspacePropsToInfo(props *workspacebackend.Workspace, pid string) *Worksp
 		ws.Content = append(ws.Content, &SdkInfo{val.Name, val.Channel, strconv.FormatInt(val.Revision, 10)})
 	}
 
-	if props.Reason() != workspacebackend.None {
-		ws.Notes = append(ws.Notes, props.Reason().String())
+	for _, err := range props.Errors() {
+		ws.Notes = append(ws.Notes, err.String())
 	}
 
 	return &ws
@@ -136,12 +136,14 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 
 	var wsInfos = make([]*WorkspaceInfo, 0)
 	for _, i := range workspaces {
-		if wsState != "all" {
-			if strings.ToLower(i.State().String()) != wsState {
-				continue
-			}
+		wst := statecontext.WorkspaceState(state, i)
+		if wsState != "all" && strings.ToLower(wst.String()) != wsState {
+			continue
 		}
-		wsInfos = append(wsInfos, workspacePropsToInfo(i, projectId))
+		info := workspacePropsToInfo(i)
+		info.State = wst.String()
+
+		wsInfos = append(wsInfos, info)
 	}
 
 	// Now, if the client wants only workspace files or just queried everything
@@ -149,7 +151,8 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	// as files, not instances)
 	if wsState == "all" || wsState == "off" {
 		for _, j := range files {
-			wsInfos = append(wsInfos, workspaceFileToInfo(j, projectId))
+			info := workspaceFileToInfo(j, projectId)
+			wsInfos = append(wsInfos, info)
 		}
 	}
 
@@ -161,7 +164,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wsmgr := c.d.overlord.WorkspaceManager()
 
 	var reqData struct {
 		Names  []string `json:"names"`
@@ -173,24 +176,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	if err := decoder.Decode(&reqData); err != nil {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
-	refreshMode := workspacestate.ParseRefreshMode(reqData.Mode)
 
 	if len(reqData.Names) == 0 {
 		return statusBadRequest("at least one workspace name must be provided")
-	}
-
-	if len(reqData.Names) > 1 && refreshMode != workspacestate.RefreshTransactional {
-		return statusBadRequest("wait-on-error is not supported for multiple workspaces")
-	}
-
-	projects, err := wBackend.Projects(r.Context())
-	if err != nil {
-		return statusBadRequest("no project found with \"id\" %v", projectId)
-	}
-
-	prj, ok := projects[projectId]
-	if !ok {
-		return statusBadRequest("no project found with \"id\" %v", projectId)
 	}
 
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
@@ -213,10 +201,8 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 
 		change = st.NewChange("launch", summary)
-		change.Set("user", user)
-		change.Set("project-key", prj)
 
-		taskset, err := workspacestate.LaunchMany(st, reqData.Names, prj)
+		taskset, err := wsmgr.LaunchMany(st, ctx, reqData.Names, projectId)
 		if err != nil {
 			return statusBadRequest(err.Error())
 		}
@@ -225,65 +211,42 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		wm := c.d.overlord.WorkspaceManager()
+		refreshMode := workspacestate.ParseRefreshMode(reqData.Mode)
+
+		var summary string
+		switch len(reqData.Names) {
+		case 1:
+			summary = fmt.Sprintf("Refresh workspace %q", reqData.Names[0])
+		default:
+			summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
+		}
+
+		if len(reqData.Names) > 1 && refreshMode != workspacestate.RefreshTransactional {
+			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
+		}
+
 		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshWaitOnError {
-			var inProgress = []string{}
-			for _, r := range reqData.Names {
-				if wm.RefreshInProgress(st, r, prj.ProjectId) != "" {
-					inProgress = append(inProgress, r)
-				}
-			}
-
-			if len(inProgress) > 0 {
-				return statusBadRequest("refresh operation is already in progress for: %s", strings.Join(inProgress, ","))
-			}
-
-			taskset, err := workspacestate.RefreshMany(st, ctx, wBackend, reqData.Names, prj)
+			taskset, err := wsmgr.RefreshMany(st, ctx, reqData.Names, projectId)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
 
-			var summary string
-			switch len(reqData.Names) {
-			case 1:
-				summary = fmt.Sprintf("Refresh workspace %q", reqData.Names[0])
-			default:
-				summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
-			}
-
 			change = st.NewChange("refresh", summary)
-			change.Set("user", user)
-			change.Set("project-key", prj)
-
-			if refreshMode == workspacestate.RefreshWaitOnError {
-				change.Set("wait-on-error", true)
-			} else {
-				change.Set("wait-on-error", false)
-			}
-
 			for _, i := range taskset {
 				change.AddAll(i)
+			}
+
+			for _, name := range reqData.Names {
+				statecontext.StartRefresh(st, name, projectId, change.ID(),
+					refreshMode == workspacestate.RefreshWaitOnError)
 			}
 		}
 
 		if refreshMode == workspacestate.RefreshContinue || refreshMode == workspacestate.RefreshAbort {
-			currentRefreshId := wm.RefreshInProgress(st, reqData.Names[0], prj.ProjectId)
-
-			if currentRefreshId == "" {
-				return statusBadRequest("cannot %s, no refresh in progress", reqData.Mode)
-			}
-
-			change = st.Change(currentRefreshId)
-			if change == nil {
-				return statusInternalError("cannot %s, no refresh in progress", reqData.Mode)
-			}
-
-			for _, tsk := range change.Tasks() {
-				if tsk.Status() == state.WaitStatus {
-					waited := tsk.WaitedStatus()
-					tsk.SetStatus(waited)
-					tsk.ClearLog()
-				}
+			var err error
+			change, err = wsmgr.ResumeRefresh(st, ctx, reqData.Names[0], projectId, refreshMode)
+			if err != nil {
+				return statusBadRequest(err.Error())
 			}
 
 			if refreshMode == workspacestate.RefreshAbort {
@@ -294,6 +257,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	default:
 		return statusBadRequest("unknown action")
 	}
+
+	change.Set("user", user)
+	change.Set("project-id", projectId)
 
 	ensureStateSoon(st, 0)
 
@@ -326,5 +292,8 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 		return statusNotFound("cannot get workspace: %v", err)
 	}
 
-	return SyncResponse(workspacePropsToInfo(workspace, projectId), http.StatusOK)
+	info := workspacePropsToInfo(workspace)
+	info.State = statecontext.WorkspaceState(state, workspace).String()
+
+	return SyncResponse(info, http.StatusOK)
 }

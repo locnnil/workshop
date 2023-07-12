@@ -45,7 +45,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workspace", w)
-		i.Set("project-key", p)
+		i.Set("project", p)
 	}
 }
 
@@ -177,7 +177,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("workspace", "ws")
-	chg.Set("project-key", s.project)
+	chg.Set("project-id", s.project.ProjectId)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)

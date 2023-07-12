@@ -3,44 +3,13 @@ package workspacestate
 import (
 	"fmt"
 
-	. "github.com/canonical/workspace/internal/overlord/sthelper"
+	. "github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 
 	"gopkg.in/tomb.v2"
 )
-
-func (m *WorkspaceManager) RefreshInProgress(st *state.State, name, projectId string) string {
-	var refresh RefreshInProgress
-	err := st.Get(RefreshStateKey, &refresh)
-	if err != nil {
-		return ""
-	}
-	return refresh[workspacebackend.InstanceName(name, projectId)].RefreshChangeId
-}
-
-func (m *WorkspaceManager) StartRefresh(st *state.State, name, projectId, change string) error {
-	var refresh RefreshInProgress = make(RefreshInProgress)
-	var setup = RefreshSetup{RefreshChangeId: change}
-
-	st.Get(RefreshStateKey, &refresh)
-
-	refresh[workspacebackend.InstanceName(name, projectId)] = setup
-	st.Set(RefreshStateKey, refresh)
-	return nil
-}
-
-func (m *WorkspaceManager) StopRefresh(st *state.State, name, projectId string) error {
-	var refresh RefreshInProgress
-	err := st.Get(RefreshStateKey, &refresh)
-	if err != nil {
-		return err
-	}
-	delete(refresh, workspacebackend.InstanceName(name, projectId))
-	st.Set(RefreshStateKey, refresh)
-	return nil
-}
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
@@ -172,7 +141,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
-func (m *WorkspaceManager) doCompleteRefresh(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doDeleteRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -189,10 +158,10 @@ func (m *WorkspaceManager) doCompleteRefresh(task *state.Task, tomb *tomb.Tomb) 
 	if err != nil {
 		return err
 	}
-	return m.StopRefresh(st, workspace, prj.ProjectId)
+	return StopRefresh(st, workspace, prj.ProjectId)
 }
 
-func (m *WorkspaceManager) doStartRefresh(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doMakeRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -205,15 +174,10 @@ func (m *WorkspaceManager) doStartRefresh(task *state.Task, tomb *tomb.Tomb) err
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.MakeWorkspaceUnavailable(ctx, workspace)
-	if err != nil {
-		return err
-	}
-
-	return m.StartRefresh(st, workspace, prj.ProjectId, task.Change().ID())
+	return m.backend.MakeWorkspaceUnavailable(ctx, workspace)
 }
 
-func (m *WorkspaceManager) undoStartRefresh(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoMakeRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -231,7 +195,7 @@ func (m *WorkspaceManager) undoStartRefresh(task *state.Task, tomb *tomb.Tomb) e
 		return err
 	}
 
-	return m.StopRefresh(st, workspace, prj.ProjectId)
+	return StopRefresh(st, workspace, prj.ProjectId)
 }
 
 func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {

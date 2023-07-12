@@ -3,7 +3,6 @@ package workspacebackend_test
 import (
 	"os"
 	"path/filepath"
-	"testing"
 
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
@@ -19,8 +18,6 @@ var _ = Suite(&F{})
 func (f *F) SetUpTest(c *C) {
 	f.fs = afero.NewMemMapFs()
 }
-
-func TestWorkspaceFile(t *testing.T) { TestingT(t) }
 
 func (f *F) TestWorkspaceFileParseNormal(c *C) {
 	buf := []byte(`name: xbert-gpu

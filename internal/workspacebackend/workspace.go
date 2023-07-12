@@ -12,33 +12,62 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type WorkspaceState int
-type WorkspaceStateReason int
+type WorkspaceErrorType int
 type WorkspaceHookType int
 
 const WorkspaceSdksDir = "/var/lib/workspace/sdk/"
 
+type WorkspaceState int
+
+const (
+	WorkspaceOff WorkspaceState = iota
+	WorkspaceReady
+	WorkspaceStopped
+	WorkspacePending
+	WorkspaceError
+)
+
+func (s WorkspaceState) String() string {
+	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
+}
+
+func ParseWorkspaceState(s string) WorkspaceState {
+	refreshMap := map[string]WorkspaceState{
+		WorkspaceOff.String():     WorkspaceOff,
+		WorkspaceReady.String():   WorkspaceReady,
+		WorkspaceStopped.String(): WorkspaceStopped,
+		WorkspacePending.String(): WorkspacePending,
+		WorkspaceError.String():   WorkspaceError,
+	}
+	return refreshMap[s]
+}
+
 type Workspace struct {
-	backend WorkspaceBackend
-	file    *WorkspaceFile
+	backend   WorkspaceBackend
+	file      *WorkspaceFile
+	projectId string
 
-	Name    string
-	Devices map[string]map[string]string
-	content map[string]*sdk.SdkInfo
-	state   WorkspaceState
-	reason  WorkspaceStateReason
+	Name      string
+	Devices   map[string]map[string]string
+	content   map[string]*sdk.SdkInfo
+	errs      []WorkspaceErrorType
+	isRunning bool
 }
 
-func (w *Workspace) State() WorkspaceState {
-	return w.state
+func (w *Workspace) IsRunning() bool {
+	return w.isRunning
 }
 
-func (w *Workspace) Reason() WorkspaceStateReason {
-	return w.reason
+func (w *Workspace) ProjectId() string {
+	return w.projectId
 }
 
-func (w *Workspace) SetState(s WorkspaceState, r WorkspaceStateReason) {
-	w.state, w.reason = s, r
+func (w *Workspace) Errors() []WorkspaceErrorType {
+	return w.errs
+}
+
+func (w *Workspace) AddError(err WorkspaceErrorType) {
+	w.errs = append(w.errs, err)
 }
 
 func (w *Workspace) Content() []*sdk.SdkInfo {
@@ -59,7 +88,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 
 	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
 		&WorkspaceConfigValue{
-			Name:  "user.workspace.sdk",
+			Name:  "user.workspace.content",
 			Value: string(sequenceValue),
 		})
 
@@ -90,7 +119,7 @@ func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 	/* Update the workspace config */
 	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
 		&WorkspaceConfigValue{
-			Name:  "user.workspace.sdk",
+			Name:  "user.workspace.content",
 			Value: string(newSequence),
 		})
 	if err != nil {
@@ -108,27 +137,26 @@ func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 }
 
 const (
-	Off WorkspaceState = iota
-	Ready
-	Stopped
-	Pending
-	Error
-)
-
-func (s WorkspaceState) String() string {
-	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
-}
-
-const (
-	None WorkspaceStateReason = iota
-	Unknown
+	None WorkspaceErrorType = iota
 	MissingProject
 	MissingFile
 	BrokenSdkRecord
+	WaitOnError
 )
 
-func (s WorkspaceStateReason) String() string {
-	return [...]string{"", "", "missing-project", "missing-file", "invalid-sdk"}[s]
+func (s WorkspaceErrorType) String() string {
+	return [...]string{"", "missing-project", "missing-file", "invalid-sdk", "waiting-on-error"}[s]
+}
+
+func ParseWorkspaceError(s string) WorkspaceErrorType {
+	wserrs := map[string]WorkspaceErrorType{
+		None.String():            None,
+		MissingProject.String():  MissingProject,
+		MissingFile.String():     MissingFile,
+		BrokenSdkRecord.String(): BrokenSdkRecord,
+		WaitOnError.String():     WaitOnError,
+	}
+	return wserrs[s]
 }
 
 const (
