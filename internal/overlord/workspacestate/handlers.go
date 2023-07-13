@@ -141,7 +141,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
-func (m *WorkspaceManager) doDeleteRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doDeleteRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (m *WorkspaceManager) doDeleteRefreshBackup(task *state.Task, tomb *tomb.To
 	return StopRefresh(st, workspace, prj.ProjectId)
 }
 
-func (m *WorkspaceManager) doMakeRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doMakeRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (m *WorkspaceManager) doMakeRefreshBackup(task *state.Task, tomb *tomb.Tomb
 	return m.backend.MakeWorkspaceUnavailable(ctx, workspace)
 }
 
-func (m *WorkspaceManager) undoMakeRefreshBackup(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoMakeRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -212,6 +212,46 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	defer cancel()
 
 	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.CreateStateStorage(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.DeleteStateStorage(ctx, workspace)
 	if err != nil {
 		return err
 	}

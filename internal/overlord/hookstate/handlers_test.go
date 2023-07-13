@@ -87,7 +87,7 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	newSdk := workspacebackend.Sdk{"new", "latest/stable"}
 	hook := hookstate.HookSetup{
 		Sdk:      newSdk,
-		HookType: workspacebackend.SetupBase,
+		HookType: hookstate.SetupBase,
 	}
 	t1 := s.state.NewTask("run-hook", "test")
 	t1.Set("hook-setup", hook)
@@ -114,4 +114,22 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	/* Install must be successful */
 	c.Check(chg.Err(), check.Equals, nil)
 	c.Check(executed, check.Equals, false)
+}
+
+func (s *hookSuite) TestExecSaveState(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	newSdk := workspacebackend.Sdk{"new", "latest/stable"}
+	hook := hookstate.HookSetup{
+		Sdk:      newSdk,
+		HookType: hookstate.SaveState,
+	}
+
+	t1 := s.state.NewTask("run-hook", "test")
+	t1.Set("hook-setup", hook)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkspaceProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
 }

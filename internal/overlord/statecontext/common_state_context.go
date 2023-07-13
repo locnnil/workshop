@@ -30,6 +30,8 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 					WaitedStatus: state.DoingStatus,
 					Reason:       fmt.Sprintf("wait to fix %v", err),
 				}
+			} else {
+				StopRefresh(st, ws, p.ProjectId)
 			}
 		}
 		return err

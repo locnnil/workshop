@@ -28,21 +28,27 @@ func (s *S) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	var sdk = workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	var sdk = workspacebackend.Sdk{Name: "go", Channel: "latest/stable"}
 
-	for _, i := range []workspacebackend.WorkspaceHookType{
-		workspacebackend.SetupBase,
-		workspacebackend.SaveState,
-		workspacebackend.RestoreState,
+	envs := []map[string]string{
+		{},
+		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
+		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
+	}
+
+	for num, i := range []hookstate.WorkspaceHookType{
+		hookstate.SetupBase,
+		hookstate.SaveState,
+		hookstate.RestoreState,
 	} {
-		task := hookstate.SetupHook(s.state, &sdk, i)
+		task := hookstate.SetupHook(s.state, "ws", s.project.ProjectId, &sdk, i)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)
 		c.Assert(err, check.IsNil)
 		c.Assert(hookSetup.Type(), check.Equals, i.String())
 		c.Assert(hookSetup.Sdk, check.DeepEquals, sdk)
-		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for SDK \"sdk\" if present", hookSetup.Type()))
+		c.Assert(hookSetup.Environment, check.DeepEquals, envs[num])
+		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for SDK \"go\" if present", hookSetup.Type()))
 	}
-
 }

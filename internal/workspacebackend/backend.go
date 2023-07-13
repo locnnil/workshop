@@ -58,6 +58,9 @@ type WorkspaceBackend interface {
 	MakeWorkspaceUnavailable(ctx context.Context, name string) error
 	DeleteUnavailableWorkspace(ctx context.Context, name string) error
 
+	CreateStateStorage(ctx context.Context, name string) error
+	DeleteStateStorage(ctx context.Context, name string) error
+
 	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error
 	RemoveWorkspaceDevice(ctx context.Context, name string, props string) error
 

@@ -7,8 +7,21 @@ import (
 )
 
 type HookSetup struct {
-	Sdk      workspacebackend.Sdk               `json:"sdk"`
-	HookType workspacebackend.WorkspaceHookType `json:"type"`
+	Sdk         workspacebackend.Sdk `json:"sdk"`
+	HookType    WorkspaceHookType    `json:"type"`
+	Environment map[string]string    `json:"environment"`
+}
+
+type WorkspaceHookType int
+
+const (
+	SetupBase WorkspaceHookType = iota
+	SaveState
+	RestoreState
+)
+
+func (s WorkspaceHookType) String() string {
+	return [...]string{"setup-base", "save-state", "restore-state"}[s]
 }
 
 func (h *HookSetup) Type() string {

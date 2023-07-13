@@ -13,9 +13,10 @@ import (
 )
 
 type WorkspaceErrorType int
-type WorkspaceHookType int
 
-const WorkspaceSdksDir = "/var/lib/workspace/sdk/"
+const (
+	WorkspaceStateDir = "/var/lib/workspace/state"
+)
 
 type WorkspaceState int
 
@@ -97,7 +98,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 	}
 
 	/* Update the current link to point out to the newly installed SDK */
-	sdkPath := filepath.Join(WorkspaceSdksDir, s.Name)
+	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, s.Name)
 
 	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
 	if err != nil {
@@ -133,7 +134,7 @@ func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 	}
 	defer fs.Close()
 
-	return fs.Remove(SdkCurrentPath(s.Name))
+	return fs.Remove(sdk.SdkCurrentPath(s.Name))
 }
 
 const (
@@ -159,16 +160,6 @@ func ParseWorkspaceError(s string) WorkspaceErrorType {
 	return wserrs[s]
 }
 
-const (
-	SetupBase WorkspaceHookType = iota
-	SaveState
-	RestoreState
-)
-
-func (s WorkspaceHookType) String() string {
-	return [...]string{"setup-base", "save-state", "restore-state"}[s]
-}
-
 func WorkspaceFilePath(dir, name string) string {
 	return filepath.Join(dir, WorkspaceFileName(name))
 }
@@ -191,10 +182,6 @@ func WorkspaceName(instance string) string {
 	return instance[:idx]
 }
 
-func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(WorkspaceSdksDir, sdkName, "current")
-}
-
-func SdkHooksPath(sdkName string) string {
-	return filepath.Join(WorkspaceSdksDir, sdkName, "current", "hooks")
+func WorkspaceStateVolumeName(ws, pid string) string {
+	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
 }

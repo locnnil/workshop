@@ -5,6 +5,7 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"golang.org/x/exp/slices"
@@ -48,7 +49,7 @@ func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
 	slices.Sort(actual)
 	slices.Sort(expected)
 
-	c.Assert(actual, DeepEquals, expected)
+	c.Assert(actual, testutil.DeepUnsortedMatches, expected)
 }
 
 func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
@@ -85,7 +86,8 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 
 	ts, err := workspace.Launch(s.state, file, s.project)
 
-	expected := []string{"create-workspace",
+	expected := []string{
+		"create-workspace",
 		"mount-project",
 		"start-workspace",
 		"retrieve-sdk",
@@ -150,9 +152,12 @@ func (s *S) TestRefresh(c *C) {
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
-		"run-hook",
-		"make-refresh-backup",
+		"create-state-storage",
+		"remove-state-storage",
 		"create-workspace",
+		"delete-workspace-copy",
+		"run-hook",
+		"make-workspace-copy",
 		"mount-project",
 		"start-workspace",
 		"retrieve-sdk",
@@ -160,7 +165,6 @@ func (s *S) TestRefresh(c *C) {
 		"link-sdk",
 		"run-hook",
 		"run-hook", // restore state hook
-		"delete-refresh-backup",
 	}
 
 	tasks := ts.Tasks()
@@ -171,7 +175,7 @@ func (s *S) TestRefresh(c *C) {
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
 }
 
-func (s *S) TestRefresMany(c *C) {
+func (s *S) TestRefreshMany(c *C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -194,8 +198,10 @@ func (s *S) TestRefresMany(c *C) {
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
+		"create-state-storage",
+		"remove-state-storage",
 		"run-hook",
-		"make-refresh-backup",
+		"make-workspace-copy",
 		"create-workspace",
 		"mount-project",
 		"start-workspace",
@@ -204,7 +210,7 @@ func (s *S) TestRefresMany(c *C) {
 		"link-sdk",
 		"run-hook",
 		"run-hook", // restore state hook
-		"delete-refresh-backup",
+		"delete-workspace-copy",
 	}
 
 	for i, t := range ts {

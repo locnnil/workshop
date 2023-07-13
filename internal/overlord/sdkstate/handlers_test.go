@@ -186,7 +186,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		s.backend.WsFs.MkdirAll(filepath.Join(workspacebackend.WorkspaceSdksDir, "new"), 0755)
+		s.backend.WsFs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
 		return workspacebackend.DoExecDefault(ctx, name, args)
 	}
 
@@ -200,7 +200,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
 	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	exist, _ := afero.Exists(s.backend.WsFs, filepath.Join(workspacebackend.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(s.backend.WsFs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
 	c.Check(exist, Equals, false)
 }
 
