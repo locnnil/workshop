@@ -10,10 +10,11 @@ LXD
 
 Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every workspace is essentially a system container that is created, started, and configured using LXD REST API. Whilst LXD supports a large set of operating systems, Workspace is currently limited to using Ubuntu as a base system for its containers.
 
-.. tabs::
-  .. tab:: Install LXD on Ubuntu
 
-    There is a chance LXD is already installed on your system, confirm that by
+.. tabs::
+  .. group-tab:: Install on Ubuntu
+
+    There is a chance LXD is already installed on your system; check that by
     running:
 
     .. code-block:: bash
@@ -35,7 +36,7 @@ Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every wor
 
       systemctl status snap.lxd.daemon.service
 
-  .. tab:: Install LXD on other Linux distributions
+  .. group-tab:: Install on other Linux distributions
 
     Check `LXD documentation
     <https://documentation.ubuntu.com/lxd/en/latest/installing/?_ga=2.224594138.1101634201.1688935617-532732205.1687382301>`_
@@ -44,17 +45,16 @@ Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every wor
 
 Go
 ~~~~~~~~~~~~~~~~~~~~~~
-The only option to get Workspace that is currently available is installing from
-the source code. Therefore, Go run-time must be available to install Workspace.
-Run:
+Currently you can install Workspace only from its source code that requires Go run-time:
 
 .. tabs::
-  .. tab:: Install Go on Ubuntu
+  .. group-tab:: Install on Ubuntu
 
     .. code-block:: bash
 
       sudo snap install --classic --channel=1.20/stable go
-  .. tab:: Install Go on other Linux distributions
+
+  .. group-tab:: Install on other Linux distributions
     Check the `official documentation <https://go.dev/doc/install>`_ for the options
     available for other Linux distributions.
 
@@ -67,10 +67,8 @@ Workspace consists of a daemon and a CLI command ``workspace``, install both:
 
 .. code-block:: bash
 
-  # Install workspaced
   go install github.com/canonical/workspace/cmd/workspaced
 
-  # Install CLI
   go install github.com/canonical/workspace/cmd/workspace
 
 ======================

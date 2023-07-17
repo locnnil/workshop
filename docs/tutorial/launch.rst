@@ -28,7 +28,7 @@ file ``.workspace.nimble.yaml`` in it:
 
 Our ``nimble`` workspace introduces two concepts: *base* and *SDK*.
 
-*base* can be any of ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a supported OS
+*base* can be either ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a supported OS
 that will be used to create the workspace container.
 
 *SDK* is a Software Development Kit designed by a publisher and available in the
