@@ -11,7 +11,6 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/maps"
@@ -211,7 +210,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		refreshMode := workspacestate.ParseRefreshMode(reqData.Mode)
+		refreshMode := statecontext.ParseRefreshMode(reqData.Mode)
 
 		var summary string
 		switch len(reqData.Names) {
@@ -221,11 +220,11 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
 		}
 
-		if len(reqData.Names) > 1 && refreshMode != workspacestate.RefreshTransactional {
+		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
 			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
 		}
 
-		if refreshMode == workspacestate.RefreshTransactional || refreshMode == workspacestate.RefreshWaitOnError {
+		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
 			taskset, err := wsmgr.RefreshMany(st, ctx, reqData.Names, projectId)
 			if err != nil {
 				return statusBadRequest(err.Error())
@@ -238,19 +237,15 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 
 			for _, name := range reqData.Names {
 				statecontext.StartRefresh(st, name, projectId, change.ID(),
-					refreshMode == workspacestate.RefreshWaitOnError)
+					refreshMode == statecontext.RefreshWaitOnError)
 			}
 		}
 
-		if refreshMode == workspacestate.RefreshContinue || refreshMode == workspacestate.RefreshAbort {
+		if refreshMode == statecontext.RefreshContinue || refreshMode == statecontext.RefreshAbort {
 			var err error
-			change, err = wsmgr.ResumeRefresh(st, ctx, reqData.Names[0], projectId, refreshMode)
+			change, err = statecontext.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
 			if err != nil {
 				return statusBadRequest(err.Error())
-			}
-
-			if refreshMode == workspacestate.RefreshAbort {
-				change.Abort()
 			}
 		}
 

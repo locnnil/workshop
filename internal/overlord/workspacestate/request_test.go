@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 )
 
 type S struct {
@@ -18,16 +17,16 @@ type S struct {
 	project *workspacebackend.Project
 }
 
-var _ = Suite(&S{})
+var _ = check.Suite(&S{})
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
-func (s *S) SetUpTest(c *C) {
+func (s *S) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.project = &workspacebackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
-func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *C, w string, ts []*state.Task) {
+func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *check.C, w string, ts []*state.Task) {
 	for _, i := range ts {
 		var prj workspacebackend.Project
 		err := i.Get("project", &prj)
@@ -41,7 +40,7 @@ func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *C, w string, ts []*state.Tas
 	}
 }
 
-func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
+func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 	actual := make([]string, 0, len(ts))
 	for _, i := range ts {
 		actual = append(actual, i.Kind())
@@ -52,7 +51,7 @@ func verifyExpectedTasks(c *C, ts []*state.Task, expected []string) {
 	c.Assert(actual, testutil.DeepUnsortedMatches, expected)
 }
 
-func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
+func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	file := &workspacebackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
@@ -63,17 +62,17 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *C) {
 		"start-workspace"}
 	tasks := ts.Tasks()
 
-	c.Assert(err, Equals, nil)
+	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
 	var base string
 	err = tasks[0].Get("base", &base)
-	c.Assert(err, Equals, nil)
-	c.Assert(base, Equals, "ubuntu@22.04")
+	c.Assert(err, check.Equals, nil)
+	c.Assert(base, check.Equals, "ubuntu@22.04")
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", ts.Tasks())
 }
 
-func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
+func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
@@ -101,43 +100,43 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *C) {
 
 	tasks := ts.Tasks()
 
-	c.Assert(err, Equals, nil)
+	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
 	var s1, s2 workspacebackend.Sdk
 	err = tasks[3].Get("sdk-setup", &s1)
-	c.Assert(err, Equals, nil)
-	c.Assert(s1, Equals, sdk)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(s1, check.Equals, sdk)
 
 	err = tasks[4].Get("sdk-setup", &s2)
-	c.Assert(err, Equals, nil)
-	c.Assert(s2, Equals, sdk_2)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(s2, check.Equals, sdk_2)
 
 	// install-sdk task for sdk
 	var id1, id2 string
 	err = tasks[5].Get("sdk-retrieve-task", &id1)
-	c.Assert(err, Equals, nil)
-	c.Assert(id1, Equals, tasks[3].ID())
+	c.Assert(err, check.Equals, nil)
+	c.Assert(id1, check.Equals, tasks[3].ID())
 
 	// link-sdk task for sdk
 	err = tasks[6].Get("sdk-retrieve-task", &id2)
-	c.Assert(err, Equals, nil)
-	c.Assert(id2, Equals, tasks[3].ID())
+	c.Assert(err, check.Equals, nil)
+	c.Assert(id2, check.Equals, tasks[3].ID())
 
 	// install-sdk task for sdk_2
 	err = tasks[7].Get("sdk-retrieve-task", &id1)
-	c.Assert(err, Equals, nil)
-	c.Assert(id1, Equals, tasks[4].ID())
+	c.Assert(err, check.Equals, nil)
+	c.Assert(id1, check.Equals, tasks[4].ID())
 
 	// link-sdk task for sdk_2
 	err = tasks[8].Get("sdk-retrieve-task", &id2)
-	c.Assert(err, Equals, nil)
-	c.Assert(id2, Equals, tasks[4].ID())
+	c.Assert(err, check.Equals, nil)
+	c.Assert(id2, check.Equals, tasks[4].ID())
 
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", tasks)
 }
 
-func (s *S) TestRefresh(c *C) {
+func (s *S) TestRefresh(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -169,13 +168,13 @@ func (s *S) TestRefresh(c *C) {
 
 	tasks := ts.Tasks()
 
-	c.Assert(err, Equals, nil)
+	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
 }
 
-func (s *S) TestRefreshMany(c *C) {
+func (s *S) TestRefreshMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -214,7 +213,7 @@ func (s *S) TestRefreshMany(c *C) {
 	}
 
 	for i, t := range ts {
-		c.Assert(err, Equals, nil)
+		c.Assert(err, check.Equals, nil)
 		verifyExpectedTasks(c, t.Tasks(), expected)
 		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
 	}

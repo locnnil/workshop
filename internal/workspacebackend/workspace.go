@@ -146,7 +146,7 @@ const (
 )
 
 func (s WorkspaceErrorType) String() string {
-	return [...]string{"", "missing-project", "missing-file", "invalid-sdk", "waiting-on-error"}[s]
+	return [...]string{"", "missing-project", "missing-file", "invalid-sdk", "wait-on-error"}[s]
 }
 
 func ParseWorkspaceError(s string) WorkspaceErrorType {

@@ -1,13 +1,38 @@
 package statecontext
 
 import (
+	"fmt"
+
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
 const (
-	OpsInProgressKey = "op-in-progress"
+	OpsInProgressKey = "operations-in-progress"
 )
+
+type RefreshMode int
+
+const (
+	RefreshTransactional RefreshMode = iota
+	RefreshWaitOnError
+	RefreshContinue
+	RefreshAbort
+)
+
+func (s RefreshMode) String() string {
+	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
+}
+
+func ParseRefreshMode(s string) RefreshMode {
+	refreshMap := map[string]RefreshMode{
+		RefreshTransactional.String(): RefreshTransactional,
+		RefreshWaitOnError.String():   RefreshWaitOnError,
+		RefreshContinue.String():      RefreshContinue,
+		RefreshAbort.String():         RefreshAbort,
+	}
+	return refreshMap[s]
+}
 
 type Operations map[string]Operation
 
@@ -57,6 +82,44 @@ func StartRefresh(st *state.State, name, projectId, change string, wait bool) er
 	return nil
 }
 
+// Attempt to resume the change associated with the refresh operation for the
+// given workspace. Depending on the mode the change will either be turned
+// into Doing (Continue mode) or Abort (Abort mode)
+func ResumeRefresh(st *state.State,
+	name string, projectId string, mode RefreshMode) (*state.Change, error) {
+	if mode != RefreshAbort && mode != RefreshContinue {
+		return nil, fmt.Errorf("only abort or continue can be used to resume the refresh operation")
+	}
+
+	op, inProgress := RefreshInProgress(st, name, projectId)
+	if !inProgress {
+		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)
+	}
+
+	change := st.Change(op.ChangeId)
+	if change == nil {
+		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)
+	}
+
+	for _, tsk := range change.Tasks() {
+		if tsk.Status() == state.WaitStatus {
+			if mode == RefreshContinue {
+				waited := tsk.WaitedStatus()
+				tsk.SetStatus(waited)
+				tsk.ClearLog()
+			} else if mode == RefreshAbort {
+				tsk.SetStatus(state.ErrorStatus)
+			}
+		}
+	}
+
+	if mode == RefreshAbort {
+		change.Abort()
+	}
+
+	return change, nil
+}
+
 // Unset the refresh mode for a given workspace, the state must be locked. The
 // method removes an association between a workspace and a change indicating
 // that the refresh is over and continue or abort will not be possible from this
@@ -72,6 +135,8 @@ func StopRefresh(st *state.State, name, projectId string) error {
 	return nil
 }
 
+// Infers the state of a workspace based on the container's state and any of
+// the operations in progress for the workspace.
 func WorkspaceState(st *state.State, ws *workspacebackend.Workspace) workspacebackend.WorkspaceState {
 	op, opInProgress := RefreshInProgress(st, ws.Name, ws.ProjectId())
 	if opInProgress {

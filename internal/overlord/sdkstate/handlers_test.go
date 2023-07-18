@@ -17,7 +17,6 @@ import (
 
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 )
 
@@ -34,9 +33,9 @@ type H struct {
 	restoreProjectId func()
 }
 
-var _ = Suite(&H{})
+var _ = check.Suite(&H{})
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
@@ -51,7 +50,7 @@ func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.
 
 var ErrTrigger = errors.New("error out")
 
-func (s *H) SetUpTest(c *C) {
+func (s *H) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
@@ -83,14 +82,14 @@ func (s *H) SetUpTest(c *C) {
 	s.se.AddManager(s.runner)
 }
 
-func (s *H) TearDownTest(c *C) {
+func (s *H) TearDownTest(c *check.C) {
 	s.restoreProjectId()
 }
 
-func (s *H) TestDoInstallSdkSuccess(c *C) {
+func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -104,7 +103,7 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 
 	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		c.Check(args.Command, DeepEquals, []string{
+		c.Check(args.Command, check.DeepEquals, []string{
 			"tar",
 			"--extract",
 			"--file",
@@ -123,16 +122,16 @@ func (s *H) TestDoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 
 	/* Install must be successful */
-	c.Check(chg.Err(), Equals, nil)
+	c.Check(chg.Err(), check.Equals, nil)
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
+	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 }
 
-func (s *H) TestDoInstallSdkExecFail(c *C) {
+func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -158,15 +157,15 @@ func (s *H) TestDoInstallSdkExecFail(c *C) {
 	s.state.Lock()
 
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
-	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), Equals, true)
+	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
+	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
 }
 
-func (s *H) TestUndoInstallSdkSuccess(c *C) {
+func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -198,17 +197,17 @@ func (s *H) TestUndoInstallSdkSuccess(c *C) {
 	s.state.Lock()
 
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
-	c.Check(props.Devices["new"], DeepEquals, map[string]string(nil))
+	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
 	exist, _ := afero.Exists(s.backend.WsFs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
-	c.Check(exist, Equals, false)
+	c.Check(exist, check.Equals, false)
 }
 
-func (s *H) TestDoLinkSdkSuccess(c *C) {
+func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
@@ -227,18 +226,18 @@ func (s *H) TestDoLinkSdkSuccess(c *C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	c.Check(chg.Err(), Equals, nil)
+	c.Check(chg.Err(), check.Equals, nil)
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
 	c.Check(*info[0], check.DeepEquals, newSdk)
 }
 
-func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
+func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{"new", "latest/stable", 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
@@ -267,5 +266,5 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *C) {
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
 	info := props.Content()
 	c.Check(info, check.HasLen, 0)
-	c.Check(link.Status(), Equals, state.UndoneStatus)
+	c.Check(link.Status(), check.Equals, state.UndoneStatus)
 }

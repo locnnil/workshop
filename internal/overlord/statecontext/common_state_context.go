@@ -28,7 +28,7 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 			if inProgress && op.WaitOnError {
 				return &state.Wait{
 					WaitedStatus: state.DoingStatus,
-					Reason:       fmt.Sprintf("wait to fix %v", err),
+					Reason:       fmt.Sprintf("wait on error %v", err),
 				}
 			} else {
 				StopRefresh(st, ws, p.ProjectId)

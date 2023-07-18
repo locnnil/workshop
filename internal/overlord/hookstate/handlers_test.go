@@ -84,7 +84,7 @@ func (s *hookSuite) TearDownTest(c *check.C) {
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{"new", "latest/stable"}
+	newSdk := workspacebackend.Sdk{Name: "new", Channel: "latest/stable"}
 	hook := hookstate.HookSetup{
 		Sdk:      newSdk,
 		HookType: hookstate.SetupBase,
@@ -119,7 +119,7 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{"new", "latest/stable"}
+	newSdk := workspacebackend.Sdk{Name: "new", Channel: "latest/stable"}
 	hook := hookstate.HookSetup{
 		Sdk:      newSdk,
 		HookType: hookstate.SaveState,
