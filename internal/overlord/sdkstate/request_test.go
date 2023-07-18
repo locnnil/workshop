@@ -29,10 +29,10 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	c.Check(tasks[1].WaitTasks(), check.HasLen, 1)
 	var id string
 	tasks[0].Get("sdk-retrieve-task", &id)
-	c.Check(tasks[0].Summary(), check.Equals, "Install SDK \"sdk\"")
+	c.Check(tasks[0].Summary(), check.Equals, "Install \"sdk\" SDK")
 	c.Check(id, check.Equals, "retrieve")
 	tasks[1].Get("sdk-retrieve-task", &id)
-	c.Check(tasks[1].Summary(), check.Equals, "Link SDK \"sdk\"")
+	c.Check(tasks[1].Summary(), check.Equals, "Link \"sdk\" SDK")
 	c.Check(id, check.Equals, "retrieve")
 }
 
@@ -48,5 +48,5 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	task.Get("sdk-setup", &s)
 	c.Check(s, check.DeepEquals, sdk)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
-	c.Check(task.Summary(), check.Equals, "Retrieve SDK \"sdk\" from channel \"latest/stable\"")
+	c.Check(task.Summary(), check.Equals, "Retrieve \"sdk\" SDK from channel \"latest/stable\"")
 }

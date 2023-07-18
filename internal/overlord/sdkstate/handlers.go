@@ -102,7 +102,8 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	cleanup := func() {
-		/* Make sure the SDK file will be unmounted once installed into the workspace */		if err := m.backend.RemoveWorkspaceDevice(ctx, workspace, sdkMount.Name); err != nil {
+		/* Make sure the SDK file will be unmounted once installed into the workspace */
+		if err := m.backend.RemoveWorkspaceDevice(ctx, workspace, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workspace %q: %v", sdkMount.Name, workspace, err)
 		}
 	}

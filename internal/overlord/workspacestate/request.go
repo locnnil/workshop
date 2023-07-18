@@ -80,14 +80,14 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create %q workspace", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
+	start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", file.Name))
 	start.WaitFor(mountProject)
 
 	prevInstall := (*state.TaskSet)(nil)
@@ -227,7 +227,7 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 		prevSave = saveStateHook
 	}
 
-	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy workspace %q", w.Name))
+	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", w.Name))
 
 	launch, err := launch(st, w, p)
 	if err != nil {
@@ -245,7 +245,7 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 		prevRestore = restoreStateHook
 	}
 
-	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove workspace %q copy", w.Name))
+	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", w.Name))
 	removeStateStorage := st.NewTask("remove-state-storage", "Unmount SDK state storage")
 
 	// save-state -> stop-workspace -> launch -> restore state

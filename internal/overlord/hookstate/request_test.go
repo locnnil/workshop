@@ -49,6 +49,6 @@ func (s *S) TestCreateHook(c *check.C) {
 		c.Assert(hookSetup.Type(), check.Equals, i.String())
 		c.Assert(hookSetup.Sdk, check.DeepEquals, sdk)
 		c.Assert(hookSetup.Environment, check.DeepEquals, envs[num])
-		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for SDK \"go\" if present", hookSetup.Type()))
+		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 	}
 }
