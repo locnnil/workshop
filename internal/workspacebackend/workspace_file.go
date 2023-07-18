@@ -41,6 +41,9 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
+	slices.SortFunc(*p, func(a, b Sdk) bool {
+		return a.Name < b.Name
+	})
 	return nil
 }
 
