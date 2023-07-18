@@ -79,8 +79,8 @@ code either from your favourite IDE or directly from the command line.
 Starting and Stopping
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A workrspace will be in the *Ready* state if the launch was successfull. When
-not used, stop the workspace by runnning:
+A workspace will be in the *Ready* state if the launch was successful. When
+not used, stop the workspace by running:
 
 .. code-block:: bash
 
@@ -89,4 +89,4 @@ not used, stop the workspace by runnning:
 
 Both ``workspace start`` and ``workspace stop`` commands wait for the graceful
 completion of the operation  and cannot be interrupted from the command-line in
-order to ensure the workspace's integrity.
+order to ensure the workspace integrity.

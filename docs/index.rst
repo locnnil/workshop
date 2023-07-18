@@ -36,20 +36,20 @@ In this documentation
 
        **Start here**: a hands-on introduction to Workspace for new users
 
-..    ..  grid-item:: :doc:`How-to guides <how-to/index>`
+   .. ..  grid-item:: :doc:`How-to guides <how-to/index>`
 
-..       **Step-by-step guides** covering key operations and common tasks
+   ..    **Step-by-step guides** covering key operations and common tasks
 
-.. .. grid:: 1 1 2 2
-..    :reverse:
+.. grid:: 1 1 2 2
+   :reverse:
 
-..    .. grid-item:: :doc:`Reference <reference/index>`
+   .. .. grid-item:: :doc:`Reference <reference/index>`
 
-..       **Technical information** - specifications, APIs, architecture
+   ..    **Technical information** - specifications, APIs, architecture
 
-..    .. grid-item:: :doc:`Explanation <explanation/index>`
+   .. grid-item:: :doc:`Explanation <explanation/index>`
 
-..       **Discussion and clarification** of key topics
+      **Discussion and clarification** of key topics
 
 ---------
 
@@ -58,8 +58,8 @@ In this documentation
    :maxdepth: 2
 
    tutorial/index
+   explanation/index
 ..   ReadMe <readme>
 
 ..    how-to/index
 ..    reference/index
-..    explanation/index

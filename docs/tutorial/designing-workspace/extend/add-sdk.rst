@@ -1,4 +1,4 @@
-Enhancing a workspace
+Adding or Removing an SDK
 ===========================
 
 It is likely that you will make a few iterations on the workspace before arriving at the
@@ -14,7 +14,7 @@ will be stopped on the task that caused an error.
     $ workspace refresh --wait-on-error nimble
     "nimble" refresh failed
 
-It lets you to investigate the issue right at the point it was encoutered. Then,
+It lets you to investigate the issue right at the point it was encountered. Then,
 the refresh can be either continued:
 
 .. code-block:: bash

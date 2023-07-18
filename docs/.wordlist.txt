@@ -28,6 +28,7 @@ pathname
 yaml
 backend
 distributions
+snapd
 
 accumsan
 adipiscing
