@@ -74,3 +74,19 @@ code either from your favourite IDE or directly from the command line.
     workspaces that still exist will be switched to the *Error* state and become
     unavailable for any commands except ``remove``. Try move around the project
     directory and check the results of the ``workspace list`` output.
+
+
+Starting and Stopping
+~~~~~~~~~~~~~~~~~~~~~~
+
+A workrspace will be in the *Ready* state if the launch was successfull. When
+not used, stop the workspace by runnning:
+
+.. code-block:: bash
+
+    $ workspace stop nimble
+    "nimble" stopped
+
+Both ``workspace start`` and ``workspace stop`` commands wait for the graceful
+completion of the operation  and cannot be interrupted from the command-line in
+order to ensure the workspace's integrity.
