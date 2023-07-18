@@ -92,7 +92,7 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk
 	var s sdk.SdkInfo
 	var revision int64
 
-	if sa := strings.Split(channel, "/"); len(sa) != 2 {
+ 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
 		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
 	} else {
 		track, risk = sa[0], sa[1]

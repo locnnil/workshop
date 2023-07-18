@@ -8,7 +8,7 @@ import (
 )
 
 func Retrieve(st *state.State, sdk *workspacebackend.Sdk) *state.Task {
-	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q from %q", sdk.Name, sdk.Channel))
+	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve SDK %q from channel %q", sdk.Name, sdk.Channel))
 	download.Set("sdk-setup", sdk)
 	return download
 }

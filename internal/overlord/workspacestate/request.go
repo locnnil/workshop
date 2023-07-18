@@ -80,6 +80,16 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
 
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
+	create.Set("base", file.Base)
+	create.WaitAll(retrieve)
+
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
+	mountProject.WaitFor(create)
+
+	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
+	start.WaitFor(mountProject)
+
 	prevInstall := (*state.TaskSet)(nil)
 	prevSetup := (*state.Task)(nil)
 	for _, sdk := range file.Sdks {
@@ -105,16 +115,6 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 
 		setupHook.AddTask(setupHookTask)
 	}
-
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create workspace %q", file.Name))
-	create.Set("base", file.Base)
-	create.WaitAll(retrieve)
-
-	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
-	mountProject.WaitFor(create)
-
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start workspace %q", file.Name))
-	start.WaitFor(mountProject)
 
 	install.WaitFor(start)
 	setupHook.WaitAll(install)
