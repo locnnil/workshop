@@ -88,7 +88,7 @@ func StartRefresh(st *state.State, name, projectId, change string, wait bool) er
 func ResumeRefresh(st *state.State,
 	name string, projectId string, mode RefreshMode) (*state.Change, error) {
 	if mode != RefreshAbort && mode != RefreshContinue {
-		return nil, fmt.Errorf("only abort or continue can be used to resume the refresh operation")
+		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the refresh operation")
 	}
 
 	op, inProgress := RefreshInProgress(st, name, projectId)
@@ -106,8 +106,9 @@ func ResumeRefresh(st *state.State,
 			if mode == RefreshContinue {
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
-				tsk.ClearLog()
+				tsk.Logf("Continuing %q workspace refresh...", name)
 			} else if mode == RefreshAbort {
+				tsk.Logf("Aborting %q workspace refresh...", name)
 				tsk.SetStatus(state.ErrorStatus)
 			}
 		}

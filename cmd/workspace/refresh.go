@@ -86,7 +86,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 		if err == errWaitOnError && mode != "transactional" {
-			return fmt.Errorf("%q refresh failed", av[0])
+			return fmt.Errorf("%q refresh failed, resolve all errors and run \"workspace refresh --continue\".\n"+
+				"To abort and get back to the state before run \"workspace refresh --abort\".", av[0])
 		}
 		return err
 	}

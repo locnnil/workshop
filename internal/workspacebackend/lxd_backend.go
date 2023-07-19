@@ -380,6 +380,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
 		done, err := s.Exec(execCtx, WorkspaceName(i.Name), &args)
 		if err != nil {
+			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
 			continue
 		}
 		<-done

@@ -87,7 +87,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, projectId))
+	out, err := memFs.Create(workspacebackend.InstanceName(workspace, projectId))
 	if err != nil {
 		return err
 	}
@@ -107,20 +107,21 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 	}
 
 	args.Stdin = nil
-	args.Stdin = outerr
-	args.Stdout = outerr
+	args.Stdin = out
+	args.Stdout = out
 
 	done, err := h.backend.Exec(ctx, workspace, &args)
-	hookLog, _ := afero.ReadFile(memFs, outerr.Name())
-	st := task.State()
-	st.Lock()
-	if err != nil {
-		task.Errorf(string(hookLog))
-	} else {
-		task.Logf(string(hookLog))
-	}
-	st.Unlock()
 	<-done
 
-	return err
+	hookLog, _ := afero.ReadFile(memFs, out.Name())
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+	if err == nil {
+		task.Logf(string(hookLog))
+		return nil
+	}
+
+	return fmt.Errorf("%v: %v", err, string(hookLog))
 }

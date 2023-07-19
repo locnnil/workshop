@@ -161,7 +161,7 @@ func (m *WorkspaceManager) doDeleteRefreshCopy(task *state.Task, tomb *tomb.Tomb
 	return StopRefresh(st, workspace, prj.ProjectId)
 }
 
-func (m *WorkspaceManager) doMakeRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (m *WorkspaceManager) doMakeRefreshCopy(task *state.Task, tomb *tomb.Tomb) 
 	return m.backend.MakeWorkspaceUnavailable(ctx, workspace)
 }
 
-func (m *WorkspaceManager) undoMakeRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err

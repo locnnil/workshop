@@ -90,8 +90,6 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
@@ -117,7 +115,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	outerr, err := memFs.Create(workspacebackend.InstanceName(workspace, project.ProjectId))
+	out, err := memFs.Create(workspacebackend.InstanceName(workspace, project.ProjectId))
 	if err != nil {
 		return err
 	}
@@ -136,19 +134,17 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		},
 		WorkDir: "/",
 		Stdin:   nil,
-		Stdout:  outerr,
-		Stderr:  outerr}
+		Stdout:  out,
+		Stderr:  out}
 	done, err := m.backend.Exec(ctx, workspace, &args)
-
-	if err != nil {
-		hookLog, _ := afero.ReadFile(memFs, outerr.Name())
-		st.Lock()
-		task.Logf(string(hookLog))
-		st.Unlock()
-	}
 
 	/* The server will close this channel when exec is finished and no i/o remains outstanding */
 	<-done
+
+	if err != nil {
+		hookLog, _ := afero.ReadFile(memFs, out.Name())
+		return fmt.Errorf("%v: %v", err, string(hookLog))
+	}
 
 	return err
 }

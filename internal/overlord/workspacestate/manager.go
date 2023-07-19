@@ -22,7 +22,7 @@ func NewWorkspaceManager(runner *state.TaskRunner, server workspacebackend.Works
 	AddHandler(runner, "delete-workspace", manager.doDeleteWorkspace, nil, WaitOnErrorDecorator)
 	AddHandler(runner, "mount-project", manager.doMountProject, manager.undoMountProject, WaitOnErrorDecorator)
 	AddHandler(runner, "delete-workspace-copy", manager.doDeleteRefreshCopy, nil, WaitOnErrorDecorator)
-	AddHandler(runner, "make-workspace-copy", manager.doMakeRefreshCopy, manager.undoMakeRefreshCopy, WaitOnErrorDecorator)
+	AddHandler(runner, "make-workspace-copy", manager.doMakeWorkspaceCopy, manager.undoMakeWorkspaceCopy, WaitOnErrorDecorator)
 
 	AddHandler(runner, "create-state-storage", manager.doCreateStateStorage, manager.doRemoveStateStorage, WaitOnErrorDecorator)
 	AddHandler(runner, "remove-state-storage", manager.doRemoveStateStorage, nil, WaitOnErrorDecorator)
