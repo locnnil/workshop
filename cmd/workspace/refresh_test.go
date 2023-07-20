@@ -45,7 +45,7 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
     "ready": true,
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["Aborting \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
 }}`
 
 func (m *WorkspaceRefresh) SetUpTest(c *check.C) {

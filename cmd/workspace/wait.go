@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"time"
 
@@ -45,6 +46,8 @@ type waitMixin struct {
 
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
+
+var abortLogMessage = regexp.MustCompile(`^Aborting \".+\" workspace refresh...$`)
 
 func stripAbortMessage(str string) string {
 	i := strings.Index(str, " ")
@@ -175,12 +178,8 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 					if t.Status == "Error" {
 						lastLogLine := t.Log[len(t.Log)-1]
 						abortMsg := stripAbortMessage(lastLogLine)
-						var wrkspc string
-						if err := t.Get("workspace", &wrkspc); err == nil {
-							expected := fmt.Sprintf("Aborting \"%s\" workspace refresh...", wrkspc)
-							if abortMsg == expected {
-								continue
-							}
+						if abortLogMessage.Match([]byte(abortMsg)) {
+							continue
 						}
 						// no abort message, that means the task produced an
 						// error during the undo execution
