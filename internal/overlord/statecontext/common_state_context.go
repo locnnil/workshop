@@ -19,7 +19,19 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		err = handler(task, tomb)
-		if err != nil {
+		switch err {
+		case context.Canceled:
+			st := task.State()
+			st.Lock()
+			defer st.Unlock()
+
+			task.Logf("cannot proceed: task execution cancelled")
+			return nil
+		case context.DeadlineExceeded:
+			return err
+		case nil:
+			return nil
+		default:
 			st := task.State()
 			st.Lock()
 			defer st.Unlock()
@@ -30,13 +42,15 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 				task.Errorf(err.Error())
 				return &state.Wait{
 					WaitedStatus: state.DoingStatus,
-					Reason:       fmt.Sprintf("wait on error %v", err),
+					Reason:       fmt.Sprintf("wait on error: %v", err),
 				}
-			} else {
-				StopRefresh(st, ws, p.ProjectId)
+			} else if inProgress {
+				if e := StopRefresh(st, ws, p.ProjectId); e != nil {
+					return fmt.Errorf("internal error: cannot stop refresh for %q: %v, refresh error: %v", ws, e, err)
+				}
 			}
+			return err
 		}
-		return err
 	}
 }
 
