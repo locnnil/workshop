@@ -46,6 +46,14 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
+func stripAbortMessage(str string) string {
+	i := strings.Index(str, " ")
+	if i >= 0 && strings.HasPrefix(str[i:], " INFO ") {
+		return str[i+len(" INFO "):]
+	}
+	return str
+}
+
 func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
@@ -165,25 +173,23 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 			if chg.Status == "Error" && abortExpected {
 				for _, t := range chg.Tasks {
 					if t.Status == "Error" {
-						lastLogLine := lastLog[t.ID]
-						if lastLogLine != "" {
-							i := strings.Index(lastLogLine, " ")
-							if i >= 0 && strings.HasPrefix(lastLogLine[i:], " INFO ") {
-								abortMsg := lastLogLine[i+len(" INFO "):]
-								var wrkspc string
-								if err := t.Get("workspace", wrkspc); err != nil {
-									continue
-								}
-								if abortMsg != fmt.Sprintf("Aborting %q workspace refresh...", wrkspc) {
-									return chg, errors.New(chg.Err)
-								}
+						lastLogLine := t.Log[len(t.Log)-1]
+						abortMsg := stripAbortMessage(lastLogLine)
+						var wrkspc string
+						if err := t.Get("workspace", &wrkspc); err == nil {
+							expected := fmt.Sprintf("Aborting \"%s\" workspace refresh...", wrkspc)
+							if abortMsg == expected {
+								continue
 							}
 						}
+						// no abort message, that means the task produced an
+						// error during the undo execution
+						goto ReportError
 					}
 				}
 				return chg, nil
 			}
-
+		ReportError:
 			if chg.Err != "" {
 				return chg, errors.New(chg.Err)
 			}
