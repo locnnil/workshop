@@ -141,7 +141,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
-func (m *WorkspaceManager) doDeleteRefreshCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doDeleteWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err

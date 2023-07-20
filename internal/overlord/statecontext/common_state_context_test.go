@@ -39,7 +39,7 @@ func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
-	handler := statecontext.WaitOnErrorDecorator(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
 		return context.Canceled
 	})
 	task := s.setupTask()
@@ -48,7 +48,7 @@ func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestExecutionError(c *check.C) {
-	handler := statecontext.WaitOnErrorDecorator(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
 	task := s.setupTask()
@@ -63,7 +63,7 @@ func (s *CommonStateFuncs) TestExecutionError(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
-	handler := statecontext.WaitOnErrorDecorator(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
 	s.state.Lock()

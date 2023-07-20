@@ -18,9 +18,9 @@ type SdkSequenceRecord struct {
 func NewSdkManager(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
-	AddHandler(runner, "retrieve-sdk", manager.doRetrieveSdk, nil, WaitOnErrorDecorator)
-	AddHandler(runner, "install-sdk", manager.doInstallSDK, manager.undoInstallSdk, WaitOnErrorDecorator)
-	AddHandler(runner, "link-sdk", manager.doLinkSdk, manager.undoLinkSdk, WaitOnErrorDecorator)
+	runner.AddHandler("retrieve-sdk", OnDoError(manager.doRetrieveSdk), nil)
+	runner.AddHandler("install-sdk", OnDoError(manager.doInstallSDK), manager.undoInstallSdk)
+	runner.AddHandler("link-sdk", OnDoError(manager.doLinkSdk), manager.undoLinkSdk)
 
 	return manager
 }

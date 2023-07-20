@@ -11,7 +11,7 @@ import (
 
 type HandlerDecorator func(handler state.HandlerFunc) state.HandlerFunc
 
-func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
+func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		_, p, ws, err := UserProjectWorkspace(task)
 		if err != nil {
@@ -27,8 +27,6 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 
 			task.Logf("cannot proceed: task execution cancelled")
 			return nil
-		case context.DeadlineExceeded:
-			return err
 		case nil:
 			return nil
 		default:
@@ -51,21 +49,6 @@ func WaitOnErrorDecorator(handler state.HandlerFunc) state.HandlerFunc {
 			}
 			return err
 		}
-	}
-}
-
-func AddHandler(runner *state.TaskRunner, kind string, do, undo state.HandlerFunc, decor HandlerDecorator) {
-	if decor != nil {
-		var doHandler, undoHandler state.HandlerFunc
-		if do != nil {
-			doHandler = decor(do)
-		}
-		if undo != nil {
-			undoHandler = decor(undo)
-		}
-		runner.AddHandler(kind, doHandler, undoHandler)
-	} else {
-		runner.AddHandler(kind, do, undo)
 	}
 }
 

@@ -16,16 +16,15 @@ func NewWorkspaceManager(runner *state.TaskRunner, server workspacebackend.Works
 	}
 
 	/* Workspace management */
-	AddHandler(runner, "create-workspace", manager.doCreateWorkspace, manager.undoCreateWorkspace, WaitOnErrorDecorator)
-	AddHandler(runner, "start-workspace", manager.doStart, manager.doStop, WaitOnErrorDecorator)
-	AddHandler(runner, "stop-workspace", manager.doStop, manager.doStart, WaitOnErrorDecorator)
-	AddHandler(runner, "delete-workspace", manager.doDeleteWorkspace, nil, WaitOnErrorDecorator)
-	AddHandler(runner, "mount-project", manager.doMountProject, manager.undoMountProject, WaitOnErrorDecorator)
-	AddHandler(runner, "delete-workspace-copy", manager.doDeleteRefreshCopy, nil, WaitOnErrorDecorator)
-	AddHandler(runner, "make-workspace-copy", manager.doMakeWorkspaceCopy, manager.undoMakeWorkspaceCopy, WaitOnErrorDecorator)
-
-	AddHandler(runner, "create-state-storage", manager.doCreateStateStorage, manager.doRemoveStateStorage, WaitOnErrorDecorator)
-	AddHandler(runner, "remove-state-storage", manager.doRemoveStateStorage, nil, WaitOnErrorDecorator)
+	runner.AddHandler("create-workspace", OnDoError(manager.doCreateWorkspace), manager.undoCreateWorkspace)
+	runner.AddHandler("start-workspace", OnDoError(manager.doStart), manager.doStop)
+	runner.AddHandler("stop-workspace", OnDoError(manager.doStop), manager.doStart)
+	runner.AddHandler("delete-workspace", OnDoError(manager.doDeleteWorkspace), nil)
+	runner.AddHandler("mount-project", OnDoError(manager.doMountProject), manager.undoMountProject)
+	runner.AddHandler("delete-workspace-copy", OnDoError(manager.doDeleteWorkspaceCopy), nil)
+	runner.AddHandler("make-workspace-copy", OnDoError(manager.doMakeWorkspaceCopy), manager.undoMakeWorkspaceCopy)
+	runner.AddHandler("create-state-storage", OnDoError(manager.doCreateStateStorage), manager.doRemoveStateStorage)
+	runner.AddHandler("remove-state-storage", OnDoError(manager.doRemoveStateStorage), nil)
 
 	return manager
 }
