@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/canonical/workspace/client"
@@ -45,7 +46,7 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
-func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error) {
+func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
 		return nil, errNoWait
@@ -155,7 +156,31 @@ func (wmx waitMixin) wait(id string, undoneExpected bool) (*client.Change, error
 				return chg, nil
 			}
 
-			if chg.Status == "Undone" && undoneExpected {
+			// if the change finished as Ready and reported an error, check if
+			// it was an expected abortion of a failed refresh and if so, finish
+			// gracefully instead of reporting errors. This approach uses the
+			// task log and checks if there are other Error tasks that became
+			// Error due to the undo logic execution not during the refresh
+			// (those must be reported as it means that abort itself failed).
+			if chg.Status == "Error" && abortExpected {
+				for _, t := range chg.Tasks {
+					if t.Status == "Error" {
+						lastLogLine := lastLog[t.ID]
+						if lastLogLine != "" {
+							i := strings.Index(lastLogLine, " ")
+							if i >= 0 && strings.HasPrefix(lastLogLine[i:], " INFO ") {
+								abortMsg := lastLogLine[i+len(" INFO "):]
+								var wrkspc string
+								if err := t.Get("workspace", wrkspc); err != nil {
+									continue
+								}
+								if abortMsg != fmt.Sprintf("Aborting %q workspace refresh...", wrkspc) {
+									return chg, errors.New(chg.Err)
+								}
+							}
+						}
+					}
+				}
 				return chg, nil
 			}
 

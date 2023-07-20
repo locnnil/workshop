@@ -17,11 +17,13 @@ import (
 const defaultWorkspaceDir = "/var/lib/workspace/default"
 
 var (
-	SdkDir   string
-	StateDir string
+	SdkDir          string
+	StateDir        string
+	BaseDir         string
+	WorkspaceSocket string
 )
 
-func GetEnvPaths() (workspaceDir string, socketPath string) {
+func getEnvPaths() (workspaceDir string, socketPath string) {
 	workspaceDir = os.Getenv("WORKSPACE")
 	if workspaceDir == "" {
 		workspaceDir = defaultWorkspaceDir
@@ -34,8 +36,8 @@ func GetEnvPaths() (workspaceDir string, socketPath string) {
 }
 
 func init() {
-	baseDir, _ := GetEnvPaths()
-	SetRootDir(baseDir)
+	BaseDir, WorkspaceSocket = getEnvPaths()
+	SetRootDir(BaseDir)
 
 	var b [8]byte
 	_, err := crypto_rand.Read(b[:])

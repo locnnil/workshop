@@ -60,5 +60,5 @@ func (cs *clientSuite) TestClientRefresh(c *check.C) {
 	body, err := io.ReadAll(cs.req.Body)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","refresh-mode":"transactional"}\n`)
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"refresh-mode":"transactional"}}\n`)
 }

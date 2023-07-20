@@ -8,14 +8,14 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type Main struct {
+type WorkspaceList struct {
 }
 
-var _ = Suite(&Main{})
+var _ = Suite(&WorkspaceList{})
 
 func TestMain(t *testing.T) { TestingT(t) }
 
-func (m *Main) TestHomeDirectoryPathContraction(c *C) {
+func (m *WorkspaceList) TestHomeDirectoryPathContraction(c *C) {
 	home, _ := os.UserHomeDir()
 	r := contractHomeDirectory(filepath.Join(home, "test"))
 	c.Assert(r, Equals, "~/test")

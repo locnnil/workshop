@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 type CmdRefresh struct {
@@ -33,7 +30,6 @@ func (c *CmdRefresh) Command() *cobra.Command {
 }
 
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
 	var err error
 
 	if c.Abort && c.Continue {
@@ -52,8 +48,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("the wait-on-error mode can be used with a single workspace only")
 	}
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
@@ -85,27 +80,20 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		if err == errNoWait {
 			return nil
 		}
-		if err == errWaitOnError && mode != "transactional" {
+		if err == errWaitOnError {
 			return fmt.Errorf("%q refresh failed, resolve all errors and run \"workspace refresh --continue\".\n"+
-				"To abort and get back to the state before run \"workspace refresh --abort\".", av[0])
+				"To abort and get back to the state before run \"workspace refresh --abort\"", av[0])
 		}
 		return err
 	}
 
 	if c.Abort && err == nil {
-		fmt.Fprintf(os.Stdout, "%q refresh aborted\n", av[0])
-		return nil
-	}
-
-	workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
-	if err != nil {
+		fmt.Fprintf(Stdout, "%q refresh aborted\n", av[0])
 		return nil
 	}
 
 	for _, i := range av {
-		if slices.ContainsFunc(workspaces, func(w *client.Workspace) bool { return w.Name == i && w.State == "Ready" }) {
-			fmt.Fprintf(os.Stdout, "%q refreshed\n", i)
-		}
+		fmt.Fprintf(Stdout, "%q refreshed\n", i)
 	}
 	return nil
 }

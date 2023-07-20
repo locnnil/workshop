@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 
 	"github.com/spf13/cobra"
@@ -37,6 +38,12 @@ var (
 )
 var Project string
 
+// ClientConfig is the configuration of the Client used by all commands.
+var ClientConfig = client.Config{
+	// we need the powerful snapd socket
+	Socket: dirs.WorkspaceSocket,
+}
+
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -57,5 +64,7 @@ func main() {
 	rootCmd.AddCommand((&CmdTasks{}).Command())
 	rootCmd.AddCommand((&CmdRefresh{}).Command())
 
-	rootCmd.Execute()
+	if err = rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

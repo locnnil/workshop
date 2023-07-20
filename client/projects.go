@@ -11,10 +11,14 @@ type Project struct {
 	Path string `json:"path"`
 }
 
+type WorkspaceActionOptions struct {
+	RefreshMode string `json:"refresh-mode,omitempty"`
+}
+
 type WorkspaceActionSetup struct {
-	Action      string
-	Names       []string
-	RefreshMode string
+	Action  string
+	Names   []string
+	Options *WorkspaceActionOptions
 }
 
 func (client *Client) Projects() ([]*Project, error) {
@@ -51,13 +55,13 @@ func (client *Client) Project(path string) (*Project, error) {
 
 func (client *Client) doWorkspaceAction(projectId string, action *WorkspaceActionSetup) (changeId string, err error) {
 	var postData struct {
-		Names       []string `json:"names"`
-		Action      string   `json:"action"`
-		RefreshMode string   `json:"refresh-mode,omitempty"`
+		Names   []string                `json:"names"`
+		Action  string                  `json:"action"`
+		Options *WorkspaceActionOptions `json:"options,omitempty"`
 	}
 	postData.Names = action.Names
 	postData.Action = action.Action
-	postData.RefreshMode = action.RefreshMode
+	postData.Options = action.Options
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(postData); err != nil {
 		return "", err
@@ -75,8 +79,10 @@ func (client *Client) Launch(projectId string, names []string) (changeId string,
 
 func (client *Client) Refresh(projectId string, names []string, mode string) (changeId string, err error) {
 	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
-		Action:      "refresh",
-		Names:       names,
-		RefreshMode: mode,
+		Action: "refresh",
+		Names:  names,
+		Options: &WorkspaceActionOptions{
+			RefreshMode: mode,
+		},
 	})
 }

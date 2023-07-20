@@ -165,10 +165,14 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	defer st.Unlock()
 	wsmgr := c.d.overlord.WorkspaceManager()
 
+	type actionOpts struct {
+		Mode string `json:"refresh-mode"`
+	}
+
 	var reqData struct {
-		Names  []string `json:"names"`
-		Action string   `json:"action"`
-		Mode   string   `json:"refresh-mode"`
+		Names   []string   `json:"names"`
+		Action  string     `json:"action"`
+		Options actionOpts `json:"options"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -210,7 +214,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			change.AddAll(i)
 		}
 	case "refresh":
-		refreshMode := statecontext.ParseRefreshMode(reqData.Mode)
+		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
 
 		var summary string
 		switch len(reqData.Names) {

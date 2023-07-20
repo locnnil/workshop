@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
@@ -30,12 +29,10 @@ func (c *CmdTasks) Command() *cobra.Command {
 const line = "......................................................................"
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
 	var clientOpts client.ChangesOptions
 	var err error
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}

@@ -52,5 +52,7 @@ func main() {
 	}
 
 	workspaced.AddCommand((&cmdRun{}).Command())
-	workspaced.Execute()
+	if err = workspaced.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

@@ -9,7 +9,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )
@@ -39,11 +38,9 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("flags --project and --global are mutually exclusive")
 	}
 
-	var clientConfig client.Config
 	var err error
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}

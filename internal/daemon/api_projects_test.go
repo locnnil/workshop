@@ -247,28 +247,28 @@ base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		// try continue without starting wait-on-error
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "options": {"refresh-mode":"continue"}}`),
 
 		// a workspace name is a must
 		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
 
 		// non-transactional refresh is only supported for a single workspace
-		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","refresh-mode":"wait-on-error"}`),
+		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 
 		// start - attempt transactional - continue (success) - continue (fail, already finished)
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"continue"}}`),
 
 		// start transactional (success) - attempt abort or continue (failure)
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"transactional"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"continue"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"abort"}}`),
 
 		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"wait-on-error"}`),
-		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","refresh-mode":"abort"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"refresh","options": {"refresh-mode":"abort"}}`),
 	}
 
 	requests := []*http.Request{}
