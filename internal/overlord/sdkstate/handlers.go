@@ -143,7 +143,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	if err != nil {
 		hookLog, _ := afero.ReadFile(memFs, out.Name())
-		return fmt.Errorf("%v: %v", err, string(hookLog))
+		return fmt.Errorf("%w: %v", err, string(hookLog))
 	}
 
 	return err

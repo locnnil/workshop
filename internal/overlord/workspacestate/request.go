@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	RefreshIncumbentPrefix = "refresh-incumbent-"
+	RefreshIncumbentPrefix            = "refresh-incumbent-"
+	RefereshDeleteCopyLane            = 1
+	LastBeforeRefreshIrreversibleEdge = state.TaskSetEdge("last-before-irreversible")
+	CleanupRefreshEdge                = state.TaskSetEdge("cleanup-refresh")
 )
 
 func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workspacebackend.Project, error) {
@@ -147,13 +150,51 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile,
 	project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(w))
 
-	for _, i := range w {
-		tasks, err := refresh(st, i, project)
+	for _, w := range w {
+		tasks, err := refresh(st, w, project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh workspace \"%s\": %v", i, err)
+			return nil, fmt.Errorf("cannot refresh workspace \"%s\": %v", w, err)
 		}
 		taskset = append(taskset, tasks)
 	}
+
+	for _, ts := range taskset {
+		cleanup, err := ts.Edge(CleanupRefreshEdge)
+		if err != nil {
+			return nil, err
+		}
+
+		// We will iterate over other refreshes and make sure that the cleanup
+		// task of our refresh will wait until all the other refresh operations
+		// finished. This will ensure that we start to remove the workspaces'
+		// previous copies once all the refresh operations were successful (at
+		// this stage, we only need to remove a copy, the newly refreshed
+		// workspace is already up and running). Thus, every CleanupEdge will
+		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
+		// other changes before execution.
+		for _, otherts := range taskset {
+			if ts != otherts {
+				last, err := otherts.Edge(LastBeforeRefreshIrreversibleEdge)
+				if err != nil {
+					return nil, err
+				}
+				cleanup.WaitFor(last)
+				// if the change was aborted during the cleanup stage execution,
+				// there is a chance that some of the workspace copies that had
+				// been created during the refresh were already deleted. If we
+				// start to Undo those workspaces' refresh progress we will
+				// endup deleting the workspaces that finished their refresh.
+				// Given that they have no copy already, the undo logic
+				// (undoMakeWorkspaceCopy) will delete the existing workspace
+				// and fail to restore from the copy. We don't want that. Hence,
+				// all the cleanup tasks are extracted into a separate lane. If
+				// any problem happens, the workspaces which had finished their
+				// refresh will not suffer.
+				cleanup.JoinLane(RefereshDeleteCopyLane)
+			}
+		}
+	}
+
 	return taskset, nil
 }
 
@@ -195,12 +236,12 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 		prevRestore = restoreStateHook
 	}
 
-	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", w.Name))
 	removeStateStorage := st.NewTask("remove-state-storage", "Unmount SDK state storage")
+	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", w.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
-	removeStateStorage.WaitFor(deleteCopy)
-	deleteCopy.WaitAll(restoreStateHooks)
+	deleteCopy.WaitFor(removeStateStorage)
+	removeStateStorage.WaitAll(restoreStateHooks)
 	restoreStateHooks.WaitAll(launch)
 	launch.WaitFor(makeCopy)
 	makeCopy.WaitAll(saveStateHooks)
@@ -214,6 +255,9 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 	refresh.AddTask(deleteCopy)
 	refresh.AddTask(createStateStorage)
 	refresh.AddTask(removeStateStorage)
+
+	refresh.MarkEdge(removeStateStorage, LastBeforeRefreshIrreversibleEdge)
+	refresh.MarkEdge(deleteCopy, CleanupRefreshEdge)
 
 	for _, i := range refresh.Tasks() {
 		i.Set("workspace", w.Name)
