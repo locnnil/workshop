@@ -30,7 +30,7 @@ func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workspa
 	return prj, nil
 }
 
-func (w *WorkspaceManager) LaunchMany(st *state.State, ctx context.Context, workspaces []string, projectId string) ([]*state.TaskSet, error) {
+func (w *WorkspaceManager) LaunchMany(ctx context.Context, workspaces []string, projectId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (w *WorkspaceManager) LaunchMany(st *state.State, ctx context.Context, work
 			return nil, fmt.Errorf("cannot read workspace \"%s\": %v", i, err)
 		}
 
-		tasks, err := launch(st, file, project)
+		tasks, err := launch(w.state, file, project)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch workspace \"%s\": %v", i, err)
 		}
@@ -109,7 +109,7 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	return set, nil
 }
 
-func (w *WorkspaceManager) RefreshMany(st *state.State, ctx context.Context,
+func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	names []string, projectId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
@@ -118,7 +118,7 @@ func (w *WorkspaceManager) RefreshMany(st *state.State, ctx context.Context,
 
 	var inProgress = []string{}
 	for _, r := range names {
-		if _, prg := statecontext.RefreshInProgress(st, r, project.ProjectId); prg {
+		if _, prg := statecontext.RefreshInProgress(w.state, r, project.ProjectId); prg {
 			inProgress = append(inProgress, r)
 		}
 	}
@@ -127,7 +127,7 @@ func (w *WorkspaceManager) RefreshMany(st *state.State, ctx context.Context,
 	}
 
 	// we are only interested in the existing (launched) workspaces
-	_, workspaces, err := w.backend.GetProjectWorkspaces(ctx)
+	_, workspaces, err := w.Workspaces(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (w *WorkspaceManager) RefreshMany(st *state.State, ctx context.Context,
 		}
 		wss = append(wss, workspaces[idx].File())
 	}
-	return refreshMany(st, wss, project)
+	return refreshMany(w.state, wss, project)
 }
 
 func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile,

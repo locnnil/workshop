@@ -691,9 +691,10 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 		backend:   s,
 		projectId: pId,
 		Name:      name,
-		isRunning: running,
-		Devices:   inst.Devices,
+		running:   running,
 	}
+
+	workspace.Devices = inst.Devices
 
 	workspace.file, err = p.WorkspaceFile(name)
 	if err != nil {

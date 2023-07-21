@@ -3,6 +3,7 @@ package statecontext_test
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
@@ -40,7 +41,7 @@ func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 
 func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
-		return context.Canceled
+		return fmt.Errorf("execution error %w", context.Canceled)
 	})
 	task := s.setupTask()
 	err := handler(task, nil)

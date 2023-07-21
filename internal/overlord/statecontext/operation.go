@@ -37,10 +37,9 @@ func ParseRefreshMode(s string) RefreshMode {
 type Operations map[string]Operation
 
 type Operation struct {
-	ChangeId    string   `json:"changeId"`
-	Operation   string   `json:"operation"`
-	WaitOnError bool     `json:"wait-on-error"`
-	Errors      []string `json:"error"`
+	ChangeId    string `json:"changeId"`
+	Operation   string `json:"operation"`
+	WaitOnError bool   `json:"wait-on-error"`
 }
 
 // The family of functions to maintain the state of current operations across
@@ -134,39 +133,4 @@ func StopRefresh(st *state.State, name, projectId string) error {
 	delete(ops, workspacebackend.InstanceName(name, projectId))
 	st.Set(OpsInProgressKey, ops)
 	return nil
-}
-
-// Infers the state of a workspace based on the container's state and any of
-// the operations in progress for the workspace.
-func WorkspaceState(st *state.State, ws *workspacebackend.Workspace) workspacebackend.WorkspaceState {
-	op, opInProgress := RefreshInProgress(st, ws.Name, ws.ProjectId())
-	if opInProgress {
-		if ws.IsRunning() {
-			change := st.Change(op.ChangeId)
-			if change == nil {
-				return workspacebackend.WorkspaceError
-			}
-			if change.Status() == state.WaitStatus {
-				ws.AddError(workspacebackend.WaitOnError)
-				return workspacebackend.WorkspacePending
-			}
-			if len(ws.Errors()) == 0 {
-				return workspacebackend.WorkspacePending
-			}
-			return workspacebackend.WorkspaceError
-		} else {
-			if len(ws.Errors()) > 0 {
-				return workspacebackend.WorkspaceError
-			}
-			return workspacebackend.WorkspacePending
-		}
-	} else {
-		if ws.IsRunning() && len(ws.Errors()) == 0 {
-			return workspacebackend.WorkspaceReady
-		}
-		if len(ws.Errors()) > 0 {
-			return workspacebackend.WorkspaceError
-		}
-		return workspacebackend.WorkspaceStopped
-	}
 }

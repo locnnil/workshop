@@ -4,5 +4,6 @@ var (
 	Refresh     = refresh
 	RefreshMany = refreshMany
 
-	Launch = launch
+	Launch         = launch
+	WorkspaceState = (*WorkspaceManager).workspaceState
 )

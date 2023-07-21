@@ -2,6 +2,7 @@ package statecontext
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -9,8 +10,13 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-type HandlerDecorator func(handler state.HandlerFunc) state.HandlerFunc
-
+// The Do handler decoractor that helps to decide whether:
+// 1. The task needs to be put on Wait (wait-on-error for refresh).
+// 2. The error needs to be reported but safely ingored (ContextCancelled can
+// happen if a user cancells or something gets interrupted during the execution
+// due to abortion, e.g. a running hook is called off because their change was
+// aborted.
+// 3. The error needs to be reported as is which will cause the abortion.
 func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		_, p, ws, err := UserProjectWorkspace(task)
@@ -19,36 +25,38 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		err = handler(task, tomb)
-		switch err {
-		case context.Canceled:
-			st := task.State()
-			st.Lock()
-			defer st.Unlock()
+		if err != nil {
+			switch {
+			case errors.Is(err, context.Canceled):
+				st := task.State()
+				st.Lock()
+				defer st.Unlock()
 
-			task.Logf("cannot proceed: task execution cancelled")
-			return nil
-		case nil:
-			return nil
-		default:
-			st := task.State()
-			st.Lock()
-			defer st.Unlock()
+				task.Logf("cannot proceed: task execution cancelled")
+				return nil
 
-			op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
-			if inProgress && op.WaitOnError {
-				task.Logf("%q workspace refresh failed, resolve errors before resuming", ws)
-				task.Errorf(err.Error())
-				return &state.Wait{
-					WaitedStatus: state.DoingStatus,
-					Reason:       fmt.Sprintf("wait on error: %v", err),
+			case err != nil:
+				st := task.State()
+				st.Lock()
+				defer st.Unlock()
+
+				op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
+				if inProgress && op.WaitOnError {
+					task.Logf("%q workspace refresh failed, resolve errors before resuming", ws)
+					task.Errorf(err.Error())
+					return &state.Wait{
+						WaitedStatus: state.DoingStatus,
+						Reason:       fmt.Sprintf("wait on error: %v", err),
+					}
+				} else if inProgress {
+					if e := StopRefresh(st, ws, p.ProjectId); e != nil {
+						return fmt.Errorf("internal error: cannot stop refresh for %q: %v, refresh error: %v", ws, e, err)
+					}
 				}
-			} else if inProgress {
-				if e := StopRefresh(st, ws, p.ProjectId); e != nil {
-					return fmt.Errorf("internal error: cannot stop refresh for %q: %v, refresh error: %v", ws, e, err)
-				}
+				return err
 			}
-			return err
 		}
+		return nil
 	}
 }
 

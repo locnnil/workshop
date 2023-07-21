@@ -72,7 +72,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	ws.Workspace = &Workspace{backend: f,
 		Name:      name,
 		Devices:   defaultDevices(),
-		isRunning: true,
+		running:   true,
 		projectId: projectId,
 		content:   make(map[string]*sdk.SdkInfo),
 	}

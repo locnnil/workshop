@@ -374,7 +374,7 @@ func (d *Daemon) Init() error {
 	if listener, err := getListener(d.normalSocketPath, listenerMap); err == nil {
 		d.generalListener = &ucrednetListener{Listener: listener}
 	} else {
-		return fmt.Errorf("when trying to listen on %s: %v", d.normalSocketPath, err)
+		return fmt.Errorf("when trying to listen on %s: %w", d.normalSocketPath, err)
 	}
 
 	if listener, err := getListener(d.untrustedSocketPath, listenerMap); err == nil {
@@ -390,7 +390,7 @@ func (d *Daemon) Init() error {
 	if d.httpAddress != "" {
 		listener, err := net.Listen("tcp", d.httpAddress)
 		if err != nil {
-			return fmt.Errorf("cannot listen on %q: %v", d.httpAddress, err)
+			return fmt.Errorf("cannot listen on %q: %w", d.httpAddress, err)
 		}
 		d.httpListener = listener
 		logger.Noticef("HTTP API server listening on %q.", d.httpAddress)

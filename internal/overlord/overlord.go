@@ -134,7 +134,7 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
 
-	o.workspace = workspace.NewWorkspaceManager(o.runner, o.workspaceBackend)
+	o.workspace = workspace.NewWorkspaceManager(s, o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)
 
 	o.sdk = sdkstate.NewSdkManager(o.runner, o.workspaceBackend)
@@ -163,7 +163,7 @@ func (o *Overlord) addManager(mgr StateManager) {
 func loadState(statePath string, restartHandler restart.Handler, backend state.Backend) (*state.State, error) {
 	curBootID, err := osutil.BootID()
 	if err != nil {
-		return nil, fmt.Errorf("fatal: cannot find current boot ID: %v", err)
+		return nil, fmt.Errorf("fatal: cannot find current boot ID: %w", err)
 	}
 	// If workspace is PID 1 we don't care about /proc/sys/kernel/random/boot_id
 	// as we are most likely running in a container. LXD mounts it's own boot_id
@@ -173,7 +173,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	if os.Getpid() == 1 {
 		curBootID, err = randutil.RandomKernelUUID()
 		if err != nil {
-			return nil, fmt.Errorf("fatal: cannot generate psuedo boot-id: %v", err)
+			return nil, fmt.Errorf("fatal: cannot generate psuedo boot-id: %w", err)
 		}
 	}
 

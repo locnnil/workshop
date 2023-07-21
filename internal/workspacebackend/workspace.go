@@ -43,20 +43,33 @@ func ParseWorkspaceState(s string) WorkspaceState {
 	return refreshMap[s]
 }
 
+func NewWorkspace(backend WorkspaceBackend, name, projectId string) *Workspace {
+	return &Workspace{
+		Name:      name,
+		projectId: projectId,
+		backend:   backend,
+	}
+}
+
 type Workspace struct {
 	backend   WorkspaceBackend
 	file      *WorkspaceFile
 	projectId string
 
-	Name      string
-	Devices   map[string]map[string]string
-	content   map[string]*sdk.SdkInfo
-	errs      []WorkspaceErrorType
-	isRunning bool
+	Name    string
+	Devices map[string]map[string]string
+	content map[string]*sdk.SdkInfo
+	errs    []WorkspaceErrorType
+	running bool
+	state   WorkspaceState
 }
 
 func (w *Workspace) IsRunning() bool {
-	return w.isRunning
+	return w.running
+}
+
+func (w *Workspace) SetRunning(run bool) {
+	w.running = run
 }
 
 func (w *Workspace) ProjectId() string {
@@ -77,6 +90,14 @@ func (w *Workspace) Content() []*sdk.SdkInfo {
 
 func (w *Workspace) File() *WorkspaceFile {
 	return w.file
+}
+
+func (w *Workspace) State() WorkspaceState {
+	return w.state
+}
+
+func (w *Workspace) SetState(st WorkspaceState) {
+	w.state = st
 }
 
 func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {

@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,6 +61,8 @@ func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
 		ws.Notes = append(ws.Notes, err.String())
 	}
 
+	ws.State = props.State().String()
+
 	return &ws
 }
 
@@ -118,44 +119,37 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	defer state.Unlock()
 
 	query := r.URL.Query()
-	wsState := query.Get("state")
-	if wsState == "" {
-		wsState = "all"
+	wstate := query.Get("state")
+	if wstate == "" {
+		wstate = "all"
 	}
 
-	wBackend := c.d.overlord.WorkspaceBackend()
-
-	// project-id must be in the context for this query
-	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
-
-	files, workspaces, err := wBackend.GetProjectWorkspaces(ctx)
+	wrkmgr := c.d.overlord.WorkspaceManager()
+	files, workspaces, err := wrkmgr.Workspaces(r.Context(), projectId)
 	if err != nil {
 		return statusInternalError("cannot list workspaces: %v", err)
 	}
 
-	var wsInfos = make([]*WorkspaceInfo, 0)
-	for _, i := range workspaces {
-		wst := statecontext.WorkspaceState(state, i)
-		if wsState != "all" && strings.ToLower(wst.String()) != wsState {
+	var infoLst = make([]*WorkspaceInfo, 0)
+	for _, w := range workspaces {
+		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
 			continue
 		}
-		info := workspacePropsToInfo(i)
-		info.State = wst.String()
-
-		wsInfos = append(wsInfos, info)
+		info := workspacePropsToInfo(w)
+		infoLst = append(infoLst, info)
 	}
 
 	// Now, if the client wants only workspace files or just queried everything
 	// available, we add workspace files to the response (note these only exist
 	// as files, not instances)
-	if wsState == "all" || wsState == "off" {
-		for _, j := range files {
-			info := workspaceFileToInfo(j, projectId)
-			wsInfos = append(wsInfos, info)
+	if wstate == "all" || wstate == "off" {
+		for _, file := range files {
+			info := workspaceFileToInfo(file, projectId)
+			infoLst = append(infoLst, info)
 		}
 	}
 
-	return SyncResponse(wsInfos, http.StatusOK)
+	return SyncResponse(infoLst, http.StatusOK)
 }
 
 func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
@@ -189,9 +183,6 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		return statusBadRequest("user is not known")
 	}
 
-	// project-id must be in the context for this query
-	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
-
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
@@ -205,7 +196,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 
 		change = st.NewChange("launch", summary)
 
-		taskset, err := wsmgr.LaunchMany(st, ctx, reqData.Names, projectId)
+		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
 		if err != nil {
 			return statusBadRequest(err.Error())
 		}
@@ -229,7 +220,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 
 		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
-			taskset, err := wsmgr.RefreshMany(st, ctx, reqData.Names, projectId)
+			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
@@ -282,17 +273,12 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 	state.Lock()
 	defer state.Unlock()
 
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wrkmgr := c.d.overlord.WorkspaceManager()
 
-	// project-id must be in the context for this query
-	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
-	workspace, err := wBackend.GetWorkspace(ctx, name)
+	workspace, err := wrkmgr.Workspace(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("cannot get workspace: %v", err)
+		return statusNotFound("cannot load workspace: %v", err)
 	}
 
-	info := workspacePropsToInfo(workspace)
-	info.State = statecontext.WorkspaceState(state, workspace).String()
-
-	return SyncResponse(info, http.StatusOK)
+	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)
 }

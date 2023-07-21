@@ -41,7 +41,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				"source": workspacebackend.WorkspaceStateVolumeName(workspace, prj.ProjectId)},
 		})
 		if err != nil {
-			return fmt.Errorf("cannot run hook %q for SDK %q: %v", hook.Type(), hook.Sdk.Name, err)
+			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
 		}
 
 		defer func() {
