@@ -2,11 +2,11 @@ Updating workspace
 ==================
 
 It is a good idea to keep your locally running workspace instance in sync with
-that of your team by using the project's workspace file as a single source of
+that of your team, by using the project's workspace file as a single source of
 truth for your development environment. On a change, bring your locally running
 workspace instance to the latest revision by running the ``refresh`` command.
 
-The workspace will be rebuilt using the ``base`` and SDKs will be updated from
+The workspace will be rebuilt using the ``base``, and SDKs will be updated from
 the respective Store channels:
 
 .. code-block:: bash
@@ -21,7 +21,7 @@ operation and revert all the progress for all participating workspaces.
 .. note::
 
     Any SDK has a notion of state that will be preserved over its life cycle. If
-    an SDK had a state data, for example a specific training configuration,
-    Workspace will save the state before any refresh operation starts. The state
-    will be restored in the refreshed workspace. Both, save and restore scripts
+    an SDK has state data, for example a specific training configuration,
+    Workspace saves the state before any refresh operation starts. The state
+    is restored in the refreshed workspace. Both save and restore scripts
     are provided by the SDK author.

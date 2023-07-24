@@ -67,12 +67,12 @@ code either from your favourite IDE or directly from the command line.
 .. note::
 
     The project directory will be mounted into the container automatically under
-    the ``/project`` pathname. Workspace tracks the project directory changes to
+    the ``/project`` pathname. Workspace tracks changes to the project directory
     keep the container configuration in sync. Thus, if the project directory is
     moved, copied or deleted, the corresponding workspace container will update
     its mounts automatically. If the directory is removed, the remaining
     workspaces that still exist will be switched to the *Error* state and become
-    unavailable for any commands except ``remove``. Try move around the project
+    unavailable for any commands except ``remove``. Try moving the project
     directory and check the results of the ``workspace list`` output.
 
 
@@ -88,5 +88,4 @@ not used, stop the workspace by running:
     "nimble" stopped
 
 Both ``workspace start`` and ``workspace stop`` commands wait for the graceful
-completion of the operation  and cannot be interrupted from the command-line in
-order to ensure the workspace integrity.
+completion of the operation.

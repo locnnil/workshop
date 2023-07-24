@@ -41,7 +41,7 @@ Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every wor
 
 Go
 ---
-Currently you can install Workspace only from its source code that requires Go run-time:
+Currently you can install Workspace only from its source code, which requires Go run-time:
 
 .. tabs::
   .. group-tab:: Install on Ubuntu
@@ -79,7 +79,7 @@ To use the CLI command, the daemon should be up and running:
   export WORKSPACE=~/workspace
   workspaced run --create-dirs
 
-Now, you should be able to run workspace CLI in a separate session:
+Now you should be able to run workspace CLI in a separate session:
 
 .. code-block:: bash
 
