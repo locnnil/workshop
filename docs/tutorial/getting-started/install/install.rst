@@ -1,12 +1,8 @@
 Installation
-=======================================
-
-==============
-Prerequisites
-==============
+============
 
 LXD
-~~~~~~~~~~~
+---
 
 Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every workspace is essentially a system container that is created, started, and configured using LXD REST API. Whilst LXD supports a large set of operating systems, Workspace is currently limited to using Ubuntu as a base system for its containers.
 
@@ -44,7 +40,7 @@ Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every wor
 
 
 Go
-~~~~~~~~~~~~~~~~~~~~~~
+---
 Currently you can install Workspace only from its source code that requires Go run-time:
 
 .. tabs::
@@ -59,9 +55,9 @@ Currently you can install Workspace only from its source code that requires Go r
     available for other Linux distributions.
 
 
-======================
+
 Install Workspace
-======================
+-----------------
 
 Workspace consists of a daemon and a CLI command ``workspace``, install both:
 
@@ -71,9 +67,9 @@ Workspace consists of a daemon and a CLI command ``workspace``, install both:
 
   go install github.com/canonical/workspace/cmd/workspace
 
-======================
+
 Run Workspace
-======================
+-------------
 To use the CLI command, the daemon should be up and running:
 
 .. code-block:: bash

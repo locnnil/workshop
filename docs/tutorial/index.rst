@@ -1,5 +1,5 @@
 Workspace tutorials
-====================
+===================
 
 This tutorial will introduce you to key concepts of Workspace, starting from the
 installation to launching a workspace for your project.

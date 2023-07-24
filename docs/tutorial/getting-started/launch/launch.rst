@@ -1,5 +1,5 @@
 Creating your first workspace
-==============================
+=============================
 
 Workspace is a system container that is created, configured and launched from a
 definition provided in a workspace file. The file is a straightforward YAML
@@ -43,7 +43,7 @@ of a `snap channel
 <https://snapcraft.io/docs/channels#:~:text=Channels%20are%20an%20important%20snap,under%20the%20same%20snap%20name>`_.
 
 Launch
-~~~~~~~~~~~
+------
 
 Now Workspace should be able to find the newly created workspace in an *Off*
 state. To confirm, run the following command from the project directory:
@@ -77,7 +77,7 @@ code either from your favourite IDE or directly from the command line.
 
 
 Starting and stopping
-~~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 A workspace will be in the *Ready* state if the launch was successful. When
 not used, stop the workspace by running:

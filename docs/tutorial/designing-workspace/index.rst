@@ -1,5 +1,5 @@
 Designing your own workspace
-=============================
+============================
 
 .. toctree::
    :maxdepth: 1
