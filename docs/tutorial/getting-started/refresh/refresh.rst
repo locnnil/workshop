@@ -1,4 +1,4 @@
-Updating your workspace
+Updating workspace
 ==============================
 
 It is a good idea to keep your locally running workspace instance in sync with
@@ -16,7 +16,7 @@ the respective Store channels:
 
 If a project contains multiple workspaces, all of them can be refreshed
 concurrently. In case of an error, ``refresh`` will automatically abort the
-operation and revert all the progress if any of the refresh operations failed.
+operation and revert all the progress for all participating workspaces.
 
 .. note::
 
