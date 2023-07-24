@@ -2,13 +2,13 @@ Iterating on a workspace
 ===========================
 
 The workspace file of an actual project may contain multiple SDKs, interfaces,
-packages and lifecycle hooks. When approached for the first time, it is likely
-that desiging a workspace will take a few iterations before arriving at the
+packages and life cycle hooks. When approached for the first time, it is likely
+that designing a workspace will take a few iterations before arriving at the
 desired development environment for your project.
 
 .. note::
     It is highly recommended to familiarise yourself with the concept `Changes and
-    Tasks <../../../../explanation/changes-and-tasks/changes>`_ before proceeding. The workspace's
+    Tasks <../../../../explanation/changes-and-tasks/changes>`_ before proceeding. The workspace
     state engine gives a fine control over how a long-running or invasive operation will
     be planned and executed by prioritising always having a workspace in a working state.
 

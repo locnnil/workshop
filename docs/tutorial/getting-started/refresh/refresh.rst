@@ -20,9 +20,8 @@ operation and revert all the progress if any of the refresh operations failed.
 
 .. note::
 
-    Any SDK has a notion of state that will be preserved over its lifecycle. If
+    Any SDK has a notion of state that will be preserved over its life cycle. If
     an SDK had a state data, for example a specific training configuration,
     Workspace will save the state before any refresh operation starts. The state
     will be restored in the refreshed workspace. Both, save and restore scripts
     are provided by the SDK author.
-

@@ -11,7 +11,7 @@ undo logic which makes their progress reversible.
 
 Thus, the state management system enables a granular control over the state of a
 workspace container instance and prioritises the workspace integrity if
-something does not follow a happy path. By default, any unsuccessfull change
+something does not follow a happy path. By default, any unsuccessful change
 reverts its progress to a previously working state.
 
 Exploring changes and tasks

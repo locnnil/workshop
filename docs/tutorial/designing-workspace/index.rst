@@ -1,4 +1,4 @@
-Designing Your Workspace
+Designing your own workspace
 ========================
 
 .. toctree::

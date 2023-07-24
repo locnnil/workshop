@@ -1,4 +1,4 @@
-Workspace Tutorials
+Workspace tutorials
 ====================
 
 This tutorial will introduce you to key concepts of Workspace, starting from the

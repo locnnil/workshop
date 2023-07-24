@@ -76,7 +76,7 @@ code either from your favourite IDE or directly from the command line.
     directory and check the results of the ``workspace list`` output.
 
 
-Starting and Stopping
+Starting and stopping
 ~~~~~~~~~~~~~~~~~~~~~~
 
 A workspace will be in the *Ready* state if the launch was successful. When
