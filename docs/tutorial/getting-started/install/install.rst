@@ -51,6 +51,7 @@ Currently you can install Workspace only from its source code that requires Go r
       sudo snap install --classic --channel=1.20/stable go
 
   .. group-tab:: Install on other Linux distributions
+
     Check the `official documentation <https://go.dev/doc/install>`_ for the options
     available for other Linux distributions.
 
