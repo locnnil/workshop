@@ -83,7 +83,7 @@ Create a workspace file in a project directory and launch the workspace:
 Development
 -----------
 
-Workspace uses a "go test"-compatible [gocheck](https://pkg.go.dev/gopkg.in/check.v1#section-readme):
+Workspace uses a "go test"-compatible `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_:
 
 .. code-block:: bash
 
