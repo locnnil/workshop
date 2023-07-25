@@ -1,5 +1,5 @@
-Updating workspace
-==================
+Update workspace
+================
 
 It is a good idea to keep your locally running workspace instance in sync with
 that of your team, by using the project's workspace file as a single source of

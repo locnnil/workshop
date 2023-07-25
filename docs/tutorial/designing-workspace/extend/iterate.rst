@@ -1,5 +1,5 @@
-Iterating on a workspace
-========================
+Iterate on a workspace
+======================
 
 The workspace file of an actual project may contain multiple SDKs, interfaces,
 packages and life cycle hooks. When approached for the first time, it is likely

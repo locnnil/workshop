@@ -1,5 +1,5 @@
-Creating your first workspace
-=============================
+Create your first workspace
+===========================
 
 Workspace is a system container that is created, configured and launched from a
 definition provided in a workspace file. The file is a straightforward YAML
