@@ -59,7 +59,7 @@ In this documentation
 
    tutorial/index
    explanation/index
-..   ReadMe <readme>
+   ReadMe <README>
 
 ..    how-to/index
 ..    reference/index
