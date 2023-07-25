@@ -90,7 +90,7 @@ Workspace uses a "go test"-compatible [gocheck](https://pkg.go.dev/gopkg.in/chec
   go test ./...
   go test -check.f <TestName|SuiteName>
 
-To run end to end and integrational tests:
+To run end to end and integration tests:
 
 .. code-block:: bash
 

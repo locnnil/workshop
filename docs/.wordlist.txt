@@ -29,6 +29,9 @@ yaml
 backend
 distributions
 snapd
+workspaced
+gopkg
+readme
 
 accumsan
 adipiscing
