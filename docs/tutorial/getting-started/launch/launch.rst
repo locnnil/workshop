@@ -40,7 +40,7 @@ language SDK.
 
 The SDKs are distributed via channels, the concept that reproduces the semantics
 of a `snap channel
-<https://snapcraft.io/docs/channels#:~:text=Channels%20are%20an%20important%20snap,under%20the%20same%20snap%20name>`_.
+<https://snapcraft.io/docs/channels>`_.
 
 Launch
 ------

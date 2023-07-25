@@ -4,7 +4,11 @@ Installation
 LXD
 ---
 
-Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every workspace is essentially a system container that is created, started, and configured using LXD REST API. Whilst LXD supports a large set of operating systems, Workspace is currently limited to using Ubuntu as a base system for its containers.
+Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every
+workspace is essentially a system container that is created, started, and
+configured using LXD REST API. Whilst LXD supports a large set of operating
+systems, Workspace is currently limited to using Ubuntu as a base system for its
+containers.
 
 
 .. tabs::

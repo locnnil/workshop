@@ -7,10 +7,10 @@ that designing a workspace will take a few iterations before arriving at the
 desired development environment for your project.
 
 .. note::
-    It is highly recommended to familiarise yourself with the concept `Changes and
-    Tasks <../../../../explanation/changes-and-tasks/changes>`_ before proceeding. The workspace
-    state engine gives a fine control over how a long-running or invasive operation will
-    be planned and executed by prioritising always having a workspace in a working state.
+    It is highly recommended to familiarise yourself with the concept :ref:`changes-and-tasks`
+    before proceeding. The workspace state engine gives a fine control over how a
+    long-running or invasive operation will be planned and executed by prioritising
+    always having a workspace in a working state.
 
 With the ``wait-on-error`` option, the refresh command will not initiate  abort
 automatically. Instead, the progress will be paused on the task that caused an

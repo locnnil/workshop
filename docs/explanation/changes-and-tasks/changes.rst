@@ -1,3 +1,5 @@
+.. _changes-and-tasks:
+
 Changes and Tasks
 ==================
 
