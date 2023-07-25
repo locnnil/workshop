@@ -25,40 +25,41 @@ Linux distributions, SDKs from multiple publishers, and system and language
 packages. Most such projects can organise setup complexity with Workspace.
 Examples include AI/ML, Robotics, IoT, EdTech and similar domains.
 
-.. ---------
+---------
 
-.. In this documentation
-.. ---------------------
+In this documentation
+---------------------
 
-.. ..  grid:: 1 1 2 2
+..  grid:: 1 1 2 2
 
-..    ..  grid-item:: :doc:`Tutorial <tutorial/index>`
+   ..  grid-item:: :doc:`Tutorial <tutorial/index>`
 
-..        **Start here**: a hands-on introduction to Example Product for new users
+       **Start here**: a hands-on introduction to Workspace for new users
 
-..    ..  grid-item:: :doc:`How-to guides <how-to/index>`
+   .. ..  grid-item:: :doc:`How-to guides <how-to/index>`
 
-..       **Step-by-step guides** covering key operations and common tasks
+   ..    **Step-by-step guides** covering key operations and common tasks
 
-.. .. grid:: 1 1 2 2
-..    :reverse:
+.. grid:: 1 1 2 2
+   :reverse:
 
-..    .. grid-item:: :doc:`Reference <reference/index>`
+   .. .. grid-item:: :doc:`Reference <reference/index>`
 
-..       **Technical information** - specifications, APIs, architecture
+   ..    **Technical information** - specifications, APIs, architecture
 
-..    .. grid-item:: :doc:`Explanation <explanation/index>`
+   .. grid-item:: :doc:`Explanation <explanation/index>`
 
-..       **Discussion and clarification** of key topics
+      **Discussion and clarification** of key topics
 
-.. ---------
+---------
 
-.. .. toctree::
-..    :hidden:
-..    :maxdepth: 2
+.. toctree::
+   :hidden:
+   :maxdepth: 2
 
-..    tutorial/index
+   tutorial/index
+   explanation/index
+   ReadMe <README>
+
 ..    how-to/index
 ..    reference/index
-..    explanation/index
-..    ReadMe <readme>
