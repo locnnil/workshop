@@ -15,7 +15,7 @@ import datetime
 ############################################################
 
 # Product name
-project = 'Documentation starter pack'
+project = 'Workspace'
 author = 'Canonical Group Ltd'
 
 # Uncomment if your product uses release numbers
@@ -26,7 +26,7 @@ copyright = '%s, %s' % (datetime.date.today().year, author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
-ogp_site_url = 'https://canonical-starter-pack.readthedocs-hosted.com/'
+ogp_site_url = 'https://canonical-workspace.readthedocs-hosted.com/'
 # The documentation website name (usually the same as the product name)
 ogp_site_name = project
 # An image or logo that is used in the preview
@@ -52,7 +52,7 @@ html_context = {
     'discourse': 'https://discourse.ubuntu.com',
 
     # Change to the GitHub info for your project
-    'github_url': 'https://github.com/canonical/starter-pack',
+    'github_url': 'https://github.com/canonical/workspace',
 
     # Change to the branch for this version of the documentation
     'github_version': 'main',
@@ -82,7 +82,8 @@ redirects = {}
 # Links to ignore when checking links
 
 linkcheck_ignore = [
-    'http://127.0.0.1:8000'
+    'http://127.0.0.1:8000',
+    'https://github.com/canonical/workspace/issues'
     ]
 
 ############################################################
