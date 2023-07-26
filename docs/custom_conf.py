@@ -15,7 +15,7 @@ import datetime
 ############################################################
 
 # Product name
-project = 'Workspace'
+project = 'Documentation starter pack'
 author = 'Canonical Group Ltd'
 
 # Uncomment if your product uses release numbers
@@ -26,7 +26,7 @@ copyright = '%s, %s' % (datetime.date.today().year, author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
-ogp_site_url = 'https://canonical-workspace.readthedocs-hosted.com/'
+ogp_site_url = 'https://canonical-starter-pack.readthedocs-hosted.com/'
 # The documentation website name (usually the same as the product name)
 ogp_site_name = project
 # An image or logo that is used in the preview
@@ -39,9 +39,12 @@ html_favicon = '.sphinx/_static/favicon.png'
 #  are on root level. Don't move the settings.)
 html_context = {
 
+    # Change to the link to your product website (without "https://")
+    'product_page': 'documentation.ubuntu.com',
+
     # Add your product tag to ".sphinx/_static" and change the path
-    # here (start with "/static"), default is the circle of friends
-    'product_tag': '/_static/tag.png',
+    # here (start with "_static"), default is the circle of friends
+    'product_tag': '_static/tag.png',
 
     # Change to the discourse instance you want to be able to link to
     # using the :discourse: metadata at the top of a file
@@ -49,7 +52,7 @@ html_context = {
     'discourse': 'https://discourse.ubuntu.com',
 
     # Change to the GitHub info for your project
-    'github_url': 'https://github.com/canonical/workspace',
+    'github_url': 'https://github.com/canonical/starter-pack',
 
     # Change to the branch for this version of the documentation
     'github_version': 'main',
@@ -79,8 +82,7 @@ redirects = {}
 # Links to ignore when checking links
 
 linkcheck_ignore = [
-    'http://127.0.0.1:8000',
-    'https://github.com/canonical/workspace/issues'
+    'http://127.0.0.1:8000'
     ]
 
 ############################################################
