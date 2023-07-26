@@ -40,6 +40,10 @@ In this documentation
 
    ..    **Step-by-step guides** covering key operations and common tasks
 
+   .. grid-item:: :doc:`Explanation <explanation/index>`
+
+      **Discussion and clarification** of key topics
+
 .. grid:: 1 1 2 2
    :reverse:
 
@@ -47,9 +51,9 @@ In this documentation
 
    ..    **Technical information** - specifications, APIs, architecture
 
-   .. grid-item:: :doc:`Explanation <explanation/index>`
+   .. .. grid-item:: :doc:`Explanation <explanation/index>`
 
-      **Discussion and clarification** of key topics
+   ..    **Discussion and clarification** of key topics
 
 ---------
 
