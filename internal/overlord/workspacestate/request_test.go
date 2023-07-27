@@ -332,3 +332,17 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 		prev = t
 	}
 }
+
+func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	file := &workspacebackend.WorkspaceFile{
+		Name: "ws1",
+		Base: "ubuntu@22.04",
+		Sdks: workspacebackend.SdkList{},
+	}
+
+	ts := workspace.RestoreStateHooks(s.state, file, s.project)
+	c.Assert(ts.Tasks(), check.HasLen, 0)
+}

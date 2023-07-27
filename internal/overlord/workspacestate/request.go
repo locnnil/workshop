@@ -273,9 +273,11 @@ func saveStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *works
 
 func restoreStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project) *state.TaskSet {
 	restoreStateHooks := createStateHooks(st, w, p, hookstate.RestoreState)
-	last := restoreStateHooks.Tasks()[len(restoreStateHooks.Tasks())-1]
-	// last restore state hook for the refresh call is the last task before the
-	// previous refresh copy removal, ie. before making something irreversible
-	restoreStateHooks.MarkEdge(last, LastBeforeRefreshIrreversibleEdge)
+	if len(restoreStateHooks.Tasks()) > 0 {
+		last := restoreStateHooks.Tasks()[len(restoreStateHooks.Tasks())-1]
+		// last restore state hook for the refresh call is the last task before the
+		// previous refresh copy removal, ie. before making something irreversible
+		restoreStateHooks.MarkEdge(last, LastBeforeRefreshIrreversibleEdge)
+	}
 	return restoreStateHooks
 }
