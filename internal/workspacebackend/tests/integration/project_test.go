@@ -31,11 +31,44 @@ func (f *LT) SetUpTest(c *check.C) {
 	f.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, f.username)
 	be := workspacebackend.LxdBackend{}
 	f.client, _ = be.LxdClient(f.ctx)
-	workspacebackend.InitProject(f.client, workspacebackend.LxdProjectName(f.username))
+	err := workspacebackend.InitProject(f.client, f.username)
+	c.Assert(err, check.IsNil)
+}
+
+func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
+	cli := client.UseProject(project)
+	fingers, err := cli.GetImageFingerprints()
+	c.Check(err, check.IsNil)
+	for _, i := range fingers {
+		op, err := cli.DeleteImage(i)
+		c.Assert(err, check.IsNil)
+		c.Assert(op.Wait(), check.IsNil)
+	}
+
+	instances, err := cli.GetInstances(api.InstanceType("container"))
+	c.Check(err, check.IsNil)
+	for _, i := range instances {
+		req := api.InstanceStatePut{
+			Action:  "stop",
+			Timeout: 1,
+			Force:   true,
+		}
+
+		op, err := cli.UpdateInstanceState(i.Name, req, "")
+		c.Assert(err, check.IsNil)
+		c.Assert(op.Wait(), check.IsNil)
+
+		op, err = cli.DeleteInstance(i.Name)
+		c.Assert(err, check.IsNil)
+		c.Assert(op.Wait(), check.IsNil)
+	}
+
+	err = cli.DeleteProject(project)
+	c.Assert(err, check.IsNil)
 }
 
 func (f *LT) TearDownTest(c *check.C) {
-	f.client.DeleteProject(workspacebackend.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.client, workspacebackend.LxdProjectName(f.username))
 }
 
 func TestWorkspaceBackendProjectIntegration(t *testing.T) { check.TestingT(t) }

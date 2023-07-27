@@ -8,12 +8,12 @@ import (
 )
 
 /* Initialise the Workspace project namespace. */
-func InitProject(conn lxd.InstanceServer, projectName string) error {
-	if err := createOrLoadLxdProject(conn, projectName); err != nil {
+func InitProject(conn lxd.InstanceServer, username string) error {
+	if err := createOrLoadLxdProject(conn, LxdProjectName(username)); err != nil {
 		return err
 	}
 
-	if err := createOrLoadLxdProject(conn, LxdSystemProjectName(projectName)); err != nil {
+	if err := createOrLoadLxdProject(conn, LxdSystemProjectName(username)); err != nil {
 		return err
 	}
 	return nil

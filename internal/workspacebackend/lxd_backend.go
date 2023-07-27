@@ -44,6 +44,7 @@ const (
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
+	UserLookup           = user.Lookup
 	NewProjectId         = allocateProjectId
 )
 
@@ -434,16 +435,9 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		if err != nil {
 			return err
 		}
-
-		defer conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
-			Name: base,
-			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
-				Target: image.Fingerprint,
-			},
-		}})
 	}
 
-	usr, err := user.Lookup(userName)
+	usr, err := UserLookup(userName)
 	if err != nil {
 		return err
 	}
@@ -466,7 +460,19 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		return err
 	}
 
-	return op.Wait()
+	if err = op.Wait(); err != nil {
+		return err
+	}
+
+	if err = conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
+		Name: base,
+		ImageAliasesEntryPut: api.ImageAliasesEntryPut{
+			Target: image.Fingerprint,
+		},
+	}}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string) error {
@@ -1015,7 +1021,7 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
 		return nil, err
 	} else {
-		if err = InitProject(srv, LxdProjectName(user)); err != nil {
+		if err = InitProject(srv, user); err != nil {
 			return nil, err
 		}
 		return srv.UseProject(LxdProjectName(user)), nil
