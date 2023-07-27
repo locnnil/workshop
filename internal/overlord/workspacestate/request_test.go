@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -174,7 +175,7 @@ func (s *S) TestRefresh(c *check.C) {
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
 }
 
-func (s *S) TestRefreshMany(c *check.C) {
+func (s *S) TestRefreshManyTasktest(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -218,4 +219,116 @@ func (s *S) TestRefreshMany(c *check.C) {
 		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
 	}
 
+}
+
+func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+
+	files := []*workspacebackend.WorkspaceFile{
+		{
+			Name: "ws",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{sdk},
+		},
+		{
+			Name: "ws1",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{sdk},
+		},
+	}
+
+	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	c.Assert(err, check.IsNil)
+
+	lastChanceWs := ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	c.Assert(lastChanceWs, check.NotNil)
+	c.Assert(lastChanceWs.Kind(), check.Equals, "run-hook")
+
+	lastChanceWs1 := ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	c.Assert(lastChanceWs1, check.NotNil)
+	c.Assert(lastChanceWs1.Kind(), check.Equals, "run-hook")
+
+	// Ensure that the delete-copy for ws will wait on the own
+	// remove-state-storage and ws1's (i.e. all the other workspaces') restore
+	// state hooks
+	removeWsStStorage := ts[0].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	deleteCopy := removeWsStStorage.HaltTasks()[0]
+	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs, lastChanceWs1})
+
+	// Ensure that the copy and state storage removals belong to a separate
+	// lane. In the case of their abortion it must not trigger abortion of the
+	// refresh that, by that moment, is already done
+	c.Assert(removeWsStStorage.Lanes()[0], check.Not(check.Equals), lastChanceWs.Lanes()[0])
+	c.Assert(deleteCopy.Lanes()[0], check.Not(check.Equals), lastChanceWs.Lanes()[0])
+	c.Assert(deleteCopy.Lanes(), check.HasLen, 1)
+	c.Assert(removeWsStStorage.Lanes(), check.HasLen, 1)
+
+	// Ensure that the delete-copy for ws1 will wait on the own
+	// remove-state-storage and ws's (i.e. all the other workspaces') restore
+	// state hooks
+	removeWsStStorage = ts[1].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	deleteCopy = removeWsStStorage.HaltTasks()[0]
+	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs1, lastChanceWs})
+
+	// Ensure that the copy and state storage removals belong to a separate
+	// lane. In the case of their abortion it must not trigger abortion of the
+	// refresh that, by that moment, is already done
+	c.Assert(removeWsStStorage.Lanes()[0], check.Not(check.Equals), lastChanceWs1.Lanes()[0])
+	c.Assert(deleteCopy.Lanes()[0], check.Not(check.Equals), lastChanceWs1.Lanes()[0])
+	c.Assert(deleteCopy.Lanes(), check.HasLen, 1)
+	c.Assert(removeWsStStorage.Lanes(), check.HasLen, 1)
+}
+
+func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	one := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	two := workspacebackend.Sdk{Name: "two", Channel: "latest/stable"}
+
+	file := &workspacebackend.WorkspaceFile{
+		Name: "ws1",
+		Base: "ubuntu@22.04",
+		Sdks: workspacebackend.SdkList{one, two},
+	}
+
+	ts := workspace.RestoreStateHooks(s.state, file, s.project)
+	c.Assert(ts.Tasks(), check.HasLen, 2)
+
+	prev := (*state.Task)(nil)
+	for _, t := range ts.Tasks() {
+		if prev != nil {
+			c.Assert(t.WaitTasks(), check.DeepEquals, []*state.Task{prev})
+		}
+		prev = t
+	}
+	c.Assert(ts.MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge), check.Equals, prev)
+}
+
+func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	one := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	two := workspacebackend.Sdk{Name: "two", Channel: "latest/stable"}
+
+	file := &workspacebackend.WorkspaceFile{
+		Name: "ws1",
+		Base: "ubuntu@22.04",
+		Sdks: workspacebackend.SdkList{one, two},
+	}
+
+	ts := workspace.SaveStateHooks(s.state, file, s.project)
+	c.Assert(ts.Tasks(), check.HasLen, 2)
+
+	prev := (*state.Task)(nil)
+	for _, t := range ts.Tasks() {
+		if prev != nil {
+			c.Assert(t.WaitTasks(), check.DeepEquals, []*state.Task{prev})
+		}
+		prev = t
+	}
 }
