@@ -64,6 +64,23 @@ func (f *WsOps) TearDownSuite(c *check.C) {
 	cleanUpLxdProject(c, f.client, workspacebackend.LxdSystemProjectName(f.username))
 }
 
+func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
+	// Setup
+
+	// Execute
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+
+	//Validate
+	c.Assert(err, check.IsNil)
+	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = f.be.DeleteWorkspace(f.ctx, "test-1", true)
+	//Validate
+	c.Assert(err, check.IsNil)
+}
+
 func (f *WsOps) TestLxdBackendMakeWorkspaceAvailable(c *check.C) {
 	// Setup
 
@@ -83,4 +100,44 @@ func (f *WsOps) TestLxdBackendMakeWorkspaceAvailable(c *check.C) {
 	_, err = f.be.GetWorkspace(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
+}
+
+func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
+	// Setup
+
+	// Execute
+	err := f.be.CreateStateStorage(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	vol, _, err := f.client.GetStoragePoolVolume("default", "custom", workspacebackend.WorkspaceStateVolumeName("test", f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+	c.Assert(vol.ContentType, check.Equals, "filesystem")
+
+	// Execute
+	err = f.be.DeleteStateStorage(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+}
+
+func (f *WsOps) TestLxdBackendDeleteUnavailableWorkspace(c *check.C) {
+	// Setup
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = f.be.MakeWorkspaceUnavailable(f.ctx, "test-1")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	c.Assert(err, check.NotNil)
+
+	// Execute
+	err = f.be.DeleteUnavailableWorkspace(f.ctx, "test-1")
+	c.Assert(err, check.IsNil)
+	cli := f.client.UseProject(workspacebackend.LxdSystemProjectName(f.username))
+	_, _, err = cli.GetInstance(workspacebackend.InstanceName("test-1", f.project.ProjectId))
+	c.Assert(err, check.ErrorMatches, "Instance not found")
 }

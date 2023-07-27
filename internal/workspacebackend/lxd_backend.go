@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -464,13 +465,18 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		return err
 	}
 
-	if err = conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
-		Name: base,
-		ImageAliasesEntryPut: api.ImageAliasesEntryPut{
-			Target: image.Fingerprint,
-		},
-	}}); err != nil {
+	_, _, err = conn.GetImageAlias(base)
+	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
 		return err
+	} else if api.StatusErrorCheck(err, http.StatusNotFound) {
+		if err = conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
+			Name: base,
+			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
+				Target: image.Fingerprint,
+			},
+		}}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -987,11 +993,7 @@ func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error 
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
 
-	err = conn.CreateStoragePoolVolume("default", vol)
-	if err != nil {
-		return err
-	}
-	return nil
+	return conn.CreateStoragePoolVolume("default", vol)
 }
 
 func (s *LxdBackend) DeleteStateStorage(ctx context.Context, name string) error {
@@ -1005,11 +1007,7 @@ func (s *LxdBackend) DeleteStateStorage(ctx context.Context, name string) error 
 		return fmt.Errorf("context key %s not found", ContextProjectId)
 	}
 
-	err = conn.DeleteStoragePoolVolume("default", "custom", WorkspaceStateVolumeName(name, pid))
-	if err != nil {
-		return err
-	}
-	return nil
+	return conn.DeleteStoragePoolVolume("default", "custom", WorkspaceStateVolumeName(name, pid))
 }
 
 func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {

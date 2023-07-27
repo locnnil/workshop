@@ -41,8 +41,10 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	c.Check(err, check.IsNil)
 	for _, i := range fingers {
 		op, err := cli.DeleteImage(i)
-		c.Assert(err, check.IsNil)
-		c.Assert(op.Wait(), check.IsNil)
+		c.Check(err, check.IsNil)
+		if err == nil {
+			c.Check(op.Wait(), check.IsNil)
+		}
 	}
 
 	instances, err := cli.GetInstances(api.InstanceType("container"))
@@ -55,16 +57,20 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 		}
 
 		op, err := cli.UpdateInstanceState(i.Name, req, "")
-		c.Assert(err, check.IsNil)
-		c.Assert(op.Wait(), check.IsNil)
+		c.Check(err, check.IsNil)
+		if err == nil {
+			c.Check(op.Wait(), check.IsNil)
+		}
 
 		op, err = cli.DeleteInstance(i.Name)
-		c.Assert(err, check.IsNil)
-		c.Assert(op.Wait(), check.IsNil)
+		c.Check(err, check.IsNil)
+		if err == nil {
+			c.Check(op.Wait(), check.IsNil)
+		}
 	}
 
 	err = cli.DeleteProject(project)
-	c.Assert(err, check.IsNil)
+	c.Check(err, check.IsNil)
 }
 
 func (f *LT) TearDownTest(c *check.C) {
