@@ -481,6 +481,10 @@ func (d *Daemon) Start() error {
 
 	d.StartTime = time.Now()
 
+	// now perform expensive overlord/manages initialization
+	if err := d.overlord.StartUp(); err != nil {
+		return err
+	}
 	d.connTracker = &connTracker{conns: make(map[net.Conn]struct{})}
 	d.serve = &http.Server{
 		Handler:   logit(d.router),
