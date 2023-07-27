@@ -50,23 +50,18 @@ function cleanup() {
   done
 }
 
-function assert_arrays_equal() {
-  local -n one=$1
-  local -n two=$2
-  mapfile -t result < <(comm -3  \
-        <(printf '%s\n' "${one[@]}"  | sort) \
-        <(printf '%s\n' "${two[@]}"  | sort))
-  test ${#result[@]} -eq 0
-}
-
 # Workspace sub-command wrappers
 
 function launch() {
-  sudo -u ubuntu -- workspace --project $1 launch $2
+  sudo -u ubuntu -- workspace --project "$1" launch "$2"
+}
+
+function refresh() {
+  sudo -u ubuntu -- workspace --project "$1" refresh "$2"
 }
 
 function list() {
-    sudo -u ubuntu -- workspace --project $1 list
+    sudo -u ubuntu -- workspace --project "$1" list
 }
 
 function list_cwd() {
@@ -78,11 +73,11 @@ function list_global() {
 }
 
 function delete() {
-    lxc delete $1 --force --project workspace.ubuntu
+    lxc delete "$1" --force --project workspace.ubuntu
 }
 
 function changes() {
-  sudo -u ubuntu -- workspace changes --project $1
+  sudo -u ubuntu -- workspace changes --project "$1"
 }
 
 function changes_global() {

@@ -137,7 +137,105 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", tasks)
 }
 
-func (s *S) TestRefresh(c *check.C) {
+func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	file := &workspacebackend.WorkspaceFile{
+		Name: "ws",
+		Base: "ubuntu@22.04",
+		Sdks: workspacebackend.SdkList{}}
+
+	ts, err := workspace.Refresh(s.state, file, s.project)
+	c.Assert(err, check.IsNil)
+
+	expected := []string{
+		"create-state-storage",
+		"remove-state-storage",
+		"create-workspace",
+		"delete-workspace-copy",
+		"make-workspace-copy",
+		"mount-project",
+		"start-workspace",
+	}
+
+	tasks := ts.Tasks()
+
+	c.Assert(err, check.Equals, nil)
+	verifyExpectedTasks(c, tasks, expected)
+
+	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
+}
+
+func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+
+	files := []*workspacebackend.WorkspaceFile{
+		{
+			Name: "ws",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{}},
+		{
+			Name: "ws-1",
+			Base: "ubuntu@22.04",
+			Sdks: workspacebackend.SdkList{sdk}},
+	}
+
+	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	c.Assert(err, check.IsNil)
+
+	expected_ws := []string{
+		"create-state-storage",
+		"remove-state-storage",
+		"create-workspace",
+		"delete-workspace-copy",
+		"make-workspace-copy",
+		"mount-project",
+		"start-workspace",
+	}
+
+	expected_ws_1 := []string{
+		"create-state-storage",
+		"remove-state-storage",
+		"create-workspace",
+		"delete-workspace-copy",
+		"run-hook",
+		"make-workspace-copy",
+		"mount-project",
+		"start-workspace",
+		"retrieve-sdk",
+		"install-sdk",
+		"link-sdk",
+		"run-hook",
+		"run-hook", // restore state hook
+	}
+
+	verifyExpectedTasks(c, ts[0].Tasks(), expected_ws)
+	verifyExpectedTasks(c, ts[1].Tasks(), expected_ws_1)
+
+	c.Assert(ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "start-workspace")
+	waitFor := ts[0].MaybeEdge(workspace.CleanupRefreshEdge).WaitTasks()
+	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
+		ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+		ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+	})
+
+	c.Assert(ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "run-hook")
+	waitFor = ts[1].MaybeEdge(workspace.CleanupRefreshEdge).WaitTasks()
+	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
+		ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+		ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+	})
+
+	for i, t := range ts {
+		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
+	}
+}
+
+func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 

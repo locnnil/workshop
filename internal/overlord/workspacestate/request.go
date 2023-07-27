@@ -226,16 +226,31 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 
 	// save-state -> stop-workspace -> launch -> restore state
 	deleteCopy.WaitFor(removeStateStorage)
-	removeStateStorage.WaitAll(restoreStateHooks)
-	restoreStateHooks.WaitAll(launch)
+	if len(restoreStateHooks.Tasks()) > 0 {
+		removeStateStorage.WaitAll(restoreStateHooks)
+		restoreStateHooks.WaitAll(launch)
+	} else {
+		lastLaunchTask := launch.Tasks()[len(launch.Tasks())-1]
+		removeStateStorage.WaitFor(lastLaunchTask)
+		// we are dealing with a workspace that does not have
+		// SDKs, i.e. it will not be running any hooks. Thus,
+		// the point of no return is the last launch task (i.e.
+		// before the moment when we delete the copy of the workspace
+		// after the refresh operation)
+		launch.MarkEdge(lastLaunchTask, LastBeforeRefreshIrreversibleEdge)
+	}
 	launch.WaitFor(makeCopy)
-	makeCopy.WaitAll(saveStateHooks)
-	saveStateHooks.WaitFor(createStateStorage)
+	if len(saveStateHooks.Tasks()) > 0 {
+		makeCopy.WaitAll(saveStateHooks)
+		saveStateHooks.WaitFor(createStateStorage)
+	} else {
+		makeCopy.WaitFor(createStateStorage)
+	}
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
 	refresh.AddTask(createStateStorage)
 	refresh.AddAll(saveStateHooks)
-	refresh.AddAll(launch)
+	refresh.AddAllWithEdges(launch)
 	refresh.AddAllWithEdges(restoreStateHooks)
 	refresh.AddTask(makeCopy)
 	refresh.AddTask(removeStateStorage)
