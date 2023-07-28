@@ -1,6 +1,6 @@
-summary: Ensure that refresh of an empty workspace works correctly
+summary: Check that basic refresh scenarios work correctly for the transactional mode
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+  WORKSPACES: $SPREAD_PATH/tests/lib
 prepare: |
   . "$TESTSLIB"/utils.sh
   install_workspaced
@@ -18,16 +18,32 @@ debug: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  project="$WORKSPACES"/test-empty-ubuntu20
+  echo "Test refresh with an empty workspace"
+  project="$WORKSPACES"/workspaces-empty/test-empty-ubuntu20
   launch $project ws
 
-  echo "The launch change must present in the list"
+  echo "Check launch change is Done"
   changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch workspace.*$"
 
   refresh $project ws
 
-  echo "The refresh change must present in the list"
+  echo "Check refresh change is Done"
   changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh workspace \"ws\"$"
 
-  echo "The workspace must be in Ready state"
+  echo "Check the workspace is in Ready state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Test refresh with a basic SDK in the workspace"
+  project="$WORKSPACES"/workspaces-sdk/test-sdk-basic
+
+  launch $project ws
+  echo "Check launch change is Done"
+  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch workspace.*$"
+
+  refresh $project ws
+
+  echo "Check refresh change is Done"
+  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh workspace \"ws\"$"
+
+  echo "Check the workspace is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

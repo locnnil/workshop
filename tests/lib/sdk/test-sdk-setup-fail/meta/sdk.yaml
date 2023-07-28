@@ -1,0 +1,8 @@
+name: go
+title: go
+base: ubuntu@20.04
+
+summary: Go SDK
+description: |
+  Go SDK
+

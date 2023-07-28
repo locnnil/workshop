@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -34,7 +35,6 @@ type StoreResult struct {
 
 type StoreClient interface {
 	RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error)
-	CheckRefresh(ctx context.Context, sdks []*sdk.SdkInfo) (*StoreResult, error)
 }
 
 func NewStoreClient() StoreClient {
@@ -45,46 +45,20 @@ type ObjectStoreClient struct {
 	Fs afero.Fs
 }
 
-func (c *ObjectStoreClient) CheckRefresh(ctx context.Context, sdks []*sdk.SdkInfo) (*StoreResult, error) {
-	if client, err := storage.NewClient(ctx, option.WithoutAuthentication()); err != nil {
-		return nil, err
-	} else {
-		bkt := client.Bucket("sdk-store")
-		defer client.Close()
-
-		var result StoreResult
-		result.ActionErrors = make(map[string]error)
-		result.Sdks = make([]*sdk.SdkInfo, 0)
-
-		for _, s := range sdks {
-			var track, risk string
-			if sa := strings.Split(s.Channel, "/"); len(sa) != 2 {
-				result.ActionErrors[s.Name] = fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", s.Name, s.Channel)
-			} else {
-				track, risk = sa[0], sa[1]
-			}
-
-			var obj *storage.ObjectHandle = bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", s.Name, track, risk, s.Name))
-			if atr, err := obj.Attrs(ctx); err != nil {
-				result.ActionErrors[s.Name] = err
-			} else {
-				revision := atr.Generation % 1000
-				// if there is a new update, we will reflect it in the return
-				// value for this SDK
-				if s.Revision != revision {
-					result.Sdks = append(result.Sdks, &sdk.SdkInfo{
-						Name:     s.Name,
-						Channel:  s.Channel,
-						Revision: revision,
-					})
-				} else {
-					result.ActionErrors[s.Name] = ErrNoRefreshAvailable
-				}
-			}
-
+func storeConnect() (*storage.Client, error) {
+	if url := os.Getenv("SDK_STORE_URL"); url != "" {
+		// Set STORAGE_EMULATOR_HOST environment variable for GSC.
+		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:9000")
+		if err != nil {
+			return nil, err
 		}
-		return &result, nil
+		client, err := storage.NewClient(context.Background(),
+			option.WithEndpoint(url))
+		return client, err
+
 	}
+	client, err := storage.NewClient(context.Background(), option.WithoutAuthentication())
+	return client, err
 }
 
 func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error) {
@@ -92,14 +66,14 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk
 	var s sdk.SdkInfo
 	var revision int64
 
- 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
+	if sa := strings.Split(channel, "/"); len(sa) != 2 {
 		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
 	} else {
 		track, risk = sa[0], sa[1]
 	}
 
 	ctx := context.Background()
-	if client, err := storage.NewClient(ctx, option.WithoutAuthentication()); err != nil {
+	if client, err := storeConnect(); err != nil {
 		return &s, err
 	} else {
 		bkt := client.Bucket("sdk-store")
