@@ -9,6 +9,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 )
@@ -135,23 +136,25 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	wss := make([]*workspacebackend.WorkspaceFile, 0)
+	files := make([]*workspacebackend.WorkspaceFile, 0)
+	content := make([][]*sdk.SdkInfo, 0)
 	for _, i := range names {
 		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
 		if idx == -1 {
 			return nil, fmt.Errorf("workspace %s not found", i)
 		}
-		wss = append(wss, workspaces[idx].File())
+		files = append(files, workspaces[idx].File())
+		content = append(content, workspaces[idx].Content())
 	}
-	return refreshMany(w.state, wss, project)
+	return refreshMany(w.state, files, content, project)
 }
 
-func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile,
+func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [][]*sdk.SdkInfo,
 	project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(w))
 
-	for _, w := range w {
-		tasks, err := refresh(st, w, project)
+	for i, w := range w {
+		tasks, err := refresh(st, w, content[i], project)
 		if err != nil {
 			return nil, fmt.Errorf("cannot refresh workspace \"%s\": %v", w, err)
 		}
@@ -201,7 +204,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile,
 	return taskset, nil
 }
 
-func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*sdk.SdkInfo, p *workspacebackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workspace
 	// 3. Make unavailable
@@ -210,19 +213,19 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 	// 6. Delete the old workspace
 
 	createStateStorage := st.NewTask("create-state-storage", "Mount SDK state storage")
-	saveStateHooks := saveStateHooks(st, w, p)
+	saveStateHooks := saveStateHooks(st, content, p)
 
-	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", w.Name))
+	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", file.Name))
 
-	launch, err := launch(st, w, p)
+	launch, err := launch(st, file, p)
 	if err != nil {
 		return nil, err
 	}
 
-	restoreStateHooks := restoreStateHooks(st, w, p)
+	restoreStateHooks := restoreStateHooks(st, file, p)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Unmount SDK state storage")
-	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", w.Name))
+	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", file.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
 	deleteCopy.WaitFor(removeStateStorage)
@@ -259,7 +262,7 @@ func refresh(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebac
 	refresh.MarkEdge(removeStateStorage, CleanupRefreshEdge)
 
 	for _, i := range refresh.Tasks() {
-		i.Set("workspace", w.Name)
+		i.Set("workspace", file.Name)
 		i.Set("project", *p)
 	}
 
@@ -271,19 +274,31 @@ func createStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *wor
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, sdk := range w.Sdks {
-		restoreStateHook := hookstate.SetupHook(st, w.Name, p.ProjectId, &sdk, hookT)
-		stateHooks.AddTask(restoreStateHook)
+		stateHook := hookstate.SetupHook(st, w.Name, p.ProjectId, &sdk, hookT)
+		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
-			restoreStateHook.WaitFor(prevRestore)
+			stateHook.WaitFor(prevRestore)
 		}
-		prevRestore = restoreStateHook
+		prevRestore = stateHook
 	}
 	return stateHooks
 }
 
-func saveStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project) *state.TaskSet {
-	saveStateHooks := createStateHooks(st, w, p, hookstate.SaveState)
-	return saveStateHooks
+func saveStateHooks(st *state.State, content []*sdk.SdkInfo, p *workspacebackend.Project) *state.TaskSet {
+	stateHooks := state.NewTaskSet([]*state.Task{}...)
+	prevRestore := (*state.Task)(nil)
+	for _, sdk := range content {
+		saveHook := hookstate.SetupHook(st, sdk.Name, p.ProjectId, &workspacebackend.Sdk{
+			Name:    sdk.Name,
+			Channel: sdk.Channel,
+		}, hookstate.SaveState)
+		stateHooks.AddTask(saveHook)
+		if prevRestore != nil {
+			saveHook.WaitFor(prevRestore)
+		}
+		prevRestore = saveHook
+	}
+	return stateHooks
 }
 
 func restoreStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project) *state.TaskSet {

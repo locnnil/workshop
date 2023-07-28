@@ -708,10 +708,11 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 
 	workspace.Devices = inst.Devices
 
-	workspace.file, err = p.WorkspaceFile(name)
+	file, err := p.WorkspaceFile(name)
 	if err != nil {
 		workspace.AddError(MissingFile)
 	}
+	workspace.SetFile(file)
 
 	if exists, isDir, _ := osutil.ExistsIsDir(p.Path); !exists || !isDir {
 		workspace.AddError(MissingProject)
@@ -720,7 +721,7 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 	// Fetch information about the installed SDKs
 	workspace.content, err = InstalledContent(inst.Config)
 	if err != nil {
-		workspace.AddError(BrokenSdkRecord)
+		return nil, fmt.Errorf("cannot load workspace: installed SDK content is not readable: %v", err)
 	}
 	return workspace, nil
 }

@@ -80,6 +80,13 @@ func (s *H) SetUpTest(c *check.C) {
 	s.se.StartUp()
 	s.se.AddManager(s.wsmgr)
 	s.se.AddManager(s.runner)
+
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04
+`), 0644)
+	c.Assert(err, check.IsNil)
+	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
 }
 
 func (s *H) TearDownTest(c *check.C) {
@@ -101,7 +108,6 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		c.Check(args.Command, check.DeepEquals, []string{
 			"tar",
@@ -143,7 +149,6 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
 		done := make(chan bool)
@@ -156,7 +161,8 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
 }
@@ -182,10 +188,10 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		s.backend.WsFs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
+		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
+		fs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
 		return workspacebackend.DoExecDefault(ctx, name, args)
 	}
 
@@ -196,10 +202,13 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	exist, _ := afero.Exists(s.backend.WsFs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
+	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	exist, _ := afero.Exists(fs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
 }
 
@@ -219,15 +228,14 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-
 	s.state.Unlock()
 	s.se.Ensure()
 	s.se.Wait()
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
 	c.Check(*info[0], check.DeepEquals, newSdk)
@@ -254,8 +262,6 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
 		s.se.Ensure()
@@ -263,7 +269,8 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 0)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)

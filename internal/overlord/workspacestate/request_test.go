@@ -6,6 +6,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
@@ -146,7 +147,7 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{}}
 
-	ts, err := workspace.Refresh(s.state, file, s.project)
+	ts, err := workspace.Refresh(s.state, file, []*sdk.SdkInfo{}, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -171,7 +172,7 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	test_sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
@@ -181,10 +182,19 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 		{
 			Name: "ws-1",
 			Base: "ubuntu@22.04",
-			Sdks: workspacebackend.SdkList{sdk}},
+			Sdks: workspacebackend.SdkList{test_sdk}},
 	}
 
-	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	content := [][]*sdk.SdkInfo{
+		nil,
+		[]*sdk.SdkInfo{{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+		},
+	}
+
+	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected_ws := []string{
@@ -239,14 +249,19 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
 
 	file := &workspacebackend.WorkspaceFile{
 		Name: "ws",
 		Base: "ubuntu@22.04",
-		Sdks: workspacebackend.SdkList{sdk}}
+		Sdks: workspacebackend.SdkList{testSdk}}
 
-	ts, err := workspace.Refresh(s.state, file, s.project)
+	ts, err := workspace.Refresh(s.state, file, []*sdk.SdkInfo{
+		{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+	}, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -277,22 +292,35 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
-			Sdks: workspacebackend.SdkList{sdk},
+			Sdks: workspacebackend.SdkList{testSdk},
 		},
 		{
 			Name: "ws1",
 			Base: "ubuntu@22.04",
-			Sdks: workspacebackend.SdkList{sdk},
+			Sdks: workspacebackend.SdkList{testSdk},
 		},
 	}
 
-	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	content := [][]*sdk.SdkInfo{
+		[]*sdk.SdkInfo{{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+		},
+		[]*sdk.SdkInfo{{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+		},
+	}
+
+	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -323,22 +351,35 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
-			Sdks: workspacebackend.SdkList{sdk},
+			Sdks: workspacebackend.SdkList{testSdk},
 		},
 		{
 			Name: "ws1",
 			Base: "ubuntu@22.04",
-			Sdks: workspacebackend.SdkList{sdk},
+			Sdks: workspacebackend.SdkList{testSdk},
 		},
 	}
 
-	ts, err := workspace.RefreshMany(s.state, files, s.project)
+	content := [][]*sdk.SdkInfo{
+		[]*sdk.SdkInfo{{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+		},
+		[]*sdk.SdkInfo{{
+			Name:    "sdk",
+			Channel: "latest/stable",
+		},
+		},
+	}
+
+	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
 	lastChanceWs := ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
@@ -410,16 +451,10 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	one := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
-	two := workspacebackend.Sdk{Name: "two", Channel: "latest/stable"}
+	one := &sdk.SdkInfo{Name: "one", Channel: "latest/stable"}
+	two := &sdk.SdkInfo{Name: "two", Channel: "latest/stable"}
 
-	file := &workspacebackend.WorkspaceFile{
-		Name: "ws1",
-		Base: "ubuntu@22.04",
-		Sdks: workspacebackend.SdkList{one, two},
-	}
-
-	ts := workspace.SaveStateHooks(s.state, file, s.project)
+	ts := workspace.SaveStateHooks(s.state, []*sdk.SdkInfo{one, two}, s.project)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
 	prev := (*state.Task)(nil)

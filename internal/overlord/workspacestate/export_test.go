@@ -2,7 +2,7 @@ package workspacestate
 
 var (
 	Refresh           = refresh
-	RefreshMany       = refreshMany
+	RefreshManyImpl   = refreshMany
 	RestoreStateHooks = restoreStateHooks
 	SaveStateHooks    = saveStateHooks
 

@@ -1,9 +1,15 @@
 package workspacestate_test
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+
+	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
@@ -14,6 +20,8 @@ type ManagerSuite struct {
 	backend workspacebackend.WorkspaceBackend
 	runner  *state.TaskRunner
 	manager *workspacestate.WorkspaceManager
+	ctx     context.Context
+	project *workspacebackend.Project
 }
 
 var _ = check.Suite(&ManagerSuite{})
@@ -23,6 +31,9 @@ func (s *ManagerSuite) SetUpTest(c *check.C) {
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workspacestate.NewWorkspaceManager(s.state, s.runner, s.backend)
+	ctx := context.WithValue(context.TODO(), workspacebackend.ContextUser, "testuser")
+	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	s.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, s.project.ProjectId)
 }
 
 func (s *ManagerSuite) TestAddHandlers(c *check.C) {
@@ -99,4 +110,62 @@ func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
 		c.Assert(st, check.Equals, setup.expectedState, check.Commentf("case num: %v", i))
 		c.Assert(wrkspc.Errors(), testutil.DeepUnsortedMatches, setup.expectedErrors, check.Commentf("case num: %v", i))
 	}
+}
+
+func (s *ManagerSuite) TestRefreshSdkWasAdded(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Setup
+	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+`), 0644)
+	c.Assert(s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04"), check.IsNil)
+	ws, err := s.backend.GetWorkspace(s.ctx, "test")
+	c.Assert(err, check.IsNil)
+	ws.LinkSdk(s.ctx, &sdk.SdkInfo{
+		Name:     "test-sdk",
+		Channel:  "latest/stable",
+		Revision: 0,
+	})
+
+	// pretend that a user updated the workspace file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+  new:
+    channel: latest/stable
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	// Execute
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	c.Check(err, check.IsNil)
+
+	// Validate
+	obtainedSave := []string{}
+	obtainedRestore := []string{}
+	for _, t := range ts[0].Tasks() {
+		if t.Kind() == "run-hook" {
+			var setup hookstate.HookSetup
+			err = t.Get("hook-setup", &setup)
+			c.Check(err, check.IsNil)
+			switch setup.HookType {
+			case hookstate.SaveState:
+				obtainedSave = append(obtainedSave, setup.Sdk.Name)
+			case hookstate.RestoreState:
+				obtainedRestore = append(obtainedRestore, setup.Sdk.Name)
+			}
+		}
+	}
+
+	// the save state shall be called only for the previously installed SDK
+	c.Assert(obtainedSave, testutil.DeepUnsortedMatches, []string{"test-sdk"})
+	// the restore state shall be called for both, the old and the new SDK
+	c.Assert(obtainedRestore, testutil.DeepUnsortedMatches, []string{"test-sdk", "new"})
 }

@@ -108,9 +108,14 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-
-	b.LaunchWorkspace(req.Context(), "ws-test", "ubuntu@20.04")
-	ws, _ := b.GetWorkspace(req.Context(), "ws-test")
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+base: ubuntu@20.04
+`), 0644)
+	c.Assert(err, check.IsNil)
+	err = b.LaunchWorkspace(req.Context(), "ws-test", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+	ws, err := b.GetWorkspace(req.Context(), "ws-test")
+	c.Assert(err, check.IsNil)
 	ws.LinkSdk(req.Context(), &sdk.SdkInfo{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
@@ -147,8 +152,12 @@ func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws-test", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	b.CreateOrLoadProject(req.Context(), s.workspaceDir)
-	b.LaunchWorkspace(req.Context(), "ws-test", "ubuntu@20.04")
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+base: ubuntu@20.04
+`), 0644)
+	c.Assert(err, check.IsNil)
+	err = b.LaunchWorkspace(s.ctx, "ws-test", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
 
 	// Execute
 	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)

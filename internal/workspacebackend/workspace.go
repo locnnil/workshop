@@ -92,6 +92,10 @@ func (w *Workspace) File() *WorkspaceFile {
 	return w.file
 }
 
+func (w *Workspace) SetFile(f *WorkspaceFile) {
+	w.file = f
+}
+
 func (w *Workspace) State() WorkspaceState {
 	return w.state
 }

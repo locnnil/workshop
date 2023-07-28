@@ -2,9 +2,11 @@ package workspacebackend
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"github.com/canonical/workspace/internal/sdk"
-	"github.com/spf13/afero"
+	"github.com/lxc/lxd/shared/api"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
@@ -15,24 +17,27 @@ type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool,
 
 type FakeWorkspace struct {
 	*Workspace
-	Config map[string]string
+	Config              map[string]string
+	WorkspaceFilesystem WorkspaceFs
+}
+
+type ExecCall struct {
+	name string
+	args *ExecArgs
 }
 
 type FakeWorkspaceBackend struct {
 	Workspaces map[string]map[string]*FakeWorkspace
 	projects   map[string]map[string]*Project
-	WsFs       WorkspaceFs
-	LocalFs    afero.Fs
 
-	DoExec ExecFunc
+	DoExec    ExecFunc
+	ExecCalls []*ExecCall
 }
 
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
 	be.Workspaces = make(map[string]map[string]*FakeWorkspace)
 	be.projects = make(map[string]map[string]*Project)
-	be.WsFs = NewFakeWorkspaceFs()
-	be.LocalFs = afero.NewMemMapFs()
 
 	be.DoExec = DoExecDefault
 
@@ -56,25 +61,36 @@ func (s *FakeWorkspaceBackend) CreateOrLoadProject(ctx context.Context, path str
 	return newPrj, true, nil
 }
 
-func (s *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string]*Project, error) {
-	username := ctx.Value(ContextUser).(string)
-	return s.projects[username], nil
+func (f *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string]*Project, error) {
+	username, _, err := f.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return f.projects[username], nil
 }
 
 func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
 
 	if f.Workspaces[projectId] == nil {
 		f.Workspaces[projectId] = make(map[string]*FakeWorkspace)
 	}
 	ws := &FakeWorkspace{}
 	ws.Config = make(map[string]string)
+	ws.WorkspaceFilesystem = NewFakeWorkspaceFs()
+
 	ws.Workspace = &Workspace{backend: f,
 		Name:      name,
 		Devices:   defaultDevices(),
 		running:   true,
 		projectId: projectId,
 		content:   make(map[string]*sdk.SdkInfo),
+	}
+	if _, ok := f.Workspaces[projectId][name]; ok {
+		return api.StatusErrorf(http.StatusNotFound, "workspace exists already")
 	}
 	f.Workspaces[projectId][name] = ws
 	return nil
@@ -89,40 +105,67 @@ func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, acti
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
 	f.Workspaces[projectId][name].Devices[props.Name] = props.Properties
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
 	delete(f.Workspaces[projectId][name].Devices, device)
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
 	f.Workspaces[projectId][name].Config[item.Name] = item.Value
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
 	delete(f.Workspaces[projectId][name].Config, key)
 	return nil
 }
 
 func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
-	projectId := ctx.Value(ContextProjectId).(string)
-	user := ctx.Value(ContextUser).(string)
+	user, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	project := f.projects[user][projectId]
 	workspace := f.Workspaces[projectId][name].Workspace
-	workspace.file, _ = project.WorkspaceFile(workspace.Name)
+	workspace.file, err = project.WorkspaceFile(workspace.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	workspace.content, err = InstalledContent(f.Workspaces[projectId][name].Config)
+	if err != nil {
+		return nil, err
+	}
 	return workspace, nil
 }
 
 func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
-	projectId := ctx.Value(ContextProjectId).(string)
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var workspaces = make([]*Workspace, 0)
 	for _, i := range f.Workspaces[projectId] {
 		ws, _ := f.GetWorkspace(ctx, i.Name)
@@ -148,10 +191,15 @@ func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filte
 }
 
 func (s *FakeWorkspaceBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
-	return s.WsFs, nil
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.Workspaces[projectId][name].WorkspaceFilesystem, nil
 }
 
 func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
 	return f.DoExec(ctx, name, args)
 }
 
@@ -180,4 +228,17 @@ func (s *FakeWorkspaceBackend) CreateStateStorage(ctx context.Context, name stri
 
 func (s *FakeWorkspaceBackend) DeleteStateStorage(ctx context.Context, name string) error {
 	panic("not implemented") // TODO: Implement
+}
+
+func (s *FakeWorkspaceBackend) userProject(ctx context.Context) (string, string, error) {
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return "", "", fmt.Errorf("context key project-id not found")
+	}
+
+	userName, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return "", "", fmt.Errorf("context key user not found")
+	}
+	return userName, projectId, nil
 }
