@@ -8,7 +8,7 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-func SetupHook(st *state.State, workspace, pid string, sdk *workspacebackend.Sdk, hook WorkspaceHookType) *state.Task {
+func SetupHook(st *state.State, sdk *workspacebackend.Sdk, hook WorkspaceHookType) *state.Task {
 	setup_hook := st.NewTask("run-hook", fmt.Sprintf("Run hook %q for %q SDK", hook.String(), sdk.Name))
 
 	setup := HookSetup{HookType: hook, Sdk: *sdk, Environment: map[string]string{}}

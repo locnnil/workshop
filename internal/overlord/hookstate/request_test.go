@@ -41,7 +41,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		hookstate.SaveState,
 		hookstate.RestoreState,
 	} {
-		task := hookstate.SetupHook(s.state, "ws", s.project.ProjectId, &sdk, i)
+		task := hookstate.SetupHook(s.state, &sdk, i)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)

@@ -88,7 +88,7 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.SetupHook(st, file.Name, project.ProjectId, &sdk, hookstate.SetupBase)
+		setupHookTask := hookstate.SetupHook(st, &sdk, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -213,7 +213,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	// 6. Delete the old workspace
 
 	createStateStorage := st.NewTask("create-state-storage", "Mount SDK state storage")
-	saveStateHooks := saveStateHooks(st, content, p)
+	saveStateHooks := saveStateHooks(st, content, file.Sdks)
 
 	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", file.Name))
 
@@ -222,7 +222,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 		return nil, err
 	}
 
-	restoreStateHooks := restoreStateHooks(st, file, p)
+	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Unmount SDK state storage")
 	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", file.Name))
@@ -269,12 +269,38 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	return refresh, nil
 }
 
-func createStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project,
-	hookT hookstate.WorkspaceHookType) *state.TaskSet {
+func saveStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList,
+) *state.TaskSet {
+	return createStateHooks(st, content, newContent, hookstate.SaveState)
+}
+
+func restoreStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList) *state.TaskSet {
+	stateHooks := createStateHooks(st, content, newContent, hookstate.RestoreState)
+
+	// if the restore hooks are not present (i.e. workspace has no SDKs after
+	// the refresh), we should mark the last launch task as last before the
+	// irreversible change happens. This will be done in the refreshMany
+	// call.
+	if len(stateHooks.Tasks()) > 0 {
+		last := stateHooks.Tasks()[len(stateHooks.Tasks())-1]
+		// last restore state hook for the refresh call is the last task before the
+		// previous refresh copy removal, ie. before making something irreversible
+		stateHooks.MarkEdge(last, LastBeforeRefreshIrreversibleEdge)
+	}
+	return stateHooks
+}
+
+func createStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList, hooktype hookstate.WorkspaceHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
-	for _, sdk := range w.Sdks {
-		stateHook := hookstate.SetupHook(st, w.Name, p.ProjectId, &sdk, hookT)
+	for _, newsdk := range newContent {
+		// the state hooks will only be set for the SDKs that were installed AND
+		// were not removed from the workspace file at the time of refresh
+		if slices.IndexFunc(content, func(s *sdk.SdkInfo) bool { return s.Name == newsdk.Name }) == -1 {
+			continue
+		}
+
+		stateHook := hookstate.SetupHook(st, &newsdk, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
 			stateHook.WaitFor(prevRestore)
@@ -282,32 +308,4 @@ func createStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *wor
 		prevRestore = stateHook
 	}
 	return stateHooks
-}
-
-func saveStateHooks(st *state.State, content []*sdk.SdkInfo, p *workspacebackend.Project) *state.TaskSet {
-	stateHooks := state.NewTaskSet([]*state.Task{}...)
-	prevRestore := (*state.Task)(nil)
-	for _, sdk := range content {
-		saveHook := hookstate.SetupHook(st, sdk.Name, p.ProjectId, &workspacebackend.Sdk{
-			Name:    sdk.Name,
-			Channel: sdk.Channel,
-		}, hookstate.SaveState)
-		stateHooks.AddTask(saveHook)
-		if prevRestore != nil {
-			saveHook.WaitFor(prevRestore)
-		}
-		prevRestore = saveHook
-	}
-	return stateHooks
-}
-
-func restoreStateHooks(st *state.State, w *workspacebackend.WorkspaceFile, p *workspacebackend.Project) *state.TaskSet {
-	restoreStateHooks := createStateHooks(st, w, p, hookstate.RestoreState)
-	if len(restoreStateHooks.Tasks()) > 0 {
-		last := restoreStateHooks.Tasks()[len(restoreStateHooks.Tasks())-1]
-		// last restore state hook for the refresh call is the last task before the
-		// previous refresh copy removal, ie. before making something irreversible
-		restoreStateHooks.MarkEdge(last, LastBeforeRefreshIrreversibleEdge)
-	}
-	return restoreStateHooks
 }

@@ -125,7 +125,7 @@ sdks:
 	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
-	// pretend that a user updated the workspace file and called refresh
+	// a user added an SDK to the workspace file and called refresh
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
@@ -141,13 +141,78 @@ sdks:
 	c.Check(err, check.IsNil)
 
 	// Validate
+	s.validateStateHooksTasksSetup(c, ts, []string{"test-sdk"}, []string{"test-sdk"})
+}
+
+func (s *ManagerSuite) TestRefreshSdkWasRemoved(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Setup
+	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+`), 0644)
+	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	// a user removed an SDK in the workspace file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	// Execute
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	c.Check(err, check.IsNil)
+
+	// Validate
+	s.validateStateHooksTasksSetup(c, ts, []string{}, []string{})
+}
+
+func (s *ManagerSuite) TestRefreshSdkChannelWasUpdated(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Setup
+	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+`), 0644)
+	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	// a user updated an SDK in the workspace file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@20.04
+sdks:
+  test-sdk:
+    channel: latest/edge
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	// Execute
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	c.Check(err, check.IsNil)
+
+	// Validate
+	s.validateStateHooksTasksSetup(c, ts, []string{"test-sdk"}, []string{"test-sdk"})
+}
+
+// the save state shall be called only for the previously installed SDK
+// the restore state shall be called for both, the old and the new SDK
+func (*ManagerSuite) validateStateHooksTasksSetup(c *check.C, ts []*state.TaskSet, expectedSave, expectedRestore []string) {
 	obtainedSave := []string{}
 	obtainedRestore := []string{}
 	for _, t := range ts[0].Tasks() {
 		if t.Kind() == "run-hook" {
 			var setup hookstate.HookSetup
-			err = t.Get("hook-setup", &setup)
-			c.Check(err, check.IsNil)
+			err := t.Get("hook-setup", &setup)
+			c.Assert(err, check.IsNil)
 			switch setup.HookType {
 			case hookstate.SaveState:
 				obtainedSave = append(obtainedSave, setup.Sdk.Name)
@@ -158,7 +223,7 @@ sdks:
 	}
 
 	// the save state shall be called only for the previously installed SDK
-	c.Assert(obtainedSave, testutil.DeepUnsortedMatches, []string{"test-sdk"})
-	// the restore state shall be called for both, the old and the new SDK
-	c.Assert(obtainedRestore, testutil.DeepUnsortedMatches, []string{"test-sdk", "new"})
+	c.Assert(obtainedSave, testutil.DeepUnsortedMatches, expectedSave)
+	// the restore state shall be called for the new previously installed SDK
+	c.Assert(obtainedRestore, testutil.DeepUnsortedMatches, expectedRestore)
 }
