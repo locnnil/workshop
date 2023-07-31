@@ -9,7 +9,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
-	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
@@ -123,14 +122,8 @@ sdks:
   test-sdk:
     channel: latest/stable
 `), 0644)
-	c.Assert(s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04"), check.IsNil)
-	ws, err := s.backend.GetWorkspace(s.ctx, "test")
+	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	ws.LinkSdk(s.ctx, &sdk.SdkInfo{
-		Name:     "test-sdk",
-		Channel:  "latest/stable",
-		Revision: 0,
-	})
 
 	// pretend that a user updated the workspace file and called refresh
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test

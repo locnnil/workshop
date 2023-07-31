@@ -74,11 +74,25 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	if err != nil {
 		return err
 	}
+	projects, err := f.Projects(ctx)
+	if err != nil {
+		return err
+	}
+	prj := projects[projectId]
 
 	if f.Workspaces[projectId] == nil {
 		f.Workspaces[projectId] = make(map[string]*FakeWorkspace)
 	}
+	if _, ok := f.Workspaces[projectId][name]; ok {
+		return api.StatusErrorf(http.StatusNotFound, "workspace exists already")
+	}
+
 	ws := &FakeWorkspace{}
+	file, err := prj.WorkspaceFile(name)
+	if err != nil {
+		return err
+	}
+
 	ws.Config = make(map[string]string)
 	ws.WorkspaceFilesystem = NewFakeWorkspaceFs()
 
@@ -88,11 +102,17 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 		running:   true,
 		projectId: projectId,
 		content:   make(map[string]*sdk.SdkInfo),
+		file:      file,
 	}
-	if _, ok := f.Workspaces[projectId][name]; ok {
-		return api.StatusErrorf(http.StatusNotFound, "workspace exists already")
-	}
+
 	f.Workspaces[projectId][name] = ws
+
+	for _, s := range ws.File().Sdks {
+		ws.LinkSdk(ctx, &sdk.SdkInfo{
+			Name:    s.Name,
+			Channel: s.Channel,
+		})
+	}
 	return nil
 }
 
