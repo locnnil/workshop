@@ -42,7 +42,7 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 
 				op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
 				if inProgress && op.WaitOnError {
-					task.Logf("%q workspace refresh failed, resolve errors before resuming", ws)
+					task.Logf("cannot refresh %q; resolve errors before resuming", ws)
 					task.Errorf(err.Error())
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,

@@ -22,8 +22,8 @@ func (c *CmdRefresh) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error", false, "Stop the refresh operation on error without reverting to the previous state (default behaviour: revert the workspace to the previous state on error)")
-	cmd.PersistentFlags().BoolVar(&c.Continue, "continue", false, "Continue the refresh operation from the last failure")
+	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error", false, "Stop the refresh operation on error without reverting to the pre-refresh state (default behaviour: revert the workspace to the pre-refresh state on error)")
+	cmd.PersistentFlags().BoolVar(&c.Continue, "continue", false, "Continue the refresh operation from the last point of failure")
 	cmd.PersistentFlags().BoolVar(&c.Abort, "abort", false, "Abort the refresh operation and revert the workspace to the pre-refresh state")
 
 	return cmd
@@ -33,19 +33,19 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	var err error
 
 	if c.Abort && c.Continue {
-		return fmt.Errorf("flags --continue and --abort are incompatible")
+		return fmt.Errorf("cannot refresh: flags --continue and --abort are incompatible")
 	}
 
 	if c.WaitOnError && c.Abort {
-		return fmt.Errorf("flags --wait-on-error and --abort are incompatible")
+		return fmt.Errorf("cannot refresh: flags --wait-on-error and --abort are incompatible")
 	}
 
 	if c.WaitOnError && c.Continue {
-		return fmt.Errorf("flags --wait-on-error and --continue are incompatible")
+		return fmt.Errorf("cannot refresh: flags --wait-on-error and --continue are incompatible")
 	}
 
 	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
-		return fmt.Errorf("the wait-on-error mode can be used with a single workspace only")
+		return fmt.Errorf("cannot refresh: the wait-on-error mode can be used with a single workspace only")
 	}
 
 	cli, err := client.New(&ClientConfig)
@@ -81,8 +81,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 		if err == errWaitOnError {
-			return fmt.Errorf("%q refresh failed, resolve all errors and run \"workspace refresh --continue\".\n"+
-				"To abort and get back to the state before run \"workspace refresh --abort\"", av[0])
+			return fmt.Errorf("cannot refresh, resolve all errors and run \"workspace refresh --continue %s\".\n"+
+				"To abort and get back to the state before run \"workspace refresh --abort %s\"", av[0], av[0])
 		}
 		return fmt.Errorf("%v \nRefresh aborted", err)
 	}

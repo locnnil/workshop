@@ -175,7 +175,7 @@ base: ubuntu@20.04
 	})
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspaceAction(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkspaceLaunch(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
@@ -209,7 +209,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "at least one workspace name must be provided",
+			Message: "cannot launch: at least one workspace name must be provided",
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -259,7 +259,7 @@ base: ubuntu@20.04`), 0644)
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "options": {"refresh-mode":"continue"}}`),
 
 		// a workspace name is a must
-		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
 
 		// non-transactional refresh is only supported for a single workspace
 		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
@@ -299,7 +299,7 @@ base: ubuntu@20.04`), 0644)
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "at least one workspace name must be provided",
+			Message: "cannot refresh: at least one workspace name must be provided",
 		},
 		{
 			Type:    ResponseTypeError,
@@ -313,7 +313,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "refresh operation is already in progress for: ws",
+			Message: "cannot refresh: refresh is already in progress for \"ws\"",
 		},
 		{
 			Type:   ResponseTypeAsync,

@@ -3,7 +3,6 @@ package workspacestate
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
@@ -11,6 +10,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/slices"
 )
 
@@ -127,7 +127,7 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		}
 	}
 	if len(inProgress) > 0 {
-		return nil, fmt.Errorf("refresh operation is already in progress for: %s", strings.Join(inProgress, ","))
+		return nil, fmt.Errorf("cannot refresh: refresh is already in progress for %s", strutil.Quoted(inProgress))
 	}
 
 	// we are only interested in the existing (launched) workspaces
@@ -141,7 +141,7 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	for _, i := range names {
 		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
 		if idx == -1 {
-			return nil, fmt.Errorf("workspace %s not found", i)
+			return nil, fmt.Errorf("%q workspace not found", i)
 		}
 		files = append(files, workspaces[idx].File())
 		content = append(content, workspaces[idx].Content())
@@ -156,7 +156,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 	for i, w := range w {
 		tasks, err := refresh(st, w, content[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh workspace \"%s\": %v", w, err)
+			return nil, fmt.Errorf("cannot refresh \"%s\" workspace: %v", w, err)
 		}
 		taskset = append(taskset, tasks)
 	}
@@ -212,7 +212,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	// 5. Run restore state
 	// 6. Delete the old workspace
 
-	createStateStorage := st.NewTask("create-state-storage", "Mount SDK state storage")
+	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
 
 	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", file.Name))
@@ -224,7 +224,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 
 	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
 
-	removeStateStorage := st.NewTask("remove-state-storage", "Unmount SDK state storage")
+	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", file.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state

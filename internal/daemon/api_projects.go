@@ -171,16 +171,16 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot %s: failed to decode data from request body: %v", err)
 	}
 
 	if len(reqData.Names) == 0 {
-		return statusBadRequest("at least one workspace name must be provided")
+		return statusBadRequest("cannot %s: at least one workspace name must be provided", reqData.Action)
 	}
 
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
 	if !ok {
-		return statusBadRequest("user is not known")
+		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
 
 	var change *state.Change

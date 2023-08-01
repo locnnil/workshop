@@ -47,7 +47,7 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
-var abortLogMessage = regexp.MustCompile(`^Aborting \".+\" workspace refresh...$`)
+var abortLogMessage = regexp.MustCompile(`^abort \".+\" workspace refresh...$`)
 
 func stripAbortMessage(str string) string {
 	i := strings.Index(str, " ")

@@ -105,9 +105,9 @@ func ResumeRefresh(st *state.State,
 			if mode == RefreshContinue {
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
-				tsk.Logf("Continuing %q workspace refresh...", name)
+				tsk.Logf("continue %q workspace refresh...", name)
 			} else if mode == RefreshAbort {
-				tsk.Logf("Aborting %q workspace refresh...", name)
+				tsk.Logf("abort %q workspace refresh...", name)
 				tsk.SetStatus(state.ErrorStatus)
 			}
 		}

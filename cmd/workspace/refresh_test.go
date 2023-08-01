@@ -45,7 +45,7 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
     "ready": true,
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO abort \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
 }}`
 
 func (m *WorkspaceRefresh) SetUpTest(c *check.C) {
@@ -115,7 +115,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "\"ws\" refresh failed, resolve all errors and run \"workspace refresh --continue\".\nTo abort and get back to the state before run \"workspace refresh --abort\"")
+	c.Assert(err, check.ErrorMatches, "cannot refresh, resolve all errors and run \"workspace refresh --continue ws\".\nTo abort and get back to the state before run \"workspace refresh --abort ws\"")
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
@@ -150,4 +150,68 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C)
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refresh aborted\n")
+}
+
+func (m *WorkspaceRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
+	cmd := &CmdRefresh{}
+	cmd.Continue = true
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "continue"}})
+			w.WriteHeader(202)
+			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
+		case 3:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
+			fmt.Fprintln(w, mockReadyChangeJSON)
+		default:
+			c.Errorf("expected 3 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refreshed\n")
+}
+
+func (m *WorkspaceRefresh) TestRefreshIncompatibleOptions(c *check.C) {
+	cmd := &CmdRefresh{}
+	cmd.Abort = true
+	cmd.Continue = true
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --continue and --abort are incompatible")
+
+	cmd.WaitOnError = true
+	cmd.Abort = false
+	cmd.Continue = true
+
+	err = cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --wait-on-error and --continue are incompatible")
+
+	cmd.WaitOnError = true
+	cmd.Abort = true
+	cmd.Continue = false
+
+	err = cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --wait-on-error and --abort are incompatible")
+
+	cmd.WaitOnError = true
+	cmd.Abort = false
+	cmd.Continue = false
+
+	err = cmd.Run(nil, []string{"ws", "ws-1"})
+	c.Assert(err, check.ErrorMatches, "cannot refresh: the wait-on-error mode can be used with a single workspace only")
 }
