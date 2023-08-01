@@ -71,12 +71,12 @@ function cleanup() {
 
 # Workspace sub-command wrappers
 
-function launch() {
-  sudo -u ubuntu -- workspace --project "$1" launch "$2"
+function workspace_exec() {
+  sudo -u ubuntu -- workspace "$@"
 }
 
-function refresh() {
-  sudo -u ubuntu -- workspace --project "$1" refresh "$2"
+function launch() {
+  sudo -u ubuntu -- workspace --project "$1" launch "$2"
 }
 
 function list() {
