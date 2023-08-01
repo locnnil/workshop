@@ -77,4 +77,6 @@ suites:
 
 path: /remote
 exclude:
+  - .git
   - .workspace.lock
+  - docs
