@@ -22,8 +22,8 @@ type FakeWorkspace struct {
 }
 
 type ExecCall struct {
-	name string
-	args *ExecArgs
+	Name string
+	Args *ExecArgs
 }
 
 type FakeWorkspaceBackend struct {

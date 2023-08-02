@@ -108,18 +108,6 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		c.Check(args.Command, check.DeepEquals, []string{
-			"tar",
-			"--extract",
-			"--file",
-			"/root/new_2.sdk",
-			"--one-top-level=/var/lib/workspace/sdk/new/2",
-			"--no-same-owner",
-		})
-		return workspacebackend.DoExecDefault(ctx, name, args)
-	}
-
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
 		s.se.Ensure()
@@ -127,7 +115,16 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	/* Install must be successful */
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals, []string{
+		"tar",
+		"--extract",
+		"--file",
+		"/root/new_2.sdk",
+		"--one-top-level=/var/lib/workspace/sdk/new/2",
+		"--no-same-owner",
+	})
+
 	c.Check(chg.Err(), check.Equals, nil)
 	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))

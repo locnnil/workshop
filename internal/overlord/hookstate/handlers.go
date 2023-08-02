@@ -54,16 +54,31 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		{
 			fs, err := h.backend.GetWorkspaceFs(ctx, workspace)
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-sate\" for SDK %q: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 			err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
 			fs.Close()
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-sate\" for SDK %q: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 		}
 		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
 	case RestoreState:
+		{
+			fs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+			if err != nil {
+				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+			}
+			info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
+			fs.Close()
+			if err != nil {
+				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+			}
+
+			if !info.IsDir() {
+				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk.Name)
+			}
+		}
 		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
 	default:
 		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)

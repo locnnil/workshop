@@ -3,12 +3,14 @@ package hookstate_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/spf13/afero"
@@ -22,11 +24,9 @@ type hookSuite struct {
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
-	wsmgr   *sdkstate.SdkManager
+	hookmgr *hookstate.HookManager
 	ctx     context.Context
 	project *workspacebackend.Project
-
-	restoreProjectId func()
 }
 
 var _ = check.Suite(&hookSuite{})
@@ -40,7 +40,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workspace", w)
-		i.Set("project-id", p.ProjectId)
+		i.Set("project", *p)
 	}
 }
 
@@ -48,61 +48,57 @@ var ErrTrigger = errors.New("error out")
 
 func (s *hookSuite) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
 
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
-	s.project = &workspacebackend.Project{
-		Path:      c.MkDir(),
-		ProjectId: "projectId",
-	}
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)
-	s.backend.CreateOrLoadProject(s.ctx, s.project.Path)
+
+	var err error
+	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	c.Assert(err, check.IsNil)
+	s.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, s.project.ProjectId)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	/* empty task handler */
+	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wsmgr = sdkstate.NewSdkManager(s.runner, s.backend)
+	s.hookmgr = hookstate.NewHookManager(s.runner, s.backend)
 
-	/* error-provoking task handler */
+	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
 		return ErrTrigger
 	}
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
 
 	s.se = overlord.NewStateEngine(s.state)
-	s.se.AddManager(s.wsmgr)
+	s.se.AddManager(s.hookmgr)
 	s.se.AddManager(s.runner)
+	err = s.se.StartUp()
+	c.Check(err, check.IsNil)
 }
 
 func (s *hookSuite) TearDownTest(c *check.C) {
-	s.restoreProjectId()
 }
 
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	newSdk := workspacebackend.Sdk{Name: "new", Channel: "latest/stable"}
-	hook := hookstate.HookSetup{
-		Sdk:      newSdk,
-		HookType: hookstate.SetupBase,
-	}
-	t1 := s.state.NewTask("run-hook", "test")
-	t1.Set("hook-setup", hook)
+
+	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkspaceProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
-	executed := false
 
-	s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
-		executed = true
-		return workspacebackend.DoExecDefault(ctx, name, args)
-	}
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -111,25 +107,90 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	}
 	s.state.Lock()
 
-	/* Install must be successful */
+	c.Assert(s.backend.ExecCalls, check.HasLen, 0)
 	c.Check(chg.Err(), check.Equals, nil)
-	c.Check(executed, check.Equals, false)
 }
 
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{Name: "new", Channel: "latest/stable"}
-	hook := hookstate.HookSetup{
-		Sdk:      newSdk,
-		HookType: hookstate.SaveState,
-	}
-
-	t1 := s.state.NewTask("run-hook", "test")
-	t1.Set("hook-setup", hook)
+	newSdk := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkspaceProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
+
+	s.launchWorkspace(c, newSdk)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/save-state"})
+
+	// ensure that the save-state handler has created the required state directory
+	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	info, err := ws.Stat("/var/lib/workspace/state/sdk/one")
+	c.Check(err, check.IsNil)
+	c.Assert(info.IsDir(), check.Equals, true)
+}
+
+func (s *hookSuite) TestExecRestoreState(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	newSdk := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkspaceProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkspace(c, newSdk)
+
+	// setup state storage (usually already set by the save-state)
+	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	err = ws.MkdirAll("/var/lib/workspace/state/sdk/one", 0755)
+	c.Check(err, check.IsNil)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/restore-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/one"})
+}
+
+func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.Sdk) {
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04
+sdks:
+  one:
+    channel: latest/stable
+`), 0644)
+	c.Check(err, check.IsNil)
+	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
+	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	err = ws.MkdirAll(sdk.SdkHooksDir(newSdk.Name), 0744)
+	c.Check(err, check.IsNil)
+	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.SaveState.String()))
+	c.Check(err, check.IsNil)
+	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.RestoreState.String()))
+	c.Check(err, check.IsNil)
+	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.SetupBase.String()))
+	c.Check(err, check.IsNil)
 }

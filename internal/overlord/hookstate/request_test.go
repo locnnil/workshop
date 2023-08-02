@@ -2,7 +2,6 @@ package hookstate_test
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -16,8 +15,6 @@ type S struct {
 }
 
 var _ = check.Suite(&S{})
-
-func TestHookstateRequest(t *testing.T) { check.TestingT(t) }
 
 func (s *S) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
