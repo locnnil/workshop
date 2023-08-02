@@ -81,11 +81,11 @@ func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *WsOps) TestLxdBackendMakeWorkspaceAvailable(c *check.C) {
+func (f *WsOps) TestLxdBackendRestoreWorkspaceFromCopy(c *check.C) {
 	// Setup
 
 	// Execute
-	err := f.be.MakeWorkspaceUnavailable(f.ctx, "test")
+	err := f.be.CreateWorkspaceCopy(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -93,7 +93,7 @@ func (f *WsOps) TestLxdBackendMakeWorkspaceAvailable(c *check.C) {
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.MakeWorkspaceAvailable(f.ctx, "test")
+	err = f.be.RestoreWorkspaceFromCopy(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -121,13 +121,13 @@ func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *WsOps) TestLxdBackendDeleteUnavailableWorkspace(c *check.C) {
+func (f *WsOps) TestLxdBackendRemoveWorkspaceCopy(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.be.MakeWorkspaceUnavailable(f.ctx, "test-1")
+	err = f.be.CreateWorkspaceCopy(f.ctx, "test-1")
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -135,7 +135,7 @@ func (f *WsOps) TestLxdBackendDeleteUnavailableWorkspace(c *check.C) {
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.DeleteUnavailableWorkspace(f.ctx, "test-1")
+	err = f.be.RemoveWorkspaceCopy(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 	cli := f.client.UseProject(workspacebackend.LxdSystemProjectName(f.username))
 	_, _, err = cli.GetInstance(workspacebackend.InstanceName("test-1", f.project.ProjectId))

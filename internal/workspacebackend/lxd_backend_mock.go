@@ -230,15 +230,15 @@ func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool,
 	return done, nil
 }
 
-func (s *FakeWorkspaceBackend) DeleteUnavailableWorkspace(ctx context.Context, name string) error {
+func (s *FakeWorkspaceBackend) RemoveWorkspaceCopy(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *FakeWorkspaceBackend) MakeWorkspaceAvailable(ctx context.Context, name string) error {
+func (s *FakeWorkspaceBackend) RestoreWorkspaceFromCopy(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *FakeWorkspaceBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) error {
+func (s *FakeWorkspaceBackend) CreateWorkspaceCopy(ctx context.Context, name string) error {
 	return nil
 }
 

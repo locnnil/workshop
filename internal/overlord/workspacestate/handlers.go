@@ -154,7 +154,7 @@ func (m *WorkspaceManager) doDeleteWorkspaceCopy(task *state.Task, tomb *tomb.To
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.DeleteUnavailableWorkspace(ctx, workspace)
+	err = m.backend.RemoveWorkspaceCopy(ctx, workspace)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (m *WorkspaceManager) doMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.MakeWorkspaceUnavailable(ctx, workspace)
+	return m.backend.CreateWorkspaceCopy(ctx, workspace)
 }
 
 func (m *WorkspaceManager) undoMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
@@ -190,7 +190,7 @@ func (m *WorkspaceManager) undoMakeWorkspaceCopy(task *state.Task, tomb *tomb.To
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.MakeWorkspaceAvailable(ctx, workspace)
+	err = m.backend.RestoreWorkspaceFromCopy(ctx, workspace)
 	if err != nil {
 		return err
 	}

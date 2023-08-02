@@ -642,7 +642,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (cha
 
 	if status, ok := op.Get().Metadata["return"].(float64); ok {
 		if status != 0 {
-			logger.Debugf("command execution failed with %v", int(status))
+			logger.Debugf("cannot exec: %v", int(status))
 			return done, &ErrExec{Status: int(status)}
 		}
 	}
@@ -879,7 +879,7 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 	return NewWorkspaceFs(sftp), nil
 }
 
-func (s *LxdBackend) DeleteUnavailableWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkspaceCopy(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -903,7 +903,7 @@ func (s *LxdBackend) DeleteUnavailableWorkspace(ctx context.Context, name string
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) MakeWorkspaceAvailable(ctx context.Context, name string) error {
+func (s *LxdBackend) RestoreWorkspaceFromCopy(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -918,7 +918,7 @@ func (s *LxdBackend) MakeWorkspaceAvailable(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *LxdBackend) MakeWorkspaceUnavailable(ctx context.Context, name string) error {
+func (s *LxdBackend) CreateWorkspaceCopy(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
