@@ -47,7 +47,7 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
-var abortLogMessage = regexp.MustCompile(`^abort \".+\" workspace refresh...$`)
+var abortLogMessage = regexp.MustCompile(`^Aborting the \".+\" workspace refresh...$`)
 
 func stripAbortMessage(str string) string {
 	i := strings.Index(str, " ")
@@ -168,11 +168,12 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 			}
 
 			// if the change finished as Ready and reported an error, check if
-			// it was an expected abortion of a failed refresh and if so, finish
-			// gracefully instead of reporting errors. This approach uses the
-			// task log and checks if there are other Error tasks that became
-			// Error due to the undo logic execution not during the refresh
-			// (those must be reported as it means that abort itself failed).
+			// it was an expected abortion of a failed refresh and if the
+			// latter, finish gracefully instead of reporting errors. This
+			// approach uses the task log and checks if there are other Error
+			// tasks that became Error due to the undo logic execution not
+			// during the refresh (those must be reported as it means that abort
+			// itself failed).
 			if chg.Status == "Error" && abortExpected {
 				for _, t := range chg.Tasks {
 					if t.Status == "Error" {

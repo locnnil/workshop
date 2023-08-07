@@ -32,7 +32,7 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 				st.Lock()
 				defer st.Unlock()
 
-				task.Logf("cannot proceed: task execution cancelled")
+				task.Logf("The task execution was cancelled")
 				return nil
 
 			case err != nil:
@@ -42,8 +42,8 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 
 				op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
 				if inProgress && op.WaitOnError {
-					task.Logf("cannot refresh %q; resolve errors before resuming", ws)
-					task.Errorf(err.Error())
+					task.Logf("Setting the task to wait until the refresh is either aborted or continued...")
+					task.Errorf("%v", err)
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,
 						Reason:       fmt.Sprintf("wait on error: %v", err),

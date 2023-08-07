@@ -45,7 +45,19 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
     "ready": true,
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO abort \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting the \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
+}}`
+
+var mockChangeWithError = `{"type": "sync", "result":{
+    "id":   "four",
+    "kind": "refresh",
+    "summary": "...",
+    "status": "Error",
+    "ready": true,
+    "spawn-time": "2015-02-21T01:02:03Z",
+    "ready-time": "2015-02-21T01:02:04Z",
+	"err": "no answer",
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z ERROR No answer found"], "data":{"workspace":["ws","ws-1"]}}]
 }}`
 
 func (m *WorkspaceRefresh) SetUpTest(c *check.C) {
@@ -75,13 +87,43 @@ func (m *WorkspaceRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		default:
-			c.Errorf("expected 4 calls, now on %d", n)
+			c.Errorf("expected 3 calls, now on %d", n)
 		}
 	})
 
 	err := cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refreshed\n")
+}
+
+func (m *WorkspaceRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
+	cmd := &CmdRefresh{}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			w.WriteHeader(202)
+			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
+		case 3:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
+			fmt.Fprintln(w, mockChangeWithError)
+		default:
+			c.Errorf("expected 3 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, "(?s).*\"ws\", \"ws-1\" refresh aborted")
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {

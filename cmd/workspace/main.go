@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -64,7 +65,10 @@ func main() {
 	rootCmd.AddCommand((&CmdTasks{}).Command())
 	rootCmd.AddCommand((&CmdRefresh{}).Command())
 
+	rootCmd.SilenceErrors = true
+
 	if err = rootCmd.Execute(); err != nil {
+		fmt.Fprintf(Stdout, "error: %v\n", err)
 		os.Exit(1)
 	}
 }

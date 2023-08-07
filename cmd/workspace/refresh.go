@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
 )
 
@@ -84,7 +85,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return fmt.Errorf("cannot refresh, resolve all errors and run \"workspace refresh --continue %s\".\n"+
 				"To abort and get back to the state before run \"workspace refresh --abort %s\"", av[0], av[0])
 		}
-		return fmt.Errorf("%v \nRefresh aborted", err)
+
+		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
 	}
 
 	if c.Abort && err == nil {
