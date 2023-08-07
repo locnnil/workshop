@@ -879,7 +879,7 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 	return NewWorkspaceFs(sftp), nil
 }
 
-func (s *LxdBackend) RemoveWorkspaceCopy(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -903,7 +903,7 @@ func (s *LxdBackend) RemoveWorkspaceCopy(ctx context.Context, name string) error
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) RestoreWorkspaceFromCopy(ctx context.Context, name string) error {
+func (s *LxdBackend) UnstashWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -918,7 +918,7 @@ func (s *LxdBackend) RestoreWorkspaceFromCopy(ctx context.Context, name string) 
 	return nil
 }
 
-func (s *LxdBackend) CreateWorkspaceCopy(ctx context.Context, name string) error {
+func (s *LxdBackend) StashWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err

@@ -141,7 +141,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
-func (m *WorkspaceManager) doDeleteWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -154,14 +154,14 @@ func (m *WorkspaceManager) doDeleteWorkspaceCopy(task *state.Task, tomb *tomb.To
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.RemoveWorkspaceCopy(ctx, workspace)
+	err = m.backend.RemoveWorkspaceStash(ctx, workspace)
 	if err != nil {
 		return err
 	}
 	return StopRefresh(st, workspace, prj.ProjectId)
 }
 
-func (m *WorkspaceManager) doMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -174,10 +174,10 @@ func (m *WorkspaceManager) doMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.CreateWorkspaceCopy(ctx, workspace)
+	return m.backend.StashWorkspace(ctx, workspace)
 }
 
-func (m *WorkspaceManager) undoMakeWorkspaceCopy(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (m *WorkspaceManager) undoMakeWorkspaceCopy(task *state.Task, tomb *tomb.To
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.RestoreWorkspaceFromCopy(ctx, workspace)
+	err = m.backend.UnstashWorkspace(ctx, workspace)
 	if err != nil {
 		return err
 	}

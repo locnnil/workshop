@@ -25,8 +25,8 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	runner.AddHandler("stop-workspace", OnDoError(manager.doStop), manager.doStart)
 	runner.AddHandler("delete-workspace", OnDoError(manager.doDeleteWorkspace), nil)
 	runner.AddHandler("mount-project", OnDoError(manager.doMountProject), manager.undoMountProject)
-	runner.AddHandler("delete-workspace-copy", OnDoError(manager.doDeleteWorkspaceCopy), nil)
-	runner.AddHandler("make-workspace-copy", OnDoError(manager.doMakeWorkspaceCopy), manager.undoMakeWorkspaceCopy)
+	runner.AddHandler("remove-workspace-stash", OnDoError(manager.doRemoveWorkspaceStash), nil)
+	runner.AddHandler("stash-workspace", OnDoError(manager.doStashWorkspace), manager.undoStashWorkspace)
 	runner.AddHandler("create-state-storage", OnDoError(manager.doCreateStateStorage), manager.doRemoveStateStorage)
 	runner.AddHandler("remove-state-storage", OnDoError(manager.doRemoveStateStorage), nil)
 

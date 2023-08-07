@@ -154,8 +154,8 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"create-workspace",
-		"delete-workspace-copy",
-		"make-workspace-copy",
+		"remove-workspace-stash",
+		"stash-workspace",
 		"mount-project",
 		"start-workspace",
 	}
@@ -201,8 +201,8 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"create-workspace",
-		"delete-workspace-copy",
-		"make-workspace-copy",
+		"remove-workspace-stash",
+		"stash-workspace",
 		"mount-project",
 		"start-workspace",
 	}
@@ -211,9 +211,9 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"create-workspace",
-		"delete-workspace-copy",
+		"remove-workspace-stash",
 		"run-hook",
-		"make-workspace-copy",
+		"stash-workspace",
 		"mount-project",
 		"start-workspace",
 		"retrieve-sdk",
@@ -268,9 +268,9 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"create-workspace",
-		"delete-workspace-copy",
+		"remove-workspace-stash",
 		"run-hook",
-		"make-workspace-copy",
+		"stash-workspace",
 		"mount-project",
 		"start-workspace",
 		"retrieve-sdk",
@@ -327,7 +327,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"run-hook",
-		"make-workspace-copy",
+		"stash-workspace",
 		"create-workspace",
 		"mount-project",
 		"start-workspace",
@@ -336,7 +336,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		"link-sdk",
 		"run-hook",
 		"run-hook", // restore state hook
-		"delete-workspace-copy",
+		"remove-workspace-stash",
 	}
 
 	for i, t := range ts {

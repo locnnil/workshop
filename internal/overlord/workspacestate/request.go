@@ -61,7 +61,7 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create %q workspace", file.Name))
+	create := st.NewTask("create-workspace", fmt.Sprintf("Create new %q workspace", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
@@ -215,7 +215,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
 
-	makeCopy := st.NewTask("make-workspace-copy", fmt.Sprintf("Copy %q workspace", file.Name))
+	makeCopy := st.NewTask("stash-workspace", fmt.Sprintf("Stash previous %q workspace", file.Name))
 
 	launch, err := launch(st, file, p)
 	if err != nil {
@@ -225,7 +225,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-	deleteCopy := st.NewTask("delete-workspace-copy", fmt.Sprintf("Remove %q workspace copy", file.Name))
+	deleteCopy := st.NewTask("remove-workspace-stash", fmt.Sprintf("Remove %q workspace from stash", file.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
 	deleteCopy.WaitFor(removeStateStorage)

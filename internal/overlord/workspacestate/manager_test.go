@@ -44,8 +44,8 @@ func (s *ManagerSuite) TestAddHandlers(c *check.C) {
 		"stop-workspace",
 		"delete-workspace",
 		"mount-project",
-		"delete-workspace-copy",
-		"make-workspace-copy",
+		"remove-workspace-stash",
+		"stash-workspace",
 		"create-state-storage",
 		"remove-state-storage",
 	})

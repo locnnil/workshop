@@ -71,18 +71,19 @@ type WorkspaceBackend interface {
 	// it is represented as a separate method.
 	SetWorkspaceState(ctx context.Context, name, action string) error
 
-	// Restore the workspace from the copy (if a copy exists, see
-	// CreateWorkspaceCopy). The workspace will be restored and become visible
-	// to the backend operations.
-	RestoreWorkspaceFromCopy(ctx context.Context, name string) error
+	// Make a stash of the workspace. The workspace will be stopped and will not
+	// be available to other workspace operations, e.g. list, stop, start and so
+	// on. A new workspace with the same name can be launched for the same
+	// project-id.
+	StashWorkspace(ctx context.Context, name string) error
 
-	// Make a copy of the workspace. The copy will be stopped and will not be
-	// available to other workspace operations, e.g. list, stop, start and so
-	// on. A new workspace with the same name can be launched.
-	CreateWorkspaceCopy(ctx context.Context, name string) error
+	// Restore the workspace from the stash (if exists, see StashWorkspace). The
+	// workspace will be restored and become visible to the backend operations.
+	// Fails if a workspace with the same name exists.
+	UnstashWorkspace(ctx context.Context, name string) error
 
-	// Delete the workspace copy (if a copy exists).
-	RemoveWorkspaceCopy(ctx context.Context, name string) error
+	// Delete the workspace from stash (if exists).
+	RemoveWorkspaceStash(ctx context.Context, name string) error
 
 	// Create a temporary state storage volume for the workspace. It can be
 	// mounted to the instance separately. This does not mount the device to the
