@@ -24,7 +24,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/canonical/workspace/client"
@@ -43,12 +44,23 @@ type waitMixin struct {
 	skipAbort bool
 }
 
-var noWait = errors.New("no wait for op")
+var errNoWait = errors.New("no wait for op")
+var errWaitOnError = errors.New("wait-on-error")
 
-func (wmx waitMixin) wait(id string) (*client.Change, error) {
+var abortLogMessage = regexp.MustCompile(`^Aborting the \".+\" workspace refresh...$`)
+
+func stripAbortMessage(str string) string {
+	i := strings.Index(str, " ")
+	if i >= 0 && strings.HasPrefix(str[i:], " INFO ") {
+		return str[i+len(" INFO "):]
+	}
+	return str
+}
+
+func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
-		return nil, noWait
+		return nil, errNoWait
 	}
 	cli := wmx.client
 	// Intercept sigint
@@ -79,7 +91,6 @@ func (wmx waitMixin) wait(id string) (*client.Change, error) {
 
 	var lastID string
 	lastLog := map[string]string{}
-	var waitCtrlcMsg sync.Once
 	for {
 		var rebootingErr error
 		chg, err := cli.Change(id)
@@ -130,9 +141,7 @@ func (wmx waitMixin) wait(id string) (*client.Change, error) {
 		for _, t := range chg.Tasks {
 			if t.Status == "Wait" {
 				maybeShowLog(t)
-				waitCtrlcMsg.Do(func() {
-					fmt.Fprintf(Stderr, i18n.G("WARNING: pressing ctrl-c will abort the running change.\n"))
-				})
+				return nil, errWaitOnError
 			}
 		}
 
@@ -158,6 +167,29 @@ func (wmx waitMixin) wait(id string) (*client.Change, error) {
 				return chg, nil
 			}
 
+			// if the change finished as Ready and reported an error, check if
+			// it was an expected abortion of a failed refresh and if the
+			// latter, finish gracefully instead of reporting errors. This
+			// approach uses the task log and checks if there are other Error
+			// tasks that became Error due to the undo logic execution not
+			// during the refresh (those must be reported as it means that abort
+			// itself failed).
+			if chg.Status == "Error" && abortExpected {
+				for _, t := range chg.Tasks {
+					if t.Status == "Error" {
+						lastLogLine := t.Log[len(t.Log)-1]
+						abortMsg := stripAbortMessage(lastLogLine)
+						if abortLogMessage.Match([]byte(abortMsg)) {
+							continue
+						}
+						// no abort message, that means the task produced an
+						// error during the undo execution
+						goto ReportError
+					}
+				}
+				return chg, nil
+			}
+		ReportError:
 			if chg.Err != "" {
 				return chg, errors.New(chg.Err)
 			}

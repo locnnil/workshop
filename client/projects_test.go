@@ -8,7 +8,7 @@ import (
 )
 
 func (cs *clientSuite) TestClientProjects(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": 
+	cs.rsp = `{"type": "sync", "result":
 			[{"id":   "42ws42ws","path": "/home/francua/workspace"},{"id":"34hg34gh",
 			"path": "/home/francua/test"}]}`
 	prjs, err := cs.cli.Projects()
@@ -46,4 +46,19 @@ func (cs *clientSuite) TestClientLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"launch"}\n`)
+}
+
+func (cs *clientSuite) TestClientRefresh(c *check.C) {
+	cs.rsp = `{"type": "async", "status-code": 202, "change": "24"}`
+
+	id, err := cs.cli.Refresh("42ws42ws", []string{"ws"}, "transactional")
+
+	c.Check(cs.req.Method, check.Equals, "POST")
+	c.Assert(id, check.Equals, "24")
+	c.Assert(err, check.IsNil)
+
+	body, err := io.ReadAll(cs.req.Body)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"refresh-mode":"transactional"}}\n`)
 }

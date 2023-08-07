@@ -4,20 +4,20 @@ import (
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	. "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 )
 
 type SdkStateTasks struct {
 	state *state.State
 }
 
-func (i *SdkStateTasks) SetUpTest(c *C) {
+func (i *SdkStateTasks) SetUpTest(c *check.C) {
 	i.state = state.New(nil)
 }
 
-var _ = Suite(&SdkStateTasks{})
+var _ = check.Suite(&SdkStateTasks{})
 
-func (i *SdkStateTasks) TestInstall(c *C) {
+func (i *SdkStateTasks) TestInstall(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
@@ -25,11 +25,28 @@ func (i *SdkStateTasks) TestInstall(c *C) {
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 
-	c.Check(tasks, HasLen, 2)
-	c.Check(tasks[1].WaitTasks(), HasLen, 1)
+	c.Check(tasks, check.HasLen, 2)
+	c.Check(tasks[1].WaitTasks(), check.HasLen, 1)
 	var id string
 	tasks[0].Get("sdk-retrieve-task", &id)
-	c.Check(id, Equals, "retrieve")
+	c.Check(tasks[0].Summary(), check.Equals, "Install \"sdk\" SDK")
+	c.Check(id, check.Equals, "retrieve")
 	tasks[1].Get("sdk-retrieve-task", &id)
-	c.Check(id, Equals, "retrieve")
+	c.Check(tasks[1].Summary(), check.Equals, "Link \"sdk\" SDK")
+	c.Check(id, check.Equals, "retrieve")
+}
+
+func (i *SdkStateTasks) TestRetrieve(c *check.C) {
+	i.state.Lock()
+	defer i.state.Unlock()
+
+	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+
+	task := sdkstate.Retrieve(i.state, &sdk)
+
+	var s workspacebackend.Sdk
+	task.Get("sdk-setup", &s)
+	c.Check(s, check.DeepEquals, sdk)
+	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
+	c.Check(task.Summary(), check.Equals, "Retrieve \"sdk\" SDK from channel \"latest/stable\"")
 }

@@ -7,8 +7,19 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
-/* Initialise the SDK project namespace. */
-func InitProject(conn lxd.InstanceServer, projectName string) error {
+/* Initialise the Workspace project namespace. */
+func InitProject(conn lxd.InstanceServer, username string) error {
+	if err := createOrLoadLxdProject(conn, LxdProjectName(username)); err != nil {
+		return err
+	}
+
+	if err := createOrLoadLxdProject(conn, LxdSystemProjectName(username)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
 	if _, _, err := conn.GetProject(projectName); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return conn.CreateProject(api.ProjectsPost{

@@ -1,0 +1,36 @@
+summary: Check a failed refresh can be aborted successfully
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+  uninstall_workspaced
+
+debug: |
+  workspace changes
+  workspace tasks 1
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a workspace"
+  project="$WORKSPACES"/workspaces-sdk/test-sdk-fail
+  launch $project ws
+
+  echo "Update the workspace file to include a failing SDK"
+  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' $project/.workspace.ws.yaml
+  workspace_exec refresh --project $project --wait-on-error ws || true
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workspace.ws.yaml
+
+  echo "Check the workspace is in Pending state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
+
+  echo "Check the workspace refresh --abort reverts to the previous state"
+  workspace_exec refresh --project $project --abort ws | MATCH "\"ws\" refresh aborted"
+
+  echo "Check the workspace is in Ready state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

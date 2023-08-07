@@ -46,5 +46,5 @@ execute: |
    sudo -u ubuntu cp -R "$path" "$path"-copy
    launch "$path"-copy ws
    rm -rf "$path"-copy
-   list_global | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
+   list_global | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file,missing-project$"
   done

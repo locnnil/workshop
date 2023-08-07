@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
@@ -26,13 +26,13 @@ func (c *CmdTasks) Command() *cobra.Command {
 	return cmd
 }
 
+const line = "......................................................................"
+
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
 	var clientOpts client.ChangesOptions
 	var err error
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
@@ -73,6 +73,19 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 					tsk.Summary}, "\t"))
 			}
 			w.Flush()
+
+			for _, tsk := range tasks {
+				if len(tsk.Log) == 0 {
+					continue
+				}
+				fmt.Fprintln(os.Stdout)
+				fmt.Fprintln(os.Stdout, line)
+				fmt.Fprintln(os.Stdout, tsk.Summary)
+				fmt.Fprintln(os.Stdout)
+				for _, line := range tsk.Log {
+					fmt.Fprintln(os.Stdout, line)
+				}
+			}
 		}
 	} else {
 		return fmt.Errorf("change with id %q not found", av[0])

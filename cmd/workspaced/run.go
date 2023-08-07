@@ -130,15 +130,14 @@ func sanityCheck() error {
 func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	t0 := time.Now().Truncate(time.Millisecond)
 
-	workspaceDir, socketPath := dirs.GetEnvPaths()
 	if rcmd.CreateDirs {
 		if err := dirs.CreateDirs(); err != nil {
 			return err
 		}
 	}
 	dopts := daemon.Options{
-		Dir:        workspaceDir,
-		SocketPath: socketPath,
+		Dir:        dirs.BaseDir,
+		SocketPath: dirs.WorkspaceSocket,
 	}
 
 	dopts.HTTPAddress = rcmd.HTTP

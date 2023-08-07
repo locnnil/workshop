@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 )
 
@@ -37,7 +36,7 @@ type changeInfo struct {
 	SpawnTime time.Time  `json:"spawn-time,omitempty"`
 	ReadyTime *time.Time `json:"ready-time,omitempty"`
 
-	Project string `json:"path,omitempty"`
+	ProjectId string `json:"project-id,omitempty"`
 
 	Data map[string]*json.RawMessage `json:"data,omitempty"`
 }
@@ -111,9 +110,9 @@ func change2changeInfo(chg *state.Change) *changeInfo {
 	}
 	chgInfo.Tasks = taskInfos
 
-	var prj workspacebackend.Project
-	if chg.Get("project-key", &prj) == nil {
-		chgInfo.Project = prj.Path
+	var prjId string
+	if chg.Get("project-id", &prjId) == nil {
+		chgInfo.ProjectId = prjId
 	}
 
 	var data map[string]*json.RawMessage
@@ -155,11 +154,11 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 				return false
 			}
 
-			var projectKey workspacebackend.Project
-			if err := chg.Get("project-key", &projectKey); err != nil {
+			var id string
+			if err := chg.Get("project-id", &id); err != nil {
 				return false
 			}
-			if projectKey.ProjectId != projectId {
+			if id != projectId {
 				return false
 			}
 

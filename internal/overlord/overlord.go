@@ -16,6 +16,7 @@
 package overlord
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,6 +48,10 @@ var (
 	defaultCachedDownloads = 5
 )
 
+var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
+	return t.C
+}
+
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
@@ -64,6 +69,7 @@ type Overlord struct {
 
 	// managers
 	inited    bool
+	startedUp bool
 	sdk       *sdkstate.SdkManager
 	workspace *workspace.WorkspaceManager
 	hook      *hookstate.HookManager
@@ -132,9 +138,9 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	matchAnyUnknownTask := func(_ *state.Task) bool {
 		return true
 	}
-	o.runner.AddOptionalHandler(matchAnyUnknownTask, nil, nil)
+	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workspace = workspace.NewWorkspaceManager(o.runner, o.workspaceBackend)
+	o.workspace = workspace.NewWorkspaceManager(s, o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)
 
 	o.sdk = sdkstate.NewSdkManager(o.runner, o.workspaceBackend)
@@ -146,14 +152,43 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
 
-	err = o.stateEng.StartUp()
+	return o, nil
+}
+
+func (se *Overlord) StartUp() error {
+	if se.startedUp {
+		return nil
+	}
+	se.startedUp = true
+
+	var err error
+	st := se.State()
+	st.Lock()
+	se.startOfOperationTime, err = se.StartOfOperationTime()
+	st.Unlock()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("cannot get start of operation time: %s", err)
+	}
+	return se.stateEng.StartUp()
+}
+
+var timeNow = time.Now
+
+// StartOfOperationTime returns the time when workspace started operating,
+// and sets it in the state when called for the first time.
+func (m *Overlord) StartOfOperationTime() (time.Time, error) {
+	var opTime time.Time
+	err := m.State().Get("start-of-operation-time", &opTime)
+	if err == nil {
+		return opTime, nil
+	}
+	if err != nil && !errors.Is(err, state.ErrNoState) {
+		return opTime, err
 	}
 
-	o.startOfOperationTime = time.Now()
-
-	return o, nil
+	opTime = timeNow()
+	m.State().Set("start-of-operation-time", opTime)
+	return opTime, nil
 }
 
 func (o *Overlord) addManager(mgr StateManager) {
@@ -163,7 +198,7 @@ func (o *Overlord) addManager(mgr StateManager) {
 func loadState(statePath string, restartHandler restart.Handler, backend state.Backend) (*state.State, error) {
 	curBootID, err := osutil.BootID()
 	if err != nil {
-		return nil, fmt.Errorf("fatal: cannot find current boot ID: %v", err)
+		return nil, fmt.Errorf("fatal: cannot find current boot ID: %w", err)
 	}
 	// If workspace is PID 1 we don't care about /proc/sys/kernel/random/boot_id
 	// as we are most likely running in a container. LXD mounts it's own boot_id
@@ -173,7 +208,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	if os.Getpid() == 1 {
 		curBootID, err = randutil.RandomKernelUUID()
 		if err != nil {
-			return nil, fmt.Errorf("fatal: cannot generate psuedo boot-id: %v", err)
+			return nil, fmt.Errorf("fatal: cannot generate psuedo boot-id: %w", err)
 		}
 	}
 
@@ -197,6 +232,9 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 
 	var s *state.State
 	s, err = state.ReadState(backend, r)
+	if err != nil {
+		return nil, err
+	}
 
 	err = initRestart(s, curBootID, restartHandler)
 	if err != nil {
@@ -270,11 +308,12 @@ func (o *Overlord) Loop() {
 			// continue to the next Ensure() try for now
 			o.stateEng.Ensure()
 			o.ensureDidRun()
+			pruneC := pruneTickerC(o.pruneTicker)
 			select {
 			case <-o.loopTomb.Dying():
 				return nil
 			case <-o.ensureTimer.C:
-			case <-o.pruneTicker.C:
+			case <-pruneC:
 				st := o.State()
 				st.Lock()
 				st.Prune(o.startOfOperationTime, pruneWait, abortWait, pruneMaxChanges)
@@ -302,6 +341,10 @@ func (o *Overlord) Stop() error {
 }
 
 func (o *Overlord) settle(timeout time.Duration, beforeCleanups func()) error {
+	if err := o.StartUp(); err != nil {
+		return err
+	}
+
 	func() {
 		o.ensureLock.Lock()
 		defer o.ensureLock.Unlock()
@@ -406,6 +449,10 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 
 func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
 	return o.workspaceBackend
+}
+
+func (o *Overlord) WorkspaceManager() *workspace.WorkspaceManager {
+	return o.workspace
 }
 
 // Fake creates an Overlord without any managers and with a backend

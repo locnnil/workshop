@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/workspacestate"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/maps"
 )
 
@@ -23,37 +22,47 @@ type SdkInfo struct {
 }
 
 type WorkspaceInfo struct {
-	Name      string     `json:"name"`
-	ProjectId string     `json:"project-id"`
-	State     string     `json:"state"`
-	Content   []*SdkInfo `json:"content,omitempty"`
-	Notes     []string   `json:"notes,omitempty"`
+	Name         string     `json:"name"`
+	ProjectId    string     `json:"project-id"`
+	State        string     `json:"state"`
+	Content      []*SdkInfo `json:"content,omitempty"`
+	Notes        []string   `json:"notes,omitempty"`
+	RefreshChgId string     `json:"refresh-change-id,omitempty"`
 }
 
 var ensureStateSoon = stateEnsureBefore
 
-func workspacePropsToInfo(props *workspacebackend.WorkspaceProps) *WorkspaceInfo {
+func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *WorkspaceInfo {
+	var ws WorkspaceInfo
+	ws.Name = file.Name
+	ws.ProjectId = pid
+	ws.State = workspacebackend.WorkspaceOff.String()
+	for _, i := range file.Sdks {
+		ws.Content = append(ws.Content, &SdkInfo{
+			Name:    i.Name,
+			Channel: i.Channel,
+		})
+	}
+	return &ws
+}
+
+func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
-	ws.ProjectId = props.Config[workspacebackend.ProjectIdConfig]
+	ws.ProjectId = props.ProjectId()
+
+	// TODO: the order of SDK records is undetermined, we need the latest SDK revision
+	// if there are multiple revisions
+	for _, val := range props.Content() {
+		ws.Content = append(ws.Content, &SdkInfo{val.Name, val.Channel, strconv.FormatInt(val.Revision, 10)})
+	}
+
+	for _, err := range props.Errors() {
+		ws.Notes = append(ws.Notes, err.String())
+	}
+
 	ws.State = props.State().String()
 
-	var sequence = make(map[string][]*sdkstate.SdkSequenceRecord, 0)
-	if sdks, ok := props.Config["user.workspace.sdk"]; ok {
-		err := json.Unmarshal([]byte(sdks), &sequence)
-		if err != nil {
-			ws.State = workspacebackend.Error.String()
-			return &ws
-		}
-		// TODO: the order of SDK records is undetermined, we need the latest SDK revision
-		// if there are multiple revisions
-		for i, val := range sequence {
-			ws.Content = append(ws.Content, &SdkInfo{i, val[0].Channel, strconv.FormatInt(val[0].Revision, 10)})
-		}
-	}
-	if props.Reason() != workspacebackend.None {
-		ws.Notes = append(ws.Notes, props.Reason().String())
-	}
 	return &ws
 }
 
@@ -110,32 +119,37 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	defer state.Unlock()
 
 	query := r.URL.Query()
-	wsState := query.Get("state")
-	if wsState == "" {
-		wsState = "all"
+	wstate := query.Get("state")
+	if wstate == "" {
+		wstate = "all"
 	}
 
-	wBackend := c.d.overlord.WorkspaceBackend()
-
-	// project-id must be in the context for this query
-	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
-
-	workspaces, err := wBackend.GetAllWorkspaces(ctx)
+	wrkmgr := c.d.overlord.WorkspaceManager()
+	files, workspaces, err := wrkmgr.Workspaces(r.Context(), projectId)
 	if err != nil {
 		return statusInternalError("cannot list workspaces: %v", err)
 	}
 
-	var wsInfos = make([]*WorkspaceInfo, 0)
-	for _, i := range workspaces {
-		if wsState != "all" {
-			if strings.ToLower(i.State().String()) != wsState {
-				continue
-			}
+	var infoLst = make([]*WorkspaceInfo, 0)
+	for _, w := range workspaces {
+		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
+			continue
 		}
-		wsInfos = append(wsInfos, workspacePropsToInfo(i))
+		info := workspacePropsToInfo(w)
+		infoLst = append(infoLst, info)
 	}
 
-	return SyncResponse(wsInfos, http.StatusOK)
+	// Now, if the client wants only workspace files or just queried everything
+	// available, we add workspace files to the response (note these only exist
+	// as files, not instances)
+	if wstate == "all" || wstate == "off" {
+		for _, file := range files {
+			info := workspaceFileToInfo(file, projectId)
+			infoLst = append(infoLst, info)
+		}
+	}
+
+	return SyncResponse(infoLst, http.StatusOK)
 }
 
 func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
@@ -143,55 +157,99 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wsmgr := c.d.overlord.WorkspaceManager()
+
+	type actionOpts struct {
+		Mode string `json:"refresh-mode"`
+	}
 
 	var reqData struct {
-		Names  []string `json:"names"`
-		Action string   `json:"action"`
+		Names   []string   `json:"names"`
+		Action  string     `json:"action"`
+		Options actionOpts `json:"options"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot %s: failed to decode data from request body: %v", err)
 	}
 
-	projects, err := wBackend.Projects(r.Context())
-	if err != nil {
-		return statusBadRequest("no project found with \"id\" %v", projectId)
-	}
-
-	prj, ok := projects[projectId]
-	if !ok {
-		return statusBadRequest("no project found with \"id\" %v", projectId)
+	if len(reqData.Names) == 0 {
+		return statusBadRequest("cannot %s: at least one workspace name must be provided", reqData.Action)
 	}
 
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
 	if !ok {
-		return statusBadRequest("user is not known")
+		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
 
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
-		change = st.NewChange("launch", fmt.Sprintf("Launch workspace(s): %s", strings.Join(reqData.Names, ",")))
-
-		for _, i := range reqData.Names {
-			file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(prj.Path, i))
-			if err != nil {
-				return statusBadRequest("cannot read workspace \"%s\": %v", i, err)
-			}
-
-			taskset, err := workspacestate.Launch(st, file, prj)
-			if err != nil {
-				return statusInternalError("cannot launch workspace \"%s\": %v", i, err)
-			}
-			change.AddAll(taskset)
-			change.Set("user", user)
-			change.Set("project-key", &prj)
+		var summary string
+		switch len(reqData.Names) {
+		case 1:
+			summary = fmt.Sprintf("Launch workspace %q", reqData.Names[0])
+		default:
+			summary = fmt.Sprintf("Launch workspaces %s", strutil.Quoted(reqData.Names))
 		}
+
+		change = st.NewChange("launch", summary)
+
+		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
+		if err != nil {
+			return statusBadRequest(err.Error())
+		}
+
+		for _, i := range taskset {
+			change.AddAll(i)
+		}
+	case "refresh":
+		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
+
+		var summary string
+		switch len(reqData.Names) {
+		case 1:
+			summary = fmt.Sprintf("Refresh workspace %q", reqData.Names[0])
+		default:
+			summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
+		}
+
+		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
+			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
+		}
+
+		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
+			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId)
+			if err != nil {
+				return statusBadRequest(err.Error())
+			}
+
+			change = st.NewChange("refresh", summary)
+			for _, i := range taskset {
+				change.AddAll(i)
+			}
+
+			for _, name := range reqData.Names {
+				statecontext.StartRefresh(st, name, projectId, change.ID(),
+					refreshMode == statecontext.RefreshWaitOnError)
+			}
+		}
+
+		if refreshMode == statecontext.RefreshContinue || refreshMode == statecontext.RefreshAbort {
+			var err error
+			change, err = statecontext.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
+			if err != nil {
+				return statusBadRequest(err.Error())
+			}
+		}
+
 	default:
 		return statusBadRequest("unknown action")
 	}
+
+	change.Set("user", user)
+	change.Set("project-id", projectId)
 
 	ensureStateSoon(st, 0)
 
@@ -215,13 +273,11 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 	state.Lock()
 	defer state.Unlock()
 
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wrkmgr := c.d.overlord.WorkspaceManager()
 
-	// project-id must be in the context for this query
-	ctx := context.WithValue(r.Context(), workspacebackend.ContextProjectId, projectId)
-	workspace, err := wBackend.GetWorkspace(ctx, name)
+	workspace, err := wrkmgr.Workspace(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("cannot get workspace: %v", err)
+		return statusNotFound("cannot load workspace: %v", err)
 	}
 
 	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)

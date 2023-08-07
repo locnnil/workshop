@@ -41,7 +41,7 @@ execute: |
   rm -rf "$PROJECT"/nested; popd
 
   echo "Listing outside of a project directory should trigger an error"
-  list_cwd 2>&1 | MATCH "^Error: not a project \(no workspace files found\)$"
+  list_cwd 2>&1 | MATCH "^error: not a project \(no workspace files found\)$"
 
   echo "The directory was moved, its instances must update configuration with a new path"
   sudo -u ubuntu mv "$PROJECT" "$PROJECT"-new

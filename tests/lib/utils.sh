@@ -6,6 +6,9 @@ function install_workspaced() {
   # make sure there is no existing changes
     go install -buildvcs=false /remote/cmd/workspaced
     install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
+    mkdir -p /etc/systemd/system/workspaced.service.d
+    echo "[Service]
+Environment=\"SDK_STORE_URL=http://localhost:8080/storage/v1/\"" > /etc/systemd/system/workspaced.service.d/local.conf
     systemctl start workspaced
 }
 
@@ -15,6 +18,22 @@ function uninstall_workspaced() {
   rm -f "$HOME"/go/bin/workspaced
   rm -rf "$WORKSPACE"
 }
+
+
+# Publish test SDKs in the fake SDK Store
+function publish_test_sdk_content() {
+    for i in "$1"/*; do
+      SDK_NAME=$(basename "$i")
+      SDK_FILE=$SDK_NAME.sdk
+      SDK_PATH=$(readlink -f "$i")
+      STORE_PATH="$2"/"$SDK_NAME"/latest/stable/
+
+      tar czf "$SDK_FILE" -C "$SDK_PATH" $(ls -A "$SDK_PATH")
+      mkdir -p "$STORE_PATH"
+      mv "$SDK_FILE" "$STORE_PATH"
+    done
+}
+
 # Functions to assert required LXD state
 
 function assert_workspace_config() {
@@ -45,28 +64,23 @@ function assert_workspace_sdk() {
 function cleanup() {
   lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
   lxc project set workspace.ubuntu user.workspace.projects ""
-  for i in $1/*; do
+  for i in "$1"/*; do
     rm -f "$i"/.workspace.lock
   done
 }
 
-function assert_arrays_equal() {
-  local -n one=$1
-  local -n two=$2
-  mapfile -t result < <(comm -3  \
-        <(printf '%s\n' "${one[@]}"  | sort) \
-        <(printf '%s\n' "${two[@]}"  | sort))
-  test ${#result[@]} -eq 0
-}
-
 # Workspace sub-command wrappers
 
+function workspace_exec() {
+  sudo -u ubuntu -- workspace "$@"
+}
+
 function launch() {
-  sudo -u ubuntu -- workspace --project $1 launch $2
+  sudo -u ubuntu -- workspace --project "$1" launch "$2"
 }
 
 function list() {
-    sudo -u ubuntu -- workspace --project $1 list
+    sudo -u ubuntu -- workspace --project "$1" list
 }
 
 function list_cwd() {
@@ -78,11 +92,11 @@ function list_global() {
 }
 
 function delete() {
-    lxc delete $1 --force --project workspace.ubuntu
+    lxc delete "$1" --force --project workspace.ubuntu
 }
 
 function changes() {
-  sudo -u ubuntu -- workspace changes --project $1
+  sudo -u ubuntu -- workspace changes --project "$1"
 }
 
 function changes_global() {

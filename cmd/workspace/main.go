@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/logger"
 
 	"github.com/spf13/cobra"
@@ -37,6 +39,12 @@ var (
 )
 var Project string
 
+// ClientConfig is the configuration of the Client used by all commands.
+var ClientConfig = client.Config{
+	// we need the powerful snapd socket
+	Socket: dirs.WorkspaceSocket,
+}
+
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -55,6 +63,12 @@ func main() {
 	rootCmd.AddCommand((&CmdList{}).Command())
 	rootCmd.AddCommand((&CmdChanges{}).Command())
 	rootCmd.AddCommand((&CmdTasks{}).Command())
+	rootCmd.AddCommand((&CmdRefresh{}).Command())
 
-	rootCmd.Execute()
+	rootCmd.SilenceErrors = true
+
+	if err = rootCmd.Execute(); err != nil {
+		fmt.Fprintf(Stdout, "error: %v\n", err)
+		os.Exit(1)
+	}
 }

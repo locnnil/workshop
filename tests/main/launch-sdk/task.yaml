@@ -20,7 +20,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Launch a test workspace with an SDK should succeed"
-  path="$WORKSPACES_SDK"/test-sdks-ubuntu22
+  path="$WORKSPACES_SDK"/test-sdk-basic
   launch "$path" ws
   list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
 
@@ -29,8 +29,5 @@ execute: |
   project_id=$(cat "$path"/.workspace.lock)
   info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSPACE"/.workspace.socket http://localhost/v1/projects/"$project_id"/workspaces/ws)
 
-  echo "$info" | jq ".result.content[0].name" | MATCH "sdk-1"
+  echo "$info" | jq ".result.content[0].name" | MATCH "test-sdk-basic"
   echo "$info" | jq ".result.content[0].channel" | MATCH "latest/stable"
-
-  echo "$info" | jq ".result.content[1].name" | MATCH "sdk-2"
-  echo "$info" | jq ".result.content[1].channel" | MATCH "latest/stable"

@@ -1,7 +1,5 @@
 name: ws
 base: ubuntu@22.04
 sdks:
-    sdk-1:
-        channel: latest/stable
-    sdk-2:
+    test-sdk-basic:
         channel: latest/stable

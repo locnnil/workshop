@@ -3,7 +3,7 @@ package workspacestate
 import (
 	"fmt"
 
-	. "github.com/canonical/workspace/internal/overlord/sthelper"
+	. "github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
 
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -121,7 +121,84 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.DeleteWorkspace(ctx, workspace, true)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.RemoveWorkspaceStash(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	return StopRefresh(st, workspace, prj.ProjectId)
+}
+
+func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	return m.backend.StashWorkspace(ctx, workspace)
+}
+
+func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.UnstashWorkspace(ctx, workspace)
+	if err != nil {
+		return err
+	}
+
+	return StopRefresh(st, workspace, prj.ProjectId)
+}
+
+func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -138,6 +215,45 @@ func (m *WorkspaceManager) undoStart(task *state.Task, tomb *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
+func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.CreateStateStorage(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	err = m.backend.DeleteStateStorage(ctx, workspace)
+	if err != nil {
+		return err
+	}
 	return nil
 }

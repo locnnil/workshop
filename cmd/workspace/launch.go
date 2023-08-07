@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )
@@ -15,9 +14,9 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch workspace-name",
+		Use:   "launch <workspace>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Launch a workspace",
+		Short: "Launch one or many workspaces",
 		RunE:  c.Run,
 	}
 
@@ -25,11 +24,9 @@ func (c *CmdLaunch) Command() *cobra.Command {
 }
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
 	var err error
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
@@ -46,8 +43,8 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(changeId); err != nil {
-		if err == noWait {
+	if _, err := c.wait(changeId, false); err != nil {
+		if err == errNoWait {
 			return nil
 		}
 		return err
@@ -59,7 +56,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 	for _, i := range av {
 		if slices.ContainsFunc(workspaces, func(w *client.Workspace) bool { return w.Name == i && w.State == "Ready" }) {
-			fmt.Fprintf(Stdout, "Workspace %q launched\n", i)
+			fmt.Fprintf(Stdout, "%q launched\n", i)
 		}
 	}
 

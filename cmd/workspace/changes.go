@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/timeutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
@@ -26,12 +25,10 @@ func (c *CmdChanges) Command() *cobra.Command {
 }
 
 func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
-	var clientConfig client.Config
 	var clientOpts client.ChangesOptions
 	var err error
 
-	_, clientConfig.Socket = dirs.GetEnvPaths()
-	cli, err := client.New(&clientConfig)
+	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
@@ -52,7 +49,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 
 	if len(chngs) > 0 {
 		w := tabWriter()
-		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tProject\tSummary\n")
+		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
 
 		for _, chg := range chngs {
 			spawnTime := timeutil.Human(chg.SpawnTime)
@@ -61,12 +58,11 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 				readyTime = "-"
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				chg.ID,
 				chg.Status,
 				spawnTime,
 				readyTime,
-				contractHomeDirectory(chg.Project),
 				chg.Summary)
 		}
 		w.Flush()

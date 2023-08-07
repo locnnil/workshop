@@ -186,7 +186,7 @@ func (c *Command) canAccess(r *http.Request, user *userState) accessResult {
 	// project
 	if !c.AdminOnly {
 		// Guest and user access restricted to GET requests
-		if c.GuestOK {
+		if r.Method == "GET" && c.GuestOK {
 			return accessOK
 		}
 
@@ -374,7 +374,7 @@ func (d *Daemon) Init() error {
 	if listener, err := getListener(d.normalSocketPath, listenerMap); err == nil {
 		d.generalListener = &ucrednetListener{Listener: listener}
 	} else {
-		return fmt.Errorf("when trying to listen on %s: %v", d.normalSocketPath, err)
+		return fmt.Errorf("when trying to listen on %s: %w", d.normalSocketPath, err)
 	}
 
 	if listener, err := getListener(d.untrustedSocketPath, listenerMap); err == nil {
@@ -390,7 +390,7 @@ func (d *Daemon) Init() error {
 	if d.httpAddress != "" {
 		listener, err := net.Listen("tcp", d.httpAddress)
 		if err != nil {
-			return fmt.Errorf("cannot listen on %q: %v", d.httpAddress, err)
+			return fmt.Errorf("cannot listen on %q: %w", d.httpAddress, err)
 		}
 		d.httpListener = listener
 		logger.Noticef("HTTP API server listening on %q.", d.httpAddress)
@@ -467,13 +467,13 @@ func (d *Daemon) initStandbyHandling() {
 	d.standbyOpinions.Start()
 }
 
-func (d *Daemon) Start() {
+func (d *Daemon) Start() error {
 	if d.rebootIsMissing {
 		// we need to schedule and wait for a system restart
 		d.tomb.Kill(nil)
 		// avoid systemd killing us again while we wait
 		systemdSdNotify("READY=1")
-		return
+		return nil
 	}
 	if d.overlord == nil {
 		panic("internal error: no Overlord")
@@ -481,6 +481,10 @@ func (d *Daemon) Start() {
 
 	d.StartTime = time.Now()
 
+	// now perform expensive overlord/manages initialization
+	if err := d.overlord.StartUp(); err != nil {
+		return err
+	}
 	d.connTracker = &connTracker{conns: make(map[net.Conn]struct{})}
 	d.serve = &http.Server{
 		Handler:   logit(d.router),
@@ -525,6 +529,7 @@ func (d *Daemon) Start() {
 
 	// notify systemd that we are ready
 	systemdSdNotify("READY=1")
+	return nil
 }
 
 // HandleRestart implements overlord.RestartBehavior.
@@ -653,7 +658,7 @@ func (d *Daemon) rebootDelay() (time.Duration, error) {
 	// see whether a reboot had already been scheduled
 	var rebootAt time.Time
 	err := d.state.Get("daemon-system-restart-at", &rebootAt)
-	if err != nil && err != state.ErrNoState {
+	if err != nil && !errors.Is(err, state.ErrNoState) {
 		return 0, err
 	}
 	rebootDelay := 1 * time.Minute
@@ -738,7 +743,7 @@ var errExpectedReboot = errors.New("expected reboot did not happen")
 func (d *Daemon) RebootIsMissing(st *state.State) error {
 	var nTentative int
 	err := st.Get("daemon-system-restart-tentative", &nTentative)
-	if err != nil && err != state.ErrNoState {
+	if err != nil && !errors.Is(err, state.ErrNoState) {
 		return err
 	}
 	nTentative++

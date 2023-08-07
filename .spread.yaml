@@ -4,14 +4,26 @@ environment:
       PATH: $PATH:~/go/bin
       WORKSPACE: /var/lib/workspace/default
       TESTSLIB: $SPREAD_PATH/tests/lib
+      SDKCONTENT: $SPREAD_PATH/tests/lib/sdk
+      SDK_STORE_BUCKET_DIR: /data/sdk-store
 
 prepare: |
+      . "$TESTSLIB"/utils.sh
+
       apt-get install -y --no-install-recommends jq
       snap install go --classic
 
       snap install lxd --classic
       cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workspace/
       lxd init --auto
+
+      # run fake GCS bucket storage to emulate SDK store
+      publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
+      /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
+
+restore: |
+      rm -rf /data
+      rm -rf /storage
 backends:
   multipass:
     type: adhoc
@@ -65,4 +77,6 @@ suites:
 
 path: /remote
 exclude:
+  - .git
   - .workspace.lock
+  - docs

@@ -2,94 +2,118 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
+	"os"
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/canonical/workspace/internal/sdk"
 	"github.com/spf13/afero"
 	"google.golang.org/api/option"
 )
 
+var (
+	ErrNoRefreshAvailable = errors.New("SDK has no update available")
+)
+
+type StoreAction int
+
+const (
+	Refresh StoreAction = iota
+)
+
+func (s StoreAction) String() string {
+	return [...]string{"refresh"}[s]
+}
+
+type StoreResult struct {
+	Sdks         []*sdk.SdkInfo
+	ActionErrors map[string]error
+}
+
 type StoreClient interface {
-	RetrieveSdk(name, channel, localSdkDir string) (SdkBlob, error)
+	RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error)
 }
 
-type SdkBlob struct {
-	Name     string `json:"name"`
-	Channel  string `json:"channel"`
-	Filename string `json:"filename"`
-	Revision int64  `json:"revision"`
-}
-
-func ToSdkFilename(sdkDir, name string, revision int64) string {
-	return filepath.Join(sdkDir, fmt.Sprintf("%s_%d.sdk", name, revision))
-}
-
-func NewStoreClient() (StoreClient, error) {
-	return &ObjectStoreClient{Fs: afero.NewOsFs()}, nil
+func NewStoreClient() StoreClient {
+	return &ObjectStoreClient{Fs: afero.NewOsFs()}
 }
 
 type ObjectStoreClient struct {
 	Fs afero.Fs
 }
 
-func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (SdkBlob, error) {
+func storeConnect() (*storage.Client, error) {
+	if url := os.Getenv("SDK_STORE_URL"); url != "" {
+		// Set STORAGE_EMULATOR_HOST environment variable for GSC.
+		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:9000")
+		if err != nil {
+			return nil, err
+		}
+		client, err := storage.NewClient(context.Background(),
+			option.WithEndpoint(url))
+		return client, err
+
+	}
+	client, err := storage.NewClient(context.Background(), option.WithoutAuthentication())
+	return client, err
+}
+
+func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error) {
 	var track, risk string
-	var sdk SdkBlob
+	var s sdk.SdkInfo
 	var revision int64
 
 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
-		return sdk, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
+		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
 	} else {
 		track, risk = sa[0], sa[1]
 	}
 
 	ctx := context.Background()
-	if client, err := storage.NewClient(ctx, option.WithoutAuthentication()); err != nil {
-		return sdk, err
+	if client, err := storeConnect(); err != nil {
+		return &s, err
 	} else {
 		bkt := client.Bucket("sdk-store")
 		defer client.Close()
 		var obj *storage.ObjectHandle = bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
 		if atr, err := obj.Attrs(ctx); err != nil {
-			return sdk, err
+			return nil, err
 		} else {
 			/* A simple modulo to keep revision numbers in a readble form for testing */
 			revision = atr.Generation % 1000
 		}
 
 		if r, err := obj.NewReader(ctx); err != nil {
-			return sdk, err
+			return nil, err
 		} else {
 			defer r.Close()
 
-			filename := ToSdkFilename(localSdkDir, name, revision)
-			exist, err := afero.Exists(c.Fs, filename)
+			s.Name = name
+			s.Channel = channel
+			s.Revision = revision
+
+			exist, err := afero.Exists(c.Fs, s.Filename())
 			if err != nil {
-				return sdk, err
+				return nil, err
 			}
 
 			if !exist {
-				file, err := c.Fs.Create(filename)
+				file, err := c.Fs.Create(s.Filename())
 				if err != nil {
-					return sdk, err
+					return nil, err
 				}
 				defer file.Close()
 
 				if _, err = io.Copy(file, r); err != nil {
-					return sdk, err
+					return nil, err
 				}
 			}
-
-			sdk.Name = name
-			sdk.Channel = channel
-			sdk.Revision = revision
-			sdk.Filename = filename
 
 		}
 	}
 
-	return sdk, nil
+	return &s, nil
 }
