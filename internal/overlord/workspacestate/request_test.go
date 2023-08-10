@@ -346,7 +346,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 
 }
 
-func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
+func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -481,4 +481,15 @@ func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
 
 	ts := workspacestate.RestoreStateHooks(s.state, []*sdk.SdkInfo{}, file.Sdks)
 	c.Assert(ts.Tasks(), check.HasLen, 0)
+}
+
+func (s *S) TestStartMany(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	ts, err := workspacestate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
+	c.Assert(err, check.IsNil)
+	c.Assert(ts.Tasks(), check.HasLen, 2)
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workspace")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workspace")
 }

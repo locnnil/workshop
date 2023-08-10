@@ -264,9 +264,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 
 		change = st.NewChange("start", summary)
-		for _, i := range taskset {
-			change.AddAll(i)
-		}
+		change.AddAll(taskset)
 
 		for _, name := range reqData.Names {
 			statecontext.StartOperation(st, name, projectId,

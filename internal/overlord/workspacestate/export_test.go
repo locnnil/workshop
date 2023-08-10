@@ -5,7 +5,7 @@ var (
 	RefreshManyImpl   = refreshMany
 	RestoreStateHooks = restoreStateHooks
 	SaveStateHooks    = saveStateHooks
-
-	Launch         = launch
-	WorkspaceState = (*WorkspaceManager).workspaceState
+	StartManyImpl     = startMany
+	Launch            = launch
+	WorkspaceState    = (*WorkspaceManager).workspaceState
 )

@@ -7,10 +7,8 @@ import (
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/slices"
 )
 
@@ -120,17 +118,6 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	var inProgress = []string{}
-	for _, r := range names {
-		if _, prg := statecontext.RefreshInProgress(w.state, r, project.ProjectId); prg {
-			inProgress = append(inProgress, r)
-		}
-	}
-	if len(inProgress) > 0 {
-		return nil, fmt.Errorf("cannot refresh: refresh is already in progress for %s", strutil.Quoted(inProgress))
-	}
-
-	// we are only interested in the existing (launched) workspaces
 	_, workspaces, err := w.Workspaces(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -310,9 +297,24 @@ func createStateHooks(st *state.State, content []*sdk.SdkInfo, newContent worksp
 	return stateHooks
 }
 
-func (w *WorkspaceManager) StartMany(ctx context.Context,
-	names []string, projectId string) ([]*state.TaskSet, error) {
-	taskset := make([]*state.TaskSet, 0, len(names))
+func (w *WorkspaceManager) StartMany(ctx context.Context, names []string, projectId string) (*state.TaskSet, error) {
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+	return startMany(w.state, names, project)
+}
+
+func startMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
+	taskset := state.NewTaskSet([]*state.Task{}...)
+
+	for _, name := range names {
+		start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", name))
+		taskset.AddTask(start)
+
+		start.Set("workspace", name)
+		start.Set("project", *project)
+	}
 
 	return taskset, nil
 }
