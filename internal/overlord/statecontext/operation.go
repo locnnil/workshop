@@ -36,6 +36,12 @@ func ParseRefreshMode(s string) RefreshMode {
 
 type Operations map[string]Operation
 
+const (
+	OperationLaunch  = "launch"
+	OperationRefresh = "refresh"
+	OperationStart   = "start"
+)
+
 type Operation struct {
 	ChangeId    string `json:"changeId"`
 	Operation   string `json:"operation"`
@@ -52,19 +58,34 @@ type Operation struct {
 // operation. It involves more complexity on maintaining the workspace state
 // record and, likely, makes it more error-prone.
 
-// Returns an associated refresh operation for the workspace. An empty
-// string will be returned if no refresh in progress. The state must be locked
-func RefreshInProgress(st *state.State, name, projectId string) (*Operation, bool) {
+func OperationInProgress(st *state.State, name, projectId string) *Operation {
 	var ops Operations
 	err := st.Get(OpsInProgressKey, &ops)
 	if err != nil {
+		return nil
+	}
+
+	if op, ok := ops[workspacebackend.InstanceName(name, projectId)]; ok {
+		return &op
+	}
+	return nil
+}
+
+// Returns an associated refresh operation for the workspace. An empty
+// string will be returned if no refresh in progress. The state must be locked
+func RefreshInProgress(st *state.State, name, projectId string) (*Operation, bool) {
+	op := OperationInProgress(st, name, projectId)
+	if op == nil || op.Operation != OperationRefresh {
 		return nil, false
 	}
-	op := ops[workspacebackend.InstanceName(name, projectId)]
-	if op.Operation != "refresh" {
-		return nil, false
-	}
-	return &op, true
+	return op, true
+}
+
+func StartOperation(st *state.State, name, projectId string, op Operation) {
+	var refresh Operations = make(Operations)
+	st.Get(OpsInProgressKey, &refresh)
+	refresh[workspacebackend.InstanceName(name, projectId)] = op
+	st.Set(OpsInProgressKey, refresh)
 }
 
 // Sets a given workspace to the refresh mode, the state must be locked. The
@@ -72,7 +93,7 @@ func RefreshInProgress(st *state.State, name, projectId string) (*Operation, boo
 // or abort the refresh operation later on.
 func StartRefresh(st *state.State, name, projectId, change string, wait bool) error {
 	var refresh Operations = make(Operations)
-	var setup = Operation{ChangeId: change, Operation: "refresh", WaitOnError: wait}
+	var setup = Operation{ChangeId: change, Operation: OperationRefresh, WaitOnError: wait}
 
 	st.Get(OpsInProgressKey, &refresh)
 

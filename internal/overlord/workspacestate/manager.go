@@ -37,6 +37,28 @@ func (w *WorkspaceManager) Ensure() error {
 	return nil
 }
 
+// Checks all of the provided list of workspaces are in the required status
+func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
+	status workspacebackend.WorkspaceState) (bool, []string, error) {
+	invalid := []string{}
+	for _, name := range names {
+		wrkspc, err := w.Workspace(ctx, name, pId)
+		if err != nil {
+			return false, nil, err
+		}
+
+		st := w.workspaceState(wrkspc)
+		if st != status {
+			invalid = append(invalid, wrkspc.Name)
+		}
+	}
+
+	if len(invalid) > 0 {
+		return false, invalid, nil
+	}
+	return true, nil, nil
+}
+
 // Loads a workspace, the state must be locked as it is used to find out the
 // workspace state
 func (w *WorkspaceManager) Workspace(ctx context.Context, name, pId string) (*workspacebackend.Workspace, error) {
@@ -74,8 +96,8 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 // operations in progress for the workspace. The state must be locked before the
 // call.
 func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) workspacebackend.WorkspaceState {
-	op, opInProgress := RefreshInProgress(w.state, ws.Name, ws.ProjectId())
-	if opInProgress {
+	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
+	if op != nil {
 		if ws.IsRunning() {
 			change := w.state.Change(op.ChangeId)
 			if change == nil {

@@ -309,3 +309,10 @@ func createStateHooks(st *state.State, content []*sdk.SdkInfo, newContent worksp
 	}
 	return stateHooks
 }
+
+func (w *WorkspaceManager) StartMany(ctx context.Context,
+	names []string, projectId string) ([]*state.TaskSet, error) {
+	taskset := make([]*state.TaskSet, 0, len(names))
+
+	return taskset, nil
+}

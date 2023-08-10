@@ -121,7 +121,17 @@ func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string,
 }
 
 func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
-	panic("not implemented") // TODO: Implement
+	w, err := f.GetWorkspace(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	if action == "start" {
+		w.running = true
+	} else if action == "stop" {
+		w.running = false
+	}
+	return nil
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error {
@@ -167,7 +177,13 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	}
 
 	project := f.projects[user][projectId]
-	workspace := f.Workspaces[projectId][name].Workspace
+	if project == nil {
+		return nil, api.StatusErrorf(404, "project not found")
+	}
+	workspace := f.Workspaces[projectId][name]
+	if workspace == nil {
+		return nil, api.StatusErrorf(404, "workspace not found")
+	}
 	workspace.file, err = project.WorkspaceFile(workspace.Name)
 	if err != nil {
 		return nil, err
@@ -177,7 +193,7 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	if err != nil {
 		return nil, err
 	}
-	return workspace, nil
+	return workspace.Workspace, nil
 }
 
 func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {

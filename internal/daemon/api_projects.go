@@ -13,6 +13,8 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/maps"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type SdkInfo struct {
@@ -183,17 +185,17 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
 
+	var summary string
+	switch len(reqData.Names) {
+	case 1:
+		summary = fmt.Sprintf("%s workspace %q", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+	default:
+		summary = fmt.Sprintf("%s workspaces %s", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+	}
+
 	var change *state.Change
 	switch reqData.Action {
 	case "launch":
-		var summary string
-		switch len(reqData.Names) {
-		case 1:
-			summary = fmt.Sprintf("Launch workspace %q", reqData.Names[0])
-		default:
-			summary = fmt.Sprintf("Launch workspaces %s", strutil.Quoted(reqData.Names))
-		}
-
 		change = st.NewChange("launch", summary)
 
 		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
@@ -207,19 +209,21 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	case "refresh":
 		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
 
-		var summary string
-		switch len(reqData.Names) {
-		case 1:
-			summary = fmt.Sprintf("Refresh workspace %q", reqData.Names[0])
-		default:
-			summary = fmt.Sprintf("Refresh workspaces %s", strutil.Quoted(reqData.Names))
-		}
-
 		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
 			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
 		}
 
 		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
+			// check if all the workspace are available for the operation
+			avail, ops, err := wsmgr.CheckStatus(r.Context(), reqData.Names, projectId, workspacebackend.WorkspaceReady)
+			if err != nil {
+				return statusBadRequest("cannot %s: %v", reqData.Action, err)
+			}
+
+			if !avail {
+				return statusConflict("cannot %s: operation is already in progress for %s", reqData.Action, strutil.Quoted(ops))
+			}
+
 			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId)
 			if err != nil {
 				return statusBadRequest(err.Error())
@@ -243,7 +247,31 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 				return statusBadRequest(err.Error())
 			}
 		}
+	case "start":
+		// check if all the workspaces are stopped
+		avail, ops, err := wsmgr.CheckStatus(r.Context(), reqData.Names, projectId, workspacebackend.WorkspaceStopped)
+		if err != nil {
+			return statusBadRequest("cannot %s: %v", reqData.Action, err)
+		}
 
+		if !avail {
+			return statusConflict("cannot %s: %s must be stopped", reqData.Action, strutil.Quoted(ops))
+		}
+
+		taskset, err := wsmgr.StartMany(r.Context(), reqData.Names, projectId)
+		if err != nil {
+			return statusBadRequest(err.Error())
+		}
+
+		change = st.NewChange("start", summary)
+		for _, i := range taskset {
+			change.AddAll(i)
+		}
+
+		for _, name := range reqData.Names {
+			statecontext.StartOperation(st, name, projectId,
+				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationStart})
+		}
 	default:
 		return statusBadRequest("unknown action")
 	}
@@ -254,7 +282,6 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	ensureStateSoon(st, 0)
 
 	return AsyncResponse(nil, change.ID())
-
 }
 
 func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
