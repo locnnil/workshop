@@ -13,7 +13,7 @@ import (
 
 /* Fake backend implementation for tests */
 
-type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
+type ExecFunc func(ctx context.Context, name string, args *ExecArgs) error
 
 type FakeWorkspace struct {
 	*Workspace
@@ -120,17 +120,24 @@ func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string,
 	panic("not implemented") // TODO: Implement
 }
 
-func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
-	w, err := f.GetWorkspace(ctx, name)
+func (s *FakeWorkspaceBackend) StartWorkspace(ctx context.Context, name string) error {
+	w, err := s.GetWorkspace(ctx, name)
 	if err != nil {
 		return err
 	}
-
-	if action == "start" {
-		w.running = true
-	} else if action == "stop" {
-		w.running = false
+	if w.running {
+		return api.StatusErrorf(http.StatusConflict, "workspace already running")
 	}
+	w.running = true
+	return nil
+}
+
+func (s *FakeWorkspaceBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
+	w, err := s.GetWorkspace(ctx, name)
+	if err != nil {
+		return err
+	}
+	w.running = false
 	return nil
 }
 
@@ -234,16 +241,13 @@ func (s *FakeWorkspaceBackend) GetWorkspaceFs(ctx context.Context, name string) 
 	return s.Workspaces[projectId][name].WorkspaceFilesystem, nil
 }
 
-func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
 	return f.DoExec(ctx, name, args)
 }
 
-func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	done := make(chan bool)
-	close(done)
-
-	return done, nil
+func DoExecDefault(ctx context.Context, name string, args *ExecArgs) error {
+	return nil
 }
 
 func (s *FakeWorkspaceBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {

@@ -65,11 +65,13 @@ type WorkspaceBackend interface {
 	// is not in the Stopped state.
 	DeleteWorkspace(ctx context.Context, name string, forceful bool) error
 
-	// Used to execute an action for the workspace. Currently,
-	// "start" and "stop" actions are supported. TODO: choose a more
-	// correct naming for this method as "launch" is also an action but
-	// it is represented as a separate method.
-	SetWorkspaceState(ctx context.Context, name, action string) error
+	// Starts a workspace and waits until it is ready
+	// to accept commands
+	StartWorkspace(ctx context.Context, name string) error
+
+	// Stops workspace gracefully (i.e. waits for the graceful instance and all
+	// its running services termination) unless force is used.
+	StopWorkspace(ctx context.Context, name string, force bool) error
 
 	// Make a stash of the workspace. The workspace will be stopped and will not
 	// be available to other workspace operations, e.g. list, stop, start and so
@@ -121,5 +123,5 @@ type WorkspaceBackend interface {
 	// not related to the command (i.e. the workspace does not exist) and the
 	// errors that were caused by the command itself (e.g. != 0 return code). If
 	// the latter, an instance of ErrExec with the status code must be returned.
-	Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
+	Exec(ctx context.Context, name string, args *ExecArgs) error
 }

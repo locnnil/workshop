@@ -146,11 +146,9 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
+	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) error {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
-		done := make(chan bool)
-		close(done)
-		return done, os.ErrDeadlineExceeded
+		return os.ErrDeadlineExceeded
 	}
 
 	s.state.Unlock()
@@ -186,10 +184,10 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(terr)
 
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) (chan bool, error) {
+	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.ExecArgs) error {
 		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
 		fs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
-		return workspacebackend.DoExecDefault(ctx, name, args)
+		return nil
 	}
 
 	s.state.Unlock()

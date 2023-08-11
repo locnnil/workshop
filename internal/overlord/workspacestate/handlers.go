@@ -87,36 +87,11 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	err = m.backend.SetWorkspaceState(ctx, workspace, "start")
-	st.Unlock()
-	if err != nil {
+	if err = m.backend.StartWorkspace(ctx, workspace); err != nil {
 		return err
-	}
-
-	/* Wait until system is up an running before returning */
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c", "while " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
-		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
-
-	if done, err := m.backend.Exec(ctx, workspace, &args); err != nil {
-		return err
-	} else {
-		<-done
 	}
 	return nil
 }
@@ -211,7 +186,7 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
+	err = m.backend.StopWorkspace(ctx, workspace, false)
 	if err != nil {
 		return err
 	}

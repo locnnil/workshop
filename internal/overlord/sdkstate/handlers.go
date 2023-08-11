@@ -136,10 +136,8 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		Stdin:   nil,
 		Stdout:  out,
 		Stderr:  out}
-	done, err := m.backend.Exec(ctx, workspace, &args)
 
-	/* The server will close this channel when exec is finished and no i/o remains outstanding */
-	<-done
+	err = m.backend.Exec(ctx, workspace, &args)
 
 	if err != nil {
 		hookLog, _ := afero.ReadFile(memFs, out.Name())

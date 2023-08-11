@@ -87,18 +87,19 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspace, projectId string, hook *HookSetup) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
-	{
-		wsFs, err := h.backend.GetWorkspaceFs(ctx, workspace)
-		if err != nil {
-			return err
-		}
 
-		info, err := wsFs.Stat(hookPath)
-		wsFs.Close()
-		if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
-			return nil
-		}
+	// 
+	wsFs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+	if err != nil {
+		return err
 	}
+
+	info, err := wsFs.Stat(hookPath)
+	wsFs.Close()
+	if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
+		return nil
+	}
+
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
@@ -125,18 +126,14 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 	args.Stdin = out
 	args.Stdout = out
 
-	done, err := h.backend.Exec(ctx, workspace, &args)
-	<-done
+	err = h.backend.Exec(ctx, workspace, &args)
 
 	hookLog, _ := afero.ReadFile(memFs, out.Name())
 
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
-	if err == nil {
-		task.Logf(string(hookLog))
-		return nil
-	}
+	task.Logf(string(hookLog))
 
-	return fmt.Errorf("%v: %v", err, string(hookLog))
+	return err
 }

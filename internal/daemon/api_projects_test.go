@@ -400,7 +400,7 @@ base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	err = s.b.SetWorkspaceState(s.ctx, "ws", "stop")
+	err = s.b.StopWorkspace(s.ctx, "ws", false)
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{

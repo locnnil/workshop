@@ -141,3 +141,23 @@ func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 	_, _, err = cli.GetInstance(workspacebackend.InstanceName("test-1", f.project.ProjectId))
 	c.Assert(err, check.ErrorMatches, "Instance not found")
 }
+
+func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
+	// Setup
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	err = f.be.StopWorkspace(f.ctx, "test-1", false)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = f.be.StartWorkspace(f.ctx, "test-1")
+
+	//Validate
+	c.Assert(err, check.IsNil)
+	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	c.Assert(err, check.IsNil)
+	// Execute
+	err = f.be.DeleteWorkspace(f.ctx, "test-1", true)
+	//Validate
+	c.Assert(err, check.IsNil)
+}

@@ -29,6 +29,7 @@ type ExecArgs struct {
 	Command     []string
 	WorkDir     string
 	Environment map[string]string
+	Interactive bool
 	Stdin       io.ReadCloser
 	Stdout      io.WriteCloser
 	Stderr      io.WriteCloser
@@ -364,7 +365,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 
 		/* Take the first instance from the group, we need any running
 		and ready to execute commands to validate the project directory */
-		stdout, err := memFs.Create(i.Name)
+		out, err := memFs.Create(i.Name)
 		if err != nil {
 			return "", err
 		}
@@ -376,16 +377,16 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
 			WorkDir: "/",
 			Stdin:   nil,
-			Stdout:  stdout,
-			Stderr:  nil}
+			Stdout:  out,
+			Stderr:  out}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		done, err := s.Exec(execCtx, WorkspaceName(i.Name), &args)
+		err = s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
 		if err != nil {
-			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
+			outbuf, _ := afero.ReadFile(memFs, out.Name())
+			logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, outbuf)
 			continue
 		}
-		<-done
 
 		/* Process the findmnt results */
 		if currentPath, err := afero.ReadFile(memFs, i.Name); err == nil {
@@ -512,12 +513,41 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
+func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
-	return s.updateInstanceState(conn, ctx, name, action)
+	if err = s.updateInstanceState(conn, ctx, name, "start"); err != nil {
+		return err
+	}
+
+	// Wait until system is up an running before returning
+	// see: https://blog.simos.info/how-to-know-when-a-lxd-container-has-finished-starting-up/
+	args := ExecArgs{
+		User: "root",
+		Command: []string{
+			"bash", "-eu", "-c", "while " +
+				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
+				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+		},
+		WorkDir: "/",
+		Stdin:   nil,
+		Stdout:  nil,
+		Stderr:  nil}
+
+	if err := s.Exec(ctx, name, &args); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	return s.updateInstanceState(conn, ctx, name, "stop")
 }
 
 func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
@@ -536,9 +566,12 @@ func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *
 		return err
 	}
 	inst.Config[item.Name] = item.Value
-	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	if err != nil {
+		return err
+	}
 
-	return op.Wait()
+	return op.WaitContext(ctx)
 }
 
 func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
@@ -606,48 +639,62 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 	return op.Wait()
 }
 
-func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *ExecArgs) error {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	req := api.InstanceExecPost{
-		Command: args.Command, WaitForWS: true,
-		User: 0, Group: 0, Cwd: args.WorkDir,
-		Interactive: false, Environment: args.Environment,
+		Command:     args.Command,
+		WaitForWS:   true,
+		User:        0,
+		Group:       0,
+		Cwd:         args.WorkDir,
+		Interactive: args.Interactive,
+		Environment: args.Environment,
 	}
 
 	done := make(chan bool)
 
 	arg := lxd.InstanceExecArgs{
-		Stdin: args.Stdin, Stdout: args.Stdout, Stderr: args.Stderr,
-		Control: nil, DataDone: done,
+		Stdin:    args.Stdin,
+		Stdout:   args.Stdout,
+		Stderr:   args.Stderr,
+		Control:  nil,
+		DataDone: done,
 	}
 
 	op, err := conn.ExecInstance(InstanceName(name, projectId), req, &arg)
 
 	if err != nil {
-		return done, err
+		return err
 	}
 
 	if err := op.WaitContext(ctx); err != nil {
-		return done, err
+		return err
 	}
+
+	// waiting for any remaining data IO to be flushed LXD closes this channel
+	// unconditionally right after the operation has exited
+	<-arg.DataDone
 
 	if status, ok := op.Get().Metadata["return"].(float64); ok {
 		if status != 0 {
 			logger.Debugf("cannot exec: %v", int(status))
-			return done, &ErrExec{Status: int(status)}
+			return &ErrExec{Status: int(status)}
 		}
 	}
+	return nil
+}
 
-	return done, nil
+func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	return s.execCommand(conn, ctx, name, args)
 }
 
 func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
