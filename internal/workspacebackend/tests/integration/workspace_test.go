@@ -12,6 +12,7 @@ import (
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
+	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
 
@@ -65,19 +66,13 @@ func (f *WsOps) TearDownSuite(c *check.C) {
 }
 
 func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
-	// Setup
-
 	// Execute
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	defer f.be.DeleteWorkspace(f.ctx, "test-1")
 
 	//Validate
 	c.Assert(err, check.IsNil)
 	_, err = f.be.GetWorkspace(f.ctx, "test-1")
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	err = f.be.DeleteWorkspace(f.ctx, "test-1", true)
-	//Validate
 	c.Assert(err, check.IsNil)
 }
 
@@ -124,6 +119,7 @@ func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	defer f.be.DeleteWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -146,8 +142,7 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
-	err = f.be.StopWorkspace(f.ctx, "test-1", false)
-	c.Assert(err, check.IsNil)
+	defer f.be.DeleteWorkspace(f.ctx, "test-1")
 
 	// Execute
 	err = f.be.StartWorkspace(f.ctx, "test-1")
@@ -156,8 +151,36 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	c.Assert(err, check.IsNil)
 	_, err = f.be.GetWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
+
+	// now, ensure that the systemd is in the final state
+	memFs := afero.NewMemMapFs()
+	out, _ := memFs.Create("stdout")
+	args := workspacebackend.ExecArgs{
+		User: "root",
+		Command: []string{
+			"bash", "-eu", "-c",
+			"systemctl is-system-running 2>/dev/null",
+		},
+		WorkDir: "/",
+		Stdin:   nil,
+		Stdout:  out,
+		Stderr:  out}
+
+	err = f.be.Exec(f.ctx, "test-1", &args)
+	c.Assert(err, check.IsNil)
+	buf, err := afero.ReadFile(memFs, out.Name())
+	c.Assert(err, check.IsNil)
+	c.Assert(string(buf), check.Equals, "running\n")
+}
+
+func (f *WsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
 	// Execute
-	err = f.be.DeleteWorkspace(f.ctx, "test-1", true)
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	err = f.be.StartWorkspace(f.ctx, "test-1")
+	c.Assert(err, check.IsNil)
+
 	//Validate
+	err = f.be.DeleteWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }

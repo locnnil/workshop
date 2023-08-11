@@ -482,7 +482,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 	return nil
 }
 
-func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string) error {
+func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -501,8 +501,8 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 10,
-		Force:   false,
+		Timeout: 30,
+		Force:   force,
 	}
 
 	op, err := conn.UpdateInstanceState(inst.Name, req, etag)
@@ -518,7 +518,7 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if err = s.updateInstanceState(conn, ctx, name, "start"); err != nil {
+	if err = s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
 		return err
 	}
 
@@ -536,10 +536,7 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 		Stdout:  nil,
 		Stderr:  nil}
 
-	if err := s.Exec(ctx, name, &args); err != nil {
-		return err
-	}
-	return nil
+	return s.execCommand(conn, ctx, name, &args)
 }
 
 func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
@@ -547,7 +544,7 @@ func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool)
 	if err != nil {
 		return err
 	}
-	return s.updateInstanceState(conn, ctx, name, "stop")
+	return s.updateInstanceState(conn, ctx, name, "stop", force)
 }
 
 func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
@@ -861,7 +858,7 @@ func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*Work
 	return files, instances
 }
 
-func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string, forceful bool) error {
+func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -878,24 +875,8 @@ func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string, forceful 
 	}
 
 	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
-		if forceful {
-			req := api.InstanceStatePut{
-				Action:  "stop",
-				Timeout: -1,
-				Force:   true,
-			}
-
-			op, err := conn.UpdateInstanceState(inst.Name, req, "")
-			if err != nil {
-				return err
-			}
-
-			err = op.WaitContext(ctx)
-			if err != nil {
-				return fmt.Errorf("stopping the instance failed: %s", err)
-			}
-		} else {
-			return fmt.Errorf("cannot delete a non-stopped workspace: %q", name)
+		if err = s.updateInstanceState(conn, ctx, name, "stop", true); err != nil {
+			return err
 		}
 	}
 
@@ -959,7 +940,7 @@ func (s *LxdBackend) UnstashWorkspace(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := s.updateInstanceState(conn, ctx, name, "start"); err != nil {
+	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
 		return err
 	}
 	return nil
@@ -970,7 +951,7 @@ func (s *LxdBackend) StashWorkspace(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop"); err != nil {
+	if err := s.updateInstanceState(conn, ctx, name, "stop", false); err != nil {
 		return err
 	}
 

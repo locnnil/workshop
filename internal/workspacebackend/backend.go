@@ -61,9 +61,8 @@ type WorkspaceBackend interface {
 	// the supported bases are ubuntu@20.04 and ubuntu@22.04.
 	LaunchWorkspace(ctx context.Context, name, base string) error
 
-	// Delete workspace. Will fail if forceful flag is false and the workspace
-	// is not in the Stopped state.
-	DeleteWorkspace(ctx context.Context, name string, forceful bool) error
+	// Delete workspace. Stop the workspace if not in Stopped
+	DeleteWorkspace(ctx context.Context, name string) error
 
 	// Starts a workspace and waits until it is ready
 	// to accept commands

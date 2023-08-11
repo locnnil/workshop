@@ -116,7 +116,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string, forceful bool) error {
+func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string) error {
 	panic("not implemented") // TODO: Implement
 }
 
