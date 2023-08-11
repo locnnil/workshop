@@ -86,3 +86,10 @@ func (client *Client) Refresh(projectId string, names []string, mode string) (ch
 		},
 	})
 }
+
+func (client *Client) Start(projectId string, names []string) (changeId string, err error) {
+	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+		Action: "start",
+		Names:  names,
+	})
+}

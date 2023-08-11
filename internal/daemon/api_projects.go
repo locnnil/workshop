@@ -235,8 +235,8 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			}
 
 			for _, name := range reqData.Names {
-				statecontext.StartRefresh(st, name, projectId, change.ID(),
-					refreshMode == statecontext.RefreshWaitOnError)
+				statecontext.StartOperation(st, name, projectId,
+					statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationRefresh, WaitOnError: refreshMode == statecontext.RefreshWaitOnError})
 			}
 		}
 

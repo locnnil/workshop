@@ -25,37 +25,42 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		err = handler(task, tomb)
-		if err != nil {
-			switch {
-			case errors.Is(err, context.Canceled):
-				st := task.State()
-				st.Lock()
-				defer st.Unlock()
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
 
-				task.Logf("The task execution was cancelled")
-				return nil
-
-			case err != nil:
-				st := task.State()
-				st.Lock()
-				defer st.Unlock()
-
-				op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
-				if inProgress && op.WaitOnError {
+		switch {
+		case err == nil:
+			var opname string
+			if err = task.Get("operation-to-stop", &opname); err == nil {
+				if e := StopOperation(st, ws, p.ProjectId, opname); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", opname, ws, e, err)
+				}
+			}
+			return nil
+		case errors.Is(err, context.Canceled):
+			task.Logf("The task execution was cancelled")
+			return nil
+		case err != nil:
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if op.Operation == OperationRefresh && op.WaitOnError {
 					task.Logf("Setting the task to wait until the refresh is either aborted or continued...")
 					task.Errorf("%v", err)
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,
 						Reason:       fmt.Sprintf("wait on error: %v", err),
 					}
-				} else if inProgress {
-					if e := StopRefresh(st, ws, p.ProjectId); e != nil {
-						return fmt.Errorf("internal error: cannot stop refresh for %q: %v, refresh error: %v", ws, e, err)
-					}
 				}
-				return err
+
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
 			}
+
+			return err
 		}
+
 		return nil
 	}
 }

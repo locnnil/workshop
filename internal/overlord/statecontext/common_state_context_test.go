@@ -68,7 +68,7 @@ func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
 		return errors.New("task failed")
 	})
 	s.state.Lock()
-	err := statecontext.StartRefresh(s.state, "ws", s.project.ProjectId, "1", true)
+	err := statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: true})
 	c.Assert(err, check.IsNil)
 	s.state.Unlock()
 
@@ -80,8 +80,8 @@ func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	op, in := statecontext.RefreshInProgress(s.state, "ws", s.project.ProjectId)
-	c.Assert(in, check.Equals, true)
+	op := statecontext.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.NotNil)
 	c.Assert(op.ChangeId, check.Equals, "1")
 	c.Assert(op.Operation, check.Equals, "refresh")
 }

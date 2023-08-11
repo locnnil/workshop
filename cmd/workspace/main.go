@@ -64,6 +64,7 @@ func main() {
 	rootCmd.AddCommand((&CmdChanges{}).Command())
 	rootCmd.AddCommand((&CmdTasks{}).Command())
 	rootCmd.AddCommand((&CmdRefresh{}).Command())
+	rootCmd.AddCommand((&CmdStart{}).Command())
 
 	rootCmd.SilenceErrors = true
 

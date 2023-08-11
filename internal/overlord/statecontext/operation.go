@@ -71,33 +71,13 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 	return nil
 }
 
-// Returns an associated refresh operation for the workspace. An empty
-// string will be returned if no refresh in progress. The state must be locked
-func RefreshInProgress(st *state.State, name, projectId string) (*Operation, bool) {
-	op := OperationInProgress(st, name, projectId)
-	if op == nil || op.Operation != OperationRefresh {
-		return nil, false
+func StartOperation(st *state.State, name, projectId string, op Operation) error {
+	if op := OperationInProgress(st, name, projectId); op != nil {
+		return fmt.Errorf("cannot start %s: has another operation in progress", op.Operation)
 	}
-	return op, true
-}
-
-func StartOperation(st *state.State, name, projectId string, op Operation) {
 	var refresh Operations = make(Operations)
 	st.Get(OpsInProgressKey, &refresh)
 	refresh[workspacebackend.InstanceName(name, projectId)] = op
-	st.Set(OpsInProgressKey, refresh)
-}
-
-// Sets a given workspace to the refresh mode, the state must be locked. The
-// method associates the workspace with a change id that can be used to continue
-// or abort the refresh operation later on.
-func StartRefresh(st *state.State, name, projectId, change string, wait bool) error {
-	var refresh Operations = make(Operations)
-	var setup = Operation{ChangeId: change, Operation: OperationRefresh, WaitOnError: wait}
-
-	st.Get(OpsInProgressKey, &refresh)
-
-	refresh[workspacebackend.InstanceName(name, projectId)] = setup
 	st.Set(OpsInProgressKey, refresh)
 	return nil
 }
@@ -111,8 +91,8 @@ func ResumeRefresh(st *state.State,
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the refresh operation")
 	}
 
-	op, inProgress := RefreshInProgress(st, name, projectId)
-	if !inProgress {
+	op := OperationInProgress(st, name, projectId)
+	if op == nil {
 		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)
 	}
 
@@ -141,17 +121,20 @@ func ResumeRefresh(st *state.State,
 	return change, nil
 }
 
-// Unset the refresh mode for a given workspace, the state must be locked. The
-// method removes an association between a workspace and a change indicating
-// that the refresh is over and continue or abort will not be possible from this
-// point.
-func StopRefresh(st *state.State, name, projectId string) error {
+// Stop the operation in progress for a given workspace, the state must be
+// locked.
+func StopOperation(st *state.State, name, projectId, opname string) error {
 	var ops Operations
 	err := st.Get(OpsInProgressKey, &ops)
 	if err != nil {
 		return err
 	}
-	delete(ops, workspacebackend.InstanceName(name, projectId))
+	opkey := workspacebackend.InstanceName(name, projectId)
+	op, ok := ops[opkey]
+	if !ok || opname != op.Operation {
+		return fmt.Errorf("cannot stop: no %s in progress", opname)
+	}
+	delete(ops, opkey)
 	st.Set(OpsInProgressKey, ops)
 	return nil
 }

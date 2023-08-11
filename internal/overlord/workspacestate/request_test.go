@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
@@ -492,4 +493,10 @@ func (s *S) TestStartMany(c *check.C) {
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workspace")
 	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workspace")
+
+	var opname string
+	ts.Tasks()[0].Get("operation-to-stop", &opname)
+	c.Assert(opname, check.Equals, statecontext.OperationStart)
+	ts.Tasks()[1].Get("operation-to-stop", &opname)
+	c.Assert(opname, check.Equals, statecontext.OperationStart)
 }

@@ -100,7 +100,7 @@ func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
 		if setup.refreshInProgress {
 			chg := s.state.NewChange("test", "...")
 			chg.SetStatus(setup.status)
-			err := statecontext.StartRefresh(s.state, "ws", "42424242", chg.ID(), true)
+			err := statecontext.StartOperation(s.state, "ws", "42424242", statecontext.Operation{Operation: statecontext.OperationRefresh, ChangeId: chg.ID(), WaitOnError: true})
 			c.Assert(err, check.IsNil)
 		}
 
@@ -108,6 +108,10 @@ func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
 		st := workspacestate.WorkspaceState(s.manager, wrkspc)
 		c.Assert(st, check.Equals, setup.expectedState, check.Commentf("case num: %v", i))
 		c.Assert(wrkspc.Errors(), testutil.DeepUnsortedMatches, setup.expectedErrors, check.Commentf("case num: %v", i))
+		if setup.refreshInProgress {
+			err := statecontext.StopOperation(s.state, "ws", "42424242", statecontext.OperationRefresh)
+			c.Assert(err, check.IsNil)
+		}
 	}
 }
 

@@ -93,6 +93,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	if err = m.backend.StartWorkspace(ctx, workspace); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -133,7 +134,7 @@ func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.T
 	if err != nil {
 		return err
 	}
-	return StopRefresh(st, workspace, prj.ProjectId)
+	return StopOperation(st, workspace, prj.ProjectId, OperationRefresh)
 }
 
 func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -170,7 +171,7 @@ func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb)
 		return err
 	}
 
-	return StopRefresh(st, workspace, prj.ProjectId)
+	return StopOperation(st, workspace, prj.ProjectId, OperationRefresh)
 }
 
 func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {

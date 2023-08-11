@@ -7,6 +7,7 @@ import (
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
@@ -310,6 +311,7 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 
 	for _, name := range names {
 		start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", name))
+		start.Set("operation-to-stop", statecontext.OperationStart)
 		taskset.AddTask(start)
 
 		start.Set("workspace", name)

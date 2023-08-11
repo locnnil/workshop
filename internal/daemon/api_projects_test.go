@@ -361,7 +361,7 @@ base: ubuntu@20.04`), 0644)
 	soon := 0
 	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
 		if mockRefreshChanges[soon] == state.DoneStatus {
-			statecontext.StopRefresh(st, "ws", s.project.ProjectId)
+			statecontext.StopOperation(st, "ws", s.project.ProjectId, statecontext.OperationRefresh)
 		}
 		soon++
 	}, &ensureStateSoon)

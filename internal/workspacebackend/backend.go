@@ -57,11 +57,11 @@ type WorkspaceBackend interface {
 	// Returns a list of projects known to the backend.
 	Projects(ctx context.Context) (map[string]*Project, error)
 
-	// Launch a barebone workspace instance using the base provided. Currently,
-	// the supported bases are ubuntu@20.04 and ubuntu@22.04.
+	// Launch a barebone workspace instance using the base provided. The
+	// supported bases are ubuntu@20.04 and ubuntu@22.04.
 	LaunchWorkspace(ctx context.Context, name, base string) error
 
-	// Delete workspace. Stop the workspace if not in Stopped
+	// Delete workspace. Stop the workspace forcefully if not in Stopped before deleting
 	DeleteWorkspace(ctx context.Context, name string) error
 
 	// Starts a workspace and waits until it is ready
