@@ -7,17 +7,15 @@ import (
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
 )
 
 const (
-	RefreshOldWorkspacePrefix         = "refresh-incumbent-"
-	RefereshDeleteCopyLane            = 1
-	LastBeforeRefreshIrreversibleEdge = state.TaskSetEdge("last-before-irreversible")
-	CleanupRefreshEdge                = state.TaskSetEdge("refresh-cleanup")
+	LaneCleanupRefresh                = 1
+	EdgeLastBeforeRefreshIrreversible = state.TaskSetEdge("last-before-irreversible")
+	EdgeCleanupRefresh                = state.TaskSetEdge("refresh-cleanup")
 )
 
 func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workspacebackend.Project, error) {
@@ -150,7 +148,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 	}
 
 	for _, ts := range taskset {
-		cleanup, err := ts.Edge(CleanupRefreshEdge)
+		cleanup, err := ts.Edge(EdgeCleanupRefresh)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +163,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 		// other changes before execution.
 		for _, otherts := range taskset {
 			if ts != otherts {
-				last, err := otherts.Edge(LastBeforeRefreshIrreversibleEdge)
+				last, err := otherts.Edge(EdgeLastBeforeRefreshIrreversible)
 				if err != nil {
 					return nil, err
 				}
@@ -181,9 +179,9 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 				// all the cleanup tasks are extracted into a separate lane. If
 				// any problem happens, the workspaces which had finished their
 				// refresh will not suffer.
-				cleanup.JoinLane(RefereshDeleteCopyLane)
+				cleanup.JoinLane(LaneCleanupRefresh)
 				for _, t := range cleanup.HaltTasks() {
-					t.JoinLane(RefereshDeleteCopyLane)
+					t.JoinLane(LaneCleanupRefresh)
 				}
 			}
 		}
@@ -228,7 +226,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 		// the point of no return is the last launch task (i.e.
 		// before the moment when we delete the copy of the workspace
 		// after the refresh operation)
-		launch.MarkEdge(lastLaunchTask, LastBeforeRefreshIrreversibleEdge)
+		launch.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
 	}
 	launch.WaitFor(makeCopy)
 	if len(saveStateHooks.Tasks()) > 0 {
@@ -247,7 +245,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	refresh.AddTask(removeStateStorage)
 	refresh.AddTask(deleteCopy)
 
-	refresh.MarkEdge(removeStateStorage, CleanupRefreshEdge)
+	refresh.MarkEdge(removeStateStorage, EdgeCleanupRefresh)
 
 	for _, i := range refresh.Tasks() {
 		i.Set("workspace", file.Name)
@@ -273,7 +271,7 @@ func restoreStateHooks(st *state.State, content []*sdk.SdkInfo, newContent works
 		last := stateHooks.Tasks()[len(stateHooks.Tasks())-1]
 		// last restore state hook for the refresh call is the last task before the
 		// previous refresh copy removal, ie. before making something irreversible
-		stateHooks.MarkEdge(last, LastBeforeRefreshIrreversibleEdge)
+		stateHooks.MarkEdge(last, EdgeLastBeforeRefreshIrreversible)
 	}
 	return stateHooks
 }
@@ -311,7 +309,7 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 
 	for _, name := range names {
 		start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", name))
-		start.Set("operation-to-stop", statecontext.OperationStart)
+		start.Set("stop-operation", true)
 		taskset.AddTask(start)
 
 		start.Set("workspace", name)

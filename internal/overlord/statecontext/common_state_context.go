@@ -17,7 +17,7 @@ import (
 // due to abortion, e.g. a running hook is called off because their change was
 // aborted.
 // 3. The error needs to be reported as is which will cause the abortion.
-func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
+func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		_, p, ws, err := UserProjectWorkspace(task)
 		if err != nil {
@@ -31,15 +31,24 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 
 		switch {
 		case err == nil:
-			var opname string
-			if err = task.Get("operation-to-stop", &opname); err == nil {
-				if e := StopOperation(st, ws, p.ProjectId, opname); e != nil {
-					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", opname, ws, e, err)
+			if task.Has("stop-operation") {
+				op := OperationInProgress(st, ws, p.ProjectId)
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
 				}
 			}
 			return nil
 		case errors.Is(err, context.Canceled):
 			task.Logf("The task execution was cancelled")
+			// the context cancellation here means the change was aborted and
+			// the undo logic chain started. we don't report the context
+			// cancellation as error here as it is an expected interruption
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
+			}
 			return nil
 		case err != nil:
 			op := OperationInProgress(st, ws, p.ProjectId)

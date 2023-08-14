@@ -40,16 +40,28 @@ func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
-	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
+	task := s.setupTask()
+
+	s.state.Lock()
+	err := statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: true})
+	c.Assert(err, check.IsNil)
+	task.Change().Abort()
+	s.state.Unlock()
+
+	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return fmt.Errorf("execution error %w", context.Canceled)
 	})
-	task := s.setupTask()
-	err := handler(task, nil)
+	err = handler(task, nil)
 	c.Assert(err, check.IsNil)
+
+	s.state.Lock()
+	op := statecontext.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.IsNil)
+	s.state.Unlock()
 }
 
 func (s *CommonStateFuncs) TestExecutionError(c *check.C) {
-	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
 	task := s.setupTask()
@@ -64,7 +76,7 @@ func (s *CommonStateFuncs) TestExecutionError(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
-	handler := statecontext.OnDoError(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
 	s.state.Lock()

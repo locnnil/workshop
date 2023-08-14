@@ -37,7 +37,7 @@ func NewHookManager(runner *state.TaskRunner, server workspacebackend.WorkspaceB
 		backend: server,
 	}
 
-	runner.AddHandler("run-hook", OnDoError(manager.doRunHook), nil)
+	runner.AddHandler("run-hook", OnDo(manager.doRunHook), nil)
 
 	return manager
 }

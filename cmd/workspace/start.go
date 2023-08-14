@@ -31,6 +31,7 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
+	c.skipAbort = true
 
 	project, err := c.client.Project(Project)
 	if err != nil {

@@ -188,9 +188,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var summary string
 	switch len(reqData.Names) {
 	case 1:
-		summary = fmt.Sprintf("%s workspace %q", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+		summary = fmt.Sprintf("%s %q workspace", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
 	default:
-		summary = fmt.Sprintf("%s workspaces %s", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+		summary = fmt.Sprintf("%s %s workspaces", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
 	}
 
 	var change *state.Change

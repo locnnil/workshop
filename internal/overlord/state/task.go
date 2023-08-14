@@ -444,11 +444,6 @@ func (t *Task) Log() []string {
 	return t.log
 }
 
-func (t *Task) ClearLog() {
-	t.state.writing()
-	t.log = []string{}
-}
-
 // Logf logs information about the progress of the task.
 func (t *Task) Logf(format string, args ...interface{}) {
 	t.state.writing()

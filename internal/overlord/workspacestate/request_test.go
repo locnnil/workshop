@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
@@ -226,18 +225,18 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	verifyExpectedTasks(c, ts[0].Tasks(), expected_ws)
 	verifyExpectedTasks(c, ts[1].Tasks(), expected_ws_1)
 
-	c.Assert(ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "start-workspace")
-	waitFor := ts[0].MaybeEdge(workspacestate.CleanupRefreshEdge).WaitTasks()
+	c.Assert(ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "start-workspace")
+	waitFor := ts[0].MaybeEdge(workspacestate.EdgeCleanupRefresh).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
-		ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge),
-		ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge),
+		ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
+		ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
 	})
 
-	c.Assert(ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "run-hook")
-	waitFor = ts[1].MaybeEdge(workspacestate.CleanupRefreshEdge).WaitTasks()
+	c.Assert(ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "run-hook")
+	waitFor = ts[1].MaybeEdge(workspacestate.EdgeCleanupRefresh).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
-		ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge),
-		ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge),
+		ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
+		ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
 	})
 
 	for i, t := range ts {
@@ -382,18 +381,18 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	ts, err := workspacestate.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
-	lastChanceWs := ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	lastChanceWs := ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible)
 	c.Assert(lastChanceWs, check.NotNil)
 	c.Assert(lastChanceWs.Kind(), check.Equals, "run-hook")
 
-	lastChanceWs1 := ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	lastChanceWs1 := ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible)
 	c.Assert(lastChanceWs1, check.NotNil)
 	c.Assert(lastChanceWs1.Kind(), check.Equals, "run-hook")
 
 	// Ensure that the delete-copy for ws will wait on the own
 	// remove-state-storage and ws1's (i.e. all the other workspaces') restore
 	// state hooks
-	removeWsStStorage := ts[0].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	removeWsStStorage := ts[0].MaybeEdge(workspacestate.EdgeCleanupRefresh)
 	deleteCopy := removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs, lastChanceWs1})
 
@@ -408,7 +407,7 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	// Ensure that the delete-copy for ws1 will wait on the own
 	// remove-state-storage and ws's (i.e. all the other workspaces') restore
 	// state hooks
-	removeWsStStorage = ts[1].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	removeWsStStorage = ts[1].MaybeEdge(workspacestate.EdgeCleanupRefresh)
 	deleteCopy = removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs1, lastChanceWs})
 
@@ -443,7 +442,7 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 		}
 		prev = t
 	}
-	c.Assert(ts.MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge), check.Equals, prev)
+	c.Assert(ts.MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible), check.Equals, prev)
 }
 
 func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
@@ -494,9 +493,9 @@ func (s *S) TestStartMany(c *check.C) {
 	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workspace")
 	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workspace")
 
-	var opname string
-	ts.Tasks()[0].Get("operation-to-stop", &opname)
-	c.Assert(opname, check.Equals, statecontext.OperationStart)
-	ts.Tasks()[1].Get("operation-to-stop", &opname)
-	c.Assert(opname, check.Equals, statecontext.OperationStart)
+	var opname bool
+	ts.Tasks()[0].Get("stop-operation", &opname)
+	c.Assert(opname, check.Equals, true)
+	ts.Tasks()[1].Get("stop-operation", &opname)
+	c.Assert(opname, check.Equals, true)
 }

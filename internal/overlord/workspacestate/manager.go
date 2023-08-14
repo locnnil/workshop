@@ -20,15 +20,15 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	}
 
 	/* Workspace management */
-	runner.AddHandler("create-workspace", OnDoError(manager.doCreateWorkspace), manager.undoCreateWorkspace)
-	runner.AddHandler("start-workspace", OnDoError(manager.doStart), manager.doStop)
-	runner.AddHandler("stop-workspace", OnDoError(manager.doStop), manager.doStart)
-	runner.AddHandler("delete-workspace", OnDoError(manager.doDeleteWorkspace), nil)
-	runner.AddHandler("mount-project", OnDoError(manager.doMountProject), manager.undoMountProject)
-	runner.AddHandler("remove-workspace-stash", OnDoError(manager.doRemoveWorkspaceStash), nil)
-	runner.AddHandler("stash-workspace", OnDoError(manager.doStashWorkspace), manager.undoStashWorkspace)
-	runner.AddHandler("create-state-storage", OnDoError(manager.doCreateStateStorage), manager.doRemoveStateStorage)
-	runner.AddHandler("remove-state-storage", OnDoError(manager.doRemoveStateStorage), nil)
+	runner.AddHandler("create-workspace", OnDo(manager.doCreateWorkspace), manager.undoCreateWorkspace)
+	runner.AddHandler("start-workspace", OnDo(manager.doStart), manager.doStop)
+	runner.AddHandler("stop-workspace", OnDo(manager.doStop), manager.doStart)
+	runner.AddHandler("delete-workspace", OnDo(manager.doDeleteWorkspace), nil)
+	runner.AddHandler("mount-project", OnDo(manager.doMountProject), manager.undoMountProject)
+	runner.AddHandler("remove-workspace-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
+	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), manager.undoStashWorkspace)
+	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), manager.doRemoveStateStorage)
+	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
 	return manager
 }
