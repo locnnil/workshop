@@ -13,7 +13,7 @@ import (
 
 /* Fake backend implementation for tests */
 
-type ExecFunc func(ctx context.Context, name string, args *ExecArgs) (chan bool, error)
+type ExecFunc func(ctx context.Context, name string, args *ExecArgs) error
 
 type FakeWorkspace struct {
 	*Workspace
@@ -116,12 +116,29 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string, forceful bool) error {
+func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string) error {
 	panic("not implemented") // TODO: Implement
 }
 
-func (f *FakeWorkspaceBackend) SetWorkspaceState(ctx context.Context, name, action string) error {
-	panic("not implemented") // TODO: Implement
+func (s *FakeWorkspaceBackend) StartWorkspace(ctx context.Context, name string) error {
+	w, err := s.GetWorkspace(ctx, name)
+	if err != nil {
+		return err
+	}
+	if w.running {
+		return api.StatusErrorf(http.StatusConflict, "workspace already running")
+	}
+	w.running = true
+	return nil
+}
+
+func (s *FakeWorkspaceBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
+	w, err := s.GetWorkspace(ctx, name)
+	if err != nil {
+		return err
+	}
+	w.running = false
+	return nil
 }
 
 func (f *FakeWorkspaceBackend) AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error {
@@ -167,7 +184,13 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	}
 
 	project := f.projects[user][projectId]
-	workspace := f.Workspaces[projectId][name].Workspace
+	if project == nil {
+		return nil, api.StatusErrorf(404, "project not found")
+	}
+	workspace := f.Workspaces[projectId][name]
+	if workspace == nil {
+		return nil, api.StatusErrorf(404, "workspace not found")
+	}
 	workspace.file, err = project.WorkspaceFile(workspace.Name)
 	if err != nil {
 		return nil, err
@@ -177,7 +200,7 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	if err != nil {
 		return nil, err
 	}
-	return workspace, nil
+	return workspace.Workspace, nil
 }
 
 func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
@@ -218,16 +241,13 @@ func (s *FakeWorkspaceBackend) GetWorkspaceFs(ctx context.Context, name string) 
 	return s.Workspaces[projectId][name].WorkspaceFilesystem, nil
 }
 
-func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
+func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
 	return f.DoExec(ctx, name, args)
 }
 
-func DoExecDefault(ctx context.Context, name string, args *ExecArgs) (chan bool, error) {
-	done := make(chan bool)
-	close(done)
-
-	return done, nil
+func DoExecDefault(ctx context.Context, name string, args *ExecArgs) error {
+	return nil
 }
 
 func (s *FakeWorkspaceBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {

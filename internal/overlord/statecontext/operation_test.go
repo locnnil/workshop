@@ -35,7 +35,7 @@ func (s *OperationSuite) TestResumeRefreshContinue(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	statecontext.StartRefresh(s.state, "ws", s.project.ProjectId, "1", true)
+	statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: true})
 	change := s.state.NewChange("refresh", "...")
 	task := s.state.NewTask("no-op", "...")
 	task.SetToWait(state.DoingStatus)
@@ -50,7 +50,7 @@ func (s *OperationSuite) TestResumeRefreshAbort(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	statecontext.StartRefresh(s.state, "ws", s.project.ProjectId, "1", true)
+	statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: true})
 	change := s.state.NewChange("refresh", "...")
 	task := s.state.NewTask("no-op", "...")
 	change.AddTask(task)

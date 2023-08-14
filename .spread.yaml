@@ -21,6 +21,9 @@ prepare: |
       publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
       /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
 
+debug: |
+      lxc list -f compact --all-projects
+
 restore: |
       rm -rf /data
       rm -rf /storage

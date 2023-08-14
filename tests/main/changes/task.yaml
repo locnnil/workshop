@@ -20,4 +20,4 @@ execute: |
   launch $project ws
 
   echo "The launch change must present in the list"
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch workspace.*$"
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workspace$"

@@ -5,7 +5,6 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/workspacestate"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -57,7 +56,7 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	file := &workspacebackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
-	ts, err := workspace.Launch(s.state, file, s.project)
+	ts, err := workspacestate.Launch(s.state, file, s.project)
 
 	expected := []string{"create-workspace",
 		"mount-project",
@@ -85,7 +84,7 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{sdk, sdk_2}}
 
-	ts, err := workspace.Launch(s.state, file, s.project)
+	ts, err := workspacestate.Launch(s.state, file, s.project)
 
 	expected := []string{
 		"create-workspace",
@@ -147,7 +146,7 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{}}
 
-	ts, err := workspace.Refresh(s.state, file, []*sdk.SdkInfo{}, s.project)
+	ts, err := workspacestate.Refresh(s.state, file, []*sdk.SdkInfo{}, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -187,14 +186,14 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 
 	content := [][]*sdk.SdkInfo{
 		nil,
-		[]*sdk.SdkInfo{{
+		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
 		},
 		},
 	}
 
-	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
+	ts, err := workspacestate.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected_ws := []string{
@@ -226,18 +225,18 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	verifyExpectedTasks(c, ts[0].Tasks(), expected_ws)
 	verifyExpectedTasks(c, ts[1].Tasks(), expected_ws_1)
 
-	c.Assert(ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "start-workspace")
-	waitFor := ts[0].MaybeEdge(workspace.CleanupRefreshEdge).WaitTasks()
+	c.Assert(ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "start-workspace")
+	waitFor := ts[0].MaybeEdge(workspacestate.EdgeCleanupRefresh).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
-		ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
-		ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+		ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
+		ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
 	})
 
-	c.Assert(ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge).Kind(), check.Equals, "run-hook")
-	waitFor = ts[1].MaybeEdge(workspace.CleanupRefreshEdge).WaitTasks()
+	c.Assert(ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "run-hook")
+	waitFor = ts[1].MaybeEdge(workspacestate.EdgeCleanupRefresh).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
-		ts[0].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
-		ts[1].MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge),
+		ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
+		ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
 	})
 
 	for i, t := range ts {
@@ -256,7 +255,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{testSdk}}
 
-	ts, err := workspace.Refresh(s.state, file, []*sdk.SdkInfo{
+	ts, err := workspacestate.Refresh(s.state, file, []*sdk.SdkInfo{
 		{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -308,19 +307,19 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 	}
 
 	content := [][]*sdk.SdkInfo{
-		[]*sdk.SdkInfo{{
+		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
 		},
 		},
-		[]*sdk.SdkInfo{{
+		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
 		},
 		},
 	}
 
-	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
+	ts, err := workspacestate.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -347,7 +346,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 
 }
 
-func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
+func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -367,33 +366,33 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
 	}
 
 	content := [][]*sdk.SdkInfo{
-		[]*sdk.SdkInfo{{
+		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
 		},
 		},
-		[]*sdk.SdkInfo{{
+		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
 		},
 		},
 	}
 
-	ts, err := workspace.RefreshManyImpl(s.state, files, content, s.project)
+	ts, err := workspacestate.RefreshManyImpl(s.state, files, content, s.project)
 	c.Assert(err, check.IsNil)
 
-	lastChanceWs := ts[0].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	lastChanceWs := ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible)
 	c.Assert(lastChanceWs, check.NotNil)
 	c.Assert(lastChanceWs.Kind(), check.Equals, "run-hook")
 
-	lastChanceWs1 := ts[1].MaybeEdge(workspacestate.LastBeforeRefreshIrreversibleEdge)
+	lastChanceWs1 := ts[1].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible)
 	c.Assert(lastChanceWs1, check.NotNil)
 	c.Assert(lastChanceWs1.Kind(), check.Equals, "run-hook")
 
 	// Ensure that the delete-copy for ws will wait on the own
 	// remove-state-storage and ws1's (i.e. all the other workspaces') restore
 	// state hooks
-	removeWsStStorage := ts[0].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	removeWsStStorage := ts[0].MaybeEdge(workspacestate.EdgeCleanupRefresh)
 	deleteCopy := removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs, lastChanceWs1})
 
@@ -408,7 +407,7 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingCopy(c *check.C) {
 	// Ensure that the delete-copy for ws1 will wait on the own
 	// remove-state-storage and ws's (i.e. all the other workspaces') restore
 	// state hooks
-	removeWsStStorage = ts[1].MaybeEdge(workspacestate.CleanupRefreshEdge)
+	removeWsStStorage = ts[1].MaybeEdge(workspacestate.EdgeCleanupRefresh)
 	deleteCopy = removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs1, lastChanceWs})
 
@@ -432,7 +431,7 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 	one := &sdk.SdkInfo{Name: "one", Channel: "latest/stable"}
 	two := &sdk.SdkInfo{Name: "two", Channel: "latest/stable"}
 
-	ts := workspace.RestoreStateHooks(s.state,
+	ts := workspacestate.RestoreStateHooks(s.state,
 		[]*sdk.SdkInfo{one, two}, workspacebackend.SdkList{oneinst, twoinst})
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
@@ -443,7 +442,7 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 		}
 		prev = t
 	}
-	c.Assert(ts.MaybeEdge(workspace.LastBeforeRefreshIrreversibleEdge), check.Equals, prev)
+	c.Assert(ts.MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible), check.Equals, prev)
 }
 
 func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
@@ -458,7 +457,7 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 	one := &sdk.SdkInfo{Name: "one", Channel: "latest/stable"}
 	two := &sdk.SdkInfo{Name: "two", Channel: "latest/stable"}
 
-	ts := workspace.SaveStateHooks(s.state, []*sdk.SdkInfo{one, two}, installed)
+	ts := workspacestate.SaveStateHooks(s.state, []*sdk.SdkInfo{one, two}, installed)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
 	prev := (*state.Task)(nil)
@@ -480,6 +479,23 @@ func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
 		Sdks: workspacebackend.SdkList{},
 	}
 
-	ts := workspace.RestoreStateHooks(s.state, []*sdk.SdkInfo{}, file.Sdks)
+	ts := workspacestate.RestoreStateHooks(s.state, []*sdk.SdkInfo{}, file.Sdks)
 	c.Assert(ts.Tasks(), check.HasLen, 0)
+}
+
+func (s *S) TestStartMany(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	ts, err := workspacestate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
+	c.Assert(err, check.IsNil)
+	c.Assert(ts.Tasks(), check.HasLen, 2)
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workspace")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workspace")
+
+	var opname bool
+	ts.Tasks()[0].Get("stop-operation", &opname)
+	c.Assert(opname, check.Equals, true)
+	ts.Tasks()[1].Get("stop-operation", &opname)
+	c.Assert(opname, check.Equals, true)
 }

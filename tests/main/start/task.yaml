@@ -1,0 +1,37 @@
+summary: Check workspace start
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+  uninstall_workspaced
+
+debug: |
+  lxc list -f compact --all-projects
+  workspace changes
+  workspace tasks 1
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a workspace"
+  project="$WORKSPACES"/workspaces-sdk/test-sdk-basic
+  launch $project ws
+
+  # Stop the workspace instance
+  project_id=$(cat "$project"/.workspace.lock)
+  instance=ws-"$project_id"
+  lxc stop "$instance" --project workspace.ubuntu
+
+  echo "Check the workspace is in Stopped state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+
+  echo "Start the workspace"
+  workspace_exec start --project $project ws
+
+  echo "Check the workspace is in Ready state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

@@ -24,7 +24,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.DeleteWorkspace(ctx, workspace, true)
+	return m.backend.DeleteWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -71,10 +71,7 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	if err = m.backend.AddWorkspaceDevice(ctx, workspace, prjMount); err != nil {
-		return err
-	}
-	return nil
+	return m.backend.AddWorkspaceDevice(ctx, workspace, prjMount)
 }
 
 func (m *WorkspaceManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
@@ -87,38 +84,10 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	/* Start the workspace. TODO: make sure that we have it ready before attempting to proceed */
-	err = m.backend.SetWorkspaceState(ctx, workspace, "start")
-	st.Unlock()
-	if err != nil {
-		return err
-	}
-
-	/* Wait until system is up an running before returning */
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c", "while " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
-		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
-
-	if done, err := m.backend.Exec(ctx, workspace, &args); err != nil {
-		return err
-	} else {
-		<-done
-	}
-	return nil
+	return m.backend.StartWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -134,11 +103,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.DeleteWorkspace(ctx, workspace, true)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.backend.DeleteWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.Tomb) error {
@@ -154,11 +119,7 @@ func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.T
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.RemoveWorkspaceStash(ctx, workspace)
-	if err != nil {
-		return err
-	}
-	return StopRefresh(st, workspace, prj.ProjectId)
+	return m.backend.RemoveWorkspaceStash(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -190,12 +151,7 @@ func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb)
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.UnstashWorkspace(ctx, workspace)
-	if err != nil {
-		return err
-	}
-
-	return StopRefresh(st, workspace, prj.ProjectId)
+	return m.backend.UnstashWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
@@ -211,11 +167,7 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.SetWorkspaceState(ctx, workspace, "stop")
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.backend.StopWorkspace(ctx, workspace, false)
 }
 
 func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
@@ -231,11 +183,7 @@ func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.CreateStateStorage(ctx, workspace)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.backend.CreateStateStorage(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
@@ -251,9 +199,5 @@ func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	err = m.backend.DeleteStateStorage(ctx, workspace)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.backend.DeleteStateStorage(ctx, workspace)
 }

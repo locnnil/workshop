@@ -17,7 +17,7 @@ import (
 // due to abortion, e.g. a running hook is called off because their change was
 // aborted.
 // 3. The error needs to be reported as is which will cause the abortion.
-func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
+func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		_, p, ws, err := UserProjectWorkspace(task)
 		if err != nil {
@@ -25,38 +25,82 @@ func OnDoError(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		err = handler(task, tomb)
-		if err != nil {
-			switch {
-			case errors.Is(err, context.Canceled):
-				st := task.State()
-				st.Lock()
-				defer st.Unlock()
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
 
-				task.Logf("The task execution was cancelled")
-				return nil
-
-			case err != nil:
-				st := task.State()
-				st.Lock()
-				defer st.Unlock()
-
-				op, inProgress := RefreshInProgress(st, ws, p.ProjectId)
-				if inProgress && op.WaitOnError {
+		switch {
+		case err == nil:
+			if task.Has("stop-operation") {
+				op := OperationInProgress(st, ws, p.ProjectId)
+				if op != nil {
+					if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+						return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+					}
+				}
+			}
+			return nil
+		case errors.Is(err, context.Canceled):
+			task.Logf("The task execution was cancelled")
+			// the context cancellation here means the change was aborted and
+			// the undo logic chain started. we don't report the context
+			// cancellation as error here as it is an expected interruption
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
+			}
+			return nil
+		case err != nil:
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if op.Operation == OperationRefresh && op.WaitOnError {
 					task.Logf("Setting the task to wait until the refresh is either aborted or continued...")
 					task.Errorf("%v", err)
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,
 						Reason:       fmt.Sprintf("wait on error: %v", err),
 					}
-				} else if inProgress {
-					if e := StopRefresh(st, ws, p.ProjectId); e != nil {
-						return fmt.Errorf("internal error: cannot stop refresh for %q: %v, refresh error: %v", ws, e, err)
-					}
 				}
-				return err
+
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
+			}
+
+			return err
+		}
+
+		return nil
+	}
+}
+
+func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
+	return func(task *state.Task, tomb *tomb.Tomb) error {
+		_, p, ws, err := UserProjectWorkspace(task)
+		if err != nil {
+			return err
+		}
+
+		err = handler(task, tomb)
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
+
+		// if the task was marked as the starter of the operation then
+		// remove the operation from being in progress as this is the last
+		// task that has just completed its undoing logic, i.e. the
+		// workspace is ready for the new commands again
+		if task.Has("start-operation") {
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
 			}
 		}
-		return nil
+		return err
 	}
 }
 

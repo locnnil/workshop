@@ -20,21 +20,43 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	}
 
 	/* Workspace management */
-	runner.AddHandler("create-workspace", OnDoError(manager.doCreateWorkspace), manager.undoCreateWorkspace)
-	runner.AddHandler("start-workspace", OnDoError(manager.doStart), manager.doStop)
-	runner.AddHandler("stop-workspace", OnDoError(manager.doStop), manager.doStart)
-	runner.AddHandler("delete-workspace", OnDoError(manager.doDeleteWorkspace), nil)
-	runner.AddHandler("mount-project", OnDoError(manager.doMountProject), manager.undoMountProject)
-	runner.AddHandler("remove-workspace-stash", OnDoError(manager.doRemoveWorkspaceStash), nil)
-	runner.AddHandler("stash-workspace", OnDoError(manager.doStashWorkspace), manager.undoStashWorkspace)
-	runner.AddHandler("create-state-storage", OnDoError(manager.doCreateStateStorage), manager.doRemoveStateStorage)
-	runner.AddHandler("remove-state-storage", OnDoError(manager.doRemoveStateStorage), nil)
+	runner.AddHandler("create-workspace", OnDo(manager.doCreateWorkspace), OnUndo(manager.undoCreateWorkspace))
+	runner.AddHandler("start-workspace", OnDo(manager.doStart), OnUndo(manager.doStop))
+	runner.AddHandler("stop-workspace", OnDo(manager.doStop), OnUndo(manager.doStart))
+	runner.AddHandler("delete-workspace", OnDo(manager.doDeleteWorkspace), nil)
+	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
+	runner.AddHandler("remove-workspace-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
+	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
+	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
+	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
 	return manager
 }
 
 func (w *WorkspaceManager) Ensure() error {
 	return nil
+}
+
+// Checks all of the provided list of workspaces are in the required status
+func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
+	status workspacebackend.WorkspaceState) (bool, []string, error) {
+	invalid := []string{}
+	for _, name := range names {
+		wrkspc, err := w.Workspace(ctx, name, pId)
+		if err != nil {
+			return false, nil, err
+		}
+
+		st := w.workspaceState(wrkspc)
+		if st != status {
+			invalid = append(invalid, wrkspc.Name)
+		}
+	}
+
+	if len(invalid) > 0 {
+		return false, invalid, nil
+	}
+	return true, nil, nil
 }
 
 // Loads a workspace, the state must be locked as it is used to find out the
@@ -74,8 +96,8 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 // operations in progress for the workspace. The state must be locked before the
 // call.
 func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) workspacebackend.WorkspaceState {
-	op, opInProgress := RefreshInProgress(w.state, ws.Name, ws.ProjectId())
-	if opInProgress {
+	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
+	if op != nil {
 		if ws.IsRunning() {
 			change := w.state.Change(op.ChangeId)
 			if change == nil {
