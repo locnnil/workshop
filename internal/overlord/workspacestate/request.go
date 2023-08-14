@@ -193,7 +193,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*sdk.SdkInfo, p *workspacebackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workspace
-	// 3. Make unavailable
+	// 3. Put to stash
 	// 4. Launch the new workspace
 	// 5. Run restore state
 	// 6. Delete the old workspace
@@ -201,7 +201,7 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
 
-	makeCopy := st.NewTask("stash-workspace", fmt.Sprintf("Stash previous %q workspace", file.Name))
+	putToStash := st.NewTask("stash-workspace", fmt.Sprintf("Stash previous %q workspace", file.Name))
 
 	launch, err := launch(st, file, p)
 	if err != nil {
@@ -211,10 +211,10 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-	deleteCopy := st.NewTask("remove-workspace-stash", fmt.Sprintf("Remove %q workspace from stash", file.Name))
+	removeFromStash := st.NewTask("remove-workspace-stash", fmt.Sprintf("Remove %q workspace from stash", file.Name))
 
 	// save-state -> stop-workspace -> launch -> restore state
-	deleteCopy.WaitFor(removeStateStorage)
+	removeFromStash.WaitFor(removeStateStorage)
 	if len(restoreStateHooks.Tasks()) > 0 {
 		removeStateStorage.WaitAll(restoreStateHooks)
 		restoreStateHooks.WaitAll(launch)
@@ -228,12 +228,12 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 		// after the refresh operation)
 		launch.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
 	}
-	launch.WaitFor(makeCopy)
+	launch.WaitFor(putToStash)
 	if len(saveStateHooks.Tasks()) > 0 {
-		makeCopy.WaitAll(saveStateHooks)
+		putToStash.WaitAll(saveStateHooks)
 		saveStateHooks.WaitFor(createStateStorage)
 	} else {
-		makeCopy.WaitFor(createStateStorage)
+		putToStash.WaitFor(createStateStorage)
 	}
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
@@ -241,9 +241,17 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	refresh.AddAll(saveStateHooks)
 	refresh.AddAllWithEdges(launch)
 	refresh.AddAllWithEdges(restoreStateHooks)
-	refresh.AddTask(makeCopy)
+	refresh.AddTask(putToStash)
 	refresh.AddTask(removeStateStorage)
-	refresh.AddTask(deleteCopy)
+	refresh.AddTask(removeFromStash)
+
+	// mark the first task to start the operation so if cancelled or failed the
+	// operation will be removed from the list of the active ones
+	createStateStorage.Set("start-operation", true)
+
+	// mark the last task to stop the operation
+	// and make the workspace available for other commands
+	removeFromStash.Set("stop-operation", true)
 
 	refresh.MarkEdge(removeStateStorage, EdgeCleanupRefresh)
 
@@ -309,6 +317,8 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 
 	for _, name := range names {
 		start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", name))
+		// start is a single task, so it is the beginning and the end of the operation
+		start.Set("start-operation", true)
 		start.Set("stop-operation", true)
 		taskset.AddTask(start)
 

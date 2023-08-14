@@ -23,12 +23,12 @@ execute: |
   launch $project ws
 
   echo "Check launch change is Done"
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch workspace.*$"
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workspace$"
 
   workspace_exec refresh --project $project ws
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh workspace \"ws\"$"
+  changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workspace$"
 
   echo "Check the workspace is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
@@ -38,12 +38,12 @@ execute: |
 
   launch $project ws
   echo "Check launch change is Done"
-  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch workspace.*$"
+  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workspace$"
 
   workspace_exec refresh --project $project ws
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh workspace \"ws\"$"
+  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workspace$"
 
   echo "Check the workspace is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

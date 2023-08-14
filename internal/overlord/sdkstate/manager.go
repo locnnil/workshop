@@ -19,8 +19,8 @@ func NewSdkManager(runner *state.TaskRunner, server backend.WorkspaceBackend) *S
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
-	runner.AddHandler("install-sdk", OnDo(manager.doInstallSDK), manager.undoInstallSdk)
-	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), manager.undoLinkSdk)
+	runner.AddHandler("install-sdk", OnDo(manager.doInstallSDK), OnUndo(manager.undoInstallSdk))
+	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), OnUndo(manager.undoLinkSdk))
 
 	return manager
 }

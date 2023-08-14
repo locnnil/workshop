@@ -41,7 +41,7 @@ type LxdBackend struct {
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 	// name prefix for the workspaces that were made unavailable
-	UnavailablePrefix = "unavailable-"
+	StashNamePrefix = "stash-"
 )
 
 var (
@@ -924,7 +924,7 @@ func (s *LxdBackend) RemoveWorkspaceStash(ctx context.Context, name string) erro
 	}
 
 	system := conn.UseProject(LxdSystemProjectName(user))
-	op, err := system.DeleteInstance(InstanceName(UnavailablePrefix+name, projectId))
+	op, err := system.DeleteInstance(InstanceName(StashNamePrefix+name, projectId))
 	if err != nil {
 		return err
 	}
@@ -980,7 +980,7 @@ func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Co
 		// the new name must not be the same, otherwise the LXD's DNS will fail
 		// the new instance creation
 		op, err = conn.MigrateInstance(instance, api.InstancePost{
-			Name:      UnavailablePrefix + instance,
+			Name:      StashNamePrefix + instance,
 			Project:   LxdSystemProjectName(user),
 			Migration: true,
 		})
@@ -989,7 +989,7 @@ func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Co
 		// switch the project for the connection first to make the reverse
 		// migration successful (i.e. from system -> user project)
 		conn = conn.UseProject(LxdSystemProjectName(user))
-		op, err = conn.MigrateInstance(UnavailablePrefix+instance, api.InstancePost{
+		op, err = conn.MigrateInstance(StashNamePrefix+instance, api.InstancePost{
 			Name:      instance,
 			Project:   LxdProjectName(user),
 			Migration: true,

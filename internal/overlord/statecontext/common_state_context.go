@@ -33,8 +33,10 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 		case err == nil:
 			if task.Has("stop-operation") {
 				op := OperationInProgress(st, ws, p.ProjectId)
-				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
-					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				if op != nil {
+					if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+						return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+					}
 				}
 			}
 			return nil
@@ -71,6 +73,34 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		return nil
+	}
+}
+
+func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
+	return func(task *state.Task, tomb *tomb.Tomb) error {
+		_, p, ws, err := UserProjectWorkspace(task)
+		if err != nil {
+			return err
+		}
+
+		err = handler(task, tomb)
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
+
+		// if the task was marked as the starter of the operation then
+		// remove the operation from being in progress as this is the last
+		// task that has just completed its undoing logic, i.e. the
+		// workspace is ready for the new commands again
+		if task.Has("start-operation") {
+			op := OperationInProgress(st, ws, p.ProjectId)
+			if op != nil {
+				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
+				}
+			}
+		}
+		return err
 	}
 }
 

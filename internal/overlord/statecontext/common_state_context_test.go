@@ -7,7 +7,6 @@ import (
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -39,6 +38,29 @@ func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.project = &workspacebackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
+func (s *CommonStateFuncs) TestStopTaskOperation(c *check.C) {
+	task := s.setupTask()
+
+	s.state.Lock()
+	// mark task to stop the associated operation
+	task.Set("stop-operation", true)
+	err := statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: true})
+	c.Assert(err, check.IsNil)
+	task.Change().Abort()
+	s.state.Unlock()
+
+	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
+		return nil
+	})
+	err = handler(task, nil)
+	c.Assert(err, check.IsNil)
+
+	s.state.Lock()
+	op := statecontext.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.IsNil)
+	s.state.Unlock()
+}
+
 func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 	task := s.setupTask()
 
@@ -60,19 +82,47 @@ func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 	s.state.Unlock()
 }
 
-func (s *CommonStateFuncs) TestExecutionError(c *check.C) {
+func (s *CommonStateFuncs) TestExecutionErrorOnDo(c *check.C) {
+	task := s.setupTask()
+
+	s.state.Lock()
+	err := statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: false})
+	c.Assert(err, check.IsNil)
+	s.state.Unlock()
+
 	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
-	task := s.setupTask()
-	err := handler(task, nil)
+
+	err = handler(task, nil)
 	c.Assert(err, check.ErrorMatches, "task failed")
-	var ops statecontext.Operations
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	err = s.state.Get(statecontext.OpsInProgressKey, &ops)
-	c.Assert(err, testutil.ErrorIs, state.ErrNoState)
+	op := statecontext.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.IsNil)
+}
+
+func (s *CommonStateFuncs) TestStartTaskOnUndo(c *check.C) {
+	task := s.setupTask()
+
+	s.state.Lock()
+	task.Set("start-operation", true)
+	err := statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationRefresh, WaitOnError: false})
+	c.Assert(err, check.IsNil)
+	s.state.Unlock()
+
+	handler := statecontext.OnUndo(func(task *state.Task, tomb *tomb.Tomb) error {
+		return nil
+	})
+
+	err = handler(task, nil)
+	c.Assert(err, check.IsNil)
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	op := statecontext.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.IsNil)
 }
 
 func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
