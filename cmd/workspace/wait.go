@@ -65,9 +65,14 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 	cli := wmx.client
 	// Intercept sigint
 	c := make(chan os.Signal, 2)
+
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		sig := <-c
+		if sig != nil && wmx.skipAbort {
+			fmt.Printf("%v", sig)
+			fmt.Fprintln(Stdout, "cannot interrupt: it may break the workspace, please wait until finished")
+		}
 		// sig is nil if c was closed
 		if sig == nil || wmx.skipAbort {
 			return

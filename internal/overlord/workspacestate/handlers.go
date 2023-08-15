@@ -1,7 +1,9 @@
 package workspacestate
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	. "github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -10,6 +12,10 @@ import (
 
 	"gopkg.in/tomb.v2"
 )
+
+var StopLogInterval = 30 * time.Second
+
+var StopWorkspace = (workspacebackend.WorkspaceBackend).StopWorkspace
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
@@ -160,14 +166,35 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.StopWorkspace(ctx, workspace, false)
+	var force bool
+	st := task.State()
+	st.Lock()
+	// false is by default
+	_ = task.Get("force", &force)
+	st.Unlock()
+
+	var stopped = make(chan error)
+	stopctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		// LXD has an internal timeout (30 seconds) for the operation,
+		// if exceeded, the dealine error will be returned
+		stopped <- StopWorkspace(m.backend, stopctx, workspace, force)
+	}()
+
+	for {
+		select {
+		case err = <-stopped:
+			return err
+		case <-time.After(StopLogInterval):
+			st.Lock()
+			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workspace)
+			st.Unlock()
+		}
+	}
 }
 
 func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {

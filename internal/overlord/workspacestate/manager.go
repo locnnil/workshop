@@ -39,7 +39,7 @@ func (w *WorkspaceManager) Ensure() error {
 
 // Checks all of the provided list of workspaces are in the required status
 func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
-	status workspacebackend.WorkspaceState) (bool, []string, error) {
+	matchStatus func(status workspacebackend.WorkspaceState) bool) (bool, []string, error) {
 	invalid := []string{}
 	for _, name := range names {
 		wrkspc, err := w.Workspace(ctx, name, pId)
@@ -48,7 +48,7 @@ func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId 
 		}
 
 		st := w.workspaceState(wrkspc)
-		if st != status {
+		if !matchStatus(st) {
 			invalid = append(invalid, wrkspc.Name)
 		}
 	}

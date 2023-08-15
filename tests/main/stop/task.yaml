@@ -1,0 +1,35 @@
+summary: Check workspace stop
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+  uninstall_workspaced
+
+debug: |
+  lxc list -f compact --all-projects
+  workspace changes
+  workspace tasks 1
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a workspace"
+  project="$WORKSPACES"/workspaces-sdk/test-sdk-basic
+  launch $project ws
+
+  echo "Stop the workspace"
+  workspace_exec stop --project $project ws
+
+  echo "Check the workspace is in Stopped state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+
+  echo "Check stopping the Stopped workspace does not result in error"
+  workspace_exec stop --project $project ws
+
+  echo "Check the workspace is in Stopped state"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"

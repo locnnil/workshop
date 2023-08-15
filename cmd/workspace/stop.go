@@ -7,22 +7,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type CmdStart struct {
+type CmdStop struct {
 	waitMixin
 }
 
-func (c *CmdStart) Command() *cobra.Command {
+func (c *CmdStop) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "start <workspace>...",
+		Use:   "stop <workspace>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Start one or many workspaces",
+		Short: "Stop one or many workspaces",
 		RunE:  c.Run,
 	}
 
 	return cmd
 }
 
-func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
+func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	var err error
 
 	cli, err := client.New(&ClientConfig)
@@ -38,7 +38,7 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	changeId, err := c.client.Start(project.Id, av)
+	changeId, err := c.client.Stop(project.Id, av)
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,7 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	for _, name := range av {
-		fmt.Fprintf(Stdout, "%s started\n", name)
+		fmt.Fprintf(Stdout, "%s stopped\n", name)
 	}
-
 	return nil
 }

@@ -328,3 +328,29 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 
 	return taskset, nil
 }
+
+func (w *WorkspaceManager) StopMany(ctx context.Context, names []string, projectId string) (*state.TaskSet, error) {
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+	return stopMany(w.state, names, project)
+}
+
+func stopMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
+	taskset := state.NewTaskSet([]*state.Task{}...)
+
+	for _, name := range names {
+		stop := st.NewTask("stop-workspace", fmt.Sprintf("Stop %q workspace", name))
+		// start is a single task, so it is the beginning and the end of the operation
+		stop.Set("start-operation", true)
+		stop.Set("stop-operation", true)
+		stop.Set("force", false)
+		taskset.AddTask(stop)
+
+		stop.Set("workspace", name)
+		stop.Set("project", *project)
+	}
+
+	return taskset, nil
+}

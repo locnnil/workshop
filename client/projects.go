@@ -93,3 +93,10 @@ func (client *Client) Start(projectId string, names []string) (changeId string, 
 		Names:  names,
 	})
 }
+
+func (client *Client) Stop(projectId string, names []string) (changeId string, err error) {
+	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+		Action: "stop",
+		Names:  names,
+	})
+}
