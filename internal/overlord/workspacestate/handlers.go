@@ -1,7 +1,9 @@
 package workspacestate
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	. "github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
@@ -10,6 +12,11 @@ import (
 
 	"gopkg.in/tomb.v2"
 )
+
+var StopLogInterval = 30 * time.Second
+var StopTimeout = 5 * time.Minute
+
+var StopWorkspace = (workspacebackend.WorkspaceBackend).StopWorkspace
 
 func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
@@ -160,18 +167,35 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
 	var force bool
+	st := task.State()
+	st.Lock()
 	// false is by default
 	_ = task.Get("force", &force)
+	st.Unlock()
 
-	return m.backend.StopWorkspace(ctx, workspace, force)
+	var stopped = make(chan error)
+	stopctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		stopped <- StopWorkspace(m.backend, stopctx, workspace, force)
+	}()
+
+	for {
+		select {
+		case err = <-stopped:
+			return err
+		case <-time.After(StopLogInterval):
+			st.Lock()
+			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workspace)
+			st.Unlock()
+		case <-time.After(StopTimeout):
+			return fmt.Errorf("cannot stop %q: timed out", workspace)
+		}
+	}
 }
 
 func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
