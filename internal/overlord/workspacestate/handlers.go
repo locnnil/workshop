@@ -14,7 +14,6 @@ import (
 )
 
 var StopLogInterval = 30 * time.Second
-var StopTimeout = 5 * time.Minute
 
 var StopWorkspace = (workspacebackend.WorkspaceBackend).StopWorkspace
 
@@ -181,6 +180,8 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	stopctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
+		// LXD has an internal timeout (30 seconds) for the operation,
+		// if exceeded, the dealine error will be returned
 		stopped <- StopWorkspace(m.backend, stopctx, workspace, force)
 	}()
 
@@ -192,8 +193,6 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 			st.Lock()
 			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workspace)
 			st.Unlock()
-		case <-time.After(StopTimeout):
-			return fmt.Errorf("cannot stop %q: timed out", workspace)
 		}
 	}
 }
