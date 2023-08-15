@@ -50,5 +50,8 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	for _, name := range av {
+		fmt.Fprintf(Stdout, "%s stopped\n", name)
+	}
 	return nil
 }

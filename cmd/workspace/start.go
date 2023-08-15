@@ -50,5 +50,9 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	for _, name := range av {
+		fmt.Fprintf(Stdout, "%s started\n", name)
+	}
+
 	return nil
 }

@@ -13,7 +13,7 @@ type WorkspaceStop struct {
 	prjId  string
 }
 
-var _ = check.Suite(&WorkspaceStart{})
+var _ = check.Suite(&WorkspaceStop{})
 
 func (m *WorkspaceStop) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
@@ -46,6 +46,7 @@ func (m *WorkspaceStop) TestStopSuccess(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws"})
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
 	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, "ws stopped\nws-1 stopped\n")
 }
