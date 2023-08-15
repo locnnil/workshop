@@ -167,7 +167,11 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.StopWorkspace(ctx, workspace, false)
+	var force bool
+	// false is by default
+	_ = task.Get("force", &force)
+
+	return m.backend.StopWorkspace(ctx, workspace, force)
 }
 
 func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {

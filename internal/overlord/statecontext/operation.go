@@ -40,6 +40,7 @@ const (
 	OperationLaunch  = "launch"
 	OperationRefresh = "refresh"
 	OperationStart   = "start"
+	OperationStop    = "stop"
 )
 
 type Operation struct {
