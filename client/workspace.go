@@ -1,18 +1,21 @@
 package client
 
+import "time"
+
 type Sdk struct {
-	Name     string `json:"name"`
-	Channel  string `json:"channel"`
-	Revision string `json:"revision"`
+	Name        string    `json:"name"`
+	Channel     string    `json:"channel"`
+	Revision    string    `json:"revision"`
+	InstallTime time.Time `json:"install-time"`
 }
 
 type Workspace struct {
-	ProjectId    string   `json:"project-id"`
-	Name         string   `json:"name"`
-	State        string   `json:"state"`
-	Content      []*Sdk   `json:"content,omitempty"`
-	RefreshChgId string   `json:"refresh-change-id,omitempty"`
-	Notes        []string `json:"notes,omitempty"`
+	ProjectId string   `json:"project-id"`
+	Name      string   `json:"name"`
+	Base      string   `json:"base"`
+	State     string   `json:"state"`
+	Content   []*Sdk   `json:"content,omitempty"`
+	Notes     []string `json:"notes,omitempty"`
 }
 
 type ListOptions struct {

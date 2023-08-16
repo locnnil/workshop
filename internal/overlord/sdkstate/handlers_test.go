@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
@@ -21,16 +22,18 @@ import (
 )
 
 type H struct {
-	fs      afero.Fs
-	backend *workspacebackend.FakeWorkspaceBackend
-	state   *state.State
-	runner  *state.TaskRunner
-	se      *overlord.StateEngine
-	wsmgr   *sdkstate.SdkManager
-	ctx     context.Context
-	project *workspacebackend.Project
+	fs          afero.Fs
+	backend     *workspacebackend.FakeWorkspaceBackend
+	state       *state.State
+	runner      *state.TaskRunner
+	se          *overlord.StateEngine
+	wsmgr       *sdkstate.SdkManager
+	ctx         context.Context
+	project     *workspacebackend.Project
+	installTime time.Time
 
-	restoreProjectId func()
+	restoreProjectId   func()
+	restoreInstallTime func()
 }
 
 var _ = check.Suite(&H{})
@@ -81,6 +84,9 @@ func (s *H) SetUpTest(c *check.C) {
 	s.se.AddManager(s.wsmgr)
 	s.se.AddManager(s.runner)
 
+	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workspacebackend.InstallTimeNow)
+
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 `), 0644)
@@ -91,6 +97,7 @@ base: ubuntu@20.04
 
 func (s *H) TearDownTest(c *check.C) {
 	s.restoreProjectId()
+	s.restoreInstallTime()
 }
 
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
@@ -211,7 +218,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
