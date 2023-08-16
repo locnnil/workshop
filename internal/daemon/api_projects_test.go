@@ -104,6 +104,8 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
+	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workspacebackend.InstallTimeNow)
+	defer restore()
 
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
 	c.Assert(err, check.IsNil)
@@ -134,9 +136,10 @@ base: ubuntu@20.04
 			State:     "Ready",
 			Content: []*SdkInfo{
 				{
-					Name:     "go",
-					Channel:  "latest/stable",
-					Revision: "234",
+					Name:        "go",
+					Channel:     "latest/stable",
+					Revision:    "234",
+					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 				},
 			},
 		},

@@ -144,5 +144,5 @@ func contractHomeDirectory(path string) string {
 
 func tabWriter() *tabwriter.Writer {
 	/* Tab writer uses the same formatting as snap list */
-	return tabwriter.NewWriter(os.Stdout, 4, 3, 2, ' ', 0)
+	return tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
 }

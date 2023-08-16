@@ -3,6 +3,7 @@ package sdk
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/canonical/workspace/internal/dirs"
 )
@@ -12,9 +13,10 @@ const (
 )
 
 type SdkInfo struct {
-	Name     string `json:"name"`
-	Channel  string `json:"channel"`
-	Revision int64  `json:"revision"`
+	Name        string    `json:"name"`
+	Channel     string    `json:"channel"`
+	Revision    int64     `json:"revision"`
+	InstallTime time.Time `json:"install-time"`
 }
 
 func SdkCurrentPath(sdkName string) string {

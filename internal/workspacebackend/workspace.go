@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/canonical/workspace/internal/sdk"
 	"golang.org/x/exp/maps"
@@ -17,6 +18,8 @@ type WorkspaceErrorType int
 const (
 	WorkspaceStateDir = "/var/lib/workspace/state"
 )
+
+var InstallTimeNow = time.Now
 
 type WorkspaceState int
 
@@ -55,13 +58,17 @@ type Workspace struct {
 	backend   WorkspaceBackend
 	file      *WorkspaceFile
 	projectId string
+	base      string
+	Name      string
+	Devices   map[string]map[string]string
+	content   map[string]*sdk.SdkInfo
+	errs      []WorkspaceErrorType
+	running   bool
+	state     WorkspaceState
+}
 
-	Name    string
-	Devices map[string]map[string]string
-	content map[string]*sdk.SdkInfo
-	errs    []WorkspaceErrorType
-	running bool
-	state   WorkspaceState
+func (w *Workspace) Base() string {
+	return w.base
 }
 
 func (w *Workspace) IsRunning() bool {
@@ -105,6 +112,7 @@ func (w *Workspace) SetState(st WorkspaceState) {
 }
 
 func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+	s.InstallTime = InstallTimeNow()
 	w.content[s.Name] = s
 
 	sequenceValue, err := json.Marshal(w.content)

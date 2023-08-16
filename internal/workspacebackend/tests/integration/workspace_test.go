@@ -140,7 +140,7 @@ func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 
 func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 	defer f.be.DeleteWorkspace(f.ctx, "test-1")
 

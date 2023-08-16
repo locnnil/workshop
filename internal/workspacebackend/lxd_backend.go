@@ -743,11 +743,17 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 		running = true
 	}
 
+	base := inst.Config["image.os"] + "@" + inst.Config["image.version"]
+	if base == "" {
+		base = "unknown"
+	}
+
 	var workspace = &Workspace{
 		backend:   s,
 		projectId: pId,
 		Name:      name,
 		running:   running,
+		base:      base,
 	}
 
 	workspace.Devices = inst.Devices

@@ -12,10 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type clientSetter interface {
-	setClient(*client.Client)
-}
-
 type clientMixin struct {
 	client *client.Client
 }
@@ -66,6 +62,7 @@ func main() {
 	rootCmd.AddCommand((&CmdRefresh{}).Command())
 	rootCmd.AddCommand((&CmdStart{}).Command())
 	rootCmd.AddCommand((&CmdStop{}).Command())
+	rootCmd.AddCommand((&CmdInfo{}).Command())
 
 	rootCmd.SilenceErrors = true
 

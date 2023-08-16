@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/overlord/statecontext"
@@ -18,18 +19,19 @@ import (
 )
 
 type SdkInfo struct {
-	Name     string `json:"name"`
-	Channel  string `json:"channel"`
-	Revision string `json:"revision"`
+	Name        string    `json:"name"`
+	Channel     string    `json:"channel"`
+	Revision    string    `json:"revision"`
+	InstallTime time.Time `json:"install-time"`
 }
 
 type WorkspaceInfo struct {
-	Name         string     `json:"name"`
-	ProjectId    string     `json:"project-id"`
-	State        string     `json:"state"`
-	Content      []*SdkInfo `json:"content,omitempty"`
-	Notes        []string   `json:"notes,omitempty"`
-	RefreshChgId string     `json:"refresh-change-id,omitempty"`
+	Name      string     `json:"name"`
+	Base      string     `json:"base"`
+	ProjectId string     `json:"project-id"`
+	State     string     `json:"state"`
+	Content   []*SdkInfo `json:"content,omitempty"`
+	Notes     []string   `json:"notes,omitempty"`
 }
 
 var ensureStateSoon = stateEnsureBefore
@@ -37,6 +39,7 @@ var ensureStateSoon = stateEnsureBefore
 func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = file.Name
+	ws.Base = file.Base
 	ws.ProjectId = pid
 	ws.State = workspacebackend.WorkspaceOff.String()
 	for _, i := range file.Sdks {
@@ -52,11 +55,14 @@ func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
+	ws.Base = props.Base()
 
-	// TODO: the order of SDK records is undetermined, we need the latest SDK revision
-	// if there are multiple revisions
 	for _, val := range props.Content() {
-		ws.Content = append(ws.Content, &SdkInfo{val.Name, val.Channel, strconv.FormatInt(val.Revision, 10)})
+		ws.Content = append(ws.Content, &SdkInfo{
+			Name:        val.Name,
+			Channel:     val.Channel,
+			Revision:    strconv.FormatInt(val.Revision, 10),
+			InstallTime: val.InstallTime})
 	}
 
 	for _, err := range props.Errors() {
