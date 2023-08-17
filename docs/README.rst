@@ -30,17 +30,20 @@ and a grocery list of libraries and programming languages.
 Getting Started
 ---------------
 
-Start with the
-`Getting Started
-<https://canonical-workspace.readthedocs-hosted.com/en/latest/tutorial/>`_
-for the full introduction into the workspace installation and essentials.
+Follow the sections below
+or refer to the
+`Getting started
+<https://canonical-workspace.readthedocs-hosted.com/en/latest/tutorial/getting-started/>`_
+tutorial series for a more detailed introduction to Workspace.
 
 
--------
-Install
--------
+------------
+Installation
+------------
 
-Workspace relies on LXD to orchestrate containers:
+Workspace requires
+`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
+for low-level operation:
 
 .. code-block:: bash
 
@@ -48,20 +51,21 @@ Workspace relies on LXD to orchestrate containers:
    sudo lxd init --auto
 
 
-Install Workspace from sources:
+Next, install Workspace from source code:
 
 .. code-block:: bash
 
-   go install github.com/canonical/workspace/cmd/workspaced
-   go install github.com/canonical/workspace/cmd/workspace
+   go install github.com/canonical/workspace/cmd/workspaced@latest
+   go install github.com/canonical/workspace/cmd/workspace@latest
 
 
-Run the daemon
---------------
+Running Workspace
+-----------------
 
-To run the Workspace daemon,
-set the `$WORKSPACE` environment variable
-and use the `workspaced run` sub-command:
+To run the daemon,
+create a directory to store Workspace state and data,
+save its pathname in the ``$WORKSPACE`` environment variable,
+and type ``workspaced run``:
 
 .. code-block:: bash
 
@@ -72,29 +76,37 @@ and use the `workspaced run` sub-command:
      2023-08-17T01:37:23.962Z [workspaced] Started daemon.
      ...
 
-Launch a workspace
-------------------
 
-Create a workspace file in a project directory
-and launch the workspace:
+Launching workspaces
+--------------------
+
+In the root directory of the project
+that you want to use with Workspace,
+create a workspace definition file named ``.workspace.<NAME>.yaml``
+to list your project's prerequisites
+and run ``workspace launch <NAME>``:
 
 .. code-block:: bash
 
    cat > .workspace.nimble.yaml <<EOF -
-
-       name: nimble base: ubuntu@22.04
-       sdks:
-         go:
-           channel: latest/stable
-         openjdk:
-           channel: latest/stable
-       EOF
+   name: nimble
+   base: ubuntu@22.04
+   sdks:
+     go:
+       channel: latest/stable
+     openjdk:
+       channel: latest/stable
+   EOF
 
    workspace launch nimble
 
 
-Development
------------
+Workspace downloads and installs the SDKs your definition lists;
+the project is now ready to use them.
+
+
+Testing
+-------
 
 Workspace uses a ``go test``-compatible
 `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_:
@@ -105,7 +117,8 @@ Workspace uses a ``go test``-compatible
    go test -check.f <TestName|SuiteName>
 
 
-To run end to end and integration tests:
+To run end-to-end tests and integration tests with
+`Spread <https://github.com/snapcore/spread>`_:
 
 .. code-block:: bash
 
