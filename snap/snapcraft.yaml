@@ -1,0 +1,28 @@
+name: workspace
+title: Workspace
+base: core20
+version: 0.1.0
+summary: Workspace
+description: |
+  Workspace is a tool that automates intricate prerequisite setup for your projects.
+confinement: devmode
+grade: devel
+apps:
+  workspace:
+    environment:
+      WORKSPACE: ${SNAP_COMMON}
+    command: bin/workspace
+  workspaced:
+    environment:
+      WORKSPACE: ${SNAP_COMMON}
+    command: bin/workspaced run --create-dirs
+    daemon: simple
+parts:
+  workspace:
+    plugin: go
+    source: .
+    source-type: local
+plugs:
+  home:
+  lxd:
+  network:
