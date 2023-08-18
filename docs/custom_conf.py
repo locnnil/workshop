@@ -22,7 +22,12 @@ author = 'Canonical Group Ltd'
 # release = '1.0'
 
 # The default value uses the current year as the copyright year
-copyright = '%s, %s' % (datetime.date.today().year, author)
+# To check the date when a GutHub repo was created:
+# curl -H 'Authorization: token <OBTAINED HERE: https://github.com/settings/tokens>' \
+#   -H 'Accept: application/vnd.github.v3.raw' \
+#   https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
+
+copyright = '%s, %s' % ('2022–' + str(datetime.date.today().year), author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
