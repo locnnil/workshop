@@ -50,6 +50,14 @@ In this documentation
 ---------
 
 
+Project and community
+---------------------
+
+We strive to keep the documentation up-to-date and reliable.
+If we somehow failed,
+`let us know
+<https://github.com/canonical/workspace/issues>`_.
+
 .. toctree::
    :hidden:
    :maxdepth: 2
