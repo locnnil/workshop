@@ -4,3 +4,4 @@ workspace
 .spread-reuse.yaml
 .workspace.lock
 __debug_bin
+*.snap

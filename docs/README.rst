@@ -50,32 +50,18 @@ for low-level operation:
    sudo snap install lxd
    sudo lxd init --auto
 
-
-Next, install Workspace from source code:
-
-.. code-block:: bash
-
-   go install github.com/canonical/workspace/cmd/workspaced@latest
-   go install github.com/canonical/workspace/cmd/workspace@latest
-
-
-Running Workspace
------------------
-
-To run the daemon,
-create a directory to store Workspace state and data,
-save its pathname in the ``$WORKSPACE`` environment variable,
-and type ``workspaced run``:
+Build and install the ``workspace`` snap:
 
 .. code-block:: bash
 
-   mkdir ~/workspace
-   export WORKSPACE=~/workspace
-   workspaced run
+   git clone git@github.com:canonical/workspace.git
+   # -- or --
+   git clone https://github.com/canonical/workspace.git
 
-     2023-08-17T01:37:23.962Z [workspaced] Started daemon.
-     ...
-
+   cd workspace
+   sudo snap install snapcraft --classic
+   snapcraft
+   sudo snap install --devmode ./workspace_0.1.0_amd64.snap
 
 Launching workspaces
 --------------------
