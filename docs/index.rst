@@ -2,10 +2,10 @@
 
 .. _home:
 
-Workspace
+|project|
 =========
 
-**Workspace is a tool that automates intricate prerequisite setup
+**|project| is a tool that automates intricate prerequisite setup
 for your projects**.
 
 **Define your dev environment in straightforward YAML**.
@@ -23,7 +23,7 @@ workspaces enhance issue reproduction across platforms,
 facilitate collaboration in code reviews,
 and confine hackish experiments in lightweight containers.
 
-**Mitigate your setup's complexity with Workspace.**
+**Mitigate your setup's complexity with |project|.**
 AI/ML, robotics, IoT, EdTech, and similar domains
 commonly have less-than-trivial project layouts
 that depend on multiple Linux distributions,
@@ -40,7 +40,7 @@ In this documentation
 
    .. grid-item:: :doc:`Tutorial <tutorial/index>`
 
-      **Start here**: a hands-on introduction to Workspace for new users
+      **Start here**: a hands-on introduction to |project| for new users
 
 
    .. grid-item:: :doc:`Explanation <explanation/index>`

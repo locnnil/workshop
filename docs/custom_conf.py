@@ -126,3 +126,24 @@ disable_feedback_button = False
 ############################################################
 
 ## Add any configuration that is not covered by the common conf.py file.
+
+
+# Add source read hook to use global replacements with Sphinx's app.config:
+# https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+#
+# Code origin:
+# https://github.com/sphinx-doc/sphinx/issues/4054#issuecomment-329097229
+
+ultimate_replacements = {
+    "|project|" : project
+}
+
+def ultimateReplace(app, docname, source):
+    result = source[0]
+    for key in app.config.ultimate_replacements:
+        result = result.replace(key, app.config.ultimate_replacements[key])
+    source[0] = result
+
+def setup(app):
+   app.add_config_value('ultimate_replacements', {}, True)
+   app.connect('source-read', ultimateReplace)
