@@ -50,11 +50,14 @@ for low-level operation:
    sudo snap install lxd
    sudo lxd init --auto
 
-Build and install the workspace snap package:
+Build and install the ``workspace`` snap:
 
 .. code-block:: bash
 
    git clone git@github.com:canonical/workspace.git
+   # -- or --
+   git clone https://github.com/canonical/workspace.git
+
    cd workspace
    sudo snap install snapcraft --classic
    snapcraft
