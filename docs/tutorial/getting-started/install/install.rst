@@ -1,91 +1,99 @@
 Installation
 ============
 
-LXD
----
-
-Workspace uses `LXD <https://ubuntu.com/lxd>`_ as a container backend. Every
-workspace is essentially a system container that is created, started, and
-configured using LXD REST API. Whilst LXD supports a large set of operating
-systems, Workspace is currently limited to using Ubuntu as a base system for its
-containers.
+Check the prerequisites,
+build and install |project|,
+then make sure it runs.
 
 
-.. tabs::
-  .. group-tab:: Install on Ubuntu
+Check prerequisites
+-------------------
 
-    There is a chance LXD is already installed on your system; check that by
-    running:
+|project| requires
+`LXD <https://ubuntu.com/lxd>`_
+for low-level operation,
+using its
+`REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
+to configure individual *workspaces*.
 
-    .. code-block:: bash
-
-      snap info lxd
-
-    If LXD is found, skip the following steps as Workspace will discover and
-    configure the required LXD settings automatically. Otherwise, if LXD is not
-    present on your system, run:
-
-    .. code-block:: bash
-
-      sudo snap install lxd
-      sudo lxd init --auto
-
-    Then ensure that the LXD daemon is active and running:
-
-    .. code-block:: bash
-
-      systemctl status snap.lxd.daemon.service
-
-  .. group-tab:: Install on other Linux distributions
-
-    Check `LXD documentation
-    <https://documentation.ubuntu.com/lxd/en/latest/installing/?_ga=2.224594138.1101634201.1688935617-532732205.1687382301>`_
-    for the options available for other Linux distributions.
-
-
-Go
----
-Currently you can install Workspace only from its source code, which requires Go run-time:
+First, install and
+`initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
+LXD.
+It's available as a snap:
 
 .. tabs::
-  .. group-tab:: Install on Ubuntu
+   .. group-tab:: Using ``snap``
 
-    .. code-block:: bash
+      .. code-block:: bash
 
-      sudo snap install --classic --channel=1.20/stable go
-
-  .. group-tab:: Install on other Linux distributions
-
-    Check the `official documentation <https://go.dev/doc/install>`_ for the options
-    available for other Linux distributions.
+         sudo snap install lxd
+         sudo lxd init --auto
 
 
+   .. group-tab:: Other ways
 
-Install Workspace
+      See the available installation options in
+      `LXD documentation
+      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_.
+
+
+Next, ensure the
+`LXD daemon
+<https://documentation.ubuntu.com/lxd/en/latest/explanation/lxd_lxc/#lxd-daemon>`_
+is enabled and running:
+
+.. tabs::
+   .. group-tab:: Using ``snap``
+
+      .. code-block:: bash
+
+         sudo snap start --enable lxd.daemon
+         snap services lxd.daemon
+
+   .. group-tab:: Other ways
+
+      Refer to
+      `LXD documentation
+      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+      and your distribution's manuals for guidance.
+
+
+Install |project|
 -----------------
 
-Workspace consists of a daemon and a CLI command ``workspace``, install both:
+Build the ``workspace`` snap
+from the |project| source code on
+`GitHub
+<https://github.com/canonical/workspace>`_:
 
 .. code-block:: bash
 
-  go install github.com/canonical/workspace/cmd/workspaced
+   git clone git@github.com:canonical/workspace.git
+   # -- or --
+   git clone https://github.com/canonical/workspace.git
+   cd workspace
+   sudo snap install snapcraft --classic
+   snapcraft
 
-  go install github.com/canonical/workspace/cmd/workspace
+Install the resulting ``.snap`` file,
+for example:
+
+.. code-block:: bash
+
+   sudo snap install --devmode ./workspace_0.1.0_amd64.snap
 
 
-Run Workspace
+Run |project|
 -------------
-To use the CLI command, the daemon should be up and running:
+
+The snap installs two major components:
+
+- The ``workspaced`` daemon that exposes a REST API
+- The ``workspace`` CLI tool that uses this API to command |project|
+
+The daemon starts automatically after installation;
+the CLI tool is run manually:
 
 .. code-block:: bash
 
-  mkdir ~/workspace
-  export WORKSPACE=~/workspace
-  workspaced run --create-dirs
-
-Now you should be able to run workspace CLI in a separate session:
-
-.. code-block:: bash
-
-  export WORKSPACE=~/workspace
-  workspace --help
+   workspace --help
