@@ -1,6 +1,6 @@
 name: workspace
 title: Workspace
-base: core20
+base: core22
 version: 0.1.0
 summary: Workspace
 description: |
@@ -17,12 +17,14 @@ apps:
       WORKSPACE: ${SNAP_COMMON}
     command: bin/workspaced run --create-dirs
     daemon: simple
+    plugs:
+      - home
+      - lxd
+      - network
 parts:
   workspace:
     plugin: go
     source: .
     source-type: local
-plugs:
-  home:
-  lxd:
-  network:
+    build-snaps:
+        - go/latest/stable
