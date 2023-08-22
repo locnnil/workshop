@@ -22,7 +22,12 @@ author = 'Canonical Group Ltd'
 # release = '1.0'
 
 # The default value uses the current year as the copyright year
-copyright = '%s, %s' % (datetime.date.today().year, author)
+# To check the date when a GutHub repo was created:
+# curl -H 'Authorization: token <OBTAINED HERE: https://github.com/settings/tokens>' \
+#   -H 'Accept: application/vnd.github.v3.raw' \
+#   https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
+
+copyright = '%s, %s' % ('2022–' + str(datetime.date.today().year), author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
@@ -83,7 +88,8 @@ redirects = {}
 
 linkcheck_ignore = [
     'http://127.0.0.1:8000',
-    'https://github.com/canonical/workspace/issues'
+    'https://github.com/canonical/workspace/issues',
+    'https://github.com/canonical/workspace'
     ]
 
 ############################################################
@@ -121,3 +127,24 @@ disable_feedback_button = False
 ############################################################
 
 ## Add any configuration that is not covered by the common conf.py file.
+
+
+# Add source read hook to use global replacements with Sphinx's app.config:
+# https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+#
+# Code origin:
+# https://github.com/sphinx-doc/sphinx/issues/4054#issuecomment-329097229
+
+ultimate_replacements = {
+    "|project|" : project
+}
+
+def ultimateReplace(app, docname, source):
+    result = source[0]
+    for key in app.config.ultimate_replacements:
+        result = result.replace(key, app.config.ultimate_replacements[key])
+    source[0] = result
+
+def setup(app):
+   app.add_config_value('ultimate_replacements', {}, True)
+   app.connect('source-read', ultimateReplace)
