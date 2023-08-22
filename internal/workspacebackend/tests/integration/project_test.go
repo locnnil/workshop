@@ -18,15 +18,15 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
-type LT struct {
+type wsProject struct {
 	ctx      context.Context
 	client   lxd.InstanceServer
 	username string
 }
 
-var _ = check.Suite(&LT{})
+var _ = check.Suite(&wsProject{})
 
-func (f *LT) SetUpTest(c *check.C) {
+func (f *wsProject) SetUpTest(c *check.C) {
 	f.username = "testuser"
 	f.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, f.username)
 	be := workspacebackend.LxdBackend{}
@@ -50,19 +50,21 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	instances, err := cli.GetInstances(api.InstanceType("container"))
 	c.Check(err, check.IsNil)
 	for _, i := range instances {
-		req := api.InstanceStatePut{
-			Action:  "stop",
-			Timeout: 1,
-			Force:   true,
+		if i.Status == "Running" {
+			req := api.InstanceStatePut{
+				Action:  "stop",
+				Timeout: 1,
+				Force:   true,
+			}
+
+			op, err := cli.UpdateInstanceState(i.Name, req, "")
+			c.Check(err, check.IsNil)
+			if err == nil {
+				c.Check(op.Wait(), check.IsNil)
+			}
 		}
 
-		op, err := cli.UpdateInstanceState(i.Name, req, "")
-		c.Check(err, check.IsNil)
-		if err == nil {
-			c.Check(op.Wait(), check.IsNil)
-		}
-
-		op, err = cli.DeleteInstance(i.Name)
+		op, err := cli.DeleteInstance(i.Name)
 		c.Check(err, check.IsNil)
 		if err == nil {
 			c.Check(op.Wait(), check.IsNil)
@@ -73,13 +75,14 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	c.Check(err, check.IsNil)
 }
 
-func (f *LT) TearDownTest(c *check.C) {
+func (f *wsProject) TearDownTest(c *check.C) {
 	cleanUpLxdProject(c, f.client, workspacebackend.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.client, workspacebackend.LxdSystemProjectName(f.username))
 }
 
-func TestWorkspaceBackendProjectIntegration(t *testing.T) { check.TestingT(t) }
+func TestWorkspaceBackendIntegration(t *testing.T) { check.TestingT(t) }
 
-func (f *LT) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
+func (f *wsProject) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
 	// Setup
 	be := workspacebackend.LxdBackend{}
 
@@ -96,7 +99,7 @@ func (f *LT) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
 	c.Assert(projects, check.HasLen, 0)
 }
 
-func (f *LT) TestLxdBackendCreateProject(c *check.C) {
+func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	// Setup
 	be := workspacebackend.LxdBackend{}
 	numCalls := 0
@@ -133,7 +136,7 @@ base: ubuntu@22.04
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"},"d4352dea":{"path":"%s","id":"d4352dea"}}`, projectDir, projectDir2))
 }
 
-func (f *LT) TestLxdBackendLoadProject(c *check.C) {
+func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	// Setup
 	be := workspacebackend.LxdBackend{}
 	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
@@ -163,7 +166,7 @@ base: ubuntu@22.04
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, projectDir))
 }
 
-func (f *LT) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
+func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 	// Setup
 	// We pre-create a project to emulate the scenario when
 	// the directory was moved, but the project's settings were not
@@ -195,7 +198,7 @@ base: ubuntu@22.04
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`{"b8639dea":{"path":"%s","id":"b8639dea"}}`, newDir))
 }
 
-func (f *LT) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
+func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
 	// Setup
 	// We pre-create a project to emulate the scenario when
 	// the directory was copied, but the project's settings were not
@@ -230,7 +233,7 @@ base: ubuntu@22.04
 	c.Assert(lxdProject.Config["user.workspace.projects"], check.Matches, fmt.Sprintf(`.*"abcdefgi":{"path":"%s","id":"abcdefgi"}.*`, newDir))
 }
 
-func (f *LT) TestLxdBackendListAvailableProjects(c *check.C) {
+func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 	// Setup
 	be := workspacebackend.LxdBackend{}
 	numCalls := 0
@@ -262,4 +265,29 @@ base: ubuntu@22.04
 	})
 	c.Assert(workspacebackend.LockPath(projectDir), testutil.FilePresent)
 	c.Assert(workspacebackend.LockPath(projectDir2), testutil.FilePresent)
+}
+
+func (f *wsProject) TestLxdBackendLoadProjectDirectoryRemoved(c *check.C) {
+	// Setup
+	// We pre-create a project to emulate the scenario when
+	// the directory was removed
+	be := workspacebackend.LxdBackend{}
+	projectDir := c.MkDir()
+	workspace := `name: test
+base: ubuntu@22.04
+`
+	err := os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspace), 0644)
+	c.Assert(err, check.IsNil)
+	_, _, err = be.CreateOrLoadProject(f.ctx, projectDir)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = os.RemoveAll(projectDir)
+	c.Assert(err, check.IsNil)
+	projects, err := be.Projects(f.ctx)
+
+	// Validate (if the directory does not exist, the project
+	// needs to be removed from tracking)
+	c.Assert(err, check.IsNil)
+	c.Assert(projects, check.HasLen, 0)
 }
