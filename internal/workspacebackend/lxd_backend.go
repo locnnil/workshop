@@ -72,7 +72,7 @@ func allocateProjectId() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (s *LxdBackend) getProject(client lxd.InstanceServer, ctx context.Context, path string) (*Project, error) {
+func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context, path string) (*Project, error) {
 
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
@@ -118,12 +118,36 @@ func (s *LxdBackend) getProject(client lxd.InstanceServer, ctx context.Context, 
 	return nil, ErrProjectNotFound
 }
 
-func (s *LxdBackend) trackProject(ctx context.Context, prj *Project) error {
-	client, err := s.LxdClient(ctx)
+func (s *LxdBackend) untrackProject(client lxd.InstanceServer, ctx context.Context, prj *Project) error {
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
 	if err != nil {
 		return err
 	}
 
+	var projects map[string]*Project = make(map[string]*Project, 0)
+	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
+		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
+			return err
+		}
+	}
+
+	delete(projects, prj.ProjectId)
+
+	buf, err := json.Marshal(projects)
+	if err != nil {
+		return err
+	}
+	lxdPrj.ProjectPut.Config["user.workspace.projects"] = string(buf)
+
+	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
+}
+
+func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context, prj *Project) error {
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key %s not found", ContextUser)
@@ -149,10 +173,7 @@ func (s *LxdBackend) trackProject(ctx context.Context, prj *Project) error {
 	}
 	lxdPrj.ProjectPut.Config["user.workspace.projects"] = string(buf)
 
-	if err = client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag); err != nil {
-		return err
-	}
-	return nil
+	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
 
 // projectPath returns a project path for the cwd provided
@@ -203,7 +224,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	}
 
 	// see if we have this project already existing
-	if existingProject, err := s.getProject(client, ctx, projectDir); err == nil {
+	if existingProject, err := s.loadProject(client, ctx, projectDir); err == nil {
 		// the tracked path and the requested path must be the same
 		// otherwise it means that the project directory was moved or copied
 		// If that is the case, we must update the project's configuration
@@ -223,7 +244,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				// 1. Update the new path to the actual and track it
 				// 2. Update all the workspaces to the new project mount
 				existingProject.Path = projectDir
-				err := s.trackProject(ctx, existingProject)
+				err := s.trackProject(client, ctx, existingProject)
 				if err != nil {
 					return nil, false, err
 				}
@@ -243,7 +264,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				if err = newPrj.UpdateLockFile(); err != nil {
 					return nil, false, err
 				}
-				s.trackProject(ctx, &newPrj)
+				s.trackProject(client, ctx, &newPrj)
 				return &newPrj, true, nil
 			}
 		}
@@ -282,7 +303,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 
 	// Now, add the project ID to the tracking map
 	// stored in a custom user.* key of the LXD project for this user
-	if err = s.trackProject(ctx, &project); err != nil {
+	if err = s.trackProject(client, ctx, &project); err != nil {
 		return nil, false, err
 	}
 
@@ -330,18 +351,32 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) 
 		}
 	}
 
-	for _, i := range projects {
-		if ok, _, err := osutil.ExistsIsDir(i.Path); !ok && err == nil {
-			// we realised that there is no project directory for the
-			// projectId anymore. It can mean moving or deletion happened in the past
-			// Try to recover the new project path
-			newPath, err := s.findProjectPathFromBindMounts(client, ctx, i)
-			if err == nil && newPath != "" {
+	for _, prj := range projects {
+		if ok, _, err := osutil.ExistsIsDir(prj.Path); !ok && err == nil {
+			// If got here then there is no project directory for the projectId
+			// anymore. It can mean moving or deletion happened in the past. Try
+			// to recover the new project path
+			newPath, _ := s.findProjectPathFromBindMounts(client, ctx, prj)
+			if newPath != "" {
 				// start tracking this project under a new path
-				i.Path = newPath
-				if err = s.trackProject(ctx, i); err == nil {
-					s.updateWorkspacesProjectPath(client, ctx, i)
+				prj.Path = newPath
+				if err = s.trackProject(client, ctx, prj); err == nil {
+					// update the workspaces configuration with the new path
+					s.updateWorkspacesProjectPath(client, ctx, prj)
 				}
+				continue
+			}
+			// Could not recover the directory, reconcile the project from the
+			// list of projects that we track (only if there are no remaining
+			// workspaces for this project)
+			inst, err := s.filterLxdInstancesByConfig(client, func(config map[string]string) bool {
+				return config["user.workspace.project-id"] == prj.ProjectId
+			})
+			if err == nil && len(inst) == 0 {
+				if err = s.untrackProject(client, ctx, prj); err != nil {
+					return nil, err
+				}
+				delete(projects, prj.ProjectId)
 			}
 		}
 	}

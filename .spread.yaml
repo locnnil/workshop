@@ -77,6 +77,8 @@ backends:
 suites:
   tests/main/:
     summary: Core workspace scenarios
+  tests/integration/:
+    summary: LXD integration tests
 
 path: /remote
 exclude:
