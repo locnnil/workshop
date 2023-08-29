@@ -1,9 +1,10 @@
 Explanation
-==================
+===========
 
-**Discussion and clarification** of key Workspace concepts such as system containers, changes and tasks, and the relationship between snapd and workspace.
+The explanatory guides in this section introduce the concepts used in
+|project| and help you understand how they fit together.
 
 .. toctree::
    :maxdepth: 1
 
-   changes-and-tasks/changes
+   essentials/changes-tasks
