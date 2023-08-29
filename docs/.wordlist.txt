@@ -22,6 +22,7 @@ gocheck
 gopkg
 https
 installable
+iteratively
 onboarding
 pathname
 reST
@@ -29,6 +30,7 @@ reStructuredText
 readme
 roadmap
 snapd
+transactional
 webhook
 workspaced
 workspaces

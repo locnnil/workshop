@@ -69,7 +69,7 @@ Wait on error
 -------------
 
 To pause the refresh operation on error
-instead of canceling it outright,
+instead of cancelling it outright,
 add the ``--wait-on-error`` option:
 
 .. code-block:: bash

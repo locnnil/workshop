@@ -13,7 +13,7 @@ Project
 A project is a directory that contains one or many workspace definitions.
 
 When a workspace runs,
-this directory is automounted as ``/project/``;
+this directory is mounted as ``/project/``;
 the changes to the directory are tracked
 to keep the workspace configuration in sync.
 Thus, if the directory is moved or copied,
@@ -57,7 +57,7 @@ A simple definition may look like this:
        channel: latest/stable
 
 This specifies a *base* and an *SDK*.
-A more complete defintion would usually list
+A more complete definition would usually list
 multiple SDKs, interfaces, packages and life cycle hooks.
 
 
