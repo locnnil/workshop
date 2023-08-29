@@ -1,3 +1,5 @@
+.. _tut_refresh:
+
 Refresh a workspace
 ===================
 
@@ -92,6 +94,11 @@ To investigate the issue, check the recent *changes and tasks*:
        1391  Undone  today at 12:17       today at 12:18       Link "go" SDK
        1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
        ...
+
+
+.. note::
+
+   For details, see :ref:`tut_changes_tasks`.
 
 
 To continue the refresh operation:

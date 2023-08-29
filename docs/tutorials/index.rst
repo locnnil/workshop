@@ -17,3 +17,4 @@ of the essential |project| activities:
    essentials/install
    essentials/launch
    essentials/refresh
+   essentials/changes-tasks
