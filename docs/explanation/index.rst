@@ -1,10 +1,11 @@
-Explanation
-===========
+Explanations
+============
 
-The explanatory guides in this section introduce the concepts used in
-|project| and help you understand how they fit together.
+These guides provide insight into |project| concepts
+and help you understand how they fit together.
 
 .. toctree::
    :maxdepth: 1
 
+   essentials/project-workspace-sdks
    essentials/changes-tasks
