@@ -2,13 +2,16 @@ Launch a workspace
 ==================
 
 Having installed |project|,
-use it to define, launch, start and stop your first *workspace*.
+use it to define, launch, start and stop your first
+:ref:`workspace <exp_workspace>`.
 
 
 Define
 ------
 
-#. Create a project directory named ``hello-workspace``:
+#. Create a
+   :ref:`project directory <exp_project>`
+   named ``hello-workspace``:
 
    .. code-block:: bash
 
@@ -17,7 +20,9 @@ Define
 
 
 #. In the project directory,
-   create a workspace file named ``.workspace.nimble.yaml``:
+   create a
+   :ref:`workspace definition <exp_workspace_def>`
+   named ``.workspace.nimble.yaml``:
 
    .. code-block:: yaml
 
@@ -70,8 +75,8 @@ move it and check the ``workspace list`` output:
    workspace list
 
 
-        Project                 Workspace  State  Notes
-        ~/hi-workspace          nimble     Ready  -
+       Project                 Workspace  State  Notes
+       ~/hi-workspace          nimble     Ready  -
 
 
 Start and stop

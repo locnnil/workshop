@@ -5,6 +5,8 @@ Projects, workspaces, workspace definitions and SDKs
 are the key building blocks of |project|.
 
 
+.. _exp_project:
+
 Project
 -------
 
@@ -30,6 +32,8 @@ Workspace
 
 A *workspace* is a container that is described in a definition file.
 
+
+.. _exp_workspace_def:
 
 Workspace definition
 ~~~~~~~~~~~~~~~~~~~~
@@ -57,6 +61,8 @@ A more complete defintion would usually list
 multiple SDKs, interfaces, packages and life cycle hooks.
 
 
+.. _exp_workspace_base:
+
 Base image
 ~~~~~~~~~~
 
@@ -65,6 +71,7 @@ that is used as the foundation of the workspace.
 Currently, it can be either ``ubuntu@20.04`` or ``ubuntu@22.04``.
 
 
+.. _exp_sdk:
 
 SDKs
 ----

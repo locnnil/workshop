@@ -10,8 +10,12 @@ refresh it to pick up the update.
 Update versions
 ---------------
 
-If SDKs listed in the definition file are updated,
-*refresh* the workspace to apply the updates:
+If the
+:ref:`SDKs <exp_sdk>`
+listed in the
+:ref:`workspace definition <exp_workspace_def>`
+are updated,
+*refresh* the workspace to apply the changes:
 
 .. code-block:: bash
 
@@ -19,9 +23,12 @@ If SDKs listed in the definition file are updated,
 
        "nimble" refreshed
 
-The workspace is rebuilt from the base;
+The workspace is rebuilt from the
+:ref:`base <exp_workspace_base>`;
 then the SDKs are updated from their respective channels.
-If your project has multiple workspaces,
+If your
+:ref:`project <exp_project>`
+has multiple workspaces,
 ``workspace refresh`` simultaneously updates all of them.
 
 .. note::

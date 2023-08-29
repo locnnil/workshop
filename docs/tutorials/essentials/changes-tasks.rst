@@ -3,7 +3,8 @@
 List changes and tasks
 ======================
 
-To trace the condition of a workspace,
+To trace the condition of a
+:ref:`workspace <exp_workspace>`,
 explore its
 :ref:`changes and tasks <exp_changes_tasks>`.
 This can help if a
@@ -15,7 +16,9 @@ List workspace changes
 ----------------------
 
 Consider a workspace named ``ml-transformer``
-that uses an unstable SDK from the ``latest/edge`` channel:
+that uses an unstable
+:ref:`SDK <exp_sdk>`
+from the ``latest/edge`` channel:
 
 .. code-block:: yaml
 
@@ -26,7 +29,9 @@ that uses an unstable SDK from the ``latest/edge`` channel:
        channel: latest/edge
 
 
-Suppose something goes wrong at ``workspace refresh``:
+Suppose something goes during a
+:ref:`refresh <tut_refresh>`
+operation:
 
 .. code-block:: bash
 
@@ -75,3 +80,5 @@ list its *tasks* to see the cause:
            File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
                from .tensorrt import *
        ModuleNotFoundError: No module named 'tensorrt.tensorrt'
+
+The SDK-specific reason can be addressed individually.
