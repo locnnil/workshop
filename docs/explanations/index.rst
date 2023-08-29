@@ -1,8 +1,8 @@
 Explanations
 ============
 
-These guides provide insight into |project| concepts
-and help you understand how they fit together.
+These detailed guides elaborate on various |project| concepts
+and explain how they fit together.
 
 .. toctree::
    :maxdepth: 1

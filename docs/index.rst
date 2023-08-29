@@ -38,12 +38,12 @@ In this documentation
 
 .. grid:: 1 1 2 2
 
-   .. grid-item:: :doc:`Tutorial <tutorial/index>`
+   .. grid-item:: :doc:`Tutorials <tutorials/index>`
 
-      **Start here**: a hands-on introduction to |project| for new users
+      **Starter instructions** for new users of |project|
 
 
-   .. grid-item:: :doc:`Explanation <explanation/index>`
+   .. grid-item:: :doc:`Explanations <explanations/index>`
 
       **Discussion and clarification** of key topics
 
@@ -62,5 +62,5 @@ If we somehow failed,
    :hidden:
    :maxdepth: 2
 
-   tutorial/index
-   explanation/index
+   tutorials/index
+   explanations/index
