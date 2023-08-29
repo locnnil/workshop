@@ -1,7 +1,7 @@
-.. _changes-and-tasks:
+.. _exp_changes:
 
-Changes and Tasks
-==================
+Changes, tasks
+==============
 
 *Change* is the core concept of the workspace state management system. Every
 long-running or invasive operation (e.g. ``launch``) that changes the state of
@@ -15,6 +15,10 @@ Thus, the state management system enables a granular control over the state of a
 workspace container instance and prioritises the workspace integrity if
 something does not follow a happy path. By default, any unsuccessful change
 reverts its progress to a previously working state.
+
+The workspace state engine gives a fine control over how a long-running or
+invasive operation will be planned and executed by prioritising always having a
+workspace in a working state.
 
 Exploring changes and tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
