@@ -64,4 +64,3 @@ If we somehow failed,
 
    tutorial/index
    explanation/index
-   ReadMe <README>
