@@ -1,8 +1,8 @@
-Your first workspace
-====================
+Launch a workspace
+==================
 
-When |project| is installed,
-you're ready to define, launch, start and stop your first *workspace*.
+Having installed |project|,
+use it to define, launch, start and stop your first *workspace*.
 
 
 Define

@@ -1,7 +1,7 @@
-Workspace tutorials
-===================
+Tutorials
+=========
 
-These tutorials introduce the key concepts,
+These tutorials introduce the key |project| concepts,
 from installation to launching a workspace for your project.
 
 .. toctree::

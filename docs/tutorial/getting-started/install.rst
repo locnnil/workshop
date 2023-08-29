@@ -1,5 +1,5 @@
-Installation
-============
+Install |project|
+=================
 
 Check the prerequisites,
 build and install |project|,
