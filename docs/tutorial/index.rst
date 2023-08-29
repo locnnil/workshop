@@ -8,4 +8,3 @@ from installation to launching a workspace for your project.
    :maxdepth: 1
 
    getting-started/index
-   designing-workspace/index
