@@ -122,5 +122,5 @@ type WorkspaceBackend interface {
 	// not related to the command (i.e. the workspace does not exist) and the
 	// errors that were caused by the command itself (e.g. != 0 return code). If
 	// the latter, an instance of ErrExec with the status code must be returned.
-	Exec(ctx context.Context, name string, args *ExecArgs) error
+	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
 }

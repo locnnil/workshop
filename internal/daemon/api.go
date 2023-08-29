@@ -34,6 +34,11 @@ var api = []*Command{{
 	GET:     v1GetProjectWorkspaces,
 	POST:    v1PostProjectWorkspace,
 }, {
+	Path:    "/v1/projects/{id}/workspaces/{name}/exec",
+	GuestOK: false,
+	UserOK:  true,
+	POST:    v1PostWorkspaceExec,
+}, {
 	Path:    "/v1/projects/{id}/workspaces/{name}",
 	GuestOK: false,
 	UserOK:  true,
@@ -47,6 +52,10 @@ var api = []*Command{{
 	UserOK: true,
 	GET:    v1GetChange,
 	POST:   v1PostChange,
+}, {
+	Path:   "/v1/tasks/{task-id}/websocket/{websocket-id}",
+	UserOK: true,
+	GET:    v1GetTaskWebsocket,
 }}
 
 var (

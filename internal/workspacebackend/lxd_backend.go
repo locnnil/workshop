@@ -16,6 +16,7 @@ import (
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/osutil"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
@@ -25,14 +26,33 @@ import (
 )
 
 type ExecArgs struct {
-	User        string
 	Command     []string
+	UserId      int
+	GroupId     int
 	WorkDir     string
 	Environment map[string]string
 	Interactive bool
-	Stdin       io.ReadCloser
-	Stdout      io.WriteCloser
-	Stderr      io.WriteCloser
+	Terminal    bool
+	SplitStderr bool
+	Width       int
+	Height      int
+}
+
+type ExecControls struct {
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+	Control func(conn *websocket.Conn)
+}
+
+type Execution struct {
+	ExecArgs
+	*ExecControls
+}
+
+type ExecContext struct {
+	Environment          map[string]string
+	DescriptorWebsockets map[string]string
 }
 
 type LxdBackend struct {
@@ -40,6 +60,8 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	// path used in workspace to mount the project directory
+	WorkspaceProjectPath = "/project"
 	// name prefix for the workspaces that were made unavailable
 	StashNamePrefix = "stash-"
 )
@@ -321,7 +343,7 @@ func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx co
 	for _, i := range workspaces {
 		err = s.AddWorkspaceDevice(ctx, WorkspaceName(i.Name), WorkspaceDevice{
 			Name:       ProjectPathDevice,
-			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": "/project"},
+			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkspaceProjectPath},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot update workspace \"%v\" project directory", i.Name)
@@ -409,16 +431,23 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
-		args := ExecArgs{User: "root",
-			Command: []string{"bash", "-c",
-				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-			WorkDir: "/",
-			Stdin:   nil,
-			Stdout:  out,
-			Stderr:  out}
+		args := Execution{
+			ExecArgs: ExecArgs{
+				UserId:  0,
+				GroupId: 0,
+				Command: []string{"bash", "-c",
+					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+				WorkDir: "/",
+			},
+			ExecControls: &ExecControls{
+				Stdin:  nil,
+				Stdout: out,
+				Stderr: out,
+			},
+		}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		err = s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
+		_, err = s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
 		if err != nil {
 			outbuf, _ := afero.ReadFile(memFs, out.Name())
 			logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, outbuf)
@@ -561,19 +590,26 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 
 	// Wait until system is up an running before returning
 	// see: https://blog.simos.info/how-to-know-when-a-lxd-container-has-finished-starting-up/
-	args := ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c", "while " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+	args := Execution{
+		ExecArgs: ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"bash", "-eu", "-c", "while " +
+					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
+					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+			},
+			WorkDir: "/",
 		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
+		ExecControls: &ExecControls{
+			Stdin:  nil,
+			Stdout: nil,
+			Stderr: nil,
+		},
+	}
 
-	return s.execCommand(conn, ctx, name, &args)
+	_, err = s.execCommand(conn, ctx, name, &args)
+	return err
 }
 
 func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
@@ -673,10 +709,15 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 	return op.Wait()
 }
 
-func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *ExecArgs) error {
+func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *Execution) (ExecContext, error) {
+
+	websocket := func(opId, secret string) string {
+		return fmt.Sprintf("http://lxd.unix/1.0/operations/%s/websocket?secret=%s", opId, secret)
+	}
+
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
-		return fmt.Errorf("context key project-id not found")
+		return ExecContext{}, fmt.Errorf("context key project-id not found")
 	}
 
 	req := api.InstanceExecPost{
@@ -691,41 +732,73 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 
 	done := make(chan bool)
 
-	arg := lxd.InstanceExecArgs{
-		Stdin:    args.Stdin,
-		Stdout:   args.Stdout,
-		Stderr:   args.Stderr,
-		Control:  nil,
-		DataDone: done,
-	}
+	if args.ExecControls == nil {
+		// create an execution object for the client to connect to
+		op, err := conn.ExecInstance(InstanceName(name, projectId), req, nil)
+		if err != nil {
+			return ExecContext{}, err
+		}
 
-	op, err := conn.ExecInstance(InstanceName(name, projectId), req, &arg)
+		opmeta := op.Get()
+		var env = map[string]string{}
+		var fds = map[string]string{}
 
-	if err != nil {
-		return err
-	}
+		for k, v := range opmeta.Metadata["environment"].(map[string]any) {
+			if value, ok := v.(string); ok {
+				env[k] = value
+			}
+		}
 
-	if err := op.WaitContext(ctx); err != nil {
-		return err
-	}
+		for k, v := range opmeta.Metadata["fds"].(map[string]any) {
+			if value, ok := v.(string); ok {
+				fds[k] = value
+			}
+		}
 
-	// waiting for any remaining data IO to be flushed LXD closes this channel
-	// unconditionally right after the operation has exited
-	<-arg.DataDone
+		return ExecContext{
+			Environment: env,
+			DescriptorWebsockets: map[string]string{
+				"stdio":   websocket(opmeta.ID, fds["0"]),
+				"stdout":  websocket(opmeta.ID, fds["1"]),
+				"stderr":  websocket(opmeta.ID, fds["2"]),
+				"control": websocket(opmeta.ID, fds["control"]),
+			},
+		}, nil
+	} else {
+		op, err := conn.ExecInstance(InstanceName(name, projectId), req, &lxd.InstanceExecArgs{
+			Stdin:    args.Stdin,
+			Stdout:   args.Stdout,
+			Stderr:   args.Stderr,
+			Control:  args.Control,
+			DataDone: done,
+		})
+		if err != nil {
+			return ExecContext{}, err
+		}
 
-	if status, ok := op.Get().Metadata["return"].(float64); ok {
-		if status != 0 {
-			logger.Debugf("cannot exec: %v", int(status))
-			return &ErrExec{Status: int(status)}
+		if err := op.WaitContext(ctx); err != nil {
+			return ExecContext{}, err
+		}
+
+		// waiting for any remaining data IO to be flushed LXD closes this channel
+		// unconditionally right after the operation has exited
+		<-done
+
+		if status, ok := op.Get().Metadata["return"].(float64); ok {
+			if status != 0 {
+				logger.Debugf("cannot exec: %v", int(status))
+				return ExecContext{}, &ErrExec{Status: int(status)}
+			}
 		}
 	}
-	return nil
+
+	return ExecContext{}, nil
 }
 
-func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
+func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return err
+		return ExecContext{}, err
 	}
 
 	return s.execCommand(conn, ctx, name, args)

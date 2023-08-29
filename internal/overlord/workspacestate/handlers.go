@@ -228,3 +228,35 @@ func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tom
 
 	return m.backend.DeleteStateStorage(ctx, workspace)
 }
+
+func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workspace, err := UserProjectWorkspace(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj)
+	defer cancel()
+
+	var setup workspacebackend.ExecArgs
+	st := task.State()
+	st.Lock()
+	err = task.Get("exec-setup", &setup)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("cannot get exec setup object for task %q: %v", task.ID(), err)
+	}
+
+	metadata, err := m.backend.Exec(ctx, workspace, &workspacebackend.Execution{ExecArgs: setup})
+	if err != nil {
+		return err
+	}
+	st.Lock()
+	task.Set("stdio", metadata.DescriptorWebsockets["stdio"])
+	task.Set("stdout", metadata.DescriptorWebsockets["stdout"])
+	task.Set("stderr", metadata.DescriptorWebsockets["stderr"])
+	task.Set("control", metadata.DescriptorWebsockets["control"])
+	st.Unlock()
+
+	return nil
+}

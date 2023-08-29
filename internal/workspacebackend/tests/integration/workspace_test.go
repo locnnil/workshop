@@ -155,18 +155,24 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// now, ensure that the systemd is in the final state
 	memFs := afero.NewMemMapFs()
 	out, _ := memFs.Create("stdout")
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c",
-			"systemctl is-system-running 2>/dev/null",
+	args := workspacebackend.Execution{
+		ExecArgs: workspacebackend.ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"bash", "-eu", "-c",
+				"systemctl is-system-running 2>/dev/null",
+			},
+			WorkDir: "/",
 		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  out,
-		Stderr:  out}
+		ExecControls: &workspacebackend.ExecControls{
+			Stdin:  nil,
+			Stdout: out,
+			Stderr: out,
+		},
+	}
 
-	err = f.be.Exec(f.ctx, "test-1", &args)
+	_, err = f.be.Exec(f.ctx, "test-1", &args)
 	c.Assert(err, check.IsNil)
 	buf, err := afero.ReadFile(memFs, out.Name())
 	c.Assert(err, check.IsNil)

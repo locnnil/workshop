@@ -486,6 +486,43 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 	return taskset, nil
 }
 
+type ExecContext struct {
+	Environment map[string]string
+	WorkingDir  string
+}
+
+func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, ExecContext, error) {
+	if args.Terminal {
+		return nil, ExecContext{}, errors.New("terminal mode is not supported")
+	}
+
+	if args.SplitStderr {
+		return nil, ExecContext{}, errors.New("splitting stderr is not supported")
+	}
+
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, ExecContext{}, err
+	}
+
+	exec := w.state.NewTask("exec", fmt.Sprintf("exec command %q", args.Command[0]))
+
+	execArgs := *args
+
+	if execArgs.WorkDir == "" {
+		execArgs.WorkDir = workspacebackend.WorkspaceProjectPath
+	}
+
+	exec.Set("exec-setup", &execArgs)
+	exec.Set("project", *project)
+	exec.Set("workspace", name)
+
+	return exec, ExecContext{
+		WorkingDir:  execArgs.WorkDir,
+		Environment: execArgs.Environment,
+	}, nil
+}
+
 func (w *WorkspaceManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	invalid, status, err := w.CheckStatus(
 		ctx,

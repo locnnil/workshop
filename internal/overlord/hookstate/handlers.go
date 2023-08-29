@@ -88,7 +88,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspace, projectId string, hook *HookSetup) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
 
-	// 
+	//
 	wsFs, err := h.backend.GetWorkspaceFs(ctx, workspace)
 	if err != nil {
 		return err
@@ -100,7 +100,6 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 		return nil
 	}
 
-
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
 	out, err := memFs.Create(workspacebackend.InstanceName(workspace, projectId))
@@ -108,25 +107,29 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 		return err
 	}
 
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash",
-			"-xue",
-			"-o",
-			"pipefail",
-			"-c",
-			hookPath,
+	args := workspacebackend.Execution{
+		ExecArgs: workspacebackend.ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"bash",
+				"-xue",
+				"-o",
+				"pipefail",
+				"-c",
+				hookPath,
+			},
+			Environment: hook.Environment,
+			WorkDir:     sdk.SdkHooksDir(hook.Sdk.Name),
 		},
-		Environment: hook.Environment,
-		WorkDir:     sdk.SdkHooksDir(hook.Sdk.Name),
+		ExecControls: &workspacebackend.ExecControls{
+			Stdin:  nil,
+			Stdout: out,
+			Stderr: out,
+		},
 	}
 
-	args.Stdin = nil
-	args.Stdin = out
-	args.Stdout = out
-
-	err = h.backend.Exec(ctx, workspace, &args)
+	_, err = h.backend.Exec(ctx, workspace, &args)
 
 	hookLog, _ := afero.ReadFile(memFs, out.Name())
 

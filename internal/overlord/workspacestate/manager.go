@@ -29,6 +29,7 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
+	runner.AddHandler("exec", OnDo(manager.doExecCommand), nil)
 
 	return manager
 }
