@@ -1,91 +1,86 @@
-Create your first workspace
-===========================
+Your first workspace
+====================
 
-Workspace is a system container that is created, configured and launched from a
-definition provided in a workspace file. The file is a straightforward YAML
-specification that describes the container's base and SDKs that will be
-installed into the workspace. It is intended to be created and maintained as a
-single source of truth about the development environment of your project. Thus,
-on-boarding or reproducing the environment on a new machine would be as simple
-as ``workspace launch``.
+When |project| is installed,
+you're ready to define, launch, start and stop your first *workspace*.
 
-We'll start with exploring the concepts of workspace, SDK and workspace file.
-These are the most important aspects of the tool.
 
-Let's create a project directory ``hello-workspace`` with a simple workspace
-file ``.workspace.nimble.yaml`` in it:
+Define
+------
 
-.. code-block:: yaml
+#. Create a project directory named ``hello-workspace``:
 
-    name: nimble
-    base: ubuntu@22.04
-    sdks:
+   .. code-block:: bash
+
+      mkdir hello-workspace
+      cd hello-workspace
+
+
+#. In the project directory,
+   create a workspace file named ``.workspace.nimble.yaml``:
+
+   .. code-block:: yaml
+
+      name: nimble
+      base: ubuntu@22.04
+      sdks:
         go:
-            channel: latest/stable
+          channel: latest/stable
 
-.. note::
-    A Workspace file must satisfy the following naming convention: .workspace.\ *name*\ .yaml
 
-Our ``nimble`` workspace introduces two concepts: *base* and *SDK*.
+#. Make sure |project| can find the definition
+   by *listing* the workspaces
+   in the project directory:
 
-*base* can be either ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a supported OS
-that will be used to create the workspace container.
+   .. code-block:: bash
 
-*SDK* is a Software Development Kit designed by a publisher and available in the
-SDK Store. The SDK is a building block for your workspace that installs the
-required system and language packages, configures the environment and maintains
-its state throughout the lifetime of the workspace. A workspace can contain
-multiple SDKs from various publishers. In this example, we use a simple Go
-language SDK.
+      workspace list
 
-The SDKs are distributed via channels, the concept that reproduces the semantics
-of a `snap channel
-<https://snapcraft.io/docs/channels>`_.
+          Project                 Workspace  State  Notes
+          ~/hello-workspace       nimble     Off    -
+
+
+   Note that a newly created workspace is *Off*.
+
 
 Launch
 ------
 
-Now Workspace should be able to find the newly created workspace in an *Off*
-state. To confirm, run the following command from the project directory:
+To prepare a workspace for action,
+you *launch* it:
 
 .. code-block:: bash
 
-    $ workspace list
-    Project                 Workspace  State  Notes
-    ~/Work/hello-workspace  nimble     Off    -
+   workspace launch nimble
 
-We are ready to launch the ``nimble`` workspace:
-
-.. code-block:: bash
-
-    $ workspace launch nimble
-    "nimble" launched
-
-Done! Once you have launched a workspace, it can be used to build, debug and run
-code either from your favourite IDE or directly from the command line.
-
-.. note::
-
-    The project directory will be mounted into the container automatically under
-    the ``/project`` pathname. Workspace tracks changes to the project directory
-    keep the container configuration in sync. Thus, if the project directory is
-    moved, copied or deleted, the corresponding workspace container will update
-    its mounts automatically. If the directory is removed, the remaining
-    workspaces that still exist will be switched to the *Error* state and become
-    unavailable for any commands except ``remove``. Try moving the project
-    directory and check the results of the ``workspace list`` output.
+       "nimble" launched
 
 
-Starting and stopping
----------------------
+Now, the workspace is *Ready*
+to build, debug and run code.
 
-A workspace will be in the *Ready* state if the launch was successful. When
-not used, stop the workspace by running:
+
+Start and stop
+--------------
+
+If you're done with the workspace for now,
+*stop* it to conserve resources:
 
 .. code-block:: bash
 
-    $ workspace stop nimble
-    "nimble" stopped
+   workspace stop nimble
 
-Both ``workspace start`` and ``workspace stop`` commands wait for the graceful
-completion of the operation.
+       "nimble" stopped
+
+
+To resume, *start* the workspace again:
+
+.. code-block:: bash
+
+   workspace start nimble
+
+       "nimble" started
+
+
+Both commands operate gracefully,
+waiting for the workspace to comply.
