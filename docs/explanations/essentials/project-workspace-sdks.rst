@@ -1,21 +1,26 @@
 Project, workspace, SDKs
 ========================
 
-The concepts of a project, its workspaces, their definitions and SDKs are the
-most important aspects of |project|.
+Projects, workspaces, workspace definitions and SDKs
+are the key building blocks of |project|.
 
 
 Project
 -------
 
-The project directory will be mounted into the container automatically under
-the ``/project`` pathname. Workspace tracks changes to the project directory
-keep the container configuration in sync. Thus, if the project directory is
-moved, copied or deleted, the corresponding workspace container will update
-its mounts automatically. If the directory is removed, the remaining
-workspaces that still exist will be switched to the *Error* state and become
-unavailable for any commands except ``remove``. Try moving the project
-directory and check the results of the ``workspace list`` output.
+A project is a directory that contains one or many workspace definitions.
+
+When a workspace runs,
+this directory is automounted as ``/project/``;
+the changes to the directory are tracked
+to keep the workspace configuration in sync.
+Thus, if the directory is moved or copied,
+the mount points in related workspaces are updated.
+
+If the directory is deleted,
+the workspaces that still refer to it
+switch to the *Error* state
+and become unavailable for any commands except ``remove``.
 
 
 .. _exp_workspace:
@@ -23,54 +28,62 @@ directory and check the results of the ``workspace list`` output.
 Workspace
 ---------
 
-A *workspace* is a system container that is created, configured and launched
-from a definition provided in a workspace file. The file is a straightforward
-YAML specification that describes the container's base and SDKs that will be
-installed into the workspace. It is intended to be created and maintained as a
-single source of truth about the development environment of your project.
+A *workspace* is a container that is described in a definition file.
 
-The workspace file of an actual project may contain multiple SDKs, interfaces,
-packages and life cycle hooks. When approached for the first time, it is likely
-that designing a workspace will take a few iterations before arriving at the
-desired development environment for your project.
 
-.. note::
+Workspace definition
+~~~~~~~~~~~~~~~~~~~~
 
-   It is a good idea to keep your locally running workspace instance in sync
-   with that of your team, by using the project's workspace file as a single
-   source of truth for your development environment.
+This is a file named ``.workspace.<NAME>.yaml``
+that lists the base image of the workspace
+and the specific components installed on top of it.
+The definition serves as a single source of truth about the workspace.
+It usually takes a few tries
+to arrive at a configuration that suits your project,
+so you can edit and update the workspace definition iteratively.
 
-A workspace file must be named as follows: ``.workspace.<NAME>.yaml``.
-The contents of a simple file may look like this:
+A simple definition may look like this:
 
 .. code-block:: yaml
 
-    name: nimble
-    base: ubuntu@22.04
-    sdks:
-        go:
-            channel: latest/stable
+   name: nimble
+   base: ubuntu@22.04
+   sdks:
+     go:
+       channel: latest/stable
 
-This adds two related concepts: *base* and *SDK*.
-Here, *base* can be either ``ubuntu@20.04`` or ``ubuntu@22.04``. It is a
-supported OS that will be used to create the workspace container.
+This specifies a *base* and an *SDK*.
+A more complete defintion would usually list
+multiple SDKs, interfaces, packages and life cycle hooks.
 
 
-SDK
----
+Base image
+~~~~~~~~~~
 
-An *SDK* is a Software Development Kit designed by a publisher and available in
-the SDK Store. The SDK is a building block for your workspace that installs the
-required system and language packages, configures the environment and maintains
-its state throughout the lifetime of the workspace. A workspace can contain
-multiple SDKs from various publishers. In this example, we use a simple Go
-language SDK.
+The base is a supported OS image
+that is used as the foundation of the workspace.
+Currently, it can be either ``ubuntu@20.04`` or ``ubuntu@22.04``.
 
-SDKs are distributed via channels, the concept that reproduces the semantics of
-a `snap channel <https://snapcraft.io/docs/channels>`_.
 
-Any SDK has a notion of state that will be preserved over its life cycle. If an
-SDK has state data, for example a specific training configuration, Workspace
-saves the state before any refresh operation starts. The state is restored in
-the refreshed workspace. Both save and restore scripts are provided by the SDK
-author.
+
+SDKs
+----
+
+SDKs are essential workspace components
+that install the required system and language packages,
+configure the workspace for their operation
+and maintain their own state
+throughout the lifetime of the workspace.
+An *SDK* is designed by a publisher
+and made available via the SDK Store.
+A single workspace can include multiple SDKs from different publishers.
+SDKs are distributed via channels similar to
+`snap channels <https://snapcraft.io/docs/channels>`_.
+
+An SDK has a state that persists SDK-specific data,
+such as a model training configuration.
+|project| saves the state before applying any changes to the SDK,
+such as in a :ref:`refresh <tut_refresh>` operation.
+After a successful change, the state is restored.
+The specific save and restore actions
+are implemented by the publisher.

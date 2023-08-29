@@ -59,6 +59,20 @@ you *launch* it:
 Now, the workspace is *Ready*
 to build, debug and run code.
 
+To make sure |project| watches the changes in the project directory,
+move it and check the ``workspace list`` output:
+
+.. code-block:: bash
+
+   cd ..
+   mv hello-workspace hi-workspace
+   cd hi-workspace
+   workspace list
+
+
+        Project                 Workspace  State  Notes
+        ~/hi-workspace          nimble     Ready  -
+
 
 Start and stop
 --------------
