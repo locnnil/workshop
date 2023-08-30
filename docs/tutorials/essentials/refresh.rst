@@ -26,22 +26,24 @@ are updated,
 The workspace is rebuilt from the
 :ref:`base <exp_workspace_base>`;
 then the SDKs are updated from their respective channels.
-If your
-:ref:`project <exp_project>`
-has multiple workspaces,
-``workspace refresh`` simultaneously updates all of them.
+
+To refresh multiple workspaces at once:
+
+.. code-block:: bash
+
+   workspace refresh nimble huggingface ...
 
 .. note::
 
    The operation is transactional: If an error occurs,
-   **all** changes in **all** affected workspaces are reverted.
+   **all** changes in **all** listed workspaces are reverted.
 
 
 Add or remove an SDK
 --------------------
 
 To add a new SDK to your workspace,
-update the definition file and **refresh** the workspace:
+update the definition file and refresh the workspace:
 
 .. code-block:: yaml
 
