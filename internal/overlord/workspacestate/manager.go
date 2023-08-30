@@ -2,6 +2,7 @@ package workspacestate
 
 import (
 	"context"
+	"sync"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	. "github.com/canonical/workspace/internal/overlord/statecontext"
@@ -11,12 +12,16 @@ import (
 type WorkspaceManager struct {
 	backend workspacebackend.WorkspaceBackend
 	state   *state.State
+
+	execChannelsLock sync.Mutex
+	execChannels     map[string]chan bool
 }
 
 func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *WorkspaceManager {
 	manager := &WorkspaceManager{
-		backend: server,
-		state:   st,
+		backend:      server,
+		state:        st,
+		execChannels: make(map[string]chan bool),
 	}
 
 	/* Workspace management */
@@ -124,4 +129,15 @@ func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) worksp
 		}
 		return workspacebackend.WorkspaceStopped
 	}
+}
+
+func (w *WorkspaceManager) WaitExecReady(execTaskId string) error {
+	w.execChannelsLock.Lock()
+	execCh := w.execChannels[execTaskId]
+	w.execChannelsLock.Unlock()
+	if execCh == nil {
+		return nil
+	}
+	<-execCh
+	return nil
 }

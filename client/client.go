@@ -31,6 +31,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/wsutil"
 )
 
@@ -96,6 +97,9 @@ type Config struct {
 	// Socket is the path to the unix socket to use.
 	Socket string
 
+	// Socket is the path to the LXD unit socket to use for exec calls.
+	LxdSocket string
+
 	// DisableKeepAlive indicates that the connections should not be kept
 	// alive for later reuse (the default is to keep them alive).
 	DisableKeepAlive bool
@@ -154,10 +158,12 @@ func New(config *Config) (*Client, error) {
 		client = &Client{baseURL: *baseURL}
 	}
 
-	client.doer = &http.Client{Transport: transport}
+	client.doer = &http.Client{
+		Transport: transport,
+	}
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
-		return getWebsocket(transport, url)
+		return getWebsocket(transport, url, config)
 	}
 
 	return client, nil
@@ -168,14 +174,33 @@ func (client *Client) getTaskWebsocket(taskID, websocketID string) (clientWebsoc
 	return client.getWebsocket(url)
 }
 
-func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error) {
+func getWebsocket(transport *http.Transport, url string, config *Config) (clientWebsocket, error) {
 	dialer := websocket.Dialer{
 		NetDial:          transport.Dial,
 		Proxy:            transport.Proxy,
 		TLSClientConfig:  transport.TLSClientConfig,
-		HandshakeTimeout: 5 * time.Second,
+		HandshakeTimeout: 50 * time.Second,
 	}
-	conn, _, err := dialer.Dial(url, nil)
+	conn, resp, err := dialer.Dial(url, nil)
+
+	if err != nil {
+		if resp.StatusCode == http.StatusTemporaryRedirect {
+			lxdtransport := &http.Transport{Dial: unixDialer(config.LxdSocket), DisableKeepAlives: config.DisableKeepAlive}
+			dialer := websocket.Dialer{
+				NetDial:          lxdtransport.Dial,
+				Proxy:            lxdtransport.Proxy,
+				TLSClientConfig:  lxdtransport.TLSClientConfig,
+				HandshakeTimeout: 50 * time.Second,
+			}
+			location, err := resp.Location()
+			if err != nil {
+				return nil, err
+			}
+			conn, resp, err := dialer.Dial(location.String(), nil)
+			logger.Debugf("response: %v", resp)
+			return conn, err
+		}
+	}
 	return conn, err
 }
 

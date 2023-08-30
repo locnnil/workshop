@@ -517,6 +517,10 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	exec.Set("project", *project)
 	exec.Set("workspace", name)
 
+	w.execChannelsLock.Lock()
+	defer w.execChannelsLock.Unlock()
+	w.execChannels[exec.ID()] = make(chan bool)
+
 	return exec, ExecContext{
 		WorkingDir:  execArgs.WorkDir,
 		Environment: execArgs.Environment,

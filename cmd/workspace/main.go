@@ -38,7 +38,8 @@ var Project string
 // ClientConfig is the configuration of the Client used by all commands.
 var ClientConfig = client.Config{
 	// we need the powerful snapd socket
-	Socket: dirs.WorkspaceSocket,
+	Socket:    dirs.WorkspaceSocket,
+	LxdSocket: "/var/snap/lxd/common/lxd/unix.socket",
 }
 
 func main() {
@@ -64,6 +65,7 @@ func main() {
 	rootCmd.AddCommand((&CmdStart{}).Command())
 	rootCmd.AddCommand((&CmdStop{}).Command())
 	rootCmd.AddCommand((&CmdInfo{}).Command())
+	rootCmd.AddCommand((&CmdExec{}).Command())
 	rootCmd.AddCommand((&CmdRemove{}).Command())
 
 	rootCmd.SilenceErrors = true

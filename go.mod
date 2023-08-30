@@ -7,6 +7,7 @@ require (
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.0
 	github.com/lxc/lxd v0.0.0-20221215165925-aa3cdeaec9a5
+	github.com/pkg/term v1.1.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/cobra v1.6.1
 	golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6

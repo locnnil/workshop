@@ -15,9 +15,7 @@
 package wsutil
 
 import (
-	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"github.com/gorilla/websocket"
 
@@ -100,25 +98,17 @@ func recvLoop(w io.Writer, conn MessageReader) {
 
 		case websocket.TextMessage:
 			// A TEXT message is an out-of-band "command".
-			payload, err := ioutil.ReadAll(r)
+			payload, err := io.ReadAll(r)
 			if err != nil {
 				logger.Debugf("Cannot read from message reader: %v", err)
 				return
 			}
-			var command struct {
-				Command string `json:"command"`
-			}
-			err = json.Unmarshal(payload, &command)
-			if err != nil {
-				logger.Noticef("Cannot decode I/O command: %v", err)
-				continue
-			}
-			switch command.Command {
-			case "end":
-				logger.Debugf(`Got message barrier ("end" command)`)
-				return
+
+			switch string(payload) {
+			case "":
+				logger.Debugf(`Got message barrier (empty command)`)
 			default:
-				logger.Noticef("Invalid I/O command %q", command.Command)
+				logger.Noticef("Invalid I/O command %q", string(payload))
 			}
 
 		case websocket.BinaryMessage:

@@ -59,7 +59,7 @@ type LxdBackend struct {
 }
 
 const (
-	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	lxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 	// path used in workspace to mount the project directory
 	WorkspaceProjectPath = "/project"
 	// name prefix for the workspaces that were made unavailable
@@ -712,7 +712,7 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *Execution) (ExecContext, error) {
 
 	websocket := func(opId, secret string) string {
-		return fmt.Sprintf("http://lxd.unix/1.0/operations/%s/websocket?secret=%s", opId, secret)
+		return fmt.Sprintf("ws://lxd.unix/1.0/operations/%s/websocket?secret=%s", opId, secret)
 	}
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
@@ -1164,7 +1164,7 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 		return nil, fmt.Errorf("context key %s not found", ContextUser)
 	}
 
-	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
+	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, lxdSock, nil); err != nil {
 		return nil, err
 	} else {
 		if err = InitProject(srv, user); err != nil {

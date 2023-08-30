@@ -11,6 +11,8 @@ func v1GetTaskWebsocket(c *Command, req *http.Request, _ *userState) Response {
 	taskID := vars["task-id"]
 	websocketId := vars["websocket-id"]
 
+	_ = c.d.overlord.WorkspaceManager().WaitExecReady(taskID)
+
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()

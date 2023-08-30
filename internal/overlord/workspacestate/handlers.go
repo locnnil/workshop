@@ -258,5 +258,12 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 	task.Set("control", metadata.DescriptorWebsockets["control"])
 	st.Unlock()
 
+	m.execChannelsLock.Lock()
+	defer m.execChannelsLock.Unlock()
+	if execCh, ok := m.execChannels[task.ID()]; ok {
+		close(execCh)
+		delete(m.execChannels, task.ID())
+	}
+
 	return nil
 }

@@ -53,6 +53,10 @@ var api = []*Command{{
 	GET:    v1GetChange,
 	POST:   v1PostChange,
 }, {
+	Path:   "/v1/changes/{id}/wait",
+	UserOK: true,
+	GET:    v1GetChangeWait,
+}, {
 	Path:   "/v1/tasks/{task-id}/websocket/{websocket-id}",
 	UserOK: true,
 	GET:    v1GetTaskWebsocket,
