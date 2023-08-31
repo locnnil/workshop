@@ -97,6 +97,11 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 
 	// Set up environment variables.
 	env := make(map[string]string)
+	term, ok := os.LookupEnv("TERM")
+	if ok {
+		env["TERM"] = term
+	}
+
 	for _, kv := range cmd.Env {
 		parts := strings.SplitN(kv, "=", 2)
 		key := parts[0]
@@ -107,16 +112,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		env[key] = value
 	}
 
-	// Specify Terminal=true if -t is given, or if stdout is a TTY.
 	stdoutIsTerminal := ptyutil.IsTerminal(unix.Stdout)
-	var terminal bool
-	if cmd.Terminal {
-		terminal = true
-	} else if cmd.NoTerminal {
-		terminal = false
-	} else {
-		terminal = stdoutIsTerminal
-	}
 
 	// Specify Interactive=true if -i is given, or if stdin and stdout are TTYs.
 	stdinIsTerminal := ptyutil.IsTerminal(unix.Stdin)
@@ -130,7 +126,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	// Record terminal state (and restore it before we exit).
-	if terminal && stdinIsTerminal {
+	if interactive {
 		oldState, err := ptyutil.MakeRaw(unix.Stdin)
 		if err != nil {
 			return fmt.Errorf("cannot change terminal to raw mode: %v", err)
@@ -154,7 +150,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		WorkingDir:  cmd.WorkingDir,
 		UserId:      cmd.UserId,
 		GroupId:     cmd.GroupId,
-		Terminal:    terminal,
+		Terminal:    false,
 		Interactive: interactive,
 		Width:       width,
 		Height:      height,
@@ -183,7 +179,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	stopControl := make(chan struct{})
 	defer close(stopControl)
 	sighup := make(chan struct{})
-	go execControlHandler(process, terminal, stopControl, sighup)
+	go execControlHandler(process, interactive, stopControl, sighup)
 
 	finished := make(chan error)
 	go func() {
@@ -247,7 +243,7 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 			}
 		case unix.SIGHUP:
 			logger.Debugf("Received 'SIGHUP' signal, forwarding and exiting")
-			err := process.SendSignal("SIGHUP")
+			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
 				logger.Debugf("Cannot forward signal '%s': %v", sig, err)
 				break
@@ -257,7 +253,7 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 			unix.SIGTSTP, unix.SIGTTIN, unix.SIGTTOU, unix.SIGUSR1,
 			unix.SIGUSR2, unix.SIGSEGV, unix.SIGCONT:
 			logger.Debugf("Received '%s' signal, forwarding to executing program", sig)
-			err := process.SendSignal(unix.SignalName(sig.(unix.Signal)))
+			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
 				logger.Debugf("Cannot forward signal '%s': %v", sig, err)
 				break

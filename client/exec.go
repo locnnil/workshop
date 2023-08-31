@@ -20,9 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/lxc/lxd/shared/api"
+	"golang.org/x/sys/unix"
 )
 
 type ExecOptions struct {
@@ -124,7 +127,7 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 		WorkingDir:  opts.WorkingDir,
 		UserId:      opts.UserId,
 		GroupId:     opts.GroupId,
-		Terminal:    false,
+		Terminal:    opts.Terminal,
 		Interactive: opts.Interactive,
 		SplitStderr: false,
 		Width:       opts.Width,
@@ -156,27 +159,31 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 	}
 
 	// Forward stdin and stdout.
-	ioConn, err := client.getTaskWebsocket(taskID, "stdio")
+	var stdinDone, stdoutDone, stderrDone chan bool
+	var stdioConn, stdoutConn, stderrConn clientWebsocket
+
+	stdioConn, err = client.getTaskWebsocket(taskID, "stdio")
 	if err != nil {
 		return nil, fmt.Errorf(`cannot connect to "stdio" websocket: %w`, err)
 	}
-	stdinDone := wsutil.WebsocketSendStream(ioConn, stdin, -1)
+	stdinDone = wsutil.WebsocketSendStream(stdioConn, stdin, -1)
 
-	ioConnOut, err := client.getTaskWebsocket(taskID, "stdout")
-	if err != nil {
-		return nil, fmt.Errorf(`cannot connect to "stdout" websocket: %w`, err)
-	}
-	stdoutDone := wsutil.WebsocketRecvStream(stdout, ioConnOut)
-
-	// Handle stderr separately if needed.
-	var stderrConn clientWebsocket
-	var stderrDone chan bool
-	if opts.Stderr != nil {
-		stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
+	if opts.Interactive {
+		stdoutDone = wsutil.WebsocketRecvStream(stdout, stdioConn)
+	} else {
+		stdoutConn, err = client.getTaskWebsocket(taskID, "stdout")
 		if err != nil {
-			return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
+			return nil, fmt.Errorf(`cannot connect to "stdout" websocket: %w`, err)
 		}
-		stderrDone = wsutil.WebsocketRecvStream(opts.Stderr, stderrConn)
+		stdoutDone = wsutil.WebsocketRecvStream(stdout, stdoutConn)
+
+		if opts.Stderr != nil {
+			stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
+			if err != nil {
+				return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
+			}
+			stderrDone = wsutil.WebsocketRecvStream(opts.Stderr, stderrConn)
+		}
 	}
 
 	// Fire up a goroutine to wait for writes to be done.
@@ -191,7 +198,7 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 		}
 
 		// Try to close websocket connections gracefully, but ignore errors.
-		_ = ioConn.Close()
+		_ = stdioConn.Close()
 		if stderrConn != nil {
 			_ = stderrConn.Close()
 		}
@@ -262,40 +269,20 @@ func (e *ExitError) Error() string {
 	return fmt.Sprintf("exit status %d", e.exitCode)
 }
 
-type execCommand struct {
-	Command string          `json:"command"`
-	Signal  *execSignalArgs `json:"signal,omitempty"`
-	Resize  *execResizeArgs `json:"resize,omitempty"`
-}
-
-type execSignalArgs struct {
-	Name string `json:"name"`
-}
-
-type execResizeArgs struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
-}
-
 // SendResize sends a resize message to the running process.
 func (p *ExecProcess) SendResize(width, height int) error {
-	msg := execCommand{
-		Command: "resize",
-		Resize: &execResizeArgs{
-			Width:  width,
-			Height: height,
-		},
-	}
+	msg := api.InstanceExecControl{}
+	msg.Command = "window-resize"
+	msg.Args = make(map[string]string)
+	msg.Args["width"] = strconv.Itoa(width)
+	msg.Args["height"] = strconv.Itoa(height)
 	return p.controlConn.WriteJSON(msg)
 }
 
 // SendSignal sends a signal to the running process.
-func (p *ExecProcess) SendSignal(signal string) error {
-	msg := execCommand{
-		Command: "signal",
-		Signal: &execSignalArgs{
-			Name: signal,
-		},
-	}
+func (p *ExecProcess) SendSignal(sig unix.Signal) error {
+	msg := api.InstanceExecControl{}
+	msg.Command = "signal"
+	msg.Signal = int(sig)
 	return p.controlConn.WriteJSON(msg)
 }

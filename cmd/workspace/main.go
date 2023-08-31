@@ -71,7 +71,7 @@ func main() {
 	rootCmd.SilenceErrors = true
 
 	if err = rootCmd.Execute(); err != nil {
-		fmt.Fprintf(Stdout, "error: %v\n", err)
+		fmt.Fprintf(Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }

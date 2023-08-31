@@ -107,6 +107,7 @@ func recvLoop(w io.Writer, conn MessageReader) {
 			switch string(payload) {
 			case "":
 				logger.Debugf(`Got message barrier (empty command)`)
+				return
 			default:
 				logger.Noticef("Invalid I/O command %q", string(payload))
 			}

@@ -723,11 +723,13 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 	req := api.InstanceExecPost{
 		Command:     args.Command,
 		WaitForWS:   true,
+		Interactive: args.Interactive,
+		Environment: args.Environment,
+		Width:       args.Width,
+		Height:      args.Height,
 		User:        0,
 		Group:       0,
 		Cwd:         args.WorkDir,
-		Interactive: args.Interactive,
-		Environment: args.Environment,
 	}
 
 	done := make(chan bool)
