@@ -1,7 +1,7 @@
 Tutorials
 =========
 
-These tutorials serve as hands-on introduction
+These tutorials serve as practical introduction
 to various aspects of using |project|.
 
 
