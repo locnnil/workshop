@@ -252,18 +252,34 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 		return err
 	}
 	st.Lock()
-	task.Set("stdio", metadata.DescriptorWebsockets["stdio"])
-	task.Set("stdout", metadata.DescriptorWebsockets["stdout"])
-	task.Set("stderr", metadata.DescriptorWebsockets["stderr"])
 	task.Set("control", metadata.DescriptorWebsockets["control"])
+	task.Set("stdio", metadata.DescriptorWebsockets["stdio"])
+	if !setup.Interactive {
+		task.Set("stdout", metadata.DescriptorWebsockets["stdout"])
+		task.Set("stderr", metadata.DescriptorWebsockets["stderr"])
+	}
 	st.Unlock()
 
 	m.execChannelsLock.Lock()
-	defer m.execChannelsLock.Unlock()
 	if execCh, ok := m.execChannels[task.ID()]; ok {
 		close(execCh)
 		delete(m.execChannels, task.ID())
 	}
+	m.execChannelsLock.Unlock()
 
-	return nil
+	status, err := metadata.WaitExecution(ctx)
+	st.Lock()
+	if err != nil {
+		task.Errorf("Exec task failed with: %v", err)
+	} else {
+		if status != 0 {
+			task.Errorf("Exec finished with exit code %v", status)
+		}
+	}
+	task.Set("api-data", map[string]interface{}{
+		"exit-code": status,
+	})
+	st.Unlock()
+
+	return err
 }

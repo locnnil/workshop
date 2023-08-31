@@ -53,6 +53,7 @@ type Execution struct {
 type ExecContext struct {
 	Environment          map[string]string
 	DescriptorWebsockets map[string]string
+	WaitExecution        func(ctx context.Context) (int, error)
 }
 
 type LxdBackend struct {
@@ -764,6 +765,14 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 				"stdout":  websocket(opmeta.ID, fds["1"]),
 				"stderr":  websocket(opmeta.ID, fds["2"]),
 				"control": websocket(opmeta.ID, fds["control"]),
+			},
+			WaitExecution: func(ctx context.Context) (int, error) {
+				err := op.WaitContext(ctx)
+				if err != nil {
+					return 0, err
+				}
+				var status = int(op.Get().Metadata["return"].(float64))
+				return status, err
 			},
 		}, nil
 	} else {

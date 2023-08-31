@@ -92,7 +92,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		return err
 	}
 
-	command := append([]string{}, av[1:]...)
+	command := av[1:]
 	logger.Debugf("Executing command %q", command)
 
 	// Set up environment variables.
