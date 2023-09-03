@@ -53,6 +53,7 @@ if not 'ogp_image' in locals():
 
 exclude_patterns = [
     '_build',
+    'README.rst',
     'Thumbs.db',
     '.DS_Store',
     '.sphinx',

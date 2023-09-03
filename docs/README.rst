@@ -1,5 +1,3 @@
-:orphan:
-
 Workspace
 =========
 
@@ -71,8 +69,8 @@ Launching workspaces
 In the root directory of the project
 that you want to use with Workspace,
 create a workspace definition file named ``.workspace.<NAME>.yaml``
-to list your project's prerequisites
-and run ``workspace launch <NAME>``:
+to list your project's prerequisites,
+then run ``workspace launch <NAME>``:
 
 .. code-block:: bash
 
