@@ -247,16 +247,16 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 		return fmt.Errorf("cannot get exec setup object for task %q: %v", task.ID(), err)
 	}
 
-	metadata, err := m.backend.Exec(ctx, workspace, &workspacebackend.Execution{ExecArgs: setup})
+	exectx, err := m.backend.Exec(ctx, workspace, &workspacebackend.Execution{ExecArgs: setup})
 	if err != nil {
 		return err
 	}
 	st.Lock()
-	task.Set("control", metadata.DescriptorWebsockets["control"])
-	task.Set("stdio", metadata.DescriptorWebsockets["stdio"])
+	task.Set("control", exectx.DescriptorWebsockets["control"])
+	task.Set("stdio", exectx.DescriptorWebsockets["stdio"])
 	if !setup.Interactive {
-		task.Set("stdout", metadata.DescriptorWebsockets["stdout"])
-		task.Set("stderr", metadata.DescriptorWebsockets["stderr"])
+		task.Set("stdout", exectx.DescriptorWebsockets["stdout"])
+		task.Set("stderr", exectx.DescriptorWebsockets["stderr"])
 	}
 	st.Unlock()
 
@@ -267,18 +267,23 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	m.execChannelsLock.Unlock()
 
-	status, err := metadata.WaitExecution(ctx)
+	err = exectx.WaitExecution(ctx)
 	st.Lock()
-	if err != nil {
-		task.Errorf("Exec task failed with: %v", err)
+	var status = 0
+	// only set the error exit status in the task's metadata if the error
+	// belongs to the command execution (e.g. not an LXD error)
+	if err == nil {
+		task.Set("api-data", map[string]interface{}{
+			"exit-code": status,
+		})
 	} else {
-		if status != 0 {
-			task.Errorf("Exec finished with exit code %v", status)
+		if execerr, ok := err.(*workspacebackend.ErrExec); ok {
+			status = execerr.Status
+			task.Set("api-data", map[string]interface{}{
+				"exit-code": status,
+			})
 		}
 	}
-	task.Set("api-data", map[string]interface{}{
-		"exit-code": status,
-	})
 	st.Unlock()
 
 	return err

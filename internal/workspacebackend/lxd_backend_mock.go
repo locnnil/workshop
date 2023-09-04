@@ -247,7 +247,9 @@ func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *Exec
 }
 
 func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecContext, error) {
-	return ExecContext{}, nil
+	return ExecContext{
+		WaitExecution: func(ctx context.Context) error { return nil },
+	}, nil
 }
 
 func (s *FakeWorkspaceBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {

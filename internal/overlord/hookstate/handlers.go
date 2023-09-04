@@ -129,8 +129,12 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 		},
 	}
 
-	_, err = h.backend.Exec(ctx, workspace, &args)
+	exectx, err := h.backend.Exec(ctx, workspace, &args)
+	if err != nil {
+		return err
+	}
 
+	err = exectx.WaitExecution(ctx)
 	hookLog, _ := afero.ReadFile(memFs, out.Name())
 
 	st := task.State()

@@ -140,7 +140,7 @@ func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 
 func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@20.04")
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 	defer f.be.RemoveWorkspace(f.ctx, "test-1")
 
@@ -161,7 +161,7 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 			GroupId: 0,
 			Command: []string{
 				"bash", "-eu", "-c",
-				"systemctl is-system-running 2>/dev/null",
+				"systemctl is-system-running",
 			},
 			WorkDir: "/",
 		},
@@ -172,8 +172,9 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 		},
 	}
 
-	_, err = f.be.Exec(f.ctx, "test-1", &args)
+	exectx, err := f.be.Exec(f.ctx, "test-1", &args)
 	c.Assert(err, check.IsNil)
+	err = exectx.WaitExecution(f.ctx)
 	buf, err := afero.ReadFile(memFs, out.Name())
 	c.Assert(err, check.IsNil)
 	c.Assert(string(buf), check.Equals, "running\n")

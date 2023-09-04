@@ -53,7 +53,7 @@ type Execution struct {
 type ExecContext struct {
 	Environment          map[string]string
 	DescriptorWebsockets map[string]string
-	WaitExecution        func(ctx context.Context) (int, error)
+	WaitExecution        func(ctx context.Context) error
 }
 
 type LxdBackend struct {
@@ -429,6 +429,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 		if err != nil {
 			return "", err
 		}
+		defer out.Close()
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
@@ -448,10 +449,16 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 		}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		_, err = s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
-		if err != nil {
-			outbuf, _ := afero.ReadFile(memFs, out.Name())
-			logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, outbuf)
+		meta, err := s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
+		if err == nil {
+			err = meta.WaitExecution(ctx)
+			if err != nil {
+				outbuf, _ := afero.ReadFile(memFs, out.Name())
+				logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, string(outbuf))
+				continue
+			}
+		} else {
+			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
 			continue
 		}
 
@@ -609,8 +616,12 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 		},
 	}
 
-	_, err = s.execCommand(conn, ctx, name, &args)
-	return err
+	exectx, err := s.execCommand(conn, ctx, name, &args)
+	if err != nil {
+		return err
+	}
+
+	return exectx.WaitExecution(ctx)
 }
 
 func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
@@ -711,7 +722,6 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 }
 
 func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *Execution) (ExecContext, error) {
-
 	websocket := func(opId, secret string) string {
 		return fmt.Sprintf("ws://lxd.unix/1.0/operations/%s/websocket?secret=%s", opId, secret)
 	}
@@ -728,8 +738,8 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 		Environment: args.Environment,
 		Width:       args.Width,
 		Height:      args.Height,
-		User:        0,
-		Group:       0,
+		User:        uint32(args.UserId),
+		Group:       uint32(args.GroupId),
 		Cwd:         args.WorkDir,
 	}
 
@@ -766,13 +776,16 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 				"stderr":  websocket(opmeta.ID, fds["2"]),
 				"control": websocket(opmeta.ID, fds["control"]),
 			},
-			WaitExecution: func(ctx context.Context) (int, error) {
+			WaitExecution: func(ctx context.Context) error {
 				err := op.WaitContext(ctx)
 				if err != nil {
-					return 0, err
+					return err
 				}
 				var status = int(op.Get().Metadata["return"].(float64))
-				return status, err
+				if status != 0 {
+					return &ErrExec{Status: status}
+				}
+				return nil
 			},
 		}, nil
 	} else {
@@ -787,23 +800,34 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 			return ExecContext{}, err
 		}
 
-		if err := op.WaitContext(ctx); err != nil {
-			return ExecContext{}, err
-		}
-
-		// waiting for any remaining data IO to be flushed LXD closes this channel
-		// unconditionally right after the operation has exited
-		<-done
-
-		if status, ok := op.Get().Metadata["return"].(float64); ok {
-			if status != 0 {
-				logger.Debugf("cannot exec: %v", int(status))
-				return ExecContext{}, &ErrExec{Status: int(status)}
+		opmeta := op.Get()
+		var env = map[string]string{}
+		for k, v := range opmeta.Metadata["environment"].(map[string]any) {
+			if value, ok := v.(string); ok {
+				env[k] = value
 			}
 		}
-	}
 
-	return ExecContext{}, nil
+		return ExecContext{
+			Environment:          env,
+			DescriptorWebsockets: map[string]string{},
+			WaitExecution: func(ctx context.Context) error {
+				if err := op.WaitContext(ctx); err != nil {
+					return err
+				}
+
+				// waiting for any remaining data IO to be flushed LXD closes this channel
+				// unconditionally right after the operation has exited, so it will not be
+				// blocked if we are here
+				<-done
+				var status = int(op.Get().Metadata["return"].(float64))
+				if status != 0 {
+					return &ErrExec{Status: status}
+				}
+				return nil
+			},
+		}, nil
+	}
 }
 
 func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {

@@ -33,7 +33,7 @@ type ErrExec struct {
 }
 
 func (e *ErrExec) Error() string {
-	return fmt.Sprintf("command failed with an error code (%d)", e.Status)
+	return fmt.Sprintf("command exit code %d", e.Status)
 }
 
 type WorkspaceDevice struct {

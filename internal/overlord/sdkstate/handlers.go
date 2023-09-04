@@ -138,12 +138,17 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		},
 		ExecControls: &workspacebackend.ExecControls{
 			Stdin:  nil,
-			Stdout: out,
+			Stdout: nil,
 			Stderr: out,
 		},
 	}
 
-	_, err = m.backend.Exec(ctx, workspace, &args)
+	exectx, err := m.backend.Exec(ctx, workspace, &args)
+	if err != nil {
+		return err
+	}
+
+	err = exectx.WaitExecution(ctx)
 
 	if err != nil {
 		hookLog, _ := afero.ReadFile(memFs, out.Name())

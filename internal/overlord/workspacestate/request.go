@@ -486,23 +486,23 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 	return taskset, nil
 }
 
-type ExecContext struct {
+type ExecMeta struct {
 	Environment map[string]string
 	WorkingDir  string
 }
 
-func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, ExecContext, error) {
+func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, ExecMeta, error) {
 	if args.Terminal {
-		return nil, ExecContext{}, errors.New("terminal mode is not supported")
+		return nil, ExecMeta{}, errors.New("terminal mode is not supported")
 	}
 
 	if args.SplitStderr {
-		return nil, ExecContext{}, errors.New("splitting stderr is not supported")
+		return nil, ExecMeta{}, errors.New("splitting stderr is not supported")
 	}
 
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
-		return nil, ExecContext{}, err
+		return nil, ExecMeta{}, err
 	}
 
 	exec := w.state.NewTask("exec", fmt.Sprintf("exec command %q", args.Command[0]))
@@ -521,7 +521,7 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	defer w.execChannelsLock.Unlock()
 	w.execChannels[exec.ID()] = make(chan bool)
 
-	return exec, ExecContext{
+	return exec, ExecMeta{
 		WorkingDir:  execArgs.WorkDir,
 		Environment: execArgs.Environment,
 	}, nil
