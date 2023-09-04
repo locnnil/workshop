@@ -36,6 +36,14 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: must specify command")
 	}
 
+	if reqData.Terminal {
+		return statusBadRequest("cannot exec: terminal mode is not supported")
+	}
+
+	if reqData.SplitStderr {
+		return statusBadRequest("cannot exec: splitting stderr is not supported")
+	}
+
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot exec: user is not in context")

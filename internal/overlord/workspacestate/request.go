@@ -2,7 +2,6 @@ package workspacestate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -492,14 +491,6 @@ type ExecMeta struct {
 }
 
 func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, ExecMeta, error) {
-	if args.Terminal {
-		return nil, ExecMeta{}, errors.New("terminal mode is not supported")
-	}
-
-	if args.SplitStderr {
-		return nil, ExecMeta{}, errors.New("splitting stderr is not supported")
-	}
-
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, ExecMeta{}, err

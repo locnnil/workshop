@@ -25,6 +25,59 @@ base: ubuntu@20.04`), 0644)
 	return projectsCmd
 }
 
+func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := []*bytes.Buffer{
+		bytes.NewBufferString(`{"command":["ls"],"terminal":true}`),
+		bytes.NewBufferString(`{"command":["ls"],"split-stderr":true}`),
+	}
+
+	expected := []*struct {
+		Type    ResponseType
+		Status  int
+		Message string
+	}{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot exec: terminal mode is not supported",
+		}, {
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot exec: splitting stderr is not supported",
+		},
+	}
+
+	var requests = []*http.Request{}
+	for _, r := range body {
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", r)
+		c.Assert(err, check.IsNil)
+		requests = append(requests, req)
+	}
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
+
+	for i, r := range requests {
+		// Execute
+		rsp := v1PostWorkspaceExec(projectsCmd, r, nil).(*resp)
+
+		// Verify
+		c.Assert(rsp.Type, check.Equals, expected[i].Type, check.Commentf("case: %v", i))
+		c.Assert(rsp.Status, check.Equals, expected[i].Status)
+		if rsp.Type == ResponseTypeError {
+			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[i].Message)
+		}
+	}
+
+	c.Assert(soon, check.Equals, 0)
+}
+
 func (s *apiSuite) TestExecSuccess(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)
