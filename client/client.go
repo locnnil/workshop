@@ -179,7 +179,7 @@ func getWebsocket(transport *http.Transport, url string, config *Config) (client
 		NetDial:          transport.Dial,
 		Proxy:            transport.Proxy,
 		TLSClientConfig:  transport.TLSClientConfig,
-		HandshakeTimeout: 50 * time.Second,
+		HandshakeTimeout: 5 * time.Second,
 	}
 	conn, resp, err := dialer.Dial(url, nil)
 
@@ -190,7 +190,7 @@ func getWebsocket(transport *http.Transport, url string, config *Config) (client
 				NetDial:          lxdtransport.Dial,
 				Proxy:            lxdtransport.Proxy,
 				TLSClientConfig:  lxdtransport.TLSClientConfig,
-				HandshakeTimeout: 50 * time.Second,
+				HandshakeTimeout: 5 * time.Second,
 			}
 			location, err := resp.Location()
 			if err != nil {

@@ -62,7 +62,7 @@ type LxdBackend struct {
 }
 
 const (
-	lxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 	// path used in workspace to mount the project directory
 	WorkspaceProjectPath = "/project"
 	// name prefix for the workspaces that were made unavailable
@@ -71,7 +71,7 @@ const (
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
-	UserLookup           = user.Lookup
+	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
 
 	ErrWorkspaceNotFound = errors.New("workspace not found")
@@ -515,7 +515,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		}
 	}
 
-	usr, err := UserLookup(userName)
+	usr, err := LookupUsername(userName)
 	if err != nil {
 		return err
 	}
@@ -1201,7 +1201,7 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 		return nil, fmt.Errorf("context key %s not found", ContextUser)
 	}
 
-	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, lxdSock, nil); err != nil {
+	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
 		return nil, err
 	} else {
 		if err = InitProject(srv, user); err != nil {
