@@ -25,6 +25,23 @@ base: ubuntu@20.04`), 0644)
 	return projectsCmd
 }
 
+func (s *apiSuite) TestExecNoCommand(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":[]}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, ".*must specify command")
+}
+
 func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)

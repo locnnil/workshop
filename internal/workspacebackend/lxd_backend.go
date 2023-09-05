@@ -13,6 +13,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/osutil"
@@ -30,6 +31,7 @@ type ExecArgs struct {
 	UserId      int
 	GroupId     int
 	WorkDir     string
+	Timeout     time.Duration
 	Environment map[string]string
 	Interactive bool
 	Terminal    bool

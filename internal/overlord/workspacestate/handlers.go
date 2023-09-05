@@ -267,6 +267,12 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	m.execChannelsLock.Unlock()
 
+	if setup.Timeout != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, setup.Timeout)
+		defer cancel()
+	}
+
 	err = exectx.WaitExecution(ctx)
 	st.Lock()
 	var status = 0

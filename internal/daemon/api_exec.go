@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
@@ -12,6 +13,7 @@ type execPayload struct {
 	Command     []string          `json:"command"`
 	Environment map[string]string `json:"environment"`
 	WorkingDir  string            `json:"working-dir"`
+	Timeout     string            `json:"timeout"`
 	UserId      int               `json:"user-id"`
 	GroupId     int               `json:"group-id"`
 	Terminal    bool              `json:"terminal"`
@@ -44,6 +46,15 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: splitting stderr is not supported")
 	}
 
+	var timeout time.Duration
+	if reqData.Timeout != "" {
+		var err error
+		timeout, err = time.ParseDuration(reqData.Timeout)
+		if err != nil {
+			return statusBadRequest("invalid timeout: %v", err)
+		}
+	}
+
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot exec: user is not in context")
@@ -55,6 +66,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		WorkDir:     reqData.WorkingDir,
 		UserId:      reqData.UserId,
 		GroupId:     reqData.GroupId,
+		Timeout:     timeout,
 		Terminal:    reqData.Terminal,
 		Interactive: reqData.Interactive,
 		SplitStderr: reqData.SplitStderr,

@@ -3,6 +3,7 @@ package workspacestate
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	. "github.com/canonical/workspace/internal/overlord/statecontext"
@@ -131,13 +132,21 @@ func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) worksp
 	}
 }
 
-func (w *WorkspaceManager) WaitExecReady(execTaskId string) error {
+func (w *WorkspaceManager) WaitExecReady(ctx context.Context, execTaskId string, timeout time.Duration) error {
 	w.execChannelsLock.Lock()
 	execCh := w.execChannels[execTaskId]
 	w.execChannelsLock.Unlock()
 	if execCh == nil {
 		return nil
 	}
-	<-execCh
-	return nil
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	select {
+	case <-execCh:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
