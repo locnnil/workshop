@@ -47,6 +47,11 @@ In this documentation
 
       **Discussion and clarification** of key topics
 
+
+   .. grid-item:: :doc:`Reference <reference/index>`
+
+      **Technical information** - specifications, APIs, architecture
+
 ---------
 
 
@@ -64,3 +69,4 @@ If we somehow failed,
 
    tutorials/index
    explanations/index
+   reference/index

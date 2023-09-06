@@ -157,7 +157,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "cannot refresh, resolve all errors and run \"workspace refresh --continue ws\".\nTo abort and get back to the state before run \"workspace refresh --abort ws\"")
+	c.Assert(err, check.ErrorMatches, "cannot refresh; fix the errors reported by \"workspace info\",\nthen run \"workspace refresh --continue ws\".\nTo abort and revert, run \"workspace refresh --abort ws\"")
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
@@ -234,26 +234,26 @@ func (m *WorkspaceRefresh) TestRefreshIncompatibleOptions(c *check.C) {
 	cmd.Continue = true
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --continue and --abort are incompatible")
+	c.Assert(err, check.ErrorMatches, "cannot refresh: '--abort' incompatible with '--continue'")
 
 	cmd.WaitOnError = true
 	cmd.Abort = false
 	cmd.Continue = true
 
 	err = cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --wait-on-error and --continue are incompatible")
+	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with '--continue'")
 
 	cmd.WaitOnError = true
 	cmd.Abort = true
 	cmd.Continue = false
 
 	err = cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: flags --wait-on-error and --abort are incompatible")
+	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with '--abort'")
 
 	cmd.WaitOnError = true
 	cmd.Abort = false
 	cmd.Continue = false
 
 	err = cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: the wait-on-error mode can be used with a single workspace only")
+	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with multiple workspaces")
 }
