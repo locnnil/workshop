@@ -125,6 +125,8 @@ func (s *workspaceHandlers) TestExecTimeout(c *check.C) {
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
+	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
 
 	t1, _, err := s.wrkmgr.Exec(s.ctx, "ws", s.project.ProjectId, &workspacebackend.ExecArgs{
 		Command: []string{"sleep", "1"},
@@ -137,8 +139,6 @@ base: ubuntu@20.04
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	c.Check(err, check.IsNil)
 	// make the exec function to wait longer than a timeout
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
 		return workspacebackend.ExecContext{

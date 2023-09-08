@@ -35,17 +35,10 @@ type CmdExec struct {
 	WorkingDir     string        `short:"w"`
 	Env            []string      `long:"env"`
 	UserId         int           `long:"uid"`
-	User           string        `long:"user"`
 	GroupId        int           `long:"gid"`
-	Group          string        `long:"group"`
 	Timeout        time.Duration `long:"timeout"`
-	Terminal       bool          `short:"t"`
-	NoTerminal     bool          `short:"T"`
 	Interactive    bool          `short:"i"`
 	NonInteractive bool          `short:"I"`
-	Positional     struct {
-		Command string `positional-arg-name:"<command>" required:"1"`
-	} `positional-args:"yes"`
 }
 
 var shortExecHelp = "Execute a remote command and wait for it to finish"
@@ -69,13 +62,16 @@ func (c *CmdExec) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
+	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "timeout after which to terminate command")
+	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "User ID to run command as")
+	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Group ID to run command as")
+	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Environment variable to set (in 'FOO=bar' format)")
+	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Working directory to run command in")
+
 	return cmd
 }
 
 func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
-	if cmd.Terminal && cmd.NoTerminal {
-		return errors.New("cannot use -t and -T at the same time")
-	}
 	if cmd.Interactive && cmd.NonInteractive {
 		return errors.New("cannot use -i and -I at the same time")
 	}
@@ -148,9 +144,8 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		Command:     command,
 		Environment: env,
 		WorkingDir:  cmd.WorkingDir,
-		UserId:      cmd.UserId,
-		GroupId:     cmd.GroupId,
-		Terminal:    false,
+		UserId:      &cmd.UserId,
+		GroupId:     &cmd.GroupId,
 		Interactive: interactive,
 		Width:       width,
 		Height:      height,

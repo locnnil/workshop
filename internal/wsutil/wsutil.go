@@ -39,7 +39,7 @@ type MessageReadWriter interface {
 	MessageWriter
 }
 
-var endCommandJSON = []byte(`{"command":"end"}`)
+var endCommandJSON = []byte("")
 
 func WebsocketSendStream(conn MessageWriter, r io.Reader, bufferSize int) chan bool {
 	ch := make(chan bool)

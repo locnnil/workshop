@@ -495,14 +495,24 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	if err != nil {
 		return nil, ExecMeta{}, err
 	}
-
-	exec := w.state.NewTask("exec", fmt.Sprintf("exec command %q", args.Command[0]))
-
 	execArgs := *args
 
-	if execArgs.WorkDir == "" {
-		execArgs.WorkDir = workspacebackend.WorkspaceProjectPath
+	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
+	wrkspc, err := w.backend.GetWorkspaceFs(ctx, name)
+	if err != nil {
+		return nil, ExecMeta{}, err
 	}
+	defer wrkspc.Close()
+
+	info, err := wrkspc.Stat(args.WorkDir)
+	if err != nil {
+		return nil, ExecMeta{}, fmt.Errorf("%s does not exist", args.WorkDir)
+	}
+	if !info.IsDir() {
+		return nil, ExecMeta{}, fmt.Errorf("%s is not a directory", args.WorkDir)
+	}
+
+	exec := w.state.NewTask("exec", fmt.Sprintf("exec command %q", args.Command[0]))
 
 	exec.Set("exec-setup", &execArgs)
 	exec.Set("project", *project)

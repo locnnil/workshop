@@ -1223,6 +1223,15 @@ func defaultConfig(projectId string, userid, groupid string) map[string]string {
 		"raw.idmap":                 fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":          "true",
 		"user.workspace.project-id": projectId,
+		"user.user-data": `#cloud-config
+users:
+  - default
+  - name: workspace
+    primary_group: workspace
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
+    shell: /bin/bash
+`,
 	}
 }
 

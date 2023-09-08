@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,13 +15,33 @@ type execPayload struct {
 	Environment map[string]string `json:"environment"`
 	WorkingDir  string            `json:"working-dir"`
 	Timeout     string            `json:"timeout"`
-	UserId      int               `json:"user-id"`
-	GroupId     int               `json:"group-id"`
+	UserId      *int              `json:"user-id"`
+	GroupId     *int              `json:"group-id"`
 	Terminal    bool              `json:"terminal"`
 	Interactive bool              `json:"interactive"`
 	SplitStderr bool              `json:"split-stderr"`
 	Width       int               `json:"width"`
 	Height      int               `json:"height"`
+}
+
+func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
+	if usrId != nil && grpId == nil {
+		return 0, 0, errors.New("must specify group, not just user")
+	}
+
+	if usrId == nil && grpId != nil {
+		return 0, 0, errors.New("must specify user, not just group")
+	}
+
+	userId := 1000
+	if usrId != nil {
+		userId = *usrId
+	}
+	groupId := 1000
+	if grpId != nil {
+		groupId = *grpId
+	}
+	return userId, groupId, nil
 }
 
 func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
@@ -46,6 +67,10 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: splitting stderr is not supported")
 	}
 
+	if reqData.WorkingDir == "" {
+		reqData.WorkingDir = workspacebackend.WorkspaceProjectPath
+	}
+
 	var timeout time.Duration
 	if reqData.Timeout != "" {
 		var err error
@@ -53,6 +78,11 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		if err != nil {
 			return statusBadRequest("invalid timeout: %v", err)
 		}
+	}
+
+	userId, groupId, err := normaliseUserGroupIds(reqData.UserId, reqData.GroupId)
+	if err != nil {
+		return statusBadRequest("cannot exec: %v", err)
 	}
 
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
@@ -64,8 +94,8 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		Command:     reqData.Command,
 		Environment: reqData.Environment,
 		WorkDir:     reqData.WorkingDir,
-		UserId:      reqData.UserId,
-		GroupId:     reqData.GroupId,
+		UserId:      userId,
+		GroupId:     groupId,
 		Timeout:     timeout,
 		Terminal:    reqData.Terminal,
 		Interactive: reqData.Interactive,

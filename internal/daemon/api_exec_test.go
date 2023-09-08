@@ -99,7 +99,60 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)
 
-	body := bytes.NewBufferString(`{"command":["ls"]}`)
+	body := bytes.NewBufferString(`{"command":["ls"],"working-dir":"/"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
+
+	// Execute
+	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
+	c.Assert(soon, check.Equals, 1)
+}
+
+func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":["ls"], "user-id": 1000}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "*.must specify group, not just user")
+
+	// Setup
+	body = bytes.NewBufferString(`{"command":["ls"], "group-id": 1000}`)
+
+	req, err = s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp = v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, "*.must specify user, not just group")
+}
+
+func (s *apiSuite) TestExecSetEnvVariable(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":["ls"],"working-dir":"/","environment":{"FOO":"BAR"}}`)
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
 	c.Assert(err, check.IsNil)

@@ -1,0 +1,34 @@
+summary: Check major workspace exec scenarios
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+  uninstall_workspaced
+
+debug: |
+  lxc list -f compact --all-projects
+  workspace changes
+  workspace tasks 1
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a workspace"
+  project="$WORKSPACES"/workspaces-sdk/test-sdk-basic
+  launch $project ws
+
+  echo "Check an environment variable can be set"
+  workspace_exec exec --project $project --env 'Foo=bar'  ws -- bash -c 'echo -n $Foo' | MATCH bar
+
+  echo "Check default user and group"
+  workspace_exec exec --project $project ws -- bash -c 'id -u -n' | MATCH workspace
+  workspace_exec exec --project $project ws -- bash -c 'id -g -n' | MATCH workspace
+
+  echo "Check working directory setup"
+  workspace_exec exec --project $project ws -- pwd | MATCH '/project'
+  workspace_exec exec --project $project -w /home/workspace ws -- pwd | MATCH '/home/workspace'

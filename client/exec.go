@@ -34,12 +34,6 @@ type ExecOptions struct {
 	// Required: command and arguments (first element is the executable).
 	Command []string
 
-	// Optional: run the command in the context of this service. Specifically,
-	// inherit its environment variables, user/group settings, and working
-	// and working directory. The other options in this struct will override
-	// the service context; Environment will be merged on top of the service's.
-	ServiceContext string
-
 	// Optional environment variables.
 	Environment map[string]string
 
@@ -47,8 +41,12 @@ type ExecOptions struct {
 	WorkingDir string
 
 	// Optional user ID and group ID for the process to run as.
-	UserId  int
-	GroupId int
+	UserId  *int
+	GroupId *int
+
+	// Optional timeout for the command execution, after which the process
+	// will be terminated. If zero, no timeout applies.
+	Timeout time.Duration
 
 	// True to ask the server to set up a pseudo-terminal (PTY) for stdout
 	// (this also allows window resizing). The default is no PTY, and just
@@ -81,13 +79,15 @@ type execPayload struct {
 	Command     []string          `json:"command"`
 	Environment map[string]string `json:"environment,omitempty"`
 	WorkingDir  string            `json:"working-dir,omitempty"`
-	UserId      int               `json:"user-id,omitempty"`
-	GroupId     int               `json:"group-id,omitempty"`
+	UserId      *int              `json:"user-id,omitempty"`
+	GroupId     *int              `json:"group-id,omitempty"`
 	Terminal    bool              `json:"terminal,omitempty"`
-	Interactive bool              `json:"interactive,omitempty"`
-	SplitStderr bool              `json:"split-stderr,omitempty"`
-	Width       int               `json:"width,omitempty"`
-	Height      int               `json:"height,omitempty"`
+	Timeout     string            `json:"timeout,omitempty"`
+
+	Interactive bool `json:"interactive,omitempty"`
+	SplitStderr bool `json:"split-stderr,omitempty"`
+	Width       int  `json:"width,omitempty"`
+	Height      int  `json:"height,omitempty"`
 }
 
 type execResult struct {
@@ -120,6 +120,15 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 	if stdout == nil {
 		stdout = io.Discard
 	}
+	stderr := opts.Stderr
+	if stderr == nil {
+		stderr = io.Discard
+	}
+
+	var timeoutStr string
+	if opts.Timeout != 0 {
+		timeoutStr = opts.Timeout.String()
+	}
 
 	payload := execPayload{
 		Command:     opts.Command,
@@ -127,6 +136,7 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 		WorkingDir:  opts.WorkingDir,
 		UserId:      opts.UserId,
 		GroupId:     opts.GroupId,
+		Timeout:     timeoutStr,
 		Terminal:    opts.Terminal,
 		Interactive: opts.Interactive,
 		SplitStderr: false,
@@ -177,13 +187,11 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 		}
 		stdoutDone = wsutil.WebsocketRecvStream(stdout, stdoutConn)
 
-		if opts.Stderr != nil {
-			stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
-			if err != nil {
-				return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
-			}
-			stderrDone = wsutil.WebsocketRecvStream(opts.Stderr, stderrConn)
+		stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
+		if err != nil {
+			return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
 		}
+		stderrDone = wsutil.WebsocketRecvStream(stderr, stderrConn)
 	}
 
 	// Fire up a goroutine to wait for writes to be done.
@@ -211,6 +219,7 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 	process := &ExecProcess{
 		changeID:    changeID,
 		client:      client,
+		timeout:     opts.Timeout,
 		writesDone:  writesDone,
 		controlConn: controlConn,
 		stdinDone:   stdinDone,
@@ -285,4 +294,10 @@ func (p *ExecProcess) SendSignal(sig unix.Signal) error {
 	msg.Command = "signal"
 	msg.Signal = int(sig)
 	return p.controlConn.WriteJSON(msg)
+}
+
+// WaitStdinDone waits for WebsocketSendStream to be finished calling
+// WriteMessage to avoid a race condition.
+func (p *ExecProcess) WaitStdinDone() {
+	<-p.stdinDone
 }
