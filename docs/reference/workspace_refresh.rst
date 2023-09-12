@@ -7,7 +7,7 @@ Updates workspaces according to their definitions.
 
 .. code:: shell
 
-   workspace refresh [--abort|--continue|--wait-on-error] <WORKSPACE>... [flags]
+   workspace refresh [--abort|--continue|--wait-on-error] <WORKSPACE>... [global options]
 
 
 Synopsis
@@ -55,15 +55,22 @@ Options
   or :option:`!--abort`.
 
 
-Options inherited from parent commands
---------------------------------------
+Global options
+--------------
+
+-h, --help
+
+  Print help message for the command.
 
 -p, --project <DIRECTORY>
 
-  Specify a project's directory path.
+  Specify the project's directory path.
 
 
 See also
 --------
 
-Explanations: :ref:`workspace (concept) <exp_workspace>`
+Explanation:
+
+- :ref:`project <exp_project>`
+- :ref:`workspace (concept) <exp_workspace>`
