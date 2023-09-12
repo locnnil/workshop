@@ -9,7 +9,7 @@ to a reasonable detail.
 Workspace (CLI)
 ---------------
 
-The :program:`workspace` CLI tool exposes the following commands,
+The :program:`workspace` CLI tool exposes the following commands,
 each with its own set of options, and also has a number of global options
 such as :option:`!--help` or :option:`!-h`:
 

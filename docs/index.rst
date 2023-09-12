@@ -13,7 +13,7 @@ The tool consumes the definition to create a contained workspace,
 installs the dependencies it lists as a number of SDKs,
 and attaches their life cycle hooks for run-time control.
 IDEs such as Visual Studio Code or JupyterLab
-can discover workspaces and leverage them in their operation,
+can discover workspaces and use them in their operation,
 tidying up your system and streamlining your work.
 
 **Untangle the know-how that was weaved into your project**.

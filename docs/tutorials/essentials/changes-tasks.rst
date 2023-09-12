@@ -20,7 +20,7 @@ that uses an unstable
 :ref:`SDK <exp_sdk>`
 from the ``latest/edge`` channel:
 
-.. code-block:: yaml
+.. code:: yaml
 
    name: ml-transformer
    base: ubuntu@22.04
@@ -33,7 +33,7 @@ Suppose something goes during a
 :ref:`refresh <tut_refresh>`
 operation:
 
-.. code-block:: bash
+.. code:: shell
 
     workspace refresh ml-transformer
 
@@ -45,7 +45,7 @@ operation:
 To investigate the failure,
 list the *changes* in the workspace to find the one that failed:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace changes
 
@@ -60,7 +60,7 @@ List tasks in a change
 When the problematic change is found,
 list its *tasks* to see the cause:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace tasks 81
 

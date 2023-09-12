@@ -1,11 +1,11 @@
 .. _workspace_refresh:
 
-``workspace refresh``
-=====================
+workspace refresh
+=================
 
 Updates workspaces according to their definitions.
 
-.. code-block:: bash
+.. code:: shell
 
    workspace refresh [--abort|--continue|--wait-on-error] <WORKSPACE>... [flags]
 
@@ -22,7 +22,7 @@ definitions once again.  For each workspace, it:
 - Applies and verifies the changes to the workspace
 - Restores the working state of the workspace
 
-The ``--wait-on-error`` option pauses the refresh if an error occurs.
+The :option:`!--wait-on-error` option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workspace.
 If multiple workspaces are listed and an error occurs,
@@ -51,7 +51,8 @@ Options
 
 --wait-on-error
 
-  Pause the operation on error; to resume, use ``--continue`` or ``--abort``.
+  Pause the operation on error; to resume, use :option:`!--continue`
+  or :option:`!--abort`.
 
 
 Options inherited from parent commands

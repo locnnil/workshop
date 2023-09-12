@@ -11,9 +11,9 @@ Define
 
 #. Create a
    :ref:`project directory <exp_project>`
-   named ``hello-workspace``:
+   named :file:`hello-workspace`:
 
-   .. code-block:: bash
+   .. code:: shell
 
       mkdir hello-workspace
       cd hello-workspace
@@ -22,9 +22,9 @@ Define
 #. In the project directory,
    create a
    :ref:`workspace definition <exp_workspace_def>`
-   named ``.workspace.nimble.yaml``:
+   named :file:`.workspace.nimble.yaml`:
 
-   .. code-block:: yaml
+   .. code:: yaml
 
       name: nimble
       base: ubuntu@22.04
@@ -37,7 +37,7 @@ Define
    by *listing* the workspaces
    in the project directory:
 
-   .. code-block:: bash
+   .. code:: shell
 
       workspace list
 
@@ -54,7 +54,7 @@ Launch
 To prepare a workspace for action,
 you *launch* it:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace launch nimble
 
@@ -65,9 +65,9 @@ Now, the workspace is *Ready*
 to build, debug and run code.
 
 To make sure |project| watches the changes in the project directory,
-move it and check the ``workspace list`` output:
+move it and check the :command:`workspace list` output:
 
-.. code-block:: bash
+.. code:: shell
 
    cd ..
    mv hello-workspace hi-workspace
@@ -85,7 +85,7 @@ Start and stop
 If you're done with the workspace for now,
 *stop* it to conserve resources:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace stop nimble
 
@@ -94,7 +94,7 @@ If you're done with the workspace for now,
 
 To resume, *start* the workspace again:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace start nimble
 

@@ -17,7 +17,7 @@ listed in the
 are updated,
 *refresh* the workspace to apply the changes:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace refresh nimble
 
@@ -29,7 +29,7 @@ then the SDKs are updated from their respective channels.
 
 To refresh multiple workspaces at once:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace refresh nimble huggingface ...
 
@@ -45,7 +45,7 @@ Add or remove an SDK
 To add a new SDK to your workspace,
 update the definition file and refresh the workspace:
 
-.. code-block:: yaml
+.. code:: yaml
 
    name: nimble
    base: ubuntu@22.04
@@ -56,7 +56,7 @@ update the definition file and refresh the workspace:
        channel: latest/edge
 
 
-.. code-block:: bash
+.. code:: shell
 
    workspace refresh nimble
 
@@ -72,9 +72,9 @@ Wait on error
 
 To pause the refresh operation on error
 instead of cancelling it outright,
-add the ``--wait-on-error`` option:
+add the :option:`!--wait-on-error` option:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace refresh --wait-on-error nimble
 
@@ -89,7 +89,7 @@ and choose to abort or continue the refresh operation.
 
 To investigate the issue, check the recent *changes and tasks*:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace changes
 
@@ -112,7 +112,7 @@ To investigate the issue, check the recent *changes and tasks*:
 
 To continue the refresh operation:
 
-.. code-block:: bash
+.. code:: shell
 
     workspace refresh --continue nimble
 
@@ -121,7 +121,7 @@ To continue the refresh operation:
 
 To abort and recover the last operational state:
 
-.. code-block:: bash
+.. code:: shell
 
     workspace refresh --abort nimble
 

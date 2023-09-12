@@ -24,7 +24,7 @@ It's available as a snap:
 .. tabs::
    .. group-tab:: Using ``snap``
 
-      .. code-block:: bash
+      .. code:: shell
 
          sudo snap install lxd
          sudo lxd init --auto
@@ -45,7 +45,7 @@ is enabled and running:
 .. tabs::
    .. group-tab:: Using ``snap``
 
-      .. code-block:: bash
+      .. code:: shell
 
          sudo snap start --enable lxd.daemon
          snap services lxd.daemon
@@ -66,7 +66,7 @@ from the |project| source code on
 `GitHub
 <https://github.com/canonical/workspace>`_:
 
-.. code-block:: bash
+.. code:: shell
 
    git clone git@github.com:canonical/workspace.git
    # -- or --
@@ -78,7 +78,7 @@ from the |project| source code on
 Install the resulting ``.snap`` file,
 for example:
 
-.. code-block:: bash
+.. code:: shell
 
    sudo snap install --devmode ./workspace_0.1.0_amd64.snap
 
@@ -88,12 +88,12 @@ Run |project|
 
 The snap installs two major components:
 
-- The ``workspaced`` daemon that exposes a REST API
-- The ``workspace`` CLI tool that uses this API to command |project|
+- The :program:`workspaced` daemon that exposes a REST API
+- The :program:`workspace` CLI tool that uses this API to command |project|
 
 The daemon starts automatically after installation;
 the CLI tool is run manually:
 
-.. code-block:: bash
+.. code:: shell
 
    workspace --help
