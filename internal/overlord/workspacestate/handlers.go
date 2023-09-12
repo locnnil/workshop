@@ -275,8 +275,6 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	err = exectx.WaitExecution(ctx)
-	st.Lock()
-	defer st.Unlock()
 	// only set the error exit status in the task's metadata if the error
 	// belongs to the command execution (e.g. not an LXD error)
 	if err == nil {

@@ -8,7 +8,8 @@ function install_workspaced() {
     install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
     mkdir -p /etc/systemd/system/workspaced.service.d
     echo "[Service]
-Environment=\"SDK_STORE_URL=http://localhost:8080/storage/v1/\"" > /etc/systemd/system/workspaced.service.d/local.conf
+Environment=\"SDK_STORE_URL=http://localhost:8080/storage/v1/\"
+Environment=\"WORKSPACED_DEBUG=1\"" > /etc/systemd/system/workspaced.service.d/local.conf
     systemctl start workspaced
 }
 

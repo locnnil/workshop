@@ -1,6 +1,7 @@
 summary: Check major workspace exec scenarios
 environment:
   WORKSPACES: $SPREAD_PATH/tests/lib
+  WORKSPACED_DEBUG: 1
 prepare: |
   . "$TESTSLIB"/utils.sh
   install_workspaced
@@ -12,8 +13,6 @@ restore: |
 
 debug: |
   lxc list -f compact --all-projects
-  workspace changes
-  workspace tasks 1
 
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -32,3 +31,14 @@ execute: |
   echo "Check working directory setup"
   workspace_exec exec --project $project ws -- pwd | MATCH '/project'
   workspace_exec exec --project $project -w /home/workspace ws -- pwd | MATCH '/home/workspace'
+
+  echo "Check enforce non-interactive mode"
+  workspace_exec exec --project $project -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
+
+  #FIXME: this works in a terminal but not under spread
+  #echo "Check enforce interactive mode"
+  #workspace_exec exec --project $project --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
+
+  #echo "Check timeout"
+  #workspace_exec exec --project $project --timeout 1s ws -- bash -c 'sleep 5'
+  #workspace_exec tasks 9 | MATCH ".*timed out after 1s.*"

@@ -62,11 +62,14 @@ func (c *CmdExec) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "timeout after which to terminate command")
+	cmd.Flags().SortFlags = false
+	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Working directory to run command in")
+	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Environment variable to set (in 'FOO=bar' format)")
 	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "User ID to run command as")
 	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Group ID to run command as")
-	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Environment variable to set (in 'FOO=bar' format)")
-	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Working directory to run command in")
+	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "timeout after which to terminate command")
+	cmd.Flags().BoolVarP(&c.Interactive, "interactive", "i", false, "Force interactive mode (default mode if both stdin AND stdout are terminals)")
+	cmd.Flags().BoolVarP(&c.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode (default mode if stdin or stdout are NOT terminals)")
 
 	return cmd
 }
@@ -122,7 +125,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	// Record terminal state (and restore it before we exit).
-	if interactive {
+	if interactive && stdinIsTerminal {
 		oldState, err := ptyutil.MakeRaw(unix.Stdin)
 		if err != nil {
 			return fmt.Errorf("cannot change terminal to raw mode: %v", err)
@@ -147,6 +150,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		UserId:      &cmd.UserId,
 		GroupId:     &cmd.GroupId,
 		Interactive: interactive,
+		Timeout:     cmd.Timeout,
 		Width:       width,
 		Height:      height,
 		Stdin:       Stdin,
