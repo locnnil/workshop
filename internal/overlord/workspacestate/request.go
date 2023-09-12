@@ -502,6 +502,7 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	if err != nil {
 		return nil, ExecMeta{}, err
 	}
+	
 	defer wrkspc.Close()
 
 	info, err := wrkspc.Stat(args.WorkDir)

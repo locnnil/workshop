@@ -48,18 +48,18 @@ type ExecOptions struct {
 	// will be terminated. If zero, no timeout applies.
 	Timeout time.Duration
 
-	// True to ask the server to set up a pseudo-terminal (PTY) for stdout
+	// NOT SUPPORTED: True to ask the server to set up a pseudo-terminal (PTY) for stdout
 	// (this also allows window resizing). The default is no PTY, and just
 	// to use pipes for stdout/stderr.
 	Terminal bool
 
-	// True to use the pseudo-terminal for stdin (only allowed when Terminal
-	// is true). The default is to use a pipe for stdin.
+	// True to use the pseudo-terminal for stdin. The default is to use a pipe
+	// for stdin.
 	Interactive bool
 
-	// Initial terminal width and height (only apply if Terminal is true).
-	// If not specified, the Pebble server uses the target's default (usually
-	// 80x25). When using the "pebble exec" CLI, these are set to the host's
+	// Initial terminal width and height (only apply if Interactive is true).
+	// If not specified, the Workspace server uses the target's default (usually
+	// 80x25). When using the "workspace exec" CLI, these are set to the host's
 	// terminal size automatically.
 	Width  int
 	Height int

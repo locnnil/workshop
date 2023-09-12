@@ -2,6 +2,7 @@ package workspacestate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -275,22 +276,29 @@ func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) erro
 
 	err = exectx.WaitExecution(ctx)
 	st.Lock()
-	var status = 0
+	defer st.Unlock()
 	// only set the error exit status in the task's metadata if the error
 	// belongs to the command execution (e.g. not an LXD error)
 	if err == nil {
-		task.Set("api-data", map[string]interface{}{
-			"exit-code": status,
-		})
+		setExitCode(task, 0)
 	} else {
 		if execerr, ok := err.(*workspacebackend.ErrExec); ok {
-			status = execerr.Status
-			task.Set("api-data", map[string]interface{}{
-				"exit-code": status,
-			})
+			setExitCode(task, execerr.Status)
+			return nil
+		}
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("timed out after %v: %w", setup.Timeout, ctx.Err())
 		}
 	}
-	st.Unlock()
 
 	return err
+}
+
+func setExitCode(task *state.Task, exitCode int) {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+	task.Set("api-data", map[string]interface{}{
+		"exit-code": exitCode,
+	})
 }
