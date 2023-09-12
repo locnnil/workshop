@@ -43,6 +43,11 @@ In this documentation
       **Starter instructions** for new users of |project|
 
 
+   .. grid-item:: :doc:`How-to guides <howto/index>`
+
+      **Step-by-step guides** covering common tasks
+
+
    .. grid-item:: :doc:`Explanation <explanation/index>`
 
       **Discussion and clarification** of key topics
@@ -50,7 +55,7 @@ In this documentation
 
    .. grid-item:: :doc:`Reference <reference/index>`
 
-      **Technical information** - specifications, APIs, architecture
+      **Technical details**, specifications, APIs
 
 ---------
 
@@ -68,5 +73,6 @@ If we somehow failed,
    :maxdepth: 2
 
    tutorial/index
+   howto/index
    explanation/index
    reference/index

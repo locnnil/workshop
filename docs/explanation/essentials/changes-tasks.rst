@@ -23,3 +23,10 @@ the state management system uses it
 to ensure the integrity of the workspace on errors.
 By default, a failed change reverts the workspace
 to the last operational state.
+
+See also
+--------
+
+How-to guides: :ref:`how_debug_workspace_issues`
+
+Tutorial: :ref:`tut_refresh_wait_on_error`

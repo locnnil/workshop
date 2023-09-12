@@ -67,6 +67,8 @@ To remove an SDK,
 delete it from the definition and refresh the workspace.
 
 
+.. _tut_refresh_wait_on_error:
+
 Wait on error
 -------------
 
@@ -107,7 +109,7 @@ To investigate the issue, check the recent *changes and tasks*:
 
 .. note::
 
-   For details, see :ref:`tut_changes_tasks`.
+   For details, see :ref:`exp_changes_tasks`.
 
 
 To continue the refresh operation:
