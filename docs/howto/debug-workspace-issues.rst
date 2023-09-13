@@ -1,13 +1,14 @@
-.. _tut_changes_tasks:
+.. _how_debug_workspace_issues:
 
-List changes and tasks
+Debug workspace issues
 ======================
 
-To trace the condition of a
+To trace the condition of a misbehaving
 :ref:`workspace <exp_workspace>`,
-explore its
+you can explore its underlying
 :ref:`changes and tasks <exp_changes_tasks>`.
-This can help if a
+This may help identify the root cause
+if a
 :ref:`refresh <tut_refresh>`
 fails.
 

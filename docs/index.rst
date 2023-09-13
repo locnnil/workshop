@@ -38,19 +38,24 @@ In this documentation
 
 .. grid:: 1 1 2 2
 
-   .. grid-item:: :doc:`Tutorials <tutorials/index>`
+   .. grid-item:: :doc:`Tutorial <tutorial/index>`
 
       **Starter instructions** for new users of |project|
 
 
-   .. grid-item:: :doc:`Explanations <explanations/index>`
+   .. grid-item:: :doc:`How-to guides <howto/index>`
+
+      **Step-by-step guides** covering common tasks
+
+
+   .. grid-item:: :doc:`Explanation <explanation/index>`
 
       **Discussion and clarification** of key topics
 
 
    .. grid-item:: :doc:`Reference <reference/index>`
 
-      **Technical information** - specifications, APIs, architecture
+      **Technical details**, specifications, APIs
 
 ---------
 
@@ -67,6 +72,7 @@ If we somehow failed,
    :hidden:
    :maxdepth: 2
 
-   tutorials/index
-   explanations/index
+   tutorial/index
+   howto/index
+   explanation/index
    reference/index
