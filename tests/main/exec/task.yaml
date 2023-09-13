@@ -12,7 +12,7 @@ restore: |
   uninstall_workspaced
 
 debug: |
-  lxc list -f compact --all-projects
+  workspace changes
 
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -35,10 +35,16 @@ execute: |
   echo "Check enforce non-interactive mode"
   workspace_exec exec --project $project -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
 
-  #FIXME: this works in a terminal but not under spread
+  #FIXME: this works in a terminal but not under spread This is due to the
+  #websocket client implementation that closes the connection when a reader from
+  #stdin has nothing to read. spread runs all commands with </dev/null which
+  #results in EOF in stdin immediately. As a result, the written stdout buffer
+  #is not read by the client as the reading go routine has closed the connection
+  #by the time already (note: it is only relevant for the interactive sessions
+  #where one websocket used for in/out)
   #echo "Check enforce interactive mode"
   #workspace_exec exec --project $project --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
 
-  #echo "Check timeout"
-  #workspace_exec exec --project $project --timeout 1s ws -- bash -c 'sleep 5'
-  #workspace_exec tasks 9 | MATCH ".*timed out after 1s.*"
+  echo "Check timeout"
+  workspace_exec exec --project $project --timeout 1s ws -- bash -c 'sleep 5' || true
+  workspace_exec tasks 8 | MATCH ".*timed out after 1s.*"

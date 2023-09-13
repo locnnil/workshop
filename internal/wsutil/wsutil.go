@@ -63,6 +63,7 @@ func WebsocketSendStream(conn MessageWriter, r io.Reader, bufferSize int) chan b
 				break
 			}
 		}
+		logger.NoGuardDebugf("closing stdin")
 		conn.WriteMessage(websocket.TextMessage, endCommandJSON)
 		close(ch) // NOTE(benhoyt): this was "ch <- true", but that can block
 	}(conn, r)
@@ -106,6 +107,7 @@ func recvLoop(w io.Writer, conn MessageReader) {
 
 			switch string(payload) {
 			case "":
+				logger.NoGuardDebugf("closing stdout")
 				logger.Debugf(`Got message barrier (empty command)`)
 				return
 			default:
