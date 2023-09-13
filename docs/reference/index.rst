@@ -1,13 +1,5 @@
-Reference
-=========
-
-These guides cover the use of |project|,
-its various aspects and intricacies
-to a reasonable detail.
-
-
-Workspace (CLI)
----------------
+Reference (CLI)
+===============
 
 The :program:`workspace` CLI tool exposes the following commands,
 each with its own set of options, and also has a number of global options
