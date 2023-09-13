@@ -5,11 +5,11 @@ Changes, tasks
 
 A *change* is the core concept of the workspace state management system.
 Any long-running or invasive operation
-(e.g. ``launch``)
+(e.g. :command:`launch`)
 that changes the state of a workspace
-is planned and executed as a change,
+is planned and applied as a change,
 which comprises specific tasks
-that execute in a predefined order.
+that run in a predefined order.
 
 A *task* is a small, independent piece of logic;
 it can be mounting a project directory,

@@ -13,7 +13,7 @@ Project
 A project is a directory that contains one or many workspace definitions.
 
 When a workspace runs,
-this directory is mounted as ``/project/``;
+this directory is mounted as :file:`/project/`;
 the changes to the directory are tracked
 to keep the workspace configuration in sync.
 Thus, if the directory is moved or copied,
@@ -22,7 +22,7 @@ the mount points in related workspaces are updated.
 If the directory is deleted,
 the workspaces that still refer to it
 switch to the *Error* state
-and become unavailable for any commands except ``remove``.
+and become unavailable for any commands except :command:`remove`.
 
 
 .. _exp_workspace:
@@ -38,7 +38,7 @@ A *workspace* is a container that is described in a definition file.
 Workspace definition
 ~~~~~~~~~~~~~~~~~~~~
 
-This is a file named ``.workspace.<NAME>.yaml``
+This is a file named :file:`.workspace.<NAME>.yaml`
 that lists the base image of the workspace
 and the specific components installed on top of it.
 The definition serves as a single source of truth about the workspace.
