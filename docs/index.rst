@@ -1,4 +1,4 @@
-:relatedlinks: [Diátaxis](https://diataxis.fr/)
+:relatedlinks: [LXD](https://documentation.ubuntu.com/lxd/en/latest/), [Snap](https://snapcraft.io/docs)
 
 .. _home:
 

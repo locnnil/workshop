@@ -32,9 +32,9 @@ Getting Started
 
 Follow the sections below
 or refer to the
-`Getting started
-<https://canonical-workspace.readthedocs-hosted.com/en/latest/tutorial/getting-started/>`_
-tutorial series for a more detailed introduction to Workspace.
+`Tutorial
+<https://canonical-workspace.readthedocs-hosted.com/en/latest/tutorial/>`_
+in our docs for a more detailed introduction to Workspace.
 
 
 ------------
