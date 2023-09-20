@@ -8,4 +8,5 @@ such as :option:`!--help` or :option:`!-h`:
 .. toctree::
    :maxdepth: 1
 
+   workspace_info
    workspace_refresh
