@@ -14,9 +14,27 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch <workspace>...",
+		Use:   "launch <WORKSPACE>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Launch one or many workspaces",
+		Short: "Initialise one or many workspaces using their definitions.",
+		Long: `
+This command constructs the workspaces listed as arguments by going over their
+definitions and installing their components. For each workspace, it:
+
+- Checks the workspace definition and identifies necessary actions
+- Retrieves the required components, such as base and SDKs
+- Runs SDK setup hooks to initialise the working state
+- On success, sets the workspace to *Ready*
+
+If multiple workspaces are listed and an error occurs,
+the operation is aborted and no workspaces are constructed.
+
+Notes:
+- Names listed as arguments must match respective 'name:' values in definitions
+- To update an existing workspace, use 'workspace refresh' instead
+- SDKs are installed in alphabetical order
+`,
+
 		RunE:  c.Run,
 	}
 

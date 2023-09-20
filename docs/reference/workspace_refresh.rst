@@ -33,6 +33,7 @@ Notes
 -----
 
 - The workspace must be *Ready* to be refreshed
+- To construct a newly defined workspace, use :ref:`workspace_launch` instead
 - Throughout the refresh, all affected workspaces remain *Pending*
 - If the refresh removes an SDK from the workspace, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
@@ -74,3 +75,7 @@ Explanation:
 
 - :ref:`project <exp_project>`
 - :ref:`workspace (concept) <exp_workspace>`
+
+Reference:
+
+- :ref:`workspace launch (command) <workspace_launch>`

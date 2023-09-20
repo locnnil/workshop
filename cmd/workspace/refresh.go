@@ -39,6 +39,7 @@ the operation is aborted and reverted for *all* of them.
 
 Notes:
 - The workspace must be *Ready* to be refreshed
+- To construct a newly defined workspace, use 'workspace launch' instead
 - Throughout the refresh, all affected workspaces remain *Pending*
 - If the refresh removes an SDK from the workspace, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
