@@ -40,7 +40,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
-		return fmt.Errorf("cannot create the client: %v", err)
+		return fmt.Errorf("cannot create client: %v", err)
 	}
 
 	c.setClient(cli)

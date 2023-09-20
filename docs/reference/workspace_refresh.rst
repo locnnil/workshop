@@ -60,7 +60,7 @@ Global options
 
 -h, --help
 
-  Print help message for the command.
+  Print the help message for the command.
 
 -p, --project <DIRECTORY>
 

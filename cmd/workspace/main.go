@@ -54,7 +54,7 @@ func main() {
 	logger.SetLogger(l)
 
 	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "Specify the project's directory path.")
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print help message for the command.")
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
 
 	rootCmd.AddCommand((&CmdLaunch{}).Command())
 	rootCmd.AddCommand((&CmdList{}).Command())
