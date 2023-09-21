@@ -39,6 +39,7 @@ the operation is aborted and reverted for *all* of them.
 
 Notes:
 - The workspace must be *Ready* to be refreshed
+- To construct a newly defined workspace, use 'workspace launch' instead
 - Throughout the refresh, all affected workspaces remain *Pending*
 - If the refresh removes an SDK from the workspace, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
@@ -81,7 +82,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
-		return fmt.Errorf("cannot create the client: %v", err)
+		return fmt.Errorf("cannot create client: %v", err)
 	}
 
 	c.setClient(cli)

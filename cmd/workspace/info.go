@@ -14,9 +14,21 @@ type CmdInfo struct {
 
 func (c *CmdInfo) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "info <workspace>",
+		Use:   "info <WORKSPACE>",
 		Args:  cobra.RangeArgs(1, 1),
-		Short: "Show detailed information on the status of the workspace and its SDKs",
+		Short: "Print the current status and details of a workspace as YAML.",
+		Long: `
+This command outputs the basic settings, current status and individual SDK
+details for a workspace, formatting them as YAML. Specifically, it prints:
+
+- Essential workspace attributes, such as name, base and project directory
+- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workspace
+- Individual SDK details, such as name, channel, installation date and revision
+
+Notes:
+- Avoid assumptions based on SDK channels: 'latest/stable' may be neither
+`,
+
 		RunE:  c.Run,
 	}
 
