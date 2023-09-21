@@ -497,12 +497,24 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	}
 	execArgs := *args
 
+	// check if all the workspaces are stopped
+	avail, _, err := w.CheckStatus(ctx, []string{name}, projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceReady || status == workspacebackend.WorkspacePending
+		})
+	if err != nil {
+		return nil, ExecMeta{}, err
+	}
+	if !avail {
+		return nil, ExecMeta{}, fmt.Errorf("%q is not in a ready or pending status", name)
+	}
+
 	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
 	wrkspc, err := w.backend.GetWorkspaceFs(ctx, name)
 	if err != nil {
 		return nil, ExecMeta{}, err
 	}
-	
+
 	defer wrkspc.Close()
 
 	info, err := wrkspc.Stat(args.WorkDir)

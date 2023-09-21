@@ -73,7 +73,7 @@ function cleanup() {
 # Workspace sub-command wrappers
 
 function workspace_exec() {
-  sudo -u ubuntu -- workspace "$@"
+  sudo -u ubuntu 2>&1 -- workspace "$@"
 }
 
 function launch() {
