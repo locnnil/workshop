@@ -160,18 +160,34 @@ func New(config *Config) (*Client, error) {
 
 	client.doer = &http.Client{
 		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
-		return getWebsocket(transport, url, config)
+		wstransport := &http.Transport{Dial: unixDialer(config.LxdSocket), DisableKeepAlives: config.DisableKeepAlive}
+		return getWebsocket(wstransport, url, config)
 	}
 
 	return client, nil
 }
 
 func (client *Client) getTaskWebsocket(taskID, websocketID string) (clientWebsocket, error) {
-	url := fmt.Sprintf("ws://localhost/v1/tasks/%s/websocket/%s", taskID, websocketID)
-	return client.getWebsocket(url)
+	url := fmt.Sprintf("/v1/tasks/%s/websocket/%s", taskID, websocketID)
+	rsp, err := client.raw(context.Background(), "GET", url, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if rsp.StatusCode == http.StatusTemporaryRedirect {
+		location, err := rsp.Location()
+		if err != nil {
+			return nil, err
+		}
+		return client.getWebsocket(location.String())
+	}
+	return nil, fmt.Errorf("cannot get task websocket: unexpected server response")
 }
 
 func getWebsocket(transport *http.Transport, url string, config *Config) (clientWebsocket, error) {
@@ -182,25 +198,7 @@ func getWebsocket(transport *http.Transport, url string, config *Config) (client
 		HandshakeTimeout: 5 * time.Second,
 	}
 	conn, resp, err := dialer.Dial(url, nil)
-
-	if err != nil {
-		if resp.StatusCode == http.StatusTemporaryRedirect {
-			lxdtransport := &http.Transport{Dial: unixDialer(config.LxdSocket), DisableKeepAlives: config.DisableKeepAlive}
-			dialer := websocket.Dialer{
-				NetDial:          lxdtransport.Dial,
-				Proxy:            lxdtransport.Proxy,
-				TLSClientConfig:  lxdtransport.TLSClientConfig,
-				HandshakeTimeout: 5 * time.Second,
-			}
-			location, err := resp.Location()
-			if err != nil {
-				return nil, err
-			}
-			conn, resp, err := dialer.Dial(location.String(), nil)
-			logger.Debugf("response: %v", resp)
-			return conn, err
-		}
-	}
+	logger.Debugf("response: %v", resp)
 	return conn, err
 }
 

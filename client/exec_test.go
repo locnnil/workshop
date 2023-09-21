@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"regexp"
 	"syscall"
 	"time"
@@ -40,10 +41,13 @@ type execSuite struct {
 
 var _ = Suite(&execSuite{})
 
+var websocketRedirectexp = regexp.MustCompile(`^http://localhost/v1/tasks/T\d+/websocket/(\w+)$`)
 var websocketRegexp = regexp.MustCompile(`^ws://localhost/v1/tasks/T\d+/websocket/(\w+)$`)
 
 func (s *execSuite) SetUpTest(c *C) {
 	s.clientSuite.SetUpTest(c)
+
+	s.clientSuite.cli.SetDoer(s)
 
 	s.stdioWs = &testWebsocket{}
 	s.stdoutWs = &testWebsocket{}
@@ -68,6 +72,23 @@ func (s *execSuite) SetUpTest(c *C) {
 			return nil, fmt.Errorf("invalid websocket ID %q", id)
 		}
 	})
+}
+
+func (cs *execSuite) Do(req *http.Request) (*http.Response, error) {
+	if req.Method == "GET" {
+		// check if the request is after a websocket. these are redirected
+		// to LXD now
+		matches := websocketRedirectexp.FindStringSubmatch(req.URL.String())
+		if matches != nil {
+			var header http.Header = make(http.Header)
+			header.Set("Location", fmt.Sprintf("ws://localhost%s", req.URL.Path))
+			return &http.Response{
+				StatusCode: http.StatusTemporaryRedirect,
+				Header:     header,
+			}, nil
+		}
+	}
+	return cs.clientSuite.Do(req)
 }
 
 func (s *execSuite) TearDownTest(c *C) {
