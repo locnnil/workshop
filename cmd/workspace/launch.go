@@ -16,7 +16,7 @@ func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "launch <WORKSPACE>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Initialise one or many workspaces using their definitions.",
+		Short: "Construct one or many workspaces using their definitions.",
 		Long: `
 This command constructs the workspaces listed as arguments by going over their
 definitions and installing their components. For each workspace, it:

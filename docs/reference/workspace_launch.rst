@@ -3,7 +3,7 @@
 workspace launch
 ================
 
-Initialises one or many workspaces using their definitions.
+Constructs one or many workspaces using their definitions.
 
 .. code:: shell
 
