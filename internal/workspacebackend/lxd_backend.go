@@ -899,7 +899,7 @@ func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*Work
 	return files, instances
 }
 
-func (s *LxdBackend) DeleteWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkspace(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err

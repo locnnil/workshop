@@ -41,6 +41,7 @@ const (
 	OperationRefresh = "refresh"
 	OperationStart   = "start"
 	OperationStop    = "stop"
+	OperationRemove  = "remove"
 )
 
 type Operation struct {

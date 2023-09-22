@@ -304,6 +304,20 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			statecontext.StartOperation(st, name, projectId,
 				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationStop})
 		}
+	case "remove":
+		taskset, err := wsmgr.RemoveMany(r.Context(), reqData.Names, projectId)
+		if err != nil {
+			return statusBadRequest(err.Error())
+		}
+
+		change = st.NewChange("remove", summary)
+		change.AddAll(taskset)
+
+		for _, name := range reqData.Names {
+			statecontext.StartOperation(st, name, projectId,
+				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationRemove})
+		}
+
 	default:
 		return statusBadRequest("unknown action")
 	}

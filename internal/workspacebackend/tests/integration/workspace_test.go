@@ -68,7 +68,7 @@ func (f *WsOps) TearDownSuite(c *check.C) {
 func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	// Execute
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
-	defer f.be.DeleteWorkspace(f.ctx, "test-1")
+	defer f.be.RemoveWorkspace(f.ctx, "test-1")
 
 	//Validate
 	c.Assert(err, check.IsNil)
@@ -119,7 +119,7 @@ func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
-	defer f.be.DeleteWorkspace(f.ctx, "test-1")
+	defer f.be.RemoveWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -142,7 +142,7 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	defer f.be.DeleteWorkspace(f.ctx, "test-1")
+	defer f.be.RemoveWorkspace(f.ctx, "test-1")
 
 	// Execute
 	err = f.be.StartWorkspace(f.ctx, "test-1")
@@ -181,6 +181,6 @@ func (f *WsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	//Validate
-	err = f.be.DeleteWorkspace(f.ctx, "test-1")
+	err = f.be.RemoveWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }

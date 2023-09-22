@@ -521,3 +521,25 @@ func (s *S) TestStopMany(c *check.C) {
 	ts.Tasks()[1].Get("force", &force)
 	c.Assert(force, check.Equals, false)
 }
+
+func (s *S) TestRemoveMany(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	ts, err := workspacestate.RemoveManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
+	c.Assert(err, check.IsNil)
+	c.Assert(ts.Tasks(), check.HasLen, 2)
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "remove-workspace")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "remove-workspace")
+
+	var force bool
+	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
+	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
+	ts.Tasks()[0].Get("force", &force)
+	c.Assert(force, check.Equals, false)
+
+	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
+	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
+	ts.Tasks()[1].Get("force", &force)
+	c.Assert(force, check.Equals, false)
+}

@@ -30,7 +30,7 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.DeleteWorkspace(ctx, workspace)
+	return m.backend.RemoveWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
@@ -96,7 +96,7 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	return m.backend.StartWorkspace(ctx, workspace)
 }
 
-func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkspaceManager) doRemoveWorkspace(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workspace, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (m *WorkspaceManager) doDeleteWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.DeleteWorkspace(ctx, workspace)
+	return m.backend.RemoveWorkspace(ctx, workspace)
 }
 
 func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.Tomb) error {

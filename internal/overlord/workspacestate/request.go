@@ -354,3 +354,28 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 
 	return taskset, nil
 }
+
+func (w *WorkspaceManager) RemoveMany(ctx context.Context, names []string, projectId string) (*state.TaskSet, error) {
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+	return removeMany(w.state, names, project)
+}
+
+func removeMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
+	taskset := state.NewTaskSet([]*state.Task{}...)
+
+	for _, name := range names {
+		remove := st.NewTask("remove-workspace", fmt.Sprintf("Remove %q workspace", name))
+		// remove is a single task, so it is the beginning and the end of the operation
+		remove.Set("start-operation", true)
+		remove.Set("stop-operation", true)
+		taskset.AddTask(remove)
+
+		remove.Set("workspace", name)
+		remove.Set("project", *project)
+	}
+
+	return taskset, nil
+}

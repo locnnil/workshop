@@ -544,3 +544,60 @@ base: ubuntu@20.04`), 0644)
 	// all successful responses must initiate the ensure call
 	c.Assert(soon, check.Equals, 2)
 }
+
+func (s *apiSuite) TestProjectsPostProjectWorkspaceRemove(c *check.C) {
+	// Setup
+	s.daemon(c)
+	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	s.vars = map[string]string{"id": s.project.ProjectId}
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04`), 0644)
+
+	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	buffers := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["ws"],"action":"remove"}`),
+	}
+
+	requests := []*http.Request{}
+	expected := []*struct {
+		Type    ResponseType
+		Status  int
+		Message string
+	}{
+		{
+			Type:   ResponseTypeAsync,
+			Status: http.StatusAccepted,
+		},
+	}
+
+	for _, i := range buffers {
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		c.Assert(err, check.IsNil)
+		requests = append(requests, req)
+	}
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
+
+	for num, i := range requests {
+		// Execute
+		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+
+		// Verify
+		c.Check(rsp.Type, check.Equals, expected[num].Type)
+		c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v, msg: %v", num, rsp.Result))
+
+		s.d.state.Lock()
+		op := statecontext.OperationInProgress(s.d.state, "ws", s.project.ProjectId)
+		c.Assert(op, check.NotNil)
+		c.Assert(op.Operation, check.Equals, statecontext.OperationRemove)
+		s.d.state.Unlock()
+	}
+	// all successful responses must initiate the ensure call
+	c.Assert(soon, check.Equals, 1)
+}
