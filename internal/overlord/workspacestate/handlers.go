@@ -24,10 +24,6 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -71,10 +67,6 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -103,10 +95,6 @@ func (m *WorkspaceManager) doRemoveWorkspace(task *state.Task, tomb *tomb.Tomb) 
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -118,10 +106,6 @@ func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.T
 	if err != nil {
 		return err
 	}
-
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
@@ -135,10 +119,6 @@ func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) e
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -150,10 +130,6 @@ func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb)
 	if err != nil {
 		return err
 	}
-
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
@@ -204,10 +180,6 @@ func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tom
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -219,10 +191,6 @@ func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tom
 	if err != nil {
 		return err
 	}
-
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
