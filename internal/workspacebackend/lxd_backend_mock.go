@@ -116,7 +116,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) DeleteWorkspace(ctx context.Context, name string) error {
+func (f *FakeWorkspaceBackend) RemoveWorkspace(ctx context.Context, name string) error {
 	panic("not implemented") // TODO: Implement
 }
 
@@ -189,7 +189,7 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	}
 	workspace := f.Workspaces[projectId][name]
 	if workspace == nil {
-		return nil, api.StatusErrorf(404, "workspace not found")
+		return nil, ErrWorkspaceNotFound
 	}
 	workspace.file, err = project.WorkspaceFile(workspace.Name)
 	if err != nil {

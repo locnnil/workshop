@@ -100,3 +100,10 @@ func (client *Client) Stop(projectId string, names []string) (changeId string, e
 		Names:  names,
 	})
 }
+
+func (client *Client) Remove(projectId string, names []string) (changeId string, err error) {
+	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+		Action: "remove",
+		Names:  names,
+	})
+}

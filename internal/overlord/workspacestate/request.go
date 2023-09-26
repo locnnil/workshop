@@ -2,11 +2,14 @@ package workspacestate
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"golang.org/x/exp/slices"
@@ -31,24 +34,59 @@ func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workspa
 	return prj, nil
 }
 
-func (w *WorkspaceManager) LaunchMany(ctx context.Context, workspaces []string, projectId string) ([]*state.TaskSet, error) {
+func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	taskset := make([]*state.TaskSet, 0, len(workspaces))
-	for _, i := range workspaces {
+	taskset := make([]*state.TaskSet, 0, len(names))
+	for _, i := range names {
 		file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(project.Path, i))
 		if err != nil {
-			return nil, fmt.Errorf("cannot read workspace \"%s\": %v", i, err)
+			return nil, fmt.Errorf("cannot read %q file: %w", i, err)
+		}
+
+		wrkspace, err := w.Workspace(ctx, i, projectId)
+		if wrkspace != nil {
+			return nil, fmt.Errorf("cannot launch: %q already exists", i)
+		}
+		if !errors.Is(err, workspacebackend.ErrWorkspaceNotFound) {
+			return nil, err
 		}
 
 		tasks, err := launch(w.state, file, project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot launch workspace \"%s\": %v", i, err)
+			return nil, fmt.Errorf("cannot launch %q: %w", i, err)
+		}
+
+		for _, tsk := range tasks.Tasks() {
+			if tsk.Kind() == "create-workspace" {
+				tsk.Set("start-operation", true)
+			}
+
+			if len(file.Sdks) == 0 {
+				if tsk.Kind() == "start-workspace" {
+					tsk.Set("stop-operation", true)
+				}
+			} else {
+				if tsk.Kind() == "run-hook" && len(tsk.HaltTasks()) == 0 {
+					tsk.Set("stop-operation", true)
+				}
+			}
 		}
 		taskset = append(taskset, tasks)
+	}
+
+	for _, name := range names {
+		err = statecontext.StartOperation(w.state, name, projectId,
+			statecontext.Operation{
+				ChangeId:  opChangeId,
+				Operation: statecontext.OperationLaunch,
+			})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return taskset, nil
 }
@@ -111,10 +149,25 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 }
 
 func (w *WorkspaceManager) RefreshMany(ctx context.Context,
-	names []string, projectId string) ([]*state.TaskSet, error) {
+	names []string, projectId string, refreshMode statecontext.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
+	}
+
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		names,
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceReady
+		})
+	if err != nil {
+		return nil, fmt.Errorf("cannot refresh: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, fmt.Errorf("cannot refresh: %q is in %s; must be ready", invalid, strings.ToLower(status.String()))
 	}
 
 	_, workspaces, err := w.Workspaces(ctx, projectId)
@@ -132,7 +185,24 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		files = append(files, workspaces[idx].File())
 		content = append(content, workspaces[idx].Content())
 	}
-	return refreshMany(w.state, files, content, project)
+
+	taskset, err := refreshMany(w.state, files, content, project)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range names {
+		err = statecontext.StartOperation(w.state, name, projectId,
+			statecontext.Operation{
+				ChangeId:    opChangeId,
+				Operation:   statecontext.OperationRefresh,
+				WaitOnError: refreshMode == statecontext.RefreshWaitOnError,
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return taskset, nil
 }
 
 func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [][]*sdk.SdkInfo,
@@ -142,7 +212,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 	for i, w := range w {
 		tasks, err := refresh(st, w, content[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh \"%s\" workspace: %v", w, err)
+			return nil, fmt.Errorf("cannot refresh \"%s\" workspace: %w", w, err)
 		}
 		taskset = append(taskset, tasks)
 	}
@@ -304,12 +374,43 @@ func createStateHooks(st *state.State, content []*sdk.SdkInfo, newContent worksp
 	return stateHooks
 }
 
-func (w *WorkspaceManager) StartMany(ctx context.Context, names []string, projectId string) (*state.TaskSet, error) {
+func (w *WorkspaceManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+	// check if all the workspaces are stopped
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		names,
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceStopped
+		})
+	if err != nil {
+		return nil, fmt.Errorf("cannot start: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, fmt.Errorf("cannot start: %q is in %s; must be stopped", invalid, strings.ToLower(status.String()))
+	}
+
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
-	return startMany(w.state, names, project)
+	taskset, err := startMany(w.state, names, project)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range names {
+		err = statecontext.StartOperation(w.state, name, projectId,
+			statecontext.Operation{
+				ChangeId:  opChangeId,
+				Operation: statecontext.OperationStart,
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return taskset, nil
 }
 
 func startMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
@@ -329,12 +430,42 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 	return taskset, nil
 }
 
-func (w *WorkspaceManager) StopMany(ctx context.Context, names []string, projectId string) (*state.TaskSet, error) {
+func (w *WorkspaceManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		names,
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceStopped || status == workspacebackend.WorkspaceReady
+		})
+	if err != nil {
+		return nil, fmt.Errorf("cannot stop: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, fmt.Errorf("cannot stop: %q is in %s; must be stopped or ready", invalid, strings.ToLower(status.String()))
+	}
+
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
-	return stopMany(w.state, names, project)
+	taskset, err := stopMany(w.state, names, project)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range names {
+		err = statecontext.StartOperation(w.state, name, projectId,
+			statecontext.Operation{
+				ChangeId:  opChangeId,
+				Operation: statecontext.OperationStop,
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return taskset, nil
 }
 
 func stopMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
@@ -350,6 +481,64 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 
 		stop.Set("workspace", name)
 		stop.Set("project", *project)
+	}
+
+	return taskset, nil
+}
+
+func (w *WorkspaceManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		names,
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status != workspacebackend.WorkspacePending && status != workspacebackend.WorkspaceOff
+		})
+	if err != nil {
+		return nil, fmt.Errorf("cannot remove: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, fmt.Errorf("cannot remove: %q is in %s; must be ready, stopped or error", invalid, strings.ToLower(status.String()))
+	}
+
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+
+	taskset, err := removeMany(w.state, names, project)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range names {
+		err = statecontext.StartOperation(w.state, name, projectId,
+			statecontext.Operation{
+				ChangeId:  opChangeId,
+				Operation: statecontext.OperationRemove,
+			})
+		if err != nil {
+			// TODO: stop operation for the workspaces that
+			// had them started successfully
+			return nil, err
+		}
+	}
+	return taskset, nil
+}
+
+func removeMany(st *state.State, names []string, project *workspacebackend.Project) (*state.TaskSet, error) {
+	taskset := state.NewTaskSet([]*state.Task{}...)
+
+	for _, name := range names {
+		remove := st.NewTask("remove-workspace", fmt.Sprintf("Remove %q workspace", name))
+		// remove is a single task, so it is the beginning and the end of the operation
+		remove.Set("start-operation", true)
+		remove.Set("stop-operation", true)
+		taskset.AddTask(remove)
+
+		remove.Set("workspace", name)
+		remove.Set("project", *project)
 	}
 
 	return taskset, nil

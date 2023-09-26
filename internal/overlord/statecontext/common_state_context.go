@@ -31,6 +31,8 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 
 		switch {
 		case err == nil:
+			// see if the task finishes the chain of tasks representing an
+			// operation launch, refresh, etc.
 			if task.Has("stop-operation") {
 				op := OperationInProgress(st, ws, p.ProjectId)
 				if op != nil {

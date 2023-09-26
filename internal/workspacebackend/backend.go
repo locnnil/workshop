@@ -62,7 +62,7 @@ type WorkspaceBackend interface {
 	LaunchWorkspace(ctx context.Context, name, base string) error
 
 	// Delete workspace. Stop the workspace forcefully if not in Stopped before deleting
-	DeleteWorkspace(ctx context.Context, name string) error
+	RemoveWorkspace(ctx context.Context, name string) error
 
 	// Starts a workspace and waits until it is ready
 	// to accept commands

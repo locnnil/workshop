@@ -1,0 +1,42 @@
+summary: Check workspace remove
+environment:
+  WORKSPACES: $SPREAD_PATH/tests/lib
+  project:  $WORKSPACES/workspaces-sdk/test-sdk-basic
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workspaced
+  cp "$project"/.workspace.ws.yaml "$project"/.workspace.ws.yaml.bak
+
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSPACES"
+  uninstall_workspaced
+  mv "$project"/.workspace.ws.yaml.bak "$project"/.workspace.ws.yaml
+
+debug: |
+  lxc list -f compact --all-projects
+  workspace changes
+  workspace tasks 1
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch a workspace"
+  workspace_exec launch --project $project ws
+
+  echo "Check the workspace can be removed if in Ready"
+  workspace_exec remove --project $project ws
+  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check the workspace can be removed if in Stopped"
+  workspace_exec launch --project $project ws
+  workspace_exec stop --project $project ws
+  workspace_exec remove --project $project ws
+  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check the workspace can be removed if in Error"
+  workspace_exec launch --project $project ws
+  rm -f "$project"/.workspace.ws.yaml
+  workspace_exec remove --project $project ws
+  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

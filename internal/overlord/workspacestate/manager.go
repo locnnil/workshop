@@ -23,7 +23,7 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	runner.AddHandler("create-workspace", OnDo(manager.doCreateWorkspace), OnUndo(manager.undoCreateWorkspace))
 	runner.AddHandler("start-workspace", OnDo(manager.doStart), OnUndo(manager.doStop))
 	runner.AddHandler("stop-workspace", OnDo(manager.doStop), OnUndo(manager.doStart))
-	runner.AddHandler("delete-workspace", OnDo(manager.doDeleteWorkspace), nil)
+	runner.AddHandler("remove-workspace", OnDo(manager.doRemoveWorkspace), nil)
 	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
 	runner.AddHandler("remove-workspace-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
 	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
@@ -37,26 +37,23 @@ func (w *WorkspaceManager) Ensure() error {
 	return nil
 }
 
-// Checks all of the provided list of workspaces are in the required status
+// Checks all of the provided list of workspaces are in the required status as
+// per the matchStatus predicate. It returns the first workspace that does NOT
+// meet the predicate's condition.
 func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
-	matchStatus func(status workspacebackend.WorkspaceState) bool) (bool, []string, error) {
-	invalid := []string{}
+	matchStatus func(status workspacebackend.WorkspaceState) bool) (string, workspacebackend.WorkspaceState, error) {
 	for _, name := range names {
 		wrkspc, err := w.Workspace(ctx, name, pId)
 		if err != nil {
-			return false, nil, err
+			return "", workspacebackend.WorkspaceOff, err
 		}
 
-		st := w.workspaceState(wrkspc)
-		if !matchStatus(st) {
-			invalid = append(invalid, wrkspc.Name)
+		status := w.workspaceState(wrkspc)
+		if !matchStatus(status) {
+			return name, status, nil
 		}
 	}
-
-	if len(invalid) > 0 {
-		return false, invalid, nil
-	}
-	return true, nil, nil
+	return "", workspacebackend.WorkspaceOff, nil
 }
 
 // Loads a workspace, the state must be locked as it is used to find out the
