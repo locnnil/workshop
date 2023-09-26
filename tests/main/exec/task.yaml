@@ -51,4 +51,4 @@ execute: |
 
   echo "Check stopped workspace"
   workspace_exec stop --project $project ws
-  workspace_exec exec --project $project ws pwd | MATCH '.*"ws" is not in a ready or pending status$'
+  workspace_exec exec --project $project ws pwd | MATCH '.*"ws" is in stopped; must be ready or pending$'

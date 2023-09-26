@@ -111,7 +111,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 	wsmgr := c.d.overlord.WorkspaceManager()
 	task, metadata, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs)
 	if err != nil {
-		return statusBadRequest("cannot exec: %v", err)
+		return statusBadRequest(err.Error())
 	}
 
 	change := st.NewChange("exec", fmt.Sprintf("Execute command %q", execArgs.Command[0]))

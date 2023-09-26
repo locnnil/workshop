@@ -155,7 +155,7 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 func (f *wsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 
 	// Execute
 	err := f.be.StashWorkspace(f.ctx, "test")
@@ -178,7 +178,7 @@ func (f *wsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 
 	// Execute
 	err := f.be.CreateStateStorage(f.ctx, "test")
@@ -292,7 +292,7 @@ func (f *wsOps) exec(c *check.C, stdin string, workspace, projectId string, opts
 func (f *wsOps) TestLxdBackendExecTrivial(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 
 	opts := &client.ExecOptions{
 		Command:    []string{"ls"},
@@ -305,7 +305,7 @@ func (f *wsOps) TestLxdBackendExecTrivial(c *check.C) {
 func (f *wsOps) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:    []string{"ls"},
 		WorkingDir: "/no/such/dir",
@@ -321,7 +321,7 @@ func (f *wsOps) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
 func (f *wsOps) TestLxdBackendExecDefaultUserGroup(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:    []string{"/bin/sh", "-c", "id -n -u && id -n -g"},
 		WorkingDir: "/",
@@ -339,7 +339,7 @@ func (f *wsOps) TestLxdBackendExecDefaultUserGroup(c *check.C) {
 func (f *wsOps) TestLxdBackendExecCustomUserGroup(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:    []string{"/bin/sh", "-c", "id -n -u && id -n -g"},
 		WorkingDir: "/",
@@ -359,7 +359,7 @@ func (f *wsOps) TestLxdBackendExecCustomUserGroup(c *check.C) {
 func (f *wsOps) TestLxdBackendExecAddEnvVar(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:     []string{"/bin/sh", "-c", "echo -n $FOO"},
 		WorkingDir:  "/",
@@ -378,7 +378,7 @@ func (f *wsOps) TestLxdBackendExecAddEnvVar(c *check.C) {
 func (f *wsOps) TestLxdBackendExecNoninteractive(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:    []string{"/bin/sh", "-c", "echo -n STDOUT; echo -n STDERR >&2; exit 42"},
 		WorkingDir: "/",
@@ -402,7 +402,7 @@ func (f *wsOps) TestLxdBackendExecNoninteractive(c *check.C) {
 func (f *wsOps) TestLxdBackendExecInteractive(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:     []string{"/bin/sh", "-c", "[[ -t 1 ]] && echo -n terminal"},
 		WorkingDir:  "/",
@@ -422,7 +422,7 @@ func (f *wsOps) TestLxdBackendExecInteractive(c *check.C) {
 func (f *wsOps) TestLxdBackendExecTimeout(c *check.C) {
 	// Setup
 	f.launchTestWorkspace(c, f.ctx, f.project.Path)
-	defer f.be.DeleteWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 	opts := &client.ExecOptions{
 		Command:    []string{"/bin/bash", "-c", "sleep 5"},
 		WorkingDir: "/",

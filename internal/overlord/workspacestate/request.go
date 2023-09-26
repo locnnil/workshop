@@ -2,6 +2,7 @@ package workspacestate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -491,23 +492,26 @@ type ExecMeta struct {
 }
 
 func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, ExecMeta, error) {
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		[]string{name},
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceReady || status == workspacebackend.WorkspacePending
+		})
+	if err != nil {
+		return nil, ExecMeta{}, fmt.Errorf("cannot exec: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, ExecMeta{}, fmt.Errorf("cannot exec: %q is in %s; must be ready or pending", invalid, strings.ToLower(status.String()))
+	}
+
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, ExecMeta{}, err
 	}
 	execArgs := *args
-
-	// check if all the workspaces are stopped
-	avail, _, err := w.CheckStatus(ctx, []string{name}, projectId,
-		func(status workspacebackend.WorkspaceState) bool {
-			return status == workspacebackend.WorkspaceReady || status == workspacebackend.WorkspacePending
-		})
-	if err != nil {
-		return nil, ExecMeta{}, err
-	}
-	if !avail {
-		return nil, ExecMeta{}, fmt.Errorf("%q is not in a ready or pending status", name)
-	}
 
 	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
 	wrkspc, err := w.backend.GetWorkspaceFs(ctx, name)
