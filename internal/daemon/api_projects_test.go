@@ -562,6 +562,7 @@ base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"remove"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"remove"}`),
 	}
 
 	requests := []*http.Request{}
@@ -573,6 +574,11 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:   ResponseTypeAsync,
 			Status: http.StatusAccepted,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot stop: \"ws\" is in pending; must be ready, stopped or error",
 		},
 	}
 
