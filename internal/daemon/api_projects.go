@@ -186,6 +186,8 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		return statusBadRequest("cannot %s: at least one workspace name must be provided", reqData.Action)
 	}
 
+	reqData.Names = strutil.Deduplicate(reqData.Names)
+
 	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
@@ -203,14 +205,13 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	switch reqData.Action {
 	case "launch":
 		change = st.NewChange("launch", summary)
-
-		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
+		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
 		}
 
-		for _, i := range taskset {
-			change.AddAll(i)
+		for _, tset := range taskset {
+			change.AddAll(tset)
 		}
 	case "refresh":
 		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
@@ -220,30 +221,13 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		}
 
 		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
-			// check if all the workspace are available for the operation
-			avail, ops, err := wsmgr.CheckStatus(r.Context(), reqData.Names, projectId,
-				func(status workspacebackend.WorkspaceState) bool { return status == workspacebackend.WorkspaceReady })
-			if err != nil {
-				return statusBadRequest("cannot %s: %v", reqData.Action, err)
-			}
-
-			if !avail {
-				return statusConflict("cannot %s: operation is already in progress for %s", reqData.Action, strutil.Quoted(ops))
-			}
-
-			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId)
+			change = st.NewChange("refresh", summary)
+			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
-
-			change = st.NewChange("refresh", summary)
-			for _, i := range taskset {
-				change.AddAll(i)
-			}
-
-			for _, name := range reqData.Names {
-				statecontext.StartOperation(st, name, projectId,
-					statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationRefresh, WaitOnError: refreshMode == statecontext.RefreshWaitOnError})
+			for _, tset := range taskset {
+				change.AddAll(tset)
 			}
 		}
 
@@ -255,75 +239,38 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 			}
 		}
 	case "start":
-		// check if all the workspaces are stopped
-		avail, ops, err := wsmgr.CheckStatus(r.Context(), reqData.Names, projectId,
-			func(status workspacebackend.WorkspaceState) bool { return status == workspacebackend.WorkspaceStopped })
-		if err != nil {
-			return statusBadRequest("cannot %s: %v", reqData.Action, err)
-		}
-
-		if !avail {
-			return statusConflict("cannot %s: %s must be stopped", reqData.Action, strutil.Quoted(ops))
-		}
-
-		taskset, err := wsmgr.StartMany(r.Context(), reqData.Names, projectId)
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-
 		change = st.NewChange("start", summary)
-		change.AddAll(taskset)
-
-		for _, name := range reqData.Names {
-			statecontext.StartOperation(st, name, projectId,
-				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationStart})
+		taskset, err := wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
+		if err != nil {
+			return statusBadRequest(err.Error())
 		}
+
+		change.AddAll(taskset)
 	case "stop":
-		// check if all the workspaces are started or stopped
-		avail, ops, err := wsmgr.CheckStatus(r.Context(), reqData.Names, projectId,
-			func(status workspacebackend.WorkspaceState) bool {
-				return status == workspacebackend.WorkspaceStopped || status == workspacebackend.WorkspaceReady
-			})
-		if err != nil {
-			return statusBadRequest("cannot %s: %v", reqData.Action, err)
-		}
-
-		if !avail {
-			return statusConflict("cannot %s: %s must be ready", reqData.Action, strutil.Quoted(ops))
-		}
-
-		taskset, err := wsmgr.StopMany(r.Context(), reqData.Names, projectId)
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-
 		change = st.NewChange("stop", summary)
-		change.AddAll(taskset)
-
-		for _, name := range reqData.Names {
-			statecontext.StartOperation(st, name, projectId,
-				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationStop})
-		}
-	case "remove":
-		taskset, err := wsmgr.RemoveMany(r.Context(), reqData.Names, projectId)
+		taskset, err := wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
 		}
 
-		change = st.NewChange("remove", summary)
 		change.AddAll(taskset)
-
-		for _, name := range reqData.Names {
-			statecontext.StartOperation(st, name, projectId,
-				statecontext.Operation{ChangeId: change.ID(), Operation: statecontext.OperationRemove})
+	case "remove":
+		change = st.NewChange("remove", summary)
+		taskset, err := wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
+		if err != nil {
+			return statusBadRequest(err.Error())
 		}
-
+		change.AddAll(taskset)
 	default:
 		return statusBadRequest("unknown action")
 	}
 
 	change.Set("user", user)
 	change.Set("project-id", projectId)
+
+	if len(change.Tasks()) == 0 {
+		change.SetStatus(state.DoneStatus)
+	}
 
 	ensureStateSoon(st, 0)
 

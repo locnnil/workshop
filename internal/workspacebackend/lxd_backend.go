@@ -48,6 +48,8 @@ var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	UserLookup           = user.Lookup
 	NewProjectId         = allocateProjectId
+
+	ErrWorkspaceNotFound = errors.New("workspace not found")
 )
 
 func New() WorkspaceBackend {
@@ -752,6 +754,9 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace,
 
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil, ErrWorkspaceNotFound
+		}
 		return nil, err
 	}
 

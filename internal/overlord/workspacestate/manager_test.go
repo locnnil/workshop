@@ -141,7 +141,7 @@ sdks:
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate
@@ -169,7 +169,7 @@ base: ubuntu@20.04
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate
@@ -200,7 +200,7 @@ sdks:
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId)
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate

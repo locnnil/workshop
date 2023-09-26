@@ -193,10 +193,13 @@ base: ubuntu@20.04`), 0644)
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
+	err = s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
 	buffers := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["ws1", "ws1", "ws1"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["ws1", "ws"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["ws"],"action":"launch"}`),
 	}
 
 	requests := []*http.Request{}
@@ -215,8 +218,9 @@ base: ubuntu@20.04`), 0644)
 			Message: "cannot launch: at least one workspace name must be provided",
 		},
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeError,
+			Message: "cannot launch: \"ws\" already exists",
+			Status:  http.StatusBadRequest,
 		},
 	}
 
@@ -246,7 +250,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	// all successful responses must initiate the ensure call
-	c.Assert(soon, check.Equals, 2)
+	c.Assert(soon, check.Equals, 1)
 }
 
 func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
@@ -317,8 +321,8 @@ base: ubuntu@20.04`), 0644)
 		},
 		{
 			Type:    ResponseTypeError,
-			Status:  http.StatusConflict,
-			Message: "cannot refresh: operation is already in progress for \"ws\"",
+			Status:  http.StatusBadRequest,
+			Message: "cannot refresh: \"ws\" is in pending; must be ready",
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -426,13 +430,13 @@ base: ubuntu@20.04`), 0644)
 		},
 		{
 			Type:    ResponseTypeError,
-			Status:  http.StatusConflict,
-			Message: "cannot start: \"ws\" must be stopped",
+			Status:  http.StatusBadRequest,
+			Message: "cannot start: \"ws\" is in pending; must be stopped",
 		},
 		{
 			Type:    ResponseTypeError,
-			Status:  http.StatusConflict,
-			Message: "cannot refresh: operation is already in progress for \"ws\"",
+			Status:  http.StatusBadRequest,
+			Message: "cannot refresh: \"ws\" is in pending; must be ready",
 		},
 	}
 
@@ -502,8 +506,8 @@ base: ubuntu@20.04`), 0644)
 		},
 		{
 			Type:    ResponseTypeError,
-			Status:  http.StatusConflict,
-			Message: "cannot stop: \"ws\" must be ready",
+			Status:  http.StatusBadRequest,
+			Message: "cannot stop: \"ws\" is in pending; must be stopped or ready",
 		},
 		{
 			Type:   ResponseTypeAsync,

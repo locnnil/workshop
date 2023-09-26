@@ -85,16 +85,16 @@ base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
 
-	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
+	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
+
+	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId, "1")
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkspaceProject("ws", s.project, t1.Tasks()...)
 	chg.Set("user", "testuser")
 	chg.AddAll(t1)
-
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
-	c.Check(err, check.IsNil)
 
 	oldInterval := workspacestate.StopLogInterval
 	workspacestate.StopLogInterval = 100 * time.Millisecond

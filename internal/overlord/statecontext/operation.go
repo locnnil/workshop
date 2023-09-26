@@ -74,8 +74,8 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 }
 
 func StartOperation(st *state.State, name, projectId string, op Operation) error {
-	if op := OperationInProgress(st, name, projectId); op != nil {
-		return fmt.Errorf("cannot start %s: has another operation in progress", op.Operation)
+	if cur := OperationInProgress(st, name, projectId); cur != nil {
+		return fmt.Errorf("cannot begin %s: %s operation is in progress", op.Operation, cur.Operation)
 	}
 	var refresh Operations = make(Operations)
 	st.Get(OpsInProgressKey, &refresh)
@@ -134,7 +134,7 @@ func StopOperation(st *state.State, name, projectId, opname string) error {
 	opkey := workspacebackend.InstanceName(name, projectId)
 	op, ok := ops[opkey]
 	if !ok || opname != op.Operation {
-		return fmt.Errorf("cannot stop: no %s in progress", opname)
+		return fmt.Errorf("cannot finish: no %s in progress", opname)
 	}
 	delete(ops, opkey)
 	st.Set(OpsInProgressKey, ops)
