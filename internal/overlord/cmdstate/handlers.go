@@ -260,11 +260,11 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 		},
 	})
 
-	if err != nil {
-		return err
+	// if the command was initiated successfully, wait for the execution
+	// otherwise, move directly to the clean up, report and exit
+	if err == nil {
+		err = exectx.WaitExecution(ctx)
 	}
-
-	err = exectx.WaitExecution(ctx)
 
 	// Close the control channel, if connected.
 	controlConn := e.getWebsocket(wsControl)

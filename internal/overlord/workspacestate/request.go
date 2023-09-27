@@ -529,7 +529,7 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 		return nil, ExecMeta{}, fmt.Errorf("%s is not a directory", args.WorkDir)
 	}
 
-	exec := w.state.NewTask("exec", fmt.Sprintf("exec command %q", args.Command[0]))
+	exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
 
 	exec.Set("exec-setup", &execArgs)
 	exec.Set("project", *project)
