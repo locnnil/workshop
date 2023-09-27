@@ -48,7 +48,6 @@ func (s *ManagerSuite) TestAddHandlers(c *check.C) {
 		"stash-workspace",
 		"create-state-storage",
 		"remove-state-storage",
-		"exec",
 	})
 }
 

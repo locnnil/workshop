@@ -143,6 +143,12 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		}
 	}
 
+	// TODO: the lack of separate output in LXD exec when executing a command in
+	// an interactive mode begets quirky things. Consider this: workspace exec
+	// empty -- ls -R / 2>/dev/null Given that the command will be executed in
+	// the interactive mode (stdin, stdout both point to the terminal), even if
+	// ls produces access errors, those will not be filtered out to null as LXD
+	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
 		Command:     command,
 		Environment: env,
@@ -156,16 +162,6 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		Stdin:       Stdin,
 		Stdout:      Stdout,
 		Stderr:      Stderr,
-	}
-
-	// If stdout and stderr both refer to the same file or device (e.g.,
-	// "/dev/pts/1"), combine stderr into stdout on the server.
-	stdoutPath, err := os.Readlink("/proc/self/fd/1")
-	if err == nil {
-		stderrPath, err := os.Readlink("/proc/self/fd/2")
-		if err == nil && stdoutPath == stderrPath {
-			opts.Stderr = nil // opts.Stderr nil uses "combine stderr" mode
-		}
 	}
 
 	// Start the command.

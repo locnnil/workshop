@@ -28,6 +28,7 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workspace/internal/overlord/cmdstate"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
 	"github.com/canonical/workspace/internal/overlord/patch"
 	"github.com/canonical/workspace/internal/overlord/restart"
@@ -73,6 +74,7 @@ type Overlord struct {
 	sdk       *sdkstate.SdkManager
 	workspace *workspace.WorkspaceManager
 	hook      *hookstate.HookManager
+	command   *cmdstate.CommandManager
 	runner    *state.TaskRunner
 
 	startOfOperationTime time.Time
@@ -148,6 +150,9 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 
 	o.hook = hookstate.NewHookManager(o.runner, o.workspaceBackend)
 	o.addManager(o.hook)
+
+	o.command = cmdstate.NewManager(o.runner, o.workspaceBackend)
+	o.addManager(o.command)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
@@ -453,6 +458,10 @@ func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
 
 func (o *Overlord) WorkspaceManager() *workspace.WorkspaceManager {
 	return o.workspace
+}
+
+func (o *Overlord) CommandManager() *cmdstate.CommandManager {
+	return o.command
 }
 
 // Fake creates an Overlord without any managers and with a backend

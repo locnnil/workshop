@@ -1,24 +1,29 @@
 package daemon
 
 import (
+	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workspace/internal/overlord/state"
 )
 
 const execReadyTimeout = 5 * time.Second
+
+type websocketConnectFunc func(r *http.Request, w http.ResponseWriter, task *state.Task, websocketID string) error
+
+type websocketResponse struct {
+	task        *state.Task
+	websocketID string
+	connect     websocketConnectFunc
+}
 
 func v1GetTaskWebsocket(c *Command, req *http.Request, _ *userState) Response {
 	vars := muxVars(req)
 	taskID := vars["task-id"]
 	websocketId := vars["websocket-id"]
-
-	err := c.d.overlord.WorkspaceManager().WaitExecReady(req.Context(), taskID, execReadyTimeout)
-	if err != nil {
-		logger.Debugf("Websocket: exec operation is not ready: %v", err)
-		return statusBadRequest("cannot exec: %v", err)
-	}
 
 	st := c.d.overlord.State()
 	st.Lock()
@@ -35,19 +40,37 @@ func v1GetTaskWebsocket(c *Command, req *http.Request, _ *userState) Response {
 		return statusBadRequest("%q tasks do not have websockets", task.Kind())
 	}
 
-	var location string
-	err = task.Get(websocketId, &location)
-	if err != nil {
-		return statusNotFound("cannot find %q for the command", websocketId)
+	cmdmgr := c.d.overlord.CommandManager()
+
+	return websocketResponse{
+		task:        task,
+		websocketID: websocketId,
+		connect:     cmdmgr.Connect,
 	}
-
-	return websocketRedirectResponse{location: location}
 }
 
-type websocketRedirectResponse struct {
-	location string
+func (wr websocketResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := wr.connect(r, w, wr.task, wr.websocketID)
+	if errors.Is(err, os.ErrNotExist) {
+		logger.Noticef("Websocket %s: cannot find websocket with id %q", wr.task.ID(), wr.websocketID)
+		rsp := statusNotFound("cannot find websocket with id %q", wr.websocketID)
+		rsp.ServeHTTP(w, r)
+		return
+	}
+	if err != nil {
+		logger.Noticef("Websocket %s: cannot connect to websocket %q: %v", wr.task.ID(), wr.websocketID, err)
+		rsp := statusInternalError("cannot connect to websocket %q: %v", wr.websocketID, err)
+		rsp.ServeHTTP(w, r)
+		return
+	}
+	// In the success case, Connect takes over the connection and upgrades to
+	// the websocket protocol.
 }
 
-func (wr websocketRedirectResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, wr.location, http.StatusTemporaryRedirect)
-}
+// type websocketRedirectResponse struct {
+// 	location string
+// }
+
+// func (wr websocketRedirectResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// 	http.Redirect(w, r, wr.location, http.StatusTemporaryRedirect)
+// }

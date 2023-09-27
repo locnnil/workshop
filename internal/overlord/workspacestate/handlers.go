@@ -2,7 +2,6 @@ package workspacestate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -196,75 +195,4 @@ func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tom
 	defer cancel()
 
 	return m.backend.DeleteStateStorage(ctx, workspace)
-}
-
-func (m *WorkspaceManager) doExecCommand(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workspace, err := UserProjectWorkspace(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, prj)
-	defer cancel()
-
-	var setup workspacebackend.ExecArgs
-	st := task.State()
-	st.Lock()
-	err = task.Get("exec-setup", &setup)
-	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("cannot get exec setup object for task %q: %v", task.ID(), err)
-	}
-
-	exectx, err := m.backend.Exec(ctx, workspace, &workspacebackend.Execution{ExecArgs: setup})
-	if err != nil {
-		return err
-	}
-	st.Lock()
-	task.Set("control", exectx.DescriptorWebsockets["control"])
-	task.Set("stdio", exectx.DescriptorWebsockets["stdio"])
-	if !setup.Interactive {
-		task.Set("stdout", exectx.DescriptorWebsockets["stdout"])
-		task.Set("stderr", exectx.DescriptorWebsockets["stderr"])
-	}
-	st.Unlock()
-
-	m.execChannelsLock.Lock()
-	if execCh, ok := m.execChannels[task.ID()]; ok {
-		close(execCh)
-		delete(m.execChannels, task.ID())
-	}
-	m.execChannelsLock.Unlock()
-
-	if setup.Timeout != 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, setup.Timeout)
-		defer cancel()
-	}
-
-	err = exectx.WaitExecution(ctx)
-	// only set the error exit status in the task's metadata if the error
-	// belongs to the command execution (e.g. not an LXD error)
-	if err == nil {
-		setExitCode(task, 0)
-	} else {
-		if execerr, ok := err.(*workspacebackend.ErrExec); ok {
-			setExitCode(task, execerr.Status)
-			return nil
-		}
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("timed out after %v: %w", setup.Timeout, ctx.Err())
-		}
-	}
-
-	return err
-}
-
-func setExitCode(task *state.Task, exitCode int) {
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-	task.Set("api-data", map[string]interface{}{
-		"exit-code": exitCode,
-	})
 }

@@ -49,6 +49,9 @@ execute: |
   workspace_exec exec --project $project --timeout 1s ws -- bash -c 'sleep 5' || true
   workspace_exec tasks 8 | MATCH ".*timed out after 1s.*"
 
+  echo "Check stderr (workspace exec redirects stderr to stdout for MATCH to work)"
+  workspace_exec exec --project $project -I ws -- bash -c '>&2 echo -n stderr' | MATCH stderr
+
   echo "Check stopped workspace"
   workspace_exec stop --project $project ws
   workspace_exec exec --project $project ws pwd | MATCH '.*"ws" is in stopped; must be ready or pending$'

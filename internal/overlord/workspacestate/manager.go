@@ -2,8 +2,6 @@ package workspacestate
 
 import (
 	"context"
-	"sync"
-	"time"
 
 	"github.com/canonical/workspace/internal/overlord/state"
 	. "github.com/canonical/workspace/internal/overlord/statecontext"
@@ -13,16 +11,12 @@ import (
 type WorkspaceManager struct {
 	backend workspacebackend.WorkspaceBackend
 	state   *state.State
-
-	execChannelsLock sync.Mutex
-	execChannels     map[string]chan bool
 }
 
 func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *WorkspaceManager {
 	manager := &WorkspaceManager{
-		backend:      server,
-		state:        st,
-		execChannels: make(map[string]chan bool),
+		backend: server,
+		state:   st,
 	}
 
 	/* Workspace management */
@@ -35,7 +29,6 @@ func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server works
 	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
-	runner.AddHandler("exec", OnDo(manager.doExecCommand), nil)
 
 	return manager
 }
@@ -129,24 +122,5 @@ func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) worksp
 			return workspacebackend.WorkspaceError
 		}
 		return workspacebackend.WorkspaceStopped
-	}
-}
-
-func (w *WorkspaceManager) WaitExecReady(ctx context.Context, execTaskId string, timeout time.Duration) error {
-	w.execChannelsLock.Lock()
-	execCh := w.execChannels[execTaskId]
-	w.execChannelsLock.Unlock()
-	if execCh == nil {
-		return nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	select {
-	case <-execCh:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
 	}
 }

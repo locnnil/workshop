@@ -166,28 +166,15 @@ func New(config *Config) (*Client, error) {
 	}
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
-		wstransport := &http.Transport{Dial: unixDialer(config.LxdSocket), DisableKeepAlives: config.DisableKeepAlive}
-		return getWebsocket(wstransport, url, config)
+		return getWebsocket(transport, url, config)
 	}
 
 	return client, nil
 }
 
 func (client *Client) getTaskWebsocket(taskID, websocketID string) (clientWebsocket, error) {
-	url := fmt.Sprintf("/v1/tasks/%s/websocket/%s", taskID, websocketID)
-	rsp, err := client.raw(context.Background(), "GET", url, nil, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if rsp.StatusCode == http.StatusTemporaryRedirect {
-		location, err := rsp.Location()
-		if err != nil {
-			return nil, err
-		}
-		return client.getWebsocket(location.String())
-	}
-	return nil, fmt.Errorf("cannot get task websocket: unexpected server response")
+	url := fmt.Sprintf("ws://localhost/v1/tasks/%s/websocket/%s", taskID, websocketID)
+	return client.getWebsocket(url)
 }
 
 func getWebsocket(transport *http.Transport, url string, config *Config) (clientWebsocket, error) {
