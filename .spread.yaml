@@ -74,7 +74,7 @@ backends:
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi
-      #multipass delete --purge "$instance_name"
+      multipass delete --purge "$instance_name"
     systems:
       - ubuntu-22.04-64:
           workers: 1
