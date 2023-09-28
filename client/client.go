@@ -97,9 +97,6 @@ type Config struct {
 	// Socket is the path to the unix socket to use.
 	Socket string
 
-	// Socket is the path to the LXD unit socket to use for exec calls.
-	LxdSocket string
-
 	// DisableKeepAlive indicates that the connections should not be kept
 	// alive for later reuse (the default is to keep them alive).
 	DisableKeepAlive bool

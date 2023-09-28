@@ -55,8 +55,7 @@ func (f *wsOps) SetUpTest(c *check.C) {
 
 	c.Check(err, check.IsNil)
 	f.client, err = client.New(&client.Config{
-		Socket:    socketPath,
-		LxdSocket: workspacebackend.LxdSock,
+		Socket: socketPath,
 	})
 	c.Assert(err, check.IsNil)
 

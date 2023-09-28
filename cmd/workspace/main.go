@@ -38,8 +38,7 @@ var Project string
 // ClientConfig is the configuration of the Client used by all commands.
 var ClientConfig = client.Config{
 	// we need the powerful snapd socket
-	Socket:    dirs.WorkspaceSocket,
-	LxdSocket: "/var/snap/lxd/common/lxd/unix.socket",
+	Socket: dirs.WorkspaceSocket,
 }
 
 func main() {
