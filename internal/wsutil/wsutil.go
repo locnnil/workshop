@@ -16,10 +16,10 @@ package wsutil
 
 import (
 	"io"
-
-	"github.com/gorilla/websocket"
+	"slices"
 
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/gorilla/websocket"
 )
 
 // MessageReader is an interface that wraps websocket message reading.
@@ -104,14 +104,12 @@ func recvLoop(w io.Writer, conn MessageReader) {
 				return
 			}
 
-			switch string(payload) {
-			case "":
+			if slices.Compare(payload, endCommandJSON) == 0 {
 				logger.Debugf(`Got message barrier (empty command)`)
 				return
-			default:
+			} else {
 				logger.Noticef("Invalid I/O command %q", string(payload))
 			}
-
 		case websocket.BinaryMessage:
 			// A BINARY message is actual I/O data.
 			_, err := io.CopyBuffer(w, r, buf)

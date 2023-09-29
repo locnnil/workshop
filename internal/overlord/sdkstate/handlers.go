@@ -136,7 +136,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			},
 			WorkDir: "/",
 		},
-		ExecControls: &workspacebackend.ExecControls{
+		ExecControls: workspacebackend.ExecControls{
 			Stdin:  nil,
 			Stdout: nil,
 			Stderr: out,

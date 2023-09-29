@@ -244,7 +244,7 @@ func (f *wsOps) TestLxdBackendStartWorkspace(c *check.C) {
 			},
 			WorkDir: "/",
 		},
-		ExecControls: &workspacebackend.ExecControls{
+		ExecControls: workspacebackend.ExecControls{
 			Stdin:  nil,
 			Stdout: out,
 			Stderr: out,

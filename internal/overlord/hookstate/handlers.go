@@ -122,7 +122,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 			Environment: hook.Environment,
 			WorkDir:     sdk.SdkHooksDir(hook.Sdk.Name),
 		},
-		ExecControls: &workspacebackend.ExecControls{
+		ExecControls: workspacebackend.ExecControls{
 			Stdin:  nil,
 			Stdout: out,
 			Stderr: out,

@@ -163,7 +163,7 @@ func New(config *Config) (*Client, error) {
 	}
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
-		return getWebsocket(transport, url, config)
+		return getWebsocket(transport, url)
 	}
 
 	return client, nil
@@ -174,7 +174,7 @@ func (client *Client) getTaskWebsocket(taskID, websocketID string) (clientWebsoc
 	return client.getWebsocket(url)
 }
 
-func getWebsocket(transport *http.Transport, url string, config *Config) (clientWebsocket, error) {
+func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error) {
 	dialer := websocket.Dialer{
 		NetDial:          transport.Dial,
 		Proxy:            transport.Proxy,

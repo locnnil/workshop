@@ -207,6 +207,9 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 
 		// Try to close websocket connections gracefully, but ignore errors.
 		_ = stdioConn.Close()
+		if stdoutConn != nil {
+			stdoutConn.Close()
+		}
 		if stderrConn != nil {
 			_ = stderrConn.Close()
 		}

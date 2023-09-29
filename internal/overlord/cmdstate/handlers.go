@@ -250,7 +250,7 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	// combines stderr and stdout in the interactive mode.
 	exectx, err := backend.Exec(ctx, e.workspace, &workspacebackend.Execution{
 		ExecArgs: *e.execArgs,
-		ExecControls: &workspacebackend.ExecControls{
+		ExecControls: workspacebackend.ExecControls{
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
 			Stderr: stderrWriter,

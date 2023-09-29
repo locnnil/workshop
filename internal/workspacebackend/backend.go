@@ -120,22 +120,11 @@ type WorkspaceBackend interface {
 	// Execute a command in a given workspace. The client should differentiate
 	// between the errors that occured during the execution but not related to
 	// the command (i.e. the workspace does not exist) and the errors that were
-	// caused by the command itself (e.g. return code != 0). If the latter, an
+	// produced by the command itself (i.e. return code != 0). If the latter, an
 	// instance of ErrExec with the status code will be returned.
 
-	// If args.ExecControls is nil, the returned ExecContext.WaitExecution will
-	// not initiate the command execution, it will only observe the execution.
-	// The client shall initiate execution by connecting to the command's file
-	// descriptors websockets provided in ExecContext.DescriptorWebsockets
-	// (control and stdio if interactive and control, stdio, stdout, stderr if
-	// non-interactive).
-
-	// If args.ExecControls is not nil, the returned ExecContext.WaitExecution
-	// will initite the command execution and redirect its IO using
-	// args.ExecControls. The ExecContext.DescriptorWebsockets will remain empty
-	// in this case.
-
-	// In both cases, ExecContext.Environment will contain full (actual)
-	// command's execution environment.
+	// The callback ExecContext.WaitExecution will initite the command execution
+	// and redirect its IO using args.ExecControls. ExecContext.Environment will
+	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
 }

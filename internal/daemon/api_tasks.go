@@ -4,13 +4,10 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord/state"
 )
-
-const execReadyTimeout = 5 * time.Second
 
 type websocketConnectFunc func(r *http.Request, w http.ResponseWriter, task *state.Task, websocketID string) error
 
@@ -66,11 +63,3 @@ func (wr websocketResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// In the success case, Connect takes over the connection and upgrades to
 	// the websocket protocol.
 }
-
-// type websocketRedirectResponse struct {
-// 	location string
-// }
-
-// func (wr websocketRedirectResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	http.Redirect(w, r, wr.location, http.StatusTemporaryRedirect)
-// }

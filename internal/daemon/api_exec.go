@@ -109,7 +109,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	wsmgr := c.d.overlord.WorkspaceManager()
-	task, metadata, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs)
+	task, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
@@ -123,9 +123,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 	ensureStateSoon(st, 0)
 
 	result := map[string]interface{}{
-		"environment": metadata.Environment,
-		"task-id":     task.ID(),
-		"working-dir": metadata.WorkingDir,
+		"task-id": task.ID(),
 	}
 
 	return AsyncResponse(result, change.ID())
