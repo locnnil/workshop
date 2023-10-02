@@ -16,7 +16,8 @@ package wsutil
 
 import (
 	"io"
-	"slices"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/gorilla/websocket"
