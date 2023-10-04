@@ -7,7 +7,7 @@ Changes, tasks
 
 A *change* is the core concept of the workspace state management system.
 Any long-running or invasive operation
-(e.g. :command:`launch`)
+(e.g. :ref:`launch <ref_workspace_launch>`)
 that changes the state of a workspace
 is planned and applied as a change,
 which comprises specific tasks

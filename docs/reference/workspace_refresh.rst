@@ -1,4 +1,4 @@
-.. _workspace_refresh:
+.. _ref_workspace_refresh:
 
 workspace refresh
 =================
@@ -33,7 +33,8 @@ Notes
 -----
 
 - The workspace must be *Ready* to be refreshed
-- To construct a newly defined workspace, use :ref:`workspace_launch` instead
+- To construct a newly defined workspace,
+  use :ref:`ref_workspace_launch` instead
 - Throughout the refresh, all affected workspaces remain *Pending*
 - If the refresh removes an SDK from the workspace, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
@@ -78,4 +79,4 @@ Explanation:
 
 Reference:
 
-- :ref:`workspace launch (command) <workspace_launch>`
+- :ref:`workspace launch (command) <ref_workspace_launch>`

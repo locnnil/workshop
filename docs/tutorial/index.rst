@@ -161,7 +161,7 @@ Launch
 ~~~~~~
 
 To prepare a workspace for action,
-you *launch* it:
+you :ref:`launch <ref_workspace_launch>` it:
 
 .. code:: shell
 
@@ -231,7 +231,7 @@ If the
 listed in the
 :ref:`workspace definition <exp_workspace_def>`
 are updated,
-*refresh* the workspace to apply the changes:
+:ref:`refresh <ref_workspace_refresh>` the workspace to apply the changes:
 
 .. code:: shell
 
