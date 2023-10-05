@@ -28,6 +28,7 @@ the operation is aborted and no workspaces are started.
 Notes:
 - If a workspace is already started or wasn't yet launched, an error occurs
 - When interrupted, the command attempts to gracefully revert its actions
+- To stop a started workspace, use 'workspace stop'
 `,
 		RunE:  c.Run,
 	}

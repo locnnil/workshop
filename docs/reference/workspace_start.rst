@@ -27,6 +27,7 @@ Notes
 
 - If a workspace is already started or wasn't yet launched, an error occurs
 - When interrupted, the command attempts to gracefully revert its actions
+- To stop a started workspace, use 'workspace stop'
 
 
 Global options
@@ -52,3 +53,4 @@ Explanation:
 Reference:
 
 - :ref:`workspace launch (command) <ref_workspace_launch>`
+- :ref:`workspace stop (command) <ref_workspace_stop>`

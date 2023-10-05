@@ -13,3 +13,4 @@ such as :option:`!--help` or :option:`!-h`:
    workspace_list
    workspace_refresh
    workspace_start
+   workspace_stop
