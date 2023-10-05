@@ -15,13 +15,12 @@
 package wsutil
 
 import (
-	"encoding/json"
 	"io"
-	"io/ioutil"
 
-	"github.com/gorilla/websocket"
+	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workspace/internal/logger"
+	"github.com/gorilla/websocket"
 )
 
 // MessageReader is an interface that wraps websocket message reading.
@@ -41,7 +40,7 @@ type MessageReadWriter interface {
 	MessageWriter
 }
 
-var endCommandJSON = []byte(`{"command":"end"}`)
+var endCommandJSON = []byte("")
 
 func WebsocketSendStream(conn MessageWriter, r io.Reader, bufferSize int) chan bool {
 	ch := make(chan bool)
@@ -100,27 +99,18 @@ func recvLoop(w io.Writer, conn MessageReader) {
 
 		case websocket.TextMessage:
 			// A TEXT message is an out-of-band "command".
-			payload, err := ioutil.ReadAll(r)
+			payload, err := io.ReadAll(r)
 			if err != nil {
 				logger.Debugf("Cannot read from message reader: %v", err)
 				return
 			}
-			var command struct {
-				Command string `json:"command"`
-			}
-			err = json.Unmarshal(payload, &command)
-			if err != nil {
-				logger.Noticef("Cannot decode I/O command: %v", err)
-				continue
-			}
-			switch command.Command {
-			case "end":
-				logger.Debugf(`Got message barrier ("end" command)`)
-				return
-			default:
-				logger.Noticef("Invalid I/O command %q", command.Command)
-			}
 
+			if slices.Compare(payload, endCommandJSON) == 0 {
+				logger.Debugf(`Got message barrier (empty command)`)
+				return
+			} else {
+				logger.Noticef("Invalid I/O command %q", string(payload))
+			}
 		case websocket.BinaryMessage:
 			// A BINARY message is actual I/O data.
 			_, err := io.CopyBuffer(w, r, buf)

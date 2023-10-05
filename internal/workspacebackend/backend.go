@@ -33,7 +33,7 @@ type ErrExec struct {
 }
 
 func (e *ErrExec) Error() string {
-	return fmt.Sprintf("command failed with an error code (%d)", e.Status)
+	return fmt.Sprintf("command exit code %d", e.Status)
 }
 
 type WorkspaceDevice struct {
@@ -117,10 +117,14 @@ type WorkspaceBackend interface {
 	// Returns a list of workspaces for the project in context.
 	GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error)
 
-	// Execute a command in a given workspace. The implementation shall
-	// differentiate between the errors that occured during the execution but
-	// not related to the command (i.e. the workspace does not exist) and the
-	// errors that were caused by the command itself (e.g. != 0 return code). If
-	// the latter, an instance of ErrExec with the status code must be returned.
-	Exec(ctx context.Context, name string, args *ExecArgs) error
+	// Execute a command in a given workspace. The client should differentiate
+	// between the errors that occured during the execution but not related to
+	// the command (i.e. the workspace does not exist) and the errors that were
+	// produced by the command itself (i.e. return code != 0). If the latter, an
+	// instance of ErrExec with the status code will be returned.
+
+	// The callback ExecContext.WaitExecution will initite the command execution
+	// and redirect its IO using args.ExecControls. ExecContext.Environment will
+	// contain full (actual)
+	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
 }

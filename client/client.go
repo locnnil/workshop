@@ -31,6 +31,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/wsutil"
 )
 
@@ -154,7 +155,12 @@ func New(config *Config) (*Client, error) {
 		client = &Client{baseURL: *baseURL}
 	}
 
-	client.doer = &http.Client{Transport: transport}
+	client.doer = &http.Client{
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
 		return getWebsocket(transport, url)
@@ -175,7 +181,8 @@ func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error
 		TLSClientConfig:  transport.TLSClientConfig,
 		HandshakeTimeout: 5 * time.Second,
 	}
-	conn, _, err := dialer.Dial(url, nil)
+	conn, resp, err := dialer.Dial(url, nil)
+	logger.Debugf("response: %v", resp)
 	return conn, err
 }
 

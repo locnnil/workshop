@@ -5,3 +5,4 @@ workspace
 .workspace.lock
 __debug_bin*
 *.snap
+cover.out

@@ -13,7 +13,7 @@ import (
 
 /* Fake backend implementation for tests */
 
-type ExecFunc func(ctx context.Context, name string, args *ExecArgs) error
+type ExecFunc func(ctx context.Context, name string, args *Execution) (ExecContext, error)
 
 type FakeWorkspace struct {
 	*Workspace
@@ -23,7 +23,7 @@ type FakeWorkspace struct {
 
 type ExecCall struct {
 	Name string
-	Args *ExecArgs
+	Args *Execution
 }
 
 type FakeWorkspaceBackend struct {
@@ -241,13 +241,15 @@ func (s *FakeWorkspaceBackend) GetWorkspaceFs(ctx context.Context, name string) 
 	return s.Workspaces[projectId][name].WorkspaceFilesystem, nil
 }
 
-func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
+func (f *FakeWorkspaceBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
 	return f.DoExec(ctx, name, args)
 }
 
-func DoExecDefault(ctx context.Context, name string, args *ExecArgs) error {
-	return nil
+func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecContext, error) {
+	return ExecContext{
+		WaitExecution: func(ctx context.Context) error { return nil },
+	}, nil
 }
 
 func (s *FakeWorkspaceBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {

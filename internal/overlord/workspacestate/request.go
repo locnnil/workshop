@@ -486,6 +486,56 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 	return taskset, nil
 }
 
+type ExecMeta struct {
+	Environment map[string]string
+	WorkingDir  string
+}
+
+func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workspacebackend.ExecArgs) (*state.Task, error) {
+	invalid, status, err := w.CheckStatus(
+		ctx,
+		[]string{name},
+		projectId,
+		func(status workspacebackend.WorkspaceState) bool {
+			return status == workspacebackend.WorkspaceReady || status == workspacebackend.WorkspacePending
+		})
+	if err != nil {
+		return nil, fmt.Errorf("cannot exec: %w", err)
+	}
+
+	if len(invalid) > 0 {
+		return nil, fmt.Errorf("cannot exec: %q is in %s; must be ready or pending", invalid, strings.ToLower(status.String()))
+	}
+
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, project.ProjectId)
+	wrkspc, err := w.backend.GetWorkspaceFs(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	defer wrkspc.Close()
+
+	info, err := wrkspc.Stat(args.WorkDir)
+	if err != nil {
+		return nil, fmt.Errorf("%s does not exist", args.WorkDir)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", args.WorkDir)
+	}
+
+	exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
+
+	exec.Set("exec-setup", args)
+	exec.Set("project", project)
+	exec.Set("workspace", name)
+
+	return exec, nil
+}
+
 func (w *WorkspaceManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	invalid, status, err := w.CheckStatus(
 		ctx,

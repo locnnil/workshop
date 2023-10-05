@@ -57,7 +57,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil
-	}, &LookupUsername)
+	}, &workspacebackend.LookupUsername)
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)

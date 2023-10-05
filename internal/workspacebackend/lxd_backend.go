@@ -13,9 +13,11 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/osutil"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
@@ -25,14 +27,34 @@ import (
 )
 
 type ExecArgs struct {
-	User        string
 	Command     []string
+	UserId      int
+	GroupId     int
 	WorkDir     string
+	Timeout     time.Duration
 	Environment map[string]string
 	Interactive bool
-	Stdin       io.ReadCloser
-	Stdout      io.WriteCloser
-	Stderr      io.WriteCloser
+	Terminal    bool
+	SplitStderr bool
+	Width       int
+	Height      int
+}
+
+type ExecControls struct {
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+	Control func(conn *websocket.Conn)
+}
+
+type Execution struct {
+	ExecArgs
+	ExecControls
+}
+
+type ExecContext struct {
+	Environment   map[string]string
+	WaitExecution func(ctx context.Context) error
 }
 
 type LxdBackend struct {
@@ -40,13 +62,15 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	// path used in workspace to mount the project directory
+	WorkspaceProjectPath = "/project"
 	// name prefix for the workspaces that were made unavailable
 	StashNamePrefix = "stash-"
 )
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
-	UserLookup           = user.Lookup
+	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
 
 	ErrWorkspaceNotFound = errors.New("workspace not found")
@@ -321,7 +345,7 @@ func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx co
 	for _, i := range workspaces {
 		err = s.AddWorkspaceDevice(ctx, WorkspaceName(i.Name), WorkspaceDevice{
 			Name:       ProjectPathDevice,
-			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": "/project"},
+			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkspaceProjectPath},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot update workspace \"%v\" project directory", i.Name)
@@ -406,22 +430,36 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 		if err != nil {
 			return "", err
 		}
+		defer out.Close()
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
-		args := ExecArgs{User: "root",
-			Command: []string{"bash", "-c",
-				"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-			WorkDir: "/",
-			Stdin:   nil,
-			Stdout:  out,
-			Stderr:  out}
+		args := Execution{
+			ExecArgs: ExecArgs{
+				UserId:  0,
+				GroupId: 0,
+				Command: []string{"bash", "-c",
+					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+				WorkDir: "/",
+			},
+			ExecControls: ExecControls{
+				Stdin:  nil,
+				Stdout: out,
+				Stderr: out,
+			},
+		}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		err = s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
-		if err != nil {
-			outbuf, _ := afero.ReadFile(memFs, out.Name())
-			logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, outbuf)
+		meta, err := s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
+		if err == nil {
+			err = meta.WaitExecution(ctx)
+			if err != nil {
+				outbuf, _ := afero.ReadFile(memFs, out.Name())
+				logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, string(outbuf))
+				continue
+			}
+		} else {
+			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
 			continue
 		}
 
@@ -476,7 +514,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 		}
 	}
 
-	usr, err := UserLookup(userName)
+	usr, err := LookupUsername(userName)
 	if err != nil {
 		return err
 	}
@@ -561,19 +599,25 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 
 	// Wait until system is up an running before returning
 	// see: https://blog.simos.info/how-to-know-when-a-lxd-container-has-finished-starting-up/
-	args := ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c", "while " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
-				"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+	args := Execution{
+		ExecArgs: ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"bash", "-eu", "-c", "while " +
+					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
+					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+			},
+			WorkDir: "/",
 		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  nil,
-		Stderr:  nil}
+	}
 
-	return s.execCommand(conn, ctx, name, &args)
+	exectx, err := s.execCommand(conn, ctx, name, &args)
+	if err != nil {
+		return err
+	}
+
+	return exectx.WaitExecution(ctx)
 }
 
 func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
@@ -673,59 +717,69 @@ func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, dev
 	return op.Wait()
 }
 
-func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *ExecArgs) error {
+func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
-		return fmt.Errorf("context key project-id not found")
+		return ExecContext{}, fmt.Errorf("context key project-id not found")
 	}
 
 	req := api.InstanceExecPost{
 		Command:     args.Command,
 		WaitForWS:   true,
-		User:        0,
-		Group:       0,
-		Cwd:         args.WorkDir,
 		Interactive: args.Interactive,
 		Environment: args.Environment,
+		Width:       args.Width,
+		Height:      args.Height,
+		User:        uint32(args.UserId),
+		Group:       uint32(args.GroupId),
+		Cwd:         args.WorkDir,
 	}
 
 	done := make(chan bool)
 
-	arg := lxd.InstanceExecArgs{
+	op, err := conn.ExecInstance(InstanceName(name, projectId), req, &lxd.InstanceExecArgs{
 		Stdin:    args.Stdin,
 		Stdout:   args.Stdout,
 		Stderr:   args.Stderr,
-		Control:  nil,
+		Control:  args.Control,
 		DataDone: done,
-	}
-
-	op, err := conn.ExecInstance(InstanceName(name, projectId), req, &arg)
-
+	})
 	if err != nil {
-		return err
+		return ExecContext{}, err
 	}
 
-	if err := op.WaitContext(ctx); err != nil {
-		return err
-	}
-
-	// waiting for any remaining data IO to be flushed LXD closes this channel
-	// unconditionally right after the operation has exited
-	<-arg.DataDone
-
-	if status, ok := op.Get().Metadata["return"].(float64); ok {
-		if status != 0 {
-			logger.Debugf("cannot exec: %v", int(status))
-			return &ErrExec{Status: int(status)}
+	opmeta := op.Get()
+	var env = map[string]string{}
+	for k, v := range opmeta.Metadata["environment"].(map[string]any) {
+		if value, ok := v.(string); ok {
+			env[k] = value
 		}
 	}
-	return nil
+
+	return ExecContext{
+		Environment: env,
+		WaitExecution: func(ctx context.Context) error {
+			if err := op.WaitContext(ctx); err != nil {
+				return err
+			}
+
+			// waiting for any remaining data IO to be flushed LXD closes this channel
+			// unconditionally right after the operation has exited, so it will not be
+			// blocked if we are here
+			<-done
+			var status = int(op.Get().Metadata["return"].(float64))
+			if status != 0 {
+				return &ErrExec{Status: status}
+			}
+			return nil
+		},
+	}, nil
 }
 
-func (s *LxdBackend) Exec(ctx context.Context, name string, args *ExecArgs) error {
+func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return err
+		return ExecContext{}, err
 	}
 
 	return s.execCommand(conn, ctx, name, args)
@@ -1113,6 +1167,15 @@ func defaultConfig(projectId string, userid, groupid string) map[string]string {
 		"raw.idmap":                 fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":          "true",
 		"user.workspace.project-id": projectId,
+		"user.user-data": `#cloud-config
+users:
+  - default
+  - name: workspace
+    primary_group: workspace
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
+    shell: /bin/bash
+`,
 	}
 }
 

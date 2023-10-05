@@ -122,22 +122,33 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	/* Unpack the SDK to the desired location in the workspace
 	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"tar",
-			"--extract",
-			"--file",
-			sdkMount.Properties["path"],
-			"--one-top-level=" + sdkPath,
-			"--no-same-owner",
+	args := workspacebackend.Execution{
+		ExecArgs: workspacebackend.ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"tar",
+				"--extract",
+				"--file",
+				sdkMount.Properties["path"],
+				"--one-top-level=" + sdkPath,
+				"--no-same-owner",
+			},
+			WorkDir: "/",
 		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  out,
-		Stderr:  out}
+		ExecControls: workspacebackend.ExecControls{
+			Stdin:  nil,
+			Stdout: nil,
+			Stderr: out,
+		},
+	}
 
-	err = m.backend.Exec(ctx, workspace, &args)
+	exectx, err := m.backend.Exec(ctx, workspace, &args)
+	if err != nil {
+		return err
+	}
+
+	err = exectx.WaitExecution(ctx)
 
 	if err != nil {
 		hookLog, _ := afero.ReadFile(memFs, out.Name())

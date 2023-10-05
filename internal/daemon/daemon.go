@@ -52,7 +52,7 @@ var (
 
 	systemdSdNotify = systemd.SdNotify
 	sysGetuid       = sys.Getuid
-	LookupUsername  = user.LookupId
+	LookupUserId    = user.LookupId
 )
 
 // Options holds the daemon setup required for the initialization of a new daemon.
@@ -263,7 +263,7 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, err := LookupUsername(strconv.FormatUint(uint64(uid), 10))
+	username, err := LookupUserId(strconv.FormatUint(uint64(uid), 10))
 	if err != nil {
 		statusInternalError("cannot get an associated user name: %v", err).ServeHTTP(w, r)
 		return
@@ -819,4 +819,8 @@ func getListener(socketPath string, listenerMap map[string]net.Listener) (net.Li
 	logger.Debugf("socket %q was not activated; listening", socketPath)
 
 	return listener, nil
+}
+
+func (d *Daemon) Overlord() *overlord.Overlord {
+	return d.overlord
 }

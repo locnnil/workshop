@@ -238,3 +238,44 @@ func v1PostChange(c *Command, r *http.Request, _ *userState) Response {
 
 	return SyncResponse(change2changeInfo(chg), http.StatusOK)
 }
+
+func v1GetChangeWait(c *Command, r *http.Request, _ *userState) Response {
+	changeID := muxVars(r)["id"]
+	st := c.d.overlord.State()
+	st.Lock()
+	change := st.Change(changeID)
+	st.Unlock()
+	if change == nil {
+		return statusNotFound("cannot find change with id %q", changeID)
+	}
+
+	timeoutStr := r.URL.Query().Get("timeout")
+	if timeoutStr != "" {
+		// Timeout specified, wait till change is ready or timeout occurs,
+		// whichever is first.
+		timeout, err := time.ParseDuration(timeoutStr)
+		if err != nil {
+			return statusBadRequest("invalid timeout %q: %v", timeoutStr, err)
+		}
+		timer := time.NewTimer(timeout)
+		select {
+		case <-change.Ready():
+			timer.Stop() // change ready, release timer resources
+		case <-timer.C:
+			return statusGatewayTimeout("timed out waiting for change after %s", timeout)
+		case <-r.Context().Done():
+			return statusInternalError("request cancelled")
+		}
+	} else {
+		// No timeout, wait indefinitely for change to be ready.
+		select {
+		case <-change.Ready():
+		case <-r.Context().Done():
+			return statusInternalError("request cancelled")
+		}
+	}
+
+	st.Lock()
+	defer st.Unlock()
+	return SyncResponse(change2changeInfo(change), http.StatusOK)
+}

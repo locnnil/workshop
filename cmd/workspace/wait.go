@@ -70,8 +70,7 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 	go func() {
 		sig := <-c
 		if sig != nil && wmx.skipAbort {
-			fmt.Printf("%v", sig)
-			fmt.Fprintln(Stdout, "cannot interrupt: it may break the workspace, please wait until finished")
+			fmt.Fprintln(Stdout, "cannot interrupt: it may break the workspace, please wait until the operation is finished")
 		}
 		// sig is nil if c was closed
 		if sig == nil || wmx.skipAbort {

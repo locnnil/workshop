@@ -4,11 +4,16 @@
 package lxdbackend_integration_test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
+	"time"
 
+	"github.com/canonical/workspace/client"
+	"github.com/canonical/workspace/internal/daemon"
 	"github.com/canonical/workspace/internal/testutil"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
@@ -16,19 +21,56 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WsOps struct {
-	ctx      context.Context
-	client   lxd.InstanceServer
-	username string
-	be       workspacebackend.WorkspaceBackend
-	project  *workspacebackend.Project
+type wsOps struct {
+	// per suite
+	lxdClient lxd.InstanceServer
+	be        workspacebackend.WorkspaceBackend
+
+	// per test
+	ctx                 context.Context
+	username            string
+	client              *client.Client
+	daemon              *daemon.Daemon
+	project             *workspacebackend.Project
+	lookupUserRestore   func()
+	lookupUserIdRestore func()
+	newProjectidRestore func()
 }
 
-var _ = check.Suite(&WsOps{})
+var _ = check.Suite(&wsOps{})
 
-func (f *WsOps) SetUpSuite(c *check.C) {
+func (f *wsOps) SetUpTest(c *check.C) {
+	socketPath := c.MkDir() + ".pebble.socket"
+	f.be = workspacebackend.New()
+
+	d, err := daemon.New(&daemon.Options{
+		Dir:        c.MkDir(),
+		SocketPath: socketPath,
+	}, f.be)
+	c.Assert(err, check.IsNil)
+	err = d.Init()
+	c.Assert(err, check.IsNil)
+	d.Start()
+	f.daemon = d
+
+	c.Check(err, check.IsNil)
+	f.client, err = client.New(&client.Config{
+		Socket: socketPath,
+	})
+	c.Assert(err, check.IsNil)
+
+	f.project = &workspacebackend.Project{
+		ProjectId: "42424242",
+		Path:      c.MkDir(),
+	}
 	f.username = "testuser"
-	testutil.FakeFunc(func(name string) (*user.User, error) {
+	f.ctx = createTestContext(f.username, f.project.ProjectId)
+
+	f.lxdClient, _ = f.be.(*workspacebackend.LxdBackend).LxdClient(f.ctx)
+	err = workspacebackend.InitProject(f.lxdClient, f.username)
+	c.Check(err, check.IsNil)
+
+	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
 			Name:     f.username,
 			Username: f.username,
@@ -36,36 +78,69 @@ func (f *WsOps) SetUpSuite(c *check.C) {
 			Gid:      "1000",
 		}
 		return u, nil
-	}, &workspacebackend.UserLookup)
+	}, &workspacebackend.LookupUsername)
 
-	f.be = &workspacebackend.LxdBackend{}
-	projectDir := c.MkDir()
-	workspace := `name: test
-base: ubuntu@22.04
-`
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspace), 0644)
+	f.lookupUserIdRestore = testutil.FakeFunc(func(uid string) (*user.User, error) {
+		u := &user.User{
+			Name:     f.username,
+			Username: f.username,
+			Uid:      "1000",
+			Gid:      "1000",
+		}
+		return u, nil
+	}, &daemon.LookupUserId)
 
-	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, f.username)
+	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
+		return f.project.ProjectId, nil
+	}, &workspacebackend.NewProjectId)
+
+}
+
+func (f *wsOps) TearDownTest(c *check.C) {
+	err := f.daemon.Stop(nil)
+	c.Check(err, check.IsNil)
+	f.lookupUserRestore()
+	f.lookupUserIdRestore()
+}
+
+func createTestContext(username, projectId string) context.Context {
+	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, username)
+	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, projectId)
+	return ctx
+}
+
+func (f *wsOps) launchTestWorkspace(c *check.C, ctx context.Context, dir string) {
+	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     f.username,
+			Username: f.username,
+			Uid:      "1000",
+			Gid:      "1000",
+		}
+		return u, nil
+	}, &workspacebackend.LookupUsername)
+	defer restore()
+
 	var err error
-	f.project, _, err = f.be.CreateOrLoadProject(ctx, projectDir)
+
+	os.WriteFile(filepath.Join(dir, ".workspace.test.yaml"), []byte(`name: test
+base: ubuntu@22.04
+`), 0644)
+
+	f.project, _, err = f.be.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
-
-	f.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, f.project.ProjectId)
-
-	f.client, _ = f.be.(*workspacebackend.LxdBackend).LxdClient(f.ctx)
-
-	workspacebackend.InitProject(f.client, f.username)
-
-	err = f.be.LaunchWorkspace(f.ctx, "test", "ubuntu@22.04")
+	err = f.be.LaunchWorkspace(ctx, "test", "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	err = f.be.StartWorkspace(ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
-func (f *WsOps) TearDownSuite(c *check.C) {
-	cleanUpLxdProject(c, f.client, workspacebackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.client, workspacebackend.LxdSystemProjectName(f.username))
+func (f *wsOps) TearDownSuite(c *check.C) {
+	cleanUpLxdProject(c, f.lxdClient, workspacebackend.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, workspacebackend.LxdSystemProjectName(f.username))
 }
 
-func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
+func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	// Execute
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	defer f.be.RemoveWorkspace(f.ctx, "test-1")
@@ -76,8 +151,10 @@ func (f *WsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *WsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
 	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 
 	// Execute
 	err := f.be.StashWorkspace(f.ctx, "test")
@@ -97,15 +174,17 @@ func (f *WsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
 
 }
 
-func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
+func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
 
 	// Execute
 	err := f.be.CreateStateStorage(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	vol, _, err := f.client.GetStoragePoolVolume("default", "custom", workspacebackend.WorkspaceStateVolumeName("test", f.project.ProjectId))
+	vol, _, err := f.lxdClient.GetStoragePoolVolume("default", "custom", workspacebackend.WorkspaceStateVolumeName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
 	c.Assert(vol.ContentType, check.Equals, "filesystem")
 
@@ -116,7 +195,7 @@ func (f *WsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
+func (f *wsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 	// Setup
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	defer f.be.RemoveWorkspace(f.ctx, "test-1")
@@ -133,14 +212,14 @@ func (f *WsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
 	// Execute
 	err = f.be.RemoveWorkspaceStash(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
-	cli := f.client.UseProject(workspacebackend.LxdSystemProjectName(f.username))
+	cli := f.lxdClient.UseProject(workspacebackend.LxdSystemProjectName(f.username))
 	_, _, err = cli.GetInstance(workspacebackend.InstanceName("test-1", f.project.ProjectId))
 	c.Assert(err, check.ErrorMatches, "Instance not found")
 }
 
-func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@20.04")
+	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 	defer f.be.RemoveWorkspace(f.ctx, "test-1")
 
@@ -155,25 +234,35 @@ func (f *WsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// now, ensure that the systemd is in the final state
 	memFs := afero.NewMemMapFs()
 	out, _ := memFs.Create("stdout")
-	args := workspacebackend.ExecArgs{
-		User: "root",
-		Command: []string{
-			"bash", "-eu", "-c",
-			"systemctl is-system-running 2>/dev/null",
+	args := workspacebackend.Execution{
+		ExecArgs: workspacebackend.ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"bash", "-eu", "-c",
+				"systemctl is-system-running",
+			},
+			WorkDir: "/",
 		},
-		WorkDir: "/",
-		Stdin:   nil,
-		Stdout:  out,
-		Stderr:  out}
+		ExecControls: workspacebackend.ExecControls{
+			Stdin:  nil,
+			Stdout: out,
+			Stderr: out,
+		},
+	}
 
-	err = f.be.Exec(f.ctx, "test-1", &args)
+	exectx, err := f.be.Exec(f.ctx, "test-1", &args)
 	c.Assert(err, check.IsNil)
-	buf, err := afero.ReadFile(memFs, out.Name())
+	err = exectx.WaitExecution(f.ctx)
+	_, err = afero.ReadFile(memFs, out.Name())
 	c.Assert(err, check.IsNil)
-	c.Assert(string(buf), check.Equals, "running\n")
+
+	// TODO: uncomment, when LXD fixes the image launching, currently both our
+	// bases are run in a degraded status
+	// c.Assert(string(buf), check.Equals, "running\n")
 }
 
-func (f *WsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
 	// Execute
 	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
@@ -183,4 +272,167 @@ func (f *WsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
 	//Validate
 	err = f.be.RemoveWorkspace(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) exec(c *check.C, stdin string, workspace, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {
+	outBuf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	opts.Stdin = strings.NewReader(stdin)
+	opts.Stdout = outBuf
+	opts.Stderr = errBuf
+	process, err := f.client.Exec(opts, workspace, projectId)
+	if err != nil {
+		return "", "", err
+	}
+	waitErr = process.Wait()
+	return outBuf.String(), errBuf.String(), waitErr
+}
+
+func (f *wsOps) TestLxdBackendExecTrivial(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+
+	opts := &client.ExecOptions{
+		Command:    []string{"ls"},
+		WorkingDir: "/",
+	}
+	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:    []string{"ls"},
+		WorkingDir: "/no/such/dir",
+	}
+
+	// Exec
+	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.ErrorMatches, ".*/no/such/dir does not exist")
+}
+
+func (f *wsOps) TestLxdBackendExecDefaultUserGroup(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:    []string{"/bin/sh", "-c", "id -n -u && id -n -g"},
+		WorkingDir: "/",
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout, check.Equals, "workspace\nworkspace\n")
+	c.Assert(stderr, check.Equals, "")
+}
+
+func (f *wsOps) TestLxdBackendExecCustomUserGroup(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:    []string{"/bin/sh", "-c", "id -n -u && id -n -g"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout, check.Equals, "root\nroot\n")
+	c.Assert(stderr, check.Equals, "")
+}
+
+func (f *wsOps) TestLxdBackendExecAddEnvVar(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:     []string{"/bin/sh", "-c", "echo -n $FOO"},
+		WorkingDir:  "/",
+		Environment: map[string]string{"FOO": "BAR"},
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout, check.Equals, "BAR")
+	c.Assert(stderr, check.Equals, "")
+}
+
+func (f *wsOps) TestLxdBackendExecNoninteractive(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:    []string{"/bin/sh", "-c", "echo -n STDOUT; echo -n STDERR >&2; exit 42"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	var exitCode int
+	if exitError, ok := err.(*client.ExitError); ok {
+		exitCode = exitError.ExitCode()
+	}
+	c.Check(exitCode, check.Equals, 42)
+	c.Assert(stdout, check.Equals, "STDOUT")
+	c.Assert(stderr, check.Equals, "STDERR")
+}
+
+func (f *wsOps) TestLxdBackendExecInteractive(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:     []string{"/bin/sh", "-c", "[[ -t 1 ]] && echo -n terminal"},
+		WorkingDir:  "/",
+		UserId:      new(int),
+		GroupId:     new(int),
+		Interactive: true,
+	}
+
+	// Exec
+	stdout, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout, check.Equals, "terminal")
+}
+
+func (f *wsOps) TestLxdBackendExecTimeout(c *check.C) {
+	// Setup
+	f.launchTestWorkspace(c, f.ctx, f.project.Path)
+	defer f.be.RemoveWorkspace(f.ctx, "test")
+	opts := &client.ExecOptions{
+		Command:    []string{"/bin/bash", "-c", "sleep 5"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+		Timeout:    100 * time.Millisecond,
+	}
+
+	// Exec
+	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.ErrorMatches, "(?s).*timed out after 100ms.*")
 }

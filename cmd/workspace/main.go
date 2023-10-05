@@ -64,12 +64,13 @@ func main() {
 	rootCmd.AddCommand((&CmdStart{}).Command())
 	rootCmd.AddCommand((&CmdStop{}).Command())
 	rootCmd.AddCommand((&CmdInfo{}).Command())
+	rootCmd.AddCommand((&CmdExec{}).Command())
 	rootCmd.AddCommand((&CmdRemove{}).Command())
 
 	rootCmd.SilenceErrors = true
 
 	if err = rootCmd.Execute(); err != nil {
-		fmt.Fprintf(Stdout, "error: %v\n", err)
+		fmt.Fprintf(Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
