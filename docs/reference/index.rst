@@ -10,4 +10,5 @@ such as :option:`!--help` or :option:`!-h`:
 
    workspace_info
    workspace_launch
+   workspace_list
    workspace_refresh
