@@ -1,4 +1,4 @@
-.. _workspace_info:
+.. _ref_workspace_info:
 
 workspace info
 ==============

@@ -1,4 +1,4 @@
-.. _workspace_launch:
+.. _ref_workspace_launch:
 
 workspace launch
 ================
@@ -30,7 +30,7 @@ Notes
 
 - Names listed as arguments must match
   respective :code:`name:` values in definitions
-- To update an existing workspace, use :ref:`workspace_refresh` instead
+- To update an existing workspace, use :ref:`ref_workspace_refresh` instead
 - SDKs are installed in alphabetical order
 
 
@@ -58,4 +58,4 @@ Explanation:
 
 Reference:
 
-- :ref:`workspace refresh (command) <workspace_refresh>`
+- :ref:`workspace refresh (command) <ref_workspace_refresh>`

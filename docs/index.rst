@@ -63,10 +63,29 @@ In this documentation
 Project and community
 ---------------------
 
-We strive to keep the documentation up-to-date and reliable.
-If we somehow failed,
-`let us know
-<https://github.com/canonical/workspace/issues>`_.
+|project| is an emergent project
+within the Enterprise Engineering department here at Canonical.
+
+Come and talk to us if you have a project in AI/ML, robotics or any other area
+where setting up an environment is a daily or weekly activity
+that can easily shave hours off your schedule.
+Share with us the frustrating parts of your experience,
+and we'll see what |project| can do.
+Let us know if you have an SDK or a framework you’d like to try with |project|:
+we'll help you get it out there.
+
+
+- `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+
+- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
+
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+
+- `Product map <https://warthogs.atlassian.net/projects/SDK?selectedItem=com.atlassian.plugins.atlassian-connect-plugin:com.herocoders.plugins.jira.epicsmap__epics-map-page>`__
+
+- `Contribution and participation <https://github.com/canonical/workspace/pulls>`__
+
+- `Product and documentation feedback <https://github.com/canonical/workspace/issues>`__
 
 .. toctree::
    :hidden:
