@@ -19,7 +19,7 @@ definitions and installing their components.  For each workspace, it:
 - Checks the workspace definition and identifies necessary actions
 - Retrieves the required components, such as base and SDKs
 - Runs SDK setup hooks to initialise the working state
-- On success, sets the workspace to *Ready*
+- On success, ties the workspace to the project and starts it
 
 If multiple workspaces are listed and an error occurs,
 the operation is aborted and no workspaces are constructed.
@@ -53,9 +53,11 @@ See also
 Explanation:
 
 - :ref:`SDK (concept) <exp_sdk>`
+- :ref:`project (concept) <exp_project>`
 - :ref:`workspace base (concept) <exp_workspace_base>`
 - :ref:`workspace definition (concept) <exp_workspace_def>`
 
 Reference:
 
 - :ref:`workspace refresh (command) <ref_workspace_refresh>`
+- :ref:`workspace start (command) <ref_workspace_start>`

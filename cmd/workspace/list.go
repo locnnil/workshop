@@ -22,12 +22,25 @@ func (c *CmdList) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(0),
-		Short: "List workspaces",
-		Long:  "The list command displays a summary of workspaces in the system",
+		Short: "List project workspaces.",
+		Long:  `
+This command enumerates all workspaces in the project, printing a compact list:
+
+- Project: absolute pathname of the project where this workspace belongs
+- Workspace: workspace name, as set by its definition
+- State: workspace status, such as *Off*, *Ready*, *Pending* and so on
+- Notes: internal remarks on the overall state of the workspace
+
+The '--global' option lists all workspaces from *all* projects in the system;
+however, it doesn't include any that are *Off*.
+
+Notes:
+- For details of a single workspace, use 'workspace info' instead
+`,
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.global, "global", false, "list workspaces from all projects")
+	cmd.Flags().BoolVar(&c.global, "global", false, "List workspaces from all projects in the system")
 
 	return cmd
 }
@@ -35,7 +48,7 @@ func (c *CmdList) Command() *cobra.Command {
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	/* check if both --project and --global were provided */
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
-		return fmt.Errorf("flags --project and --global are mutually exclusive")
+		return fmt.Errorf("cannot list: '--project' incompatible with '--global'")
 	}
 
 	var err error
@@ -84,10 +97,10 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 				return err
 			}
 			for _, j := range workspaces {
-				// --global flage would not list Off workspaces for consistency.
+				// --global flag would not list Off workspaces for consistency.
 				// We may not be aware of all the project directories on the system
 				// and, thus, will not know all the available Off workspaces (contrary
-				// to the workspace that are in any other state, i.e. running instances, which we always know
+				// to the workspaces that are in any other state, i.e. running instances, which we always know
 				// about from the workspace backend)
 				if j.State != "Off" {
 					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))

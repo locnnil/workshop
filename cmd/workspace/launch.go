@@ -24,7 +24,7 @@ definitions and installing their components. For each workspace, it:
 - Checks the workspace definition and identifies necessary actions
 - Retrieves the required components, such as base and SDKs
 - Runs SDK setup hooks to initialise the working state
-- On success, sets the workspace to *Ready*
+- On success, ties the workspace to the project and starts it
 
 If multiple workspaces are listed and an error occurs,
 the operation is aborted and no workspaces are constructed.
