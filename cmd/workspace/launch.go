@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 type CmdLaunch struct {
@@ -35,7 +35,7 @@ Notes:
 - SDKs are installed in alphabetical order
 `,
 
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -43,6 +43,8 @@ Notes:
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	var err error
+
+	av = strutil.Deduplicate(av)
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
@@ -68,14 +70,8 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
-	if err != nil {
-		return nil
-	}
 	for _, i := range av {
-		if slices.ContainsFunc(workspaces, func(w *client.Workspace) bool { return w.Name == i && w.State == "Ready" }) {
-			fmt.Fprintf(Stdout, "%q launched\n", i)
-		}
+		fmt.Fprintf(Stdout, "%q launched\n", i)
 	}
 
 	return nil

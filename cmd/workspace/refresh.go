@@ -45,16 +45,16 @@ Notes:
 - Updated and newly added SDKs are installed in alphabetical order
 `,
 
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
 		false,
 		"Pause the operation on error; to resume, use '--continue' or '--abort'.")
-		cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
+	cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
 		false,
 		"Continue the previously paused operation.")
-		cmd.PersistentFlags().BoolVar(&c.Abort, "abort",
+	cmd.PersistentFlags().BoolVar(&c.Abort, "abort",
 		false,
 		"Abort the previously paused operation, reverting any changes.")
 
@@ -63,6 +63,8 @@ Notes:
 
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	var err error
+
+	av = strutil.Deduplicate(av)
 
 	if c.Abort && c.Continue {
 		return fmt.Errorf("cannot refresh: '--abort' incompatible with '--continue'")
@@ -113,8 +115,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 		if err == errWaitOnError {
-			return fmt.Errorf("cannot refresh; fix the errors reported by \"workspace info\",\n" +
-				"then run \"workspace refresh --continue %s\".\n" +
+			return fmt.Errorf("cannot refresh; fix the errors reported by \"workspace info\",\n"+
+				"then run \"workspace refresh --continue %s\".\n"+
 				"To abort and revert, run \"workspace refresh --abort %s\"", av[0], av[0])
 		}
 

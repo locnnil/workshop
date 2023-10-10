@@ -46,7 +46,7 @@ func (m *WorkspaceStop) TestStopSuccess(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1", "ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "ws stopped\nws-1 stopped\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" stopped\n"ws-1" stopped\n`)
 }

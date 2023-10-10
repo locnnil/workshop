@@ -297,7 +297,7 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 		}
 	}
 
-	return nil
+	return err
 }
 
 func setExitCode(task *state.Task, exitCode int) {

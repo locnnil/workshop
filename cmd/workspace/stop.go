@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ func (c *CmdStop) Command() *cobra.Command {
 		Use:   "stop <WORKSPACE>...",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Stop one or many workspaces.",
-		Long:  `
+		Long: `
 This command deactivates the workspaces listed as arguments. For each one, it:
 
 - Makes sure the workspace was actually started or is already stopped
@@ -30,7 +31,7 @@ Notes:
 - When interrupted, the command attempts to gracefully revert its actions
 - To start a stopped workspace, use 'workspace start'
 `,
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -38,6 +39,8 @@ Notes:
 
 func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	var err error
+
+	av = strutil.Deduplicate(av)
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
@@ -65,7 +68,7 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	for _, name := range av {
-		fmt.Fprintf(Stdout, "%s stopped\n", name)
+		fmt.Fprintf(Stdout, "%q stopped\n", name)
 	}
 	return nil
 }

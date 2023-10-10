@@ -18,7 +18,7 @@ type CmdTasks struct {
 func (c *CmdTasks) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "tasks change-id",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.RangeArgs(1, 1),
 		Short: "Show a summary of tasks for the change",
 		RunE:  c.Run,
 	}
