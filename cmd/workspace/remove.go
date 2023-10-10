@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,8 @@ func (c *CmdRemove) Command() *cobra.Command {
 
 func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 	var err error
+
+	av = strutil.Deduplicate(av)
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
@@ -51,7 +54,7 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	for _, name := range av {
-		fmt.Fprintf(Stdout, "%s removed\n", name)
+		fmt.Fprintf(Stdout, "%q removed\n", name)
 	}
 
 	return nil

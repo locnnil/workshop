@@ -91,9 +91,9 @@ func (m *WorkspaceRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws"})
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refreshed\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
@@ -123,7 +123,7 @@ func (m *WorkspaceRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) 
 
 	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "(?s).*\"ws\", \"ws-1\" refresh aborted")
+	c.Assert(err, check.ErrorMatches, `(?s).*"ws", "ws-1" refresh aborted`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
@@ -157,7 +157,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "cannot refresh; fix the errors reported by \"workspace info\",\nthen run \"workspace refresh --continue ws\".\nTo abort and revert, run \"workspace refresh --abort ws\"")
+	c.Assert(err, check.ErrorMatches, `cannot refresh; fix the errors reported by "workspace info",\nthen run "workspace refresh --continue ws".\nTo abort and revert, run "workspace refresh --abort ws"`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
@@ -191,7 +191,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C)
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refresh aborted\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" refresh aborted\n`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
@@ -225,7 +225,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "\"ws\" refreshed\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshIncompatibleOptions(c *check.C) {

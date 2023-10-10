@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workspace/client"
+	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ func (c *CmdStart) Command() *cobra.Command {
 		Use:   "start <WORKSPACE>...",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Start one or many workspaces.",
-		Long:  `
+		Long: `
 This command activates the workspaces listed as arguments. For each one, it:
 
 - Makes sure the workspace was actually launched
@@ -30,7 +31,7 @@ Notes:
 - When interrupted, the command attempts to gracefully revert its actions
 - To stop a started workspace, use 'workspace stop'
 `,
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -38,6 +39,8 @@ Notes:
 
 func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	var err error
+
+	av = strutil.Deduplicate(av)
 
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
@@ -65,7 +68,7 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	for _, name := range av {
-		fmt.Fprintf(Stdout, "%s started\n", name)
+		fmt.Fprintf(Stdout, "%q started\n", name)
 	}
 
 	return nil

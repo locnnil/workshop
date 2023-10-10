@@ -46,7 +46,7 @@ func (m *WorkspaceRemove) TestStartSuccess(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1", "ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "ws removed\nws-1 removed\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" removed\n"ws-1" removed\n`)
 }

@@ -46,7 +46,7 @@ func (m *WorkspaceStart) TestStartSuccess(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
+	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1", "ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, "ws started\nws-1 started\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" started\n"ws-1" started\n`)
 }
