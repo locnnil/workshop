@@ -103,7 +103,7 @@ func (s *H) TearDownTest(c *check.C) {
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -141,7 +141,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -173,7 +173,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -218,7 +218,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	newSdk := sdk.Setup{Name: "new", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
@@ -240,14 +240,14 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
-	c.Check(*info[0], check.DeepEquals, newSdk)
+	c.Check(info[0], check.DeepEquals, newSdk)
 }
 
 func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")

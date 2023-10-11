@@ -29,12 +29,12 @@ func (s StoreAction) String() string {
 }
 
 type StoreResult struct {
-	Sdks         []*sdk.SdkInfo
+	Sdks         []*sdk.Info
 	ActionErrors map[string]error
 }
 
 type StoreClient interface {
-	RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error)
+	RetrieveSdk(name, channel, localSdkDir string) (sdk.Setup, error)
 }
 
 func NewStoreClient() StoreClient {
@@ -61,33 +61,33 @@ func storeConnect() (*storage.Client, error) {
 	return client, err
 }
 
-func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk.SdkInfo, error) {
+func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (sdk.Setup, error) {
 	var track, risk string
-	var s sdk.SdkInfo
+	var s sdk.Setup
 	var revision int64
 
 	if sa := strings.Split(channel, "/"); len(sa) != 2 {
-		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
+		return s, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
 	} else {
 		track, risk = sa[0], sa[1]
 	}
 
 	ctx := context.Background()
 	if client, err := storeConnect(); err != nil {
-		return &s, err
+		return s, err
 	} else {
 		bkt := client.Bucket("sdk-store")
 		defer client.Close()
 		var obj *storage.ObjectHandle = bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
 		if atr, err := obj.Attrs(ctx); err != nil {
-			return nil, err
+			return s, err
 		} else {
 			/* A simple modulo to keep revision numbers in a readble form for testing */
 			revision = atr.Generation % 1000
 		}
 
 		if r, err := obj.NewReader(ctx); err != nil {
-			return nil, err
+			return s, err
 		} else {
 			defer r.Close()
 
@@ -97,23 +97,23 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (*sdk
 
 			exist, err := afero.Exists(c.Fs, s.Filename())
 			if err != nil {
-				return nil, err
+				return s, err
 			}
 
 			if !exist {
 				file, err := c.Fs.Create(s.Filename())
 				if err != nil {
-					return nil, err
+					return s, err
 				}
 				defer file.Close()
 
 				if _, err = io.Copy(file, r); err != nil {
-					return nil, err
+					return s, err
 				}
 			}
 
 		}
 	}
 
-	return &s, nil
+	return s, nil
 }

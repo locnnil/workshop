@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -61,7 +62,7 @@ type Workspace struct {
 	base      string
 	Name      string
 	Devices   map[string]map[string]string
-	content   map[string]*sdk.SdkInfo
+	content   map[string]sdk.Setup
 	errs      []WorkspaceErrorType
 	running   bool
 	state     WorkspaceState
@@ -91,7 +92,7 @@ func (w *Workspace) AddError(err WorkspaceErrorType) {
 	w.errs = append(w.errs, err)
 }
 
-func (w *Workspace) Content() []*sdk.SdkInfo {
+func (w *Workspace) Content() []sdk.Setup {
 	return maps.Values(w.content)
 }
 
@@ -111,7 +112,34 @@ func (w *Workspace) SetState(st WorkspaceState) {
 	w.state = st
 }
 
-func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+func (w *Workspace) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+	wsfs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer wsfs.Close()
+
+	sdkPath := sdk.SdkCurrentPath(s.Name)
+	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	defer sdkYamlFile.Close()
+
+	yamlData, err := io.ReadAll(sdkYamlFile)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := sdk.ReadSdkInfo(yamlData, s)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
+func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	s.InstallTime = InstallTimeNow()
 	w.content[s.Name] = s
 
@@ -130,7 +158,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		return err
 	}
 
-	/* Update the current link to point out to the newly installed SDK */
+	// Update the current link to point out to the newly installed SDK
 	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, s.Name)
 
 	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
@@ -143,7 +171,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		filepath.Join(sdkPath, "current"), true)
 }
 
-func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+func (w *Workspace) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	delete(w.content, s.Name)
 	newSequence, err := json.Marshal(w.content)
 	if err != nil {

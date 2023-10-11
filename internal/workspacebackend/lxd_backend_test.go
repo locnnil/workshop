@@ -56,7 +56,7 @@ sdks:
 	c.Assert(ws.IsRunning(), check.Equals, true)
 	c.Assert(ws.Errors(), check.HasLen, 0)
 	c.Assert(ws.ProjectId(), check.Equals, f.project.ProjectId)
-	c.Assert(ws.Content(), testutil.DeepUnsortedMatches, []*sdk.SdkInfo{{
+	c.Assert(ws.Content(), testutil.DeepUnsortedMatches, []sdk.Setup{{
 		Name:     "go",
 		Channel:  "latest/stable",
 		Revision: 277,

@@ -146,7 +146,7 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{}}
 
-	ts, err := workspacestate.Refresh(s.state, file, []*sdk.SdkInfo{}, s.project)
+	ts, err := workspacestate.Refresh(s.state, file, []sdk.Setup{}, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -184,7 +184,7 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 			Sdks: workspacebackend.SdkList{test_sdk}},
 	}
 
-	content := [][]*sdk.SdkInfo{
+	content := [][]sdk.Setup{
 		nil,
 		{{
 			Name:    "sdk",
@@ -255,7 +255,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workspacebackend.SdkList{testSdk}}
 
-	ts, err := workspacestate.Refresh(s.state, file, []*sdk.SdkInfo{
+	ts, err := workspacestate.Refresh(s.state, file, []sdk.Setup{
 		{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -306,7 +306,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		},
 	}
 
-	content := [][]*sdk.SdkInfo{
+	content := [][]sdk.Setup{
 		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -365,7 +365,7 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 		},
 	}
 
-	content := [][]*sdk.SdkInfo{
+	content := [][]sdk.Setup{
 		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -428,11 +428,11 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 	twoinst := workspacebackend.Sdk{Name: "two", Channel: "latest/stable"}
 
 	// installed SDKs
-	one := &sdk.SdkInfo{Name: "one", Channel: "latest/stable"}
-	two := &sdk.SdkInfo{Name: "two", Channel: "latest/stable"}
+	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
+	two := sdk.Setup{Name: "two", Channel: "latest/stable"}
 
 	ts := workspacestate.RestoreStateHooks(s.state,
-		[]*sdk.SdkInfo{one, two}, workspacebackend.SdkList{oneinst, twoinst})
+		[]sdk.Setup{one, two}, workspacebackend.SdkList{oneinst, twoinst})
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
 	prev := (*state.Task)(nil)
@@ -454,10 +454,10 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 		workspacebackend.Sdk{Name: "two"}}
 
 	// installed SDKs
-	one := &sdk.SdkInfo{Name: "one", Channel: "latest/stable"}
-	two := &sdk.SdkInfo{Name: "two", Channel: "latest/stable"}
+	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
+	two := sdk.Setup{Name: "two", Channel: "latest/stable"}
 
-	ts := workspacestate.SaveStateHooks(s.state, []*sdk.SdkInfo{one, two}, installed)
+	ts := workspacestate.SaveStateHooks(s.state, []sdk.Setup{one, two}, installed)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
 	prev := (*state.Task)(nil)
@@ -479,7 +479,7 @@ func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
 		Sdks: workspacebackend.SdkList{},
 	}
 
-	ts := workspacestate.RestoreStateHooks(s.state, []*sdk.SdkInfo{}, file.Sdks)
+	ts := workspacestate.RestoreStateHooks(s.state, []sdk.Setup{}, file.Sdks)
 	c.Assert(ts.Tasks(), check.HasLen, 0)
 }
 

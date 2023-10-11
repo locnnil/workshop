@@ -19,29 +19,29 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-func SdkSetup(task *state.Task) (*sdk.SdkInfo, error) {
+func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
 	var retrieveId string
-	var blob sdk.SdkInfo
+	var blob sdk.Setup
 
 	err := task.Get("sdk-retrieve-task", &retrieveId)
 
 	if err != nil {
-		return nil, err
+		return sdk.Setup{}, err
 	}
 
 	retrieve := task.State().Task(retrieveId)
 	if retrieve == nil {
-		return nil, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
+		return sdk.Setup{}, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
 	}
 
 	if err = retrieve.Get("sdk-setup", &blob); err != nil {
-		return nil, err
+		return sdk.Setup{}, err
 	}
-	return &blob, nil
+	return blob, nil
 }
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -70,7 +70,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk *sdk.SdkInfo) workspacebackend.WorkspaceDevice {
+func sdkBlobDevice(sdk sdk.Setup) workspacebackend.WorkspaceDevice {
 	/* Bind-mount the SDK to the workspace */
 	return workspacebackend.WorkspaceDevice{
 		Name: sdk.Name,

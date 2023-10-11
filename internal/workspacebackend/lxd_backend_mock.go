@@ -101,14 +101,14 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 		Devices:   defaultDevices(),
 		running:   true,
 		projectId: projectId,
-		content:   make(map[string]*sdk.SdkInfo),
+		content:   make(map[string]sdk.Setup),
 		file:      file,
 	}
 
 	f.Workspaces[projectId][name] = ws
 
 	for _, s := range ws.File().Sdks {
-		ws.LinkSdk(ctx, &sdk.SdkInfo{
+		ws.LinkSdk(ctx, sdk.Setup{
 			Name:    s.Name,
 			Channel: s.Channel,
 		})

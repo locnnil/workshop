@@ -118,7 +118,7 @@ base: ubuntu@20.04
 	c.Assert(err, check.IsNil)
 	ws, err := b.GetWorkspace(req.Context(), "ws-test")
 	c.Assert(err, check.IsNil)
-	ws.LinkSdk(req.Context(), &sdk.SdkInfo{Name: "go", Channel: "latest/stable", Revision: 234})
+	ws.LinkSdk(req.Context(), sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
 	rsp := v1GetProjectWorkspaces(projectsCmd, req, nil).(*resp)

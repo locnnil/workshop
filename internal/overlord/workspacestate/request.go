@@ -176,7 +176,7 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	}
 
 	files := make([]*workspacebackend.WorkspaceFile, 0)
-	content := make([][]*sdk.SdkInfo, 0)
+	content := make([][]sdk.Setup, 0)
 	for _, i := range names {
 		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
 		if idx == -1 {
@@ -205,7 +205,7 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [][]*sdk.SdkInfo,
+func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [][]sdk.Setup,
 	project *workspacebackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(w))
 
@@ -260,7 +260,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*sdk.SdkInfo, p *workspacebackend.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []sdk.Setup, p *workspacebackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workspace
 	// 3. Put to stash
@@ -333,12 +333,12 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []*s
 	return refresh, nil
 }
 
-func saveStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList,
+func saveStateHooks(st *state.State, content []sdk.Setup, newContent workspacebackend.SdkList,
 ) *state.TaskSet {
 	return createStateHooks(st, content, newContent, hookstate.SaveState)
 }
 
-func restoreStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList) *state.TaskSet {
+func restoreStateHooks(st *state.State, content []sdk.Setup, newContent workspacebackend.SdkList) *state.TaskSet {
 	stateHooks := createStateHooks(st, content, newContent, hookstate.RestoreState)
 
 	// if the restore hooks are not present (i.e. workspace has no SDKs after
@@ -354,13 +354,13 @@ func restoreStateHooks(st *state.State, content []*sdk.SdkInfo, newContent works
 	return stateHooks
 }
 
-func createStateHooks(st *state.State, content []*sdk.SdkInfo, newContent workspacebackend.SdkList, hooktype hookstate.WorkspaceHookType) *state.TaskSet {
+func createStateHooks(st *state.State, content []sdk.Setup, newContent workspacebackend.SdkList, hooktype hookstate.WorkspaceHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {
 		// the state hooks will only be set for the SDKs that were installed AND
 		// were not removed from the workspace file at the time of refresh
-		if slices.IndexFunc(content, func(s *sdk.SdkInfo) bool { return s.Name == newsdk.Name }) == -1 {
+		if slices.IndexFunc(content, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
 			continue
 		}
 
