@@ -8,6 +8,7 @@ import (
 
 	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/metautil"
+	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,6 +42,10 @@ type Info struct {
 	Slots map[string]*SlotInfo
 	// Plugs or slots with issues (they are not included in Plugs or Slots)
 	BadInterfaces map[string]string
+}
+
+var SanitizePlugsSlots = func(snapInfo *Info) {
+	panic("SanitizePlugsSlots function not set")
 }
 
 func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
@@ -236,6 +241,14 @@ type PlugInfo struct {
 	Label     string
 }
 
+func (plug *PlugInfo) Attr(key string, val interface{}) error {
+	return getAttribute(plug.Sdk.Name, plug.Interface, plug.Attrs, key, val)
+}
+
+func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
+	return lookupAttr(plug.Attrs, key)
+}
+
 func SdkCurrentPath(sdkName string) string {
 	return filepath.Join(WorkspaceSdksDir, sdkName, "current")
 }
@@ -250,4 +263,21 @@ func SdkHookPath(sdkName, hookName string) string {
 
 func (s *Setup) Filename() string {
 	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
+}
+
+func MockSanitizePlugsSlots(f func(snapInfo *Info)) (restore func()) {
+	old := SanitizePlugsSlots
+	SanitizePlugsSlots = f
+	return func() { SanitizePlugsSlots = old }
+}
+
+func MockInfo(c *check.C, yamlText string, setup Setup) *Info {
+	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
+	defer restoreSanitize()
+	info, err := ReadSdkInfo([]byte(yamlText), setup)
+	c.Assert(err, check.IsNil)
+
+	err = Validate(info)
+	c.Assert(err, check.IsNil)
+	return info
 }

@@ -1,0 +1,223 @@
+// -*- Mode: Go; indent-tabs-mode: t -*-
+
+/*
+ * Copyright (C) 2016 Canonical Ltd
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+package interfaces_test
+
+import (
+	"fmt"
+	"testing"
+
+	. "gopkg.in/check.v1"
+
+	"github.com/canonical/workspace/internal/interfaces"
+	"github.com/canonical/workspace/internal/interfaces/builtin"
+	"github.com/canonical/workspace/internal/interfaces/ifacetest"
+	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workspace/internal/testutil"
+)
+
+func Test(t *testing.T) {
+	TestingT(t)
+}
+
+type CoreSuite struct {
+	testutil.BaseTest
+}
+
+var _ = Suite(&CoreSuite{})
+
+func (s *CoreSuite) SetUpTest(c *C) {
+	s.BaseTest.SetUpTest(c)
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+}
+
+func (s *CoreSuite) TearDownTest(c *C) {
+	s.BaseTest.TearDownTest(c)
+}
+
+// PlugRef.String works as expected
+func (s *CoreSuite) TestPlugRefString(c *C) {
+	ref := interfaces.PlugRef{Sdk: "snap", Name: "plug"}
+	c.Check(ref.String(), Equals, "snap:plug")
+	refPtr := &interfaces.PlugRef{Sdk: "snap", Name: "plug"}
+	c.Check(refPtr.String(), Equals, "snap:plug")
+}
+
+// SlotRef.String works as expected
+func (s *CoreSuite) TestSlotRefString(c *C) {
+	ref := interfaces.SlotRef{Sdk: "snap", Name: "slot"}
+	c.Check(ref.String(), Equals, "snap:slot")
+	refPtr := &interfaces.SlotRef{Sdk: "snap", Name: "slot"}
+	c.Check(refPtr.String(), Equals, "snap:slot")
+}
+
+// ConnRef.ID works as expected
+func (s *CoreSuite) TestConnRefID(c *C) {
+	conn := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Sdk: "producer", Name: "slot"},
+	}
+	c.Check(conn.ID(), Equals, "consumer:plug producer:slot")
+}
+
+// ParseConnRef works as expected
+func (s *CoreSuite) TestParseConnRef(c *C) {
+	ref, err := interfaces.ParseConnRef("consumer:plug producer:slot")
+	c.Assert(err, IsNil)
+	c.Check(ref, DeepEquals, &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Sdk: "producer", Name: "slot"},
+	})
+	_, err = interfaces.ParseConnRef("garbage")
+	c.Assert(err, ErrorMatches, `malformed connection identifier: "garbage"`)
+	_, err = interfaces.ParseConnRef("snap:plug:garbage snap:slot")
+	c.Assert(err, ErrorMatches, `malformed connection identifier: ".*"`)
+	_, err = interfaces.ParseConnRef("snap:plug snap:slot:garbage")
+	c.Assert(err, ErrorMatches, `malformed connection identifier: ".*"`)
+}
+
+type simpleIface struct {
+	name string
+}
+
+func (si simpleIface) Name() string                                            { return si.name }
+func (si simpleIface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool { return false }
+
+func (s *CoreSuite) TestByName(c *C) {
+	// setup a mock interface using builtin - this will also trigger init() in
+	// builtin package which set ByName to a real implementation
+	r := builtin.MockInterface(simpleIface{name: "mock-network"})
+	defer r()
+
+	_, err := interfaces.ByName("no-such-interface")
+	c.Assert(err, ErrorMatches, "interface \"no-such-interface\" not found")
+
+	iface, err := interfaces.ByName("mock-network")
+	c.Assert(err, IsNil)
+	c.Assert(iface.Name(), Equals, "mock-network")
+}
+
+type serviceSnippetIface struct {
+	simpleIface
+
+	sanitizerErr error
+
+	snips []string
+}
+
+func (ssi serviceSnippetIface) BeforePreparePlug(plug *sdk.PlugInfo) error {
+	return ssi.sanitizerErr
+}
+
+func (ssi serviceSnippetIface) ServicePermanentPlug(plug *sdk.PlugInfo) []string {
+	return ssi.snips
+}
+
+func (s *CoreSuite) TestPermanentPlugServiceSnippets(c *C) {
+	// setup a mock interface using builtin - this will also trigger init() in
+	// builtin package which set ByName to a real implementation
+	ssi := serviceSnippetIface{
+		simpleIface: simpleIface{name: "mock-service-snippets"},
+		snips:       []string{"foo1", "foo2"},
+	}
+	r := builtin.MockInterface(ssi)
+	defer r()
+
+	iface, err := interfaces.ByName("mock-service-snippets")
+	c.Assert(err, IsNil)
+	c.Assert(iface.Name(), Equals, "mock-service-snippets")
+
+	info := sdk.MockInfo(c, `
+name: sdk
+plugs:
+  plug:
+    interface: mock-service-snippets
+`, sdk.Setup{})
+	plug := info.Plugs["plug"]
+
+	snips, err := interfaces.PermanentPlugServiceSnippets(iface, plug)
+	c.Assert(err, IsNil)
+	c.Assert(snips, DeepEquals, []string{"foo1", "foo2"})
+}
+
+func (s *CoreSuite) TestPermanentPlugServiceSnippetsSanitizesPlugs(c *C) {
+	// setup a mock interface using builtin - this will also trigger init() in
+	// builtin package which set ByName to a real implementation
+	ssi := serviceSnippetIface{
+		simpleIface:  simpleIface{name: "unclean-service-snippets"},
+		sanitizerErr: fmt.Errorf("cannot sanitize: foo"),
+	}
+	r := builtin.MockInterface(ssi)
+	defer r()
+
+	info := sdk.MockInfo(c, `
+name: sdk
+plugs:
+  plug:
+    interface: unclean-service-snippets
+`, sdk.Setup{})
+	plug := info.Plugs["plug"]
+
+	iface, err := interfaces.ByName("unclean-service-snippets")
+	c.Assert(err, IsNil)
+	c.Assert(iface.Name(), Equals, "unclean-service-snippets")
+
+	_, err = interfaces.PermanentPlugServiceSnippets(iface, plug)
+	c.Assert(err, ErrorMatches, "cannot sanitize: foo")
+}
+
+func (s *CoreSuite) TestSanitizePlug(c *C) {
+	info := sdk.MockInfo(c, `
+name: sdk
+plugs:
+  plug:
+    interface: iface
+`, sdk.Setup{})
+	plug := info.Plugs["plug"]
+	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
+		InterfaceName: "iface",
+	}, plug), IsNil)
+	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
+		InterfaceName:             "iface",
+		BeforePreparePlugCallback: func(plug *sdk.PlugInfo) error { return fmt.Errorf("broken") },
+	}, plug), ErrorMatches, "broken")
+	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
+		InterfaceName: "other",
+	}, plug), ErrorMatches, `cannot sanitize plug "sdk:plug" \(interface "iface"\) using interface "other"`)
+}
+
+func (s *CoreSuite) TestSanitizeSlot(c *C) {
+	info := sdk.MockInfo(c, `
+name: sdk
+slots:
+  slot:
+    interface: iface
+`, sdk.Setup{})
+	slot := info.Slots["slot"]
+	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
+		InterfaceName: "iface",
+	}, slot), IsNil)
+	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
+		InterfaceName:             "iface",
+		BeforePrepareSlotCallback: func(slot *sdk.SlotInfo) error { return fmt.Errorf("broken") },
+	}, slot), ErrorMatches, "broken")
+	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
+		InterfaceName: "other",
+	}, slot), ErrorMatches, `cannot sanitize slot "sdk:slot" \(interface "iface"\) using interface "other"`)
+}
