@@ -145,6 +145,7 @@ func (s *CoreSuite) TestPermanentPlugServiceSnippets(c *C) {
 
 	info := sdk.MockInfo(c, `
 name: sdk
+base: ubuntu@22.04
 plugs:
   plug:
     interface: mock-service-snippets
@@ -168,6 +169,7 @@ func (s *CoreSuite) TestPermanentPlugServiceSnippetsSanitizesPlugs(c *C) {
 
 	info := sdk.MockInfo(c, `
 name: sdk
+base: ubuntu@22.04
 plugs:
   plug:
     interface: unclean-service-snippets
@@ -185,6 +187,7 @@ plugs:
 func (s *CoreSuite) TestSanitizePlug(c *C) {
 	info := sdk.MockInfo(c, `
 name: sdk
+base: ubuntu@22.04
 plugs:
   plug:
     interface: iface
@@ -205,6 +208,7 @@ plugs:
 func (s *CoreSuite) TestSanitizeSlot(c *C) {
 	info := sdk.MockInfo(c, `
 name: sdk
+base: ubuntu@22.04
 slots:
   slot:
     interface: iface

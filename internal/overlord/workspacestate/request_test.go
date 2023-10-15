@@ -76,8 +76,8 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
 func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
-	sdk_2 := workspacebackend.Sdk{Name: "sdk_2", Channel: "latest/stable"}
+	sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	sdk_2 := workspacebackend.SdkRecord{Name: "sdk_2", Channel: "latest/stable"}
 
 	file := &workspacebackend.WorkspaceFile{
 		Name: "test",
@@ -104,7 +104,7 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
-	var s1, s2 workspacebackend.Sdk
+	var s1, s2 workspacebackend.SdkRecord
 	err = tasks[3].Get("sdk-setup", &s1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(s1, check.Equals, sdk)
@@ -171,7 +171,7 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	test_sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	test_sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
@@ -248,7 +248,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	file := &workspacebackend.WorkspaceFile{
 		Name: "ws",
@@ -291,7 +291,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
@@ -350,7 +350,7 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	files := []*workspacebackend.WorkspaceFile{
 		{
@@ -424,8 +424,8 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	oneinst := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
-	twoinst := workspacebackend.Sdk{Name: "two", Channel: "latest/stable"}
+	oneinst := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	twoinst := workspacebackend.SdkRecord{Name: "two", Channel: "latest/stable"}
 
 	// installed SDKs
 	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
@@ -450,8 +450,8 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 	defer s.state.Unlock()
 
 	// the SDK list to be refreshed (i.e. coming from a workspace file)
-	installed := workspacebackend.SdkList{workspacebackend.Sdk{Name: "one"},
-		workspacebackend.Sdk{Name: "two"}}
+	installed := workspacebackend.SdkList{workspacebackend.SdkRecord{Name: "one"},
+		workspacebackend.SdkRecord{Name: "two"}}
 
 	// installed SDKs
 	one := sdk.Setup{Name: "one", Channel: "latest/stable"}

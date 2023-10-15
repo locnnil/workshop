@@ -4,22 +4,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
+
+	"github.com/canonical/workspace/internal/sdk"
 )
 
-var SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04"}
-var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-var validChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
-
-type Sdk struct {
+type SdkRecord struct {
 	Name    string `json:"name"`
 	Channel string `json:"channel"`
 }
 
-type SdkList []Sdk
+type SdkList []SdkRecord
 
 type WorkspaceFile struct {
 	Name string `yaml:"name" json:"name"`
@@ -31,7 +28,7 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return fmt.Errorf("`sdks` must contain YAML mapping, has %v", value.Kind)
 	}
-	*p = make([]Sdk, len(value.Content)/2)
+	*p = make([]SdkRecord, len(value.Content)/2)
 	for i := 0; i < len(value.Content); i += 2 {
 		var res = &(*p)[i/2]
 		if err := value.Content[i].Decode(&res.Name); err != nil {
@@ -41,7 +38,7 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-	slices.SortFunc(*p, func(a, b Sdk) bool {
+	slices.SortFunc(*p, func(a, b SdkRecord) bool {
 		return a.Name < b.Name
 	})
 	return nil
@@ -63,11 +60,11 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 	}
 
 	/* Validate workspace properties */
-	if !validName.MatchString(file.Name) {
+	if !sdk.ValidName.MatchString(file.Name) {
 		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
 
-	if !slices.Contains(SupportedBases, file.Base) {
+	if !slices.Contains(sdk.ValidBases, file.Base) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 
@@ -76,7 +73,7 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 	}
 
 	for _, k := range file.Sdks {
-		if matches := validChannel.FindStringSubmatch(k.Channel); matches != nil {
+		if matches := sdk.ValidChannel.FindStringSubmatch(k.Channel); matches != nil {
 			continue
 		} else {
 			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, k.Name)

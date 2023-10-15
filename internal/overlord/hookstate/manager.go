@@ -7,9 +7,9 @@ import (
 )
 
 type HookSetup struct {
-	Sdk         workspacebackend.Sdk `json:"sdk"`
-	HookType    WorkspaceHookType    `json:"type"`
-	Environment map[string]string    `json:"environment"`
+	Sdk         workspacebackend.SdkRecord `json:"sdk"`
+	HookType    WorkspaceHookType          `json:"type"`
+	Environment map[string]string          `json:"environment"`
 }
 
 type WorkspaceHookType int

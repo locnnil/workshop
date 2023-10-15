@@ -277,6 +277,6 @@ type Specification interface {
 type SecuritySystem string
 
 const (
-	// SecurityPolkit identifies the polkit security system.
+	// SecurityLxdDevice creates LXD device configurations (mount, GPU, etc.)
 	SecurityLxdDevice SecuritySystem = "lxd-device"
 )

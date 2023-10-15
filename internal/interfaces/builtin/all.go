@@ -28,7 +28,7 @@ import (
 )
 
 func init() {
-	sdk.SanitizePlugsSlots = sanitizePlugsSlots
+	sdk.SanitizePlugsSlots = SanitizePlugsSlots
 
 	// setup the ByName function using allInterfaces
 	interfaces.ByName = func(name string) (interfaces.Interface, error) {
@@ -44,45 +44,45 @@ var (
 	allInterfaces map[string]interfaces.Interface
 )
 
-func sanitizePlugsSlots(snapInfo *sdk.Info) {
+func SanitizePlugsSlots(sdkInfo *sdk.Info) {
 	var badPlugs []string
 	var badSlots []string
 
-	for plugName, plugInfo := range snapInfo.Plugs {
+	for plugName, plugInfo := range sdkInfo.Plugs {
 		iface, ok := allInterfaces[plugInfo.Interface]
 		if !ok {
-			snapInfo.BadInterfaces[plugName] = fmt.Sprintf("unknown interface %q", plugInfo.Interface)
+			sdkInfo.BadInterfaces[plugName] = fmt.Sprintf("unknown interface %q", plugInfo.Interface)
 			badPlugs = append(badPlugs, plugName)
 			continue
 		}
 		// Reject plug with invalid name
 		if err := sdk.ValidatePlugName(plugName); err != nil {
-			snapInfo.BadInterfaces[plugName] = err.Error()
+			sdkInfo.BadInterfaces[plugName] = err.Error()
 			badPlugs = append(badPlugs, plugName)
 			continue
 		}
 		if err := interfaces.BeforePreparePlug(iface, plugInfo); err != nil {
-			snapInfo.BadInterfaces[plugName] = err.Error()
+			sdkInfo.BadInterfaces[plugName] = err.Error()
 			badPlugs = append(badPlugs, plugName)
 			continue
 		}
 	}
 
-	for slotName, slotInfo := range snapInfo.Slots {
+	for slotName, slotInfo := range sdkInfo.Slots {
 		iface, ok := allInterfaces[slotInfo.Interface]
 		if !ok {
-			snapInfo.BadInterfaces[slotName] = fmt.Sprintf("unknown interface %q", slotInfo.Interface)
+			sdkInfo.BadInterfaces[slotName] = fmt.Sprintf("unknown interface %q", slotInfo.Interface)
 			badSlots = append(badSlots, slotName)
 			continue
 		}
 		// Reject slot with invalid name
 		if err := sdk.ValidateSlotName(slotName); err != nil {
-			snapInfo.BadInterfaces[slotName] = err.Error()
+			sdkInfo.BadInterfaces[slotName] = err.Error()
 			badSlots = append(badSlots, slotName)
 			continue
 		}
 		if err := interfaces.BeforePrepareSlot(iface, slotInfo); err != nil {
-			snapInfo.BadInterfaces[slotName] = err.Error()
+			sdkInfo.BadInterfaces[slotName] = err.Error()
 			badSlots = append(badSlots, slotName)
 			continue
 		}
@@ -90,10 +90,10 @@ func sanitizePlugsSlots(snapInfo *sdk.Info) {
 
 	// remove any bad plugs and slots
 	for _, plugName := range badPlugs {
-		delete(snapInfo.Plugs, plugName)
+		delete(sdkInfo.Plugs, plugName)
 	}
 	for _, slotName := range badSlots {
-		delete(snapInfo.Slots, slotName)
+		delete(sdkInfo.Slots, slotName)
 	}
 }
 
@@ -116,59 +116,6 @@ func registerIface(iface interfaces.Interface) {
 		allInterfaces = make(map[string]interfaces.Interface)
 	}
 	allInterfaces[iface.Name()] = iface
-}
-
-func SanitizePlugsSlots(snapInfo *sdk.Info) {
-	var badPlugs []string
-	var badSlots []string
-
-	for plugName, plugInfo := range snapInfo.Plugs {
-		iface, ok := allInterfaces[plugInfo.Interface]
-		if !ok {
-			snapInfo.BadInterfaces[plugName] = fmt.Sprintf("unknown interface %q", plugInfo.Interface)
-			badPlugs = append(badPlugs, plugName)
-			continue
-		}
-		// Reject plug with invalid name
-		if err := sdk.ValidatePlugName(plugName); err != nil {
-			snapInfo.BadInterfaces[plugName] = err.Error()
-			badPlugs = append(badPlugs, plugName)
-			continue
-		}
-		if err := interfaces.BeforePreparePlug(iface, plugInfo); err != nil {
-			snapInfo.BadInterfaces[plugName] = err.Error()
-			badPlugs = append(badPlugs, plugName)
-			continue
-		}
-	}
-
-	for slotName, slotInfo := range snapInfo.Slots {
-		iface, ok := allInterfaces[slotInfo.Interface]
-		if !ok {
-			snapInfo.BadInterfaces[slotName] = fmt.Sprintf("unknown interface %q", slotInfo.Interface)
-			badSlots = append(badSlots, slotName)
-			continue
-		}
-		// Reject slot with invalid name
-		if err := sdk.ValidateSlotName(slotName); err != nil {
-			snapInfo.BadInterfaces[slotName] = err.Error()
-			badSlots = append(badSlots, slotName)
-			continue
-		}
-		if err := interfaces.BeforePrepareSlot(iface, slotInfo); err != nil {
-			snapInfo.BadInterfaces[slotName] = err.Error()
-			badSlots = append(badSlots, slotName)
-			continue
-		}
-	}
-
-	// remove any bad plugs and slots
-	for _, plugName := range badPlugs {
-		delete(snapInfo.Plugs, plugName)
-	}
-	for _, slotName := range badSlots {
-		delete(snapInfo.Slots, slotName)
-	}
 }
 
 func MockInterface(iface interfaces.Interface) func() {

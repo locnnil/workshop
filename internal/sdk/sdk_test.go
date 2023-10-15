@@ -28,6 +28,8 @@ func (s *SdkSuite) SetUpTest(c *check.C) {
 		Revision:    1,
 		InstallTime: time.Now(),
 	}
+
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 }
 
 func (s *SdkSuite) TearDownTest(c *check.C) {
@@ -126,10 +128,10 @@ func (s *SdkSuite) TestUnmarshalLastPlugDefinitionWins(c *check.C) {
 name: sdk
 plugs:
     net:
-        interface: network-client
+        interface: content
         attr: 1
     net:
-        interface: network-client
+        interface: content
         attr: 2
 `), s.setup)
 	c.Assert(err, check.IsNil)
@@ -138,7 +140,7 @@ plugs:
 	c.Assert(info.Plugs["net"], check.DeepEquals, &sdk.PlugInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "network-client",
+		Interface: "content",
 		Attrs:     map[string]interface{}{"attr": int64(2)},
 	})
 }
@@ -148,16 +150,16 @@ func (s *SdkSuite) TestUnmarshalPlugWithoutInterfaceName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 plugs:
-    network-client:
+    content:
         ipv6-aware: true
 `), s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 1)
 	c.Check(info.Slots, check.HasLen, 0)
-	c.Assert(info.Plugs["network-client"], check.DeepEquals, &sdk.PlugInfo{
+	c.Assert(info.Plugs["content"], check.DeepEquals, &sdk.PlugInfo{
 		Sdk:       info,
-		Name:      "network-client",
-		Interface: "network-client",
+		Name:      "content",
+		Interface: "content",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }
@@ -283,15 +285,15 @@ func (s *SdkSuite) TestUnmarshalStandaloneImplicitSlot(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    network-client:
+    content:
 `), s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
-	c.Assert(info.Slots["network-client"], check.DeepEquals, &sdk.SlotInfo{
+	c.Assert(info.Slots["content"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
-		Name:      "network-client",
-		Interface: "network-client",
+		Name:      "content",
+		Interface: "content",
 	})
 }
 
@@ -300,7 +302,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneAbbreviatedSlot(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    net: network-client
+    net: content
 `), s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
@@ -308,7 +310,7 @@ slots:
 	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "network-client",
+		Interface: "content",
 	})
 }
 
@@ -318,7 +320,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneCompleteSlot(c *check.C) {
 name: sdk
 slots:
     net:
-        interface: network-client
+        interface: content
         ipv6-aware: true
 `), s.setup)
 	c.Assert(err, check.IsNil)
@@ -327,7 +329,7 @@ slots:
 	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "network-client",
+		Interface: "content",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }
@@ -365,10 +367,10 @@ func (s *SdkSuite) TestUnmarshalLastSlotDefinitionWins(c *check.C) {
 name: sdk
 slots:
     net:
-        interface: network-client
+        interface: content
         attr: 1
     net:
-        interface: network-client
+        interface: content
         attr: 2
 `), s.setup)
 	c.Assert(err, check.IsNil)
@@ -377,7 +379,7 @@ slots:
 	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "network-client",
+		Interface: "content",
 		Attrs:     map[string]interface{}{"attr": int64(2)},
 	})
 }
@@ -387,16 +389,16 @@ func (s *SdkSuite) TestUnmarshalSlotWithoutInterfaceName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    network-client:
+    content:
         ipv6-aware: true
 `), s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
-	c.Assert(info.Slots["network-client"], check.DeepEquals, &sdk.SlotInfo{
+	c.Assert(info.Slots["content"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
-		Name:      "network-client",
-		Interface: "network-client",
+		Name:      "content",
+		Interface: "content",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }

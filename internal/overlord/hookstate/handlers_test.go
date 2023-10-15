@@ -83,7 +83,7 @@ func (s *hookSuite) TearDownTest(c *check.C) {
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{Name: "new", Channel: "latest/stable"}
+	newSdk := workspacebackend.SdkRecord{Name: "new", Channel: "latest/stable"}
 
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
 
@@ -114,7 +114,7 @@ base: ubuntu@20.04
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
@@ -145,7 +145,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.Sdk{Name: "one", Channel: "latest/stable"}
+	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
@@ -173,7 +173,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/one"})
 }
 
-func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.Sdk) {
+func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.SdkRecord) {
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:

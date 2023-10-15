@@ -839,12 +839,9 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 	return spec, nil
 }
 
-// AddSnap adds plugs and slots declared by the given snap to the repository.
+// AddSdk adds plugs and slots declared by the given snap to the repository.
 //
-// This function can be used to implement snap install or, when used along with
-// RemoveSnap, snap upgrade.
-//
-// AddSnap doesn't change existing plugs/slots. The caller is responsible for
+// AddSdk doesn't change existing plugs/slots. The caller is responsible for
 // ensuring that the snap is not present in the repository in any way prior to
 // calling this function. If this constraint is violated then no changes are
 // made and an error is returned.

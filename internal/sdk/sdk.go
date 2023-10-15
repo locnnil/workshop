@@ -1,8 +1,10 @@
 package sdk
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,13 +58,14 @@ func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
 	}
 
 	sdkInfo := &Info{
-		Workspace: setup.Workspace,
-		Name:      sdkYaml.Name,
-		Base:      sdkYaml.Base,
-		Plugs:     make(map[string]*PlugInfo),
-		Slots:     make(map[string]*SlotInfo),
-		Revision:  setup.Revision,
-		Channel:   setup.Channel,
+		Workspace:     setup.Workspace,
+		Name:          sdkYaml.Name,
+		Base:          sdkYaml.Base,
+		Plugs:         make(map[string]*PlugInfo),
+		Slots:         make(map[string]*SlotInfo),
+		BadInterfaces: make(map[string]string),
+		Revision:      setup.Revision,
+		Channel:       setup.Channel,
 	}
 
 	if err := setPlugsFromSnapYaml(&sdkYaml, sdkInfo); err != nil {
@@ -72,6 +75,8 @@ func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
 	if err := setSlotsFromSnapYaml(&sdkYaml, sdkInfo); err != nil {
 		return nil, err
 	}
+
+	SanitizePlugsSlots(sdkInfo)
 	return sdkInfo, nil
 }
 
@@ -280,4 +285,43 @@ func MockInfo(c *check.C, yamlText string, setup Setup) *Info {
 	err = Validate(info)
 	c.Assert(err, check.IsNil)
 	return info
+}
+
+func MockInvalidInfo(c *check.C, yamlText string, setup Setup) *Info {
+	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
+	defer restoreSanitize()
+
+	sdkInfo, err := ReadSdkInfo([]byte(yamlText), setup)
+	c.Assert(err, check.IsNil)
+	err = Validate(sdkInfo)
+	c.Assert(err, check.NotNil)
+	return sdkInfo
+}
+
+// BadInterfacesSummary returns a summary of the problems of bad plugs
+// and slots in the sdk.
+func BadInterfacesSummary(sdkInfo *Info) string {
+	inverted := make(map[string][]string)
+	for name, reason := range sdkInfo.BadInterfaces {
+		inverted[reason] = append(inverted[reason], name)
+	}
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "sdk %q has bad plugs or slots: ", sdkInfo.Name)
+	reasons := make([]string, 0, len(inverted))
+	for reason := range inverted {
+		reasons = append(reasons, reason)
+	}
+	sort.Strings(reasons)
+	for _, reason := range reasons {
+		names := inverted[reason]
+		sort.Strings(names)
+		for i, name := range names {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString(name)
+		}
+		fmt.Fprintf(&buf, " (%s); ", reason)
+	}
+	return strings.TrimSuffix(buf.String(), "; ")
 }

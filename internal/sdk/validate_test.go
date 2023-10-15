@@ -14,6 +14,7 @@ var _ = check.Suite(&ValidateSuite{})
 
 func (s *ValidateSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 }
 
 func (s *ValidateSuite) TearDownTest(c *check.C) {
@@ -58,4 +59,23 @@ func (s *ValidateSuite) TestValidateSlotPlugInterfaceName(c *check.C) {
 		err = sdk.ValidateInterfaceName(name)
 		c.Assert(err, check.ErrorMatches, `invalid interface name: ".*"`)
 	}
+}
+
+func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
+	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
+`), sdk.Setup{})
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.ErrorMatches, `invalid sdk name: "foo.something"`)
+}
+
+func (s *ValidateSuite) TestIllegalSdkBase(c *check.C) {
+	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
+base: ubuntu@20.04
+`), sdk.Setup{})
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.ErrorMatches, `invalid sdk name: "foo.something"`)
 }

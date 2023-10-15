@@ -39,7 +39,7 @@ sdks:
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
-	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workspacebackend.Sdk) bool {
+	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workspacebackend.SdkRecord) bool {
 		return a.Name < b.Name
 	}), check.Equals, true)
 	c.Assert(file.Sdks[0].Name, check.Equals, "automotive")

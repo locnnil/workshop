@@ -51,6 +51,7 @@ func (s *ContentSuite) TestName(c *check.C) {
 
 func (s *ContentSuite) TestSanitizeSlotSimple(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
@@ -62,6 +63,7 @@ slots:
 
 func (s *ContentSuite) TestSanitizePlugSimple(c *check.C) {
 	const mockSnapYaml = `name: content-slot-sdk
+base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
@@ -74,6 +76,7 @@ plugs:
 
 func (s *ContentSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
@@ -86,6 +89,7 @@ plugs:
 
 func (s *ContentSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
@@ -103,6 +107,7 @@ func (s *ContentSuite) TestInterfaces(c *check.C) {
 
 func (s *ContentSuite) TestContentInterface(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
 plugs:
  content:
   target: /project/training
@@ -110,6 +115,7 @@ plugs:
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
 slots:
  content:
 `, sdk.Setup{Workspace: "ws"}, "content")

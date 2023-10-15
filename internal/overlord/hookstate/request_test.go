@@ -25,7 +25,7 @@ func (s *S) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	var sdk = workspacebackend.Sdk{Name: "go", Channel: "latest/stable"}
+	var sdk = workspacebackend.SdkRecord{Name: "go", Channel: "latest/stable"}
 
 	envs := []map[string]string{
 		{},

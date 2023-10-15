@@ -51,6 +51,7 @@ var _ = Suite(&RepositorySuite{
 
 const consumerYaml = `
 name: consumer
+base: ubuntu@22.04
 plugs:
     plug:
         interface: interface
@@ -60,6 +61,7 @@ plugs:
 
 const producerYaml = `
 name: producer
+base: ubuntu@22.04
 slots:
     slot:
         interface: interface
@@ -294,6 +296,7 @@ func (s *RepositorySuite) TestPlugSearch(c *C) {
 	addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "xx", Yaml: `
 name: xx
+base: ubuntu@22.04
 plugs:
     a: interface
     b: interface
@@ -301,6 +304,7 @@ plugs:
 `},
 		{Name: "yy", Yaml: `
 name: yy
+base: ubuntu@22.04
 plugs:
     a: interface
     b: interface
@@ -308,6 +312,7 @@ plugs:
 `},
 		{Name: "zz_instance", Yaml: `
 name: zz
+base: ubuntu@22.04
 plugs:
     a: interface
     b: interface
@@ -363,11 +368,13 @@ func (s *RepositorySuite) TestAllPlugsWithoutInterfaceName(c *C) {
 	sdks := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "snap-a", Yaml: `
 name: snap-a
+base: ubuntu@22.04
 plugs:
     name-a: interface
 `},
 		{Name: "snap-b", Yaml: `
 name: snap-b
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
@@ -375,6 +382,7 @@ plugs:
 `},
 		{Name: "snap-b_instance", Yaml: `
 name: snap-b
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
@@ -402,13 +410,13 @@ func (s *RepositorySuite) TestAllPlugsWithInterfaceName(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "snap-a", Yaml: `
 name: snap-a
-version: 0
+base: ubuntu@22.04
 plugs:
     name-a: interface
 `},
 		{Name: "snap-b", Yaml: `
 name: snap-b
-version: 0
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: other-interface
@@ -416,7 +424,7 @@ plugs:
 `},
 		{Name: "snap-b_instance", Yaml: `
 name: snap-b
-version: 0
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: other-interface
@@ -436,6 +444,7 @@ func (s *RepositorySuite) TestPlugs(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "snap-a", Yaml: `
 name: snap-a
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
@@ -443,6 +452,7 @@ plugs:
 `},
 		{Name: "snap-b", Yaml: `
 name: snap-b
+base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
@@ -474,20 +484,20 @@ func (s *RepositorySuite) TestAllSlots(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "snap-a", Yaml: `
 name: snap-a
-version: 0
+base: ubuntu@22.04
 slots:
     name-a: interface
     name-b: interface
 `},
 		{Name: "snap-b", Yaml: `
 name: snap-b
-version: 0
+base: ubuntu@22.04
 slots:
     name-a: other-interface
 `},
 		{Name: "snap-b_instance", Yaml: `
 name: snap-b
-version: 0
+base: ubuntu@22.04
 slots:
     name-a: other-interface
 `},
@@ -513,14 +523,14 @@ func (s *RepositorySuite) TestSlots(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
 		{Name: "snap-a", Yaml: `
 name: snap-a
-version: 0
+base: ubuntu@22.04
 slots:
     name-a: interface
     name-b: interface
 `},
 		{Name: "snap-b", Yaml: `
 name: snap-b
-version: 0
+base: ubuntu@22.04
 slots:
     name-a: interface
 `},
@@ -1062,12 +1072,14 @@ func (s *RepositorySuite) TestAutoConnectCandidatePlugsAndSlots(c *C) {
 	// Add a pair of snaps with plugs/slots using those two interfaces
 	consumer := sdk.MockInfo(c, `
 name: consumer
+base: ubuntu@22.04
 plugs:
     auto:
     manual:
 `, sdk.Setup{Workspace: "ws", Name: "consumer"})
 	producer := sdk.MockInfo(c, `
 name: producer
+base: ubuntu@22.04
 slots:
     auto:
     manual:
@@ -1103,6 +1115,7 @@ func (s *RepositorySuite) TestAutoConnectCandidatePlugsAndSlotsSymmetry(c *C) {
 	// Add a producer snap for "auto"
 	producer := sdk.MockInfo(c, `
 name: producer
+base: ubuntu@22.04
 slots:
     auto:
 `, sdk.Setup{Workspace: "ws", Name: "producer"})
@@ -1112,6 +1125,7 @@ slots:
 	// Add two consumers snaps for "auto"
 	consumer1 := sdk.MockInfo(c, `
 name: consumer1
+base: ubuntu@22.04
 plugs:
     auto:
 `, sdk.Setup{Workspace: "ws", Name: "consumer1"})
@@ -1122,6 +1136,7 @@ plugs:
 	// Add two consumers snaps for "auto"
 	consumer2 := sdk.MockInfo(c, `
 name: consumer2
+base: ubuntu@22.04
 plugs:
     auto:
 `, sdk.Setup{Workspace: "ws", Name: "consumer2"})
@@ -1184,6 +1199,7 @@ func (s *AddRemoveSuite) addSdk(c *C, yaml string) (*sdk.Info, error) {
 func (s *AddRemoveSuite) TestAddSnapSkipsUnknownInterfaces(c *C) {
 	info, err := s.addSdk(c, `
 name: bogus
+base: ubuntu@22.04
 plugs:
   bogus-plug:
 slots:
@@ -1221,6 +1237,7 @@ func (s *DisconnectSnapSuite) SetUpTest(c *C) {
 
 	s.s1 = sdk.MockInfo(c, `
 name: s1
+base: ubuntu@22.04
 plugs:
     iface-a:
 slots:
@@ -1231,6 +1248,7 @@ slots:
 
 	s.s2 = sdk.MockInfo(c, `
 name: s2
+base: ubuntu@22.04
 plugs:
     iface-b:
 slots:
@@ -1241,6 +1259,7 @@ slots:
 	c.Assert(err, IsNil)
 	s.s2Instance = sdk.MockInfo(c, `
 name: s2-instance
+base: ubuntu@22.04
 plugs:
     iface-b:
 slots:
@@ -1332,6 +1351,7 @@ func makeContentConnectionTestSnaps(c *C, plugContentToken, slotContentToken str
 
 	plugSnap := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-plug-sdk
+base: ubuntu@22.04
 plugs:
   imported-content:
     interface: content
@@ -1339,6 +1359,7 @@ plugs:
 `, plugContentToken), sdk.Setup{Workspace: "ws-importer"})
 	slotSnap := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-slot-sdk
+base: ubuntu@22.04
 slots:
   exported-content:
     interface: content
@@ -1391,6 +1412,7 @@ func (s *RepositorySuite) TestAutoConnectContentInterfaceNoMatchingDeveloper(c *
 
 const ifacehooksSnap1 = `
 name: s1
+base: ubuntu@22.04
 plugs:
   consumer:
     interface: iface2
@@ -1399,6 +1421,7 @@ plugs:
 
 const ifacehooksSnap2 = `
 name: s2
+base: ubuntu@22.04
 slots:
   producer:
     interface: iface2

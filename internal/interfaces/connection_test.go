@@ -42,9 +42,7 @@ func (s *connSuite) SetUpTest(c *check.C) {
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 	consumer := sdk.MockInfo(c, `
 name: consumer
-version: 0
-apps:
-    app:
+base: ubuntu@22.04
 plugs:
     plug:
         interface: interface
@@ -55,9 +53,7 @@ plugs:
 	s.plug = consumer.Plugs["plug"]
 	producer := sdk.MockInfo(c, `
 name: producer
-version: 0
-apps:
-    app:
+base: ubuntu@22.04
 slots:
     slot:
         interface: interface

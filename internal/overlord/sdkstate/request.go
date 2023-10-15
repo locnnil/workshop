@@ -7,7 +7,7 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-func Retrieve(st *state.State, sdk *workspacebackend.Sdk) *state.Task {
+func Retrieve(st *state.State, sdk *workspacebackend.SdkRecord) *state.Task {
 	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve %q SDK from channel %q", sdk.Name, sdk.Channel))
 	download.Set("sdk-setup", sdk)
 	return download

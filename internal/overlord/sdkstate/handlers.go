@@ -46,7 +46,7 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
-	var sdk workspacebackend.Sdk
+	var sdk workspacebackend.SdkRecord
 
 	st.Lock()
 	err := task.Get("sdk-setup", &sdk)
