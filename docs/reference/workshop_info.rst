@@ -1,23 +1,23 @@
-.. _ref_workspace_info:
+.. _ref_workshop_info:
 
-workspace info
+workshop info
 ==============
 
-Prints the current status and details of a workspace as YAML.
+Prints the current status and details of a workshop as YAML.
 
 .. code:: shell
 
-   workspace info <WORKSPACE> [global options]
+   workshop info <WORKSHOP> [global options]
 
 
 Synopsis
 --------
 
 This command outputs the basic settings, current status and individual SDK
-details for a workspace, formatting them as YAML.  Specifically, it prints:
+details for a workshop, formatting them as YAML.  Specifically, it prints:
 
-- Essential workspace attributes, such as name, base and project directory
-- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workspace
+- Essential workshop attributes, such as name, base and project directory
+- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workshop
 - Individual SDK details, such as name, channel, installation date and revision
 
 
@@ -45,5 +45,5 @@ See also
 Explanation:
 
 - :ref:`SDK (concept) <exp_sdk>`
-- :ref:`workspace base (concept) <exp_workspace_base>`
-- :ref:`workspace definition (concept) <exp_workspace_def>`
+- :ref:`workshop base (concept) <exp_workshop_base>`
+- :ref:`workshop definition (concept) <exp_workshop_def>`

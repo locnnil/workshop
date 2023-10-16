@@ -33,6 +33,5 @@ roadmap
 snapd
 transactional
 webhook
-workspaced
-workspaces
+workshopd
 yaml

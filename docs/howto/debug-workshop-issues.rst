@@ -1,10 +1,10 @@
-.. _how_debug_workspace_issues:
+.. _how_debug_workshop_issues:
 
-Debug workspace issues
+Debug workshop issues
 ======================
 
 To trace the condition of a misbehaving
-:ref:`workspace <exp_workspace>`,
+:ref:`workshop <exp_workshop>`,
 you can explore its underlying
 :ref:`changes and tasks <exp_changes_tasks>`.
 This may help identify the root cause
@@ -13,10 +13,10 @@ if a
 fails.
 
 
-List workspace changes
+List workshop changes
 ----------------------
 
-Consider a workspace named ``ml-transformer``
+Consider a workshop named ``ml-transformer``
 that uses an unstable
 :ref:`SDK <exp_sdk>`
 from the ``latest/edge`` channel:
@@ -36,7 +36,7 @@ operation:
 
 .. code:: shell
 
-    workspace refresh ml-transformer
+    workshop refresh ml-transformer
 
         Error: cannot perform the following tasks:
         - Run hook "setup-base" for "huggingface" SDK (command failed with an error code (1))
@@ -44,15 +44,15 @@ operation:
 
 
 To investigate the failure,
-list the *changes* in the workspace to find the one that failed:
+list the *changes* in the workshop to find the one that failed:
 
 .. code:: shell
 
-   workspace changes
+   workshop changes
 
        ID  Status  Spawn                Ready                Summary
        ...
-       81  Error   today at 12:20       today at 12:23       Refresh workspaces "ml-transformer"
+       81  Error   today at 12:20       today at 12:23       Refresh workshops "ml-transformer"
 
 
 List tasks in a change
@@ -63,7 +63,7 @@ list its *tasks* to see the cause:
 
 .. code:: shell
 
-   workspace tasks 81
+   workshop tasks 81
 
        ID    Status  Spawn                Ready                Summary
        ...

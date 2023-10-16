@@ -22,7 +22,7 @@ Check prerequisites
 for low-level operation,
 using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
-to configure individual *workspaces*.
+to configure individual *workshops*.
 
 First, install and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
@@ -69,17 +69,17 @@ is enabled and running:
 Install
 ~~~~~~~
 
-Build the ``workspace`` snap
+Build the ``workshop`` snap
 from the |project| source code on
 `GitHub
-<https://github.com/canonical/workspace>`_:
+<https://github.com/canonical/workshop>`_:
 
 .. code:: shell
 
-   git clone git@github.com:canonical/workspace.git
+   git clone git@github.com:canonical/workshop.git
    # -- or --
-   git clone https://github.com/canonical/workspace.git
-   cd workspace
+   git clone https://github.com/canonical/workshop.git
+   cd workshop
    sudo snap install snapcraft --classic
    snapcraft
 
@@ -88,7 +88,7 @@ for example:
 
 .. code:: shell
 
-   sudo snap install --devmode ./workspace_0.1.0_amd64.snap
+   sudo snap install --devmode ./workshop_0.1.0_amd64.snap
 
 
 Run
@@ -96,23 +96,23 @@ Run
 
 The snap installs two major components:
 
-- The :program:`workspaced` daemon that exposes a REST API
-- The :program:`workspace` CLI tool that uses this API to command |project|
+- The :program:`workshopd` daemon that exposes a REST API
+- The :program:`workshop` CLI tool that uses this API to command |project|
 
 The daemon starts automatically after installation;
 the CLI tool is run manually:
 
 .. code:: shell
 
-   workspace --help
+   workshop --help
 
 
-Launch a workspace
+Launch a workshop
 ------------------
 
 Having installed |project|,
 use it to define, launch, start and stop your first
-:ref:`workspace <exp_workspace>`.
+:ref:`workshop <exp_workshop>`.
 
 
 Define
@@ -120,18 +120,18 @@ Define
 
 #. Create a
    :ref:`project directory <exp_project>`
-   named :file:`hello-workspace`:
+   named :file:`hello-workshop`:
 
    .. code:: shell
 
-      mkdir hello-workspace
-      cd hello-workspace
+      mkdir hello-workshop
+      cd hello-workshop
 
 
 #. In the project directory,
    create a
-   :ref:`workspace definition <exp_workspace_def>`
-   named :file:`.workspace.nimble.yaml`:
+   :ref:`workshop definition <exp_workshop_def>`
+   named :file:`.workshop.nimble.yaml`:
 
    .. code:: yaml
 
@@ -143,83 +143,83 @@ Define
 
 
 #. Make sure |project| can find the definition
-   by *listing* the workspaces
+   by *listing* the workshops
    in the project directory:
 
    .. code:: shell
 
-      workspace list
+      workshop list
 
-          Project                 Workspace  State  Notes
-          ~/hello-workspace       nimble     Off    -
+          Project                Workshop   State  Notes
+          ~/hello-workshop       nimble     Off    -
 
 
-   Note that a newly created workspace is *Off*.
+   Note that a newly created workshop is *Off*.
 
 
 Launch
 ~~~~~~
 
-To prepare a workspace for action,
-you :ref:`launch <ref_workspace_launch>` it:
+To prepare a workshop for action,
+you :ref:`launch <ref_workshop_launch>` it:
 
 .. code:: shell
 
-   workspace launch nimble
+   workshop launch nimble
 
        "nimble" launched
 
 
-Now, the workspace is *Ready*
+Now, the workshop is *Ready*
 to build, debug and run code.
 
 To make sure |project| watches the changes in the project directory,
-move it, then run :command:`workspace list`:
+move it, then run :command:`workshop list`:
 
 .. code:: shell
 
    cd ..
-   mv hello-workspace hi-workspace
-   cd hi-workspace
-   workspace list
+   mv hello-workshop hi-workshop
+   cd hi-workshop
+   workshop list
 
 
-       Project                 Workspace  State  Notes
-       ~/hi-workspace          nimble     Ready  -
+       Project                Workshop   State  Notes
+       ~/hi-workshop          nimble     Ready  -
 
 
 Start and stop
 ~~~~~~~~~~~~~~
 
-If you're done with the workspace for now,
+If you're done with the workshop for now,
 *stop* it to conserve resources:
 
 .. code:: shell
 
-   workspace stop nimble
+   workshop stop nimble
 
        "nimble" stopped
 
 
-To resume, *start* the workspace again:
+To resume, *start* the workshop again:
 
 .. code:: shell
 
-   workspace start nimble
+   workshop start nimble
 
        "nimble" started
 
 
 Both commands operate gracefully,
-waiting for the workspace to comply.
+waiting for the workshop to comply.
 
 
 .. _tut_refresh:
 
-Refresh a workspace
+Refresh a workshop
 -------------------
 
-When an aspect of the workspace changes,
+When an aspect of the workshop changes,
 refresh it to pick up the update.
 
 
@@ -229,37 +229,37 @@ Update components
 If the
 :ref:`SDKs <exp_sdk>`
 listed in the
-:ref:`workspace definition <exp_workspace_def>`
+:ref:`workshop definition <exp_workshop_def>`
 are updated,
-:ref:`refresh <ref_workspace_refresh>` the workspace to apply the changes:
+:ref:`refresh <ref_workshop_refresh>` the workshop to apply the changes:
 
 .. code:: shell
 
-   workspace refresh nimble
+   workshop refresh nimble
 
        "nimble" refreshed
 
-The workspace is rebuilt from the
-:ref:`base <exp_workspace_base>`;
+The workshop is rebuilt from the
+:ref:`base <exp_workshop_base>`;
 then the SDKs are updated from their respective channels.
 
-To refresh multiple workspaces at once:
+To refresh multiple workshops at once:
 
 .. code:: shell
 
-   workspace refresh nimble huggingface ...
+   workshop refresh nimble huggingface ...
 
 .. note::
 
    The operation is transactional: If an error occurs,
-   **all** changes in **all** listed workspaces are reverted.
+   **all** changes in **all** listed workshops are reverted.
 
 
 Add or remove an SDK
 ~~~~~~~~~~~~~~~~~~~~
 
-To add a new SDK to your workspace,
-update the definition file and refresh the workspace:
+To add a new SDK to your workshop,
+update the definition file and refresh the workshop:
 
 .. code:: yaml
 
@@ -274,13 +274,13 @@ update the definition file and refresh the workspace:
 
 .. code:: shell
 
-   workspace refresh nimble
+   workshop refresh nimble
 
        "nimble" refreshed
 
 
 To remove an SDK,
-delete it from the definition and refresh the workspace.
+delete it from the definition and refresh the workshop.
 
 
 .. _tut_refresh_wait_on_error:
@@ -294,28 +294,28 @@ add the :option:`!--wait-on-error` option:
 
 .. code:: shell
 
-   workspace refresh --wait-on-error nimble
+   workshop refresh --wait-on-error nimble
 
        ERROR command failed with an error code (1): The edge version is not stable
 
-       Error: "nimble" refresh failed, resolve all errors and run "workspace refresh --continue".
-       To abort and get back to the state before run "workspace refresh --abort"
+       Error: "nimble" refresh failed, resolve all errors and run "workshop refresh --continue".
+       To abort and get back to the state before run "workshop refresh --abort"
 
 All progress is saved, up to the specific *task* that caused the error.
-Then, you can explore the paused workspace
+Then, you can explore the paused workshop
 and choose to abort or continue the refresh operation.
 
 To investigate the issue, check the recent *changes and tasks*:
 
 .. code:: shell
 
-   workspace changes
+   workshop changes
 
        ID  Status  Spawn                Ready                Summary
        ...
        81  Error   ...                  ...                  ...
 
-   workspace tasks 81
+   workshop tasks 81
 
        ...
        1391  Undone  today at 12:17       today at 12:18       Link "go" SDK
@@ -332,7 +332,7 @@ To continue the refresh operation:
 
 .. code:: shell
 
-    workspace refresh --continue nimble
+    workshop refresh --continue nimble
 
         "nimble" refreshed
 
@@ -341,6 +341,6 @@ To abort the operation and recover the last operational state:
 
 .. code:: shell
 
-    workspace refresh --abort nimble
+    workshop refresh --abort nimble
 
         "nimble" aborted

@@ -9,17 +9,17 @@
 for your projects**.
 
 **Define your dev environment in straightforward YAML**.
-The tool consumes the definition to create a contained workspace,
+The tool consumes the definition to create a contained workshop,
 installs the dependencies it lists as a number of SDKs,
 and attaches their life cycle hooks for run-time control.
 IDEs such as Visual Studio Code or JupyterLab
-can discover workspaces and use them in their operation,
+can discover workshops and use them in their operation,
 tidying up your system and streamlining your work.
 
 **Untangle the know-how that was weaved into your project**.
 An environment that could take hours of setup
 can be launched with one command;
-workspaces enhance issue reproduction across platforms,
+workshops enhance issue reproduction across platforms,
 facilitate collaboration in code reviews,
 and confine hackish experiments in lightweight containers.
 
@@ -83,9 +83,9 @@ we'll help you get it out there.
 
 - `Product map <https://warthogs.atlassian.net/projects/SDK?selectedItem=com.atlassian.plugins.atlassian-connect-plugin:com.herocoders.plugins.jira.epicsmap__epics-map-page>`__
 
-- `Contribution and participation <https://github.com/canonical/workspace/pulls>`__
+- `Contribution and participation <https://github.com/canonical/workshop/pulls>`__
 
-- `Product and documentation feedback <https://github.com/canonical/workspace/issues>`__
+- `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
 
 .. toctree::
    :hidden:

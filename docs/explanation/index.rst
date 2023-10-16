@@ -7,5 +7,5 @@ and explain how they fit together.
 .. toctree::
    :maxdepth: 1
 
-   essentials/project-workspace-sdks
+   essentials/project-workshop-sdks
    essentials/changes-tasks
