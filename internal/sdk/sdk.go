@@ -29,14 +29,27 @@ type Setup struct {
 type sdkYaml struct {
 	Name  string                 `json:"name"`
 	Base  string                 `json:"base"`
+	Type  string                 `json:"type"`
 	Plugs map[string]interface{} `yaml:"plugs,omitempty"`
 	Slots map[string]interface{} `yaml:"slots,omitempty"`
+}
+
+type Type string
+
+const (
+	Sdk  Type = "sdk"
+	Core Type = "core"
+)
+
+func (t Type) String() string {
+	return string(t)
 }
 
 type Info struct {
 	Workspace string
 	Name      string
 	Base      string
+	Type      Type
 	Channel   string
 	Revision  int64
 
@@ -57,10 +70,15 @@ func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
 		return &Info{}, err
 	}
 
+	if sdkYaml.Type == "" {
+		sdkYaml.Type = Sdk.String()
+	}
+
 	sdkInfo := &Info{
 		Workspace:     setup.Workspace,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
+		Type:          Type(sdkYaml.Type),
 		Plugs:         make(map[string]*PlugInfo),
 		Slots:         make(map[string]*SlotInfo),
 		BadInterfaces: make(map[string]string),

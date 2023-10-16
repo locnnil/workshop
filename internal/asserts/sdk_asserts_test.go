@@ -20,14 +20,15 @@ slots:
   interface3:
     deny-installation: false
     allow-auto-connection:
-      plug-sdk-type:
+      plug-type:
         - core
   interface4:
     allow-connection: true
     deny-connection: false
     allow-installation:
-      slot-snap-type:
+      slot-type:
         - core
+        - sdk
 timestamp: 2016-09-29T19:50:49Z
 sign-key-sha3-384: Jv8_JiHiIzJVcO9M55pPdqSDWUvuhfDIBJUS-3VW7F_idjix7Ffn5qMxB21ZQuij
 
@@ -112,7 +113,7 @@ revision: 0
 slots:
   network:
     allow-installation:
-      slot-workspace-type:
+      slot-type:
         - core
 `
 
@@ -127,7 +128,7 @@ slots:
 
 	c.Check(baseDecl.AuthorityID(), check.Equals, "canonical")
 	c.Check(baseDecl.Series(), check.Equals, "1")
-	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotWorkspaceTypes, check.DeepEquals, []string{"core"})
+	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"core"})
 
 	enc := asserts.Encode(baseDecl)
 	// it's expected that it cannot be decoded

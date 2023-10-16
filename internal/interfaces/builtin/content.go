@@ -37,7 +37,7 @@ const contentSummary = `allows sharing host code and data with SDKs`
 const contentBaseDeclarationSlots = `
   content:
     allow-installation:
-      slot-workspace-type:
+      slot-type:
         - core
     allow-connection: true
     allow-auto-connection: true

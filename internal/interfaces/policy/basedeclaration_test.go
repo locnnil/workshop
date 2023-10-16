@@ -1,0 +1,173 @@
+// -*- Mode: Go; indent-tabs-mode: t -*-
+
+/*
+ * Copyright (C) 2016-2018 Canonical Ltd
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+package policy_test
+
+import (
+	"fmt"
+	"testing"
+
+	"gopkg.in/check.v1"
+	. "gopkg.in/check.v1"
+
+	"github.com/canonical/workspace/internal/asserts"
+	"github.com/canonical/workspace/internal/interfaces"
+	"github.com/canonical/workspace/internal/interfaces/builtin"
+	"github.com/canonical/workspace/internal/interfaces/policy"
+	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workspace/internal/testutil"
+)
+
+type baseDeclSuite struct {
+	baseDecl        *asserts.BaseDeclaration
+	restoreSanitize func()
+}
+
+var _ = Suite(&baseDeclSuite{})
+
+func Test(t *testing.T) {
+	check.TestingT(t)
+}
+
+func (s *baseDeclSuite) SetUpSuite(c *C) {
+	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {})
+	s.baseDecl = asserts.BuiltinBaseDeclaration()
+}
+
+func (s *baseDeclSuite) TearDownSuite(c *C) {
+	s.restoreSanitize()
+}
+
+func (s *baseDeclSuite) connectCand(c *C, iface, slotYaml, plugYaml string) *policy.ConnectCandidate {
+	if slotYaml == "" {
+		slotYaml = fmt.Sprintf(`name: slot-sdk
+base: ubuntu@22.04
+slots:
+  %s:
+`, iface)
+	}
+	if plugYaml == "" {
+		plugYaml = fmt.Sprintf(`name: plug-sdk
+base: ubuntu@22.04
+plugs:
+  %s:
+`, iface)
+	}
+	slotSnap := sdk.MockInfo(c, slotYaml, sdk.Setup{Workspace: "ws"})
+	plugSnap := sdk.MockInfo(c, plugYaml, sdk.Setup{Workspace: "ws"})
+	return &policy.ConnectCandidate{
+		Plug:            interfaces.NewConnectedPlug(plugSnap.Plugs[iface], nil, nil),
+		Slot:            interfaces.NewConnectedSlot(slotSnap.Slots[iface], nil, nil),
+		BaseDeclaration: s.baseDecl,
+	}
+}
+
+func (s *baseDeclSuite) installSlotCand(c *C, iface string, snapType sdk.Type, yaml string) *policy.InstallCandidate {
+	if yaml == "" {
+		yaml = fmt.Sprintf(`name: install-slot-sdk
+base: ubuntu@22.04
+type: %s
+slots:
+  %s:
+`, snapType, iface)
+	}
+	snap := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	return &policy.InstallCandidate{
+		Sdk:             snap,
+		BaseDeclaration: s.baseDecl,
+	}
+}
+
+func (s *baseDeclSuite) installPlugCand(c *C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
+	if yaml == "" {
+		yaml = fmt.Sprintf(`name: install-plug-sdk
+base: ubuntu@22.04
+type: %s
+plugs:
+  %s:
+`, sdkType, iface)
+	}
+	snap := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	return &policy.InstallCandidate{
+		Sdk:             snap,
+		BaseDeclaration: s.baseDecl,
+	}
+}
+
+func (s *baseDeclSuite) TestContentAutoConnection(c *C) {
+	slotYaml := fmt.Sprintf(`name: slot-sdk
+base: ubuntu@22.04
+slots:
+    %s:
+`, "content")
+
+	cand := s.connectCand(c, "content", slotYaml, "")
+	arity, err := cand.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+	c.Check(arity.SlotsPerPlugAny(), check.Equals, false)
+}
+
+func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
+	all := builtin.Interfaces()
+
+	for _, iface := range all {
+		c.Check(iface.AutoConnect(nil, nil), Equals, true)
+	}
+}
+
+var (
+	slotInstallation = map[string][]string{
+		// other
+		"content": {"core"},
+	}
+	sdkTypeMap = map[string]sdk.Type{
+		"core": sdk.Core,
+		"sdk":  sdk.Sdk,
+	}
+)
+
+func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
+	// test content specially
+	ic := s.installSlotCand(c, "content", sdk.Sdk, ``)
+	err := ic.Check()
+	c.Assert(err, Not(IsNil))
+	c.Assert(err, ErrorMatches, "installation not allowed by \"content\" slot rule of interface \"content\"")
+
+	ic = s.installSlotCand(c, "content", sdk.Core, ``)
+	err = ic.Check()
+	c.Assert(err, IsNil)
+}
+
+func (s *baseDeclSuite) TestComposeBaseDeclaration(c *C) {
+	decl, err := policy.ComposeBaseDeclaration(nil)
+	c.Assert(err, IsNil)
+	c.Assert(string(decl), testutil.Contains, `
+type: base-declaration
+authority-id: canonical
+series: 1
+revision: 0
+`)
+}
+
+func (s *baseDeclSuite) TestDoesNotPanic(c *C) {
+	// In case there are any issues in the actual interfaces we'd get a panic
+	// on snapd startup. This test prevents this from happing unnoticed.
+	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
+	c.Assert(err, IsNil)
+}

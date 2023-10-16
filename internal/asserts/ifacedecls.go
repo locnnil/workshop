@@ -24,16 +24,16 @@ var (
 
 	ruleSubrules = []string{"allow-installation", "deny-installation", "allow-connection", "deny-connection", "allow-auto-connection", "deny-auto-connection"}
 
-	validWorkspaceType = regexp.MustCompile(`^(?:core|workspace)$`)
+	validWorkspaceType = regexp.MustCompile(`^(?:core|sdk)$`)
 
 	validIDConstraints = map[string]*regexp.Regexp{
-		"slot-workspace-type": validWorkspaceType,
-		"plug-sdk-type":       validWorkspaceType,
+		"slot-type": validWorkspaceType,
+		"plug-type": validWorkspaceType,
 	}
 
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}
 
-	slotIDConstraints = []string{"plug-sdk-type"}
+	slotIDConstraints = []string{"plug-type"}
 
 	sideArityConstraints        = []string{"slots-per-plug", "plugs-per-slot"}
 	sideArityConstraintsSetters = map[string]func(sideArityConstraintsHolder, SideArityConstraint){
@@ -45,14 +45,14 @@ var (
 // SlotInstallationConstraints specifies a set of constraints on an
 // interface slot relevant to the installation of SDK.
 type SlotInstallationConstraints struct {
-	SlotWorkspaceTypes []string
-	SlotAttributes     *AttributeConstraints
+	SlotTypes      []string
+	SlotAttributes *AttributeConstraints
 }
 
 func (c *SlotInstallationConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
-	case "slot-workspace-type":
-		c.SlotWorkspaceTypes = cstrs
+	case "slot-type":
+		c.SlotTypes = cstrs
 	default:
 		panic("unknown SlotInstallationConstraints field " + field)
 	}
@@ -105,7 +105,7 @@ type SlotConnectionConstraints struct {
 
 func (c *SlotConnectionConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
-	case "plug-sdk-type":
+	case "plug-type":
 		c.PlugSdkTypes = cstrs
 	default:
 		panic("unknown SlotConnectionConstraints field " + field)
@@ -232,7 +232,7 @@ func castSlotInstallationConstraints(cstrs []constraintsHolder) (res []*SlotInst
 
 func compileSlotInstallationConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	slotInstCstrs := &SlotInstallationConstraints{}
-	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-attributes"}, []string{"slot-workspace-type"})
+	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-attributes"}, []string{"slot-type"})
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +300,29 @@ func (ac *AttributeConstraints) feature(flabel string) bool {
 	return ac.matcher.feature(flabel)
 }
 
+// Check checks whether attrs don't match the constraints.
+func (c *AttributeConstraints) Check(attrer Attrer, helper AttrMatchContext) error {
+	return c.matcher.match("", attrer, &attrMatchingContext{
+		attrWord: "attribute",
+		helper:   helper,
+	})
+}
+
+// compileAttributeConstraints checks and compiles a mapping or list
+// from the assertion format into AttributeConstraints.
+func compileAttributeConstraints(constraints interface{}) (*AttributeConstraints, error) {
+	cc := compileContext{
+		opts: &compileAttrMatcherOptions{
+			allowedOperations: []string{"SLOT", "PLUG"},
+		},
+	}
+	matcher, err := compileAttrMatcher(cc, constraints)
+	if err != nil {
+		return nil, err
+	}
+	return &AttributeConstraints{matcher: matcher}, nil
+}
+
 var (
 	AlwaysMatchAttributes = &AttributeConstraints{matcher: fixedAttrMatcher{nil}}
 	NeverMatchAttributes  = &AttributeConstraints{matcher: fixedAttrMatcher{errors.New("not allowed")}}
@@ -323,6 +346,20 @@ func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target
 		return nil
 	}
 	defaultUsed := 0
+	for _, field := range attrConstraints {
+		cstrs := AlwaysMatchAttributes
+		v := cMap[field]
+		if v != nil {
+			var err error
+			cstrs, err = compileAttributeConstraints(cMap[field])
+			if err != nil {
+				return fmt.Errorf("cannot compile %s in %s: %v", field, context, err)
+			}
+		} else {
+			defaultUsed++
+		}
+		target.setAttributeConstraints(field, cstrs)
+	}
 	for _, field := range idConstraints {
 		lst, err := checkStringListInMap(cMap, field, fmt.Sprintf("%s in %v", field, context), validIDConstraints[field])
 		if err != nil {

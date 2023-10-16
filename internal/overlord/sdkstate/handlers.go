@@ -85,7 +85,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	blob, err := SdkSetup(task)
+	sdkSetup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
@@ -93,10 +93,9 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	sdkMount := sdkBlobDevice(blob)
+	sdkMount := sdkBlobDevice(sdkSetup)
 
-	err = m.backend.AddWorkspaceDevice(ctx, workspace, sdkMount)
-	if err != nil {
+	if err = m.backend.AddWorkspaceDevice(ctx, workspace, sdkMount); err != nil {
 		return err
 	}
 
@@ -109,19 +108,19 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	defer cleanup()
 
-	/* example: /var/lib/workspace/sdk/cuda/712/ */
-	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, blob.Name,
-		strconv.Itoa(int(blob.Revision)))
+	// example: /var/lib/workspace/sdk/cuda/712/
+	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, sdkSetup.Name,
+		strconv.Itoa(int(sdkSetup.Revision)))
 
-	/* create a memory out/err to log the hook output into the task's log */
+	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
 	out, err := memFs.Create(workspacebackend.InstanceName(workspace, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
-	/* Unpack the SDK to the desired location in the workspace
-	   Note: the following command requires ~ tar >= 1.29 due to --one-top-level */
+	// Unpack the SDK to the desired location in the workspace
+	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
 	args := workspacebackend.Execution{
 		ExecArgs: workspacebackend.ExecArgs{
 			UserId:  0,
@@ -175,6 +174,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
+
 	sdkMount := sdkBlobDevice(blob)
 
 	fs, err := m.backend.GetWorkspaceFs(ctx, workspace)

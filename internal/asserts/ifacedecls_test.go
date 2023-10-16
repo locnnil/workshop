@@ -21,14 +21,14 @@ type plugSlotRulesSuite struct{}
 func (s *plugSlotRulesSuite) TestCompileSlotRuleInstallationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompileSlotRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"slot-workspace-type": []interface{}{"core", "workspace"},
+			"slot-type": []interface{}{"core", "sdk"},
 		},
 	})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rule.AllowInstallation, check.HasLen, 1)
 	cstrs := rule.AllowInstallation[0]
-	c.Check(cstrs.SlotWorkspaceTypes, check.DeepEquals, []string{"core", "workspace"})
+	c.Check(cstrs.SlotTypes, check.DeepEquals, []string{"core", "sdk"})
 }
 
 func checkBoolSlotConnConstraints(c *check.C, subrule string, cstrs []*asserts.SlotConnectionConstraints, always bool) {
@@ -169,12 +169,12 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleErrors(c *check.C) {
     - true`, `alternative 1 of allow-connection in slot rule for interface "iface" must be a map`},
 		{`iface:
   allow-connection:
-    plug-sdk-type:
-      - foo`, `plug-sdk-type in allow-connection in slot rule for interface "iface" contains an invalid element: "foo"`},
+    plug-type:
+      - foo`, `plug-type in allow-connection in slot rule for interface "iface" contains an invalid element: "foo"`},
 		{`iface:
   allow-connection:
-    plug-sdk-type:
-      - xapp`, `plug-sdk-type in allow-connection in slot rule for interface "iface" contains an invalid element: "xapp"`},
+    plug-type:
+      - xapp`, `plug-type in allow-connection in slot rule for interface "iface" contains an invalid element: "xapp"`},
 		{`iface:
   allow-connect: true`, `slot rule for interface "iface" must specify at least one of allow-installation, deny-installation, allow-connection, deny-connection, allow-auto-connection, deny-auto-connection`},
 		{`iface:
