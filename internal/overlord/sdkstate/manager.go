@@ -15,7 +15,7 @@ type SdkSequenceRecord struct {
 	Revision int64  `json:"revision"`
 }
 
-func NewSdkManager(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
+func New(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)

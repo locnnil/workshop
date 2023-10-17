@@ -220,7 +220,13 @@ func WorkspaceStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
 }
 
-func SdkInfo(wsfs WorkspaceFs, s sdk.Setup) (*sdk.Info, error) {
+// Reads information about the installed SDK from its meta file
+
+// NOTE: we have to accept the filesystem as an argument to ensure it is the
+// callers responsibility to get and close the filesystem due to the LXD's bug:
+// if the filesystem of the container is not closed, it maintains the underlying
+// SFTP connection which stops the container from stoppping.
+func (w *Workspace) SdkInfo(wsfs WorkspaceFs, s sdk.Setup) (*sdk.Info, error) {
 	sdkPath := sdk.SdkCurrentPath(s.Name)
 	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {

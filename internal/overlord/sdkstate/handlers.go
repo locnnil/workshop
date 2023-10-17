@@ -7,6 +7,7 @@ import (
 
 	"github.com/canonical/workspace/internal/dirs"
 	store "github.com/canonical/workspace/internal/fakestore"
+	"github.com/canonical/workspace/internal/interfaces/policy"
 	"github.com/canonical/workspace/internal/logger"
 	"github.com/canonical/workspace/internal/overlord/state"
 	"github.com/canonical/workspace/internal/sdk"
@@ -171,10 +172,6 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	sdkMount := sdkBlobDevice(blob)
 
 	fs, err := m.backend.GetWorkspaceFs(ctx, workspace)
@@ -197,24 +194,39 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	blob, err := SdkSetup(task)
+	setup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
-
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	props, err := m.backend.GetWorkspace(ctx, workspace)
+	inst, err := m.backend.GetWorkspace(ctx, workspace)
 	if err != nil {
 		return err
 	}
 
-	return props.LinkSdk(ctx, blob)
+	if err = inst.LinkSdk(ctx, setup); err != nil {
+		return err
+	}
+
+	wsfs, err := m.backend.GetWorkspaceFs(ctx, workspace)
+	if err != nil {
+		return err
+	}
+	defer wsfs.Close()
+
+	sdkInfo, err := inst.SdkInfo(wsfs, setup)
+	if err != nil {
+		return nil
+	}
+
+	if err = policy.CheckInterfaces(sdkInfo); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -228,17 +240,13 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	props, err := m.backend.GetWorkspace(ctx, workspace)
+	inst, err := m.backend.GetWorkspace(ctx, workspace)
 	if err != nil {
 		return err
 	}
 
-	return props.UnlinkSdk(ctx, blob)
+	return inst.UnlinkSdk(ctx, blob)
 }

@@ -145,7 +145,7 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	o.workspace = workspace.NewWorkspaceManager(s, o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)
 
-	o.sdk = sdkstate.NewSdkManager(o.runner, o.workspaceBackend)
+	o.sdk = sdkstate.New(o.runner, o.workspaceBackend)
 	o.addManager(o.sdk)
 
 	o.hook = hookstate.NewHookManager(o.runner, o.workspaceBackend)

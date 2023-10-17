@@ -71,7 +71,7 @@ func (s *H) SetUpTest(c *check.C) {
 
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wsmgr = sdkstate.NewSdkManager(s.runner, s.backend)
+	s.wsmgr = sdkstate.New(s.runner, s.backend)
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {

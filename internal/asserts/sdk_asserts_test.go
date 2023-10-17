@@ -15,10 +15,10 @@ type baseDeclSuite struct{}
 func (s *baseDeclSuite) TestDecodeOK(c *check.C) {
 	encoded := `type: base-declaration
 authority-id: canonical
-series: 16
+series: 1
 slots:
   interface3:
-    deny-installation: false
+    deny-installation: true
     allow-auto-connection:
       plug-type:
         - core
@@ -36,7 +36,7 @@ AXNpZw==`
 	a, err := asserts.Decode([]byte(encoded))
 	c.Assert(err, check.IsNil)
 	baseDecl := a.(*asserts.BaseDeclaration)
-	c.Check(baseDecl.Series(), check.Equals, "16")
+	c.Check(baseDecl.Series(), check.Equals, "1")
 	ts, err := time.Parse(time.RFC3339, "2016-09-29T19:50:49Z")
 	c.Assert(err, check.IsNil)
 	c.Check(baseDecl.Timestamp().Equal(ts), check.Equals, true)
@@ -50,19 +50,12 @@ AXNpZw==`
 	c.Assert(slotRule3.AllowAutoConnection, check.HasLen, 1)
 	c.Check(slotRule3.AllowAutoConnection[0].PlugSdkTypes, check.DeepEquals, []string{"core"})
 
-	// slotRule4 := baseDecl.SlotRule("interface4")
-	// c.Assert(slotRule4, check.NotNil)
-	// c.Assert(slotRule4.AllowConnection, check.HasLen, 1)
-	// c.Check(slotRule4.AllowConnection[0].PlugAttributes.Check(plug, nil), check.ErrorMatches, `attribute "c2".*`)
-	// c.Check(slotRule4.AllowConnection[0].SlotAttributes.Check(slot, nil), check.ErrorMatches, `attribute "d2".*`)
-	// c.Assert(slotRule4.DenyConnection, HasLen, 1)
-	// c.Check(slotRule4.DenyConnection[0].PlugAttributes.Check(plug, nil), check.ErrorMatches, `attribute "c2".*`)
-	// c.Check(slotRule4.DenyConnection[0].SlotAttributes.Check(slot, nil), check.ErrorMatches, `attribute "d2".*`)
-	// c.Check(slotRule4.DenyConnection[0].PlugSnapIDs, check.DeepEquals, []string{"snapidsnapidsnapidsnapidsnapid01", "snapidsnapidsnapidsnapidsnapid02"})
-	// c.Assert(slotRule4.AllowInstallation, HasLen, 1)
-	// c.Check(slotRule4.AllowInstallation[0].SlotAttributes.Check(slot, nil), check.ErrorMatches, `attribute "e1".*`)
-	// c.Check(slotRule4.AllowInstallation[0].SlotSnapTypes, check.DeepEquals, []string{"app"})
-
+	slotRule4 := baseDecl.SlotRule("interface4")
+	c.Assert(slotRule4, check.NotNil)
+	c.Check(slotRule4.AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"core", "sdk"})
+	c.Assert(slotRule4.DenyInstallation, check.HasLen, 1)
+	c.Assert(slotRule3.AllowConnection, check.HasLen, 1)
+	c.Assert(slotRule3.DenyConnection, check.HasLen, 1)
 }
 
 const (

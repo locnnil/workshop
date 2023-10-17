@@ -131,17 +131,6 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
 	}
 }
 
-var (
-	slotInstallation = map[string][]string{
-		// other
-		"content": {"core"},
-	}
-	sdkTypeMap = map[string]sdk.Type{
-		"core": sdk.Core,
-		"sdk":  sdk.Sdk,
-	}
-)
-
 func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
 	// test content specially
 	ic := s.installSlotCand(c, "content", sdk.Sdk, ``)
