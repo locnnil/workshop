@@ -13,7 +13,7 @@ type WorkspaceManager struct {
 	state   *state.State
 }
 
-func NewWorkspaceManager(st *state.State, runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *WorkspaceManager {
+func New(st *state.State, runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *WorkspaceManager {
 	manager := &WorkspaceManager{
 		backend: server,
 		state:   st,

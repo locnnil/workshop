@@ -32,7 +32,7 @@ type HookManager struct {
 	backend workspacebackend.WorkspaceBackend
 }
 
-func NewHookManager(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *HookManager {
+func New(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *HookManager {
 	manager := &HookManager{
 		backend: server,
 	}

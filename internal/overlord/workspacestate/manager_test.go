@@ -29,14 +29,14 @@ func (s *ManagerSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.backend = workspacebackend.NewFakeWorkspaceBackend()
 	s.runner = state.NewTaskRunner(s.state)
-	s.manager = workspacestate.NewWorkspaceManager(s.state, s.runner, s.backend)
+	s.manager = workspacestate.New(s.state, s.runner, s.backend)
 	ctx := context.WithValue(context.TODO(), workspacebackend.ContextUser, "testuser")
 	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	s.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, s.project.ProjectId)
 }
 
 func (s *ManagerSuite) TestAddHandlers(c *check.C) {
-	workspacestate.NewWorkspaceManager(s.state, s.runner, s.backend)
+	workspacestate.New(s.state, s.runner, s.backend)
 
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
 		"create-workspace",

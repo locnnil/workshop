@@ -62,7 +62,7 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.hookmgr = hookstate.NewHookManager(s.runner, s.backend)
+	s.hookmgr = hookstate.New(s.runner, s.backend)
 
 	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
