@@ -1,25 +1,25 @@
-Workspace
-=========
+Workshop
+========
 
-**Workspace is a tool that automates intricate prerequisite setup
+**Workshop is a tool that automates intricate prerequisite setup
 for your projects**.
 
 **Define your dev environment in straightforward YAML**.
-The tool consumes the definition to create a contained workspace,
+The tool consumes the definition to create a contained workshop,
 installs the dependencies it lists as a number of SDKs,
 and attaches their life cycle hooks for run-time control.
 IDEs such as Visual Studio Code or JupyterLab
-can discover workspaces and use them in their operation,
+can discover workshops and use them in their operation,
 tidying up your system and streamlining your work.
 
 **Untangle the know-how that was weaved into your project**.
 An environment that could take hours of setup
 can be launched with one command;
-workspaces enhance issue reproduction across platforms,
+workshops enhance issue reproduction across platforms,
 facilitate collaboration in code reviews,
 and confine hackish experiments in lightweight containers.
 
-**Mitigate your setup's complexity with Workspace.**
+**Mitigate your setup's complexity with Workshop.**
 AI/ML, robotics, IoT, EdTech, and similar domains
 commonly have less-than-trivial project layouts
 that depend on multiple Linux distributions,
@@ -33,15 +33,15 @@ Getting Started
 Follow the sections below
 or refer to the
 `Tutorial
-<https://canonical-workspace.readthedocs-hosted.com/en/latest/tutorial/>`_
-in our docs for a more detailed introduction to Workspace.
+<https://canonical-workshop.readthedocs-hosted.com/en/latest/tutorial/>`_
+in our docs for a more detailed introduction to Workshop.
 
 
 ------------
 Installation
 ------------
 
-Workspace requires
+Workshop requires
 `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
 for low-level operation:
 
@@ -50,31 +50,31 @@ for low-level operation:
    sudo snap install lxd
    sudo lxd init --auto
 
-Build and install the ``workspace`` snap:
+Build and install the ``workshop`` snap:
 
 .. code-block:: bash
 
-   git clone git@github.com:canonical/workspace.git
+   git clone git@github.com:canonical/workshop.git
    # -- or --
-   git clone https://github.com/canonical/workspace.git
+   git clone https://github.com/canonical/workshop.git
 
-   cd workspace
+   cd workshop
    sudo snap install snapcraft --classic
    snapcraft
-   sudo snap install --devmode ./workspace_0.1.0_amd64.snap
+   sudo snap install --devmode ./workshop_0.1.0_amd64.snap
 
-Launching workspaces
+Launching workshops
 --------------------
 
 In the root directory of the project
-that you want to use with Workspace,
-create a workspace definition file named ``.workspace.<NAME>.yaml``
+that you want to use with Workshop,
+create a workshop definition file named ``.workshop.<NAME>.yaml``
 to list your project's prerequisites,
-then run ``workspace launch <NAME>``:
+then run ``workshop launch <NAME>``:
 
 .. code-block:: bash
 
-   cat > .workspace.nimble.yaml <<EOF -
+   cat > .workshop.nimble.yaml <<EOF -
    name: nimble
    base: ubuntu@22.04
    sdks:
@@ -84,17 +84,17 @@ then run ``workspace launch <NAME>``:
        channel: latest/stable
    EOF
 
-   workspace launch nimble
+   workshop launch nimble
 
 
-Workspace downloads and installs the SDKs your definition lists;
+Workshop downloads and installs the SDKs your definition lists;
 the project is now ready to use them.
 
 
 Testing
 -------
 
-Workspace uses a ``go test``-compatible
+Workshop uses a ``go test``-compatible
 `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_:
 
 .. code-block:: bash

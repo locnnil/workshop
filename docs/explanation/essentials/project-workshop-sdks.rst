@@ -1,7 +1,7 @@
-Project, workspace, SDKs
+Project, workshop, SDKs
 ========================
 
-Projects, workspaces, workspace definitions and SDKs
+Projects, workshops, workshop definitions and SDKs
 are the key building blocks of |project|.
 
 
@@ -10,41 +10,41 @@ are the key building blocks of |project|.
 Project
 -------
 
-A project is a directory that contains one or many workspace definitions.
+A project is a directory that contains one or many workshop definitions.
 
-When a workspace runs,
+When a workshop runs,
 this directory is mounted as :file:`/project/`;
 the changes to the directory are tracked
-to keep the workspace configuration in sync.
+to keep the workshop configuration in sync.
 Thus, if the directory is moved or copied,
-the mount points in related workspaces are updated.
+the mount points in related workshops are updated.
 
 If the directory is deleted,
-the workspaces that still refer to it
+the workshops that still refer to it
 switch to the *Error* state
 and become unavailable for any commands except :command:`remove`.
 
 
-.. _exp_workspace:
+.. _exp_workshop:
 
-Workspace
+Workshop
 ---------
 
-A *workspace* is a container that is described in a definition file.
+A *workshop* is a container that is described in a definition file.
 
 
-.. _exp_workspace_def:
+.. _exp_workshop_def:
 
-Workspace definition
+Workshop definition
 ~~~~~~~~~~~~~~~~~~~~
 
-This is a file named :file:`.workspace.<NAME>.yaml`
-that lists the base image of the workspace
+This is a file named :file:`.workshop.<NAME>.yaml`
+that lists the base image of the workshop
 and the specific components installed on top of it.
-The definition serves as a single source of truth about the workspace.
+The definition serves as a single source of truth about the workshop.
 It usually takes a few tries
 to arrive at a configuration that suits your project,
-so you can edit and update the workspace definition iteratively.
+so you can edit and update the workshop definition iteratively.
 
 A simple definition may look like this:
 
@@ -61,13 +61,13 @@ A more complete definition would usually list
 multiple SDKs, interfaces, packages and life cycle hooks.
 
 
-.. _exp_workspace_base:
+.. _exp_workshop_base:
 
 Base image
 ~~~~~~~~~~
 
 The base is a supported OS image
-that is used as the foundation of the workspace.
+that is used as the foundation of the workshop.
 Currently, it can be either ``ubuntu@20.04`` or ``ubuntu@22.04``.
 
 
@@ -76,14 +76,14 @@ Currently, it can be either ``ubuntu@20.04`` or ``ubuntu@22.04``.
 SDKs
 ----
 
-SDKs are essential workspace components
+SDKs are essential workshop components
 that install the required system and language packages,
-configure the workspace for their operation
+configure the workshop for their operation
 and maintain their own state
-throughout the lifetime of the workspace.
+throughout the lifetime of the workshop.
 An *SDK* is designed by a publisher
 and made available via the SDK Store.
-A single workspace can include multiple SDKs from different publishers.
+A single workshop can include multiple SDKs from different publishers.
 SDKs are distributed via channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 
