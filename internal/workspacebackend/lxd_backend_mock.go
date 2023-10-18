@@ -2,12 +2,12 @@ package workspacebackend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/canonical/workspace/internal/sdk"
 	"github.com/lxc/lxd/shared/api"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -28,7 +28,8 @@ type ExecCall struct {
 
 type FakeWorkspaceBackend struct {
 	Workspaces map[string]map[string]*FakeWorkspace
-	projects   map[string]map[string]*Project
+	// the key is a username
+	projects map[string][]*Project
 
 	DoExec    ExecFunc
 	ExecCalls []*ExecCall
@@ -37,7 +38,7 @@ type FakeWorkspaceBackend struct {
 func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 	var be FakeWorkspaceBackend
 	be.Workspaces = make(map[string]map[string]*FakeWorkspace)
-	be.projects = make(map[string]map[string]*Project)
+	be.projects = make(map[string][]*Project)
 
 	be.DoExec = DoExecDefault
 
@@ -45,40 +46,53 @@ func NewFakeWorkspaceBackend() *FakeWorkspaceBackend {
 }
 
 func (s *FakeWorkspaceBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
-	username := ctx.Value(ContextUser).(string)
+	username, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, false, errors.New("user not found")
+	}
 	if val, ok := s.projects[username]; ok {
-		idx := slices.IndexFunc(maps.Values(val), func(p *Project) bool { return p.Path == path })
+		idx := slices.IndexFunc(val, func(p *Project) bool { return p.Path == path })
 		if idx != -1 {
-			return maps.Values(val)[idx], false, nil
+			return val[idx], false, nil
 		}
 	} else {
-		s.projects[username] = make(map[string]*Project)
+		s.projects[username] = make([]*Project, 0)
 	}
 
 	prjId, _ := NewProjectId()
 	newPrj := &Project{ProjectId: prjId, Path: path}
-	s.projects[username][prjId] = newPrj
+	s.projects[username] = append(s.projects[username], newPrj)
 	return newPrj, true, nil
 }
 
-func (f *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string]*Project, error) {
-	username, _, err := f.userProject(ctx)
-	if err != nil {
-		return nil, err
+func (f *FakeWorkspaceBackend) Projects(ctx context.Context) (map[string][]*Project, error) {
+	userName, ok := ctx.Value(ContextUser).(string)
+	if ok {
+		return map[string][]*Project{userName: f.projects[userName]}, nil
 	}
-	return f.projects[username], nil
+	all := map[string][]*Project{}
+	for name, prjs := range f.projects {
+		all[name] = prjs
+	}
+	return all, nil
+}
+
+func (f *FakeWorkspaceBackend) project(user, id string) *Project {
+	prjs := f.projects[user]
+	idx := slices.IndexFunc(prjs, func(p *Project) bool { return p.ProjectId == id })
+	if idx != -1 {
+		return prjs[idx]
+	}
+	return nil
 }
 
 func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
-	_, projectId, err := f.userProject(ctx)
+	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
-	projects, err := f.Projects(ctx)
-	if err != nil {
-		return err
-	}
-	prj := projects[projectId]
+
+	prj := f.project(user, projectId)
 
 	if f.Workspaces[projectId] == nil {
 		f.Workspaces[projectId] = make(map[string]*FakeWorkspace)
@@ -109,8 +123,9 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 
 	for _, s := range ws.File().Sdks {
 		ws.LinkSdk(ctx, sdk.Setup{
-			Name:    s.Name,
-			Channel: s.Channel,
+			Workspace: name,
+			Name:      s.Name,
+			Channel:   s.Channel,
 		})
 	}
 	return nil
@@ -183,7 +198,7 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 		return nil, err
 	}
 
-	project := f.projects[user][projectId]
+	project := f.project(user, projectId)
 	if project == nil {
 		return nil, api.StatusErrorf(404, "project not found")
 	}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -193,7 +194,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
 		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
-		fs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
+		fs.MkdirAll(filepath.Join(dirs.WorkspaceSdksDir, "new"), 0755)
 		return workspacebackend.ExecContext{}, nil
 	}
 
@@ -210,7 +211,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	/* make sure SDK dir was removed */
 	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	exist, _ := afero.Exists(fs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkspaceSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
 }
 

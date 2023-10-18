@@ -110,7 +110,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	defer cleanup()
 
 	// example: /var/lib/workspace/sdk/cuda/712/
-	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, sdkSetup.Name,
+	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, sdkSetup.Name,
 		strconv.Itoa(int(sdkSetup.Revision)))
 
 	// create a memory out/err to log the hook output into the task's log
@@ -180,7 +180,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(sdk.WorkspaceSdksDir, blob.Name))
+	err = fs.RemoveAll(filepath.Join(dirs.WorkspaceSdksDir, blob.Name))
 	if err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
@@ -211,13 +211,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	wsfs, err := m.backend.GetWorkspaceFs(ctx, workspace)
-	if err != nil {
-		return err
-	}
-	defer wsfs.Close()
-
-	sdkInfo, err := inst.SdkInfo(wsfs, setup)
+	sdkInfo, err := inst.SdkInfo(ctx, setup)
 	if err != nil {
 		return nil
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord/statecontext"
 	"github.com/canonical/workspace/internal/workspacebackend"
 	"github.com/canonical/x-go/strutil"
-	"golang.org/x/exp/maps"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -87,7 +86,12 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	return SyncResponse(maps.Values(projects), http.StatusOK)
+	result := make([]*workspacebackend.Project, 0)
+	for _, val := range projects {
+		result = append(result, val...)
+	}
+
+	return SyncResponse(result, http.StatusOK)
 }
 
 func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/sdk"
 	"golang.org/x/exp/maps"
 )
@@ -132,7 +133,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 
 	// Update the current link to point out to the newly installed SDK
-	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, s.Name)
+	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, s.Name)
 
 	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
 	if err != nil {
@@ -226,7 +227,13 @@ func WorkspaceStateVolumeName(ws, pid string) string {
 // callers responsibility to get and close the filesystem due to the LXD's bug:
 // if the filesystem of the container is not closed, it maintains the underlying
 // SFTP connection which stops the container from stoppping.
-func (w *Workspace) SdkInfo(wsfs WorkspaceFs, s sdk.Setup) (*sdk.Info, error) {
+func (w *Workspace) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+	wsfs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer wsfs.Close()
+
 	sdkPath := sdk.SdkCurrentPath(s.Name)
 	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {
@@ -245,4 +252,16 @@ func (w *Workspace) SdkInfo(wsfs WorkspaceFs, s sdk.Setup) (*sdk.Info, error) {
 	}
 
 	return info, nil
+}
+
+func (w *Workspace) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
+	var infos = make([]*sdk.Info, 0, len(w.content))
+	for _, sdk := range w.content {
+		info, err := w.SdkInfo(ctx, sdk)
+		if err != nil {
+			return nil, err
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
 }

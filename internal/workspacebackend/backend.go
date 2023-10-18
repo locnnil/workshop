@@ -54,8 +54,9 @@ type WorkspaceBackend interface {
 	// If unsuccessful, a new project will be created for the path provided.
 	CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error)
 
-	// Returns a list of projects known to the backend.
-	Projects(ctx context.Context) (map[string]*Project, error)
+	// Returns a list of projects known to the backend. The returned map
+	// has a username that the corresponding projects belong to as a key.
+	Projects(ctx context.Context) (map[string][]*Project, error)
 
 	// Launch a barebone workspace instance using the base provided. The
 	// supported bases are ubuntu@20.04 and ubuntu@22.04.

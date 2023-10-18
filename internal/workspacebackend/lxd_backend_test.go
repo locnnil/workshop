@@ -208,3 +208,30 @@ func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 		os.RemoveAll(filepath.Join(root, i.cwd))
 	}
 }
+
+func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
+	configData := `[{"path":"/home/dmitry/Work/ros-tutorials","id":"01ac7c0e"},{"path":"/home/dmitry/Work/ros2-tutorials","id":"47b66ebc"}]`
+
+	projects, err := workspacebackend.ReadProjects([]byte(configData))
+	c.Assert(err, check.IsNil)
+	c.Assert(projects, testutil.DeepUnsortedMatches, []*workspacebackend.Project{
+		{
+			Path:      "/home/dmitry/Work/ros-tutorials",
+			ProjectId: "01ac7c0e",
+		},
+		{
+			Path:      "/home/dmitry/Work/ros2-tutorials",
+			ProjectId: "47b66ebc",
+		},
+	})
+
+	projects, err = workspacebackend.ReadProjects([]byte("[]"))
+	c.Assert(err, check.IsNil)
+	c.Assert(projects, check.NotNil)
+	c.Assert(projects, check.HasLen, 0)
+
+	projects, err = workspacebackend.ReadProjects(nil)
+	c.Assert(err, check.IsNil)
+	c.Assert(projects, check.NotNil)
+	c.Assert(projects, check.HasLen, 0)
+}

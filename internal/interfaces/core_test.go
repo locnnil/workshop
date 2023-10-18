@@ -70,25 +70,25 @@ func (s *CoreSuite) TestSlotRefString(c *C) {
 // ConnRef.ID works as expected
 func (s *CoreSuite) TestConnRefID(c *C) {
 	conn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"},
 	}
-	c.Check(conn.ID(), Equals, "consumer:plug producer:slot")
+	c.Check(conn.ID(), Equals, "ws:consumer:plug ws:producer:slot")
 }
 
 // ParseConnRef works as expected
 func (s *CoreSuite) TestParseConnRef(c *C) {
-	ref, err := interfaces.ParseConnRef("consumer:plug producer:slot")
+	ref, err := interfaces.ParseConnRef("ws:consumer:plug ws:producer:slot")
 	c.Assert(err, IsNil)
 	c.Check(ref, DeepEquals, &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"},
 	})
 	_, err = interfaces.ParseConnRef("garbage")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: "garbage"`)
-	_, err = interfaces.ParseConnRef("snap:plug:garbage snap:slot")
+	_, err = interfaces.ParseConnRef("ws:plug:garbage ws:slot")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: ".*"`)
-	_, err = interfaces.ParseConnRef("snap:plug snap:slot:garbage")
+	_, err = interfaces.ParseConnRef("ws:plug ws:slot:garbage")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: ".*"`)
 }
 

@@ -22,16 +22,21 @@ const (
 )
 
 func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workspacebackend.Project, error) {
-	projects, err := w.backend.Projects(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("no project found with \"id\" %v", id)
+	username, ok := ctx.Value(workspacebackend.ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key user not found")
 	}
 
-	prj, ok := projects[id]
-	if !ok {
+	projects, err := w.backend.Projects(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	idx := slices.IndexFunc(projects[username], func(p *workspacebackend.Project) bool { return p.ProjectId == id })
+	if idx == -1 {
 		return nil, fmt.Errorf("no project found with \"id\" %v", id)
 	}
-	return prj, nil
+	return projects[username][idx], nil
 }
 
 func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {

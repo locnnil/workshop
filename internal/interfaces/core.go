@@ -143,7 +143,7 @@ func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 
 // ID returns a string identifying a given connection.
 func (conn *ConnRef) ID() string {
-	return fmt.Sprintf("%s:%s %s:%s", conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk, conn.SlotRef.Name)
+	return fmt.Sprintf("%s:%s:%s %s:%s:%s", conn.PlugRef.Workspace, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Workspace, conn.SlotRef.Sdk, conn.SlotRef.Name)
 }
 
 // SortsBefore returns true when connection should be sorted before the other
@@ -163,13 +163,16 @@ func ParseConnRef(id string) (*ConnRef, error) {
 	}
 	plugParts := strings.Split(parts[0], ":")
 	slotParts := strings.Split(parts[1], ":")
-	if len(plugParts) != 2 || len(slotParts) != 2 {
+	if len(plugParts) != 3 || len(slotParts) != 3 {
 		return nil, fmt.Errorf("malformed connection identifier: %q", id)
 	}
-	conn.PlugRef.Sdk = plugParts[0]
-	conn.PlugRef.Name = plugParts[1]
-	conn.SlotRef.Sdk = slotParts[0]
-	conn.SlotRef.Name = slotParts[1]
+
+	conn.PlugRef.Workspace = plugParts[0]
+	conn.PlugRef.Sdk = plugParts[1]
+	conn.PlugRef.Name = plugParts[2]
+	conn.SlotRef.Workspace = slotParts[0]
+	conn.SlotRef.Sdk = slotParts[1]
+	conn.SlotRef.Name = slotParts[2]
 	return &conn, nil
 }
 

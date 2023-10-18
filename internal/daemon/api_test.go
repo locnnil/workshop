@@ -65,7 +65,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, s.project.ProjectId)
 	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
 
-	s.b.CreateOrLoadProject(s.ctx, s.project.Path)
+	_, _, err := s.b.CreateOrLoadProject(s.ctx, s.project.Path)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {

@@ -7,7 +7,7 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
-/* Initialise the Workspace project namespace. */
+// Initialise the Workspace project namespace. 
 func InitProject(conn lxd.InstanceServer, username string) error {
 	if err := createOrLoadLxdProject(conn, LxdProjectName(username)); err != nil {
 		return err

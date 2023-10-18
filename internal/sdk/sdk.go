@@ -14,10 +14,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	WorkspaceSdksDir = "/var/lib/workspace/sdk"
-)
-
 type Setup struct {
 	Workspace   string    `json:"workspace"`
 	Name        string    `json:"name"`
@@ -273,7 +269,7 @@ func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
 }
 
 func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(WorkspaceSdksDir, sdkName, "current")
+	return filepath.Join(dirs.WorkspaceSdksDir, sdkName, "current")
 }
 
 func SdkHooksDir(sdkName string) string {
