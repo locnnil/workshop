@@ -68,7 +68,7 @@ func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo *sdk.Info, 
 }
 
 // Remove records information about the call and calls the remove callback if one is defined
-func (b *TestSecurityBackend) Remove(sdkName string) error {
+func (b *TestSecurityBackend) Remove(context context.Context, workspace, sdkName string) error {
 	b.RemoveCalls = append(b.RemoveCalls, sdkName)
 	if b.RemoveCallback == nil {
 		return nil

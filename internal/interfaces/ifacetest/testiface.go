@@ -39,6 +39,10 @@ type TestInterface struct {
 	TestPermanentSlotCallback func(spec *Specification, slot *sdk.SlotInfo) error
 }
 
+func (t *TestInterface) StaticInfo() interfaces.StaticInfo {
+	return t.InterfaceStaticInfo
+}
+
 func (t *TestInterface) String() string {
 	return t.Name()
 }

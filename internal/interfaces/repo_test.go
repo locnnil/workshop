@@ -1163,7 +1163,7 @@ plugs:
 	c.Assert(candidatePlugs, HasLen, 2)
 }
 
-// Tests for AddSnap and RemoveSnap
+// Tests for AddSdk and RemoveSnap
 
 type AddRemoveSuite struct {
 	testutil.BaseTest
@@ -1560,4 +1560,98 @@ func (s *RepositorySuite) TestConnectWithStaticAttrs(c *C) {
 	c.Assert(conn.Slot.Name(), Equals, "slot")
 	c.Assert(conn.Plug.StaticAttrs(), DeepEquals, plugAttrs)
 	c.Assert(conn.Slot.StaticAttrs(), DeepEquals, slotAttrs)
+}
+
+func (s *RepositorySuite) TestInfo(c *C) {
+	r := s.emptyRepo
+
+	// Add some test interfaces.
+	i1 := &ifacetest.TestInterface{InterfaceName: "i1", InterfaceStaticInfo: StaticInfo{Summary: "i1 summary", DocURL: "http://example.com/i1"}}
+	i2 := &ifacetest.TestInterface{InterfaceName: "i2", InterfaceStaticInfo: StaticInfo{Summary: "i2 summary", DocURL: "http://example.com/i2"}}
+	i3 := &ifacetest.TestInterface{InterfaceName: "i3", InterfaceStaticInfo: StaticInfo{Summary: "i3 summary", DocURL: "http://example.com/i3"}}
+	c.Assert(r.AddInterface(i1), IsNil)
+	c.Assert(r.AddInterface(i2), IsNil)
+	c.Assert(r.AddInterface(i3), IsNil)
+
+	// Add some test snaps.
+	s1 := sdk.MockInfo(c, `
+name: s1
+base: ubuntu@22.04
+plugs:
+  i1:
+  i2:
+`, sdk.Setup{Workspace: "ws"})
+	c.Assert(r.AddSdk(s1), IsNil)
+
+	s2 := sdk.MockInfo(c, `
+name: s2
+base: ubuntu@22.04
+slots: 
+  i1:
+  i3:
+`, sdk.Setup{Workspace: "ws"})
+	c.Assert(r.AddSdk(s2), IsNil)
+
+	s3 := sdk.MockInfo(c, `
+name: s3
+base: ubuntu@22.04
+type: core
+slots:
+  i2:
+`, sdk.Setup{Workspace: "ws"})
+	c.Assert(r.AddSdk(s3), IsNil)
+	s4 := sdk.MockInfo(c, `
+name: s4
+base: ubuntu@22.04
+plugs:
+  i2:
+`, sdk.Setup{Workspace: "ws"})
+	c.Assert(r.AddSdk(s4), IsNil)
+
+	// Connect a few things for the tests below.
+	_, err := r.Connect(&ConnRef{PlugRef: PlugRef{Workspace: "ws", Sdk: "s1", Name: "i1"}, SlotRef: SlotRef{Workspace: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
+	c.Assert(err, IsNil)
+	_, err = r.Connect(&ConnRef{PlugRef: PlugRef{Workspace: "ws", Sdk: "s1", Name: "i1"}, SlotRef: SlotRef{Workspace: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
+	c.Assert(err, IsNil)
+	_, err = r.Connect(&ConnRef{PlugRef: PlugRef{Workspace: "ws", Sdk: "s1", Name: "i2"}, SlotRef: SlotRef{Workspace: "ws", Sdk: "s3", Name: "i2"}}, nil, nil, nil, nil, nil)
+	c.Assert(err, IsNil)
+
+	// Without any names or options we get the summary of all the interfaces.
+	infos := r.Info(nil)
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i1", Summary: "i1 summary"},
+		{Name: "i2", Summary: "i2 summary"},
+		{Name: "i3", Summary: "i3 summary"},
+	})
+
+	// We can choose specific interfaces, unknown names are just skipped.
+	infos = r.Info(&InfoOptions{Names: []string{"i2", "i4"}})
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i2", Summary: "i2 summary"},
+	})
+
+	// We can ask for documentation.
+	infos = r.Info(&InfoOptions{Names: []string{"i2"}, Doc: true})
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i2", Summary: "i2 summary", DocURL: "http://example.com/i2"},
+	})
+
+	// We can ask for a list of plugs.
+	infos = r.Info(&InfoOptions{Names: []string{"i2"}, Plugs: true})
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i2", Summary: "i2 summary", Plugs: []*sdk.PlugInfo{s1.Plugs["i2"], s4.Plugs["i2"]}},
+	})
+
+	// We can ask for a list of slots.
+	infos = r.Info(&InfoOptions{Names: []string{"i2"}, Slots: true})
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i2", Summary: "i2 summary", Slots: []*sdk.SlotInfo{s3.Slots["i2"]}},
+	})
+
+	// We can also ask for only those interfaces that have connected plugs or slots.
+	infos = r.Info(&InfoOptions{Connected: true})
+	c.Assert(infos, DeepEquals, []*Info{
+		{Name: "i1", Summary: "i1 summary"},
+		{Name: "i2", Summary: "i2 summary"},
+	})
 }

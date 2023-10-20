@@ -35,8 +35,9 @@ type Repository struct {
 	// Protects the internals from concurrent access.
 	m      sync.Mutex
 	ifaces map[string]Interface
-	// Indexed by [workspace-sdk-key][plugName]
+	// Indexed by [workspace-sdk][plugName]
 	plugs map[string]map[string]*sdk.PlugInfo
+	// Indexed by [workspace-sdk][plugName]
 	slots map[string]map[string]*sdk.SlotInfo
 	// given a slot and a plug, are they connected?
 	slotPlugs map[*sdk.SlotInfo]map[*sdk.PlugInfo]*Connection
@@ -858,30 +859,30 @@ func (r *Repository) AddSdk(sdkInfo *sdk.Info) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	sdkName := plugOrSlotKey(sdkInfo.Workspace, sdkInfo.Name)
+	key := plugOrSlotKey(sdkInfo.Workspace, sdkInfo.Name)
 
-	if r.plugs[sdkName] != nil || r.slots[sdkName] != nil {
-		return fmt.Errorf("cannot register interfaces for %q SDK more than once", sdkName)
+	if r.plugs[key] != nil || r.slots[key] != nil {
+		return fmt.Errorf("cannot register interfaces for %q SDK more than once", key)
 	}
 
 	for plugName, plugInfo := range sdkInfo.Plugs {
 		if _, ok := r.ifaces[plugInfo.Interface]; !ok {
 			continue
 		}
-		if r.plugs[sdkName] == nil {
-			r.plugs[sdkName] = make(map[string]*sdk.PlugInfo)
+		if r.plugs[key] == nil {
+			r.plugs[key] = make(map[string]*sdk.PlugInfo)
 		}
-		r.plugs[sdkName][plugName] = plugInfo
+		r.plugs[key][plugName] = plugInfo
 	}
 
 	for slotName, slotInfo := range sdkInfo.Slots {
 		if _, ok := r.ifaces[slotInfo.Interface]; !ok {
 			continue
 		}
-		if r.slots[sdkName] == nil {
-			r.slots[sdkName] = make(map[string]*sdk.SlotInfo)
+		if r.slots[key] == nil {
+			r.slots[key] = make(map[string]*sdk.SlotInfo)
 		}
-		r.slots[sdkName][slotName] = slotInfo
+		r.slots[key][slotName] = slotInfo
 	}
 	return nil
 }

@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workspace/internal/interfaces"
 	"github.com/canonical/workspace/internal/interfaces/ifacetest"
@@ -43,7 +42,7 @@ type SpecificationSuite struct {
 	slot     *interfaces.ConnectedSlot
 }
 
-var _ = Suite(&SpecificationSuite{
+var _ = check.Suite(&SpecificationSuite{
 	iface: &ifacetest.TestInterface{
 		InterfaceName: "test",
 		TestConnectedPlugCallback: func(spec *ifacetest.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
@@ -75,26 +74,26 @@ var _ = Suite(&SpecificationSuite{
 	},
 })
 
-func (s *SpecificationSuite) SetUpTest(c *C) {
+func (s *SpecificationSuite) SetUpTest(c *check.C) {
 	s.spec = &ifacetest.Specification{}
 	s.plug = interfaces.NewConnectedPlug(s.plugInfo, nil, nil)
 	s.slot = interfaces.NewConnectedSlot(s.slotInfo, nil, nil)
 }
 
 // AddSnippet is not broken
-func (s *SpecificationSuite) TestAddSnippet(c *C) {
+func (s *SpecificationSuite) TestAddSnippet(c *check.C) {
 	s.spec.AddSnippet("hello")
 	s.spec.AddSnippet("world")
-	c.Assert(s.spec.Snippets, DeepEquals, []string{"hello", "world"})
+	c.Assert(s.spec.Snippets, check.DeepEquals, []string{"hello", "world"})
 }
 
 // The Specification can be used through the interfaces.Specification interface
-func (s *SpecificationSuite) SpecificationIface(c *C) {
+func (s *SpecificationSuite) SpecificationIface(c *check.C) {
 	var r interfaces.Specification = s.spec
-	c.Assert(r.AddConnectedPlug(s.iface, s.plug, s.slot), IsNil)
-	c.Assert(r.AddConnectedSlot(s.iface, s.plug, s.slot), IsNil)
-	c.Assert(r.AddPermanentPlug(s.iface, s.plugInfo), IsNil)
-	c.Assert(r.AddPermanentSlot(s.iface, s.slotInfo), IsNil)
-	c.Assert(s.spec.Snippets, DeepEquals, []string{
+	c.Assert(r.AddConnectedPlug(s.iface, s.plug, s.slot), check.IsNil)
+	c.Assert(r.AddConnectedSlot(s.iface, s.plug, s.slot), check.IsNil)
+	c.Assert(r.AddPermanentPlug(s.iface, s.plugInfo), check.IsNil)
+	c.Assert(r.AddPermanentSlot(s.iface, s.slotInfo), check.IsNil)
+	c.Assert(s.spec.Snippets, check.DeepEquals, []string{
 		"connected-plug", "connected-slot", "permanent-plug", "permanent-slot"})
 }
