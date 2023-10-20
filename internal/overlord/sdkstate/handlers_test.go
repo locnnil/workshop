@@ -90,9 +90,29 @@ func (s *H) SetUpTest(c *check.C) {
 
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
+sdks:
+  test:
+    channel: latest/stable
 `), 0644)
 	c.Assert(err, check.IsNil)
 	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	var sdkYaml = `
+name: test
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: content
+`
+	s.mockTestSdk(c, sdkYaml)
+}
+
+func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
+	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, "test", "current", "meta", "sdk.yaml")
+	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 
@@ -104,7 +124,7 @@ func (s *H) TearDownTest(c *check.C) {
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -128,8 +148,8 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"tar",
 		"--extract",
 		"--file",
-		"/root/new_2.sdk",
-		"--one-top-level=/var/lib/workspace/sdk/new/2",
+		"/root/test_2.sdk",
+		"--one-top-level=/var/lib/workspace/sdk/test/2",
 		"--no-same-owner",
 	})
 
@@ -142,7 +162,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -174,7 +194,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -219,9 +239,10 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: "new", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+
 	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk)
+	t.Set("sdk-setup", testSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
@@ -241,14 +262,49 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
-	c.Check(info[0], check.DeepEquals, newSdk)
+	c.Check(info[0], check.DeepEquals, testSdk)
+}
+
+func (s *H) TestDoLinkSdkFailPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	var sdkYaml = `
+name: test
+base: ubuntu@22.04
+slots:
+  slot:
+    interface: content
+`
+	s.mockTestSdk(c, sdkYaml)
+
+	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", testSdk)
+	t1 := s.state.NewTask("link-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkspaceProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
 }
 
 func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")

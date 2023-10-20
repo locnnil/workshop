@@ -57,12 +57,11 @@ func NewFakeWorkspaceFs() WorkspaceFs {
 
 func (w *FakeInstanceFs) Symlink(source, target string, force bool) error {
 	if force {
-		err := w.Remove(target)
+		_, err := w.Stat(target)
 		if errors.Is(err, afero.ErrFileNotFound) {
 			return w.Fs.Mkdir(target, os.ModeSymlink)
-		} else {
-			return err
 		}
+		return nil
 	}
 	return w.Fs.Mkdir(target, os.ModeSymlink)
 }
