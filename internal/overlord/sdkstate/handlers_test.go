@@ -104,6 +104,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: content
+    target: /project/sub
 `
 	s.mockTestSdk(c, sdkYaml)
 }
@@ -263,6 +264,11 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
 	c.Check(info[0], check.DeepEquals, testSdk)
+
+	sdkInfo, err := props.SdkInfo(s.ctx, info[0])
+	c.Assert(err, check.IsNil)
+	c.Assert(sdkInfo.Plugs, check.HasLen, 1)
+	c.Assert(sdkInfo.Slots, check.HasLen, 0)
 }
 
 func (s *H) TestDoLinkSdkFailPolicyCheck(c *check.C) {
