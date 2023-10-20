@@ -41,7 +41,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 }
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
@@ -140,21 +140,85 @@ slots:
 	})
 }
 
-// func (s *interfaceManagerSuite) TestManagerDoesntReloadUndesiredAutoconnections(c *C) {
-// 	s.mockIfaces(&ifacetest.TestInterface{InterfaceName: "test"}, &ifacetest.TestInterface{InterfaceName: "test2"})
-// 	s.mockSdk(c, consumerYaml)
-// 	s.mockSdk(c, producerYaml)
+func (s *interfaceManagerSuite) TestManagerDoesntReloadUndesiredAutoconnections(c *check.C) {
+	var consumerYaml = `
+name: consumer
+base: ubuntu@22.04
+plugs:
+ plug:
+  interface: content
+  attr1: value1
+ otherplug:
+  interface: content
+`
 
-// 	s.state.Lock()
-// 	s.state.Set("conns", map[string]interface{}{
-// 		"consumer:plug producer:slot": map[string]interface{}{
-// 			"interface": "test",
-// 			"auto":      true,
-// 			"undesired": true,
-// 		},
-// 	})
-// 	s.state.Unlock()
+	var producerYaml = `
+name: producer
+base: ubuntu@22.04
+slots:
+ slot:
+  interface: content
+  attr2: value2
+`
+	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+		"consumer": consumerYaml,
+		"producer": producerYaml,
+	})
 
-// 	mgr := s.manager(c)
-// 	c.Assert(mgr.Repository().Interfaces().Connections, HasLen, 0)
-// }
+	s.state.Lock()
+	s.state.Set("conns", map[string]interface{}{
+		"ws:consumer:plug core:producer:slot": map[string]interface{}{
+			"interface": "test",
+			"auto":      true,
+			"undesired": true,
+		},
+	})
+	s.state.Unlock()
+
+	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	err := mgr.StartUp()
+	c.Assert(err, check.IsNil)
+
+	c.Assert(mgr.Repository().Interfaces().Connections, check.HasLen, 0)
+}
+
+func (s *interfaceManagerSuite) TestManagerRemovesNonexistingAutoConnectionss(c *check.C) {
+	var consumerYaml = `
+name: consumer
+base: ubuntu@22.04
+plugs:
+ plug:
+  interface: content
+  attr1: value1
+ otherplug:
+  interface: content
+`
+
+	var producerYaml = `
+name: producer
+base: ubuntu@22.04
+slots:
+ slot:
+  interface: content
+  attr2: value2
+`
+	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+		"consumer": consumerYaml,
+		"producer": producerYaml,
+	})
+
+	s.state.Lock()
+	s.state.Set("conns", map[string]interface{}{
+		"ws:consumer:plug-1 core:producer:slot-1": map[string]interface{}{
+			"interface": "test",
+			"auto":      true,
+		},
+	})
+	s.state.Unlock()
+
+	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	err := mgr.StartUp()
+	c.Assert(err, check.IsNil)
+
+	c.Assert(mgr.Repository().Interfaces().Connections, check.HasLen, 0)
+}
