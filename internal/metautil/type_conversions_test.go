@@ -101,7 +101,7 @@ func (s *conversionssSuite) TestConvertUnhappy(c *C) {
 func (s *conversionssSuite) TestSetValueFromAttributeHappy(c *C) {
 	interfaceArray := []interface{}{12, -3}
 	var outputValue []int
-	err := metautil.SetValueFromAttribute("snap0", "iface0", "attr0", interfaceArray, &outputValue)
+	err := metautil.SetValueFromAttribute("sdk0", "iface0", "attr0", interfaceArray, &outputValue)
 	c.Assert(err, IsNil)
 	c.Check(outputValue, DeepEquals, []int{12, -3})
 }
@@ -109,7 +109,7 @@ func (s *conversionssSuite) TestSetValueFromAttributeHappy(c *C) {
 func (s *conversionssSuite) TestSetValueFromAttributeUnhappy(c *C) {
 	var outputBool bool
 	data := []struct {
-		snapName      string
+		sdkName       string
 		ifaceName     string
 		attrName      string
 		inputValue    interface{}
@@ -118,7 +118,7 @@ func (s *conversionssSuite) TestSetValueFromAttributeUnhappy(c *C) {
 	}{
 		// error if output value parameter is not a pointer
 		{
-			"snap1",
+			"sdk1",
 			"iface1",
 			"attr1",
 			"input value",
@@ -128,17 +128,17 @@ func (s *conversionssSuite) TestSetValueFromAttributeUnhappy(c *C) {
 
 		// error if value cannot be converted
 		{
-			"snap2",
+			"sdk2",
 			"iface2",
 			"attr2",
 			"input value",
 			&outputBool,
-			`snap "snap2" has interface "iface2" with invalid value type string for "attr2" attribute: \*bool`,
+			`sdk "sdk2" has interface "iface2" with invalid value type string for "attr2" attribute: \*bool`,
 		},
 	}
 
 	for _, td := range data {
-		err := metautil.SetValueFromAttribute(td.snapName, td.ifaceName, td.attrName, td.inputValue, td.outputValue)
+		err := metautil.SetValueFromAttribute(td.sdkName, td.ifaceName, td.attrName, td.inputValue, td.outputValue)
 		c.Check(err, ErrorMatches, td.expectedError, Commentf("input value %v", td.inputValue))
 	}
 }

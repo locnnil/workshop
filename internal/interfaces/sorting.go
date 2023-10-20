@@ -61,7 +61,7 @@ func (c bySlotWorkspaceSdkAndName) Less(i, j int) bool {
 	return c[i].Name < c[j].Name
 }
 
-func sortedSnapNamesWithPlugs(m map[string]map[string]*sdk.PlugInfo) []string {
+func sortedSdkNamesWithPlugs(m map[string]map[string]*sdk.PlugInfo) []string {
 	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)
@@ -79,7 +79,7 @@ func sortedPlugNames(m map[string]*sdk.PlugInfo) []string {
 	return keys
 }
 
-func sortedSnapNamesWithSlots(m map[string]map[string]*sdk.SlotInfo) []string {
+func sortedSdkNamesWithSlots(m map[string]map[string]*sdk.SlotInfo) []string {
 	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)

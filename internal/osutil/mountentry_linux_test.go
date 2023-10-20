@@ -30,12 +30,12 @@ func (s *entrySuite) TestString(c *C) {
 	ent0 := osutil.MountEntry{}
 	c.Assert(ent0.String(), Equals, "none none none defaults 0 0")
 	ent1 := osutil.MountEntry{
-		Name:    "/var/snap/foo/common",
-		Dir:     "/var/snap/bar/common",
+		Name:    "/var/sdk/foo/common",
+		Dir:     "/var/sdk/bar/common",
 		Options: []string{"bind"},
 	}
 	c.Assert(ent1.String(), Equals,
-		"/var/snap/foo/common /var/snap/bar/common none bind 0 0")
+		"/var/sdk/foo/common /var/sdk/bar/common none bind 0 0")
 	ent2 := osutil.MountEntry{
 		Name:    "/dev/sda5",
 		Dir:     "/media/foo",

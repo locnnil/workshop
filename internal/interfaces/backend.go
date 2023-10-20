@@ -31,25 +31,21 @@ import (
 // needs of a particular security system.
 type SecurityBackend interface {
 	// Initialize performs any initialization required by the backend.
-	// It is called during snapd startup process.
+	// It is called during workspaced startup process.
 	Initialize(backend workspacebackend.WorkspaceBackend) error
 
 	// Name returns the name of the backend.
 	// This is intended for diagnostic messages.
 	Name() SecuritySystem
 
-	// Setup creates and loads security artefacts specific to a given snap.
-	// The snap can be in one of three kids onf confinement (strict mode,
-	// developer mode or classic mode). In the last two security violations
-	// are non-fatal to the offending application process.
-	//
+	// Setup creates and loads security artefacts specific to a given sdk.
 	// This method should be called after changing plug, slots, connections
-	// between them or application present in the snap.
+	// between them.
 	Setup(context context.Context, sdk *sdk.Info, repo *Repository) error
 
-	// Remove removes and unloads security artefacts of a given snap.
+	// Remove removes and unloads security artefacts of a given sdk.
 	//
-	// This method should be called during the process of removing a snap.
+	// This method should be called during the process of removing a sdk.
 	Remove(sdkName string) error
 
 	// NewSpecification returns a new specification associated with this backend.
@@ -57,9 +53,9 @@ type SecurityBackend interface {
 }
 
 // SecurityBackendSetupMany interface may be implemented by backends that can optimize their operations
-// when setting up multiple snaps at once.
+// when setting up multiple sdks at once.
 type SecurityBackendSetupMany interface {
-	// SetupMany creates and loads apparmor profiles of multiple snaps. It tries to process all snaps and doesn't interrupt processing
-	// on errors of individual snaps.
-	SetupMany(snaps []*sdk.Info, repo *Repository, tm timings.Measurer) []error
+	// SetupMany creates and loads apparmor profiles of multiple sdks. It tries to process all sdks and doesn't interrupt processing
+	// on errors of individual sdks.
+	SetupMany(sdks []*sdk.Info, repo *Repository, tm timings.Measurer) []error
 }

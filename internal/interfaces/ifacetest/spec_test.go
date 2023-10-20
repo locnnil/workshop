@@ -20,12 +20,19 @@
 package ifacetest_test
 
 import (
+	"testing"
+
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workspace/internal/interfaces"
 	"github.com/canonical/workspace/internal/interfaces/ifacetest"
 	"github.com/canonical/workspace/internal/sdk"
 )
+
+func Test(t *testing.T) {
+	check.TestingT(t)
+}
 
 type SpecificationSuite struct {
 	iface    *ifacetest.TestInterface
@@ -57,12 +64,12 @@ var _ = Suite(&SpecificationSuite{
 		},
 	},
 	plugInfo: &sdk.PlugInfo{
-		Sdk:       &sdk.Info{Name: "snap"},
+		Sdk:       &sdk.Info{Name: "sdk"},
 		Name:      "name",
 		Interface: "test",
 	},
 	slotInfo: &sdk.SlotInfo{
-		Sdk:       &sdk.Info{Name: "snap"},
+		Sdk:       &sdk.Info{Name: "sdk"},
 		Name:      "name",
 		Interface: "test",
 	},

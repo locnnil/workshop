@@ -62,14 +62,14 @@ slots:
 }
 
 func (s *ContentSuite) TestSanitizePlugSimple(c *check.C) {
-	const mockSnapYaml = `name: content-slot-sdk
+	const mockSdkYaml = `name: content-slot-sdk
 base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
   target: import
 `
-	info := sdk.MockInfo(c, mockSnapYaml, sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, sdk.Setup{})
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 }

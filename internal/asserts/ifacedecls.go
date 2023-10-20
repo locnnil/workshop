@@ -89,7 +89,7 @@ func (ac SideArityConstraint) Any() bool {
 }
 
 // SlotConnectionConstraints specfies a set of constraints on an
-// interface slot for a snap relevant to its connection or
+// interface slot for a sdk relevant to its connection or
 // auto-connection.
 type SlotConnectionConstraints struct {
 	PlugSdkTypes []string
@@ -390,7 +390,7 @@ func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target
 }
 
 // PlugRule holds the rule of what is allowed, wrt installation and
-// connection, for a plug of a specific interface for a snap.
+// connection, for a plug of a specific interface for a sdk.
 type PlugRule struct {
 	Interface string
 }

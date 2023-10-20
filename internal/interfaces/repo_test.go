@@ -231,7 +231,7 @@ func (s *RepositorySuite) TestAddPlugClashingPlug(c *C) {
 }
 
 func (s *RepositorySuite) TestAddPlugClashingSlot(c *C) {
-	snapInfo := &sdk.Info{Workspace: "ws", Name: "snap"}
+	snapInfo := &sdk.Info{Workspace: "ws", Name: "sdk"}
 	plug := &sdk.PlugInfo{
 		Sdk:       snapInfo,
 		Name:      "clashing",
@@ -245,14 +245,14 @@ func (s *RepositorySuite) TestAddPlugClashingSlot(c *C) {
 	err := s.testRepo.AddSlot(slot)
 	c.Assert(err, IsNil)
 	err = s.testRepo.AddPlug(plug)
-	c.Assert(err, ErrorMatches, `sdk "snap" has plug and slot conflicting on name "clashing"`)
+	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllSlots(""), HasLen, 1)
 	c.Assert(s.testRepo.Slot(slot.Sdk.Workspace, slot.Sdk.Name, slot.Name), DeepEquals, slot)
 }
 
 func (s *RepositorySuite) TestAddPlugFailsWithInvalidPlugName(c *C) {
 	plug := &sdk.PlugInfo{
-		Sdk:       &sdk.Info{Name: "snap"},
+		Sdk:       &sdk.Info{Name: "sdk"},
 		Name:      "bad-name-",
 		Interface: "interface",
 	}
@@ -343,7 +343,7 @@ func (s *RepositorySuite) TestRemovePlugSucceedsWhenPlugExistsAndDisconnected(c 
 
 func (s *RepositorySuite) TestRemovePlugFailsWhenPlugDoesntExist(c *C) {
 	err := s.emptyRepo.RemovePlug(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name)
-	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from snap "consumer", no such plug`)
+	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", no such plug`)
 }
 
 func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
@@ -356,7 +356,7 @@ func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
 	c.Assert(err, IsNil)
 	// Removing a plug used by a slot returns an appropriate error
 	err = s.testRepo.RemovePlug(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name)
-	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from snap "consumer", it is still connected`)
+	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", it is still connected`)
 	// The plug is still there
 	slot := s.testRepo.Plug(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(slot, Not(IsNil))
@@ -366,22 +366,22 @@ func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
 
 func (s *RepositorySuite) TestAllPlugsWithoutInterfaceName(c *C) {
 	sdks := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
-		{Name: "snap-a", Yaml: `
-name: snap-a
+		{Name: "sdk-a", Yaml: `
+name: sdk-a
 base: ubuntu@22.04
 plugs:
     name-a: interface
 `},
-		{Name: "snap-b", Yaml: `
-name: snap-b
+		{Name: "sdk-b", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
     name-c: interface
 `},
-		{Name: "snap-b_instance", Yaml: `
-name: snap-b
+		{Name: "sdk-b_instance", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 plugs:
     name-a: interface
@@ -390,7 +390,7 @@ plugs:
 `},
 	})
 	c.Assert(sdks, HasLen, 3)
-	// The result is sorted by snap and name
+	// The result is sorted by sdk and name
 	allPlugs := s.testRepo.AllPlugs("")
 	c.Assert(allPlugs, DeepEquals, []*sdk.PlugInfo{
 		sdks[0].Plugs["name-a"],
@@ -408,22 +408,22 @@ func (s *RepositorySuite) TestAllPlugsWithInterfaceName(c *C) {
 	err := s.testRepo.AddInterface(&ifacetest.TestInterface{InterfaceName: "other-interface"})
 	c.Assert(err, IsNil)
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
-		{Name: "snap-a", Yaml: `
-name: snap-a
+		{Name: "sdk-a", Yaml: `
+name: sdk-a
 base: ubuntu@22.04
 plugs:
     name-a: interface
 `},
-		{Name: "snap-b", Yaml: `
-name: snap-b
+		{Name: "sdk-b", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: other-interface
     name-c: interface
 `},
-		{Name: "snap-b_instance", Yaml: `
-name: snap-b
+		{Name: "sdk-b_instance", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 plugs:
     name-a: interface
@@ -442,16 +442,16 @@ plugs:
 
 func (s *RepositorySuite) TestPlugs(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
-		{Name: "snap-a", Yaml: `
-name: snap-a
+		{Name: "sdk-a", Yaml: `
+name: sdk-a
 base: ubuntu@22.04
 plugs:
     name-a: interface
     name-b: interface
     name-c: interface
 `},
-		{Name: "snap-b", Yaml: `
-name: snap-b
+		{Name: "sdk-b", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 plugs:
     name-a: interface
@@ -460,20 +460,20 @@ plugs:
 `},
 	})
 	c.Assert(snaps, HasLen, 2)
-	// The result is sorted by snap and name
-	c.Assert(s.testRepo.Plugs("ws-snap-a", "snap-a"), DeepEquals, []*sdk.PlugInfo{
+	// The result is sorted by sdk and name
+	c.Assert(s.testRepo.Plugs("ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.PlugInfo{
 		snaps[0].Plugs["name-a"],
 		snaps[0].Plugs["name-b"],
 		snaps[0].Plugs["name-c"],
 	})
-	c.Assert(s.testRepo.Plugs("ws-snap-b", "snap-b"), DeepEquals, []*sdk.PlugInfo{
+	c.Assert(s.testRepo.Plugs("ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.PlugInfo{
 		snaps[1].Plugs["name-a"],
 		snaps[1].Plugs["name-b"],
 		snaps[1].Plugs["name-c"],
 	})
-	// The result is empty if the snap is not known
-	c.Assert(s.testRepo.Plugs("ws-snap-a", "snap-x"), HasLen, 0)
-	c.Assert(s.testRepo.Plugs("ws-snap-b", "snap-b_other"), HasLen, 0)
+	// The result is empty if the sdk is not known
+	c.Assert(s.testRepo.Plugs("ws-sdk-a", "sdk-x"), HasLen, 0)
+	c.Assert(s.testRepo.Plugs("ws-sdk-b", "sdk-b_other"), HasLen, 0)
 }
 
 // Tests for Repository.AllSlots()
@@ -482,35 +482,35 @@ func (s *RepositorySuite) TestAllSlots(c *C) {
 	err := s.testRepo.AddInterface(&ifacetest.TestInterface{InterfaceName: "other-interface"})
 	c.Assert(err, IsNil)
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
-		{Name: "snap-a", Yaml: `
-name: snap-a
+		{Name: "sdk-a", Yaml: `
+name: sdk-a
 base: ubuntu@22.04
 slots:
     name-a: interface
     name-b: interface
 `},
-		{Name: "snap-b", Yaml: `
-name: snap-b
+		{Name: "sdk-b", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 slots:
     name-a: other-interface
 `},
-		{Name: "snap-b_instance", Yaml: `
-name: snap-b
+		{Name: "sdk-b_instance", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 slots:
     name-a: other-interface
 `},
 	})
 	c.Assert(snaps, HasLen, 3)
-	// AllSlots("") returns all slots, sorted by snap and slot name
+	// AllSlots("") returns all slots, sorted by sdk and slot name
 	c.Assert(s.testRepo.AllSlots(""), DeepEquals, []*sdk.SlotInfo{
 		snaps[0].Slots["name-a"],
 		snaps[0].Slots["name-b"],
 		snaps[1].Slots["name-a"],
 		snaps[2].Slots["name-a"],
 	})
-	// AllSlots("") returns all slots, sorted by snap and slot name
+	// AllSlots("") returns all slots, sorted by sdk and slot name
 	c.Assert(s.testRepo.AllSlots("other-interface"), DeepEquals, []*sdk.SlotInfo{
 		snaps[1].Slots["name-a"],
 		snaps[2].Slots["name-a"],
@@ -521,35 +521,35 @@ slots:
 
 func (s *RepositorySuite) TestSlots(c *C) {
 	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
-		{Name: "snap-a", Yaml: `
-name: snap-a
+		{Name: "sdk-a", Yaml: `
+name: sdk-a
 base: ubuntu@22.04
 slots:
     name-a: interface
     name-b: interface
 `},
-		{Name: "snap-b", Yaml: `
-name: snap-b
+		{Name: "sdk-b", Yaml: `
+name: sdk-b
 base: ubuntu@22.04
 slots:
     name-a: interface
 `},
 	})
-	// Slots("snap-a") returns slots present in that snap
-	c.Assert(s.testRepo.Slots("ws-snap-a", "snap-a"), DeepEquals, []*sdk.SlotInfo{
+	// Slots("sdk-a") returns slots present in that sdk
+	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.SlotInfo{
 		snaps[0].Slots["name-a"],
 		snaps[0].Slots["name-b"],
 	})
-	// Slots("snap-b") returns slots present in that snap
-	c.Assert(s.testRepo.Slots("ws-snap-b", "snap-b"), DeepEquals, []*sdk.SlotInfo{
+	// Slots("sdk-b") returns slots present in that sdk
+	c.Assert(s.testRepo.Slots("ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.SlotInfo{
 		snaps[1].Slots["name-a"],
 	})
-	// Slots("snap-c") returns no slots (because that sdk doesn't exist)
-	c.Assert(s.testRepo.Slots("ws-snap-a", "snap-c"), HasLen, 0)
-	// Slots("snap-b_other") returns no slots (the sdk does not exist)
-	c.Assert(s.testRepo.Slots("ws-snap-a", "snap-b_other"), HasLen, 0)
+	// Slots("sdk-c") returns no slots (because that sdk doesn't exist)
+	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-c"), HasLen, 0)
+	// Slots("sdk-b_other") returns no slots (the sdk does not exist)
+	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-b_other"), HasLen, 0)
 	// Slots("") returns no slots
-	c.Assert(s.testRepo.Slots("ws-snap-a", ""), HasLen, 0)
+	c.Assert(s.testRepo.Slots("ws-sdk-a", ""), HasLen, 0)
 }
 
 // Tests for Repository.Slot()
@@ -575,7 +575,7 @@ func (s *RepositorySuite) TestAddSlotFailsWhenInterfaceIsUnknown(c *C) {
 
 func (s *RepositorySuite) TestAddSlotFailsWhenSlotNameIsInvalid(c *C) {
 	slot := &sdk.SlotInfo{
-		Sdk:       &sdk.Info{Name: "snap"},
+		Sdk:       &sdk.Info{Name: "sdk"},
 		Name:      "bad-name-",
 		Interface: "interface",
 	}
@@ -594,7 +594,7 @@ func (s *RepositorySuite) TestAddSlotClashingSlot(c *C) {
 }
 
 func (s *RepositorySuite) TestAddSlotClashingPlug(c *C) {
-	snapInfo := &sdk.Info{Name: "snap"}
+	snapInfo := &sdk.Info{Name: "sdk"}
 	plug := &sdk.PlugInfo{
 		Sdk:       snapInfo,
 		Name:      "clashing",
@@ -608,7 +608,7 @@ func (s *RepositorySuite) TestAddSlotClashingPlug(c *C) {
 	err := s.testRepo.AddPlug(plug)
 	c.Assert(err, IsNil)
 	err = s.testRepo.AddSlot(slot)
-	c.Assert(err, ErrorMatches, `sdk "snap" has plug and slot conflicting on name "clashing"`)
+	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 1)
 	c.Assert(s.testRepo.Plug(plug.Sdk.Workspace, plug.Sdk.Name, plug.Name), DeepEquals, plug)
 }
@@ -760,16 +760,16 @@ func (s *RepositorySuite) TestDisconnectFailsOnEmptyArgs(c *C) {
 	err3 := s.testRepo.Disconnect(s.plug.Sdk.Workspace, s.plug.Sdk.Name, "", s.slot.Sdk.Workspace, s.slot.Sdk.Name, s.slot.Name)
 	err4 := s.testRepo.Disconnect(s.plug.Sdk.Workspace, "", s.plug.Name, s.slot.Sdk.Workspace, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err1, ErrorMatches, `cannot disconnect, slot name is empty`)
-	c.Assert(err2, ErrorMatches, `cannot disconnect, slot snap name is empty`)
+	c.Assert(err2, ErrorMatches, `cannot disconnect, slot sdk name is empty`)
 	c.Assert(err3, ErrorMatches, `cannot disconnect, plug name is empty`)
-	c.Assert(err4, ErrorMatches, `cannot disconnect, plug snap name is empty`)
+	c.Assert(err4, ErrorMatches, `cannot disconnect, plug sdk name is empty`)
 }
 
 // Disconnect fails if plug doesn't exist
 func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 	c.Assert(s.testRepo.AddSlot(s.slot), IsNil)
 	err := s.testRepo.Disconnect(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workspace, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `snap "consumer" has no plug named "plug"`)
+	c.Assert(err, ErrorMatches, `sdk "consumer" has no plug named "plug"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -778,7 +778,7 @@ func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 func (s *RepositorySuite) TestDisconnectFailsWithutSlot(c *C) {
 	c.Assert(s.testRepo.AddPlug(s.plug), IsNil)
 	err := s.testRepo.Disconnect(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workspace, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `snap "producer" has no slot named "slot"`)
+	c.Assert(err, ErrorMatches, `sdk "producer" has no slot named "slot"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -811,7 +811,7 @@ func (s *RepositorySuite) TestDisconnectSucceeds(c *C) {
 
 // Tests for Repository.Connected
 
-// Connected fails if snap name is empty and there's no core snap around
+// Connected fails if sdk name is empty
 func (s *RepositorySuite) TestConnectedFailsWithEmptyWorkspaceName(c *C) {
 	_, err := s.testRepo.Connected("ws", "", s.plug.Name)
 	c.Check(err, ErrorMatches, "internal error: cannot obtain sdk name while computing connections")
@@ -832,10 +832,10 @@ func (s *RepositorySuite) TestConnectedFailsWithEmptyPlugSlotName(c *C) {
 func (s *RepositorySuite) TestConnectedFailsWithoutPlugOrSlot(c *C) {
 	_, err1 := s.testRepo.Connected(s.plug.Sdk.Workspace, s.plug.Sdk.Name, s.plug.Name)
 	_, err2 := s.testRepo.Connected(s.slot.Sdk.Workspace, s.slot.Sdk.Name, s.slot.Name)
-	c.Check(err1, ErrorMatches, `snap "consumer" has no plug or slot named "plug"`)
+	c.Check(err1, ErrorMatches, `sdk "consumer" has no plug or slot named "plug"`)
 	e, _ := err1.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
-	c.Check(err2, ErrorMatches, `snap "producer" has no plug or slot named "slot"`)
+	c.Check(err2, ErrorMatches, `sdk "producer" has no plug or slot named "slot"`)
 	e, _ = err1.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -1112,7 +1112,7 @@ func (s *RepositorySuite) TestAutoConnectCandidatePlugsAndSlotsSymmetry(c *C) {
 		return slot.Interface() == "auto", nil
 	}
 
-	// Add a producer snap for "auto"
+	// Add a producer sdk for "auto"
 	producer := sdk.MockInfo(c, `
 name: producer
 base: ubuntu@22.04
@@ -1206,7 +1206,7 @@ slots:
   bogus-slot:
 `)
 	c.Assert(err, IsNil)
-	// the snap knowns about the bogus plug and slot
+	// the sdk knowns about the bogus plug and slot
 	c.Assert(info.Plugs["bogus-plug"], NotNil)
 	c.Assert(info.Slots["bogus-slot"], NotNil)
 	// but the repository ignores them
@@ -1344,7 +1344,7 @@ func contentAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 
 // internal helper that creates a new repository with two snaps, one
 // is a content plug and one a content slot
-func makeContentConnectionTestSnaps(c *C, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
+func makeContentConnectionTestSdks(c *C, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
 	repo := NewRepository()
 	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "content", AutoConnectCallback: contentAutoConnect})
 	c.Assert(err, IsNil)
@@ -1375,7 +1375,7 @@ slots:
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceSimple(c *C) {
-	repo, _, _ := makeContentConnectionTestSnaps(c, "mylib", "mylib")
+	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "mylib")
 	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Name, Equals, "exported-content")
@@ -1385,28 +1385,19 @@ func (s *RepositorySuite) TestAutoConnectContentInterfaceSimple(c *C) {
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceOSWorksCorrectly(c *C) {
-	repo, _, _ := makeContentConnectionTestSnaps(c, "mylib", "otherlib")
+	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "otherlib")
 
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-snap", "imported-content", contentPolicyCheck)
+	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-snap", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 0)
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceNoMatchingContent(c *C) {
-	repo, _, _ := makeContentConnectionTestSnaps(c, "mylib", "otherlib")
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-snap", "imported-content", contentPolicyCheck)
+	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "otherlib")
+	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-snap", "exported-content", contentPolicyCheck)
-	c.Assert(candidatePlugs, HasLen, 0)
-}
-
-func (s *RepositorySuite) TestAutoConnectContentInterfaceNoMatchingDeveloper(c *C) {
-	repo, _, _ := makeContentConnectionTestSnaps(c, "mylib", "mylib")
-
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-snap", "imported-content", contentPolicyCheck)
-	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-snap", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 0)
 }
 

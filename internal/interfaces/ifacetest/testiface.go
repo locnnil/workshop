@@ -49,6 +49,9 @@ func (t *TestInterface) Name() string {
 }
 
 func (t *TestInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
+	if t.AutoConnectCallback != nil {
+		return t.AutoConnectCallback(plug, slot)
+	}
 	return true
 }
 

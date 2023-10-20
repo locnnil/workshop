@@ -30,7 +30,7 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-// Repository stores all known snappy plugs and slots and ifaces.
+// Repository stores all known plugs and slots and ifaces.
 type Repository struct {
 	// Protects the internals from concurrent access.
 	m      sync.Mutex
@@ -129,9 +129,9 @@ func (r *Repository) interfaceInfo(iface Interface, opts *InfoOptions) *Info {
 	}
 	if opts != nil && opts.Plugs {
 		// Collect all plugs of this interface type.
-		for _, snapName := range sortedSnapNamesWithPlugs(r.plugs) {
-			for _, plugName := range sortedPlugNames(r.plugs[snapName]) {
-				plugInfo := r.plugs[snapName][plugName]
+		for _, sdkName := range sortedSdkNamesWithPlugs(r.plugs) {
+			for _, plugName := range sortedPlugNames(r.plugs[sdkName]) {
+				plugInfo := r.plugs[sdkName][plugName]
 				if plugInfo.Interface == ifaceName {
 					ii.Plugs = append(ii.Plugs, plugInfo)
 				}
@@ -140,9 +140,9 @@ func (r *Repository) interfaceInfo(iface Interface, opts *InfoOptions) *Info {
 	}
 	if opts != nil && opts.Slots {
 		// Collect all slots of this interface type.
-		for _, snapName := range sortedSnapNamesWithSlots(r.slots) {
-			for _, slotName := range sortedSlotNames(r.slots[snapName]) {
-				slotInfo := r.slots[snapName][slotName]
+		for _, sdkName := range sortedSdkNamesWithSlots(r.slots) {
+			for _, slotName := range sortedSlotNames(r.slots[sdkName]) {
+				slotInfo := r.slots[sdkName][slotName]
 				if slotInfo.Interface == ifaceName {
 					ii.Slots = append(ii.Slots, slotInfo)
 				}
@@ -231,8 +231,8 @@ func (r *Repository) AllPlugs(interfaceName string) []*sdk.PlugInfo {
 	defer r.m.Unlock()
 
 	var result []*sdk.PlugInfo
-	for _, plugsForSnap := range r.plugs {
-		for _, plug := range plugsForSnap {
+	for _, plugsForSdk := range r.plugs {
+		for _, plug := range plugsForSdk {
 			if interfaceName == "" || plug.Interface == interfaceName {
 				result = append(result, plug)
 			}
@@ -299,7 +299,7 @@ func (r *Repository) Connection(connRef *ConnRef) (*Connection, error) {
 }
 
 // AddPlug adds a plug to the repository.
-// Plug names must be valid snap names, as defined by ValidateName.
+// Plug names must be valid sdk names, as defined by ValidateName.
 // Plug name must be unique within a particular sdk.
 func (r *Repository) AddPlug(plug *sdk.PlugInfo) error {
 	r.m.Lock()
@@ -339,11 +339,11 @@ func (r *Repository) RemovePlug(workspace, sdkName, plugName string) error {
 	// Ensure that such plug exists
 	plug := r.plugs[key][plugName]
 	if plug == nil {
-		return fmt.Errorf("cannot remove plug %q from snap %q, no such plug", plugName, sdkName)
+		return fmt.Errorf("cannot remove plug %q from sdk %q, no such plug", plugName, sdkName)
 	}
 	// Ensure that the plug is not used by any slot
 	if len(r.plugSlots[plug]) > 0 {
-		return fmt.Errorf("cannot remove plug %q from snap %q, it is still connected", plugName, sdkName)
+		return fmt.Errorf("cannot remove plug %q from sdk %q, it is still connected", plugName, sdkName)
 	}
 	delete(r.plugs[key], plugName)
 	if len(r.plugs[key]) == 0 {
@@ -359,8 +359,8 @@ func (r *Repository) AllSlots(interfaceName string) []*sdk.SlotInfo {
 	defer r.m.Unlock()
 
 	var result []*sdk.SlotInfo
-	for _, slotsForSnap := range r.slots {
-		for _, slot := range slotsForSnap {
+	for _, slotsForSdk := range r.slots {
+		for _, slot := range slotsForSdk {
 			if interfaceName == "" || slot.Interface == interfaceName {
 				result = append(result, slot)
 			}
@@ -397,7 +397,7 @@ func (r *Repository) Slot(workspace, sdkName, slotName string) *sdk.SlotInfo {
 
 // AddSlot adds a new slot to the repository.
 // Adding a slot with invalid name returns an error.
-// Adding a slot that has the same name and snap name as another slot returns an error.
+// Adding a slot that has the same name and sdk name as another slot returns an error.
 func (r *Repository) AddSlot(slot *sdk.SlotInfo) error {
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -571,13 +571,13 @@ func (r *Repository) Disconnect(plugWorkspace, plugSdkName, plugName, slotWorksp
 
 	// Validity check
 	if plugSdkName == "" {
-		return fmt.Errorf("cannot disconnect, plug snap name is empty")
+		return fmt.Errorf("cannot disconnect, plug sdk name is empty")
 	}
 	if plugName == "" {
 		return fmt.Errorf("cannot disconnect, plug name is empty")
 	}
 	if slotSdkName == "" {
-		return fmt.Errorf("cannot disconnect, slot snap name is empty")
+		return fmt.Errorf("cannot disconnect, slot sdk name is empty")
 	}
 	if slotName == "" {
 		return fmt.Errorf("cannot disconnect, slot name is empty")
@@ -590,7 +590,7 @@ func (r *Repository) Disconnect(plugWorkspace, plugSdkName, plugName, slotWorksp
 	plug := r.plugs[plugKey][plugName]
 	if plug == nil {
 		return &NoPlugOrSlotError{
-			message: fmt.Sprintf("snap %q has no plug named %q",
+			message: fmt.Sprintf("sdk %q has no plug named %q",
 				plugSdkName, plugName),
 		}
 	}
@@ -598,7 +598,7 @@ func (r *Repository) Disconnect(plugWorkspace, plugSdkName, plugName, slotWorksp
 	slot := r.slots[slotKey][slotName]
 	if slot == nil {
 		return &NoPlugOrSlotError{
-			message: fmt.Sprintf("snap %q has no slot named %q",
+			message: fmt.Sprintf("sdk %q has no slot named %q",
 				slotSdkName, slotName),
 		}
 	}
@@ -669,7 +669,7 @@ func (r *Repository) connected(workspace, sdk, plugOrSlotName string) ([]*ConnRe
 	// Check if plugOrSlotName actually maps to anything
 	if r.plugs[key][plugOrSlotName] == nil && r.slots[key][plugOrSlotName] == nil {
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("snap %q has no plug or slot named %q",
+			message: fmt.Sprintf("sdk %q has no plug or slot named %q",
 				sdk, plugOrSlotName)}
 	}
 	// Collect all the relevant connections
@@ -767,7 +767,7 @@ func (r *Repository) Interfaces() *Interfaces {
 	return ifaces
 }
 
-// SnapSpecification returns the specification of a given snap in a given security system.
+// SdkSpecification returns the specification of a given sdk in a given security system.
 func (r *Repository) SdkSpecification(ctx context.Context, securitySystem SecuritySystem, sdkInfo *sdk.Info) (Specification, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -800,11 +800,11 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 	// XXX: If either of the AddConnected{Plug,Slot} methods for a connection
 	// fail resiliently as-in they can never succeed (such as the case where a
 	// bit of policy generated is unable to be used on this system), we may be
-	// stuck never able to modify the policy without restarting snapd. This is
+	// stuck never able to modify the policy without restarting daemon. This is
 	// because the (broken) connection is still left inside the in-memory
-	// repository so the next time we try to do any modification to this snap's
+	// repository so the next time we try to do any modification to this sdk's
 	// plugs or slots, we will try to add that connection again and fail. It is
-	// resolved by restarting snapd since we just store the repository in-memory
+	// resolved by restarting daemon since we just store the repository in-memory
 	// and don't persist new connections until after these bits are successful.
 	// We may want to consider removing connections which fail when we try to
 	// generate/add policy for them. This may just be a transitory failure
@@ -839,10 +839,10 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 	return spec, nil
 }
 
-// AddSdk adds plugs and slots declared by the given snap to the repository.
+// AddSdk adds plugs and slots declared by the given sdk to the repository.
 //
 // AddSdk doesn't change existing plugs/slots. The caller is responsible for
-// ensuring that the snap is not present in the repository in any way prior to
+// ensuring that the sdk is not present in the repository in any way prior to
 // calling this function. If this constraint is violated then no changes are
 // made and an error is returned.
 //
@@ -886,12 +886,12 @@ func (r *Repository) AddSdk(sdkInfo *sdk.Info) error {
 	return nil
 }
 
-// RemoveSnap removes all the plugs and slots associated with a given sdk.
+// RemoveSdk removes all the plugs and slots associated with a given sdk.
 //
-// This function can be used to implement snap removal or, when used along with
-// AddSnap, snap upgrade.
+// This function can be used to implement sdk removal or, when used along with
+// AddSdk, sdk upgrade.
 //
-// RemoveSnap does not remove connections. The caller is responsible for
+// RemoveSdk does not remove connections. The caller is responsible for
 // ensuring that connections are broken before calling this method. If this
 // constraint is violated then no changes are made and an error is returned.
 func (r *Repository) RemoveSdk(workspace, sdkName string) error {
@@ -923,7 +923,7 @@ func (r *Repository) RemoveSdk(workspace, sdkName string) error {
 	return nil
 }
 
-// DisconnectSnap disconnects all the connections to and from a given sdk.
+// DisconnectSdk disconnects all the connections to and from a given sdk.
 //
 // The return value is a list of names that were affected.
 func (r *Repository) DisconnectSdk(workspace, sdkName string) ([]string, error) {
@@ -981,8 +981,8 @@ func (r *Repository) AutoConnectCandidateSlots(workspace, plugSdkName, plugName 
 	}
 
 	var candidates []*sdk.SlotInfo
-	for _, slotsForSnap := range r.slots {
-		for _, slotInfo := range slotsForSnap {
+	for _, slotsForSdk := range r.slots {
+		for _, slotInfo := range slotsForSdk {
 			if slotInfo.Interface != plugInfo.Interface {
 				continue
 			}
@@ -1016,8 +1016,8 @@ func (r *Repository) AutoConnectCandidatePlugs(workspace, slotSdkName, slotName 
 	}
 
 	var candidates []*sdk.PlugInfo
-	for _, plugsForSnap := range r.plugs {
-		for _, plugInfo := range plugsForSnap {
+	for _, plugsForSdk := range r.plugs {
+		for _, plugInfo := range plugsForSdk {
 			if slotInfo.Interface != plugInfo.Interface {
 				continue
 			}

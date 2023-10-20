@@ -9,7 +9,6 @@ import (
 	"github.com/canonical/workspace/internal/workspacebackend"
 )
 
-// Backend is responsible for maintaining mount files for snap-confine
 type Backend struct {
 	wsbackend workspacebackend.WorkspaceBackend
 }
@@ -25,7 +24,7 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 	return interfaces.SecurityLxdDevice
 }
 
-// Setup creates mount mount profile files specific to a given snap.
+// Setup creates mount mount profile files specific to a given sdk.
 func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(context, b.Name(), sdkInfo)
 	if err != nil {
@@ -42,9 +41,9 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 	return nil
 }
 
-// Remove removes mount configuration files of a given snap.
+// Remove removes mount configuration files of a given sdk.
 //
-// This method should be called after removing a snap.
+// This method should be called after removing a sdk.
 func (b *Backend) Remove(sdkName string) error {
 	return nil
 }

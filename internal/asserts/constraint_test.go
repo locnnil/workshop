@@ -268,10 +268,10 @@ func (s *attrMatcherSuite) TestAlternativeMatchingStringList(c *C) {
 	toMatch := vals(`
 write:
  - /var/tmp
- - /var/lib/snapd/snapshots
+ - /var/lib/workspaced/snapshots
 `)
 	m, err := asserts.ParseHeaders([]byte(`attrs:
-  write: /var/(tmp|lib/snapd/snapshots)`))
+  write: /var/(tmp|lib/workspaced/snapshots)`))
 	c.Assert(err, IsNil)
 
 	domatch, err := asserts.CompileAttrMatcher(m["attrs"].(map[string]interface{}), nil)
@@ -283,7 +283,7 @@ write:
 	m, err = asserts.ParseHeaders([]byte(`attrs:
   write:
     - /var/tmp
-    - /var/lib/snapd/snapshots`))
+    - /var/lib/workspaced/snapshots`))
 	c.Assert(err, IsNil)
 
 	domatchLst, err := asserts.CompileAttrMatcher(m["attrs"].(map[string]interface{}), nil)

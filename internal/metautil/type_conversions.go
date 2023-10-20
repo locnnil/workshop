@@ -80,7 +80,7 @@ type AttributeNotCompatibleError struct {
 }
 
 func (e AttributeNotCompatibleError) Error() string {
-	return fmt.Sprintf("snap %q has interface %q with invalid value type %s for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
+	return fmt.Sprintf("sdk %q has interface %q with invalid value type %s for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
 }
 
 func (e AttributeNotCompatibleError) Is(target error) bool {
@@ -89,13 +89,13 @@ func (e AttributeNotCompatibleError) Is(target error) bool {
 }
 
 // SetValueFromAttribute attempts to convert the attribute value read from the
-// given snap/interface into the desired type.
+// given sdk/interface into the desired type.
 //
-// The snapName, ifaceName and attrName are only used to produce contextual
+// The sdkName, ifaceName and attrName are only used to produce contextual
 // error messages, but are not otherwise significant. This function only
 // operates converting the attrVal parameter into a value which can fit into
 // the val parameter, which therefore must be a pointer.
-func SetValueFromAttribute(snapName string, ifaceName string, attrName string, attrVal interface{}, val interface{}) error {
+func SetValueFromAttribute(sdkName string, ifaceName string, attrName string, attrVal interface{}, val interface{}) error {
 	rt := reflect.TypeOf(val)
 	if rt.Kind() != reflect.Ptr || val == nil {
 		return fmt.Errorf("internal error: cannot get %q attribute of interface %q with non-pointer value", attrName, ifaceName)
@@ -104,7 +104,7 @@ func SetValueFromAttribute(snapName string, ifaceName string, attrName string, a
 	converted, err := convertValue(reflect.ValueOf(attrVal), rt.Elem())
 	if err != nil {
 		return AttributeNotCompatibleError{
-			SdkName:       snapName,
+			SdkName:       sdkName,
 			InterfaceName: ifaceName,
 			AttributeName: attrName,
 			AttributeType: reflect.TypeOf(attrVal),

@@ -17,7 +17,7 @@
  *
  */
 
-// Package metautil takes care of basic details of working with snap metadata formats.
+// Package metautil takes care of basic details of working with sdk metadata formats.
 package metautil
 
 import (

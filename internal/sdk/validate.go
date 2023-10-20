@@ -46,9 +46,7 @@ func Validate(sdk *Info) error {
 
 // ValidatePlug checks if a string can be used as a slot name.
 //
-// Slot names and plug names within one snap must have unique names.
-// This is not enforced by this function but is enforced by snap-level
-// validation.
+// Slot names and plug names within one sdk must have unique names.
 func ValidatePlugName(name string) error {
 	if !validPlugSlotIface.MatchString(name) {
 		return fmt.Errorf("invalid plug name: %q", name)
@@ -58,9 +56,7 @@ func ValidatePlugName(name string) error {
 
 // ValidateSlot checks if a string can be used as a slot name.
 //
-// Slot names and plug names within one snap must have unique names.
-// This is not enforced by this function but is enforced by snap-level
-// validation.
+// Slot names and plug names within one sdk must have unique names.
 func ValidateSlotName(name string) error {
 	if !validPlugSlotIface.MatchString(name) {
 		return fmt.Errorf("invalid slot name: %q", name)

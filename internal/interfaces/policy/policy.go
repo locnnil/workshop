@@ -18,7 +18,7 @@
  */
 
 // Package policy implements the declaration based policy checks for
-// connecting or permitting installation of snaps based on their slots
+// connecting or permitting installation of sdks based on their slots
 // and plugs.
 package policy
 
@@ -112,11 +112,11 @@ func (connc *ConnectCandidate) SlotAttr(arg string) (interface{}, error) {
 	return nestedGet("slot", connc.Slot, arg)
 }
 
-func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule, snapRule bool) (interfaces.SideArity, error) {
+func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule, sdkRule bool) (interfaces.SideArity, error) {
 	return sideArity{asserts.SideArityConstraint{1}}, nil
 }
 
-func (connc *ConnectCandidate) checkSlotRule(kind string, rule *asserts.SlotRule, snapRule bool) (interfaces.SideArity, error) {
+func (connc *ConnectCandidate) checkSlotRule(kind string, rule *asserts.SlotRule, sdkRule bool) (interfaces.SideArity, error) {
 	denyConst := rule.DenyConnection
 	allowConst := rule.AllowConnection
 	if kind == "auto-connection" {
@@ -187,7 +187,7 @@ func (a sideArity) SlotsPerPlugAny() bool {
 	return a.slotsPerPlug.Any()
 }
 
-// CheckInterfaces checks whether plugs and slots of snap are allowed for installation.
+// CheckInterfaces checks whether plugs and slots of sdk are allowed for installation.
 func CheckInterfaces(sdkInfo *sdk.Info) error {
 	baseDecl := asserts.BuiltinBaseDeclaration()
 	if baseDecl == nil {

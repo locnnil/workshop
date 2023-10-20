@@ -505,10 +505,10 @@ func (s *SystemdTestSuite) TestAddMountUnit(c *C) {
 	restore := squashfs.FakeUseFuse(false)
 	defer restore()
 
-	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.snap")
+	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.sdk")
 	makeFakeFile(c, fakeSnapPath)
 
-	mountUnitName, err := systemd.New(s.rootDir, systemd.SystemMode, nil).AddMountUnitFile("foo", "42", fakeSnapPath, "/snap/snapname/123", "squashfs")
+	mountUnitName, err := systemd.New(s.rootDir, systemd.SystemMode, nil).AddMountUnitFile("foo", "42", fakeSnapPath, "/sdk/snapname/123", "squashfs")
 	c.Assert(err, IsNil)
 	defer os.Remove(mountUnitName)
 
@@ -519,7 +519,7 @@ Before=snapd.service
 
 [Mount]
 What=%s
-Where=/snap/snapname/123
+Where=/sdk/snapname/123
 Type=squashfs
 Options=nodev,ro,x-gdu.hide
 
@@ -529,8 +529,8 @@ WantedBy=multi-user.target
 
 	c.Assert(s.argses, DeepEquals, [][]string{
 		{"daemon-reload"},
-		{"--root", s.rootDir, "enable", "snap-snapname-123.mount"},
-		{"start", "snap-snapname-123.mount"},
+		{"--root", s.rootDir, "enable", "sdk-snapname-123.mount"},
+		{"start", "sdk-snapname-123.mount"},
 	})
 }
 
@@ -540,7 +540,7 @@ func (s *SystemdTestSuite) TestAddMountUnitForDirs(c *C) {
 
 	// a directory instead of a file produces a different output
 	snapDir := c.MkDir()
-	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foodir", "x1", snapDir, "/snap/snapname/x1", "squashfs")
+	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foodir", "x1", snapDir, "/sdk/snapname/x1", "squashfs")
 	c.Assert(err, IsNil)
 	defer os.Remove(mountUnitName)
 
@@ -551,7 +551,7 @@ Before=snapd.service
 
 [Mount]
 What=%s
-Where=/snap/snapname/x1
+Where=/sdk/snapname/x1
 Type=none
 Options=nodev,ro,x-gdu.hide,bind
 
@@ -561,8 +561,8 @@ WantedBy=multi-user.target
 
 	c.Assert(s.argses, DeepEquals, [][]string{
 		{"daemon-reload"},
-		{"--root", "", "enable", "snap-snapname-x1.mount"},
-		{"start", "snap-snapname-x1.mount"},
+		{"--root", "", "enable", "sdk-snapname-x1.mount"},
+		{"start", "sdk-snapname-x1.mount"},
 	})
 }
 
@@ -582,13 +582,13 @@ exit 0
 	`)
 	defer fuseCmd.Restore()
 
-	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.snap")
+	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.sdk")
 	err := os.MkdirAll(filepath.Dir(fakeSnapPath), 0755)
 	c.Assert(err, IsNil)
 	err = ioutil.WriteFile(fakeSnapPath, nil, 0644)
 	c.Assert(err, IsNil)
 
-	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foo", "x1", fakeSnapPath, "/snap/snapname/123", "squashfs")
+	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foo", "x1", fakeSnapPath, "/sdk/snapname/123", "squashfs")
 	c.Assert(err, IsNil)
 	defer os.Remove(mountUnitName)
 
@@ -599,7 +599,7 @@ Before=snapd.service
 
 [Mount]
 What=%s
-Where=/snap/snapname/123
+Where=/sdk/snapname/123
 Type=fuse.squashfuse
 Options=nodev,ro,x-gdu.hide,allow_other
 
@@ -620,13 +620,13 @@ exit 0
 	`)
 	defer fuseCmd.Restore()
 
-	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.snap")
+	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.sdk")
 	err := os.MkdirAll(filepath.Dir(fakeSnapPath), 0755)
 	c.Assert(err, IsNil)
 	err = ioutil.WriteFile(fakeSnapPath, nil, 0644)
 	c.Assert(err, IsNil)
 
-	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foo", "x1", fakeSnapPath, "/snap/snapname/123", "squashfs")
+	mountUnitName, err := systemd.New("", systemd.SystemMode, nil).AddMountUnitFile("foo", "x1", fakeSnapPath, "/sdk/snapname/123", "squashfs")
 	c.Assert(err, IsNil)
 	defer os.Remove(mountUnitName)
 
@@ -637,7 +637,7 @@ Before=snapd.service
 
 [Mount]
 What=%s
-Where=/snap/snapname/123
+Where=/sdk/snapname/123
 Type=squashfs
 Options=nodev,ro,x-gdu.hide
 
@@ -707,8 +707,8 @@ func makeFakeMountUnit(c *C, mountDir string) string {
 
 // FIXME: also test for the "IsMounted" case
 func (s *SystemdTestSuite) TestRemoveMountUnit(c *C) {
-	mountDir := s.rootDir + "/snap/foo/42"
-	mountUnit := makeFakeMountUnit(c, "/snap/foo/42")
+	mountDir := s.rootDir + "/sdk/foo/42"
+	mountUnit := makeFakeMountUnit(c, "/sdk/foo/42")
 	err := systemd.New(s.rootDir, systemd.SystemMode, nil).RemoveMountUnitFile(mountDir)
 	c.Assert(err, IsNil)
 
@@ -716,7 +716,7 @@ func (s *SystemdTestSuite) TestRemoveMountUnit(c *C) {
 	c.Check(osutil.FileExists(mountUnit), Equals, false)
 	// and the unit is disabled and the daemon reloaded
 	c.Check(s.argses, DeepEquals, [][]string{
-		{"--root", s.rootDir, "disable", "snap-foo-42.mount"},
+		{"--root", s.rootDir, "disable", "sdk-foo-42.mount"},
 		{"daemon-reload"},
 	})
 }
@@ -724,7 +724,7 @@ func (s *SystemdTestSuite) TestRemoveMountUnit(c *C) {
 func (s *SystemdTestSuite) TestDaemonReloadMutex(c *C) {
 	sysd := systemd.New(s.rootDir, systemd.SystemMode, nil)
 
-	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.snap")
+	fakeSnapPath := filepath.Join(c.MkDir(), "/var/lib/snappy/snaps/foo_1.0.sdk")
 	makeFakeFile(c, fakeSnapPath)
 
 	// create a go-routine that will try to daemon-reload like crazy
@@ -747,7 +747,7 @@ func (s *SystemdTestSuite) TestDaemonReloadMutex(c *C) {
 	// daemon-reload. This will be serialized, if not this would
 	// panic because systemd.daemonReloadNoLock ensures the lock is
 	// taken when this happens.
-	_, err := sysd.AddMountUnitFile("foo", "42", fakeSnapPath, "/snap/foo/42", "squashfs")
+	_, err := sysd.AddMountUnitFile("foo", "42", fakeSnapPath, "/sdk/foo/42", "squashfs")
 	c.Assert(err, IsNil)
 	close(stopCh)
 	<-stoppedCh

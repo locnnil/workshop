@@ -37,15 +37,15 @@ type TestSecurityBackend struct {
 	// SetupCallback is an callback that is optionally called in Setup
 	SetupCallback func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error
 	// RemoveCallback is a callback that is optionally called in Remove
-	RemoveCallback func(snapName string) error
+	RemoveCallback func(sdkName string) error
 	// SandboxFeaturesCallback is a callback that is optionally called in SandboxFeatures
 	SandboxFeaturesCallback func() []string
 }
 
 // TestSetupCall stores details about calls to TestSecurityBackend.Setup
 type TestSetupCall struct {
-	// SnapInfo is a copy of the snapInfo argument to a particular call to Setup
-	SnapInfo *sdk.Info
+	// SdkInfo is a copy of the sdkInfo argument to a particular call to Setup
+	SdkInfo *sdk.Info
 }
 
 // Initialize does nothing.
@@ -60,7 +60,7 @@ func (b *TestSecurityBackend) Name() interfaces.SecuritySystem {
 
 // Setup records information about the call and calls the setup callback if one is defined.
 func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
-	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SnapInfo: sdkInfo})
+	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkInfo: sdkInfo})
 	if b.SetupCallback == nil {
 		return nil
 	}
@@ -68,12 +68,12 @@ func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo *sdk.Info, 
 }
 
 // Remove records information about the call and calls the remove callback if one is defined
-func (b *TestSecurityBackend) Remove(snapName string) error {
-	b.RemoveCalls = append(b.RemoveCalls, snapName)
+func (b *TestSecurityBackend) Remove(sdkName string) error {
+	b.RemoveCalls = append(b.RemoveCalls, sdkName)
 	if b.RemoveCallback == nil {
 		return nil
 	}
-	return b.RemoveCallback(snapName)
+	return b.RemoveCallback(sdkName)
 }
 
 func (b *TestSecurityBackend) NewSpecification(user, pid string) interfaces.Specification {
@@ -100,12 +100,12 @@ type TestSecurityBackendSetupMany struct {
 
 // TestSetupManyCall stores details about calls to TestSecurityBackendMany.SetupMany
 type TestSetupManyCall struct {
-	// SnapInfos is a copy of the snapInfo arguments to a particular call to SetupMany
-	SnapInfos []*sdk.Info
+	// SdkInfos is a copy of the sdkInfo arguments to a particular call to SetupMany
+	SdkInfos []*sdk.Info
 }
 
 func (b *TestSecurityBackendSetupMany) SetupMany(context context.Context, sdkInfo []*sdk.Info, repo *interfaces.Repository) []error {
-	b.SetupManyCalls = append(b.SetupManyCalls, TestSetupManyCall{SnapInfos: sdkInfo})
+	b.SetupManyCalls = append(b.SetupManyCalls, TestSetupManyCall{SdkInfos: sdkInfo})
 	if b.SetupManyCallback == nil {
 		return nil
 	}

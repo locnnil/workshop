@@ -995,13 +995,13 @@ func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
 	select {
 	case <-d.Dying():
 		// Pretend we got change while shutting down, this can
-		// happen when e.g. the user requested a `snap install
+		// happen when e.g. the user requested a `workspace install
 		// foo` at the same time as the code in the overlord
 		// checked that it can go into socket activated
 		// mode. I.e. the daemon was processing the request
 		// but no change was generated at the time yet.
 		st.Lock()
-		chg := st.NewChange("fake-install", "fake install some snap")
+		chg := st.NewChange("fake-install", "fake install some work")
 		chg.AddTask(st.NewTask("fake-install-task", "fake install task"))
 		chgStatus := chg.Status()
 		st.Unlock()

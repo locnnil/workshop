@@ -56,8 +56,8 @@ func (s *testhelperSuite) TestMustBeTestBinary(c *C) {
 }
 
 func (s *testhelperSuite) TestBinaryNoRegressionWithValidApp(c *C) {
-	// a snap app named 'test' is valid, we must not be confused here
-	defer mockOsArgs([]string{"/snap/bin/some-snap.test", "bar", "baz"})()
+	// a sdk app named 'test' is valid, we must not be confused here
+	defer mockOsArgs([]string{"/sdk/bin/some-sdk.test", "bar", "baz"})()
 	// must not be considered a test binary
 	c.Assert(osutil.IsTestBinary(), Equals, false)
 	// must panic since binary is a non-test one

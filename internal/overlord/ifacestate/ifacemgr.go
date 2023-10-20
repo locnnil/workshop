@@ -90,10 +90,10 @@ func (m *InterfaceManager) Ensure() error {
 }
 
 // reloadConnections reloads connections stored in the state in the repository.
-// Using non-empty snapName the operation can be scoped to connections
-// affecting a given snap.
+// Using non-empty sdkName the operation can be scoped to connections
+// affecting a given sdk.
 //
-// The return value is the list of affected snap names.
+// The return value is the list of affected sdk names.
 func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[string]string, error) {
 	conns, err := getConns(m.state)
 	if err != nil {

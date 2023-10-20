@@ -41,7 +41,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
 }
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
@@ -142,8 +142,8 @@ slots:
 
 // func (s *interfaceManagerSuite) TestManagerDoesntReloadUndesiredAutoconnections(c *C) {
 // 	s.mockIfaces(&ifacetest.TestInterface{InterfaceName: "test"}, &ifacetest.TestInterface{InterfaceName: "test2"})
-// 	s.mockSnap(c, consumerYaml)
-// 	s.mockSnap(c, producerYaml)
+// 	s.mockSdk(c, consumerYaml)
+// 	s.mockSdk(c, producerYaml)
 
 // 	s.state.Lock()
 // 	s.state.Set("conns", map[string]interface{}{

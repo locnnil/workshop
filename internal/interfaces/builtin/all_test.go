@@ -38,9 +38,9 @@ type AllSuite struct{}
 var _ = Suite(&AllSuite{})
 
 // This section contains a list of *valid* defines that represent methods that
-// backends recognize and call. They are in individual interfaces as each snapd
+// backends recognize and call. They are in individual interfaces as each
 // interface can define a subset that it is interested in providing. Those are,
-// essentially, the only valid methods that a snapd interface can have, apart
+// essentially, the only valid methods that an interface can have, apart
 // from what is defined in the Interface golang interface.
 type mountDefiner1 interface {
 	MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error

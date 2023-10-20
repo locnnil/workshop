@@ -46,7 +46,7 @@ func Test(t *testing.T) {
 }
 
 func (s *baseDeclSuite) SetUpSuite(c *C) {
-	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {})
+	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
 	s.baseDecl = asserts.BuiltinBaseDeclaration()
 }
 
@@ -69,27 +69,27 @@ plugs:
   %s:
 `, iface)
 	}
-	slotSnap := sdk.MockInfo(c, slotYaml, sdk.Setup{Workspace: "ws"})
-	plugSnap := sdk.MockInfo(c, plugYaml, sdk.Setup{Workspace: "ws"})
+	slotSdk := sdk.MockInfo(c, slotYaml, sdk.Setup{Workspace: "ws"})
+	plugSdk := sdk.MockInfo(c, plugYaml, sdk.Setup{Workspace: "ws"})
 	return &policy.ConnectCandidate{
-		Plug:            interfaces.NewConnectedPlug(plugSnap.Plugs[iface], nil, nil),
-		Slot:            interfaces.NewConnectedSlot(slotSnap.Slots[iface], nil, nil),
+		Plug:            interfaces.NewConnectedPlug(plugSdk.Plugs[iface], nil, nil),
+		Slot:            interfaces.NewConnectedSlot(slotSdk.Slots[iface], nil, nil),
 		BaseDeclaration: s.baseDecl,
 	}
 }
 
-func (s *baseDeclSuite) installSlotCand(c *C, iface string, snapType sdk.Type, yaml string) *policy.InstallCandidate {
+func (s *baseDeclSuite) installSlotCand(c *C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
 	if yaml == "" {
 		yaml = fmt.Sprintf(`name: install-slot-sdk
 base: ubuntu@22.04
 type: %s
 slots:
   %s:
-`, snapType, iface)
+`, sdkType, iface)
 	}
-	snap := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
 	return &policy.InstallCandidate{
-		Sdk:             snap,
+		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,
 	}
 }
@@ -103,9 +103,9 @@ plugs:
   %s:
 `, sdkType, iface)
 	}
-	snap := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
 	return &policy.InstallCandidate{
-		Sdk:             snap,
+		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,
 	}
 }
@@ -156,7 +156,7 @@ revision: 0
 
 func (s *baseDeclSuite) TestDoesNotPanic(c *C) {
 	// In case there are any issues in the actual interfaces we'd get a panic
-	// on snapd startup. This test prevents this from happing unnoticed.
+	// on startup. This test prevents this from happing unnoticed.
 	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
 	c.Assert(err, IsNil)
 }

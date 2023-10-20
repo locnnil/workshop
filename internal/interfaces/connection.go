@@ -83,14 +83,14 @@ func lookupAttr(staticAttrs map[string]interface{}, dynamicAttrs map[string]inte
 	return v, true
 }
 
-func getAttribute(snapName string, ifaceName string, staticAttrs map[string]interface{}, dynamicAttrs map[string]interface{}, path string, val interface{}) error {
+func getAttribute(sdkName string, ifaceName string, staticAttrs map[string]interface{}, dynamicAttrs map[string]interface{}, path string, val interface{}) error {
 	v, ok := lookupAttr(staticAttrs, dynamicAttrs, path)
 	if !ok {
-		err := fmt.Errorf("snap %q does not have attribute %q for interface %q", snapName, path, ifaceName)
+		err := fmt.Errorf("sdk %q does not have attribute %q for interface %q", sdkName, path, ifaceName)
 		return sdk.AttributeNotFoundError{Err: err}
 	}
 
-	return metautil.SetValueFromAttribute(snapName, ifaceName, path, v, val)
+	return metautil.SetValueFromAttribute(sdkName, ifaceName, path, v, val)
 }
 
 // NewConnectedSlot creates an object representing a connected slot.
@@ -133,7 +133,7 @@ func (plug *ConnectedPlug) Name() string {
 	return plug.plugInfo.Name
 }
 
-// Snap returns the snap Info of this plug.
+// sdk returns the sdk Info of this plug.
 func (plug *ConnectedPlug) Sdk() *sdk.Info {
 	return plug.plugInfo.Sdk
 }
@@ -167,7 +167,7 @@ func (plug *ConnectedPlug) Lookup(path string) (interface{}, bool) {
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
 func (plug *ConnectedPlug) SetAttr(key string, value interface{}) error {
 	if _, ok := plug.staticAttrs[key]; ok {
-		return fmt.Errorf("cannot change attribute %q as it was statically specified in the snap details", key)
+		return fmt.Errorf("cannot change attribute %q as it was statically specified in the sdk details", key)
 	}
 	if plug.dynamicAttrs == nil {
 		plug.dynamicAttrs = make(map[string]interface{})
@@ -191,7 +191,7 @@ func (slot *ConnectedSlot) Name() string {
 	return slot.slotInfo.Name
 }
 
-// Snap returns the snap Info of this slot.
+// sdk returns the sdk Info of this slot.
 func (slot *ConnectedSlot) Sdk() *sdk.Info {
 	return slot.slotInfo.Sdk
 }
@@ -225,7 +225,7 @@ func (slot *ConnectedSlot) Lookup(path string) (interface{}, bool) {
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
 func (slot *ConnectedSlot) SetAttr(key string, value interface{}) error {
 	if _, ok := slot.staticAttrs[key]; ok {
-		return fmt.Errorf("cannot change attribute %q as it was statically specified in the snap details", key)
+		return fmt.Errorf("cannot change attribute %q as it was statically specified in the sdk details", key)
 	}
 	if slot.dynamicAttrs == nil {
 		slot.dynamicAttrs = make(map[string]interface{})

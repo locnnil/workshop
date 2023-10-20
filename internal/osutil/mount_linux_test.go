@@ -27,20 +27,20 @@ var _ = Suite(&mountSuite{})
 func (s *mountSuite) TestIsMountedHappyish(c *C) {
 	// note the different optional fields
 	const content = "" +
-		"44 24 7:1 / /snap/ubuntu-core/855 rw,relatime shared:27 - squashfs /dev/loop1 ro\n" +
-		"44 24 7:1 / /snap/something/123 rw,relatime - squashfs /dev/loop2 ro\n" +
-		"44 24 7:1 / /snap/random/456 rw,relatime opt:1 shared:27 - squashfs /dev/loop1 ro\n"
+		"44 24 7:1 / /sdk/ubuntu-core/855 rw,relatime shared:27 - squashfs /dev/loop1 ro\n" +
+		"44 24 7:1 / /sdk/something/123 rw,relatime - squashfs /dev/loop2 ro\n" +
+		"44 24 7:1 / /sdk/random/456 rw,relatime opt:1 shared:27 - squashfs /dev/loop1 ro\n"
 	defer osutil.FakeMountInfo(content)()
 
-	mounted, err := osutil.IsMounted("/snap/ubuntu-core/855")
+	mounted, err := osutil.IsMounted("/sdk/ubuntu-core/855")
 	c.Check(err, IsNil)
 	c.Check(mounted, Equals, true)
 
-	mounted, err = osutil.IsMounted("/snap/something/123")
+	mounted, err = osutil.IsMounted("/sdk/something/123")
 	c.Check(err, IsNil)
 	c.Check(mounted, Equals, true)
 
-	mounted, err = osutil.IsMounted("/snap/random/456")
+	mounted, err = osutil.IsMounted("/sdk/random/456")
 	c.Check(err, IsNil)
 	c.Check(mounted, Equals, true)
 
@@ -52,7 +52,7 @@ func (s *mountSuite) TestIsMountedHappyish(c *C) {
 func (s *mountSuite) TestIsMountedBroken(c *C) {
 	defer osutil.FakeMountInfo("44 24 7:1 ...truncated-stuff")()
 
-	mounted, err := osutil.IsMounted("/snap/ubuntu-core/855")
+	mounted, err := osutil.IsMounted("/sdk/ubuntu-core/855")
 	c.Check(err, ErrorMatches, "incorrect number of fields, .*")
 	c.Check(mounted, Equals, false)
 }

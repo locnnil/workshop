@@ -145,7 +145,7 @@ func (l *Log) debugEnabled() bool {
 	return l.debug || osutil.GetenvBool("WORKSPACED_DEBUG")
 }
 
-// Debug only prints if SNAPD_DEBUG is set
+// Debug only prints if WORKSPACED_DEBUG is set
 func (l *Log) Debug(msg string) {
 	if l.debugEnabled() {
 		l.NoGuardDebug(msg)
@@ -177,7 +177,7 @@ func New(w io.Writer, flag int) (Logger, error) {
 func buildFlags() int {
 	flags := log.Lshortfile
 	if term := os.Getenv("TERM"); term != "" {
-		// snapd is probably not running under systemd
+		// daemon is probably not running under systemd
 		flags = DefaultFlags
 	}
 	return flags
@@ -221,9 +221,9 @@ func debugEnabledOnKernelCmdline() bool {
 
 var timeNow = time.Now
 
-// StartupStageTimestamp produce snap startup timings message.
+// StartupStageTimestamp produce sdk startup timings message.
 func StartupStageTimestamp(stage string) {
 	now := timeNow()
-	Debugf(`-- snap startup {"stage":"%s", "time":"%v.%06d"}`,
+	Debugf(`-- sdk startup {"stage":"%s", "time":"%v.%06d"}`,
 		stage, now.Unix(), (now.UnixNano()/1e3)%1e6)
 }

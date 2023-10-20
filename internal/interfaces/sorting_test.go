@@ -32,8 +32,8 @@ type SortingSuite struct{}
 
 var _ = Suite(&SortingSuite{})
 
-func newConnRef(plugSnap, plug, slotSnap, slot string) *interfaces.ConnRef {
-	return &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Sdk: plugSnap, Name: plug}, SlotRef: interfaces.SlotRef{Sdk: slotSnap, Name: slot}}
+func newConnRef(plugSdk, plug, slotSdk, slot string) *interfaces.ConnRef {
+	return &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Sdk: plugSdk, Name: plug}, SlotRef: interfaces.SlotRef{Sdk: slotSdk, Name: slot}}
 }
 
 func (s *SortingSuite) TestByInterfaceName(c *C) {
@@ -71,8 +71,8 @@ func (s *SortingSuite) TestByConnRef(c *C) {
 	})
 }
 
-func newSlotRef(snap, name string) *interfaces.SlotRef {
-	return &interfaces.SlotRef{Sdk: snap, Name: name}
+func newSlotRef(sdk, name string) *interfaces.SlotRef {
+	return &interfaces.SlotRef{Sdk: sdk, Name: name}
 }
 
 type bySlotRef []*interfaces.SlotRef
@@ -110,8 +110,8 @@ func (b byPlugRef) Less(i, j int) bool {
 	return b[i].SortsBefore(*b[j])
 }
 
-func newPlugRef(snap, name string) *interfaces.PlugRef {
-	return &interfaces.PlugRef{Sdk: snap, Name: name}
+func newPlugRef(sdk, name string) *interfaces.PlugRef {
+	return &interfaces.PlugRef{Sdk: sdk, Name: name}
 }
 
 func (s *SortingSuite) TestSortPlugRef(c *C) {

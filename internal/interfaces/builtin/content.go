@@ -43,7 +43,7 @@ const contentBaseDeclarationSlots = `
     allow-auto-connection: true
 `
 
-// contentInterface allows sharing content between snaps
+// contentInterface allows sharing content between sdks
 type contentInterface struct{}
 
 func (iface *contentInterface) Name() string {

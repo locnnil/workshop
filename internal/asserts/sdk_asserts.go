@@ -45,7 +45,7 @@ func compileSlotRules(slots map[string]interface{}, compiled func(iface string, 
 }
 
 // BaseDeclaration holds a base-declaration assertion, declaring the
-// policies (to start with interface ones) applying to all snaps of
+// policies (to start with interface ones) applying to all sdks of
 // a series.
 type BaseDeclaration struct {
 	assertionBase
@@ -54,7 +54,7 @@ type BaseDeclaration struct {
 	timestamp time.Time
 }
 
-// Series returns the series whose snaps are governed by the declaration.
+// Series returns the series whose sdks are governed by the declaration.
 func (basedcl *BaseDeclaration) Series() string {
 	return basedcl.HeaderString("series")
 }

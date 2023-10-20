@@ -44,7 +44,7 @@ var _ = Suite(&CoreSuite{})
 
 func (s *CoreSuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
 }
 
 func (s *CoreSuite) TearDownTest(c *C) {
@@ -53,18 +53,18 @@ func (s *CoreSuite) TearDownTest(c *C) {
 
 // PlugRef.String works as expected
 func (s *CoreSuite) TestPlugRefString(c *C) {
-	ref := interfaces.PlugRef{Sdk: "snap", Name: "plug"}
-	c.Check(ref.String(), Equals, "snap:plug")
-	refPtr := &interfaces.PlugRef{Sdk: "snap", Name: "plug"}
-	c.Check(refPtr.String(), Equals, "snap:plug")
+	ref := interfaces.PlugRef{Sdk: "sdk", Name: "plug"}
+	c.Check(ref.String(), Equals, "sdk:plug")
+	refPtr := &interfaces.PlugRef{Sdk: "sdk", Name: "plug"}
+	c.Check(refPtr.String(), Equals, "sdk:plug")
 }
 
 // SlotRef.String works as expected
 func (s *CoreSuite) TestSlotRefString(c *C) {
-	ref := interfaces.SlotRef{Sdk: "snap", Name: "slot"}
-	c.Check(ref.String(), Equals, "snap:slot")
-	refPtr := &interfaces.SlotRef{Sdk: "snap", Name: "slot"}
-	c.Check(refPtr.String(), Equals, "snap:slot")
+	ref := interfaces.SlotRef{Sdk: "sdk", Name: "slot"}
+	c.Check(ref.String(), Equals, "sdk:slot")
+	refPtr := &interfaces.SlotRef{Sdk: "sdk", Name: "slot"}
+	c.Check(refPtr.String(), Equals, "sdk:slot")
 }
 
 // ConnRef.ID works as expected

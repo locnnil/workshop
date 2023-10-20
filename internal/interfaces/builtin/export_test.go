@@ -65,5 +65,5 @@ func MockSlot(c *check.C, yaml string, si sdk.Setup, slotName string) *sdk.SlotI
 	if slotInfo, ok := info.Slots[slotName]; ok {
 		return slotInfo
 	}
-	panic(fmt.Sprintf("cannot find slot %q in snap %q", slotName, si.Name))
+	panic(fmt.Sprintf("cannot find slot %q in sdk %q", slotName, si.Name))
 }

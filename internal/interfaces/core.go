@@ -26,7 +26,7 @@ import (
 	"github.com/canonical/workspace/internal/sdk"
 )
 
-// BeforePreparePlug sanitizes a plug with a given snapd interface.
+// BeforePreparePlug sanitizes a plug with a given interface.
 func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 	if iface.Name() != plugInfo.Interface {
 		return fmt.Errorf("cannot sanitize plug %q (interface %q) using interface %q",
@@ -65,7 +65,7 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
-// String returns the "snap:plug" representation of a plug reference.
+// String returns the "sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
 	return fmt.Sprintf("%s:%s", ref.Sdk, ref.Name)
 }
@@ -78,7 +78,7 @@ func (ref PlugRef) SortsBefore(other PlugRef) bool {
 	return ref.Name < other.Name
 }
 
-// Sanitize slot with a given snapd interface.
+// Sanitize slot with a given interface.
 func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 	if iface.Name() != slotInfo.Interface {
 		return fmt.Errorf("cannot sanitize slot %q (interface %q) using interface %q",
@@ -98,7 +98,7 @@ type SlotRef struct {
 	Name      string `json:"slot"`
 }
 
-// String returns the "snap:slot" representation of a slot reference.
+// String returns the "sdk:slot" representation of a slot reference.
 func (ref SlotRef) String() string {
 	return fmt.Sprintf("%s:%s", ref.Sdk, ref.Name)
 }
@@ -215,15 +215,9 @@ type StaticInfo struct {
 	Summary string `json:"summary,omitempty"`
 	DocURL  string `json:"doc-url,omitempty"`
 
-	// AffectsPlugOnRefresh tells if refreshing of a snap with a slot of this interface
-	// is disruptive for the snap on the plug side (when the interface is connected),
-	// meaning that a refresh of the slot-side affects snap(s) on the plug side
-	// due to e.g. namespace changes which require freezing and thawing of the
-	// running processes. This flag is consulted when computing snaps affected
-	// by refresh for auto-refresh gating with gate-auto-refresh hooks.
-	// TODO: if we change the snap-update-ns logic to avoid the freezeing/thawing
-	// if there are no changes, there are interfaces like appstream-metadata or
-	// system-packages-doc that could get the flag set back to false.
+	// AffectsPlugOnRefresh tells if refreshing of a sdk with a slot of this interface
+	// is disruptive for the sdk on the plug side (when the interface is connected),
+	// meaning that a refresh of the slot-side affects sdk(s) on the plug side
 	AffectsPlugOnRefresh bool `json:"affects-plug-on-refresh,omitempty"`
 
 	// BaseDeclarationPlugs defines an optional extension to the base-declaration assertion relevant for this interface.
@@ -233,7 +227,7 @@ type StaticInfo struct {
 }
 
 // PermanentPlugServiceSnippets will return the set of snippets for the systemd
-// service unit that should be generated for a snap with the specified plug.
+// service unit that should be generated for a sdk with the specified plug.
 // The list returned is not unique, callers must de-duplicate themselves.
 // The plug is provided because the snippet may depend on plug attributes for
 // example. The plug is sanitized before the snippets are returned.

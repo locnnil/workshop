@@ -231,7 +231,7 @@ func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
 func getAttribute(snapName string, ifaceName string, attrs map[string]interface{}, key string, val interface{}) error {
 	v, ok := lookupAttr(attrs, key)
 	if !ok {
-		return AttributeNotFoundError{fmt.Errorf("snap %q does not have attribute %q for interface %q", snapName, key, ifaceName)}
+		return AttributeNotFoundError{fmt.Errorf("sdk %q does not have attribute %q for interface %q", snapName, key, ifaceName)}
 	}
 
 	return metautil.SetValueFromAttribute(snapName, ifaceName, key, v, val)
@@ -245,7 +245,7 @@ func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
 	return lookupAttr(slot.Attrs, key)
 }
 
-// String returns the representation of the slot as snap:slot string.
+// String returns the representation of the slot as sdk:slot string.
 func (slot *SlotInfo) String() string {
 	return fmt.Sprintf("%s:%s", slot.Sdk.Name, slot.Name)
 }
