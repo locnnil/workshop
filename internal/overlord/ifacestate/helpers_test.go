@@ -27,7 +27,6 @@ import (
 	"github.com/canonical/workspace/internal/overlord/state"
 
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 )
 
 type helpersSuite struct {
@@ -36,13 +35,13 @@ type helpersSuite struct {
 
 func Test(t *testing.T) { check.TestingT(t) }
 
-var _ = Suite(&helpersSuite{})
+var _ = check.Suite(&helpersSuite{})
 
-func (s *helpersSuite) SetUpTest(c *C) {
+func (s *helpersSuite) SetUpTest(c *check.C) {
 	s.st = state.New(nil)
 }
 
-func (s *helpersSuite) TestGetConns(c *C) {
+func (s *helpersSuite) TestGetConns(c *check.C) {
 	s.st.Lock()
 	defer s.st.Unlock()
 	s.st.Set("conns", map[string]interface{}{
@@ -56,16 +55,16 @@ func (s *helpersSuite) TestGetConns(c *C) {
 	})
 
 	conns, err := ifacestate.GetConns(s.st)
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	for id, connState := range conns {
-		c.Assert(id, Equals, "ws:app:content ws:core:content")
-		c.Assert(connState.Auto, Equals, true)
-		c.Assert(connState.Interface, Equals, "content")
-		c.Assert(connState.StaticSlotAttrs["number"], Equals, int64(78))
+		c.Assert(id, check.Equals, "ws:app:content ws:core:content")
+		c.Assert(connState.Auto, check.Equals, true)
+		c.Assert(connState.Interface, check.Equals, "content")
+		c.Assert(connState.StaticSlotAttrs["number"], check.Equals, int64(78))
 	}
 }
 
-func (s *helpersSuite) TestSetConns(c *C) {
+func (s *helpersSuite) TestSetConns(c *check.C) {
 	s.st.Lock()
 	defer s.st.Unlock()
 
@@ -76,8 +75,8 @@ func (s *helpersSuite) TestSetConns(c *C) {
 	ifacestate.SetConns(s.st, conns)
 	var readconns map[string]interface{}
 	err := s.st.Get("conns", &readconns)
-	c.Assert(err, IsNil)
-	c.Assert(readconns, DeepEquals, map[string]interface{}{
+	c.Assert(err, check.IsNil)
+	c.Assert(readconns, check.DeepEquals, map[string]interface{}{
 		"ws:app:content ws:core:content": map[string]interface{}{
 			"auto":      true,
 			"interface": "content",
