@@ -164,11 +164,11 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 
 			if query.Has("workspaces") {
 				var workspaces []string = strings.Split(query.Get("workspaces"), ",")
-				var workspace string
-				if err := chg.Get("workspace", &workspace); err != nil {
+				var workshop string
+				if err := chg.Get("workshop", &workshop); err != nil {
 					return false
 				}
-				if !slices.Contains(workspaces, workspace) {
+				if !slices.Contains(workspaces, workshop) {
 					return false
 				}
 			}

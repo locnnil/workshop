@@ -60,9 +60,9 @@ var ByName = func(name string) (iface Interface, err error) {
 
 // PlugRef is a reference to a plug.
 type PlugRef struct {
-	Workspace string `json:"workspace"`
-	Sdk       string `json:"sdk"`
-	Name      string `json:"plug"`
+	Workshop string `json:"workshop"`
+	Sdk      string `json:"sdk"`
+	Name     string `json:"plug"`
 }
 
 // String returns the "sdk:plug" representation of a plug reference.
@@ -93,9 +93,9 @@ func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 
 // SlotRef is a reference to a slot.
 type SlotRef struct {
-	Workspace string `json:"workspace"`
-	Sdk       string `json:"sdk"`
-	Name      string `json:"slot"`
+	Workshop string `json:"workshop"`
+	Sdk      string `json:"sdk"`
+	Name     string `json:"slot"`
 }
 
 // String returns the "sdk:slot" representation of a slot reference.
@@ -136,14 +136,14 @@ type ConnRef struct {
 // NewConnRef creates a connection reference for given plug and slot
 func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 	return &ConnRef{
-		PlugRef: PlugRef{Sdk: plug.Sdk.Name, Name: plug.Name, Workspace: plug.Sdk.Workspace},
-		SlotRef: SlotRef{Sdk: slot.Sdk.Name, Name: slot.Name, Workspace: slot.Sdk.Workspace},
+		PlugRef: PlugRef{Sdk: plug.Sdk.Name, Name: plug.Name, Workshop: plug.Sdk.Workshop},
+		SlotRef: SlotRef{Sdk: slot.Sdk.Name, Name: slot.Name, Workshop: slot.Sdk.Workshop},
 	}
 }
 
 // ID returns a string identifying a given connection.
 func (conn *ConnRef) ID() string {
-	return fmt.Sprintf("%s:%s:%s %s:%s:%s", conn.PlugRef.Workspace, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Workspace, conn.SlotRef.Sdk, conn.SlotRef.Name)
+	return fmt.Sprintf("%s:%s:%s %s:%s:%s", conn.PlugRef.Workshop, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Workshop, conn.SlotRef.Sdk, conn.SlotRef.Name)
 }
 
 // SortsBefore returns true when connection should be sorted before the other
@@ -167,10 +167,10 @@ func ParseConnRef(id string) (*ConnRef, error) {
 		return nil, fmt.Errorf("malformed connection identifier: %q", id)
 	}
 
-	conn.PlugRef.Workspace = plugParts[0]
+	conn.PlugRef.Workshop = plugParts[0]
 	conn.PlugRef.Sdk = plugParts[1]
 	conn.PlugRef.Name = plugParts[2]
-	conn.SlotRef.Workspace = slotParts[0]
+	conn.SlotRef.Workshop = slotParts[0]
 	conn.SlotRef.Sdk = slotParts[1]
 	conn.SlotRef.Name = slotParts[2]
 	return &conn, nil

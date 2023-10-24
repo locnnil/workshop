@@ -15,7 +15,7 @@ import (
 )
 
 type Setup struct {
-	Workspace   string    `json:"workspace"`
+	Workshop    string    `json:"workshop"`
 	Name        string    `json:"name"`
 	Channel     string    `json:"channel"`
 	Revision    int64     `json:"revision"`
@@ -42,12 +42,12 @@ func (t Type) String() string {
 }
 
 type Info struct {
-	Workspace string
-	Name      string
-	Base      string
-	Type      Type
-	Channel   string
-	Revision  int64
+	Workshop string
+	Name     string
+	Base     string
+	Type     Type
+	Channel  string
+	Revision int64
 
 	Plugs map[string]*PlugInfo
 	Slots map[string]*SlotInfo
@@ -71,7 +71,7 @@ func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
 	}
 
 	sdkInfo := &Info{
-		Workspace:     setup.Workspace,
+		Workshop:      setup.Workshop,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
 		Type:          Type(sdkYaml.Type),

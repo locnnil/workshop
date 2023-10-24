@@ -934,7 +934,7 @@ func (s *daemonSuite) TestRestartExpectedRebootGiveUp(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
-	c.Skip("no standby support for workspace yet")
+	c.Skip("no standby support for workshop yet")
 	notifySocket := filepath.Join(c.MkDir(), "notify.socket")
 	os.Setenv("NOTIFY_SOCKET", notifySocket)
 	defer os.Setenv("NOTIFY_SOCKET", "")
@@ -971,7 +971,7 @@ func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
-	c.Skip("no standby support for workspace yet")
+	c.Skip("no standby support for workshop yet")
 
 	os.Setenv("NOTIFY_SOCKET", c.MkDir())
 	defer os.Setenv("NOTIFY_SOCKET", "")
@@ -995,7 +995,7 @@ func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
 	select {
 	case <-d.Dying():
 		// Pretend we got change while shutting down, this can
-		// happen when e.g. the user requested a `workspace install
+		// happen when e.g. the user requested a `workshop install
 		// foo` at the same time as the code in the overlord
 		// checked that it can go into socket activated
 		// mode. I.e. the daemon was processing the request

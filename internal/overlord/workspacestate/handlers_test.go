@@ -36,7 +36,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
-		i.Set("workspace", w)
+		i.Set("workshop", w)
 		i.Set("project", *p)
 	}
 }
@@ -80,7 +80,7 @@ func (s *workspaceHandlers) TearDownTest(c *check.C) {
 func (s *workspaceHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)

@@ -38,8 +38,8 @@ type byPlugWorkspaceSdkAndName []*sdk.PlugInfo
 func (c byPlugWorkspaceSdkAndName) Len() int      { return len(c) }
 func (c byPlugWorkspaceSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 func (c byPlugWorkspaceSdkAndName) Less(i, j int) bool {
-	if c[i].Sdk.Workspace != c[j].Sdk.Workspace {
-		return c[i].Sdk.Workspace < c[j].Sdk.Workspace
+	if c[i].Sdk.Workshop != c[j].Sdk.Workshop {
+		return c[i].Sdk.Workshop < c[j].Sdk.Workshop
 	}
 	if c[i].Sdk.Name != c[j].Sdk.Name {
 		return c[i].Sdk.Name < c[j].Sdk.Name
@@ -52,8 +52,8 @@ type bySlotWorkspaceSdkAndName []*sdk.SlotInfo
 func (c bySlotWorkspaceSdkAndName) Len() int      { return len(c) }
 func (c bySlotWorkspaceSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 func (c bySlotWorkspaceSdkAndName) Less(i, j int) bool {
-	if c[i].Sdk.Workspace != c[j].Sdk.Workspace {
-		return c[i].Sdk.Workspace < c[j].Sdk.Workspace
+	if c[i].Sdk.Workshop != c[j].Sdk.Workshop {
+		return c[i].Sdk.Workshop < c[j].Sdk.Workshop
 	}
 	if c[i].Sdk.Name != c[j].Sdk.Name {
 		return c[i].Sdk.Name < c[j].Sdk.Name

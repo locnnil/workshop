@@ -34,7 +34,7 @@ sdks:
     channel: latest/beta
 `)
 	dir := c.MkDir()
-	os.WriteFile(filepath.Join(dir, ".workspace.xbert-gpu.yaml"), buf, 0644)
+	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
 	file, err := workspacebackend.ReadWorkspace(workspacebackend.WorkspaceFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")

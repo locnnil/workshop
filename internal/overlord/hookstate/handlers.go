@@ -15,7 +15,7 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workspace, err := UserProjectWorkspace(task)
+	user, prj, workshop, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -33,26 +33,26 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		err := h.backend.AddWorkspaceDevice(ctx, workspace, workspacebackend.WorkspaceDevice{
-			Name: workspacebackend.WorkspaceStateVolumeName(workspace, prj.ProjectId),
+		err := h.backend.AddWorkspaceDevice(ctx, workshop, workspacebackend.WorkspaceDevice{
+			Name: workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId),
 			Properties: map[string]string{"type": "disk",
 				"pool":   "default",
 				"path":   workspacebackend.WorkspaceStateDir,
-				"source": workspacebackend.WorkspaceStateVolumeName(workspace, prj.ProjectId)},
+				"source": workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId)},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
 		}
 
 		defer func() {
-			h.backend.RemoveWorkspaceDevice(ctx, workspace, workspacebackend.WorkspaceStateVolumeName(workspace, prj.ProjectId))
+			h.backend.RemoveWorkspaceDevice(ctx, workshop, workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId))
 		}()
 	}
 
 	switch hook.HookType {
 	case SaveState:
 		{
-			fs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+			fs, err := h.backend.GetWorkspaceFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -62,10 +62,10 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 		}
-		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	case RestoreState:
 		{
-			fs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+			fs, err := h.backend.GetWorkspaceFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -79,17 +79,17 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk.Name)
 			}
 		}
-		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	default:
-		return h.executeHook(ctx, task, workspace, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	}
 }
 
-func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspace, projectId string, hook *HookSetup) error {
+func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workshop, projectId string, hook *HookSetup) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
 
 	//
-	wsFs, err := h.backend.GetWorkspaceFs(ctx, workspace)
+	wsFs, err := h.backend.GetWorkspaceFs(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workspacebackend.InstanceName(workspace, projectId))
+	out, err := memFs.Create(workspacebackend.InstanceName(workshop, projectId))
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workspa
 		},
 	}
 
-	exectx, err := h.backend.Exec(ctx, workspace, &args)
+	exectx, err := h.backend.Exec(ctx, workshop, &args)
 	if err != nil {
 		return err
 	}

@@ -29,8 +29,8 @@ func (s *S) TestCreateHook(c *check.C) {
 
 	envs := []map[string]string{
 		{},
-		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
-		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
+		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
+		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
 	}
 
 	for num, i := range []hookstate.WorkspaceHookType{

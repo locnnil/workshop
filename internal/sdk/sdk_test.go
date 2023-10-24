@@ -22,7 +22,7 @@ func (s *SdkSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 
 	s.setup = sdk.Setup{
-		Workspace:   "ws",
+		Workshop:    "ws",
 		Name:        "sdk",
 		Channel:     "latest/stable",
 		Revision:    1,
@@ -47,7 +47,7 @@ base: ubuntu@20.04
 	c.Assert(info.Name, check.Equals, "sdk")
 	c.Assert(info.Channel, check.Equals, "latest/stable")
 	c.Assert(info.Revision, check.Equals, int64(1))
-	c.Assert(info.Workspace, check.Equals, "ws")
+	c.Assert(info.Workshop, check.Equals, "ws")
 	c.Assert(info.Plugs, check.HasLen, 0)
 	c.Assert(info.Slots, check.HasLen, 0)
 }

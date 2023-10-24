@@ -59,9 +59,9 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 		return nil, err
 	}
 
-	/* Validate workspace properties */
+	/* Validate workshop properties */
 	if !sdk.ValidName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workspace's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
+		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
 
 	if !slices.Contains(sdk.ValidBases, file.Base) {
@@ -69,7 +69,7 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 	}
 
 	if WorkspaceFileName(file.Name) != filepath.Base(pathname) {
-		return nil, fmt.Errorf("%s's file must be named as .workspace.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
+		return nil, fmt.Errorf("%s's file must be named as .workshop.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 
 	for _, k := range file.Sdks {

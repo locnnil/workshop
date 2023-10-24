@@ -58,69 +58,69 @@ type WorkspaceBackend interface {
 	// has a username that the corresponding projects belong to as a key.
 	Projects(ctx context.Context) (map[string][]*Project, error)
 
-	// Launch a barebone workspace instance using the base provided. The
+	// Launch a barebone workshop instance using the base provided. The
 	// supported bases are ubuntu@20.04 and ubuntu@22.04.
 	LaunchWorkspace(ctx context.Context, name, base string) error
 
-	// Delete workspace. Stop the workspace forcefully if not in Stopped before deleting
+	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkspace(ctx context.Context, name string) error
 
-	// Starts a workspace and waits until it is ready
+	// Starts a workshop and waits until it is ready
 	// to accept commands
 	StartWorkspace(ctx context.Context, name string) error
 
-	// Stops workspace gracefully (i.e. waits for the graceful instance and all
+	// Stops workshop gracefully (i.e. waits for the graceful instance and all
 	// its running services termination) unless force is used.
 	StopWorkspace(ctx context.Context, name string, force bool) error
 
-	// Make a stash of the workspace. The workspace will be stopped and will not
-	// be available to other workspace operations, e.g. list, stop, start and so
-	// on. A new workspace with the same name can be launched for the same
+	// Make a stash of the workshop. The workshop will be stopped and will not
+	// be available to other workshop operations, e.g. list, stop, start and so
+	// on. A new workshop with the same name can be launched for the same
 	// project-id.
 	StashWorkspace(ctx context.Context, name string) error
 
-	// Restore the workspace from the stash (if exists, see StashWorkspace). The
-	// workspace will be restored and become visible to the backend operations.
-	// Fails if a workspace with the same name exists.
+	// Restore the workshop from the stash (if exists, see StashWorkspace). The
+	// workshop will be restored and become visible to the backend operations.
+	// Fails if a workshop with the same name exists.
 	UnstashWorkspace(ctx context.Context, name string) error
 
-	// Delete the workspace from stash (if exists).
+	// Delete the workshop from stash (if exists).
 	RemoveWorkspaceStash(ctx context.Context, name string) error
 
-	// Create a temporary state storage volume for the workspace. It can be
+	// Create a temporary state storage volume for the workshop. It can be
 	// mounted to the instance separately. This does not mount the device to the
-	// workspace, it must be mounted to the required workspace as a separate
+	// workshop, it must be mounted to the required workshop as a separate
 	// operation (see AddWorkspaceDevice).
 	CreateStateStorage(ctx context.Context, name string) error
 
-	// Delete a temporary state storage volume for the workspace. It does
-	// not unmount the volume from the workspace if mounted.
+	// Delete a temporary state storage volume for the workshop. It does
+	// not unmount the volume from the workshop if mounted.
 	DeleteStateStorage(ctx context.Context, name string) error
 
-	// Adds a workspace device described by the properties.
+	// Adds a workshop device described by the properties.
 	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error
 
-	// Removes a workspace device.
+	// Removes a workshop device.
 	RemoveWorkspaceDevice(ctx context.Context, name string, device string) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change
-	// any workspace property arbitrarily.
+	// any workshop property arbitrarily.
 	AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error
 	RemoveWorkspaceConfig(ctx context.Context, name string, key string) error
 
-	// Loads a workspace instance.
-	GetWorkspace(ctx context.Context, name string) (*Workspace, error)
+	// Loads a workshop instance.
+	GetWorkspace(ctx context.Context, name string) (*Workshop, error)
 
-	// Returns a workspace's file system interface.
+	// Returns a workshop's file system interface.
 	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
 
 	// Returns a list of workspaces for the project in context.
-	GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error)
+	GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workshop, error)
 
-	// Execute a command in a given workspace. The client should differentiate
+	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to
-	// the command (i.e. the workspace does not exist) and the errors that were
+	// the command (i.e. the workshop does not exist) and the errors that were
 	// produced by the command itself (i.e. return code != 0). If the latter, an
 	// instance of ErrExec with the status code will be returned.
 

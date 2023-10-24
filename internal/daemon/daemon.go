@@ -57,12 +57,12 @@ var (
 
 // Options holds the daemon setup required for the initialization of a new daemon.
 type Options struct {
-	// Dir is the workspace directory where all setup is found. Defaults to /var/lib/workspace/default.
+	// Dir is the workshop directory where all setup is found. Defaults to /var/lib/workshop/default.
 	Dir string
 
 	// SocketPath is an optional path for the unix socket used for the client
 	// to communicate with the daemon. Defaults to a hidden (dotted) name inside
-	// the workspace directory.
+	// the workshop directory.
 	SocketPath string
 
 	// HTTPAddress is the address for the plain HTTP API server, for example
@@ -180,7 +180,7 @@ func (c *Command) canAccess(r *http.Request, user *userState) accessResult {
 	}
 
 	// the !AdminOnly check is redundant, but belt-and-suspenders
-	// earlier is was permissible for the GET queries only. Workspace
+	// earlier is was permissible for the GET queries only. Workshop
 	// allows a user to execute a POST query as it will be bound to their
 	// LXD project and they could only do CRUD to the containers within this
 	// project
@@ -619,7 +619,7 @@ func (d *Daemon) Stop(sigCh chan<- os.Signal) error {
 		// those open requests resulted in something that
 		// prevents us from going into socket activation mode.
 		//
-		// If this is the case we do a "normal" workspace restart
+		// If this is the case we do a "normal" workshop restart
 		// to process the new changes.
 		if !d.standbyOpinions.CanStandby() {
 			d.restartSocket = false
@@ -631,7 +631,7 @@ func (d *Daemon) Stop(sigCh chan<- os.Signal) error {
 	if err != nil {
 		// do not stop the shutdown even if the tomb errors
 		// because we already scheduled a slow shutdown and
-		// exiting here will just restart workspace (via systemd)
+		// exiting here will just restart workshop (via systemd)
 		// which will lead to confusing results.
 		if restartSystem {
 			logger.Noticef("WARNING: cannot stop daemon: %v", err)
@@ -684,7 +684,7 @@ func (d *Daemon) doReboot(sigCh chan<- os.Signal, waitTimeout time.Duration) err
 		return err
 	}
 	// ask for shutdown and wait for it to happen.
-	// if we exit, workspace will be restarted by systemd
+	// if we exit, workshop will be restarted by systemd
 	if err := reboot(rebootDelay); err != nil {
 		return err
 	}
@@ -752,12 +752,12 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 		// might get rolled back!!
 		restart.ClearReboot(st)
 		clearReboot(st)
-		logger.Noticef("workspace was restarted while a system restart was expected, workspace retried to schedule and waited again for a system restart %d times and is giving up", rebootMaxTentatives)
+		logger.Noticef("workshop was restarted while a system restart was expected, workshop retried to schedule and waited again for a system restart %d times and is giving up", rebootMaxTentatives)
 		return nil
 	}
 	st.Set("daemon-system-restart-tentative", nTentative)
 	d.state = st
-	logger.Noticef("workspace was restarted while a system restart was expected, workspace will try to schedule and wait for a system restart again (tenative %d/%d)", nTentative, rebootMaxTentatives)
+	logger.Noticef("workshop was restarted while a system restart was expected, workshop will try to schedule and wait for a system restart again (tenative %d/%d)", nTentative, rebootMaxTentatives)
 	return errExpectedReboot
 }
 

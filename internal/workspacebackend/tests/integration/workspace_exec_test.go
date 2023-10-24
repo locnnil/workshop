@@ -107,13 +107,13 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	cleanUpLxdProject(c, f.lxdClient, workspacebackend.LxdSystemProjectName(f.username))
 }
 
-func (f *wsExec) exec(c *check.C, stdin string, workspace, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {
+func (f *wsExec) exec(c *check.C, stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {
 	outBuf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
 	opts.Stdin = strings.NewReader(stdin)
 	opts.Stdout = outBuf
 	opts.Stderr = errBuf
-	process, err := f.client.Exec(opts, workspace, projectId)
+	process, err := f.client.Exec(opts, workshop, projectId)
 	if err != nil {
 		return "", "", err
 	}
@@ -157,7 +157,7 @@ func (f *wsExec) TestLxdBackendExecDefaultUserGroup(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout, check.Equals, "workspace\nworkspace\n")
+	c.Assert(stdout, check.Equals, "workshop\nworkspace\n")
 	c.Assert(stderr, check.Equals, "")
 }
 

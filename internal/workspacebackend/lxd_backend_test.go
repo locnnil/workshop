@@ -30,7 +30,7 @@ func (s *LxdBeTests) TearDownTest(c *check.C) {
 
 func (f *LxdBeTests) TestLoadWorkspaceSuccess(c *check.C) {
 	// Setup
-	os.WriteFile(filepath.Join(f.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(f.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
   go:
@@ -44,8 +44,8 @@ sdks:
 	ws, err := workspacebackend.LoadWorkspace(b, &api.Instance{
 		Name: workspacebackend.InstanceName("ws", f.project.ProjectId),
 		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workspace.project-id": f.project.ProjectId,
-			"user.workspace.content":    `{"go":{"name":"go","channel":"latest/stable","revision":277}}`,
+			"user.workshop.project-id": f.project.ProjectId,
+			"user.workshop.content":    `{"go":{"name":"go","channel":"latest/stable","revision":277}}`,
 		}},
 		StatusCode: api.Running,
 	}, &project)
@@ -74,7 +74,7 @@ func (f *LxdBeTests) TestLoadWorkspaceMissingErrors(c *check.C) {
 	ws, err := workspacebackend.LoadWorkspace(b, &api.Instance{
 		Name: workspacebackend.InstanceName("ws", f.project.ProjectId),
 		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workspace.project-id": f.project.ProjectId,
+			"user.workshop.project-id": f.project.ProjectId,
 		},
 		}}, &project)
 
@@ -91,7 +91,7 @@ func (f *LxdBeTests) TestLoadWorkspaceMissingErrors(c *check.C) {
 	ws, err = workspacebackend.LoadWorkspace(b, &api.Instance{
 		Name: workspacebackend.InstanceName("ws", f.project.ProjectId),
 		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workspace.project-id": f.project.ProjectId,
+			"user.workshop.project-id": f.project.ProjectId,
 		},
 		}}, &project)
 
@@ -104,14 +104,14 @@ func (f *LxdBeTests) TestLoadWorkspaceMissingErrors(c *check.C) {
 
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
 	// Setup
-	os.WriteFile(filepath.Join(f.project.Path, ".workspace.t1.yaml"), []byte(`name: t1
+	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t1.yaml"), []byte(`name: t1
 base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(f.project.Path, ".workspace.t2.yaml"), []byte(`name: t2
+	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
 base: ubuntu@20.04`), 0644)
 	files, err := f.project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workspacebackend.Workspace{
+	instances := []*workspacebackend.Workshop{
 		{
 			Name: "t1",
 		},
@@ -137,15 +137,15 @@ base: ubuntu@20.04`), 0644)
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesWorkspaceOff(c *check.C) {
 	// Setup
 
-	os.WriteFile(filepath.Join(f.project.Path, ".workspace.t1.yaml"), []byte(`name: t1
+	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t1.yaml"), []byte(`name: t1
 base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(f.project.Path, ".workspace.t2.yaml"), []byte(`name: t2
+	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
 base: ubuntu@20.04`), 0644)
 
 	files, err := f.project.EnumWorkspaceFiles()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workspacebackend.Workspace{
+	instances := []*workspacebackend.Workshop{
 		{
 			Name: "t1",
 		},

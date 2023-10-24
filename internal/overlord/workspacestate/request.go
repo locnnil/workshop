@@ -52,7 +52,7 @@ func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, proje
 			return nil, fmt.Errorf("cannot read %q file: %w", i, err)
 		}
 
-		wrkspace, err := w.Workspace(ctx, i, projectId)
+		wrkspace, err := w.Workshop(ctx, i, projectId)
 		if wrkspace != nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", i)
 		}
@@ -66,12 +66,12 @@ func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, proje
 		}
 
 		for _, tsk := range tasks.Tasks() {
-			if tsk.Kind() == "create-workspace" {
+			if tsk.Kind() == "create-workshop" {
 				tsk.Set("start-operation", true)
 			}
 
 			if len(file.Sdks) == 0 {
-				if tsk.Kind() == "start-workspace" {
+				if tsk.Kind() == "start-workshop" {
 					tsk.Set("stop-operation", true)
 				}
 			} else {
@@ -101,14 +101,14 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
 
-	create := st.NewTask("create-workspace", fmt.Sprintf("Create new %q workspace", file.Name))
+	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("base", file.Base)
 	create.WaitAll(retrieve)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
-	start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", file.Name))
+	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	start.WaitFor(mountProject)
 
 	prevInstall := (*state.TaskSet)(nil)
@@ -146,7 +146,7 @@ func launch(st *state.State, file *workspacebackend.WorkspaceFile, project *work
 	set.AddAll(setupHook)
 
 	for _, i := range set.Tasks() {
-		i.Set("workspace", file.Name)
+		i.Set("workshop", file.Name)
 		i.Set("project", project)
 	}
 
@@ -183,9 +183,9 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	files := make([]*workspacebackend.WorkspaceFile, 0)
 	content := make([][]sdk.Setup, 0)
 	for _, i := range names {
-		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workspace) bool { return w.Name == i })
+		idx := slices.IndexFunc(workspaces, func(w *workspacebackend.Workshop) bool { return w.Name == i })
 		if idx == -1 {
-			return nil, fmt.Errorf("%q workspace not found", i)
+			return nil, fmt.Errorf("%q workshop not found", i)
 		}
 		files = append(files, workspaces[idx].File())
 		content = append(content, workspaces[idx].Content())
@@ -217,7 +217,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 	for i, w := range w {
 		tasks, err := refresh(st, w, content[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh \"%s\" workspace: %w", w, err)
+			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", w, err)
 		}
 		taskset = append(taskset, tasks)
 	}
@@ -233,7 +233,7 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 		// finished. This will ensure that we start to remove the workspaces'
 		// previous copies once all the refresh operations were successful (at
 		// this stage, we only need to remove a copy, the newly refreshed
-		// workspace is already up and running). Thus, every CleanupEdge will
+		// workshop is already up and running). Thus, every CleanupEdge will
 		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
 		// other changes before execution.
 		for _, otherts := range taskset {
@@ -244,12 +244,12 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 				}
 				cleanup.WaitFor(last)
 				// if the change was aborted during the cleanup stage execution,
-				// there is a chance that some of the workspace copies that had
+				// there is a chance that some of the workshop copies that had
 				// been created during the refresh were already deleted. If we
 				// start to Undo those workspaces' refresh progress we will
 				// endup deleting the workspaces that finished their refresh.
 				// Given that they have no copy already, the undo logic
-				// (undoMakeWorkspaceCopy) will delete the existing workspace
+				// (undoMakeWorkspaceCopy) will delete the existing workshop
 				// and fail to restore from the copy. We don't want that. Hence,
 				// all the cleanup tasks are extracted into a separate lane. If
 				// any problem happens, the workspaces which had finished their
@@ -267,16 +267,16 @@ func refreshMany(st *state.State, w []*workspacebackend.WorkspaceFile, content [
 
 func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []sdk.Setup, p *workspacebackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
-	// 2. Stop previous workspace
+	// 2. Stop previous workshop
 	// 3. Put to stash
-	// 4. Launch the new workspace
+	// 4. Launch the new workshop
 	// 5. Run restore state
-	// 6. Delete the old workspace
+	// 6. Delete the old workshop
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
 
-	putToStash := st.NewTask("stash-workspace", fmt.Sprintf("Stash previous %q workspace", file.Name))
+	putToStash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 
 	launch, err := launch(st, file, p)
 	if err != nil {
@@ -286,9 +286,9 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []sd
 	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-	removeFromStash := st.NewTask("remove-workspace-stash", fmt.Sprintf("Remove %q workspace from stash", file.Name))
+	removeFromStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
 
-	// save-state -> stop-workspace -> launch -> restore state
+	// save-state -> stop-workshop -> launch -> restore state
 	removeFromStash.WaitFor(removeStateStorage)
 	if len(restoreStateHooks.Tasks()) > 0 {
 		removeStateStorage.WaitAll(restoreStateHooks)
@@ -296,10 +296,10 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []sd
 	} else {
 		lastLaunchTask := launch.Tasks()[len(launch.Tasks())-1]
 		removeStateStorage.WaitFor(lastLaunchTask)
-		// we are dealing with a workspace that does not have
+		// we are dealing with a workshop that does not have
 		// SDKs, i.e. it will not be running any hooks. Thus,
 		// the point of no return is the last launch task (i.e.
-		// before the moment when we delete the copy of the workspace
+		// before the moment when we delete the copy of the workshop
 		// after the refresh operation)
 		launch.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
 	}
@@ -325,13 +325,13 @@ func refresh(st *state.State, file *workspacebackend.WorkspaceFile, content []sd
 	createStateStorage.Set("start-operation", true)
 
 	// mark the last task to stop the operation
-	// and make the workspace available for other commands
+	// and make the workshop available for other commands
 	removeFromStash.Set("stop-operation", true)
 
 	refresh.MarkEdge(removeStateStorage, EdgeCleanupRefresh)
 
 	for _, i := range refresh.Tasks() {
-		i.Set("workspace", file.Name)
+		i.Set("workshop", file.Name)
 		i.Set("project", *p)
 	}
 
@@ -346,7 +346,7 @@ func saveStateHooks(st *state.State, content []sdk.Setup, newContent workspaceba
 func restoreStateHooks(st *state.State, content []sdk.Setup, newContent workspacebackend.SdkList) *state.TaskSet {
 	stateHooks := createStateHooks(st, content, newContent, hookstate.RestoreState)
 
-	// if the restore hooks are not present (i.e. workspace has no SDKs after
+	// if the restore hooks are not present (i.e. workshop has no SDKs after
 	// the refresh), we should mark the last launch task as last before the
 	// irreversible change happens. This will be done in the refreshMany
 	// call.
@@ -364,7 +364,7 @@ func createStateHooks(st *state.State, content []sdk.Setup, newContent workspace
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {
 		// the state hooks will only be set for the SDKs that were installed AND
-		// were not removed from the workspace file at the time of refresh
+		// were not removed from the workshop file at the time of refresh
 		if slices.IndexFunc(content, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
 			continue
 		}
@@ -422,13 +422,13 @@ func startMany(st *state.State, names []string, project *workspacebackend.Projec
 	taskset := state.NewTaskSet([]*state.Task{}...)
 
 	for _, name := range names {
-		start := st.NewTask("start-workspace", fmt.Sprintf("Start %q workspace", name))
+		start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 		// start is a single task, so it is the beginning and the end of the operation
 		start.Set("start-operation", true)
 		start.Set("stop-operation", true)
 		taskset.AddTask(start)
 
-		start.Set("workspace", name)
+		start.Set("workshop", name)
 		start.Set("project", *project)
 	}
 
@@ -477,14 +477,14 @@ func stopMany(st *state.State, names []string, project *workspacebackend.Project
 	taskset := state.NewTaskSet([]*state.Task{}...)
 
 	for _, name := range names {
-		stop := st.NewTask("stop-workspace", fmt.Sprintf("Stop %q workspace", name))
+		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", name))
 		// start is a single task, so it is the beginning and the end of the operation
 		stop.Set("start-operation", true)
 		stop.Set("stop-operation", true)
 		stop.Set("force", false)
 		taskset.AddTask(stop)
 
-		stop.Set("workspace", name)
+		stop.Set("workshop", name)
 		stop.Set("project", *project)
 	}
 
@@ -536,7 +536,7 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 
 	exec.Set("exec-setup", args)
 	exec.Set("project", project)
-	exec.Set("workspace", name)
+	exec.Set("workshop", name)
 
 	return exec, nil
 }
@@ -586,13 +586,13 @@ func removeMany(st *state.State, names []string, project *workspacebackend.Proje
 	taskset := state.NewTaskSet([]*state.Task{}...)
 
 	for _, name := range names {
-		remove := st.NewTask("remove-workspace", fmt.Sprintf("Remove %q workspace", name))
+		remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", name))
 		// remove is a single task, so it is the beginning and the end of the operation
 		remove.Set("start-operation", true)
 		remove.Set("stop-operation", true)
 		taskset.AddTask(remove)
 
-		remove.Set("workspace", name)
+		remove.Set("workshop", name)
 		remove.Set("project", *project)
 	}
 

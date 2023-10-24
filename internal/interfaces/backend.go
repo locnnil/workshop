@@ -46,7 +46,7 @@ type SecurityBackend interface {
 	// Remove removes and unloads security artefacts of a given sdk.
 	//
 	// This method should be called during the process of removing an sdk.
-	Remove(context context.Context, workspace, sdkName string) error
+	Remove(context context.Context, workshop, sdkName string) error
 
 	// NewSpecification returns a new specification associated with this backend.
 	NewSpecification(user, pid string) Specification

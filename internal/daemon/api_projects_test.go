@@ -19,7 +19,7 @@ import (
 
 func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
-	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workspace/.socket);"
+	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workshop/.socket);"
 	return req.WithContext(s.ctx), err
 }
 
@@ -100,7 +100,7 @@ func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
 base: ubuntu@20.04
 `), 0644)
 	c.Assert(err, check.IsNil)
@@ -145,7 +145,7 @@ func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws-test", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
 base: ubuntu@20.04
 `), 0644)
 	c.Assert(err, check.IsNil)
@@ -174,12 +174,12 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceLaunch(c *check.C) {
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 
-	// Mock workspace files
-	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	// Mock workshop files
+	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws1.yaml"), []byte(`name: ws1
+	err = os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
@@ -205,7 +205,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot launch: at least one workspace name must be provided",
+			Message: "cannot launch: at least one workshop name must be provided",
 		},
 		{
 			Type:    ResponseTypeError,
@@ -248,19 +248,19 @@ func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws1.yaml"), []byte(`name: ws1
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		// try continue without starting wait-on-error
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "options": {"refresh-mode":"continue"}}`),
 
-		// a workspace name is a must
+		// a workshop name is a must
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
 
-		// non-transactional refresh is only supported for a single workspace
+		// non-transactional refresh is only supported for a single workshop
 		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 
 		// start - attempt transactional - continue (success) - continue (fail, already finished)
@@ -298,7 +298,7 @@ base: ubuntu@20.04`), 0644)
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: at least one workspace name must be provided",
+			Message: "cannot refresh: at least one workshop name must be provided",
 		},
 		{
 			Type:    ResponseTypeError,
@@ -392,7 +392,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceStart(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
@@ -402,9 +402,9 @@ base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"start"}`),
-		// a second attempt to start the workspace that is already in Pending (i.e. being started)
+		// a second attempt to start the workshop that is already in Pending (i.e. being started)
 		bytes.NewBufferString(`{"names":["ws"],"action":"start"}`),
-		// ensure another operation is not going to work when the workspace in Pending
+		// ensure another operation is not going to work when the workshop in Pending
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh"}`),
 	}
 
@@ -456,7 +456,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	s.d.overlord.State().Lock()
-	ws, err := s.d.overlord.WorkspaceManager().Workspace(s.ctx, "ws", s.project.ProjectId)
+	ws, err := s.d.overlord.WorkspaceManager().Workshop(s.ctx, "ws", s.project.ProjectId)
 	c.Assert(err, check.IsNil)
 	c.Assert(ws.State(), check.Equals, workspacebackend.WorkspacePending)
 	s.d.overlord.State().Unlock()
@@ -470,7 +470,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceStop(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
@@ -478,9 +478,9 @@ base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
-		// a second attempt to stop the workspace that is already in Pending (i.e. being stopped)
+		// a second attempt to stop the workshop that is already in Pending (i.e. being stopped)
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
-		// stop the workspace that is already stopped
+		// stop the workshop that is already stopped
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
 	}
 
@@ -528,7 +528,7 @@ base: ubuntu@20.04`), 0644)
 			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
 
 			s.d.state.Lock()
-			// stop the workspace stop operation here, so it is ready for the next command
+			// stop the workshop stop operation here, so it is ready for the next command
 			err := statecontext.StopOperation(s.d.state, "ws", s.project.ProjectId, statecontext.OperationStop)
 			c.Assert(err, check.IsNil)
 			s.b.StopWorkspace(s.ctx, "ws", false)
@@ -544,7 +544,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceRemove(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")

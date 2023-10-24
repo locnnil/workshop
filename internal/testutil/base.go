@@ -20,7 +20,7 @@ import (
 	"gopkg.in/check.v1"
 )
 
-// BaseTest is a structure used as a base test suite for many of the workspace
+// BaseTest is a structure used as a base test suite for many of the workshop
 // tests.
 type BaseTest struct {
 	cleanupHandlers []func()

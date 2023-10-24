@@ -50,7 +50,7 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	return &ws
 }
 
-func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
+func workspacePropsToInfo(props *workspacebackend.Workshop) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
@@ -151,8 +151,8 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 		infoLst = append(infoLst, info)
 	}
 
-	// Now, if the client wants only workspace files or just queried everything
-	// available, we add workspace files to the response (note these only exist
+	// Now, if the client wants only workshop files or just queried everything
+	// available, we add workshop files to the response (note these only exist
 	// as files, not instances)
 	if wstate == "all" || wstate == "off" {
 		for _, file := range files {
@@ -187,7 +187,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	}
 
 	if len(reqData.Names) == 0 {
-		return statusBadRequest("cannot %s: at least one workspace name must be provided", reqData.Action)
+		return statusBadRequest("cannot %s: at least one workshop name must be provided", reqData.Action)
 	}
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
@@ -200,7 +200,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var summary string
 	switch len(reqData.Names) {
 	case 1:
-		summary = fmt.Sprintf("%s %q workspace", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
 	default:
 		summary = fmt.Sprintf("%s %s workspaces", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
 	}
@@ -290,7 +290,7 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if name == "" {
-		return statusBadRequest("workspace name must be provided")
+		return statusBadRequest("workshop name must be provided")
 	}
 
 	state := c.d.overlord.State()
@@ -299,10 +299,10 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 
 	wrkmgr := c.d.overlord.WorkspaceManager()
 
-	workspace, err := wrkmgr.Workspace(r.Context(), name, projectId)
+	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("cannot load workspace: %v", err)
+		return statusNotFound("cannot load workshop: %v", err)
 	}
 
-	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)
+	return SyncResponse(workspacePropsToInfo(workshop), http.StatusOK)
 }

@@ -47,7 +47,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
-		i.Set("workspace", w)
+		i.Set("workshop", w)
 		i.Set("project", p)
 	}
 }
@@ -88,7 +88,7 @@ func (s *H) SetUpTest(c *check.C) {
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workspacebackend.InstallTimeNow)
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
   test:
@@ -150,7 +150,7 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"--extract",
 		"--file",
 		"/root/test_2.sdk",
-		"--one-top-level=/var/lib/workspace/sdk/test/2",
+		"--one-top-level=/var/lib/workshop/sdk/test/2",
 		"--no-same-owner",
 	})
 
@@ -205,7 +205,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	terr.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
+	chg.Set("workshop", "ws")
 	chg.Set("project-id", s.project.ProjectId)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -240,7 +240,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -284,7 +284,7 @@ slots:
 `
 	s.mockTestSdk(c, sdkYaml)
 
-	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -310,7 +310,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")

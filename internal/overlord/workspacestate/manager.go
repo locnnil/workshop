@@ -19,14 +19,14 @@ func New(st *state.State, runner *state.TaskRunner, server workspacebackend.Work
 		state:   st,
 	}
 
-	/* Workspace management */
-	runner.AddHandler("create-workspace", OnDo(manager.doCreateWorkspace), OnUndo(manager.undoCreateWorkspace))
-	runner.AddHandler("start-workspace", OnDo(manager.doStart), OnUndo(manager.doStop))
-	runner.AddHandler("stop-workspace", OnDo(manager.doStop), OnUndo(manager.doStart))
-	runner.AddHandler("remove-workspace", OnDo(manager.doRemoveWorkspace), nil)
+	/* Workshop management */
+	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkspace), OnUndo(manager.undoCreateWorkspace))
+	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUndo(manager.doStop))
+	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUndo(manager.doStart))
+	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkspace), nil)
 	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
-	runner.AddHandler("remove-workspace-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
-	runner.AddHandler("stash-workspace", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
+	runner.AddHandler("remove-workshop-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
+	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
@@ -38,12 +38,12 @@ func (w *WorkspaceManager) Ensure() error {
 }
 
 // Checks all of the provided list of workspaces are in the required status as
-// per the matchStatus predicate. It returns the first workspace that does NOT
+// per the matchStatus predicate. It returns the first workshop that does NOT
 // meet the predicate's condition.
 func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
 	matchStatus func(status workspacebackend.WorkspaceState) bool) (string, workspacebackend.WorkspaceState, error) {
 	for _, name := range names {
-		wrkspc, err := w.Workspace(ctx, name, pId)
+		wrkspc, err := w.Workshop(ctx, name, pId)
 		if err != nil {
 			return "", workspacebackend.WorkspaceOff, err
 		}
@@ -56,9 +56,9 @@ func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId 
 	return "", workspacebackend.WorkspaceOff, nil
 }
 
-// Loads a workspace, the state must be locked as it is used to find out the
-// workspace state
-func (w *WorkspaceManager) Workspace(ctx context.Context, name, pId string) (*workspacebackend.Workspace, error) {
+// Loads a workshop, the state must be locked as it is used to find out the
+// workshop state
+func (w *WorkspaceManager) Workshop(ctx context.Context, name, pId string) (*workspacebackend.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workspacebackend.ContextProjectId, pId)
 
@@ -72,8 +72,8 @@ func (w *WorkspaceManager) Workspace(ctx context.Context, name, pId string) (*wo
 }
 
 // Loads all workspaces for a project, the state must be locked as it is used to find out the
-// workspace state
-func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*workspacebackend.WorkspaceFile, []*workspacebackend.Workspace, error) {
+// workshop state
+func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*workspacebackend.WorkspaceFile, []*workspacebackend.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workspacebackend.ContextProjectId, pId)
 
@@ -89,10 +89,10 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 	return files, workspaces, nil
 }
 
-// Infers the state of a workspace based on the container's state and any of the
-// operations in progress for the workspace. The state must be locked before the
+// Infers the state of a workshop based on the container's state and any of the
+// operations in progress for the workshop. The state must be locked before the
 // call.
-func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workspace) workspacebackend.WorkspaceState {
+func (w *WorkspaceManager) workspaceState(ws *workspacebackend.Workshop) workspacebackend.WorkspaceState {
 	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
 	if op != nil {
 		if ws.IsRunning() {

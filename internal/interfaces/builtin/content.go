@@ -107,8 +107,8 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	source := filepath.Join(user.HomeDir, ".local", "share", "workspace", "project", spec.ProjectId(), "content",
-		strings.Join([]string{plug.Sdk().Workspace, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
+	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", spec.ProjectId(), "content",
+		strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
 
 	if err = os.MkdirAll(source, 0744); err != nil {
 		return err

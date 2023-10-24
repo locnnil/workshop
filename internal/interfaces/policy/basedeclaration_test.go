@@ -69,8 +69,8 @@ plugs:
   %s:
 `, iface)
 	}
-	slotSdk := sdk.MockInfo(c, slotYaml, sdk.Setup{Workspace: "ws"})
-	plugSdk := sdk.MockInfo(c, plugYaml, sdk.Setup{Workspace: "ws"})
+	slotSdk := sdk.MockInfo(c, slotYaml, sdk.Setup{Workshop: "ws"})
+	plugSdk := sdk.MockInfo(c, plugYaml, sdk.Setup{Workshop: "ws"})
 	return &policy.ConnectCandidate{
 		Plug:            interfaces.NewConnectedPlug(plugSdk.Plugs[iface], nil, nil),
 		Slot:            interfaces.NewConnectedSlot(slotSdk.Slots[iface], nil, nil),
@@ -87,7 +87,7 @@ slots:
   %s:
 `, sdkType, iface)
 	}
-	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workshop: "ws"})
 	return &policy.InstallCandidate{
 		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,
@@ -103,7 +103,7 @@ plugs:
   %s:
 `, sdkType, iface)
 	}
-	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workspace: "ws"})
+	sdk := sdk.MockInfo(c, yaml, sdk.Setup{Workshop: "ws"})
 	return &policy.InstallCandidate{
 		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,

@@ -16,7 +16,7 @@ import (
 type ExecFunc func(ctx context.Context, name string, args *Execution) (ExecContext, error)
 
 type FakeWorkspace struct {
-	*Workspace
+	*Workshop
 	Config              map[string]string
 	WorkspaceFilesystem WorkspaceFs
 }
@@ -98,7 +98,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 		f.Workspaces[projectId] = make(map[string]*FakeWorkspace)
 	}
 	if _, ok := f.Workspaces[projectId][name]; ok {
-		return api.StatusErrorf(http.StatusNotFound, "workspace exists already")
+		return api.StatusErrorf(http.StatusNotFound, "workshop exists already")
 	}
 
 	ws := &FakeWorkspace{}
@@ -110,7 +110,7 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 	ws.Config = make(map[string]string)
 	ws.WorkspaceFilesystem = NewFakeWorkspaceFs()
 
-	ws.Workspace = &Workspace{backend: f,
+	ws.Workshop = &Workshop{backend: f,
 		Name:      name,
 		Devices:   defaultDevices(),
 		running:   true,
@@ -123,9 +123,9 @@ func (f *FakeWorkspaceBackend) LaunchWorkspace(ctx context.Context, name, base s
 
 	for _, s := range ws.File().Sdks {
 		ws.LinkSdk(ctx, sdk.Setup{
-			Workspace: name,
-			Name:      s.Name,
-			Channel:   s.Channel,
+			Workshop: name,
+			Name:     s.Name,
+			Channel:  s.Channel,
 		})
 	}
 	return nil
@@ -141,7 +141,7 @@ func (s *FakeWorkspaceBackend) StartWorkspace(ctx context.Context, name string) 
 		return err
 	}
 	if w.running {
-		return api.StatusErrorf(http.StatusConflict, "workspace already running")
+		return api.StatusErrorf(http.StatusConflict, "workshop already running")
 	}
 	w.running = true
 	return nil
@@ -192,7 +192,7 @@ func (f *FakeWorkspaceBackend) RemoveWorkspaceConfig(ctx context.Context, name s
 	return nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
+func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*Workshop, error) {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, err
@@ -202,29 +202,29 @@ func (f *FakeWorkspaceBackend) GetWorkspace(ctx context.Context, name string) (*
 	if project == nil {
 		return nil, api.StatusErrorf(404, "project not found")
 	}
-	workspace := f.Workspaces[projectId][name]
-	if workspace == nil {
+	workshop := f.Workspaces[projectId][name]
+	if workshop == nil {
 		return nil, ErrWorkspaceNotFound
 	}
-	workspace.file, err = project.WorkspaceFile(workspace.Name)
+	workshop.file, err = project.WorkspaceFile(workshop.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	workspace.content, err = InstalledContent(f.Workspaces[projectId][name].Config)
+	workshop.content, err = InstalledContent(f.Workspaces[projectId][name].Config)
 	if err != nil {
 		return nil, err
 	}
-	return workspace.Workspace, nil
+	return workshop.Workshop, nil
 }
 
-func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
+func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workshop, error) {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var workspaces = make([]*Workspace, 0)
+	var workspaces = make([]*Workshop, 0)
 	for _, i := range f.Workspaces[projectId] {
 		ws, _ := f.GetWorkspace(ctx, i.Name)
 		workspaces = append(workspaces, ws)
@@ -232,19 +232,19 @@ func (f *FakeWorkspaceBackend) GetProjectWorkspaces(ctx context.Context) ([]*Wor
 	return nil, workspaces, nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*Workspace, error) {
-	res := make([]*Workspace, 0)
+func (f *FakeWorkspaceBackend) GetWorkspacesByConfig(ctx context.Context, filter WorkspaceConfigFilter) ([]*Workshop, error) {
+	res := make([]*Workshop, 0)
 	for _, i := range f.Workspaces {
 		for _, j := range i {
 			if filter(j.Config) {
-				res = append(res, j.Workspace)
+				res = append(res, j.Workshop)
 			}
 		}
 	}
 	return res, nil
 }
 
-func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workspace, error) {
+func (f *FakeWorkspaceBackend) GetWorkspacesByDevices(ctx context.Context, filter WorkspaceDeviceFilter) (map[string]*Workshop, error) {
 	panic("not implemented") // TODO: Implement
 }
 

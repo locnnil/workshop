@@ -35,7 +35,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	workspace "github.com/canonical/workshop/internal/overlord/workspacestate"
+	workshop "github.com/canonical/workshop/internal/overlord/workspacestate"
 	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
@@ -73,7 +73,7 @@ type Overlord struct {
 	inited    bool
 	startedUp bool
 	sdk       *sdkstate.SdkManager
-	workspace *workspace.WorkspaceManager
+	workshop  *workshop.WorkspaceManager
 	hook      *hookstate.HookManager
 	command   *cmdstate.CommandManager
 	ifacemgr  *ifacestate.InterfaceManager
@@ -144,8 +144,8 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workspace = workspace.New(s, o.runner, o.workspaceBackend)
-	o.addManager(o.workspace)
+	o.workshop = workshop.New(s, o.runner, o.workspaceBackend)
+	o.addManager(o.workshop)
 
 	o.sdk = sdkstate.New(o.runner, o.workspaceBackend)
 	o.addManager(o.sdk)
@@ -184,7 +184,7 @@ func (se *Overlord) StartUp() error {
 
 var timeNow = time.Now
 
-// StartOfOperationTime returns the time when workspace started operating,
+// StartOfOperationTime returns the time when workshop started operating,
 // and sets it in the state when called for the first time.
 func (m *Overlord) StartOfOperationTime() (time.Time, error) {
 	var opTime time.Time
@@ -210,7 +210,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	if err != nil {
 		return nil, fmt.Errorf("fatal: cannot find current boot ID: %w", err)
 	}
-	// If workspace is PID 1 we don't care about /proc/sys/kernel/random/boot_id
+	// If workshop is PID 1 we don't care about /proc/sys/kernel/random/boot_id
 	// as we are most likely running in a container. LXD mounts it's own boot_id
 	// to correctly emulate the boot_id behaviour of non-containerized systems.
 	// Within containerd/docker, boot_id is consistent with the host, which provides
@@ -223,7 +223,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	}
 
 	if !osutil.FileExists(statePath) {
-		// fail fast, mostly interesting for tests, this dir is set up by workspace
+		// fail fast, mostly interesting for tests, this dir is set up by workshop
 		stateDir := filepath.Dir(statePath)
 		if !osutil.IsDir(stateDir) {
 			return nil, fmt.Errorf("fatal: directory %q must be present", stateDir)
@@ -461,8 +461,8 @@ func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
 	return o.workspaceBackend
 }
 
-func (o *Overlord) WorkspaceManager() *workspace.WorkspaceManager {
-	return o.workspace
+func (o *Overlord) WorkspaceManager() *workshop.WorkspaceManager {
+	return o.workshop
 }
 
 func (o *Overlord) CommandManager() *cmdstate.CommandManager {

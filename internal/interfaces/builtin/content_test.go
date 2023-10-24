@@ -111,14 +111,14 @@ base: ubuntu@22.04
 plugs:
  content:
   target: /project/training
-`, sdk.Setup{Workspace: "ws"}, "content")
+`, sdk.Setup{Workshop: "ws"}, "content")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
 base: ubuntu@22.04
 slots:
  content:
-`, sdk.Setup{Workspace: "ws"}, "content")
+`, sdk.Setup{Workshop: "ws"}, "content")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec := &device.Specification{}
 
@@ -145,7 +145,7 @@ slots:
 		Name: plug.Name,
 		Properties: map[string]string{
 			"type":   "disk",
-			"source": filepath.Join(homeDir, "/.local/share/workspace/project/content/ws_consumer_content.sdk"),
+			"source": filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"),
 			"path":   "/project/training",
 		},
 	}}

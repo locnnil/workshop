@@ -39,7 +39,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 
 func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
-		i.Set("workspace", w)
+		i.Set("workshop", w)
 		i.Set("project", *p)
 	}
 }
@@ -92,7 +92,7 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
@@ -132,12 +132,12 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/save-state"})
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
 	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	info, err := ws.Stat("/var/lib/workspace/state/sdk/one")
+	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
 	c.Assert(info.IsDir(), check.Equals, true)
 }
@@ -158,7 +158,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	// setup state storage (usually already set by the save-state)
 	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	err = ws.MkdirAll("/var/lib/workspace/state/sdk/one", 0755)
+	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -169,12 +169,12 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/restore-state"})
-	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/one"})
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/restore-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
 }
 
 func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.SdkRecord) {
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
   one:

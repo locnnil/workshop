@@ -34,10 +34,10 @@ func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *check.C, w string, ts []*sta
 		c.Assert(err, check.IsNil)
 		c.Assert(&prj, check.DeepEquals, s.project)
 
-		var workspace string
-		err = i.Get("workspace", &workspace)
+		var workshop string
+		err = i.Get("workshop", &workshop)
 		c.Assert(err, check.IsNil)
-		c.Assert(workspace, check.Equals, w)
+		c.Assert(workshop, check.Equals, w)
 	}
 }
 
@@ -58,9 +58,9 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
 	file := &workspacebackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
 	ts, err := workspacestate.Launch(s.state, file, s.project)
 
-	expected := []string{"create-workspace",
+	expected := []string{"create-workshop",
 		"mount-project",
-		"start-workspace"}
+		"start-workshop"}
 	tasks := ts.Tasks()
 
 	c.Assert(err, check.Equals, nil)
@@ -87,9 +87,9 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	ts, err := workspacestate.Launch(s.state, file, s.project)
 
 	expected := []string{
-		"create-workspace",
+		"create-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 		"retrieve-sdk",
 		"retrieve-sdk",
 		"install-sdk",
@@ -152,11 +152,11 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 	expected := []string{
 		"create-state-storage",
 		"remove-state-storage",
-		"create-workspace",
-		"remove-workspace-stash",
-		"stash-workspace",
+		"create-workshop",
+		"remove-workshop-stash",
+		"stash-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 	}
 
 	tasks := ts.Tasks()
@@ -199,22 +199,22 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	expected_ws := []string{
 		"create-state-storage",
 		"remove-state-storage",
-		"create-workspace",
-		"remove-workspace-stash",
-		"stash-workspace",
+		"create-workshop",
+		"remove-workshop-stash",
+		"stash-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 	}
 
 	expected_ws_1 := []string{
 		"create-state-storage",
 		"remove-state-storage",
-		"create-workspace",
-		"remove-workspace-stash",
+		"create-workshop",
+		"remove-workshop-stash",
 		"run-hook",
-		"stash-workspace",
+		"stash-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -225,7 +225,7 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	verifyExpectedTasks(c, ts[0].Tasks(), expected_ws)
 	verifyExpectedTasks(c, ts[1].Tasks(), expected_ws_1)
 
-	c.Assert(ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "start-workspace")
+	c.Assert(ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible).Kind(), check.Equals, "start-workshop")
 	waitFor := ts[0].MaybeEdge(workspacestate.EdgeCleanupRefresh).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
 		ts[0].MaybeEdge(workspacestate.EdgeLastBeforeRefreshIrreversible),
@@ -266,12 +266,12 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	expected := []string{
 		"create-state-storage",
 		"remove-state-storage",
-		"create-workspace",
-		"remove-workspace-stash",
+		"create-workshop",
+		"remove-workshop-stash",
 		"run-hook",
-		"stash-workspace",
+		"stash-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -326,16 +326,16 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 		"run-hook",
-		"stash-workspace",
-		"create-workspace",
+		"stash-workshop",
+		"create-workshop",
 		"mount-project",
-		"start-workspace",
+		"start-workshop",
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
 		"run-hook",
 		"run-hook", // restore state hook
-		"remove-workspace-stash",
+		"remove-workshop-stash",
 	}
 
 	for i, t := range ts {
@@ -449,7 +449,7 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	// the SDK list to be refreshed (i.e. coming from a workspace file)
+	// the SDK list to be refreshed (i.e. coming from a workshop file)
 	installed := workspacebackend.SdkList{workspacebackend.SdkRecord{Name: "one"},
 		workspacebackend.SdkRecord{Name: "two"}}
 
@@ -490,8 +490,8 @@ func (s *S) TestStartMany(c *check.C) {
 	ts, err := workspacestate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(err, check.IsNil)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workspace")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workspace")
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workshop")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workshop")
 
 	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
 	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
@@ -507,8 +507,8 @@ func (s *S) TestStopMany(c *check.C) {
 	ts, err := workspacestate.StopManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(err, check.IsNil)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "stop-workspace")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "stop-workspace")
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "stop-workshop")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "stop-workshop")
 
 	var force bool
 	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
@@ -529,8 +529,8 @@ func (s *S) TestRemoveMany(c *check.C) {
 	ts, err := workspacestate.RemoveManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(err, check.IsNil)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "remove-workspace")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "remove-workspace")
+	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "remove-workshop")
+	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "remove-workshop")
 
 	var force bool
 	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)

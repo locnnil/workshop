@@ -51,7 +51,7 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 func (s *interfaceManagerSuite) mockWorkspaceWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
 	ctx := context.WithValue(s.ctx, workspacebackend.ContextProjectId, s.prj.ProjectId)
 
-	err := os.WriteFile(filepath.Join(s.prj.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@22.04
 sdks:
   consumer:
@@ -123,7 +123,7 @@ slots:
 
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 1)
-	cref := &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"}}
+	cref := &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)

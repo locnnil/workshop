@@ -27,7 +27,7 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 	chg.Set("user", "testuser")
 
 	t := s.state.NewTask("task", "...")
-	t.Set("workspace", "ws")
+	t.Set("workshop", "ws")
 	t.Set("project", *s.project)
 	chg.AddTask(t)
 	return t

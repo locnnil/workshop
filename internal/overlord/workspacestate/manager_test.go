@@ -39,19 +39,19 @@ func (s *ManagerSuite) TestAddHandlers(c *check.C) {
 	workspacestate.New(s.state, s.runner, s.backend)
 
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
-		"create-workspace",
-		"start-workspace",
-		"stop-workspace",
-		"remove-workspace",
+		"create-workshop",
+		"start-workshop",
+		"stop-workshop",
+		"remove-workshop",
 		"mount-project",
-		"remove-workspace-stash",
-		"stash-workspace",
+		"remove-workshop-stash",
+		"stash-workshop",
 		"create-state-storage",
 		"remove-state-storage",
 	})
 }
 
-func (s *ManagerSuite) setupWorkspace(running bool) *workspacebackend.Workspace {
+func (s *ManagerSuite) setupWorkspace(running bool) *workspacebackend.Workshop {
 	wrkspc := workspacebackend.NewWorkspace(s.backend, "ws", "42424242")
 	wrkspc.SetRunning(running)
 	return wrkspc
@@ -120,7 +120,7 @@ func (s *ManagerSuite) TestRefreshSdkWasAdded(c *check.C) {
 	defer s.state.Unlock()
 
 	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
   test-sdk:
@@ -129,8 +129,8 @@ sdks:
 	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
-	// a user added an SDK to the workspace file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	// a user added an SDK to the workshop file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
   test-sdk:
@@ -153,7 +153,7 @@ func (s *ManagerSuite) TestRefreshSdkWasRemoved(c *check.C) {
 	defer s.state.Unlock()
 
 	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
   test-sdk:
@@ -162,8 +162,8 @@ sdks:
 	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
-	// a user removed an SDK in the workspace file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	// a user removed an SDK in the workshop file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
@@ -181,7 +181,7 @@ func (s *ManagerSuite) TestRefreshSdkChannelWasUpdated(c *check.C) {
 	defer s.state.Unlock()
 
 	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
   test-sdk:
@@ -190,8 +190,8 @@ sdks:
 	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
-	// a user updated an SDK in the workspace file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.test.yaml"), []byte(`name: test
+	// a user updated an SDK in the workshop file and called refresh
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@20.04
 sdks:
   test-sdk:

@@ -94,7 +94,7 @@ func (m *InterfaceManager) Ensure() error {
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[string]string, error) {
+func (m *InterfaceManager) reloadConnections(workshop, sdkName string) (map[string]string, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
@@ -114,12 +114,12 @@ func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[str
 		// Apply filtering, this allows us to reload only a subset of
 		// connections (and similarly, refresh the static attributes of only a
 		// subset of connections).
-		if workspace != "" && connRef.PlugRef.Workspace != workspace && connRef.SlotRef.Workspace != workspace {
+		if workshop != "" && connRef.PlugRef.Workshop != workshop && connRef.SlotRef.Workshop != workshop {
 			continue
 		}
 
-		plugInfo := m.repo.Plug(connRef.PlugRef.Workspace, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
-		slotInfo := m.repo.Slot(connRef.SlotRef.Workspace, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
+		plugInfo := m.repo.Plug(connRef.PlugRef.Workshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
+		slotInfo := m.repo.Slot(connRef.SlotRef.Workshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
 
 		// The connection refers to a plug or slot that doesn't exist anymore, e.g. because of a refresh
 		// to a new sdk revision that doesn't have the given plug/slot.
@@ -144,8 +144,8 @@ func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[str
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[connRef.PlugRef.Workspace] = connRef.PlugRef.Sdk
-			affected[connRef.SlotRef.Workspace] = connRef.SlotRef.Sdk
+			affected[connRef.PlugRef.Workshop] = connRef.PlugRef.Sdk
+			affected[connRef.SlotRef.Workshop] = connRef.SlotRef.Sdk
 		}
 	}
 	if connStateChanged {

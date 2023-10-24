@@ -61,7 +61,7 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
-	// path used in workspace to mount the project directory
+	// path used in workshop to mount the project directory
 	WorkspaceProjectPath = "/project"
 	// name prefix for the workspaces that were made unavailable
 	StashNamePrefix = "stash-"
@@ -72,7 +72,7 @@ var (
 	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
 
-	ErrWorkspaceNotFound = errors.New("workspace not found")
+	ErrWorkspaceNotFound = errors.New("workshop not found")
 )
 
 func New() WorkspaceBackend {
@@ -81,7 +81,7 @@ func New() WorkspaceBackend {
 }
 
 func LxdProjectName(user string) string {
-	return "workspace." + user
+	return "workshop." + user
 }
 
 func LxdProjectUser(project string) string {
@@ -125,14 +125,14 @@ func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context,
 		return nil, err
 	}
 
-	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
 	if err != nil {
 		return nil, err
 	}
 
-	// did we find a .workspace.lock in the path?
+	// did we find a .workshop.lock in the path?
 	if lockNotFound {
-		// try to recover .workspace.lock file for this project
+		// try to recover .workshop.lock file for this project
 		// if it existed before and was accidentally removed
 		for _, i := range projects {
 			if i.Path == path {
@@ -161,7 +161,7 @@ func (s *LxdBackend) untrackProject(client lxd.InstanceServer, ctx context.Conte
 		return err
 	}
 
-	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (s *LxdBackend) untrackProject(client lxd.InstanceServer, ctx context.Conte
 	if err != nil {
 		return err
 	}
-	lxdPrj.ProjectPut.Config["user.workspace.projects"] = projectsJson
+	lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
 
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
@@ -192,7 +192,7 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 		return err
 	}
 
-	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 	if err != nil {
 		return err
 	}
-	lxdPrj.ProjectPut.Config["user.workspace.projects"] = projectsJson
+	lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
 
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
@@ -326,7 +326,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 		return nil, false, ErrNotAProject
 	}
 
-	// If there is at least one workspace, we consider the path
+	// If there is at least one workshop, we consider the path
 	// as a project and create a new project id
 	if project.ProjectId, err = NewProjectId(); err != nil {
 		return nil, false, err
@@ -359,7 +359,7 @@ func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx co
 			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkspaceProjectPath},
 		})
 		if err != nil {
-			return fmt.Errorf("cannot update workspace \"%v\" project directory", i.Name)
+			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
 		}
 	}
 	return nil
@@ -376,7 +376,7 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 			return nil, err
 		}
 
-		projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+		projects, err := ReadProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
 		if err != nil {
 			return nil, err
 		}
@@ -389,8 +389,8 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 	} else {
 		// get a default connection without preseting the LXD project as we are
 		// going over all the LXD projects to filter the ones managed by
-		// workspace and reload every interface connection for every SDK of
-		// every workspace
+		// workshop and reload every interface connection for every SDK of
+		// every workshop
 		client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
 		if err != nil {
 			return nil, err
@@ -404,10 +404,10 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 		for _, prj := range lxdProjects {
 			username := LxdProjectUser(prj.Name)
 			_, err := LookupUsername(username)
-			// if the project is created by workspace, the key must be present
-			if _, ok := prj.Config["user.workspace.projects"]; ok && err == nil {
+			// if the project is created by workshop, the key must be present
+			if _, ok := prj.Config["user.workshop.projects"]; ok && err == nil {
 				prjctx := context.WithValue(ctx, ContextUser, username)
-				projects, err := ReadProjects([]byte(prj.Config["user.workspace.projects"]))
+				projects, err := ReadProjects([]byte(prj.Config["user.workshop.projects"]))
 				if err != nil {
 					return nil, err
 				}
@@ -448,7 +448,7 @@ func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx 
 			// list of projects that we track (only if there are no remaining
 			// workspaces for this project)
 			inst, err := s.filterLxdInstancesByConfig(client, func(config map[string]string) bool {
-				return config["user.workspace.project-id"] == prj.ProjectId
+				return config["user.workshop.project-id"] == prj.ProjectId
 			})
 			if err == nil && len(inst) == 0 {
 				if err = s.untrackProject(client, ctx, prj); err != nil {
@@ -549,7 +549,7 @@ func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) err
 
 	/* Skip if the instance exists already */
 	if _, _, err := conn.GetInstance(InstanceName(name, projectId)); err == nil {
-		return fmt.Errorf("workspace \"%s\" already exists", name)
+		return fmt.Errorf("workshop \"%s\" already exists", name)
 	}
 
 	/* Check if we have the base image stored locally */
@@ -836,7 +836,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (Ex
 	return s.execCommand(conn, ctx, name, args)
 }
 
-func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace, error) {
+func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workshop, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -872,23 +872,23 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace,
 		return nil, err
 	}
 
-	workspace, err := s.loadWorkspace(inst, p)
+	workshop, err := s.loadWorkspace(inst, p)
 	if err != nil {
 		return nil, err
 	}
 
-	return workspace, nil
+	return workshop, nil
 }
 
-func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, error) {
+func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workshop, error) {
 	var err error
 	var running, ok bool
 	var pId string
 
 	name := WorkspaceName(inst.Name)
 
-	if pId, ok = inst.Config["user.workspace.project-id"]; !ok {
-		return nil, fmt.Errorf("no project assossiated with the workspace %q", name)
+	if pId, ok = inst.Config["user.workshop.project-id"]; !ok {
+		return nil, fmt.Errorf("no project assossiated with the workshop %q", name)
 	}
 
 	if inst.StatusCode == api.Running || inst.StatusCode == api.Ready {
@@ -900,7 +900,7 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 		base = "unknown"
 	}
 
-	var workspace = &Workspace{
+	var workshop = &Workshop{
 		backend:   s,
 		projectId: pId,
 		Name:      name,
@@ -908,24 +908,24 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workspace, 
 		base:      base,
 	}
 
-	workspace.Devices = inst.Devices
+	workshop.Devices = inst.Devices
 
 	file, err := p.WorkspaceFile(name)
 	if err != nil {
-		workspace.AddError(MissingFile)
+		workshop.AddError(MissingFile)
 	}
-	workspace.SetFile(file)
+	workshop.SetFile(file)
 
 	if exists, isDir, _ := osutil.ExistsIsDir(p.Path); !exists || !isDir {
-		workspace.AddError(MissingProject)
+		workshop.AddError(MissingProject)
 	}
 
 	// Fetch information about the installed SDKs
-	workspace.content, err = InstalledContent(inst.Config)
+	workshop.content, err = InstalledContent(inst.Config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot load workspace: installed SDK content is not readable: %v", err)
+		return nil, fmt.Errorf("cannot load workshop: installed SDK content is not readable: %v", err)
 	}
-	return workspace, nil
+	return workshop, nil
 }
 
 func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkspaceConfigFilter) ([]api.Instance, error) {
@@ -944,7 +944,7 @@ func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter 
 	return toReturn, nil
 }
 
-func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workspace, error) {
+func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workshop, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -987,12 +987,12 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 		return nil, nil, err
 	}
 
-	var projectWorkspaces []*Workspace
+	var projectWorkspaces []*Workshop
 	for _, i := range instances {
 		if i.Config[ProjectIdConfig] == p.ProjectId {
 			ws, err := s.loadWorkspace(&i, p)
 			if err != nil {
-				logger.Debugf("error loading workspace: %v", err)
+				logger.Debugf("error loading workshop: %v", err)
 				continue
 			}
 			projectWorkspaces = append(projectWorkspaces, ws)
@@ -1003,11 +1003,11 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 	return wsFiles, wsInstances, nil
 }
 
-// Examine the lists of project's workspace files and workspaces. Returns two
-// lists. The first has *only* the workspace files that do not have any launched
+// Examine the lists of project's workshop files and workspaces. Returns two
+// lists. The first has *only* the workshop files that do not have any launched
 // workspaces yet, the second contains workspaces that are launched with or
 // without an associated file.
-func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*WorkspaceFile, []*Workspace) {
+func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workshop) ([]*WorkspaceFile, []*Workshop) {
 	files := make([]*WorkspaceFile, len(f))
 	copy(files, f)
 	/* Walk both lists from to build a list of workspaces with their states */
@@ -1021,7 +1021,7 @@ func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workspace) ([]*Work
 	}
 
 	/* At this point, files contain only inactive workspaces and instances
-	contain the workspaces that have workspace files available */
+	contain the workspaces that have workshop files available */
 	return files, instances
 }
 
@@ -1127,7 +1127,7 @@ func (s *LxdBackend) StashWorkspace(ctx context.Context, name string) error {
 
 // Moves the instance between projects. If system is true the project will be
 // moved to the LXD project which is not available to the users (e.g. for
-// hiding a workspace temporarily). Otherwise, the workspace will be move to
+// hiding a workshop temporarily). Otherwise, the workshop will be move to
 // the regular project visible by the user specified in the ctx context.
 func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Context, name string, system bool) error {
 	var err error
@@ -1224,21 +1224,21 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 
 func defaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
-		"root":              {"type": "disk", "pool": "default", "path": "/"},
-		"workspace.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"root":             {"type": "disk", "pool": "default", "path": "/"},
+		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 	}
 }
 
 func defaultConfig(projectId string, userid, groupid string) map[string]string {
 	return map[string]string{
-		"raw.idmap":                 fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
-		"security.nesting":          "true",
-		"user.workspace.project-id": projectId,
+		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
+		"security.nesting":         "true",
+		"user.workshop.project-id": projectId,
 		"user.user-data": `#cloud-config
 users:
   - default
-  - name: workspace
-    primary_group: workspace
+  - name: workshop
+    primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
     shell: /bin/bash
@@ -1256,7 +1256,7 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 
 	names := strings.Split(base, "@")
 	if len(names) <= 1 {
-		return nil, nil, fmt.Errorf("cannot find a base image for the workspace")
+		return nil, nil, fmt.Errorf("cannot find a base image for the workshop")
 	}
 
 	alias, _, err := imageServer.GetImageAlias(fmt.Sprintf("%s/amd64", names[1]))

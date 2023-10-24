@@ -52,12 +52,12 @@ type Operation struct {
 
 // The family of functions to maintain the state of current operations across
 // the workspaces. The reason we track the current operations as part of the
-// state structure and not as a property of a workspace is that, for example, a
-// refresh operation maintains a backup of the previously running workspace.
-// Hence, if a workspace was flaged as pending (i.e. refresh op in progress), we
+// state structure and not as a property of a workshop is that, for example, a
+// refresh operation maintains a backup of the previously running workshop.
+// Hence, if a workshop was flaged as pending (i.e. refresh op in progress), we
 // would have to also make sure that the flag exists in both, its copy of the
 // previous instance and the current instance that is created during the refresh
-// operation. It involves more complexity on maintaining the workspace state
+// operation. It involves more complexity on maintaining the workshop state
 // record and, likely, makes it more error-prone.
 
 func OperationInProgress(st *state.State, name, projectId string) *Operation {
@@ -85,7 +85,7 @@ func StartOperation(st *state.State, name, projectId string, op Operation) error
 }
 
 // Attempt to resume the change associated with the refresh operation for the
-// given workspace. Depending on the mode the change will either be turned
+// given workshop. Depending on the mode the change will either be turned
 // into Doing (Continue mode) or Abort (Abort mode)
 func ResumeRefresh(st *state.State,
 	name string, projectId string, mode RefreshMode) (*state.Change, error) {
@@ -108,9 +108,9 @@ func ResumeRefresh(st *state.State,
 			if mode == RefreshContinue {
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
-				tsk.Logf("Continuing the %q workspace refresh...", name)
+				tsk.Logf("Continuing the %q workshop refresh...", name)
 			} else if mode == RefreshAbort {
-				tsk.Logf("Aborting the %q workspace refresh...", name)
+				tsk.Logf("Aborting the %q workshop refresh...", name)
 				tsk.SetStatus(state.ErrorStatus)
 			}
 		}
@@ -123,7 +123,7 @@ func ResumeRefresh(st *state.State,
 	return change, nil
 }
 
-// Stop the operation in progress for a given workspace, the state must be
+// Stop the operation in progress for a given workshop, the state must be
 // locked.
 func StopOperation(st *state.State, name, projectId, opname string) error {
 	var ops Operations

@@ -93,7 +93,7 @@ func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 		// if the task was marked as the starter of the operation then
 		// remove the operation from being in progress as this is the last
 		// task that has just completed its undoing logic, i.e. the
-		// workspace is ready for the new commands again
+		// workshop is ready for the new commands again
 		if task.Has("start-operation") {
 			op := OperationInProgress(st, ws, p.ProjectId)
 			if op != nil {
@@ -122,11 +122,11 @@ func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, 
 	}
 
 	st.Lock()
-	err = task.Get("workspace", &name)
+	err = task.Get("workshop", &name)
 	st.Unlock()
 
 	if err != nil {
-		return "", nil, "", fmt.Errorf("cannot get workspace, task %q: %v", id, err)
+		return "", nil, "", fmt.Errorf("cannot get workshop, task %q: %v", id, err)
 	}
 
 	st.Lock()

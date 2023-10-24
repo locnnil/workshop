@@ -18,7 +18,7 @@ import (
 type WorkspaceErrorType int
 
 const (
-	WorkspaceStateDir = "/var/lib/workspace/state"
+	WorkspaceStateDir = "/var/lib/workshop/state"
 )
 
 var InstallTimeNow = time.Now
@@ -48,15 +48,15 @@ func ParseWorkspaceState(s string) WorkspaceState {
 	return refreshMap[s]
 }
 
-func NewWorkspace(backend WorkspaceBackend, name, projectId string) *Workspace {
-	return &Workspace{
+func NewWorkspace(backend WorkspaceBackend, name, projectId string) *Workshop {
+	return &Workshop{
 		Name:      name,
 		projectId: projectId,
 		backend:   backend,
 	}
 }
 
-type Workspace struct {
+type Workshop struct {
 	backend   WorkspaceBackend
 	file      *WorkspaceFile
 	projectId string
@@ -69,51 +69,51 @@ type Workspace struct {
 	state     WorkspaceState
 }
 
-func (w *Workspace) Base() string {
+func (w *Workshop) Base() string {
 	return w.base
 }
 
-func (w *Workspace) IsRunning() bool {
+func (w *Workshop) IsRunning() bool {
 	return w.running
 }
 
-func (w *Workspace) SetRunning(run bool) {
+func (w *Workshop) SetRunning(run bool) {
 	w.running = run
 }
 
-func (w *Workspace) ProjectId() string {
+func (w *Workshop) ProjectId() string {
 	return w.projectId
 }
 
-func (w *Workspace) Errors() []WorkspaceErrorType {
+func (w *Workshop) Errors() []WorkspaceErrorType {
 	return w.errs
 }
 
-func (w *Workspace) AddError(err WorkspaceErrorType) {
+func (w *Workshop) AddError(err WorkspaceErrorType) {
 	w.errs = append(w.errs, err)
 }
 
-func (w *Workspace) Content() []sdk.Setup {
+func (w *Workshop) Content() []sdk.Setup {
 	return maps.Values(w.content)
 }
 
-func (w *Workspace) File() *WorkspaceFile {
+func (w *Workshop) File() *WorkspaceFile {
 	return w.file
 }
 
-func (w *Workspace) SetFile(f *WorkspaceFile) {
+func (w *Workshop) SetFile(f *WorkspaceFile) {
 	w.file = f
 }
 
-func (w *Workspace) State() WorkspaceState {
+func (w *Workshop) State() WorkspaceState {
 	return w.state
 }
 
-func (w *Workspace) SetState(st WorkspaceState) {
+func (w *Workshop) SetState(st WorkspaceState) {
 	w.state = st
 }
 
-func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
+func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	s.InstallTime = InstallTimeNow()
 	w.content[s.Name] = s
 
@@ -124,7 +124,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
 
 	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
 		&WorkspaceConfigValue{
-			Name:  "user.workspace.content",
+			Name:  "user.workshop.content",
 			Value: string(sequenceValue),
 		})
 
@@ -145,17 +145,17 @@ func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
 		filepath.Join(sdkPath, "current"), true)
 }
 
-func (w *Workspace) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
+func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	delete(w.content, s.Name)
 	newSequence, err := json.Marshal(w.content)
 	if err != nil {
 		return err
 	}
 
-	/* Update the workspace config */
+	/* Update the workshop config */
 	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
 		&WorkspaceConfigValue{
-			Name:  "user.workspace.content",
+			Name:  "user.workshop.content",
 			Value: string(newSequence),
 		})
 	if err != nil {
@@ -200,7 +200,7 @@ func WorkspaceFilePath(dir, name string) string {
 }
 
 func WorkspaceFileName(name string) string {
-	return fmt.Sprintf(".workspace.%s.yaml", name)
+	return fmt.Sprintf(".workshop.%s.yaml", name)
 }
 
 func InstanceName(name string, project_id string) string {
@@ -227,7 +227,7 @@ func WorkspaceStateVolumeName(ws, pid string) string {
 // callers responsibility to get and close the filesystem due to the LXD's bug:
 // if the filesystem of the container is not closed, it maintains the underlying
 // SFTP connection which stops the container from stoppping.
-func (w *Workspace) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
 	wsfs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (w *Workspace) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error)
 	return info, nil
 }
 
-func (w *Workspace) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
+func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	var infos = make([]*sdk.Info, 0, len(w.content))
 	for _, sdk := range w.content {
 		info, err := w.SdkInfo(ctx, sdk)

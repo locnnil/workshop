@@ -124,7 +124,7 @@ func launchTestWorkspace(c *check.C, ctx context.Context, be workspacebackend.Wo
 
 	var err error
 
-	os.WriteFile(filepath.Join(dir, ".workspace.test.yaml"), []byte(`name: test
+	os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@22.04
 `), 0644)
 

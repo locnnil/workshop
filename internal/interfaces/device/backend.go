@@ -27,12 +27,12 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(context, b.Name(), sdkInfo)
 	if err != nil {
-		return fmt.Errorf("cannot obtain device snippets for workspace %q: %s", sdkInfo.Workspace, err)
+		return fmt.Errorf("cannot obtain device snippets for workshop %q: %s", sdkInfo.Workshop, err)
 	}
 
 	spec := s.(*Specification)
 	for _, dev := range spec.devices {
-		err = b.wsbackend.AddWorkspaceDevice(context, sdkInfo.Workspace, *dev)
+		err = b.wsbackend.AddWorkspaceDevice(context, sdkInfo.Workshop, *dev)
 		if err != nil {
 			return nil
 		}
@@ -43,7 +43,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 // Remove removes mount configuration of a given sdk.
 //
 // This method should be called after removing a sdk.
-func (b *Backend) Remove(context context.Context, workspace, sdkName string) error {
+func (b *Backend) Remove(context context.Context, workshop, sdkName string) error {
 	return nil
 }
 

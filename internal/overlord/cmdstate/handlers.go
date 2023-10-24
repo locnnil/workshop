@@ -49,8 +49,8 @@ const (
 
 // execution tracks the execution of a command.
 type execution struct {
-	workspace string
-	execArgs  *workspacebackend.ExecArgs
+	workshop string
+	execArgs *workspacebackend.ExecArgs
 
 	websockets       map[string]*websocket.Conn
 	websocketsLock   sync.Mutex
@@ -59,7 +59,7 @@ type execution struct {
 }
 
 func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workspace, err := UserProjectWorkspace(task)
+	user, prj, workshop, err := UserProjectWorkspace(task)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 
 	// Set up the object that will track the execution.
 	e := &execution{
-		workspace:        workspace,
+		workshop:         workshop,
 		execArgs:         &setup,
 		websockets:       make(map[string]*websocket.Conn),
 		ioConnected:      make(chan struct{}),
@@ -243,12 +243,12 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	}
 
 	// TODO: the lack of separate output in LXD exec when executing a command in
-	// an interactive mode begets quirky things. Consider this: workspace exec
+	// an interactive mode begets quirky things. Consider this: workshop exec
 	// empty -- ls -R / 2>/dev/null Given that the command will be executed in
 	// the interactive mode (stdin, stdout both point to the terminal), even if
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
-	exectx, err := backend.Exec(ctx, e.workspace, &workspacebackend.Execution{
+	exectx, err := backend.Exec(ctx, e.workshop, &workspacebackend.Execution{
 		ExecArgs: *e.execArgs,
 		ExecControls: workspacebackend.ExecControls{
 			Stdin:  stdinReader,

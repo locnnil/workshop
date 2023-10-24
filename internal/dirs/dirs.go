@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	// defaultWorkspaceDir is the Workspace directory used if $WORKSPACE is not set. It is
+	// defaultWorkspaceDir is the Workshop directory used if $WORKSHOP is not set. It is
 	// created by the daemon ("workspaced run") if it doesn't exist, and also used by
-	// the workspace client.
-	defaultWorkspaceDir = "/var/lib/workspace/default"
+	// the workshop client.
+	defaultWorkspaceDir = "/var/lib/workshop/default"
 
-	// default root directory path for the SDKs to be installed into in a workspace
-	WorkspaceSdksDir = "/var/lib/workspace/sdk"
+	// default root directory path for the SDKs to be installed into in a workshop
+	WorkspaceSdksDir = "/var/lib/workshop/sdk"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 )
 
 func getEnvPaths() (workspaceDir string, socketPath string) {
-	workspaceDir = os.Getenv("WORKSPACE")
+	workspaceDir = os.Getenv("WORKSHOP")
 	if workspaceDir == "" {
 		workspaceDir = defaultWorkspaceDir
 	}

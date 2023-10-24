@@ -113,8 +113,8 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
-	os.WriteFile(filepath.Join(projectDir2, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir2, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
 
 	// Execute
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
@@ -126,7 +126,7 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 
 	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName("testuser"))
 	c.Assert(workspacebackend.LockPath(projectDir), testutil.FilePresent)
-	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
 
 	// Execute
 	prj, _, err = be.CreateOrLoadProject(f.ctx, projectDir2)
@@ -136,7 +136,7 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	// Validate
 	lxdProject, _, _ = f.client.GetProject(workspacebackend.LxdProjectName("testuser"))
 	c.Assert(workspacebackend.LockPath(projectDir2), testutil.FilePresent)
-	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"},{"path":"%s","id":"d4352dea"}]`, projectDir, projectDir2))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"},{"path":"%s","id":"d4352dea"}]`, projectDir, projectDir2))
 }
 
 func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
@@ -145,7 +145,7 @@ func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workspacebackend.NewProjectId)
 	projectDir := c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(prj.Path, check.Equals, projectDir)
@@ -164,7 +164,7 @@ func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	c.Assert(created, check.Equals, false)
 	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName("testuser"))
 
-	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
 }
 
 func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
@@ -178,12 +178,12 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 	f.client.UpdateProject(workspacebackend.LxdProjectName(f.username),
 		api.ProjectPut{
 			Config: map[string]string{
-				"user.workspace.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
+				"user.workshop.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
 			},
 		}, "")
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
-	os.WriteFile(filepath.Join(projectDir, ".workspace.lock"), []byte("b8639dea"), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.lock"), []byte("b8639dea"), 0644)
 	err := os.Rename(projectDir, newDir)
 	c.Assert(err, check.IsNil)
 
@@ -193,7 +193,7 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(created, check.Equals, false)
 	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName(f.username))
-	c.Assert(lxdProject.Config["user.workspace.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, newDir))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, newDir))
 }
 
 func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
@@ -209,23 +209,23 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
 	f.client.UpdateProject(workspacebackend.LxdProjectName(f.username),
 		api.ProjectPut{
 			Config: map[string]string{
-				"user.workspace.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
+				"user.workshop.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
 			},
 		}, "")
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
-	os.WriteFile(filepath.Join(newDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
-	os.WriteFile(filepath.Join(projectDir, ".workspace.lock"), []byte("b8639dea"), 0644)
-	os.WriteFile(filepath.Join(newDir, ".workspace.lock"), []byte("b8639dea"), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(newDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.lock"), []byte("b8639dea"), 0644)
+	os.WriteFile(filepath.Join(newDir, ".workshop.lock"), []byte("b8639dea"), 0644)
 
 	prj, created, err := be.CreateOrLoadProject(f.ctx, newDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(prj.Path, check.Equals, newDir)
 	c.Assert(err, check.IsNil)
 	c.Assert(created, check.Equals, true)
-	c.Assert(filepath.Join(newDir, ".workspace.lock"), testutil.FileEquals, "abcdefgi")
+	c.Assert(filepath.Join(newDir, ".workshop.lock"), testutil.FileEquals, "abcdefgi")
 	lxdProject, _, _ := f.client.GetProject(workspacebackend.LxdProjectName(f.username))
-	c.Assert(lxdProject.Config["user.workspace.projects"], check.Matches, fmt.Sprintf(`.*{"path":"%s","id":"abcdefgi"}.*`, newDir))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.Matches, fmt.Sprintf(`.*{"path":"%s","id":"abcdefgi"}.*`, newDir))
 }
 
 func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
@@ -237,8 +237,8 @@ func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
-	os.WriteFile(filepath.Join(projectDir2, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir2, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
 
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
@@ -269,7 +269,7 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryRemoved(c *check.C) {
 	be := workspacebackend.LxdBackend{}
 	projectDir := c.MkDir()
 
-	err := os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
+	err := os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
 	c.Assert(err, check.IsNil)
 	_, _, err = be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(err, check.IsNil)
@@ -301,7 +301,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 	projectDir := c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workspace.test.yaml"), []byte(workspaceMock), 0644)
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workspaceMock), 0644)
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(err, check.IsNil)

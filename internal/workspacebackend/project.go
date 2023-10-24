@@ -11,17 +11,17 @@ import (
 
 var (
 	ErrProjectNotFound        = errors.New("project not found")
-	ErrNotAProject            = errors.New("not a project (no workspace files found)")
+	ErrNotAProject            = errors.New("not a project (no workshop files found)")
 	ErrNoRelativePathsAllowed = errors.New("absolute project path must be used")
 )
 
 const (
-	ProjectLock       = ".workspace.lock"
-	ProjectPathDevice = "workspace.project"
-	ProjectIdConfig   = "user.workspace.project-id"
+	ProjectLock       = ".workshop.lock"
+	ProjectPathDevice = "workshop.project"
+	ProjectIdConfig   = "user.workshop.project-id"
 )
 
-var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
+var validWorkspaceFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 type Project struct {
 	Path      string `json:"path"`
@@ -63,8 +63,8 @@ func (w *Project) UpdateLockFile() error {
 	return os.WriteFile(LockPath(w.Path), []byte(w.ProjectId), 0644)
 }
 
-func (w *Project) WorkspaceFile(workspace string) (*WorkspaceFile, error) {
-	file, err := ReadWorkspace(filepath.Join(w.Path, WorkspaceFileName(workspace)))
+func (w *Project) WorkspaceFile(workshop string) (*WorkspaceFile, error) {
+	file, err := ReadWorkspace(filepath.Join(w.Path, WorkspaceFileName(workshop)))
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceFile, error) {
 			continue
 		}
 
-		/* The first element in names will contain the workspace name if matched */
+		/* The first element in names will contain the workshop name if matched */
 		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
 			file, err := ReadWorkspace(filepath.Join(w.Path, info.Name()))
 			if err != nil {
