@@ -123,13 +123,15 @@ slots:
 	deviceSpec := &device.Specification{}
 
 	homeDir := c.MkDir()
+	usr, err := user.Current()
+	c.Assert(err, check.IsNil)
 
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
-			Name:     "user",
-			Username: "user",
-			Uid:      "1000",
-			Gid:      "1000",
+			Name:     usr.Name,
+			Username: usr.Name,
+			Uid:      usr.Uid,
+			Gid:      usr.Gid,
 			HomeDir:  homeDir,
 		}
 		return u, nil
