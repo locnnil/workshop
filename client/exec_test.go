@@ -394,10 +394,10 @@ func (w *testWebsocket) WriteJSON(v interface{}) error {
 
 func (s *execSuite) exec(c *C, opts *client.ExecOptions, exitCode int) (process *client.ExecProcess, requestBody map[string]interface{}) {
 	s.addResponses("123", exitCode)
-	process, err := s.cli.Exec(opts, "workspace", "42424242")
+	process, err := s.cli.Exec(opts, "workshop", "42424242")
 	c.Assert(err, IsNil)
 	c.Assert(s.req.Method, Equals, "POST")
-	c.Assert(s.req.URL.String(), Equals, "http://localhost/v1/projects/42424242/workspaces/workspace/exec")
+	c.Assert(s.req.URL.String(), Equals, "http://localhost/v1/projects/42424242/workspaces/workshop/exec")
 	err = json.NewDecoder(s.req.Body).Decode(&requestBody)
 	c.Assert(err, IsNil)
 	return process, requestBody

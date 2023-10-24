@@ -51,7 +51,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	workshop, err := c.client.Workspace(project.Id, av[0])
+	workshop, err := c.client.Workshop(project.Id, av[0])
 	if err != nil {
 		return err
 	}

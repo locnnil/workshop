@@ -29,8 +29,8 @@ import (
 )
 
 type ExecOptions struct {
-	// Required: name of the workspace to run the command in
-	Workspace string
+	// Required: name of the workshop to run the command in
+	Workshop string
 	// Required: command and arguments (first element is the executable).
 	Command []string
 
@@ -58,8 +58,8 @@ type ExecOptions struct {
 	Interactive bool
 
 	// Initial terminal width and height (only apply if Interactive is true).
-	// If not specified, the Workspace server uses the target's default (usually
-	// 80x25). When using the "workspace exec" CLI, these are set to the host's
+	// If not specified, the Workshop server uses the target's default (usually
+	// 80x25). When using the "workshop exec" CLI, these are set to the host's
 	// terminal size automatically.
 	Width  int
 	Height int
@@ -110,7 +110,7 @@ func (p *ExecProcess) ChangeId() string {
 
 // Exec starts a command with the given options, returning a value
 // representing the process.
-func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*ExecProcess, error) {
+func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*ExecProcess, error) {
 	// Set up stdin/stdout defaults.
 	stdin := opts.Stdin
 	if stdin == nil {
@@ -151,7 +151,7 @@ func (client *Client) Exec(opts *ExecOptions, workspace, projectId string) (*Exe
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	resultBytes, changeID, err := client.doAsyncFull("POST", "/v1/projects/"+projectId+"/workspaces/"+workspace+"/exec", nil, headers, &body)
+	resultBytes, changeID, err := client.doAsyncFull("POST", "/v1/projects/"+projectId+"/workspaces/"+workshop+"/exec", nil, headers, &body)
 	if err != nil {
 		return nil, err
 	}
