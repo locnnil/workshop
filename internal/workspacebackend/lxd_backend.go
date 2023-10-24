@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -85,6 +84,14 @@ func LxdProjectName(user string) string {
 	return "workspace." + user
 }
 
+func LxdProjectUser(project string) string {
+	parts := strings.Split(project, ".")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[1]
+}
+
 func LxdSystemProjectName(user string) string {
 	return LxdProjectName(user) + ".system"
 }
@@ -118,11 +125,9 @@ func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context,
 		return nil, err
 	}
 
-	var projects map[string]*Project = make(map[string]*Project, 0)
-	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
-		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
-			return nil, err
-		}
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+	if err != nil {
+		return nil, err
 	}
 
 	// did we find a .workspace.lock in the path?
@@ -137,8 +142,9 @@ func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context,
 			}
 		}
 	} else {
-		if val, ok := projects[pId]; ok {
-			return val, nil
+		idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == pId })
+		if idx != -1 {
+			return projects[idx], nil
 		}
 	}
 	return nil, ErrProjectNotFound
@@ -155,20 +161,22 @@ func (s *LxdBackend) untrackProject(client lxd.InstanceServer, ctx context.Conte
 		return err
 	}
 
-	var projects map[string]*Project = make(map[string]*Project, 0)
-	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
-		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
-			return err
-		}
-	}
-
-	delete(projects, prj.ProjectId)
-
-	buf, err := json.Marshal(projects)
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
 	if err != nil {
 		return err
 	}
-	lxdPrj.ProjectPut.Config["user.workspace.projects"] = string(buf)
+
+	idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == prj.ProjectId })
+	if idx == -1 {
+		return fmt.Errorf("project %q at %q not found", prj.ProjectId, prj.Path)
+	}
+
+	projects = slices.Delete(projects, idx, idx+1)
+	projectsJson, err := SaveProjects(projects)
+	if err != nil {
+		return err
+	}
+	lxdPrj.ProjectPut.Config["user.workspace.projects"] = projectsJson
 
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
@@ -184,20 +192,23 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 		return err
 	}
 
-	var projects map[string]*Project = make(map[string]*Project, 0)
-	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
-		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
-			return err
-		}
-	}
-
-	projects[prj.ProjectId] = prj
-
-	buf, err := json.Marshal(projects)
+	projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
 	if err != nil {
 		return err
 	}
-	lxdPrj.ProjectPut.Config["user.workspace.projects"] = string(buf)
+
+	idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == prj.ProjectId })
+	if idx == -1 {
+		projects = append(projects, prj)
+	} else {
+		projects[idx] = prj
+	}
+
+	projectsJson, err := SaveProjects(projects)
+	if err != nil {
+		return err
+	}
+	lxdPrj.ProjectPut.Config["user.workspace.projects"] = projectsJson
 
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
@@ -354,30 +365,71 @@ func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx co
 	return nil
 }
 
-func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) {
-	client, err := s.LxdClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	user, ok := ctx.Value(ContextUser).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key %s not found", ContextUser)
-	}
-
-	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
-	if err != nil {
-		return nil, err
-	}
-
-	var projects map[string]*Project = make(map[string]*Project, 0)
-	if buf, ok := lxdPrj.Config["user.workspace.projects"]; ok {
-		if err = json.Unmarshal([]byte(buf), &projects); err != nil {
+func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error) {
+	if user, ok := ctx.Value(ContextUser).(string); ok {
+		client, err := s.LxdClient(ctx)
+		if err != nil {
 			return nil, err
 		}
-	}
+		lxdPrj, _, err := client.GetProject(LxdProjectName(user))
+		if err != nil {
+			return nil, err
+		}
 
-	for _, prj := range projects {
+		projects, err := ReadProjects([]byte(lxdPrj.Config["user.workspace.projects"]))
+		if err != nil {
+			return nil, err
+		}
+
+		checked, err := s.checkAndRecoverProjectPaths(client, ctx, projects)
+		if err != nil {
+			return nil, err
+		}
+		return map[string][]*Project{user: checked}, nil
+	} else {
+		// get a default connection without preseting the LXD project as we are
+		// going over all the LXD projects to filter the ones managed by
+		// workspace and reload every interface connection for every SDK of
+		// every workspace
+		client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
+		if err != nil {
+			return nil, err
+		}
+		// list all projects for all users if the user is not provided
+		lxdProjects, err := client.GetProjects()
+		if err != nil {
+			return nil, err
+		}
+		allProjects := make(map[string][]*Project)
+		for _, prj := range lxdProjects {
+			username := LxdProjectUser(prj.Name)
+			_, err := LookupUsername(username)
+			// if the project is created by workspace, the key must be present
+			if _, ok := prj.Config["user.workspace.projects"]; ok && err == nil {
+				prjctx := context.WithValue(ctx, ContextUser, username)
+				projects, err := ReadProjects([]byte(prj.Config["user.workspace.projects"]))
+				if err != nil {
+					return nil, err
+				}
+
+				checked, err := s.checkAndRecoverProjectPaths(client, prjctx, projects)
+				if err != nil {
+					return nil, err
+				}
+
+				allProjects[username] = checked
+			}
+		}
+		return allProjects, nil
+	}
+}
+
+// Ensures that every project has a valid existing path. If not, tries to
+// recover the path from the actual bind mount of the '/project'. If recovery
+// went unsuccessful, stop project tracking (it is likely that the directory was
+// removed already)
+func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) ([]*Project, error) {
+	for idx, prj := range projects {
 		if ok, _, err := osutil.ExistsIsDir(prj.Path); !ok && err == nil {
 			// If got here then there is no project directory for the projectId
 			// anymore. It can mean moving or deletion happened in the past. Try
@@ -402,11 +454,10 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string]*Project, error) 
 				if err = s.untrackProject(client, ctx, prj); err != nil {
 					return nil, err
 				}
-				delete(projects, prj.ProjectId)
+				projects = slices.Delete(projects, idx, idx+1)
 			}
 		}
 	}
-
 	return projects, nil
 }
 
@@ -802,9 +853,16 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workspace,
 		return nil, err
 	}
 
-	if p, ok = projects[projectId]; !ok {
-		return nil, fmt.Errorf("project is not available: %v", projectId)
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", ContextUser)
 	}
+
+	idx := slices.IndexFunc(projects[user], func(p *Project) bool { return p.ProjectId == projectId })
+	if idx == -1 {
+		return nil, fmt.Errorf("project %q is not found", projectId)
+	}
+	p = projects[user][idx]
 
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
@@ -892,6 +950,11 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 		return nil, nil, fmt.Errorf("context key project-id not found")
 	}
 
+	user, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("context key %s not found", ContextUser)
+	}
+
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -902,9 +965,13 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 	if err != nil {
 		return nil, nil, err
 	}
-	if p, ok = projects[projectId]; !ok {
-		return nil, nil, fmt.Errorf("project is not available: %v", projectId)
+
+	idx := slices.IndexFunc(projects[user], func(p *Project) bool { return p.ProjectId == projectId })
+	if idx == -1 {
+		return nil, nil, fmt.Errorf("project %q is not found", projectId)
 	}
+
+	p = projects[user][idx]
 
 	files, err := p.EnumWorkspaceFiles()
 	// if the dir does not exist it does not mean there are no workspaces. It

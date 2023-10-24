@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/workspace/internal/osutil"
 	"github.com/canonical/workspace/internal/overlord/cmdstate"
 	"github.com/canonical/workspace/internal/overlord/hookstate"
+	"github.com/canonical/workspace/internal/overlord/ifacestate"
 	"github.com/canonical/workspace/internal/overlord/patch"
 	"github.com/canonical/workspace/internal/overlord/restart"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
@@ -75,6 +76,7 @@ type Overlord struct {
 	workspace *workspace.WorkspaceManager
 	hook      *hookstate.HookManager
 	command   *cmdstate.CommandManager
+	ifacemgr  *ifacestate.InterfaceManager
 	runner    *state.TaskRunner
 
 	startOfOperationTime time.Time
@@ -142,17 +144,20 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workspace = workspace.NewWorkspaceManager(s, o.runner, o.workspaceBackend)
+	o.workspace = workspace.New(s, o.runner, o.workspaceBackend)
 	o.addManager(o.workspace)
 
-	o.sdk = sdkstate.NewSdkManager(o.runner, o.workspaceBackend)
+	o.sdk = sdkstate.New(o.runner, o.workspaceBackend)
 	o.addManager(o.sdk)
 
-	o.hook = hookstate.NewHookManager(o.runner, o.workspaceBackend)
+	o.hook = hookstate.New(o.runner, o.workspaceBackend)
 	o.addManager(o.hook)
 
-	o.command = cmdstate.NewManager(o.runner, o.workspaceBackend)
+	o.command = cmdstate.New(o.runner, o.workspaceBackend)
 	o.addManager(o.command)
+
+	o.ifacemgr = ifacestate.New(s, o.runner, o.workspaceBackend)
+	o.addManager(o.ifacemgr)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)

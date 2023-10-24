@@ -59,7 +59,7 @@ func (s *workspaceHandlers) SetUpTest(c *check.C) {
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wrkmgr = workspacestate.NewWorkspaceManager(s.state, s.runner, s.backend)
+	s.wrkmgr = workspacestate.New(s.state, s.runner, s.backend)
 
 	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {

@@ -203,7 +203,7 @@ func (s *LogSuite) TestStartupTimestampMsg(c *C) {
 	})
 	logger.StartupStageTimestamp("foo to bar")
 	msg := strings.TrimSpace(s.logbuf.String())
-	c.Assert(msg, Matches, `.* DEBUG: -- snap startup \{"stage":"foo to bar", "time":"1652697792.022312"\}$`)
+	c.Assert(msg, Matches, `.* DEBUG: -- sdk startup \{"stage":"foo to bar", "time":"1652697792.022312"\}$`)
 
 	var m msgTimestamp
 	start := strings.LastIndex(msg, "{")

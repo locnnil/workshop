@@ -21,7 +21,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 
@@ -40,11 +40,11 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workspacebackend.Sdk{Name: "sdk", Channel: "latest/stable"}
+	sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	task := sdkstate.Retrieve(i.state, &sdk)
 
-	var s workspacebackend.Sdk
+	var s workspacebackend.SdkRecord
 	task.Get("sdk-setup", &s)
 	c.Check(s, check.DeepEquals, sdk)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")

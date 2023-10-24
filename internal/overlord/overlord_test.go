@@ -202,7 +202,7 @@ func (wm *witnessManager) Ensure() error {
 }
 
 func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, workspacebackend.NewFakeWorkspaceBackend(), nil)
 	c.Assert(err, IsNil)
 
 	err = o.StartUp()
@@ -215,7 +215,7 @@ func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
 }
 
 func (ovs *overlordSuite) TestUnknownTasks(c *C) {
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, workspacebackend.NewFakeWorkspaceBackend(), nil)
 	c.Assert(err, IsNil)
 
 	// unknown tasks are ignored and succeed
@@ -537,7 +537,7 @@ func (ovs *overlordSuite) TestOverlordStartUpSetsStartOfOperation(c *C) {
 	restoreIntv := overlord.FakePruneInterval(100*time.Millisecond, 1000*time.Millisecond, 1*time.Hour)
 	defer restoreIntv()
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, workspacebackend.NewFakeWorkspaceBackend(), nil)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -559,7 +559,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneDoesntAbortShortlyAfterStartOfOpera
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, workspacebackend.NewFakeWorkspaceBackend(), nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to unknown kind
@@ -610,7 +610,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneAbortsOld(c *C) {
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, workspacebackend.NewFakeWorkspaceBackend(), nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to having unknown kind

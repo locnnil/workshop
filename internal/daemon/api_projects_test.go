@@ -29,15 +29,6 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects", nil)
 	c.Assert(err, check.IsNil)
 
-	b := s.d.overlord.WorkspaceBackend()
-	// will be called when project is created
-	numCalls := 0
-	ids := []string{"b8639dea", "a8639dea"}
-	restoreId := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workspacebackend.NewProjectId)
-	defer restoreId()
-	b.CreateOrLoadProject(req.Context(), "/home/testuser/project")
-	b.CreateOrLoadProject(req.Context(), "/home/testuser/project2")
-
 	projectsCmd := apiCmd("/v1/projects")
 
 	// Execute
@@ -50,8 +41,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workspacebackend.Project{
-		{Path: "/home/testuser/project", ProjectId: "b8639dea"},
-		{Path: "/home/testuser/project2", ProjectId: "a8639dea"},
+		{Path: s.project.Path, ProjectId: s.project.ProjectId},
 	})
 }
 
@@ -118,7 +108,7 @@ base: ubuntu@20.04
 	c.Assert(err, check.IsNil)
 	ws, err := b.GetWorkspace(req.Context(), "ws-test")
 	c.Assert(err, check.IsNil)
-	ws.LinkSdk(req.Context(), &sdk.SdkInfo{Name: "go", Channel: "latest/stable", Revision: 234})
+	ws.LinkSdk(req.Context(), sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
 	rsp := v1GetProjectWorkspaces(projectsCmd, req, nil).(*resp)

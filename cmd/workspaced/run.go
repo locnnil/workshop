@@ -96,7 +96,7 @@ func runWatchdog(d *daemon.Daemon) (*time.Ticker, error) {
 		// Not running under systemd.
 		return nil, nil
 	}
-	usec, err := strconv.ParseFloat(os.Getenv("WATCHDOG_USEC"), 10)
+	usec, err := strconv.ParseFloat(os.Getenv("WATCHDOG_USEC"), 32)
 	if usec == 0 || err != nil {
 		return nil, fmt.Errorf("cannot parse WATCHDOG_USEC: %q", os.Getenv("WATCHDOG_USEC"))
 	}
@@ -164,7 +164,9 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	}
 
 	d.Version = version.Version
-	d.Start()
+	if err = d.Start(); err != nil {
+		return err
+	}
 
 	watchdog, err := runWatchdog(d)
 	if err != nil {

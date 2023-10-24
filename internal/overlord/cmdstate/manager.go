@@ -29,8 +29,8 @@ type CommandManager struct {
 	backend         workspacebackend.WorkspaceBackend
 }
 
-// NewManager creates a new CommandManager.
-func NewManager(runner *state.TaskRunner, backend workspacebackend.WorkspaceBackend) *CommandManager {
+// New creates a new CommandManager.
+func New(runner *state.TaskRunner, backend workspacebackend.WorkspaceBackend) *CommandManager {
 	manager := &CommandManager{
 		executions:     make(map[string]*execution),
 		executionsCond: sync.NewCond(&sync.Mutex{}),

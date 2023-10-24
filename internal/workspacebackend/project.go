@@ -1,7 +1,9 @@
 package workspacebackend
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -24,6 +26,25 @@ var validWorkspaceFilename = regexp.MustCompile(`^\.workspace\.(?P<name>[a-z_][a
 type Project struct {
 	Path      string `json:"path"`
 	ProjectId string `json:"id"`
+}
+
+func ReadProjects(jsonData []byte) ([]*Project, error) {
+	var projects = make([]*Project, 0)
+	if len(jsonData) == 0 {
+		return projects, nil
+	}
+	if err := json.Unmarshal([]byte(jsonData), &projects); err != nil {
+		return nil, fmt.Errorf("invalid projects record: %w", err)
+	}
+	return projects, nil
+}
+
+func SaveProjects(projects []*Project) (string, error) {
+	buf, err := json.Marshal(projects)
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
 }
 
 func LockPath(path string) string {

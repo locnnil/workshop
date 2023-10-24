@@ -157,20 +157,20 @@ func (s *envSuite) TestOSEnvironment(c *C) {
 }
 
 func (s *envSuite) TestOSEnvironmentUnescapeUnsafe(c *C) {
-	os.Setenv("SNAPD_UNSAFE_PREFIX_A", "a")
-	defer os.Unsetenv("SNAPD_UNSAFE_PREFIX_A")
-	os.Setenv("SNAPDEXTRA", "2")
-	defer os.Unsetenv("SNAPDEXTRA")
-	os.Setenv("SNAPD_UNSAFE_PREFIX_SNAPDEXTRA", "1")
-	defer os.Unsetenv("SNAPD_UNSAFE_PREFIX_SNAPDEXTRA")
+	os.Setenv("WORKSPACED_UNSAFE_PREFIX_A", "a")
+	defer os.Unsetenv("WORKSPACED_UNSAFE_PREFIX_A")
+	os.Setenv("SDKDEXTRA", "2")
+	defer os.Unsetenv("SDKDEXTRA")
+	os.Setenv("WORKSPACED_UNSAFE_PREFIX_SDKDEXTRA", "1")
+	defer os.Unsetenv("WORKSPACED_UNSAFE_PREFIX_SDKDEXTRA")
 
-	env, err := osutil.OSEnvironmentUnescapeUnsafe("SNAPD_UNSAFE_PREFIX_")
+	env, err := osutil.OSEnvironmentUnescapeUnsafe("WORKSPACED_UNSAFE_PREFIX_")
 	c.Assert(err, IsNil)
-	// -1 because only the unescaped SNAPDEXTRA is kept
+	// -1 because only the unescaped SDKDEXTRA is kept
 	c.Check(len(os.Environ())-1, Equals, len(env.ForExec()))
 	c.Check(os.Getenv("PATH"), Equals, env["PATH"])
 	c.Check("a", Equals, env["A"])
-	c.Check("2", Equals, env["SNAPDEXTRA"])
+	c.Check("2", Equals, env["SDKDEXTRA"])
 }
 
 func (s *envSuite) TestGet(c *C) {
@@ -245,16 +245,16 @@ func (s *envSuite) TestExtendWithExpandedOfNil(c *C) {
 
 func (s *envSuite) TestExtendWithExpandedForEnvOverride(c *C) {
 	env := osutil.Environment{"PATH": "system-value"}
-	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "snap-level-override"))
+	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "sdk-level-override"))
 	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "app-level-override"))
 	c.Check(env, DeepEquals, osutil.Environment{"PATH": "app-level-override"})
 }
 
 func (s *envSuite) TestExtendWithExpandedForEnvExpansion(c *C) {
 	env := osutil.Environment{"PATH": "system-value"}
-	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "snap-ext:$PATH"))
+	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "sdk-ext:$PATH"))
 	env.ExtendWithExpanded(osutil.NewExpandableEnv("PATH", "app-ext:$PATH"))
-	c.Check(env, DeepEquals, osutil.Environment{"PATH": "app-ext:snap-ext:system-value"})
+	c.Check(env, DeepEquals, osutil.Environment{"PATH": "app-ext:sdk-ext:system-value"})
 }
 
 func (s *envSuite) TestExtendWithExpandedVarious(c *C) {
@@ -291,42 +291,42 @@ func (s *envSuite) TestExtendWithExpandedVarious(c *C) {
 
 func (s *envSuite) TestForExecEscapeUnsafe(c *C) {
 	env := osutil.Environment{
-		"FOO":             "foo",
-		"LD_PRELOAD":      "/opt/lib/libfunky.so",
-		"SNAP_DATA":       "snap-data",
-		"SNAP_SAVED_WHAT": "what", // will be dropped
-		"SNAP_SAVED":      "snap-saved",
-		"SNAP_S":          "snap-s",
-		"XDG_STUFF":       "xdg-stuff", // will be prefixed
-		"TMPDIR":          "/var/tmp",  // will be prefixed
+		"FOO":            "foo",
+		"LD_PRELOAD":     "/opt/lib/libfunky.so",
+		"SDK_DATA":       "sdk-data",
+		"SDK_SAVED_WHAT": "what", // will be dropped
+		"SDK_SAVED":      "sdk-saved",
+		"SDK_S":          "sdk-s",
+		"XDG_STUFF":      "xdg-stuff", // will be prefixed
+		"TMPDIR":         "/var/tmp",  // will be prefixed
 	}
-	raw := env.ForExecEscapeUnsafe("SNAP_SAVED_")
+	raw := env.ForExecEscapeUnsafe("SDK_SAVED_")
 	c.Check(raw, DeepEquals, []string{
 		"FOO=foo",
-		"SNAP_DATA=snap-data",
-		"SNAP_S=snap-s",
-		"SNAP_SAVED=snap-saved",
-		"SNAP_SAVED_LD_PRELOAD=/opt/lib/libfunky.so",
-		"SNAP_SAVED_TMPDIR=/var/tmp",
+		"SDK_DATA=sdk-data",
+		"SDK_S=sdk-s",
+		"SDK_SAVED=sdk-saved",
+		"SDK_SAVED_LD_PRELOAD=/opt/lib/libfunky.so",
+		"SDK_SAVED_TMPDIR=/var/tmp",
 		"XDG_STUFF=xdg-stuff",
 	})
 }
 
 func (s *envSuite) TestForExecEscapeUnsafeNothingToEscape(c *C) {
 	env := osutil.Environment{
-		"FOO":             "foo",
-		"SNAP_DATA":       "snap-data",
-		"SNAP_SAVED_WHAT": "what",
-		"SNAP_SAVED":      "snap-saved",
-		"SNAP_S":          "snap-s",
-		"XDG_STUFF":       "xdg-stuff",
+		"FOO":            "foo",
+		"SDK_DATA":       "sdk-data",
+		"SDK_SAVED_WHAT": "what",
+		"SDK_SAVED":      "sdk-saved",
+		"SDK_S":          "sdk-s",
+		"XDG_STUFF":      "xdg-stuff",
 	}
-	raw := env.ForExecEscapeUnsafe("SNAP_SAVED_")
+	raw := env.ForExecEscapeUnsafe("SDK_SAVED_")
 	c.Check(raw, DeepEquals, []string{
 		"FOO=foo",
-		"SNAP_DATA=snap-data",
-		"SNAP_S=snap-s",
-		"SNAP_SAVED=snap-saved",
+		"SDK_DATA=sdk-data",
+		"SDK_S=sdk-s",
+		"SDK_SAVED=sdk-saved",
 		"XDG_STUFF=xdg-stuff",
 	})
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/sdk"
 	"golang.org/x/exp/maps"
 )
@@ -61,7 +63,7 @@ type Workspace struct {
 	base      string
 	Name      string
 	Devices   map[string]map[string]string
-	content   map[string]*sdk.SdkInfo
+	content   map[string]sdk.Setup
 	errs      []WorkspaceErrorType
 	running   bool
 	state     WorkspaceState
@@ -91,7 +93,7 @@ func (w *Workspace) AddError(err WorkspaceErrorType) {
 	w.errs = append(w.errs, err)
 }
 
-func (w *Workspace) Content() []*sdk.SdkInfo {
+func (w *Workspace) Content() []sdk.Setup {
 	return maps.Values(w.content)
 }
 
@@ -111,7 +113,7 @@ func (w *Workspace) SetState(st WorkspaceState) {
 	w.state = st
 }
 
-func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+func (w *Workspace) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	s.InstallTime = InstallTimeNow()
 	w.content[s.Name] = s
 
@@ -130,8 +132,8 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		return err
 	}
 
-	/* Update the current link to point out to the newly installed SDK */
-	sdkPath := filepath.Join(sdk.WorkspaceSdksDir, s.Name)
+	// Update the current link to point out to the newly installed SDK
+	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, s.Name)
 
 	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
 	if err != nil {
@@ -143,7 +145,7 @@ func (w *Workspace) LinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
 		filepath.Join(sdkPath, "current"), true)
 }
 
-func (w *Workspace) UnlinkSdk(ctx context.Context, s *sdk.SdkInfo) error {
+func (w *Workspace) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	delete(w.content, s.Name)
 	newSequence, err := json.Marshal(w.content)
 	if err != nil {
@@ -217,4 +219,49 @@ func WorkspaceName(instance string) string {
 
 func WorkspaceStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
+}
+
+// Reads information about the installed SDK from its meta file
+
+// NOTE: we have to accept the filesystem as an argument to ensure it is the
+// callers responsibility to get and close the filesystem due to the LXD's bug:
+// if the filesystem of the container is not closed, it maintains the underlying
+// SFTP connection which stops the container from stoppping.
+func (w *Workspace) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+	wsfs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer wsfs.Close()
+
+	sdkPath := sdk.SdkCurrentPath(s.Name)
+	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	defer sdkYamlFile.Close()
+
+	yamlData, err := io.ReadAll(sdkYamlFile)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := sdk.ReadSdkInfo(yamlData, s)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
+func (w *Workspace) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
+	var infos = make([]*sdk.Info, 0, len(w.content))
+	for _, sdk := range w.content {
+		info, err := w.SdkInfo(ctx, sdk)
+		if err != nil {
+			return nil, err
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
 }

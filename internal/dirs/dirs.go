@@ -11,10 +11,15 @@ import (
 	"github.com/spf13/afero"
 )
 
-// defaultWorkspaceDir is the Workspace directory used if $WORKSPACE is not set. It is
-// created by the daemon ("workspaced run") if it doesn't exist, and also used by
-// the workspace client.
-const defaultWorkspaceDir = "/var/lib/workspace/default"
+const (
+	// defaultWorkspaceDir is the Workspace directory used if $WORKSPACE is not set. It is
+	// created by the daemon ("workspaced run") if it doesn't exist, and also used by
+	// the workspace client.
+	defaultWorkspaceDir = "/var/lib/workspace/default"
+
+	// default root directory path for the SDKs to be installed into in a workspace
+	WorkspaceSdksDir = "/var/lib/workspace/sdk"
+)
 
 var (
 	SdkDir          string

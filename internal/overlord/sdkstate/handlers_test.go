@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/canonical/workspace/internal/dirs"
 	"github.com/canonical/workspace/internal/overlord"
 	"github.com/canonical/workspace/internal/overlord/sdkstate"
 	"github.com/canonical/workspace/internal/overlord/state"
@@ -71,7 +72,7 @@ func (s *H) SetUpTest(c *check.C) {
 
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wsmgr = sdkstate.NewSdkManager(s.runner, s.backend)
+	s.wsmgr = sdkstate.New(s.runner, s.backend)
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
@@ -89,9 +90,30 @@ func (s *H) SetUpTest(c *check.C) {
 
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
+sdks:
+  test:
+    channel: latest/stable
 `), 0644)
 	c.Assert(err, check.IsNil)
 	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	var sdkYaml = `
+name: test
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: content
+    target: /project/sub
+`
+	s.mockTestSdk(c, sdkYaml)
+}
+
+func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
+	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, "test", "current", "meta", "sdk.yaml")
+	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 
@@ -103,7 +125,7 @@ func (s *H) TearDownTest(c *check.C) {
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -127,8 +149,8 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"tar",
 		"--extract",
 		"--file",
-		"/root/new_2.sdk",
-		"--one-top-level=/var/lib/workspace/sdk/new/2",
+		"/root/test_2.sdk",
+		"--one-top-level=/var/lib/workspace/sdk/test/2",
 		"--no-same-owner",
 	})
 
@@ -141,7 +163,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -173,7 +195,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -193,7 +215,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
 		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
-		fs.MkdirAll(filepath.Join(sdk.WorkspaceSdksDir, "new"), 0755)
+		fs.MkdirAll(filepath.Join(dirs.WorkspaceSdksDir, "new"), 0755)
 		return workspacebackend.ExecContext{}, nil
 	}
 
@@ -210,7 +232,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	/* make sure SDK dir was removed */
 	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	exist, _ := afero.Exists(fs, filepath.Join(sdk.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkspaceSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
 }
 
@@ -218,9 +240,10 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+
 	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk)
+	t.Set("sdk-setup", testSdk)
 	t1 := s.state.NewTask("link-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
@@ -240,14 +263,54 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
-	c.Check(*info[0], check.DeepEquals, newSdk)
+	c.Check(info[0], check.DeepEquals, testSdk)
+
+	sdkInfo, err := props.SdkInfo(s.ctx, info[0])
+	c.Assert(err, check.IsNil)
+	c.Assert(sdkInfo.Plugs, check.HasLen, 1)
+	c.Assert(sdkInfo.Slots, check.HasLen, 0)
+}
+
+func (s *H) TestDoLinkSdkFailPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	var sdkYaml = `
+name: test
+base: ubuntu@22.04
+slots:
+  slot:
+    interface: content
+`
+	s.mockTestSdk(c, sdkYaml)
+
+	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", testSdk)
+	t1 := s.state.NewTask("link-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkspaceProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
 }
 
 func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.SdkInfo{Name: "new", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")

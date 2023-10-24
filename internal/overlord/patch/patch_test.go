@@ -86,7 +86,7 @@ func (s *patchSuite) TestNoDowngrade(c *C) {
 	st.Set("patch-level", 3)
 	st.Unlock()
 	err := patch.Apply(st)
-	c.Assert(err, ErrorMatches, `cannot downgrade: snapd is too old for the current system state \(patch level 3\)`)
+	c.Assert(err, ErrorMatches, `cannot downgrade: workspaced is too old for the current system state \(patch level 3\)`)
 }
 
 func (s *patchSuite) TestApply(c *C) {
@@ -238,7 +238,7 @@ func (s *patchSuite) TestMissing(c *C) {
 	st.Set("patch-level", 1)
 	st.Unlock()
 	err := patch.Apply(st)
-	c.Assert(err, ErrorMatches, `cannot upgrade: snapd is too new for the current system state \(patch level 1\)`)
+	c.Assert(err, ErrorMatches, `cannot upgrade: workspaced is too new for the current system state \(patch level 1\)`)
 }
 
 func (s *patchSuite) TestDowngradeSublevel(c *C) {
@@ -350,22 +350,22 @@ func (s *patchSuite) testMaybeResetPatchLevel6(c *C, snapdVersion, lastVersion s
 	c.Assert(st.Get("patch-sublevel", &sublevel), IsNil)
 	c.Assert(st.Get("patch-sublevel-last-version", &ver), IsNil)
 	c.Assert(st.Get("patch-sublevel-reset", &lastRefresh), testutil.ErrorIs, state.ErrNoState)
-	c.Check(ver, Equals, "snapd-version-1")
+	c.Check(ver, Equals, "workspaced-version-1")
 	c.Check(level, Equals, 6)
 	c.Check(sublevel, Equals, 2)
 }
 
 func (s *patchSuite) TestSameSnapdVersionLvl60PatchesNotApplied(c *C) {
-	// sublevel patches not applied if snapd version is same
-	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "snapd-version-1", nil)
+	// sublevel patches not applied if workspaced version is same
+	s.testMaybeResetPatchLevel6(c, "workspaced-version-1", "workspaced-version-1", nil)
 }
 
 func (s *patchSuite) TestDifferentSnapdVersionPatchLevel6NoLastVersion(c *C) {
-	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "", []int{61, 62})
+	s.testMaybeResetPatchLevel6(c, "workspaced-version-1", "", []int{61, 62})
 }
 
 func (s *patchSuite) TestDifferentSnapdVersionPatchLevel6(c *C) {
-	s.testMaybeResetPatchLevel6(c, "snapd-version-1", "snapd-version-2", []int{61, 62})
+	s.testMaybeResetPatchLevel6(c, "workspaced-version-1", "workspaced-version-2", []int{61, 62})
 }
 
 func (s *patchSuite) TestValidity(c *C) {
