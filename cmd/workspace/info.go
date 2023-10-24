@@ -14,22 +14,22 @@ type CmdInfo struct {
 
 func (c *CmdInfo) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "info <WORKSPACE>",
+		Use:   "info <WORKSHOP>",
 		Args:  cobra.RangeArgs(1, 1),
-		Short: "Print the current status and details of a workspace as YAML.",
+		Short: "Print the current status and details of a workshop as YAML.",
 		Long: `
 This command outputs the basic settings, current status and individual SDK
-details for a workspace, formatting them as YAML. Specifically, it prints:
+details for a workshop, formatting them as YAML. Specifically, it prints:
 
-- Essential workspace attributes, such as name, base and project directory
-- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workspace
+- Essential workshop attributes, such as name, base and project directory
+- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workshop
 - Individual SDK details, such as name, channel, installation date and revision
 
 Notes:
 - Avoid assumptions based on SDK channels: 'latest/stable' may be neither
 `,
 
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -51,27 +51,27 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	workspace, err := c.client.Workspace(project.Id, av[0])
+	workshop, err := c.client.Workspace(project.Id, av[0])
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 
-	fmt.Fprintf(w, "name:\t%s\n", workspace.Name)
-	fmt.Fprintf(w, "base:\t%s\n", workspace.Base)
+	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
+	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
 	fmt.Fprintf(w, "project:\t%s\n", project.Path)
-	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workspace.State))
-	notes := strings.Join(workspace.Notes, ",")
-	if len(workspace.Notes) == 0 {
+	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.State))
+	notes := strings.Join(workshop.Notes, ",")
+	if len(workshop.Notes) == 0 {
 		notes = "-"
 	}
 	fmt.Fprintf(w, "notes:\t%s\n", notes)
 
-	if len(workspace.Content) > 0 {
+	if len(workshop.Content) > 0 {
 		fmt.Fprintf(w, "content:\n")
 
-		for _, sdk := range workspace.Content {
+		for _, sdk := range workshop.Content {
 			fmt.Fprintf(w, "\t%s:\n", sdk.Name)
 			installTime := sdk.InstallTime.Format("2006-01-02")
 			if sdk.InstallTime.IsZero() {

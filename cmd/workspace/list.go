@@ -23,21 +23,21 @@ func (c *CmdList) Command() *cobra.Command {
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(0),
 		Short: "List project workspaces.",
-		Long:  `
+		Long: `
 This command enumerates all workspaces in the project, printing a compact list:
 
-- Project: absolute pathname of the project where this workspace belongs
-- Workspace: workspace name, as set by its definition
-- State: workspace status, such as *Off*, *Ready*, *Pending* and so on
-- Notes: internal remarks on the overall state of the workspace
+- Project: absolute pathname of the project where this workshop belongs
+- Workshop: workshop name, as set by its definition
+- State: workshop status, such as *Off*, *Ready*, *Pending* and so on
+- Notes: internal remarks on the overall state of the workshop
 
 The '--global' option lists all workspaces from *all* projects in the system;
 however, it doesn't include any that are *Off*.
 
 Notes:
-- For details of a single workspace, use 'workspace info' instead
+- For details of a single workshop, use 'workshop info' instead
 `,
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	cmd.Flags().BoolVar(&c.global, "global", false, "List workspaces from all projects in the system")
@@ -101,7 +101,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 				// We may not be aware of all the project directories on the system
 				// and, thus, will not know all the available Off workspaces (contrary
 				// to the workspaces that are in any other state, i.e. running instances, which we always know
-				// about from the workspace backend)
+				// about from the workshop backend)
 				if j.State != "Off" {
 					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))
 				}

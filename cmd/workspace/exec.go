@@ -50,12 +50,12 @@ stderr are output locally.
 To avoid confusion, exec options may be separated from the command and its
 arguments using "--", for example:
 
-workspace exec -- echo -n foo bar
+workshop exec -- echo -n foo bar
 `
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec <workspace>",
+		Use:   "exec <workshop>",
 		Args:  cobra.MinimumNArgs(1),
 		Short: shortExecHelp,
 		Long:  longExecHelp,
@@ -144,7 +144,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	// TODO: the lack of separate output in LXD exec when executing a command in
-	// an interactive mode begets quirky things. Consider this: workspace exec
+	// an interactive mode begets quirky things. Consider this: workshop exec
 	// empty -- ls -R / 2>/dev/null Given that the command will be executed in
 	// the interactive mode (stdin, stdout both point to the terminal), even if
 	// ls produces access errors, those will not be filtered out to null as LXD

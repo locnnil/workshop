@@ -14,22 +14,22 @@ type CmdStart struct {
 
 func (c *CmdStart) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "start <WORKSPACE>...",
+		Use:   "start <WORKSHOP>...",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Start one or many workspaces.",
 		Long: `
 This command activates the workspaces listed as arguments. For each one, it:
 
-- Makes sure the workspace was actually launched
-- Activates the workspace for use and sets it to *Ready*
+- Makes sure the workshop was actually launched
+- Activates the workshop for use and sets it to *Ready*
 
 If multiple workspaces are listed and an error occurs,
 the operation is aborted and no workspaces are started.
 
 Notes:
-- If a workspace is already started or wasn't yet launched, an error occurs
+- If a workshop is already started or wasn't yet launched, an error occurs
 - When interrupted, the command attempts to gracefully revert its actions
-- To stop a started workspace, use 'workspace stop'
+- To stop a started workshop, use 'workshop stop'
 `,
 		RunE: c.Run,
 	}

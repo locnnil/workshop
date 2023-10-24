@@ -21,7 +21,7 @@ func (ch *clientMixin) setClient(cli *client.Client) {
 }
 
 var rootCmd = &cobra.Command{
-	Use:              "workspace",
+	Use:              "workshop",
 	SilenceErrors:    false,
 	SilenceUsage:     true,
 	TraverseChildren: true,

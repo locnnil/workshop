@@ -17,31 +17,31 @@ type CmdRefresh struct {
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSPACE>...",
+		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Update workspaces according to their definitions.",
 		Long: `
 This command updates the workspaces listed as arguments by going over their
-definitions once again. For each workspace, it:
+definitions once again. For each workshop, it:
 
-- Saves the working state of the workspace
-- Checks the workspace definition and identifies any updates required
+- Saves the working state of the workshop
+- Checks the workshop definition and identifies any updates required
 - Retrieves the updated components
-- Applies and verifies the changes to the workspace
-- Restores the working state of the workspace
+- Applies and verifies the changes to the workshop
+- Restores the working state of the workshop
 
 The '--wait-on-error' option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
-This option can only be used with a single workspace.
+This option can only be used with a single workshop.
 
 If multiple workspaces are listed and an error occurs,
 the operation is aborted and reverted for *all* of them.
 
 Notes:
-- The workspace must be *Ready* to be refreshed
-- To construct a newly defined workspace, use 'workspace launch' instead
+- The workshop must be *Ready* to be refreshed
+- To construct a newly defined workshop, use 'workshop launch' instead
 - Throughout the refresh, all affected workspaces remain *Pending*
-- If the refresh removes an SDK from the workspace, the SDK state isn't saved
+- If the refresh removes an SDK from the workshop, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
 `,
 
@@ -115,9 +115,9 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 		if err == errWaitOnError {
-			return fmt.Errorf("cannot refresh; fix the errors reported by \"workspace info\",\n"+
-				"then run \"workspace refresh --continue %s\".\n"+
-				"To abort and revert, run \"workspace refresh --abort %s\"", av[0], av[0])
+			return fmt.Errorf("cannot refresh; fix the errors reported by \"workshop info\",\n"+
+				"then run \"workshop refresh --continue %s\".\n"+
+				"To abort and revert, run \"workshop refresh --abort %s\"", av[0], av[0])
 		}
 
 		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))

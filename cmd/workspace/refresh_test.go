@@ -45,7 +45,7 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
     "ready": true,
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting the \"ws\" workspace refresh..."], "data":{"workspace":"ws"}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting the \"ws\" workshop refresh..."], "data":{"workshop":"ws"}}]
 }}`
 
 var mockChangeWithError = `{"type": "sync", "result":{
@@ -57,7 +57,7 @@ var mockChangeWithError = `{"type": "sync", "result":{
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
 	"err": "no answer",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z ERROR No answer found"], "data":{"workspace":["ws","ws-1"]}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z ERROR No answer found"], "data":{"workshop":["ws","ws-1"]}}]
 }}`
 
 func (m *WorkspaceRefresh) SetUpTest(c *check.C) {
@@ -157,7 +157,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot refresh; fix the errors reported by "workspace info",\nthen run "workspace refresh --continue ws".\nTo abort and revert, run "workspace refresh --abort ws"`)
+	c.Assert(err, check.ErrorMatches, `cannot refresh; fix the errors reported by "workshop info",\nthen run "workshop refresh --continue ws".\nTo abort and revert, run "workshop refresh --abort ws"`)
 }
 
 func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {

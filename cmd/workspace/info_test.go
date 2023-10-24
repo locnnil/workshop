@@ -25,7 +25,7 @@ var mockWorkspaceWithContent = `{"type":"sync","status-code":200,"status":"OK","
 
 func (m *WorkspaceInfo) TestWorkspaceInfo(c *check.C) {
 	cmd := &CmdInfo{}
-	workspace := "ws"
+	workshop := "ws"
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -37,7 +37,7 @@ func (m *WorkspaceInfo) TestWorkspaceInfo(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces/%s", m.prjId, workspace))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces/%s", m.prjId, workshop))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockWorkspaceWithContent)
 		default:
@@ -45,7 +45,7 @@ func (m *WorkspaceInfo) TestWorkspaceInfo(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{workspace})
+	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
 base:     ubuntu@22.04

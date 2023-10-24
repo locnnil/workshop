@@ -47,7 +47,7 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
-var abortLogMessage = regexp.MustCompile(`^Aborting the \".+\" workspace refresh...$`)
+var abortLogMessage = regexp.MustCompile(`^Aborting the \".+\" workshop refresh...$`)
 
 func stripAbortMessage(str string) string {
 	i := strings.Index(str, " ")
@@ -70,7 +70,7 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 	go func() {
 		sig := <-c
 		if sig != nil && wmx.skipAbort {
-			fmt.Fprintln(Stdout, "cannot interrupt: it may break the workspace, please wait until the operation is finished")
+			fmt.Fprintln(Stdout, "cannot interrupt: it may break the workshop, please wait until the operation is finished")
 		}
 		// sig is nil if c was closed
 		if sig == nil || wmx.skipAbort {
