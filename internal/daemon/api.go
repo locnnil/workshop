@@ -17,7 +17,7 @@ package daemon
 import (
 	"github.com/gorilla/mux"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 var api = []*Command{{

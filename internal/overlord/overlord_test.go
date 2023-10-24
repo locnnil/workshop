@@ -28,14 +28,14 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/version"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/patch"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/version"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 func TestOverlord(t *testing.T) { TestingT(t) }

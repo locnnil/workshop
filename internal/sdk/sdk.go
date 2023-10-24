@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/metautil"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/metautil"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 )

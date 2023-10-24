@@ -22,7 +22,7 @@ package interfaces
 import (
 	"sort"
 
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type byConnRef []*ConnRef

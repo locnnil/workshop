@@ -17,8 +17,8 @@ package standby
 import (
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 var standbyWait = 5 * time.Second

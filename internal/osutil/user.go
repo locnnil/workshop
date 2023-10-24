@@ -20,7 +20,7 @@ import (
 	"os/user"
 	"strconv"
 
-	"github.com/canonical/workspace/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var (

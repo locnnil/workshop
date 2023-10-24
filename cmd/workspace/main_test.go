@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"os"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/testutil"
 	"gopkg.in/check.v1"
 )
 

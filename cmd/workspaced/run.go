@@ -22,13 +22,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/canonical/workspace/internal/daemon"
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/systemd"
-	"github.com/canonical/workspace/internal/version"
+	"github.com/canonical/workshop/internal/daemon"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/systemd"
+	"github.com/canonical/workshop/internal/version"
 
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workspacebackend"
 
 	"github.com/spf13/cobra"
 )

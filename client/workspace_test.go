@@ -3,7 +3,7 @@ package client_test
 import (
 	"time"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 	"gopkg.in/check.v1"
 )
 

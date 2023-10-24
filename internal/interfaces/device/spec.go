@@ -1,9 +1,9 @@
 package device
 
 import (
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	"golang.org/x/exp/maps"
 )
 

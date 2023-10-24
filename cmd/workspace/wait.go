@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/progress"
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/x-go/i18n"
 )
 

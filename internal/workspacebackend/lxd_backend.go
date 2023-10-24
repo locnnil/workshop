@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"

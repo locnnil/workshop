@@ -33,9 +33,9 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 // Hook up check.v1 into the "go test" runner

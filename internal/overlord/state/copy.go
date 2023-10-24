@@ -29,8 +29,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/jsonutil"
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/jsonutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type checkpointOnlyBackend struct {

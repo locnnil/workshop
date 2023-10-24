@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 	"github.com/spf13/cobra"
 )
 

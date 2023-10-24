@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 // BeforePreparePlug sanitizes a plug with a given interface.

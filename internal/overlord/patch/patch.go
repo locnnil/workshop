@@ -23,9 +23,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/version"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/version"
 )
 
 // Level is the current implemented patch level of the state format and content.

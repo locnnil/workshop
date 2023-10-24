@@ -26,12 +26,12 @@ import (
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/interfaces/policy"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 type baseDeclSuite struct {

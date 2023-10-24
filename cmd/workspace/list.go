@@ -8,7 +8,7 @@ import (
 
 	"text/tabwriter"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )

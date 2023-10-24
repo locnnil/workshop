@@ -15,7 +15,7 @@
 package patch
 
 import (
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 func init() {

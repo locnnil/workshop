@@ -15,7 +15,7 @@
 package progresstest
 
 import (
-	"github.com/canonical/workspace/internal/progress"
+	"github.com/canonical/workshop/internal/progress"
 )
 
 type Meter struct {

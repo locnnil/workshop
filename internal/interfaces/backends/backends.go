@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/device"
 )
 
 func All() []interfaces.SecurityBackend {

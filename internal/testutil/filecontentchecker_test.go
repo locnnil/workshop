@@ -21,7 +21,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	. "github.com/canonical/workspace/internal/testutil"
+	. "github.com/canonical/workshop/internal/testutil"
 )
 
 type fileContentCheckerSuite struct{}

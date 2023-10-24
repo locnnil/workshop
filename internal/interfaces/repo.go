@@ -26,8 +26,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 // Repository stores all known plugs and slots and ifaces.

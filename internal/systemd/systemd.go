@@ -33,8 +33,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/osutil/squashfs"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/squashfs"
 )
 
 var (

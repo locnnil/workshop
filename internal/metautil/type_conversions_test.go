@@ -25,8 +25,8 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/metautil"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/metautil"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 type conversionssSuite struct{}

@@ -26,11 +26,11 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/interfaces/device"
-	"github.com/canonical/workspace/internal/interfaces/ifacetest"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type AllSuite struct{}

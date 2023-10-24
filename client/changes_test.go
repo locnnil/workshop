@@ -22,7 +22,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 )
 
 func (cs *clientSuite) TestClientChange(c *check.C) {

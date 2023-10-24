@@ -22,9 +22,9 @@ package ifacestate_test
 import (
 	"testing"
 
-	"github.com/canonical/workspace/internal/overlord/ifacestate"
-	"github.com/canonical/workspace/internal/overlord/ifacestate/schema"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
+	"github.com/canonical/workshop/internal/overlord/state"
 
 	"gopkg.in/check.v1"
 )

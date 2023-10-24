@@ -25,7 +25,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/interfaces/utils"
+	"github.com/canonical/workshop/internal/interfaces/utils"
 )
 
 func Test(t *testing.T) {

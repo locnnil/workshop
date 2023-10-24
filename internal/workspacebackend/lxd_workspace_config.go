@@ -3,7 +3,7 @@ package workspacebackend
 import (
 	"encoding/json"
 
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 func InstalledContent(lxdConfig map[string]string) (map[string]sdk.Setup, error) {

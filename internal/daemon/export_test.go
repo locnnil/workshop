@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 func FakeMuxVars(f func(*http.Request) map[string]string) (restore func()) {

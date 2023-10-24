@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"golang.org/x/exp/slices"
 )
 

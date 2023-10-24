@@ -27,16 +27,16 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/overlord/cmdstate"
-	"github.com/canonical/workspace/internal/overlord/hookstate"
-	"github.com/canonical/workspace/internal/overlord/ifacestate"
-	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/cmdstate"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/patch"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	workspace "github.com/canonical/workshop/internal/overlord/workspacestate"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 var (

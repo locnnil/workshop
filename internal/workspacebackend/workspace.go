@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/maps"
 )
 

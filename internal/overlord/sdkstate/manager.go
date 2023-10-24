@@ -1,9 +1,9 @@
 package sdkstate
 
 import (
-	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
-	backend "github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	backend "github.com/canonical/workshop/internal/workspacebackend"
 )
 
 type SdkManager struct {

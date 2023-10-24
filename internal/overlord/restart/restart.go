@@ -18,7 +18,7 @@ package restart
 import (
 	"errors"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 type RestartType int

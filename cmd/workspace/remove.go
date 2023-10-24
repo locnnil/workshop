@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
 )

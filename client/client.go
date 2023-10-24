@@ -31,8 +31,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/wsutil"
 )
 
 // SocketNotFoundError is the error type returned when the client fails

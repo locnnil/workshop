@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 type ResponseType string

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 type Backend struct {

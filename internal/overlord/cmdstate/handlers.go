@@ -29,12 +29,12 @@ import (
 	"github.com/lxc/lxd/shared/api"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/wsutil"
 
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
 )
 
 const (

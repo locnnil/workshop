@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/daemon"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/daemon"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
 	"gopkg.in/check.v1"
 )

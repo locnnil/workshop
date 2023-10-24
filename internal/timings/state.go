@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // TimingJSON and rootTimingsJSON aid in marshalling of flattened timings into state.

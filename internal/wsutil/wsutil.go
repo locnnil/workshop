@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/gorilla/websocket"
 )
 

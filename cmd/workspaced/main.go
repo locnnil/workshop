@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/spf13/cobra"
 )
 

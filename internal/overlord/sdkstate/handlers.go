@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/canonical/workspace/internal/dirs"
-	store "github.com/canonical/workspace/internal/fakestore"
-	"github.com/canonical/workspace/internal/interfaces/policy"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/dirs"
+	store "github.com/canonical/workshop/internal/fakestore"
+	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workspacebackend"
 
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
 
 	"github.com/spf13/afero"
 

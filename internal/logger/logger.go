@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 // A Logger is a fairly minimal logging tool.

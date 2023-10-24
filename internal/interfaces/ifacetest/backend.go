@@ -22,9 +22,9 @@ package ifacetest
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 // TestSecurityBackend is a security backend intended for testing.

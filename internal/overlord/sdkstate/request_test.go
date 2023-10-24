@@ -1,9 +1,9 @@
 package sdkstate_test
 
 import (
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	"gopkg.in/check.v1"
 )
 

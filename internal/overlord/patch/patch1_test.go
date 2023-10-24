@@ -21,8 +21,8 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/patch"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 // Analogous to patch1.go itself, this is available as inspiration for actual patch tests.

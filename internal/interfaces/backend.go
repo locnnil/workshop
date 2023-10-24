@@ -22,9 +22,9 @@ package interfaces
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/timings"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/timings"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 // SecurityBackend abstracts interactions between the interface system and the

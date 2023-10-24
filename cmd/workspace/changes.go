@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/timeutil"
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )

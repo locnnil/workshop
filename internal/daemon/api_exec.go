@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 type execPayload struct {

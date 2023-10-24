@@ -1,4 +1,4 @@
-module github.com/canonical/workspace
+module github.com/canonical/workshop
 
 go 1.19
 

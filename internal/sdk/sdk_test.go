@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 	"gopkg.in/check.v1"
 )
 

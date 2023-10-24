@@ -3,13 +3,13 @@ package ifacestate
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces"
 
-	backend "github.com/canonical/workspace/internal/interfaces/backends"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	backend "github.com/canonical/workshop/internal/interfaces/backends"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 type InterfaceManager struct {

@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 var (

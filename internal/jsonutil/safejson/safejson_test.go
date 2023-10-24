@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/jsonutil/safejson"
+	"github.com/canonical/workshop/internal/jsonutil/safejson"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }

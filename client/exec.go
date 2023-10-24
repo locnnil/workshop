@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/canonical/workshop/internal/wsutil"
 	"github.com/lxc/lxd/shared/api"
 	"golang.org/x/sys/unix"
 )

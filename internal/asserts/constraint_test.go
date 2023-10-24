@@ -26,9 +26,9 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/metautil"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/metautil"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 type attrMatcherSuite struct {

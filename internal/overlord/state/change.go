@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // Status is used for status values for changes and tasks.

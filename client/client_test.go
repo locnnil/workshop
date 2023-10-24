@@ -29,7 +29,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 )
 
 // Hook up check.v1 into the "go test" runner

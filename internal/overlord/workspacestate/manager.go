@@ -3,9 +3,9 @@ package workspacestate
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 type WorkspaceManager struct {

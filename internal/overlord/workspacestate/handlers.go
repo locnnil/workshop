@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/workspacebackend"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 
 	"gopkg.in/tomb.v2"
 )

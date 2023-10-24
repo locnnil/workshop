@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 type websocketConnectFunc func(r *http.Request, w http.ResponseWriter, task *state.Task, websocketID string) error

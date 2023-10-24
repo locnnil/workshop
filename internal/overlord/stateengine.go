@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 // StateManager is implemented by types responsible for observing

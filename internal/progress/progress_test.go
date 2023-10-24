@@ -21,8 +21,8 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/progress"
-	"github.com/canonical/workspace/internal/progress/progresstest"
+	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/progress/progresstest"
 )
 
 // Hook up check.v1 into the "go test" runner

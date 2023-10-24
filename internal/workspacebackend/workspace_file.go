@@ -8,7 +8,7 @@ import (
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type SdkRecord struct {

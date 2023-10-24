@@ -23,7 +23,7 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/sys/unix"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // MirrorToWebsocket mirrors PTY output from r (file descriptor fd) to the websocket.

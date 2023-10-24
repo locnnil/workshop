@@ -23,8 +23,8 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/standby"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/standby"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 // Hook up v1 into the "go test" runner

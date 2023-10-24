@@ -22,7 +22,7 @@ package testutil_test
 import (
 	"errors"
 
-	. "github.com/canonical/workspace/internal/testutil"
+	. "github.com/canonical/workshop/internal/testutil"
 
 	. "gopkg.in/check.v1"
 )

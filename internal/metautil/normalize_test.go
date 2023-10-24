@@ -24,7 +24,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/metautil"
+	"github.com/canonical/workshop/internal/metautil"
 )
 
 type normalizeTestSuite struct {

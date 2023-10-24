@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"

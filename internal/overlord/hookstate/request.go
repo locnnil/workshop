@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 func SetupHook(st *state.State, sdk *workspacebackend.SdkRecord, hook WorkspaceHookType) *state.Task {

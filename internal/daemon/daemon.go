@@ -36,15 +36,15 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/osutil/sys"
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/standby"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/systemd"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/standby"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/systemd"
+	"github.com/canonical/workshop/internal/workspacebackend"
 )
 
 var (

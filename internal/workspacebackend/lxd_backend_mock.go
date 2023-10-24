@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/lxc/lxd/shared/api"
 	"golang.org/x/exp/slices"
 )

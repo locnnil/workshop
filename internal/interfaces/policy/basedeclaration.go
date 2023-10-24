@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
 )
 
 // The headers of the builtin base-declaration describing the default

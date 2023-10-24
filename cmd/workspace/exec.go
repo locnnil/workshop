@@ -24,9 +24,9 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/canonical/workspace/client"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/ptyutil"
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/ptyutil"
 	"github.com/spf13/cobra"
 )
 

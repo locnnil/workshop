@@ -13,8 +13,8 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 )

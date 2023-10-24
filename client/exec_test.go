@@ -28,7 +28,7 @@ import (
 	"github.com/gorilla/websocket"
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 )
 
 type execSuite struct {

@@ -20,8 +20,8 @@ import (
 	"os/user"
 	"testing"
 
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workspacebackend"
 	"gopkg.in/check.v1"
 )
 
