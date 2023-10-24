@@ -1,13 +1,13 @@
-name: workspace
-title: Workspace
+name: workshop
+title: Workshop
 base: core22
 version: 0.1.0
-summary: Workspace automates intricate prerequisite setup for your development projects
+summary: Workshop automates intricate prerequisite setup for your development projects
 description: |
-  Workspace automates intricate prerequisite setup for your projects, allowing
+  Workshop automates intricate prerequisite setup for your projects, allowing
   you to define development environments in straightforward YAML.
 
-  The tool consumes the definition to create a contained workspace, installs the
+  The tool consumes the definition to create a contained workshop, installs the
   dependencies it lists as a number of SDKs, and attaches their life cycle hooks
   for run-time control.
 
@@ -17,13 +17,13 @@ description: |
 confinement: devmode
 grade: devel
 apps:
-  workspace:
+  workshop:
     environment:
-      WORKSPACE: ${SNAP_COMMON}
-    command: bin/workspace
+      WORKSHOP: ${SNAP_COMMON}
+    command: bin/workshop
   workspaced:
     environment:
-      WORKSPACE: ${SNAP_COMMON}
+      WORKSHOP: ${SNAP_COMMON}
     command: bin/workspaced run --create-dirs
     daemon: simple
     plugs:
@@ -31,7 +31,7 @@ apps:
       - lxd
       - network
 parts:
-  workspace:
+  workshop:
     plugin: go
     source: .
     source-type: local
