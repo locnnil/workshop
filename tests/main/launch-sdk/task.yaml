@@ -27,7 +27,7 @@ execute: |
   echo "SDKs must be configured correctly"
   # TODO reimplement using the workspace info when ready
   project_id=$(cat "$path"/.workspace.lock)
-  info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSPACE"/.workspace.socket http://localhost/v1/projects/"$project_id"/workspaces/ws)
+  info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSPACE"/.workshop.socket http://localhost/v1/projects/"$project_id"/workspaces/ws)
 
   echo "$info" | jq ".result.content[0].name" | MATCH "test-sdk-basic"
   echo "$info" | jq ".result.content[0].channel" | MATCH "latest/stable"

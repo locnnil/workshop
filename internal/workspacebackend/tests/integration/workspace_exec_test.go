@@ -37,7 +37,7 @@ type wsExec struct {
 var _ = check.Suite(&wsExec{})
 
 func (f *wsExec) SetUpSuite(c *check.C) {
-	socketPath := c.MkDir() + ".workspace.socket"
+	socketPath := c.MkDir() + ".workshop.socket"
 	f.be = workspacebackend.New()
 
 	d, err := daemon.New(&daemon.Options{

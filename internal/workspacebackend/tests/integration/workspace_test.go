@@ -37,7 +37,7 @@ type wsOps struct {
 var _ = check.Suite(&wsOps{})
 
 func (f *wsOps) SetUpTest(c *check.C) {
-	socketPath := c.MkDir() + ".workspace.socket"
+	socketPath := c.MkDir() + ".workshop.socket"
 	f.be = workspacebackend.New()
 
 	d, err := daemon.New(&daemon.Options{

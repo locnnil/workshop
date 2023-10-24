@@ -35,7 +35,7 @@ func getEnvPaths() (workspaceDir string, socketPath string) {
 	}
 	socketPath = os.Getenv("WORKSPACE_SOCKET")
 	if socketPath == "" {
-		socketPath = filepath.Join(workspaceDir, ".workspace.socket")
+		socketPath = filepath.Join(workspaceDir, ".workshop.socket")
 	}
 	return workspaceDir, socketPath
 }
