@@ -16,9 +16,12 @@ SDKs
 UI
 YAML
 backend
+cwd
 dev
 distributions
+env
 favicon
+gid
 gocheck
 gopkg
 https
@@ -31,7 +34,9 @@ reStructuredText
 readme
 roadmap
 snapd
+subcommand
 transactional
+uid
 webhook
 workshopd
 yaml

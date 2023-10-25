@@ -351,6 +351,40 @@ To abort the operation and recover the last operational state:
         "nimble" aborted
 
 
+.. _tut_exec:
+
+Execute commands
+----------------
+
+When the workshop is ready,
+execute arbitrary commands in it using :ref:`ref_workshop_exec`:
+
+.. code:: shell
+
+   workshop exec nimble go build
+
+
+To define environment variables and visibly separate the command's options:
+
+.. code:: shell
+
+   workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
+
+
+You can run an interactive shell as well:
+
+.. code:: shell
+
+   workshop exec nimble bash
+
+   uname -a
+
+       Linux nimble-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+
+Persistent changes are saved in the project directory and the workshop itself.
+
+
 .. _tut_remove:
 
 Remove a workshop

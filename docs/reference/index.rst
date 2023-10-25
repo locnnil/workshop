@@ -9,6 +9,7 @@ such as :option:`!--help` or :option:`!-h`:
    :maxdepth: 1
 
    workshop-changes
+   workshop-exec
    workshop-info
    workshop-launch
    workshop-list

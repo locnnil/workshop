@@ -41,21 +41,37 @@ type CmdExec struct {
 	NonInteractive bool          `short:"I"`
 }
 
-var shortExecHelp = "Execute a remote command and wait for it to finish"
+var shortExecHelp = "Run a command and wait for it to complete."
 var longExecHelp = `
-The exec command runs a remote command and waits for it to finish. The local
-stdin is sent as the input to the remote process, while the remote stdout and
-stderr are output locally.
+The 'exec' subcommand runs an arbitrary command in the specified workshop,
+waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To avoid confusion, exec options may be separated from the command and its
-arguments using "--", for example:
+To accept an 'exec' command, the workshop must be *Ready* or *Pending*.
+A command can run in two modes that determine how it handles standard streams:
 
-workshop exec -- echo -n foo bar
+- Interactively (for shell sessions)
+- Non-interactively (for scripts)
+
+To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
+'exec' deduces the mode based on the nature of its own streams:
+
+- If stdin and stdout are terminals, the mode is interactive
+- Otherwise, it's non-interactive
+
+To separate the 'exec' subcommand options from the command itself,
+use shell syntax such as '--':
+
+  $ workshop exec nimble -- echo -n foo bar
+
+Notes:
+- To start a workshop before running commands in it, use 'workshop start'
+- You can set the working directory, environment variables, user and group ID
+  for running the command in the workshop; reasonable defaults are provided
 `
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec <workshop>",
+		Use:   "exec <WORKSHOP>",
 		Args:  cobra.MinimumNArgs(1),
 		Short: shortExecHelp,
 		Long:  longExecHelp,
@@ -63,20 +79,20 @@ func (c *CmdExec) Command() *cobra.Command {
 	}
 
 	cmd.Flags().SortFlags = false
-	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Working directory to run command in")
-	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Environment variable to set (in 'FOO=bar' format)")
-	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "User ID to run command as")
-	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Group ID to run command as")
-	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "timeout after which to terminate command")
-	cmd.Flags().BoolVarP(&c.Interactive, "interactive", "i", false, "Force interactive mode (default mode if both stdin AND stdout are terminals)")
-	cmd.Flags().BoolVarP(&c.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode (default mode if stdin or stdout are NOT terminals)")
+	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
+	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'")
+	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "Run as a specific workshop user")
+	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
+	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "Set a timeout; valid units are 'ns', 'us'/'µs', 'ms', 's', 'm', 'h'")
+	cmd.Flags().BoolVarP(&c.Interactive, "interactive", "i", false, "Force interactive mode")
+	cmd.Flags().BoolVarP(&c.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
 
 	return cmd
 }
 
 func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	if cmd.Interactive && cmd.NonInteractive {
-		return errors.New("cannot use -i and -I at the same time")
+		return errors.New("'-i' incompatible with '-I'")
 	}
 
 	cli, err := client.New(&ClientConfig)
@@ -92,7 +108,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	command := av[1:]
-	logger.Debugf("Executing command %q", command)
+	logger.Debugf("Running %q", command)
 
 	// Set up environment variables.
 	env := make(map[string]string)
@@ -128,7 +144,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	if interactive && stdinIsTerminal {
 		oldState, err := ptyutil.MakeRaw(unix.Stdin)
 		if err != nil {
-			return fmt.Errorf("cannot change terminal to raw mode: %v", err)
+			return fmt.Errorf("cannot switch terminal to raw mode: %v", err)
 		}
 		defer ptyutil.Restore(unix.Stdin, oldState)
 	}
@@ -221,7 +237,7 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 		switch sig {
 		case unix.SIGWINCH:
 			if !terminal {
-				logger.Debugf("Received SIGWINCH but not in terminal mode, ignoring")
+				logger.Debugf("Received 'SIGWINCH' signal in non-terminal mode, ignoring")
 				break
 			}
 			logger.Debugf("Received '%s' signal, updating window geometry", sig)
@@ -247,7 +263,7 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 		case unix.SIGTERM, unix.SIGINT, unix.SIGQUIT, unix.SIGABRT,
 			unix.SIGTSTP, unix.SIGTTIN, unix.SIGTTOU, unix.SIGUSR1,
 			unix.SIGUSR2, unix.SIGSEGV, unix.SIGCONT:
-			logger.Debugf("Received '%s' signal, forwarding to executing program", sig)
+			logger.Debugf("Received '%s' signal, forwarding to running process", sig)
 			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
 				logger.Debugf("Cannot forward signal '%s': %v", sig, err)
