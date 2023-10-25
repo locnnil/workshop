@@ -8,6 +8,7 @@ such as :option:`!--help` or :option:`!-h`:
 .. toctree::
    :maxdepth: 1
 
+   workshop_changes
    workshop_info
    workshop_launch
    workshop_list
@@ -15,3 +16,4 @@ such as :option:`!--help` or :option:`!-h`:
    workshop_remove
    workshop_start
    workshop_stop
+   workshop_tasks

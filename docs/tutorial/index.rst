@@ -305,7 +305,8 @@ All progress is saved, up to the specific *task* that caused the error.
 Then, you can explore the paused workshop
 and choose to abort or continue the refresh operation.
 
-To investigate the issue, check the recent *changes and tasks*:
+To investigate the issue, check the recent
+:ref:`changes <ref_workshop_changes>`:
 
 .. code:: shell
 
@@ -314,6 +315,10 @@ To investigate the issue, check the recent *changes and tasks*:
        ID  Status  Spawn                Ready                Summary
        ...
        81  Error   ...                  ...                  ...
+
+
+Having found the problematic change, explore its
+:ref:`tasks <ref_workshop_tasks>`:
 
    workshop tasks 81
 
