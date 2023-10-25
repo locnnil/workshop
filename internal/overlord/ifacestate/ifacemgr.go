@@ -9,16 +9,16 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type InterfaceManager struct {
 	state     *state.State
-	wsbackend workspacebackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkspaceBackend
 	repo      *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workspacebackend.WorkspaceBackend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkspaceBackend) *InterfaceManager {
 	m := &InterfaceManager{
 		state:     s,
 		wsbackend: be,
@@ -56,9 +56,9 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	for user, projects := range allprojects {
-		ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, user)
+		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
 		for _, prj := range projects {
-			prjctx := context.WithValue(ctx, workspacebackend.ContextProjectId, prj.ProjectId)
+			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
 			_, wrksps, err := m.wsbackend.GetProjectWorkspaces(prjctx)
 			if err != nil {
 				return err

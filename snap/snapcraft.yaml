@@ -11,7 +11,7 @@ description: |
   dependencies it lists as a number of SDKs, and attaches their life cycle hooks
   for run-time control.
 
-  IDEs such as Visual Studio Code or JupyterLab can discover workspaces and
+  IDEs such as Visual Studio Code or JupyterLab can discover workshops and
   leverage them in their operation, tidying up your system and streamlining your
   work.
 confinement: devmode

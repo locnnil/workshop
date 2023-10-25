@@ -8,7 +8,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 
 	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
@@ -33,19 +33,19 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		err := h.backend.AddWorkspaceDevice(ctx, workshop, workspacebackend.WorkspaceDevice{
-			Name: workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId),
+		err := h.backend.AddWorkspaceDevice(ctx, workshop, workshopbackend.WorkspaceDevice{
+			Name: workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId),
 			Properties: map[string]string{"type": "disk",
 				"pool":   "default",
-				"path":   workspacebackend.WorkspaceStateDir,
-				"source": workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId)},
+				"path":   workshopbackend.WorkspaceStateDir,
+				"source": workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId)},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
 		}
 
 		defer func() {
-			h.backend.RemoveWorkspaceDevice(ctx, workshop, workspacebackend.WorkspaceStateVolumeName(workshop, prj.ProjectId))
+			h.backend.RemoveWorkspaceDevice(ctx, workshop, workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId))
 		}()
 	}
 
@@ -102,13 +102,13 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 
 	/* create a memory out/err to log the hook output into the task's log */
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workspacebackend.InstanceName(workshop, projectId))
+	out, err := memFs.Create(workshopbackend.InstanceName(workshop, projectId))
 	if err != nil {
 		return err
 	}
 
-	args := workspacebackend.Execution{
-		ExecArgs: workspacebackend.ExecArgs{
+	args := workshopbackend.Execution{
+		ExecArgs: workshopbackend.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -122,7 +122,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 			Environment: hook.Environment,
 			WorkDir:     sdk.SdkHooksDir(hook.Sdk.Name),
 		},
-		ExecControls: workspacebackend.ExecControls{
+		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,
 			Stdout: out,
 			Stderr: out,

@@ -142,10 +142,10 @@ type Log struct {
 }
 
 func (l *Log) debugEnabled() bool {
-	return l.debug || osutil.GetenvBool("WORKSPACED_DEBUG")
+	return l.debug || osutil.GetenvBool("WORKSHOP_DEBUG")
 }
 
-// Debug only prints if WORKSPACED_DEBUG is set
+// Debug only prints if WORKSHOP_DEBUG is set
 func (l *Log) Debug(msg string) {
 	if l.debugEnabled() {
 		l.NoGuardDebug(msg)

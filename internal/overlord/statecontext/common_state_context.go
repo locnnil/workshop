@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/tomb.v2"
 )
 
@@ -106,9 +106,9 @@ func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 	}
 }
 
-func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, string, error) {
+func UserProjectWorkspace(task *state.Task) (string, *workshopbackend.Project, string, error) {
 	st := task.State()
-	var prj workspacebackend.Project
+	var prj workshopbackend.Project
 	var name string
 	var user string
 
@@ -141,10 +141,10 @@ func UserProjectWorkspace(task *state.Task) (string, *workspacebackend.Project, 
 	return user, &prj, name, nil
 }
 
-func BackendContext(tomb *tomb.Tomb, user string, prj *workspacebackend.Project) (context.Context, context.CancelFunc) {
+func BackendContext(tomb *tomb.Tomb, user string, prj *workshopbackend.Project) (context.Context, context.CancelFunc) {
 	ctx := tomb.Context(context.Background())
-	ctxProject := context.WithValue(ctx, workspacebackend.ContextProjectId, prj.ProjectId)
-	ctxUser := context.WithValue(ctxProject, workspacebackend.ContextUser, user)
+	ctxProject := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
+	ctxUser := context.WithValue(ctxProject, workshopbackend.ContextUser, user)
 	ctxCancel, cancel := context.WithCancel(ctxUser)
 	return ctxCancel, cancel
 }

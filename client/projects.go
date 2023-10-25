@@ -67,7 +67,7 @@ func (client *Client) doWorkspaceAction(projectId string, action *WorkspaceActio
 		return "", err
 	}
 
-	return client.doAsync("POST", "/v1/projects/"+projectId+"/workspaces", nil, nil, &body)
+	return client.doAsync("POST", "/v1/projects/"+projectId+"/workshops", nil, nil, &body)
 }
 
 func (client *Client) Launch(projectId string, names []string) (changeId string, err error) {

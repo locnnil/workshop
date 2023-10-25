@@ -15,7 +15,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
@@ -24,13 +24,13 @@ import (
 
 type H struct {
 	fs          afero.Fs
-	backend     *workspacebackend.FakeWorkspaceBackend
+	backend     *workshopbackend.FakeWorkspaceBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
 	wsmgr       *sdkstate.SdkManager
 	ctx         context.Context
-	project     *workspacebackend.Project
+	project     *workshopbackend.Project
 	installTime time.Time
 
 	restoreProjectId   func()
@@ -45,7 +45,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
+func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", p)
@@ -56,15 +56,15 @@ var ErrTrigger = errors.New("error out")
 
 func (s *H) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, "projectId")
+	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
 
-	s.backend = workspacebackend.NewFakeWorkspaceBackend()
-	s.project = &workspacebackend.Project{
+	s.backend = workshopbackend.NewFakeWorkspaceBackend()
+	s.project = &workshopbackend.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",
 	}
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshopbackend.NewProjectId)
 	s.backend.CreateOrLoadProject(s.ctx, s.project.Path)
 
 	s.state = state.New(nil)
@@ -86,7 +86,7 @@ func (s *H) SetUpTest(c *check.C) {
 	s.se.AddManager(s.runner)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
-	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workspacebackend.InstallTimeNow)
+	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshopbackend.InstallTimeNow)
 
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
@@ -175,9 +175,9 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
-		return workspacebackend.ExecContext{}, os.ErrDeadlineExceeded
+		return workshopbackend.ExecContext{}, os.ErrDeadlineExceeded
 	}
 
 	s.state.Unlock()
@@ -213,10 +213,10 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(terr)
 
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
 		fs.MkdirAll(filepath.Join(dirs.WorkspaceSdksDir, "new"), 0755)
-		return workspacebackend.ExecContext{}, nil
+		return workshopbackend.ExecContext{}, nil
 	}
 
 	s.state.Unlock()

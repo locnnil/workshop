@@ -147,8 +147,8 @@ func (s *LogSuite) TestDebugf(c *C) {
 }
 
 func (s *LogSuite) TestDebugfEnv(c *C) {
-	os.Setenv("WORKSPACED_DEBUG", "1")
-	defer os.Unsetenv("WORKSPACED_DEBUG")
+	os.Setenv("WORKSHOP_DEBUG", "1")
+	defer os.Unsetenv("WORKSHOP_DEBUG")
 
 	logger.Debugf("xyzzy")
 	c.Check(s.logbuf.String(), testutil.Contains, `DEBUG: xyzzy`)
@@ -176,12 +176,12 @@ func (s *LogSuite) TestWithLoggerLock(c *C) {
 }
 
 func (s *LogSuite) TestNoGuardDebug(c *C) {
-	debugValue, ok := os.LookupEnv("WORKSPACED_DEBUG")
+	debugValue, ok := os.LookupEnv("WORKSHOP_DEBUG")
 	if ok {
 		defer func() {
-			os.Setenv("WORKSPACED_DEBUG", debugValue)
+			os.Setenv("WORKSHOP_DEBUG", debugValue)
 		}()
-		os.Unsetenv("WORKSPACED_DEBUG")
+		os.Unsetenv("WORKSHOP_DEBUG")
 	}
 
 	logger.NoGuardDebugf("xyzzy")
@@ -189,8 +189,8 @@ func (s *LogSuite) TestNoGuardDebug(c *C) {
 }
 
 func (s *LogSuite) TestStartupTimestampMsg(c *C) {
-	os.Setenv("WORKSPACED_DEBUG", "1")
-	defer os.Unsetenv("WORKSPACED_DEBUG")
+	os.Setenv("WORKSHOP_DEBUG", "1")
+	defer os.Unsetenv("WORKSHOP_DEBUG")
 
 	type msgTimestamp struct {
 		Stage string `json:"stage"`

@@ -12,7 +12,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -20,13 +20,13 @@ import (
 
 type hookSuite struct {
 	fs      afero.Fs
-	backend *workspacebackend.FakeWorkspaceBackend
+	backend *workshopbackend.FakeWorkspaceBackend
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
 	hookmgr *hookstate.HookManager
 	ctx     context.Context
-	project *workspacebackend.Project
+	project *workshopbackend.Project
 }
 
 var _ = check.Suite(&hookSuite{})
@@ -37,7 +37,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
+func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -48,14 +48,14 @@ var ErrTrigger = errors.New("error out")
 
 func (s *hookSuite) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 
-	s.backend = workspacebackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkspaceBackend()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -83,7 +83,7 @@ func (s *hookSuite) TearDownTest(c *check.C) {
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "new", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "new", Channel: "latest/stable"}
 
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
 
@@ -114,7 +114,7 @@ base: ubuntu@20.04
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
@@ -145,7 +145,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
@@ -173,7 +173,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
 }
 
-func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.SdkRecord) {
+func (s *hookSuite) launchWorkspace(c *check.C, newSdk workshopbackend.SdkRecord) {
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:

@@ -1,4 +1,4 @@
-summary: Run LXD integration tests for workspace exec 
+summary: Run LXD integration tests for workshop exec 
 
 execute: |
-  go test $SPREAD_PATH/internal/workspacebackend/tests/integration -tags=integration -check.f wsExec
+  go test $SPREAD_PATH/internal/workshopbackend/tests/integration -tags=integration -check.f wsExec

@@ -19,9 +19,9 @@ func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Update workspaces according to their definitions.",
+		Short: "Update workshops according to their definitions.",
 		Long: `
-This command updates the workspaces listed as arguments by going over their
+This command updates the workshops listed as arguments by going over their
 definitions once again. For each workshop, it:
 
 - Saves the working state of the workshop
@@ -34,13 +34,13 @@ The '--wait-on-error' option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workshop.
 
-If multiple workspaces are listed and an error occurs,
+If multiple workshops are listed and an error occurs,
 the operation is aborted and reverted for *all* of them.
 
 Notes:
 - The workshop must be *Ready* to be refreshed
 - To construct a newly defined workshop, use 'workshop launch' instead
-- Throughout the refresh, all affected workspaces remain *Pending*
+- Throughout the refresh, all affected workshops remain *Pending*
 - If the refresh removes an SDK from the workshop, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
 `,
@@ -79,7 +79,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
-		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with multiple workspaces")
+		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with multiple workshops")
 	}
 
 	cli, err := client.New(&ClientConfig)

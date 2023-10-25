@@ -1,8 +1,8 @@
-project: workspace
+project: workshop
 
 environment:
       PATH: $PATH:~/go/bin
-      WORKSPACE: /var/lib/workspace/default
+      WORKSHOP: /var/lib/workshop/default
       TESTSLIB: $SPREAD_PATH/tests/lib
       SDKCONTENT: $SPREAD_PATH/tests/lib/sdk
       SDK_STORE_BUCKET_DIR: /data/sdk-store
@@ -14,7 +14,7 @@ prepare: |
       snap install go --classic
 
       snap install lxd --classic
-      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workspace/
+      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workshop/
       lxd init --auto
 
       # run fake GCS bucket storage to emulate SDK store
@@ -82,12 +82,12 @@ backends:
           password: ubuntu
 suites:
   tests/main/:
-    summary: Core workspace scenarios
+    summary: Core workshop scenarios
   tests/integration/:
     summary: LXD integration tests
 
 path: /remote
 exclude:
   - .git
-  - .workspace.lock
+  - .workshop.lock
   - docs

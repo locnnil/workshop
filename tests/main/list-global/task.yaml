@@ -1,40 +1,40 @@
-summary: Test workspace list with a --global flag on
+summary: Test workshop list with a --global flag on
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
 
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
-  for path in "$WORKSPACES"/*; do
+  for path in "$WORKSHOPS"/*; do
     launch $path ws
   done
-  lxc project switch workspace.ubuntu
+  lxc project switch workshop.ubuntu
 
 
 debug: |
-  lxc project switch workspace.ubuntu
+  lxc project switch workshop.ubuntu
   lxc list -f compact
-  ls $WORKSPACES/*
+  ls $WORKSHOPS/*
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  uninstall_workspaced
+  uninstall_workshopd
 
-  cleanup "$WORKSPACES"
-  for path in "$WORKSPACES"/{*-copy,*-new}; do
+  cleanup "$WORKSHOPS"
+  for path in "$WORKSHOPS"/{*-copy,*-new}; do
     rm -rf "$path"
   done
 
 execute: |
   . "$TESTSLIB"/utils.sh
-  echo "(1) make sure every required workspace present in the global list output"
-  for path in "$WORKSPACES"/*; do
+  echo "(1) make sure every required workshop present in the global list output"
+  for path in "$WORKSHOPS"/*; do
    list_global | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   done
 
   echo "(2) move a directory and validate it has an updated path in the output"
-  for path in "$WORKSPACES"/*; do
+  for path in "$WORKSHOPS"/*; do
    sudo -u ubuntu mv "$path" "$path"-new
    list_global | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
    list_global | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
@@ -42,7 +42,7 @@ execute: |
   done
 
   echo "(3) delete a directory and validate it has a correct state in the output"
-  for path in "$WORKSPACES"/*; do
+  for path in "$WORKSHOPS"/*; do
    sudo -u ubuntu cp -R "$path" "$path"-copy
    launch "$path"-copy ws
    rm -rf "$path"-copy

@@ -6,14 +6,14 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type Backend struct {
-	wsbackend workspacebackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkspaceBackend
 }
 
-func (b *Backend) Initialize(backend workspacebackend.WorkspaceBackend) error {
+func (b *Backend) Initialize(backend workshopbackend.WorkspaceBackend) error {
 	b.wsbackend = backend
 	return nil
 }
@@ -50,7 +50,7 @@ func (b *Backend) Remove(context context.Context, workshop, sdkName string) erro
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid string) interfaces.Specification {
 	return &Specification{
-		devices: make(map[string]*workspacebackend.WorkspaceDevice),
+		devices: make(map[string]*workshopbackend.WorkspaceDevice),
 		user:    user,
 		pid:     pid,
 	}

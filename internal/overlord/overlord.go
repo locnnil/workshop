@@ -35,8 +35,8 @@ import (
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	workshop "github.com/canonical/workshop/internal/overlord/workspacestate"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 var (
@@ -59,7 +59,7 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 type Overlord struct {
 	stateDir         string
 	stateEng         *StateEngine
-	workspaceBackend workspacebackend.WorkspaceBackend
+	workspaceBackend workshopbackend.WorkspaceBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -81,13 +81,13 @@ type Overlord struct {
 
 	startOfOperationTime time.Time
 
-	// exclusive file lock for the state to avoid multiple running workspaces (temporary)
+	// exclusive file lock for the state to avoid multiple running workshops (temporary)
 	stateFileLock *osutil.FileLock
 }
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b workshopbackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -457,7 +457,7 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
+func (o *Overlord) WorkspaceBackend() workshopbackend.WorkspaceBackend {
 	return o.workspaceBackend
 }
 

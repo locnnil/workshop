@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // Repository stores all known plugs and slots and ifaces.
@@ -784,12 +784,12 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 		return nil, fmt.Errorf("cannot handle interfaces of %q workshop, security system %q is not known", sdkInfo.Workshop, securitySystem)
 	}
 
-	user, ok := ctx.Value(workspacebackend.ContextUser).(string)
+	user, ok := ctx.Value(workshopbackend.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("internal error: context key %s not found", workspacebackend.ContextUser)
+		return nil, fmt.Errorf("internal error: context key %s not found", workshopbackend.ContextUser)
 	}
 
-	projectId, ok := ctx.Value(workspacebackend.ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshopbackend.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
 	}

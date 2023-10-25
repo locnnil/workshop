@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 const (
@@ -51,7 +51,7 @@ type Operation struct {
 }
 
 // The family of functions to maintain the state of current operations across
-// the workspaces. The reason we track the current operations as part of the
+// the workshops. The reason we track the current operations as part of the
 // state structure and not as a property of a workshop is that, for example, a
 // refresh operation maintains a backup of the previously running workshop.
 // Hence, if a workshop was flaged as pending (i.e. refresh op in progress), we
@@ -67,7 +67,7 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 		return nil
 	}
 
-	if op, ok := ops[workspacebackend.InstanceName(name, projectId)]; ok {
+	if op, ok := ops[workshopbackend.InstanceName(name, projectId)]; ok {
 		return &op
 	}
 	return nil
@@ -79,7 +79,7 @@ func StartOperation(st *state.State, name, projectId string, op Operation) error
 	}
 	var refresh Operations = make(Operations)
 	st.Get(OpsInProgressKey, &refresh)
-	refresh[workspacebackend.InstanceName(name, projectId)] = op
+	refresh[workshopbackend.InstanceName(name, projectId)] = op
 	st.Set(OpsInProgressKey, refresh)
 	return nil
 }
@@ -131,7 +131,7 @@ func StopOperation(st *state.State, name, projectId, opname string) error {
 	if err != nil {
 		return err
 	}
-	opkey := workspacebackend.InstanceName(name, projectId)
+	opkey := workshopbackend.InstanceName(name, projectId)
 	op, ok := ops[opkey]
 	if !ok || opname != op.Operation {
 		return fmt.Errorf("cannot finish: no %s in progress", opname)

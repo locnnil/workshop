@@ -29,7 +29,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
@@ -135,13 +135,13 @@ slots:
 			HomeDir:  homeDir,
 		}
 		return u, nil
-	}, &workspacebackend.LookupUsername)
+	}, &workshopbackend.LookupUsername)
 	defer restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Analyze the mount specification.
-	expectedMnt := []*workspacebackend.WorkspaceDevice{{
+	expectedMnt := []*workshopbackend.WorkspaceDevice{{
 		Name: plug.Name,
 		Properties: map[string]string{
 			"type":   "disk",

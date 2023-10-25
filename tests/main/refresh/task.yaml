@@ -1,49 +1,49 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib
+  WORKSHOPS: $SPREAD_PATH/tests/lib
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSPACES"
-  uninstall_workspaced
+  cleanup "$WORKSHOPS"
+  uninstall_workshopd
 
 debug: |
-  workspace changes
-  workspace tasks 1
-  workspace tasks 2
+  workshop changes
+  workshop tasks 1
+  workshop tasks 2
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Test refresh with an empty workspace"
-  project="$WORKSPACES"/workspaces-empty/test-empty-ubuntu20
+  echo "Test refresh with an empty workshop"
+  project="$WORKSHOPS"/workshops-empty/test-empty-ubuntu20
   launch $project ws
 
   echo "Check launch change is Done"
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workspace$"
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
 
-  workspace_exec refresh --project $project ws
+  workshop_exec refresh --project $project ws
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workspace$"
+  changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
 
-  echo "Check the workspace is in Ready state"
+  echo "Check the workshop is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
 
-  echo "Test refresh with a basic SDK in the workspace"
-  project="$WORKSPACES"/workspaces-sdk/test-sdk-basic
+  echo "Test refresh with a basic SDK in the workshop"
+  project="$WORKSHOPS"/workshops-sdk/test-sdk-basic
 
   launch $project ws
   echo "Check launch change is Done"
-  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workspace$"
+  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
 
-  workspace_exec refresh --project $project ws
+  workshop_exec refresh --project $project ws
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workspace$"
+  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
 
-  echo "Check the workspace is in Ready state"
+  echo "Check the workshop is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

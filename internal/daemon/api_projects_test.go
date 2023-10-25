@@ -13,7 +13,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
@@ -40,7 +40,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workspacebackend.Project{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workshopbackend.Project{
 		{Path: s.project.Path, ProjectId: s.project.ProjectId},
 	})
 }
@@ -92,12 +92,12 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workspacebackend.InstallTimeNow)
+	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
 	defer restore()
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
@@ -139,10 +139,10 @@ base: ubuntu@20.04
 func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws-test"}
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws-test", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/ws-test", nil)
 	c.Assert(err, check.IsNil)
 	b := s.d.overlord.WorkspaceBackend()
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
@@ -171,7 +171,7 @@ base: ubuntu@20.04
 func (s *apiSuite) TestProjectsPostProjectWorkspaceLaunch(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 
 	// Mock workshop files
@@ -215,7 +215,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -246,7 +246,7 @@ base: ubuntu@20.04`), 0644)
 func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
@@ -281,7 +281,7 @@ base: ubuntu@20.04`), 0644)
 
 	requests := []*http.Request{}
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -303,7 +303,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "wait-on-error is not supported for multiple workspaces",
+			Message: "wait-on-error is not supported for multiple workshops",
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -390,7 +390,7 @@ base: ubuntu@20.04`), 0644)
 func (s *apiSuite) TestProjectsPostProjectWorkspaceStart(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
@@ -431,7 +431,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -458,7 +458,7 @@ base: ubuntu@20.04`), 0644)
 	s.d.overlord.State().Lock()
 	ws, err := s.d.overlord.WorkspaceManager().Workshop(s.ctx, "ws", s.project.ProjectId)
 	c.Assert(err, check.IsNil)
-	c.Assert(ws.State(), check.Equals, workspacebackend.WorkspacePending)
+	c.Assert(ws.State(), check.Equals, workshopbackend.WorkspacePending)
 	s.d.overlord.State().Unlock()
 
 	// all successful responses must initiate the ensure call
@@ -468,7 +468,7 @@ base: ubuntu@20.04`), 0644)
 func (s *apiSuite) TestProjectsPostProjectWorkspaceStop(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
@@ -506,7 +506,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -542,7 +542,7 @@ base: ubuntu@20.04`), 0644)
 func (s *apiSuite) TestProjectsPostProjectWorkspaceRemove(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
@@ -573,7 +573,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}

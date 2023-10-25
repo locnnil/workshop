@@ -37,7 +37,7 @@ func (m *WorkspaceInfo) TestWorkspaceInfo(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces/%s", m.prjId, workshop))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockWorkspaceWithContent)
 		default:

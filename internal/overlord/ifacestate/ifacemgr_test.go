@@ -12,7 +12,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
@@ -23,8 +23,8 @@ type interfaceManagerSuite struct {
 	state     *state.State
 	se        *overlord.StateEngine
 	ctx       context.Context
-	wsbackend workspacebackend.WorkspaceBackend
-	prj       *workspacebackend.Project
+	wsbackend workshopbackend.WorkspaceBackend
+	prj       *workshopbackend.Project
 }
 
 var _ = check.Suite(&interfaceManagerSuite{})
@@ -36,8 +36,8 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.o = overlord.Fake()
 	s.state = s.o.State()
 	s.se = s.o.StateEngine()
-	s.wsbackend = workspacebackend.NewFakeWorkspaceBackend()
-	s.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
+	s.wsbackend = workshopbackend.NewFakeWorkspaceBackend()
+	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 
@@ -49,7 +49,7 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 }
 
 func (s *interfaceManagerSuite) mockWorkspaceWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
-	ctx := context.WithValue(s.ctx, workspacebackend.ContextProjectId, s.prj.ProjectId)
+	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
 	err := os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@22.04

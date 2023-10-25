@@ -31,7 +31,7 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/workshop/internal/wsutil"
 
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
@@ -50,7 +50,7 @@ const (
 // execution tracks the execution of a command.
 type execution struct {
 	workshop string
-	execArgs *workspacebackend.ExecArgs
+	execArgs *workshopbackend.ExecArgs
 
 	websockets       map[string]*websocket.Conn
 	websocketsLock   sync.Mutex
@@ -67,7 +67,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	var setup workspacebackend.ExecArgs
+	var setup workshopbackend.ExecArgs
 	st := task.State()
 	st.Lock()
 	err = task.Get("exec-setup", &setup)
@@ -168,7 +168,7 @@ func (e *execution) waitIOConnected(ctx context.Context, execID string) error {
 }
 
 // do actually runs the command.
-func (e *execution) do(ctx context.Context, task *state.Task, backend workspacebackend.WorkspaceBackend) error {
+func (e *execution) do(ctx context.Context, task *state.Task, backend workshopbackend.WorkspaceBackend) error {
 	// Wait till client has connected to "stdio" websocket (and "stderr" if
 	// separating stderr), to avoid race conditions forwarding I/O.
 	err := e.waitIOConnected(ctx, task.ID())
@@ -248,9 +248,9 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	// the interactive mode (stdin, stdout both point to the terminal), even if
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
-	exectx, err := backend.Exec(ctx, e.workshop, &workspacebackend.Execution{
+	exectx, err := backend.Exec(ctx, e.workshop, &workshopbackend.Execution{
 		ExecArgs: *e.execArgs,
-		ExecControls: workspacebackend.ExecControls{
+		ExecControls: workshopbackend.ExecControls{
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
 			Stderr: stderrWriter,
@@ -288,7 +288,7 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	if err == nil {
 		setExitCode(task, 0)
 	} else {
-		if execerr, ok := err.(*workspacebackend.ErrExec); ok {
+		if execerr, ok := err.(*workshopbackend.ErrExec); ok {
 			setExitCode(task, execerr.Status)
 			return nil
 		}

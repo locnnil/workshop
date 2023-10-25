@@ -14,7 +14,7 @@ import (
 
 func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}/exec")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}/exec")
 
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
 	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
@@ -31,7 +31,7 @@ func (s *apiSuite) TestExecNoCommand(c *check.C) {
 
 	body := bytes.NewBufferString(`{"command":[]}`)
 
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -69,7 +69,7 @@ func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
 
 	var requests = []*http.Request{}
 	for _, r := range body {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", r)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", r)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -101,7 +101,7 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 
 	body := bytes.NewBufferString(`{"command":["ls"],"working-dir":"/"}`)
 
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
 
 	soon := 0
@@ -124,7 +124,7 @@ func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {
 
 	body := bytes.NewBufferString(`{"command":["ls"], "user-id": 1000}`)
 
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -137,7 +137,7 @@ func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {
 	// Setup
 	body = bytes.NewBufferString(`{"command":["ls"], "group-id": 1000}`)
 
-	req, err = s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	req, err = s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -154,7 +154,7 @@ func (s *apiSuite) TestExecSetEnvVariable(c *check.C) {
 
 	body := bytes.NewBufferString(`{"command":["ls"],"working-dir":"/","environment":{"FOO":"BAR"}}`)
 
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws/exec", body)
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
 
 	soon := 0

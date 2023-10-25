@@ -1,42 +1,42 @@
 summary: Check a failed refresh can be fixed and continued successfully
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib
+  WORKSHOPS: $SPREAD_PATH/tests/lib
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSPACES"
-  uninstall_workspaced
+  cleanup "$WORKSHOPS"
+  uninstall_workshopd
 
 debug: |
   lxc list -f compact --all-projects
-  workspace changes
-  workspace tasks 1
+  workshop changes
+  workshop tasks 1
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a workspace"
-  project="$WORKSPACES"/workspaces-sdk/test-sdk-fail
+  echo "Launch a workshop"
+  project="$WORKSHOPS"/workshops-sdk/test-sdk-fail
   launch $project ws
 
-  echo "Update the workspace file to include a failing SDK"
-  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' $project/.workspace.ws.yaml
-  workspace_exec refresh --project $project --wait-on-error ws || true
-  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workspace.ws.yaml
+  echo "Update the workshop file to include a failing SDK"
+  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' $project/.workshop.ws.yaml
+  workshop_exec refresh --project $project --wait-on-error ws || true
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workshop.ws.yaml
 
-  echo "Check the workspace is in Pending state"
+  echo "Check the workshop is in Pending state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
 
   echo "\"Fix\" the SDK error by replacing the setup-base hook"
-  project_id=$(cat "$project"/.workspace.lock)
+  project_id=$(cat "$project"/.workshop.lock)
   instance=ws-"$project_id"
-  lxc exec "$instance" --project workspace.ubuntu -- sed -i "s/exit 1/exit 0/g" /var/lib/workspace/sdk/test-sdk-setup-fail/current/hooks/setup-base
+  lxc exec "$instance" --project workshop.ubuntu -- sed -i "s/exit 1/exit 0/g" /var/lib/workshop/sdk/test-sdk-setup-fail/current/hooks/setup-base
 
-  echo "Check the workspace refresh --continue reverts to the previous state"
-  workspace_exec refresh --project $project --continue ws | MATCH "\"ws\" refreshed"
+  echo "Check the workshop refresh --continue reverts to the previous state"
+  workshop_exec refresh --project $project --continue ws | MATCH "\"ws\" refreshed"
 
-  echo "Check the workspace is in Ready state"
+  echo "Check the workshop is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

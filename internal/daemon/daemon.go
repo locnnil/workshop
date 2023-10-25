@@ -44,7 +44,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/standby"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/systemd"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 var (
@@ -269,7 +269,7 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userCtx := context.WithValue(r.Context(), workspacebackend.ContextUser, username.Username)
+	userCtx := context.WithValue(r.Context(), workshopbackend.ContextUser, username.Username)
 
 	if rspf != nil {
 		rsp = rspf(c, r.WithContext(userCtx), user)
@@ -665,7 +665,7 @@ func (d *Daemon) rebootDelay() (time.Duration, error) {
 	if err == nil {
 		rebootDelay = rebootAt.Sub(now)
 	} else {
-		ovr := os.Getenv("WORKSPACE_REBOOT_DELAY") // for tests
+		ovr := os.Getenv("WORKSHOP_REBOOT_DELAY") // for tests
 		if ovr != "" {
 			d, err := time.ParseDuration(ovr)
 			if err == nil {
@@ -761,7 +761,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 	return errExpectedReboot
 }
 
-func New(opts *Options, be workspacebackend.WorkspaceBackend) (*Daemon, error) {
+func New(opts *Options, be workshopbackend.WorkspaceBackend) (*Daemon, error) {
 	d := &Daemon{
 		workspaceDir:        opts.Dir,
 		normalSocketPath:    opts.SocketPath,

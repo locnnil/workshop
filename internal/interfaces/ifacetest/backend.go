@@ -24,7 +24,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // TestSecurityBackend is a security backend intended for testing.
@@ -49,7 +49,7 @@ type TestSetupCall struct {
 }
 
 // Initialize does nothing.
-func (b *TestSecurityBackend) Initialize(backend workspacebackend.WorkspaceBackend) error {
+func (b *TestSecurityBackend) Initialize(backend workshopbackend.WorkspaceBackend) error {
 	return nil
 }
 

@@ -3,13 +3,13 @@ package hookstate
 import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type HookSetup struct {
-	Sdk         workspacebackend.SdkRecord `json:"sdk"`
-	HookType    WorkspaceHookType          `json:"type"`
-	Environment map[string]string          `json:"environment"`
+	Sdk         workshopbackend.SdkRecord `json:"sdk"`
+	HookType    WorkspaceHookType         `json:"type"`
+	Environment map[string]string         `json:"environment"`
 }
 
 type WorkspaceHookType int
@@ -29,10 +29,10 @@ func (h *HookSetup) Type() string {
 }
 
 type HookManager struct {
-	backend workspacebackend.WorkspaceBackend
+	backend workshopbackend.WorkspaceBackend
 }
 
-func New(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *HookManager {
+func New(runner *state.TaskRunner, server workshopbackend.WorkspaceBackend) *HookManager {
 	manager := &HookManager{
 		backend: server,
 	}

@@ -79,7 +79,7 @@ func (m *WorkspaceRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:
@@ -109,7 +109,7 @@ func (m *WorkspaceRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) 
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:
@@ -141,7 +141,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "wait-on-error"}})
 			w.WriteHeader(202)
@@ -175,7 +175,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C)
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "abort"}})
 			w.WriteHeader(202)
@@ -209,7 +209,7 @@ func (m *WorkspaceRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "continue"}})
 			w.WriteHeader(202)
@@ -255,5 +255,5 @@ func (m *WorkspaceRefresh) TestRefreshIncompatibleOptions(c *check.C) {
 	cmd.Continue = false
 
 	err = cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with multiple workspaces")
+	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with multiple workshops")
 }

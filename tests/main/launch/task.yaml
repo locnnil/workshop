@@ -1,27 +1,27 @@
-summary: Test 'workspace launch' for the supported workspace bases
+summary: Test 'workshop launch' for the supported workshop bases
 
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
+  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
 
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSPACES"
-  uninstall_workspaced
+  cleanup "$WORKSHOPS"
+  uninstall_workshopd
 
 debug: |
-  lxc project switch workspace.ubuntu
+  lxc project switch workshop.ubuntu
   lxc list -f compact
-  ls "$WORKSPACES"/*
+  ls "$WORKSHOPS"/*
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Test launch for all the supported bases"
-  for path in "$WORKSPACES"/*; do
+  for path in "$WORKSHOPS"/*; do
     launch "$path" ws
     list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
   done

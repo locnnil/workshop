@@ -151,7 +151,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	resultBytes, changeID, err := client.doAsyncFull("POST", "/v1/projects/"+projectId+"/workspaces/"+workshop+"/exec", nil, headers, &body)
+	resultBytes, changeID, err := client.doAsyncFull("POST", "/v1/projects/"+projectId+"/workshops/"+workshop+"/exec", nil, headers, &body)
 	if err != nil {
 		return nil, err
 	}

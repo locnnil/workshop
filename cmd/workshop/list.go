@@ -22,16 +22,16 @@ func (c *CmdList) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(0),
-		Short: "List project workspaces.",
+		Short: "List project workshops.",
 		Long: `
-This command enumerates all workspaces in the project, printing a compact list:
+This command enumerates all workshops in the project, printing a compact list:
 
 - Project: absolute pathname of the project where this workshop belongs
 - Workshop: workshop name, as set by its definition
 - State: workshop status, such as *Off*, *Ready*, *Pending* and so on
 - Notes: internal remarks on the overall state of the workshop
 
-The '--global' option lists all workspaces from *all* projects in the system;
+The '--global' option lists all workshops from *all* projects in the system;
 however, it doesn't include any that are *Off*.
 
 Notes:
@@ -40,7 +40,7 @@ Notes:
 		RunE: c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.global, "global", false, "List workspaces from all projects in the system")
+	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system")
 
 	return cmd
 }
@@ -66,14 +66,14 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 			return err
 		}
 
-		workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
+		workshops, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
-		slices.SortFunc(workspaces, func(a, b *client.Workshop) bool { return a.Name < b.Name })
-		/* List all workspaces for the current project */
-		if len(workspaces) != 0 {
-			printWorkspaces(workspaces, project)
+		slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
+		/* List all workshops for the current project */
+		if len(workshops) != 0 {
+			printWorkspaces(workshops, project)
 		} else {
 			return err
 		}
@@ -90,17 +90,17 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		for _, i := range projects {
-			workspaces, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
-			slices.SortFunc(workspaces, func(a, b *client.Workshop) bool { return a.Name < b.Name })
+			workshops, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
+			slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
 
 			if err != nil {
 				return err
 			}
-			for _, j := range workspaces {
-				// --global flag would not list Off workspaces for consistency.
+			for _, j := range workshops {
+				// --global flag would not list Off workshops for consistency.
 				// We may not be aware of all the project directories on the system
-				// and, thus, will not know all the available Off workspaces (contrary
-				// to the workspaces that are in any other state, i.e. running instances, which we always know
+				// and, thus, will not know all the available Off workshops (contrary
+				// to the workshops that are in any other state, i.e. running instances, which we always know
 				// about from the workshop backend)
 				if j.State != "Off" {
 					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))

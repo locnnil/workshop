@@ -5,13 +5,13 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/statecontext"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
 type OperationSuite struct {
 	state   *state.State
-	project *workspacebackend.Project
+	project *workshopbackend.Project
 }
 
 var _ = check.Suite(&OperationSuite{})
@@ -20,7 +20,7 @@ func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *OperationSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workspacebackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *OperationSuite) TestResumeRefreshNothingInProgress(c *check.C) {

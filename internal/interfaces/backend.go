@@ -24,7 +24,7 @@ import (
 
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/timings"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // SecurityBackend abstracts interactions between the interface system and the
@@ -32,7 +32,7 @@ import (
 type SecurityBackend interface {
 	// Initialize performs any initialization required by the backend.
 	// It is called during workspaced startup process.
-	Initialize(backend workspacebackend.WorkspaceBackend) error
+	Initialize(backend workshopbackend.WorkspaceBackend) error
 
 	// Name returns the name of the backend.
 	// This is intended for diagnostic messages.

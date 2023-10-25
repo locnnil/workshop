@@ -155,7 +155,7 @@ func (client *Client) Changes(opts *ChangesOptions) ([]*Change, error) {
 			query.Set("select", opts.Selector.String())
 		}
 		if len(opts.Workspaces) > 0 {
-			query.Set("workspaces", strings.Join(opts.Workspaces, ","))
+			query.Set("workshops", strings.Join(opts.Workspaces, ","))
 		}
 		if opts.ProjectPath != "" {
 			project, err := client.Project(opts.ProjectPath)

@@ -34,7 +34,7 @@ func (m *WorkspaceStop) TestStopSuccess(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workspaces", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:

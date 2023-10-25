@@ -11,7 +11,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 
@@ -47,7 +47,7 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
-	var sdk workspacebackend.SdkRecord
+	var sdk workshopbackend.SdkRecord
 
 	st.Lock()
 	err := task.Get("sdk-setup", &sdk)
@@ -71,9 +71,9 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk sdk.Setup) workspacebackend.WorkspaceDevice {
+func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkspaceDevice {
 	/* Bind-mount the SDK to the workshop */
-	return workspacebackend.WorkspaceDevice{
+	return workshopbackend.WorkspaceDevice{
 		Name: sdk.Name,
 		Properties: map[string]string{"type": "disk", "source": sdk.Filename(),
 			"path": filepath.Join("/root", filepath.Base(sdk.Filename()))},
@@ -115,15 +115,15 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workspacebackend.InstanceName(workshop, project.ProjectId))
+	out, err := memFs.Create(workshopbackend.InstanceName(workshop, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
-	args := workspacebackend.Execution{
-		ExecArgs: workspacebackend.ExecArgs{
+	args := workshopbackend.Execution{
+		ExecArgs: workshopbackend.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -136,7 +136,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			},
 			WorkDir: "/",
 		},
-		ExecControls: workspacebackend.ExecControls{
+		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,
 			Stdout: nil,
 			Stderr: out,

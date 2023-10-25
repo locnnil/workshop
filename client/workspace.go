@@ -23,17 +23,17 @@ type ListOptions struct {
 }
 
 func (client *Client) ListWorkspaces(opts *ListOptions) ([]*Workshop, error) {
-	var workspaces []*Workshop
-	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workspaces", nil, nil, nil, &workspaces)
+	var workshops []*Workshop
+	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &workshops)
 	if err != nil {
 		return nil, err
 	}
-	return workspaces, nil
+	return workshops, nil
 }
 
 func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 	var workshop Workshop
-	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workspaces/"+name, nil, nil, nil, &workshop)
+	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name, nil, nil, nil, &workshop)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ func (c *CmdRemove) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "remove <WORKSHOP>...",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Remove one or many workspaces",
+		Short: "Remove one or many workshops",
 		RunE:  c.Run,
 	}
 

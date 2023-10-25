@@ -212,7 +212,7 @@ func (cs *clientSuite) TestClientChanges(c *check.C) {
 			if i.Selector != 0 {
 				c.Check(cs.req.URL.RawQuery, check.Equals, "select="+i.Selector.String())
 			} else {
-				c.Check(cs.req.URL.RawQuery, check.Equals, "workspaces="+strings.Join(i.Workspaces, ","))
+				c.Check(cs.req.URL.RawQuery, check.Equals, "workshops="+strings.Join(i.Workspaces, ","))
 			}
 		}
 	}

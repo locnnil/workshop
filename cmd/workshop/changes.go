@@ -17,7 +17,7 @@ func (c *CmdChanges) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "changes",
 		Args:  cobra.NoArgs,
-		Short: "Show a summary of recent changes to the system's workspaces",
+		Short: "Show a summary of recent changes to the system's workshops",
 		RunE:  c.Run,
 	}
 

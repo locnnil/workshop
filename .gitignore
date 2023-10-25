@@ -1,8 +1,8 @@
 .vscode/
-workspace
-!workspace/
+workshop
+!workshop/
 .spread-reuse.yaml
-.workspace.lock
+.workshop.lock
 __debug_bin*
 *.snap
 cover.out

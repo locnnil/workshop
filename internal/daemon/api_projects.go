@@ -11,7 +11,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/statecontext"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -35,12 +35,12 @@ type WorkspaceInfo struct {
 
 var ensureStateSoon = stateEnsureBefore
 
-func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *WorkspaceInfo {
+func workspaceFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
 	ws.ProjectId = pid
-	ws.State = workspacebackend.WorkspaceOff.String()
+	ws.State = workshopbackend.WorkspaceOff.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -50,7 +50,7 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	return &ws
 }
 
-func workspacePropsToInfo(props *workspacebackend.Workshop) *WorkspaceInfo {
+func workspacePropsToInfo(props *workshopbackend.Workshop) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
@@ -80,13 +80,13 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 
 	// In this scenario, we will have go walk all projects in the system
 	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
-	// and returns a list of workspaces for every project found in the system
+	// and returns a list of workshops for every project found in the system
 	projects, err := c.d.overlord.WorkspaceBackend().Projects(r.Context())
 	if err != nil {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	result := make([]*workspacebackend.Project, 0)
+	result := make([]*workshopbackend.Project, 0)
 	for _, val := range projects {
 		result = append(result, val...)
 	}
@@ -111,9 +111,9 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	wBackend := c.d.overlord.WorkspaceBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
-	if err != nil && !errors.Is(err, workspacebackend.ErrNotAProject) {
+	if err != nil && !errors.Is(err, workshopbackend.ErrNotAProject) {
 		return statusInternalError("cannot create or load project: %v", err)
-	} else if errors.Is(err, workspacebackend.ErrNotAProject) {
+	} else if errors.Is(err, workshopbackend.ErrNotAProject) {
 		return statusBadRequest("%v", err)
 	}
 
@@ -137,13 +137,13 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	}
 
 	wrkmgr := c.d.overlord.WorkspaceManager()
-	files, workspaces, err := wrkmgr.Workspaces(r.Context(), projectId)
+	files, workshops, err := wrkmgr.Workspaces(r.Context(), projectId)
 	if err != nil {
-		return statusInternalError("cannot list workspaces: %v", err)
+		return statusInternalError("cannot list workshops: %v", err)
 	}
 
 	var infoLst = make([]*WorkspaceInfo, 0)
-	for _, w := range workspaces {
+	for _, w := range workshops {
 		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
 			continue
 		}
@@ -192,7 +192,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
-	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
@@ -202,7 +202,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	case 1:
 		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
 	default:
-		summary = fmt.Sprintf("%s %s workspaces", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
 	}
 
 	var change *state.Change
@@ -221,7 +221,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
 
 		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
-			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
+			return statusBadRequest("wait-on-error is not supported for multiple workshops")
 		}
 
 		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {

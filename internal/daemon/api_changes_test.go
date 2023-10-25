@@ -63,7 +63,7 @@ func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *
 	stateChangesCmd := apiCmd("/v1/changes")
 
 	// Execute
-	req, err := http.NewRequest("GET", "/v1/changes?workspaces=test", nil)
+	req, err := http.NewRequest("GET", "/v1/changes?workshops=test", nil)
 	c.Assert(err, check.IsNil)
 	rsp := v1GetChanges(stateChangesCmd, req, nil).(*resp)
 
@@ -71,7 +71,7 @@ func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *
 	c.Check(rsp.Type, check.Equals, ResponseTypeError)
 	c.Check(rsp.Status, check.Equals, 400)
 	c.Check(rsp.Result.(*errorResult).Message, check.Equals,
-		"project-id must be provided if workspaces are specified")
+		"project-id must be provided if workshops are specified")
 }
 
 func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
@@ -204,7 +204,7 @@ func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
 	stateChangesCmd := apiCmd("/v1/changes")
 
 	// Execute
-	req, err := http.NewRequest("GET", "/v1/changes?workspaces=one,two&project-id=123", nil)
+	req, err := http.NewRequest("GET", "/v1/changes?workshops=one,two&project-id=123", nil)
 	c.Assert(err, check.IsNil)
 	rsp := v1GetChanges(stateChangesCmd, req, nil).(*resp)
 

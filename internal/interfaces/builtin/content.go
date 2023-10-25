@@ -29,7 +29,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 const contentSummary = `allows sharing host code and data with SDKs`
@@ -102,7 +102,7 @@ func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 
 // Interactions with the mount backend.
 func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workspacebackend.LookupUsername(spec.User())
+	user, err := workshopbackend.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	var entry = workspacebackend.WorkspaceDevice{
+	var entry = workshopbackend.WorkspaceDevice{
 		Name: plug.Name(),
 		Properties: map[string]string{"type": "disk", "source": source,
 			"path": iface.mount(plug)},
