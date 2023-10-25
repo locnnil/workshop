@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/hookstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -20,13 +20,13 @@ import (
 
 type hookSuite struct {
 	fs      afero.Fs
-	backend *workspacebackend.FakeWorkspaceBackend
+	backend *workshopbackend.FakeWorkshopBackend
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
 	hookmgr *hookstate.HookManager
 	ctx     context.Context
-	project *workspacebackend.Project
+	project *workshopbackend.Project
 }
 
 var _ = check.Suite(&hookSuite{})
@@ -37,9 +37,9 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
-		i.Set("workspace", w)
+		i.Set("workshop", w)
 		i.Set("project", *p)
 	}
 }
@@ -48,14 +48,14 @@ var ErrTrigger = errors.New("error out")
 
 func (s *hookSuite) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 
-	s.backend = workspacebackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -83,21 +83,21 @@ func (s *hookSuite) TearDownTest(c *check.C) {
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "new", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "new", Channel: "latest/stable"}
 
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
 
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -114,15 +114,15 @@ base: ubuntu@20.04
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkspace(c, newSdk)
+	s.launchWorkshop(c, newSdk)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -132,12 +132,12 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/save-state"})
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	info, err := ws.Stat("/var/lib/workspace/state/sdk/one")
+	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
 	c.Assert(info.IsDir(), check.Equals, true)
 }
@@ -145,20 +145,20 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workspacebackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkspace(c, newSdk)
+	s.launchWorkshop(c, newSdk)
 
 	// setup state storage (usually already set by the save-state)
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	err = ws.MkdirAll("/var/lib/workspace/state/sdk/one", 0755)
+	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -169,21 +169,21 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workspace/sdk/one/current/hooks/restore-state"})
-	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/one"})
+		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/restore-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
 }
 
-func (s *hookSuite) launchWorkspace(c *check.C, newSdk workspacebackend.SdkRecord) {
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+func (s *hookSuite) launchWorkshop(c *check.C, newSdk workshopbackend.SdkRecord) {
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
   one:
     channel: latest/stable
 `), 0644)
 	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newSdk.Name), 0744)
 	c.Check(err, check.IsNil)

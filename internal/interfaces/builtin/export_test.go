@@ -22,8 +22,8 @@ package builtin
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
 
 	"gopkg.in/check.v1"
 )

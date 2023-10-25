@@ -32,11 +32,11 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/testutil"
 
-	"github.com/canonical/workspace/internal/osutil/squashfs"
-	"github.com/canonical/workspace/internal/systemd"
+	"github.com/canonical/workshop/internal/osutil/squashfs"
+	"github.com/canonical/workshop/internal/systemd"
 )
 
 type testreporter struct {

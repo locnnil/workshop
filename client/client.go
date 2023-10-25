@@ -31,8 +31,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/wsutil"
 )
 
 // SocketNotFoundError is the error type returned when the client fails
@@ -90,7 +90,7 @@ type doer interface {
 
 // Config allows the user to customize client behavior.
 type Config struct {
-	// BaseURL contains the base URL where the Workspace daemon is expected to be.
+	// BaseURL contains the base URL where the Workshop daemon is expected to be.
 	// It can be empty for a default behavior of talking over a unix socket.
 	BaseURL string
 
@@ -101,11 +101,11 @@ type Config struct {
 	// alive for later reuse (the default is to keep them alive).
 	DisableKeepAlive bool
 
-	// UserAgent is the User-Agent header sent to the Workspace daemon.
+	// UserAgent is the User-Agent header sent to the Workshop daemon.
 	UserAgent string
 }
 
-// A Client knows how to talk to the Workspace daemon.
+// A Client knows how to talk to the Workshop daemon.
 type Client struct {
 	baseURL   url.URL
 	doer      doer

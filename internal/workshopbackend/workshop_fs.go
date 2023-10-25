@@ -1,0 +1,70 @@
+package workshopbackend
+
+import (
+	"errors"
+	"os"
+
+	"github.com/pkg/sftp"
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/sftpfs"
+)
+
+type WorkshopFs interface {
+	afero.Fs
+	Symlink(old, new string, force bool) error
+	Close()
+}
+
+func NewWorkshopFs(c *sftp.Client) WorkshopFs {
+	var fs InstanceFs
+	fs.client = c
+	fs.Fs = sftpfs.New(fs.client)
+	return &fs
+}
+
+type InstanceFs struct {
+	afero.Fs
+	client *sftp.Client
+}
+
+func (w *InstanceFs) Symlink(source, target string, force bool) error {
+	if force {
+		err := w.Remove(target)
+		if errors.Is(err, afero.ErrFileNotFound) {
+			return w.client.Symlink(source, target)
+		} else {
+			return err
+		}
+	}
+	return w.client.Symlink(source, target)
+}
+
+func (w *InstanceFs) Close() {
+	w.client.Close()
+}
+
+/* Fake wokrspace fs implementation for tests */
+
+type FakeInstanceFs struct {
+	afero.Fs
+}
+
+func NewFakeWorkshopFs() WorkshopFs {
+	var fs FakeInstanceFs
+	fs.Fs = afero.NewMemMapFs()
+	return &fs
+}
+
+func (w *FakeInstanceFs) Symlink(source, target string, force bool) error {
+	if force {
+		_, err := w.Stat(target)
+		if errors.Is(err, afero.ErrFileNotFound) {
+			return w.Fs.Mkdir(target, os.ModeSymlink)
+		}
+		return nil
+	}
+	return w.Fs.Mkdir(target, os.ModeSymlink)
+}
+
+func (w *FakeInstanceFs) Close() {
+}

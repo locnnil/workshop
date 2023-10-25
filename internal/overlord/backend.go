@@ -17,7 +17,7 @@ package overlord
 import (
 	"time"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type overlordStateBackend struct {

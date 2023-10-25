@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/policy"
-	"github.com/canonical/workspace/internal/interfaces/utils"
-	"github.com/canonical/workspace/internal/jsonutil"
-	"github.com/canonical/workspace/internal/overlord/ifacestate/schema"
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/interfaces/utils"
+	"github.com/canonical/workshop/internal/jsonutil"
+	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 func autoConnectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {

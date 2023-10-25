@@ -20,8 +20,8 @@ import (
 	"os/user"
 	"testing"
 
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
@@ -29,12 +29,12 @@ var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d *Daemon
-	b workspacebackend.WorkspaceBackend
+	b workshopbackend.WorkshopBackend
 
-	workspaceDir string
-	username     string
-	project      *workspacebackend.Project
-	ctx          context.Context
+	workshopDir string
+	username    string
+	project     *workshopbackend.Project
+	ctx         context.Context
 
 	vars map[string]string
 
@@ -47,23 +47,23 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
-	s.workspaceDir = c.MkDir()
+	s.workshopDir = c.MkDir()
 	s.username = "testuser"
-	s.project = &workspacebackend.Project{
-		Path:      s.workspaceDir,
+	s.project = &workshopbackend.Project{
+		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
-	s.b = workspacebackend.NewFakeWorkspaceBackend()
+	s.b = workshopbackend.NewFakeWorkshopBackend()
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil
-	}, &workspacebackend.LookupUsername)
+	}, &workshopbackend.LookupUsername)
 
 	// will be called when project is created
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshopbackend.NewProjectId)
 
-	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
 
 	_, _, err := s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
@@ -71,7 +71,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
-	s.workspaceDir = ""
+	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreUserLookup()
 	s.restoreProjectId()
@@ -85,7 +85,7 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
-	d, err := New(&Options{Dir: s.workspaceDir}, s.b)
+	d, err := New(&Options{Dir: s.workshopDir}, s.b)
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	s.d = d

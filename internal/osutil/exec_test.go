@@ -26,7 +26,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type execSuite struct{}

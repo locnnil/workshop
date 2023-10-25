@@ -12,36 +12,36 @@ import (
 )
 
 const (
-	// defaultWorkspaceDir is the Workspace directory used if $WORKSPACE is not set. It is
-	// created by the daemon ("workspaced run") if it doesn't exist, and also used by
-	// the workspace client.
-	defaultWorkspaceDir = "/var/lib/workspace/default"
+	// defaultWorkshopDir is the Workshop directory used if $WORKSHOP is not set. It is
+	// created by the daemon ("workshopd run") if it doesn't exist, and also used by
+	// the workshop client.
+	defaultWorkshopDir = "/var/lib/workshop/default"
 
-	// default root directory path for the SDKs to be installed into in a workspace
-	WorkspaceSdksDir = "/var/lib/workspace/sdk"
+	// default root directory path for the SDKs to be installed into in a workshop
+	WorkshopSdksDir = "/var/lib/workshop/sdk"
 )
 
 var (
-	SdkDir          string
-	StateDir        string
-	BaseDir         string
-	WorkspaceSocket string
+	SdkDir         string
+	StateDir       string
+	BaseDir        string
+	WorkshopSocket string
 )
 
-func getEnvPaths() (workspaceDir string, socketPath string) {
-	workspaceDir = os.Getenv("WORKSPACE")
-	if workspaceDir == "" {
-		workspaceDir = defaultWorkspaceDir
+func getEnvPaths() (workshopDir string, socketPath string) {
+	workshopDir = os.Getenv("WORKSHOP")
+	if workshopDir == "" {
+		workshopDir = defaultWorkshopDir
 	}
-	socketPath = os.Getenv("WORKSPACE_SOCKET")
+	socketPath = os.Getenv("WORKSHOP_SOCKET")
 	if socketPath == "" {
-		socketPath = filepath.Join(workspaceDir, ".workspace.socket")
+		socketPath = filepath.Join(workshopDir, ".workshop.socket")
 	}
-	return workspaceDir, socketPath
+	return workshopDir, socketPath
 }
 
 func init() {
-	BaseDir, WorkspaceSocket = getEnvPaths()
+	BaseDir, WorkshopSocket = getEnvPaths()
 	SetRootDir(BaseDir)
 
 	var b [8]byte

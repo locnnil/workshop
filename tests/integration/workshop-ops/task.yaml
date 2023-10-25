@@ -1,0 +1,4 @@
+summary: Run LXD integration tests for workshop operations (launch, delete, attach storage, etc.)
+
+execute: |
+  go test $SPREAD_PATH/internal/workshopbackend/tests/integration -tags=integration -check.f wsOps

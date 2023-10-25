@@ -19,9 +19,9 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 func TestRestart(t *testing.T) { TestingT(t) }

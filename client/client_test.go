@@ -29,7 +29,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/client"
+	"github.com/canonical/workshop/client"
 )
 
 // Hook up check.v1 into the "go test" runner
@@ -68,7 +68,7 @@ func (cs *clientSuite) SetUpTest(c *C) {
 	cs.doCalls = 0
 
 	cs.tmpDir = c.MkDir()
-	cs.socketPath = filepath.Join(cs.tmpDir, "workspace.socket")
+	cs.socketPath = filepath.Join(cs.tmpDir, "workshop.socket")
 
 	cs.restore = client.FakeDoRetry(time.Millisecond, 10*time.Millisecond)
 }

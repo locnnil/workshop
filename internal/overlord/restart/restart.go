@@ -18,7 +18,7 @@ package restart
 import (
 	"errors"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 type RestartType int
@@ -44,10 +44,10 @@ const (
 type Handler interface {
 	HandleRestart(t RestartType)
 	// RebootIsFine is called early when either a reboot was
-	// requested by workspaced and happened or no reboot was expected at all.
+	// requested by workshopd and happened or no reboot was expected at all.
 	RebootIsFine(st *state.State) error
 	// RebootIsMissing is called early instead when a reboot was
-	// requested by workspaced but did not happen.
+	// requested by workshopd but did not happen.
 	RebootIsMissing(st *state.State) error
 }
 

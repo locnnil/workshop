@@ -24,9 +24,9 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/timings"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/timings"
 )
 
 type timingsSuite struct {

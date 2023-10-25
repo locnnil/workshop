@@ -23,9 +23,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/version"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/version"
 )
 
 // Level is the current implemented patch level of the state format and content.
@@ -73,7 +73,7 @@ func applySublevelPatches(level, firstSublevel int, s *state.State) error {
 }
 
 // maybeResetSublevelForLevel60 checks if we're coming from a different version
-// of workspaced and if so, reset sublevel back to 0 to re-apply sublevel patches.
+// of workshopd and if so, reset sublevel back to 0 to re-apply sublevel patches.
 func maybeResetSublevelForLevel60(s *state.State, sublevel *int) error {
 	s.Lock()
 	defer s.Unlock()
@@ -87,7 +87,7 @@ func maybeResetSublevelForLevel60(s *state.State, sublevel *int) error {
 		*sublevel = 0
 		s.Set("patch-sublevel", *sublevel)
 		// unset old reset key in case of revert into old version.
-		// TODO: this can go away if we go through a workspaced epoch.
+		// TODO: this can go away if we go through a workshopd epoch.
 		s.Set("patch-sublevel-reset", nil)
 	}
 
@@ -110,7 +110,7 @@ func Apply(s *state.State) error {
 	}
 
 	if stateLevel > Level {
-		return fmt.Errorf("cannot downgrade: workspaced is too old for the current system state (patch level %d)", stateLevel)
+		return fmt.Errorf("cannot downgrade: workshopd is too old for the current system state (patch level %d)", stateLevel)
 	}
 
 	// check if we refreshed from 6.0 which was not aware of sublevels
@@ -147,7 +147,7 @@ func Apply(s *state.State) error {
 		sublevels := patches[level]
 		logger.Noticef("Patching system state from level %d to %d", level-1, level)
 		if sublevels == nil {
-			return fmt.Errorf("cannot upgrade: workspaced is too new for the current system state (patch level %d)", level-1)
+			return fmt.Errorf("cannot upgrade: workshopd is too new for the current system state (patch level %d)", level-1)
 		}
 		if err := applySublevelPatches(level, 0, s); err != nil {
 			return err
@@ -155,7 +155,7 @@ func Apply(s *state.State) error {
 	}
 
 	s.Lock()
-	// store last workspaced version last in case system is restarted before patches are applied
+	// store last workshopd version last in case system is restarted before patches are applied
 	s.Set("patch-sublevel-last-version", version.Version)
 	s.Unlock()
 

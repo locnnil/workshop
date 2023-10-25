@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type execPayload struct {
@@ -44,7 +44,7 @@ func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
 	return userId, groupId, nil
 }
 
-func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
+func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	wrkspc := muxVars(r)["name"]
 	projectId := muxVars(r)["id"]
 
@@ -68,7 +68,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if reqData.WorkingDir == "" {
-		reqData.WorkingDir = workspacebackend.WorkspaceProjectPath
+		reqData.WorkingDir = workshopbackend.WorkshopProjectPath
 	}
 
 	var timeout time.Duration
@@ -85,12 +85,12 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: %v", err)
 	}
 
-	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot exec: user is not in context")
 	}
 
-	var execArgs = &workspacebackend.ExecArgs{
+	var execArgs = &workshopbackend.ExecArgs{
 		Command:     reqData.Command,
 		Environment: reqData.Environment,
 		WorkDir:     reqData.WorkingDir,
@@ -108,7 +108,7 @@ func v1PostWorkspaceExec(c *Command, r *http.Request, _ *userState) Response {
 	st.Lock()
 	defer st.Unlock()
 
-	wsmgr := c.d.overlord.WorkspaceManager()
+	wsmgr := c.d.overlord.WorkshopManager()
 	task, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs)
 	if err != nil {
 		return statusBadRequest(err.Error())

@@ -27,7 +27,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type kcmdlineTestSuite struct{}

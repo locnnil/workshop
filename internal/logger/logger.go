@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 // A Logger is a fairly minimal logging tool.
@@ -142,10 +142,10 @@ type Log struct {
 }
 
 func (l *Log) debugEnabled() bool {
-	return l.debug || osutil.GetenvBool("WORKSPACED_DEBUG")
+	return l.debug || osutil.GetenvBool("WORKSHOP_DEBUG")
 }
 
-// Debug only prints if WORKSPACED_DEBUG is set
+// Debug only prints if WORKSHOP_DEBUG is set
 func (l *Log) Debug(msg string) {
 	if l.debugEnabled() {
 		l.NoGuardDebug(msg)
@@ -213,7 +213,7 @@ func BootSetup() error {
 var procCmdlineUseDefaultMockInTests = true
 
 // The function returns false and left here for compatibility
-// with snapd further merges. Workspaced does not use this
+// with snapd further merges. Workshopd does not use this
 // functionality
 func debugEnabledOnKernelCmdline() bool {
 	return false

@@ -29,12 +29,12 @@ import (
 	"github.com/lxc/lxd/shared/api"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
-	"github.com/canonical/workspace/internal/wsutil"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/wsutil"
 
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
 )
 
 const (
@@ -49,8 +49,8 @@ const (
 
 // execution tracks the execution of a command.
 type execution struct {
-	workspace string
-	execArgs  *workspacebackend.ExecArgs
+	workshop string
+	execArgs *workshopbackend.ExecArgs
 
 	websockets       map[string]*websocket.Conn
 	websocketsLock   sync.Mutex
@@ -59,7 +59,7 @@ type execution struct {
 }
 
 func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workspace, err := UserProjectWorkspace(task)
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	var setup workspacebackend.ExecArgs
+	var setup workshopbackend.ExecArgs
 	st := task.State()
 	st.Lock()
 	err = task.Get("exec-setup", &setup)
@@ -78,7 +78,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 
 	// Set up the object that will track the execution.
 	e := &execution{
-		workspace:        workspace,
+		workshop:         workshop,
 		execArgs:         &setup,
 		websockets:       make(map[string]*websocket.Conn),
 		ioConnected:      make(chan struct{}),
@@ -168,7 +168,7 @@ func (e *execution) waitIOConnected(ctx context.Context, execID string) error {
 }
 
 // do actually runs the command.
-func (e *execution) do(ctx context.Context, task *state.Task, backend workspacebackend.WorkspaceBackend) error {
+func (e *execution) do(ctx context.Context, task *state.Task, backend workshopbackend.WorkshopBackend) error {
 	// Wait till client has connected to "stdio" websocket (and "stderr" if
 	// separating stderr), to avoid race conditions forwarding I/O.
 	err := e.waitIOConnected(ctx, task.ID())
@@ -243,14 +243,14 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	}
 
 	// TODO: the lack of separate output in LXD exec when executing a command in
-	// an interactive mode begets quirky things. Consider this: workspace exec
+	// an interactive mode begets quirky things. Consider this: workshop exec
 	// empty -- ls -R / 2>/dev/null Given that the command will be executed in
 	// the interactive mode (stdin, stdout both point to the terminal), even if
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
-	exectx, err := backend.Exec(ctx, e.workspace, &workspacebackend.Execution{
+	exectx, err := backend.Exec(ctx, e.workshop, &workshopbackend.Execution{
 		ExecArgs: *e.execArgs,
-		ExecControls: workspacebackend.ExecControls{
+		ExecControls: workshopbackend.ExecControls{
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
 			Stderr: stderrWriter,
@@ -288,7 +288,7 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workspaceb
 	if err == nil {
 		setExitCode(task, 0)
 	} else {
-		if execerr, ok := err.(*workspacebackend.ErrExec); ok {
+		if execerr, ok := err.(*workshopbackend.ErrExec); ok {
 			setExitCode(task, execerr.Status)
 			return nil
 		}

@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // HandlerFunc is the type of function for the handlers

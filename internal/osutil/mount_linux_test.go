@@ -17,7 +17,7 @@ package osutil_test
 import (
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type mountSuite struct{}

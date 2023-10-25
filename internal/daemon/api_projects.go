@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -24,7 +24,7 @@ type SdkInfo struct {
 	InstallTime time.Time `json:"install-time"`
 }
 
-type WorkspaceInfo struct {
+type WorkshopInfo struct {
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
 	ProjectId string     `json:"project-id"`
@@ -35,12 +35,12 @@ type WorkspaceInfo struct {
 
 var ensureStateSoon = stateEnsureBefore
 
-func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *WorkspaceInfo {
-	var ws WorkspaceInfo
+func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *WorkshopInfo {
+	var ws WorkshopInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
 	ws.ProjectId = pid
-	ws.State = workspacebackend.WorkspaceOff.String()
+	ws.State = workshopbackend.WorkshopOff.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -50,8 +50,8 @@ func workspaceFileToInfo(file *workspacebackend.WorkspaceFile, pid string) *Work
 	return &ws
 }
 
-func workspacePropsToInfo(props *workspacebackend.Workspace) *WorkspaceInfo {
-	var ws WorkspaceInfo
+func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkshopInfo {
+	var ws WorkshopInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
 	ws.Base = props.Base()
@@ -79,14 +79,14 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	// In this scenario, we will have go walk all projects in the system
-	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
-	// and returns a list of workspaces for every project found in the system
-	projects, err := c.d.overlord.WorkspaceBackend().Projects(r.Context())
+	// and also make sure these are up-to-date, this is what RetrieveWorkshopsGlobal does
+	// and returns a list of workshops for every project found in the system
+	projects, err := c.d.overlord.WorkshopBackend().Projects(r.Context())
 	if err != nil {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	result := make([]*workspacebackend.Project, 0)
+	result := make([]*workshopbackend.Project, 0)
 	for _, val := range projects {
 		result = append(result, val...)
 	}
@@ -108,12 +108,12 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wBackend := c.d.overlord.WorkshopBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
-	if err != nil && !errors.Is(err, workspacebackend.ErrNotAProject) {
+	if err != nil && !errors.Is(err, workshopbackend.ErrNotAProject) {
 		return statusInternalError("cannot create or load project: %v", err)
-	} else if errors.Is(err, workspacebackend.ErrNotAProject) {
+	} else if errors.Is(err, workshopbackend.ErrNotAProject) {
 		return statusBadRequest("%v", err)
 	}
 
@@ -124,7 +124,7 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	}
 }
 
-func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	state := c.d.overlord.State()
 	state.Lock()
@@ -136,27 +136,27 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 		wstate = "all"
 	}
 
-	wrkmgr := c.d.overlord.WorkspaceManager()
-	files, workspaces, err := wrkmgr.Workspaces(r.Context(), projectId)
+	wrkmgr := c.d.overlord.WorkshopManager()
+	files, workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
-		return statusInternalError("cannot list workspaces: %v", err)
+		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	var infoLst = make([]*WorkspaceInfo, 0)
-	for _, w := range workspaces {
+	var infoLst = make([]*WorkshopInfo, 0)
+	for _, w := range workshops {
 		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
 			continue
 		}
-		info := workspacePropsToInfo(w)
+		info := workshopPropsToInfo(w)
 		infoLst = append(infoLst, info)
 	}
 
-	// Now, if the client wants only workspace files or just queried everything
-	// available, we add workspace files to the response (note these only exist
+	// Now, if the client wants only workshop files or just queried everything
+	// available, we add workshop files to the response (note these only exist
 	// as files, not instances)
 	if wstate == "all" || wstate == "off" {
 		for _, file := range files {
-			info := workspaceFileToInfo(file, projectId)
+			info := workshopFileToInfo(file, projectId)
 			infoLst = append(infoLst, info)
 		}
 	}
@@ -164,12 +164,12 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	return SyncResponse(infoLst, http.StatusOK)
 }
 
-func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	wsmgr := c.d.overlord.WorkspaceManager()
+	wsmgr := c.d.overlord.WorkshopManager()
 
 	type actionOpts struct {
 		Mode string `json:"refresh-mode"`
@@ -187,12 +187,12 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	}
 
 	if len(reqData.Names) == 0 {
-		return statusBadRequest("cannot %s: at least one workspace name must be provided", reqData.Action)
+		return statusBadRequest("cannot %s: at least one workshop name must be provided", reqData.Action)
 	}
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
-	user, ok := r.Context().Value(workspacebackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
@@ -200,9 +200,9 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	var summary string
 	switch len(reqData.Names) {
 	case 1:
-		summary = fmt.Sprintf("%s %q workspace", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
 	default:
-		summary = fmt.Sprintf("%s %s workspaces", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
 	}
 
 	var change *state.Change
@@ -221,7 +221,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
 
 		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
-			return statusBadRequest("wait-on-error is not supported for multiple workspaces")
+			return statusBadRequest("wait-on-error is not supported for multiple workshops")
 		}
 
 		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
@@ -281,7 +281,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	return AsyncResponse(nil, change.ID())
 }
 
-func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	name := muxVars(r)["name"]
 
@@ -290,19 +290,19 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if name == "" {
-		return statusBadRequest("workspace name must be provided")
+		return statusBadRequest("workshop name must be provided")
 	}
 
 	state := c.d.overlord.State()
 	state.Lock()
 	defer state.Unlock()
 
-	wrkmgr := c.d.overlord.WorkspaceManager()
+	wrkmgr := c.d.overlord.WorkshopManager()
 
-	workspace, err := wrkmgr.Workspace(r.Context(), name, projectId)
+	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("cannot load workspace: %v", err)
+		return statusNotFound("cannot load workshop: %v", err)
 	}
 
-	return SyncResponse(workspacePropsToInfo(workspace), http.StatusOK)
+	return SyncResponse(workshopPropsToInfo(workshop), http.StatusOK)
 }

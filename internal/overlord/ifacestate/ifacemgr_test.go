@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/ifacestate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
@@ -23,8 +23,8 @@ type interfaceManagerSuite struct {
 	state     *state.State
 	se        *overlord.StateEngine
 	ctx       context.Context
-	wsbackend workspacebackend.WorkspaceBackend
-	prj       *workspacebackend.Project
+	wsbackend workshopbackend.WorkshopBackend
+	prj       *workshopbackend.Project
 }
 
 var _ = check.Suite(&interfaceManagerSuite{})
@@ -36,8 +36,8 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.o = overlord.Fake()
 	s.state = s.o.State()
 	s.se = s.o.StateEngine()
-	s.wsbackend = workspacebackend.NewFakeWorkspaceBackend()
-	s.ctx = context.WithValue(context.Background(), workspacebackend.ContextUser, "testuser")
+	s.wsbackend = workshopbackend.NewFakeWorkshopBackend()
+	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 
@@ -48,10 +48,10 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) mockWorkspaceWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
-	ctx := context.WithValue(s.ctx, workspacebackend.ContextProjectId, s.prj.ProjectId)
+func (s *interfaceManagerSuite) mockWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
+	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
-	err := os.WriteFile(filepath.Join(s.prj.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@22.04
 sdks:
   consumer:
@@ -61,15 +61,15 @@ sdks:
 `), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchWorkspace(ctx, ws, "ubuntu@22.04")
+	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 
-	wsfs, err := s.wsbackend.GetWorkspaceFs(ctx, ws)
+	wsfs, err := s.wsbackend.GetWorkshopFs(ctx, ws)
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
 	for name, sdk := range sdkYamls {
-		sdkPath := filepath.Join(dirs.WorkspaceSdksDir, name, "current", "meta", "sdk.yaml")
+		sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
 		err = afero.WriteFile(wsfs, sdkPath, []byte(sdk), 0644)
 		c.Assert(err, check.IsNil)
 	}
@@ -94,7 +94,7 @@ slots:
   attr: slot-value
 `
 
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})
@@ -123,7 +123,7 @@ slots:
 
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 1)
-	cref := &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"}}
+	cref := &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)
@@ -160,7 +160,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})
@@ -202,7 +202,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})

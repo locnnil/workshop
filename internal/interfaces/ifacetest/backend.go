@@ -22,9 +22,9 @@ package ifacetest
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // TestSecurityBackend is a security backend intended for testing.
@@ -49,7 +49,7 @@ type TestSetupCall struct {
 }
 
 // Initialize does nothing.
-func (b *TestSecurityBackend) Initialize(backend workspacebackend.WorkspaceBackend) error {
+func (b *TestSecurityBackend) Initialize(backend workshopbackend.WorkshopBackend) error {
 	return nil
 }
 
@@ -68,7 +68,7 @@ func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo *sdk.Info, 
 }
 
 // Remove records information about the call and calls the remove callback if one is defined
-func (b *TestSecurityBackend) Remove(context context.Context, workspace, sdkName string) error {
+func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName string) error {
 	b.RemoveCalls = append(b.RemoveCalls, sdkName)
 	if b.RemoveCallback == nil {
 		return nil

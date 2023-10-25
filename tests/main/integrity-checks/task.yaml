@@ -1,21 +1,21 @@
-summary: Error states tracking and recovery for the .workspace.lock
+summary: Error states tracking and recovery for the .workshop.lock
 environment:
-  WORKSPACES: $SPREAD_PATH/tests/lib/workspaces-empty
-  PROJECT: $WORKSPACES/test-empty-ubuntu20
+  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
+  PROJECT: $WORKSHOPS/test-empty-ubuntu20
 
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSPACES"
-  uninstall_workspaced
+  cleanup "$WORKSHOPS"
+  uninstall_workshopd
 
 debug: |
-  lxc project switch workspace.ubuntu
+  lxc project switch workshop.ubuntu
   lxc list -f compact
-  ls "$WORKSPACES"/*
+  ls "$WORKSHOPS"/*
 
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -23,12 +23,12 @@ execute: |
   launch "$PROJECT" ws
 
   echo "Should recover .lock file if removed for an existing project"
-  rm -f "$PROJECT"/.workspace.lock
+  rm -f "$PROJECT"/.workshop.lock
   list "$PROJECT"
-  test -f "$PROJECT"/.workspace.lock
+  test -f "$PROJECT"/.workshop.lock
 
-  echo "Should report a workspace state as Error if there is no workspace file"
-  mv "$PROJECT"/.workspace.ws.yaml "$PROJECT"/.workspace.ws.yaml.bak
+  echo "Should report a workshop state as Error if there is no workshop file"
+  mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
   list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
-  mv "$PROJECT"/.workspace.ws.yaml.bak "$PROJECT"/.workspace.ws.yaml
+  mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
   list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

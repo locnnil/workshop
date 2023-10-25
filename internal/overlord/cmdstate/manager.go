@@ -18,19 +18,19 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type CommandManager struct {
 	executions      map[string]*execution
 	executionsCond  *sync.Cond
 	executionsMutex sync.Mutex
-	backend         workspacebackend.WorkspaceBackend
+	backend         workshopbackend.WorkshopBackend
 }
 
 // New creates a new CommandManager.
-func New(runner *state.TaskRunner, backend workspacebackend.WorkspaceBackend) *CommandManager {
+func New(runner *state.TaskRunner, backend workshopbackend.WorkshopBackend) *CommandManager {
 	manager := &CommandManager{
 		executions:     make(map[string]*execution),
 		executionsCond: sync.NewCond(&sync.Mutex{}),

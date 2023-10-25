@@ -3,37 +3,37 @@ package hookstate_test
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/overlord/hookstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
 type S struct {
 	state   *state.State
-	project *workspacebackend.Project
+	project *workshopbackend.Project
 }
 
 var _ = check.Suite(&S{})
 
 func (s *S) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workspacebackend.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
+	s.project = &workshopbackend.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
 }
 
 func (s *S) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	var sdk = workspacebackend.SdkRecord{Name: "go", Channel: "latest/stable"}
+	var sdk = workshopbackend.SdkRecord{Name: "go", Channel: "latest/stable"}
 
 	envs := []map[string]string{
 		{},
-		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
-		{"SDK_STATE_DIR": "/var/lib/workspace/state/sdk/go"},
+		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
+		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
 	}
 
-	for num, i := range []hookstate.WorkspaceHookType{
+	for num, i := range []hookstate.WorkshopHookType{
 		hookstate.SetupBase,
 		hookstate.SaveState,
 		hookstate.RestoreState,

@@ -1,23 +1,24 @@
 #!/bin/bash
 
-# Install and uninstall workspaced
+# Install and uninstall workshopd
 
-function install_workspaced() {
+function install_workshopd() {
   # make sure there is no existing changes
-    go install -buildvcs=false /remote/cmd/workspaced
-    install /remote/cmd/workspaced/workspaced.service /etc/systemd/system/
-    mkdir -p /etc/systemd/system/workspaced.service.d
+    go install -buildvcs=false /remote/cmd/workshopd
+    install /remote/cmd/workshopd/workshopd.service /etc/systemd/system/
+    mkdir -p /etc/systemd/system/workshopd.service.d
     echo "[Service]
 Environment=\"SDK_STORE_URL=http://localhost:8080/storage/v1/\"
-Environment=\"WORKSPACED_DEBUG=1\"" > /etc/systemd/system/workspaced.service.d/local.conf
-    systemctl start workspaced
+Environment=\"WORKSHOP_DEBUG=1\"" > /etc/systemd/system/workshopd.service.d/local.conf
+    systemctl daemon-reload
+    systemctl start workshopd
 }
 
-function uninstall_workspaced() {
-  systemctl stop workspaced
-  rm -f /etc/systemd/system/workspaced.service
-  rm -f "$HOME"/go/bin/workspaced
-  rm -rf "$WORKSPACE"
+function uninstall_workshopd() {
+  systemctl stop workshopd
+  rm -f /etc/systemd/system/workshopd.service
+  rm -f "$HOME"/go/bin/workshopd
+  rm -rf "$WORKSHOP"
 }
 
 
@@ -37,69 +38,69 @@ function publish_test_sdk_content() {
 
 # Functions to assert required LXD state
 
-function assert_workspace_config() {
-  project_id=$(cat "$1"/.workspace.lock)
-  lxc config device get ws-"$project_id" workspace.project source --project workspace.ubuntu | MATCH "$1"
-  lxc config device get ws-"$project_id" workspace.project path --project workspace.ubuntu | MATCH /project
-  lxc config get ws-"$project_id" user.workspace.project-id --project workspace.ubuntu | MATCH "$project_id"
+function assert_workshop_config() {
+  project_id=$(cat "$1"/.workshop.lock)
+  lxc config device get ws-"$project_id" workshop.project source --project workshop.ubuntu | MATCH "$1"
+  lxc config device get ws-"$project_id" workshop.project path --project workshop.ubuntu | MATCH /project
+  lxc config get ws-"$project_id" user.workshop.project-id --project workshop.ubuntu | MATCH "$project_id"
 
-  lxc list -c ns -f compact --project workspace.ubuntu | MATCH "ws-$project_id  RUNNING"
+  lxc list -c ns -f compact --project workshop.ubuntu | MATCH "ws-$project_id  RUNNING"
 }
 
-function assert_workspace_sdk() {
-  project_id=$(cat "$1"/.workspace.lock)
-  workspace=ws-"$project_id"
-  base=/var/lib/workspace/sdk
-  sdk_config=$(lxc config get "$workspace" user.workspace.sdk --project workspace.ubuntu)
+function assert_workshop_sdk() {
+  project_id=$(cat "$1"/.workshop.lock)
+  workshop=ws-"$project_id"
+  base=/var/lib/workshop/sdk
+  sdk_config=$(lxc config get "$workshop" user.workshop.sdk --project workshop.ubuntu)
 
-  rev=$(lxc exec "$workspace" -- ls -1 "$base"/"$2" | sort | grep -E "^[0-9]+$")
+  rev=$(lxc exec "$workshop" -- ls -1 "$base"/"$2" | sort | grep -E "^[0-9]+$")
   echo "$sdk_config" | jq ".\"$2\"[0].revision" | MATCH "$rev"
   echo "$sdk_config" | jq ".\"$2\"[0].channel" | MATCH "latest/stable"
 
-  lxc exec "$workspace" -- test -h "$base"/"$2"/current || echo "current must be a symbolic link"
-  lxc exec "$workspace" -- test "$base"/"$2"/"$rev" = "$(readlink -f "$base"/"$2"/current)" || echo "current does not point to $rev"
+  lxc exec "$workshop" -- test -h "$base"/"$2"/current || echo "current must be a symbolic link"
+  lxc exec "$workshop" -- test "$base"/"$2"/"$rev" = "$(readlink -f "$base"/"$2"/current)" || echo "current does not point to $rev"
 }
 
 # General functions
 
 function cleanup() {
-  lxc delete $(lxc list -c n -f csv --project workspace.ubuntu) --force --project workspace.ubuntu
-  lxc project set workspace.ubuntu user.workspace.projects ""
+  lxc delete $(lxc list -c n -f csv --project workshop.ubuntu) --force --project workshop.ubuntu
+  lxc project set workshop.ubuntu user.workshop.projects ""
   for i in "$1"/*; do
-    rm -f "$i"/.workspace.lock
+    rm -f "$i"/.workshop.lock
   done
 }
 
-# Workspace sub-command wrappers
+# Workshop sub-command wrappers
 
-function workspace_exec() {
-  sudo -u ubuntu 2>&1 -- workspace "$@"
+function workshop_exec() {
+  sudo -u ubuntu 2>&1 -- workshop "$@"
 }
 
 function launch() {
-  sudo -u ubuntu -- workspace --project "$1" launch "$2"
+  sudo -u ubuntu -- workshop --project "$1" launch "$2"
 }
 
 function list() {
-    sudo -u ubuntu -- workspace --project "$1" list
+    sudo -u ubuntu -- workshop --project "$1" list
 }
 
 function list_cwd() {
-  sudo -u ubuntu -- workspace list
+  sudo -u ubuntu -- workshop list
 }
 
 function list_global() {
-  sudo -u ubuntu -- workspace list --global
+  sudo -u ubuntu -- workshop list --global
 }
 
 function delete() {
-    lxc delete "$1" --force --project workspace.ubuntu
+    lxc delete "$1" --force --project workshop.ubuntu
 }
 
 function changes() {
-  sudo -u ubuntu -- workspace changes --project "$1"
+  sudo -u ubuntu -- workshop changes --project "$1"
 }
 
 function changes_global() {
-  sudo -u ubuntu -- workspace changes
+  sudo -u ubuntu -- workshop changes
 }

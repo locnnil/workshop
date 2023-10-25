@@ -3,22 +3,22 @@ package ifacestate
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces"
 
-	backend "github.com/canonical/workspace/internal/interfaces/backends"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	backend "github.com/canonical/workshop/internal/interfaces/backends"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type InterfaceManager struct {
 	state     *state.State
-	wsbackend workspacebackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkshopBackend
 	repo      *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workspacebackend.WorkspaceBackend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend) *InterfaceManager {
 	m := &InterfaceManager{
 		state:     s,
 		wsbackend: be,
@@ -56,10 +56,10 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	for user, projects := range allprojects {
-		ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, user)
+		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
 		for _, prj := range projects {
-			prjctx := context.WithValue(ctx, workspacebackend.ContextProjectId, prj.ProjectId)
-			_, wrksps, err := m.wsbackend.GetProjectWorkspaces(prjctx)
+			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
+			_, wrksps, err := m.wsbackend.GetProjectWorkshops(prjctx)
 			if err != nil {
 				return err
 			}
@@ -94,7 +94,7 @@ func (m *InterfaceManager) Ensure() error {
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[string]string, error) {
+func (m *InterfaceManager) reloadConnections(workshop, sdkName string) (map[string]string, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
@@ -114,12 +114,12 @@ func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[str
 		// Apply filtering, this allows us to reload only a subset of
 		// connections (and similarly, refresh the static attributes of only a
 		// subset of connections).
-		if workspace != "" && connRef.PlugRef.Workspace != workspace && connRef.SlotRef.Workspace != workspace {
+		if workshop != "" && connRef.PlugRef.Workshop != workshop && connRef.SlotRef.Workshop != workshop {
 			continue
 		}
 
-		plugInfo := m.repo.Plug(connRef.PlugRef.Workspace, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
-		slotInfo := m.repo.Slot(connRef.SlotRef.Workspace, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
+		plugInfo := m.repo.Plug(connRef.PlugRef.Workshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
+		slotInfo := m.repo.Slot(connRef.SlotRef.Workshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
 
 		// The connection refers to a plug or slot that doesn't exist anymore, e.g. because of a refresh
 		// to a new sdk revision that doesn't have the given plug/slot.
@@ -144,8 +144,8 @@ func (m *InterfaceManager) reloadConnections(workspace, sdkName string) (map[str
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[connRef.PlugRef.Workspace] = connRef.PlugRef.Sdk
-			affected[connRef.SlotRef.Workspace] = connRef.SlotRef.Sdk
+			affected[connRef.PlugRef.Workshop] = connRef.PlugRef.Sdk
+			affected[connRef.SlotRef.Workshop] = connRef.SlotRef.Sdk
 		}
 	}
 	if connStateChanged {

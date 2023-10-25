@@ -3,14 +3,14 @@ package ifacetest
 import (
 	"context"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 func CreateTestContext(username, projectId string) context.Context {
-	ctx := context.WithValue(context.Background(), workspacebackend.ContextUser, username)
-	ctx = context.WithValue(ctx, workspacebackend.ContextProjectId, projectId)
+	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
+	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
 	return ctx
 }
 

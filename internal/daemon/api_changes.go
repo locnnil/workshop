@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"golang.org/x/exp/slices"
 )
 
@@ -126,8 +126,8 @@ func change2changeInfo(chg *state.Change) *changeInfo {
 func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 	query := r.URL.Query()
 
-	if query.Has("workspaces") && !query.Has("project-id") {
-		return statusBadRequest("project-id must be provided if workspaces are specified")
+	if query.Has("workshops") && !query.Has("project-id") {
+		return statusBadRequest("project-id must be provided if workshops are specified")
 	}
 
 	qselect := query.Get("select")
@@ -162,13 +162,13 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 				return false
 			}
 
-			if query.Has("workspaces") {
-				var workspaces []string = strings.Split(query.Get("workspaces"), ",")
-				var workspace string
-				if err := chg.Get("workspace", &workspace); err != nil {
+			if query.Has("workshops") {
+				var workshops []string = strings.Split(query.Get("workshops"), ",")
+				var workshop string
+				if err := chg.Get("workshop", &workshop); err != nil {
 					return false
 				}
-				if !slices.Contains(workspaces, workspace) {
+				if !slices.Contains(workshops, workshop) {
 					return false
 				}
 			}

@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 type progress struct {

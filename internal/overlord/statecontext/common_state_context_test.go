@@ -5,16 +5,16 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 )
 
 type CommonStateFuncs struct {
 	state   *state.State
-	project *workspacebackend.Project
+	project *workshopbackend.Project
 }
 
 var _ = check.Suite(&CommonStateFuncs{})
@@ -27,7 +27,7 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 	chg.Set("user", "testuser")
 
 	t := s.state.NewTask("task", "...")
-	t.Set("workspace", "ws")
+	t.Set("workshop", "ws")
 	t.Set("project", *s.project)
 	chg.AddTask(t)
 	return t
@@ -35,7 +35,7 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 
 func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workspacebackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *CommonStateFuncs) TestStopTaskOperation(c *check.C) {

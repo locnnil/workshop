@@ -9,17 +9,17 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
 func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
-	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workspace/.socket);"
+	req.RemoteAddr = "pid=11;uid=1000;socket=(/var/lib/workshop/.socket);"
 	return req.WithContext(s.ctx), err
 }
 
@@ -40,7 +40,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workspacebackend.Project{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workshopbackend.Project{
 		{Path: s.project.Path, ProjectId: s.project.ProjectId},
 	})
 }
@@ -89,29 +89,29 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 		fmt.Sprintf(`.*{"path":"%s","id":"%s"}.*`, s.project.Path, s.project.ProjectId))
 }
 
-func (s *apiSuite) TestProjectsGetWorkspaces(c *check.C) {
+func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workspacebackend.InstallTimeNow)
+	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
 	defer restore()
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops", nil)
 	c.Assert(err, check.IsNil)
-	b := s.d.overlord.WorkspaceBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+	b := s.d.overlord.WorkshopBackend()
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
 base: ubuntu@20.04
 `), 0644)
 	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkspace(req.Context(), "ws-test", "ubuntu@20.04")
+	err = b.LaunchWorkshop(req.Context(), "ws-test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	ws, err := b.GetWorkspace(req.Context(), "ws-test")
+	ws, err := b.GetWorkshop(req.Context(), "ws-test")
 	c.Assert(err, check.IsNil)
 	ws.LinkSdk(req.Context(), sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
-	rsp := v1GetProjectWorkspaces(projectsCmd, req, nil).(*resp)
+	rsp := v1GetProjectWorkshops(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
@@ -119,7 +119,7 @@ base: ubuntu@20.04
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, check.DeepEquals, []*WorkspaceInfo{
+	c.Check(rsp.Result, check.DeepEquals, []*WorkshopInfo{
 		{
 			Name:      "ws-test",
 			ProjectId: s.project.ProjectId,
@@ -136,24 +136,24 @@ base: ubuntu@20.04
 	})
 }
 
-func (s *apiSuite) TestProjectsGetWorkspace(c *check.C) {
+func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces/{name}")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws-test"}
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workspaces/ws-test", nil)
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/ws-test", nil)
 	c.Assert(err, check.IsNil)
-	b := s.d.overlord.WorkspaceBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws-test.yaml"), []byte(`name: ws-test
+	b := s.d.overlord.WorkshopBackend()
+	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
 base: ubuntu@20.04
 `), 0644)
 	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkspace(s.ctx, "ws-test", "ubuntu@20.04")
+	err = b.LaunchWorkshop(s.ctx, "ws-test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	rsp := v1GetProjectWorkspace(projectsCmd, req, nil).(*resp)
+	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
@@ -161,29 +161,29 @@ base: ubuntu@20.04
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, check.DeepEquals, &WorkspaceInfo{
+	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
 		Name:      "ws-test",
 		ProjectId: s.project.ProjectId,
 		State:     "Ready",
 	})
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspaceLaunch(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkshopLaunch(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 
-	// Mock workspace files
-	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	// Mock workshop files
+	err := os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws1.yaml"), []byte(`name: ws1
+	err = os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
@@ -205,7 +205,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot launch: at least one workspace name must be provided",
+			Message: "cannot launch: at least one workshop name must be provided",
 		},
 		{
 			Type:    ResponseTypeError,
@@ -215,7 +215,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -228,7 +228,7 @@ base: ubuntu@20.04`), 0644)
 
 	for num, i := range requests {
 		// Execute
-		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
 		{
 			// Verify
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
@@ -243,24 +243,24 @@ base: ubuntu@20.04`), 0644)
 	c.Assert(soon, check.Equals, 1)
 }
 
-func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectRefreshWorkshopContinue(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws1.yaml"), []byte(`name: ws1
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		// try continue without starting wait-on-error
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh", "options": {"refresh-mode":"continue"}}`),
 
-		// a workspace name is a must
+		// a workshop name is a must
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
 
-		// non-transactional refresh is only supported for a single workspace
+		// non-transactional refresh is only supported for a single workshop
 		bytes.NewBufferString(`{"names":["ws", "ws1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 
 		// start - attempt transactional - continue (success) - continue (fail, already finished)
@@ -281,7 +281,7 @@ base: ubuntu@20.04`), 0644)
 
 	requests := []*http.Request{}
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -298,12 +298,12 @@ base: ubuntu@20.04`), 0644)
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: at least one workspace name must be provided",
+			Message: "cannot refresh: at least one workshop name must be provided",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "wait-on-error is not supported for multiple workspaces",
+			Message: "wait-on-error is not supported for multiple workshops",
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -364,15 +364,15 @@ base: ubuntu@20.04`), 0644)
 	}, &ensureStateSoon)
 	defer restoreEnsure()
 
-	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
-	err = s.b.LaunchWorkspace(s.ctx, "ws1", "ubuntu@20.04")
+	err = s.b.LaunchWorkshop(s.ctx, "ws1", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	for num, i := range requests {
 		// Execute
-		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
 		{
 			// Verify
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
@@ -387,24 +387,24 @@ base: ubuntu@20.04`), 0644)
 	c.Assert(soon, check.Equals, 5)
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspaceStart(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkshopStart(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	err = s.b.StopWorkspace(s.ctx, "ws", false)
+	err = s.b.StopWorkshop(s.ctx, "ws", false)
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"start"}`),
-		// a second attempt to start the workspace that is already in Pending (i.e. being started)
+		// a second attempt to start the workshop that is already in Pending (i.e. being started)
 		bytes.NewBufferString(`{"names":["ws"],"action":"start"}`),
-		// ensure another operation is not going to work when the workspace in Pending
+		// ensure another operation is not going to work when the workshop in Pending
 		bytes.NewBufferString(`{"names":["ws"],"action":"refresh"}`),
 	}
 
@@ -431,7 +431,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -444,7 +444,7 @@ base: ubuntu@20.04`), 0644)
 
 	for num, i := range requests {
 		// Execute
-		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
 		{
 			// Verify
 			c.Check(rsp.Type, check.Equals, expected[num].Type)
@@ -456,31 +456,31 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	s.d.overlord.State().Lock()
-	ws, err := s.d.overlord.WorkspaceManager().Workspace(s.ctx, "ws", s.project.ProjectId)
+	ws, err := s.d.overlord.WorkshopManager().Workshop(s.ctx, "ws", s.project.ProjectId)
 	c.Assert(err, check.IsNil)
-	c.Assert(ws.State(), check.Equals, workspacebackend.WorkspacePending)
+	c.Assert(ws.State(), check.Equals, workshopbackend.WorkshopPending)
 	s.d.overlord.State().Unlock()
 
 	// all successful responses must initiate the ensure call
 	c.Assert(soon, check.Equals, 1)
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspaceStop(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkshopStop(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
-		// a second attempt to stop the workspace that is already in Pending (i.e. being stopped)
+		// a second attempt to stop the workshop that is already in Pending (i.e. being stopped)
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
-		// stop the workspace that is already stopped
+		// stop the workshop that is already stopped
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
 	}
 
@@ -506,7 +506,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -519,7 +519,7 @@ base: ubuntu@20.04`), 0644)
 
 	for num, i := range requests {
 		// Execute
-		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
 
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)
@@ -528,10 +528,10 @@ base: ubuntu@20.04`), 0644)
 			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
 
 			s.d.state.Lock()
-			// stop the workspace stop operation here, so it is ready for the next command
+			// stop the workshop stop operation here, so it is ready for the next command
 			err := statecontext.StopOperation(s.d.state, "ws", s.project.ProjectId, statecontext.OperationStop)
 			c.Assert(err, check.IsNil)
-			s.b.StopWorkspace(s.ctx, "ws", false)
+			s.b.StopWorkshop(s.ctx, "ws", false)
 			s.d.state.Unlock()
 		}
 	}
@@ -539,15 +539,15 @@ base: ubuntu@20.04`), 0644)
 	c.Assert(soon, check.Equals, 2)
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkspaceRemove(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectWorkshopRemove(c *check.C) {
 	// Setup
 	s.daemon(c)
-	projectsCmd := apiCmd("/v1/projects/{id}/workspaces")
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workspace.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
@@ -573,7 +573,7 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	for _, i := range buffers {
-		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workspaces", i)
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", i)
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
@@ -586,7 +586,7 @@ base: ubuntu@20.04`), 0644)
 
 	for num, i := range requests {
 		// Execute
-		rsp := v1PostProjectWorkspace(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
 
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)

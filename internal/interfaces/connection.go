@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canonical/workspace/internal/interfaces/utils"
-	"github.com/canonical/workspace/internal/metautil"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/interfaces/utils"
+	"github.com/canonical/workshop/internal/metautil"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 // Connection represents a connection between a particular plug and slot.

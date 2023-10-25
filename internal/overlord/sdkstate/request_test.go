@@ -1,9 +1,9 @@
 package sdkstate_test
 
 import (
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
@@ -21,7 +21,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 
@@ -40,11 +40,11 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workspacebackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	task := sdkstate.Retrieve(i.state, &sdk)
 
-	var s workspacebackend.SdkRecord
+	var s workshopbackend.SdkRecord
 	task.Get("sdk-setup", &s)
 	c.Check(s, check.DeepEquals, sdk)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")

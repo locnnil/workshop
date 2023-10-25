@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 var osGetenv = os.Getenv

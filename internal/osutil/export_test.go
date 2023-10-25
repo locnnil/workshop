@@ -24,7 +24,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/canonical/workspace/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/x-go/strutil"
 )
 

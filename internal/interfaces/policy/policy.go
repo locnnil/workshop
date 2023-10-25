@@ -25,9 +25,9 @@ package policy
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 // InstallCandidate represents a candidate SDK for installation.

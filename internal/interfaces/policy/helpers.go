@@ -22,8 +22,8 @@ package policy
 import (
 	"fmt"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/slices"
 )
 

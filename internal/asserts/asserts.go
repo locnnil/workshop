@@ -30,7 +30,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type typeFlags int
@@ -61,7 +61,7 @@ type AssertionType struct {
 	// OptionalPrimaryKeyDefaults holds the default values for
 	// optional primary key headers.
 	// Optional primary key headers can be added to types defined
-	// in previous versions of workspaced, as long as they are added at
+	// in previous versions of workshopd, as long as they are added at
 	// the end of the old primary key together with a default value set in
 	// this map. So they must form a contiguous suffix of PrimaryKey with
 	// each member having a default value set in this map.

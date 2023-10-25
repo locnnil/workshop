@@ -29,7 +29,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 type changeSuite struct{}

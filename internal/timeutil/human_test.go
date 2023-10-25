@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/timeutil"
+	"github.com/canonical/workshop/internal/timeutil"
 )
 
 func TestTimeUtil(t *testing.T) { check.TestingT(t) }

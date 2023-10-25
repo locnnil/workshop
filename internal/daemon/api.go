@@ -17,7 +17,7 @@ package daemon
 import (
 	"github.com/gorilla/mux"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 var api = []*Command{{
@@ -28,21 +28,21 @@ var api = []*Command{{
 	GET:     v1GetProjects,
 	POST:    v1PostProjects,
 }, {
-	Path:    "/v1/projects/{id}/workspaces",
+	Path:    "/v1/projects/{id}/workshops",
 	GuestOK: false,
 	UserOK:  true,
-	GET:     v1GetProjectWorkspaces,
-	POST:    v1PostProjectWorkspace,
+	GET:     v1GetProjectWorkshops,
+	POST:    v1PostProjectWorkshop,
 }, {
-	Path:    "/v1/projects/{id}/workspaces/{name}/exec",
+	Path:    "/v1/projects/{id}/workshops/{name}/exec",
 	GuestOK: false,
 	UserOK:  true,
-	POST:    v1PostWorkspaceExec,
+	POST:    v1PostWorkshopExec,
 }, {
-	Path:    "/v1/projects/{id}/workspaces/{name}",
+	Path:    "/v1/projects/{id}/workshops/{name}",
 	GuestOK: false,
 	UserOK:  true,
-	GET:     v1GetProjectWorkspace,
+	GET:     v1GetProjectWorkshop,
 }, {
 	Path:   "/v1/changes",
 	UserOK: true,

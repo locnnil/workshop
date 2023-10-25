@@ -27,7 +27,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 type envSuite struct{}
@@ -157,14 +157,14 @@ func (s *envSuite) TestOSEnvironment(c *C) {
 }
 
 func (s *envSuite) TestOSEnvironmentUnescapeUnsafe(c *C) {
-	os.Setenv("WORKSPACED_UNSAFE_PREFIX_A", "a")
-	defer os.Unsetenv("WORKSPACED_UNSAFE_PREFIX_A")
+	os.Setenv("WORKSHOPD_UNSAFE_PREFIX_A", "a")
+	defer os.Unsetenv("WORKSHOPD_UNSAFE_PREFIX_A")
 	os.Setenv("SDKDEXTRA", "2")
 	defer os.Unsetenv("SDKDEXTRA")
-	os.Setenv("WORKSPACED_UNSAFE_PREFIX_SDKDEXTRA", "1")
-	defer os.Unsetenv("WORKSPACED_UNSAFE_PREFIX_SDKDEXTRA")
+	os.Setenv("WORKSHOPD_UNSAFE_PREFIX_SDKDEXTRA", "1")
+	defer os.Unsetenv("WORKSHOPD_UNSAFE_PREFIX_SDKDEXTRA")
 
-	env, err := osutil.OSEnvironmentUnescapeUnsafe("WORKSPACED_UNSAFE_PREFIX_")
+	env, err := osutil.OSEnvironmentUnescapeUnsafe("WORKSHOPD_UNSAFE_PREFIX_")
 	c.Assert(err, IsNil)
 	// -1 because only the unescaped SDKDEXTRA is kept
 	c.Check(len(os.Environ())-1, Equals, len(env.ForExec()))

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/asserts"
+	"github.com/canonical/workshop/internal/asserts"
 	"gopkg.in/check.v1"
 )
 

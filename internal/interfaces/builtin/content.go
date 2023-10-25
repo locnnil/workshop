@@ -26,10 +26,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/device"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 const contentSummary = `allows sharing host code and data with SDKs`
@@ -102,13 +102,13 @@ func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 
 // Interactions with the mount backend.
 func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workspacebackend.LookupUsername(spec.User())
+	user, err := workshopbackend.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
 
-	source := filepath.Join(user.HomeDir, ".local", "share", "workspace", "project", spec.ProjectId(), "content",
-		strings.Join([]string{plug.Sdk().Workspace, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
+	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", spec.ProjectId(), "content",
+		strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
 
 	if err = os.MkdirAll(source, 0744); err != nil {
 		return err
@@ -128,7 +128,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	var entry = workspacebackend.WorkspaceDevice{
+	var entry = workshopbackend.WorkshopDevice{
 		Name: plug.Name(),
 		Properties: map[string]string{"type": "disk", "source": source,
 			"path": iface.mount(plug)},

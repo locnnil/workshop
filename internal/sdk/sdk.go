@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/metautil"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/metautil"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 )
 
 type Setup struct {
-	Workspace   string    `json:"workspace"`
+	Workshop    string    `json:"workshop"`
 	Name        string    `json:"name"`
 	Channel     string    `json:"channel"`
 	Revision    int64     `json:"revision"`
@@ -42,12 +42,12 @@ func (t Type) String() string {
 }
 
 type Info struct {
-	Workspace string
-	Name      string
-	Base      string
-	Type      Type
-	Channel   string
-	Revision  int64
+	Workshop string
+	Name     string
+	Base     string
+	Type     Type
+	Channel  string
+	Revision int64
 
 	Plugs map[string]*PlugInfo
 	Slots map[string]*SlotInfo
@@ -71,7 +71,7 @@ func ReadSdkInfo(yamlData []byte, setup Setup) (*Info, error) {
 	}
 
 	sdkInfo := &Info{
-		Workspace:     setup.Workspace,
+		Workshop:      setup.Workshop,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
 		Type:          Type(sdkYaml.Type),
@@ -269,7 +269,7 @@ func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
 }
 
 func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(dirs.WorkspaceSdksDir, sdkName, "current")
+	return filepath.Join(dirs.WorkshopSdksDir, sdkName, "current")
 }
 
 func SdkHooksDir(sdkName string) string {

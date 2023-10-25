@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/canonical/workspace/internal/dirs"
-	"github.com/canonical/workspace/internal/overlord"
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
@@ -24,13 +24,13 @@ import (
 
 type H struct {
 	fs          afero.Fs
-	backend     *workspacebackend.FakeWorkspaceBackend
+	backend     *workshopbackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
 	wsmgr       *sdkstate.SdkManager
 	ctx         context.Context
-	project     *workspacebackend.Project
+	project     *workshopbackend.Project
 	installTime time.Time
 
 	restoreProjectId   func()
@@ -45,9 +45,9 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workspacebackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
-		i.Set("workspace", w)
+		i.Set("workshop", w)
 		i.Set("project", p)
 	}
 }
@@ -56,15 +56,15 @@ var ErrTrigger = errors.New("error out")
 
 func (s *H) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.TODO(), workspacebackend.ContextProjectId, "projectId")
-	s.ctx = context.WithValue(ctx, workspacebackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, "projectId")
+	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
 
-	s.backend = workspacebackend.NewFakeWorkspaceBackend()
-	s.project = &workspacebackend.Project{
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
+	s.project = &workshopbackend.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",
 	}
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workspacebackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshopbackend.NewProjectId)
 	s.backend.CreateOrLoadProject(s.ctx, s.project.Path)
 
 	s.state = state.New(nil)
@@ -86,16 +86,16 @@ func (s *H) SetUpTest(c *check.C) {
 	s.se.AddManager(s.runner)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
-	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workspacebackend.InstallTimeNow)
+	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshopbackend.InstallTimeNow)
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workspace.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
   test:
     channel: latest/stable
 `), 0644)
 	c.Assert(err, check.IsNil)
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	var sdkYaml = `
@@ -110,8 +110,8 @@ plugs:
 }
 
 func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
-	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, "test", "current", "meta", "sdk.yaml")
-	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, "test", "current", "meta", "sdk.yaml")
+	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
@@ -132,7 +132,7 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -150,12 +150,12 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"--extract",
 		"--file",
 		"/root/test_2.sdk",
-		"--one-top-level=/var/lib/workspace/sdk/test/2",
+		"--one-top-level=/var/lib/workshop/sdk/test/2",
 		"--no-same-owner",
 	})
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, _ := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 }
 
@@ -170,14 +170,14 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
-		return workspacebackend.ExecContext{}, os.ErrDeadlineExceeded
+		return workshopbackend.ExecContext{}, os.ErrDeadlineExceeded
 	}
 
 	s.state.Unlock()
@@ -185,7 +185,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
@@ -205,7 +205,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	terr.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workspace", "ws")
+	chg.Set("workshop", "ws")
 	chg.Set("project-id", s.project.ProjectId)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -213,10 +213,10 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(terr)
 
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
-	s.backend.DoExec = func(ctx context.Context, name string, args *workspacebackend.Execution) (workspacebackend.ExecContext, error) {
-		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
-		fs.MkdirAll(filepath.Join(dirs.WorkspaceSdksDir, "new"), 0755)
-		return workspacebackend.ExecContext{}, nil
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		fs, _ := s.backend.GetWorkshopFs(ctx, name)
+		fs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "new"), 0755)
+		return workshopbackend.ExecContext{}, nil
 	}
 
 	s.state.Unlock()
@@ -226,13 +226,13 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkshopSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
 }
 
@@ -240,7 +240,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -248,7 +248,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -259,7 +259,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
@@ -284,7 +284,7 @@ slots:
 `
 	s.mockTestSdk(c, sdkYaml)
 
-	testSdk := sdk.Setup{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -292,7 +292,7 @@ slots:
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -310,7 +310,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Workspace: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")
@@ -320,7 +320,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	terr.WaitFor(link)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, link, t)
+	setWorkshopProject("ws", s.project, link, t)
 
 	chg.Set("user", "testuser")
 	chg.AddTask(link)
@@ -334,7 +334,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 0)

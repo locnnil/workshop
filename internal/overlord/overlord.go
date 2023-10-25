@@ -27,16 +27,16 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/overlord/cmdstate"
-	"github.com/canonical/workspace/internal/overlord/hookstate"
-	"github.com/canonical/workspace/internal/overlord/ifacestate"
-	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/sdkstate"
-	"github.com/canonical/workspace/internal/overlord/state"
-	workspace "github.com/canonical/workspace/internal/overlord/workspacestate"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/cmdstate"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/patch"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
+	"github.com/canonical/workshop/internal/overlord/state"
+	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 var (
@@ -57,9 +57,9 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
-	stateDir         string
-	stateEng         *StateEngine
-	workspaceBackend workspacebackend.WorkspaceBackend
+	stateDir        string
+	stateEng        *StateEngine
+	workshopBackend workshopbackend.WorkshopBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -73,7 +73,7 @@ type Overlord struct {
 	inited    bool
 	startedUp bool
 	sdk       *sdkstate.SdkManager
-	workspace *workspace.WorkspaceManager
+	workshop  *workshop.WorkshopManager
 	hook      *hookstate.HookManager
 	command   *cmdstate.CommandManager
 	ifacemgr  *ifacestate.InterfaceManager
@@ -81,13 +81,13 @@ type Overlord struct {
 
 	startOfOperationTime time.Time
 
-	// exclusive file lock for the state to avoid multiple running workspaces (temporary)
+	// exclusive file lock for the state to avoid multiple running workshops (temporary)
 	stateFileLock *osutil.FileLock
 }
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -113,7 +113,7 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	for {
 		err = o.stateFileLock.TryLock()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "cannot start, could another workspaced be running?")
+			fmt.Fprintln(os.Stderr, "cannot start, could another workshopd be running?")
 			fmt.Fprintln(os.Stderr, "retry in 5 seconds...")
 
 			time.Sleep(5 * time.Second)
@@ -122,7 +122,7 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 		}
 	}
 
-	o.workspaceBackend = b
+	o.workshopBackend = b
 
 	statePath := filepath.Join(dir, "state.json")
 
@@ -144,19 +144,19 @@ func New(dir string, b workspacebackend.WorkspaceBackend, restartHandler restart
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workspace = workspace.New(s, o.runner, o.workspaceBackend)
-	o.addManager(o.workspace)
+	o.workshop = workshop.New(s, o.runner, o.workshopBackend)
+	o.addManager(o.workshop)
 
-	o.sdk = sdkstate.New(o.runner, o.workspaceBackend)
+	o.sdk = sdkstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.sdk)
 
-	o.hook = hookstate.New(o.runner, o.workspaceBackend)
+	o.hook = hookstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.hook)
 
-	o.command = cmdstate.New(o.runner, o.workspaceBackend)
+	o.command = cmdstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.command)
 
-	o.ifacemgr = ifacestate.New(s, o.runner, o.workspaceBackend)
+	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.ifacemgr)
 
 	// the shared task runner should be added last!
@@ -184,7 +184,7 @@ func (se *Overlord) StartUp() error {
 
 var timeNow = time.Now
 
-// StartOfOperationTime returns the time when workspace started operating,
+// StartOfOperationTime returns the time when workshop started operating,
 // and sets it in the state when called for the first time.
 func (m *Overlord) StartOfOperationTime() (time.Time, error) {
 	var opTime time.Time
@@ -210,7 +210,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	if err != nil {
 		return nil, fmt.Errorf("fatal: cannot find current boot ID: %w", err)
 	}
-	// If workspace is PID 1 we don't care about /proc/sys/kernel/random/boot_id
+	// If workshop is PID 1 we don't care about /proc/sys/kernel/random/boot_id
 	// as we are most likely running in a container. LXD mounts it's own boot_id
 	// to correctly emulate the boot_id behaviour of non-containerized systems.
 	// Within containerd/docker, boot_id is consistent with the host, which provides
@@ -223,7 +223,7 @@ func loadState(statePath string, restartHandler restart.Handler, backend state.B
 	}
 
 	if !osutil.FileExists(statePath) {
-		// fail fast, mostly interesting for tests, this dir is set up by workspace
+		// fail fast, mostly interesting for tests, this dir is set up by workshop
 		stateDir := filepath.Dir(statePath)
 		if !osutil.IsDir(stateDir) {
 			return nil, fmt.Errorf("fatal: directory %q must be present", stateDir)
@@ -457,12 +457,12 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkspaceBackend() workspacebackend.WorkspaceBackend {
-	return o.workspaceBackend
+func (o *Overlord) WorkshopBackend() workshopbackend.WorkshopBackend {
+	return o.workshopBackend
 }
 
-func (o *Overlord) WorkspaceManager() *workspace.WorkspaceManager {
-	return o.workspace
+func (o *Overlord) WorkshopManager() *workshop.WorkshopManager {
+	return o.workshop
 }
 
 func (o *Overlord) CommandManager() *cmdstate.CommandManager {

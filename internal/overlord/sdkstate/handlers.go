@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/canonical/workspace/internal/dirs"
-	store "github.com/canonical/workspace/internal/fakestore"
-	"github.com/canonical/workspace/internal/interfaces/policy"
-	"github.com/canonical/workspace/internal/logger"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/dirs"
+	store "github.com/canonical/workshop/internal/fakestore"
+	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
 
 	"github.com/spf13/afero"
 
@@ -47,7 +47,7 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
-	var sdk workspacebackend.SdkRecord
+	var sdk workshopbackend.SdkRecord
 
 	st.Lock()
 	err := task.Get("sdk-setup", &sdk)
@@ -71,9 +71,9 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk sdk.Setup) workspacebackend.WorkspaceDevice {
-	/* Bind-mount the SDK to the workspace */
-	return workspacebackend.WorkspaceDevice{
+func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkshopDevice {
+	/* Bind-mount the SDK to the workshop */
+	return workshopbackend.WorkshopDevice{
 		Name: sdk.Name,
 		Properties: map[string]string{"type": "disk", "source": sdk.Filename(),
 			"path": filepath.Join("/root", filepath.Base(sdk.Filename()))},
@@ -81,7 +81,7 @@ func sdkBlobDevice(sdk sdk.Setup) workspacebackend.WorkspaceDevice {
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workspace, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -96,34 +96,34 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	sdkMount := sdkBlobDevice(sdkSetup)
 
-	if err = m.backend.AddWorkspaceDevice(ctx, workspace, sdkMount); err != nil {
+	if err = m.backend.AddWorkshopDevice(ctx, workshop, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
-		/* Make sure the SDK file will be unmounted once installed into the workspace */
-		if err := m.backend.RemoveWorkspaceDevice(ctx, workspace, sdkMount.Name); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workspace %q: %v", sdkMount.Name, workspace, err)
+		/* Make sure the SDK file will be unmounted once installed into the workshop */
+		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, workshop, err)
 		}
 	}
 
 	defer cleanup()
 
-	// example: /var/lib/workspace/sdk/cuda/712/
-	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, sdkSetup.Name,
+	// example: /var/lib/workshop/sdk/cuda/712/
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name,
 		strconv.Itoa(int(sdkSetup.Revision)))
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workspacebackend.InstanceName(workspace, project.ProjectId))
+	out, err := memFs.Create(workshopbackend.InstanceName(workshop, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
-	// Unpack the SDK to the desired location in the workspace
+	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
-	args := workspacebackend.Execution{
-		ExecArgs: workspacebackend.ExecArgs{
+	args := workshopbackend.Execution{
+		ExecArgs: workshopbackend.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -136,14 +136,14 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			},
 			WorkDir: "/",
 		},
-		ExecControls: workspacebackend.ExecControls{
+		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,
 			Stdout: nil,
 			Stderr: out,
 		},
 	}
 
-	exectx, err := m.backend.Exec(ctx, workspace, &args)
+	exectx, err := m.backend.Exec(ctx, workshop, &args)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workspace, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -174,13 +174,13 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	sdkMount := sdkBlobDevice(blob)
 
-	fs, err := m.backend.GetWorkspaceFs(ctx, workspace)
+	fs, err := m.backend.GetWorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(dirs.WorkspaceSdksDir, blob.Name))
+	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, blob.Name))
 	if err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
@@ -189,7 +189,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workspace, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkspace(ctx, workspace)
+	inst, err := m.backend.GetWorkshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workspace, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkspace(ctx, workspace)
+	inst, err := m.backend.GetWorkshop(ctx, workshop)
 	if err != nil {
 		return err
 	}

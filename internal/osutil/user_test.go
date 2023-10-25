@@ -23,9 +23,9 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/osutil/sys"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 type userSuite struct {

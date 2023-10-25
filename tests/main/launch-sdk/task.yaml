@@ -1,33 +1,33 @@
-summary: Ensure that 'workspace launch' creates a core LXD config correctly
+summary: Ensure that 'workshop launch' creates a core LXD config correctly
 environment:
-  WORKSPACES_SDK: $SPREAD_PATH/tests/lib/workspaces-sdk
+  WORKSHOPS_SDK: $SPREAD_PATH/tests/lib/workshops-sdk
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSPACES_SDK"
-  uninstall_workspaced
+  cleanup "$WORKSHOPS_SDK"
+  uninstall_workshopd
 
 prepare: |
   . "$TESTSLIB"/utils.sh
-  install_workspaced
+  install_workshopd
 
 debug: |
-  lxc project switch workspace.ubuntu
+  lxc project switch workshop.ubuntu
   lxc list -f compact
-  ls "$WORKSPACES_SDK"/*
+  ls "$WORKSHOPS_SDK"/*
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a test workspace with an SDK should succeed"
-  path="$WORKSPACES_SDK"/test-sdk-basic
+  echo "Launch a test workshop with an SDK should succeed"
+  path="$WORKSHOPS_SDK"/test-sdk-basic
   launch "$path" ws
   list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
 
   echo "SDKs must be configured correctly"
-  # TODO reimplement using the workspace info when ready
-  project_id=$(cat "$path"/.workspace.lock)
-  info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSPACE"/.workspace.socket http://localhost/v1/projects/"$project_id"/workspaces/ws)
+  # TODO reimplement using the workshop info when ready
+  project_id=$(cat "$path"/.workshop.lock)
+  info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSHOP"/.workshop.socket http://localhost/v1/projects/"$project_id"/workshops/ws)
 
   echo "$info" | jq ".result.content[0].name" | MATCH "test-sdk-basic"
   echo "$info" | jq ".result.content[0].channel" | MATCH "latest/stable"

@@ -1,13 +1,13 @@
 package sdkstate
 
 import (
-	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
-	backend "github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	backend "github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type SdkManager struct {
-	backend backend.WorkspaceBackend
+	backend backend.WorkshopBackend
 }
 
 type SdkSequenceRecord struct {
@@ -15,7 +15,7 @@ type SdkSequenceRecord struct {
 	Revision int64  `json:"revision"`
 }
 
-func New(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
+func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)

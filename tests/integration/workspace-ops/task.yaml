@@ -1,4 +1,0 @@
-summary: Run LXD integration tests for workspace operations (launch, delete, attach storage, etc.)
-
-execute: |
-  go test $SPREAD_PATH/internal/workspacebackend/tests/integration -tags=integration -check.f wsOps

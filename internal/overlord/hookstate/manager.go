@@ -1,26 +1,26 @@
 package hookstate
 
 import (
-	"github.com/canonical/workspace/internal/overlord/state"
-	. "github.com/canonical/workspace/internal/overlord/statecontext"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/overlord/state"
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type HookSetup struct {
-	Sdk         workspacebackend.SdkRecord `json:"sdk"`
-	HookType    WorkspaceHookType          `json:"type"`
-	Environment map[string]string          `json:"environment"`
+	Sdk         workshopbackend.SdkRecord `json:"sdk"`
+	HookType    WorkshopHookType          `json:"type"`
+	Environment map[string]string         `json:"environment"`
 }
 
-type WorkspaceHookType int
+type WorkshopHookType int
 
 const (
-	SetupBase WorkspaceHookType = iota
+	SetupBase WorkshopHookType = iota
 	SaveState
 	RestoreState
 )
 
-func (s WorkspaceHookType) String() string {
+func (s WorkshopHookType) String() string {
 	return [...]string{"setup-base", "save-state", "restore-state"}[s]
 }
 
@@ -29,10 +29,10 @@ func (h *HookSetup) Type() string {
 }
 
 type HookManager struct {
-	backend workspacebackend.WorkspaceBackend
+	backend workshopbackend.WorkshopBackend
 }
 
-func New(runner *state.TaskRunner, server workspacebackend.WorkspaceBackend) *HookManager {
+func New(runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
 	manager := &HookManager{
 		backend: server,
 	}

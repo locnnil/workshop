@@ -26,9 +26,9 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
 
-	"github.com/canonical/workspace/internal/asserts"
-	"github.com/canonical/workspace/internal/metautil"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/metautil"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 type attrMatcherSuite struct {
@@ -268,10 +268,10 @@ func (s *attrMatcherSuite) TestAlternativeMatchingStringList(c *C) {
 	toMatch := vals(`
 write:
  - /var/tmp
- - /var/lib/workspaced/snapshots
+ - /var/lib/workshopd/snapshots
 `)
 	m, err := asserts.ParseHeaders([]byte(`attrs:
-  write: /var/(tmp|lib/workspaced/snapshots)`))
+  write: /var/(tmp|lib/workshopd/snapshots)`))
 	c.Assert(err, IsNil)
 
 	domatch, err := asserts.CompileAttrMatcher(m["attrs"].(map[string]interface{}), nil)
@@ -283,7 +283,7 @@ write:
 	m, err = asserts.ParseHeaders([]byte(`attrs:
   write:
     - /var/tmp
-    - /var/lib/workspaced/snapshots`))
+    - /var/lib/workshopd/snapshots`))
 	c.Assert(err, IsNil)
 
 	domatchLst, err := asserts.CompileAttrMatcher(m["attrs"].(map[string]interface{}), nil)

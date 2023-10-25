@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/asserts"
+	"github.com/canonical/workshop/internal/asserts"
 )
 
 type assertsSuite struct{}

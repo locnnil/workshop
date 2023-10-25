@@ -1,14 +1,14 @@
 package device
 
 import (
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"golang.org/x/exp/maps"
 )
 
 type Specification struct {
-	devices map[string]*workspacebackend.WorkspaceDevice
+	devices map[string]*workshopbackend.WorkshopDevice
 	user    string
 	pid     string
 }
@@ -48,13 +48,13 @@ func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *inter
 	return nil
 }
 
-func (s *Specification) DeviceEntries() []*workspacebackend.WorkspaceDevice {
+func (s *Specification) DeviceEntries() []*workshopbackend.WorkshopDevice {
 	return maps.Values(s.devices)
 }
 
-func (s *Specification) AddDeviceEntry(dev *workspacebackend.WorkspaceDevice) error {
+func (s *Specification) AddDeviceEntry(dev *workshopbackend.WorkshopDevice) error {
 	if s.devices == nil {
-		s.devices = make(map[string]*workspacebackend.WorkspaceDevice)
+		s.devices = make(map[string]*workshopbackend.WorkshopDevice)
 	}
 	s.devices[dev.Name] = dev
 	return nil

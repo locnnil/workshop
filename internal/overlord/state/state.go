@@ -31,7 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/canonical/workspace/internal/logger"
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // A Backend is used by State to checkpoint on every unlock operation

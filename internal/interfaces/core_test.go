@@ -25,11 +25,11 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/interfaces/ifacetest"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 )
 
 func Test(t *testing.T) {
@@ -70,8 +70,8 @@ func (s *CoreSuite) TestSlotRefString(c *C) {
 // ConnRef.ID works as expected
 func (s *CoreSuite) TestConnRefID(c *C) {
 	conn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"},
 	}
 	c.Check(conn.ID(), Equals, "ws:consumer:plug ws:producer:slot")
 }
@@ -81,8 +81,8 @@ func (s *CoreSuite) TestParseConnRef(c *C) {
 	ref, err := interfaces.ParseConnRef("ws:consumer:plug ws:producer:slot")
 	c.Assert(err, IsNil)
 	c.Check(ref, DeepEquals, &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Workspace: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Workspace: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"},
 	})
 	_, err = interfaces.ParseConnRef("garbage")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: "garbage"`)

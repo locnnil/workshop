@@ -20,7 +20,7 @@
 package state
 
 import (
-	"github.com/canonical/workspace/internal/timings"
+	"github.com/canonical/workshop/internal/timings"
 )
 
 // TimingsForTask creates a new Timings tree for the given task.

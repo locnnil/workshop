@@ -23,7 +23,7 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/canonical/workspace/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"golang.org/x/exp/slices"
 
 	"gopkg.in/check.v1"
@@ -31,15 +31,15 @@ import (
 
 func setupChanges(st *state.State) []string {
 	chg1 := st.NewChange("launch", "launch...")
-	chg1.Set("workspace", "one")
+	chg1.Set("workshop", "one")
 	chg1.Set("project-id", "123")
-	t1 := st.NewTask("create-workspace", "1...")
-	t2 := st.NewTask("start-workspace", "2...")
+	t1 := st.NewTask("create-workshop", "1...")
+	t2 := st.NewTask("start-workshop", "2...")
 	chg1.AddAll(state.NewTaskSet(t1, t2))
 	t1.Logf("l11")
 	t1.Logf("l12")
 	chg2 := st.NewChange("remove", "remove...")
-	chg2.Set("workspace", "two")
+	chg2.Set("workshop", "two")
 	chg2.Set("project-id", "123")
 	t3 := st.NewTask("unlink-sdk", "1...")
 	chg2.AddTask(t3)
@@ -49,7 +49,7 @@ func setupChanges(st *state.State) []string {
 	return []string{chg1.ID(), chg2.ID(), t1.ID(), t2.ID(), t3.ID()}
 }
 
-func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *check.C) {
+func (s *apiSuite) TestStateChangesProjectAndWorkshopMustBeProvidedTogether(c *check.C) {
 	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
@@ -63,7 +63,7 @@ func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *
 	stateChangesCmd := apiCmd("/v1/changes")
 
 	// Execute
-	req, err := http.NewRequest("GET", "/v1/changes?workspaces=test", nil)
+	req, err := http.NewRequest("GET", "/v1/changes?workshops=test", nil)
 	c.Assert(err, check.IsNil)
 	rsp := v1GetChanges(stateChangesCmd, req, nil).(*resp)
 
@@ -71,7 +71,7 @@ func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *
 	c.Check(rsp.Type, check.Equals, ResponseTypeError)
 	c.Check(rsp.Status, check.Equals, 400)
 	c.Check(rsp.Result.(*errorResult).Message, check.Equals,
-		"project-id must be provided if workspaces are specified")
+		"project-id must be provided if workshops are specified")
 }
 
 func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
@@ -100,7 +100,7 @@ func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workshop","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
@@ -130,7 +130,7 @@ func (s *apiSuite) TestStateChangesInProgress(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workshop","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 }
 
 func (s *apiSuite) TestStateChangesAll(c *check.C) {
@@ -158,7 +158,7 @@ func (s *apiSuite) TestStateChangesAll(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workspace","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workshop","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
@@ -190,7 +190,7 @@ func (s *apiSuite) TestStateChangesReady(c *check.C) {
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
-func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
+func (s *apiSuite) TestStateChangesForWorkshop(c *check.C) {
 	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
@@ -204,7 +204,7 @@ func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
 	stateChangesCmd := apiCmd("/v1/changes")
 
 	// Execute
-	req, err := http.NewRequest("GET", "/v1/changes?workspaces=one,two&project-id=123", nil)
+	req, err := http.NewRequest("GET", "/v1/changes?workshops=one,two&project-id=123", nil)
 	c.Assert(err, check.IsNil)
 	rsp := v1GetChanges(stateChangesCmd, req, nil).(*resp)
 
@@ -271,7 +271,7 @@ func (s *apiSuite) TestStateChange(c *check.C) {
 		"tasks": []interface{}{
 			map[string]interface{}{
 				"id":         ids[2],
-				"kind":       "create-workspace",
+				"kind":       "create-workshop",
 				"summary":    "1...",
 				"status":     "Do",
 				"log":        []interface{}{"2016-04-21T01:02:03Z INFO l11", "2016-04-21T01:02:03Z INFO l12"},
@@ -283,7 +283,7 @@ func (s *apiSuite) TestStateChange(c *check.C) {
 			},
 			map[string]interface{}{
 				"id":         ids[3],
-				"kind":       "start-workspace",
+				"kind":       "start-workshop",
 				"summary":    "2...",
 				"status":     "Do",
 				"progress":   map[string]interface{}{"label": "", "done": 0., "total": 1.},
@@ -349,7 +349,7 @@ func (s *apiSuite) TestStateChangeAbort(c *check.C) {
 		"tasks": []interface{}{
 			map[string]interface{}{
 				"id":         ids[2],
-				"kind":       "create-workspace",
+				"kind":       "create-workshop",
 				"summary":    "1...",
 				"status":     "Hold",
 				"log":        []interface{}{"2016-04-21T01:02:03Z INFO l11", "2016-04-21T01:02:03Z INFO l12"},
@@ -359,7 +359,7 @@ func (s *apiSuite) TestStateChangeAbort(c *check.C) {
 			},
 			map[string]interface{}{
 				"id":         ids[3],
-				"kind":       "start-workspace",
+				"kind":       "start-workshop",
 				"summary":    "2...",
 				"status":     "Hold",
 				"progress":   map[string]interface{}{"label": "", "done": 1., "total": 1.},

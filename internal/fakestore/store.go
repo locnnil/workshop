@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/canonical/workspace/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/spf13/afero"
 	"google.golang.org/api/option"
 )

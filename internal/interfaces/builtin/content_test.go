@@ -24,12 +24,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/canonical/workspace/internal/interfaces"
-	"github.com/canonical/workspace/internal/interfaces/builtin"
-	"github.com/canonical/workspace/internal/interfaces/device"
-	"github.com/canonical/workspace/internal/sdk"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
@@ -111,14 +111,14 @@ base: ubuntu@22.04
 plugs:
  content:
   target: /project/training
-`, sdk.Setup{Workspace: "ws"}, "content")
+`, sdk.Setup{Workshop: "ws"}, "content")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
 base: ubuntu@22.04
 slots:
  content:
-`, sdk.Setup{Workspace: "ws"}, "content")
+`, sdk.Setup{Workshop: "ws"}, "content")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec := &device.Specification{}
 
@@ -135,17 +135,17 @@ slots:
 			HomeDir:  homeDir,
 		}
 		return u, nil
-	}, &workspacebackend.LookupUsername)
+	}, &workshopbackend.LookupUsername)
 	defer restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Analyze the mount specification.
-	expectedMnt := []*workspacebackend.WorkspaceDevice{{
+	expectedMnt := []*workshopbackend.WorkshopDevice{{
 		Name: plug.Name,
 		Properties: map[string]string{
 			"type":   "disk",
-			"source": filepath.Join(homeDir, "/.local/share/workspace/project/content/ws_consumer_content.sdk"),
+			"source": filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"),
 			"path":   "/project/training",
 		},
 	}}

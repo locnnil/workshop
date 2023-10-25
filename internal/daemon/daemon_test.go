@@ -34,20 +34,20 @@ import (
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workspace/internal/osutil"
-	"github.com/canonical/workspace/internal/overlord/patch"
-	"github.com/canonical/workspace/internal/overlord/restart"
-	"github.com/canonical/workspace/internal/overlord/standby"
-	"github.com/canonical/workspace/internal/overlord/state"
-	"github.com/canonical/workspace/internal/systemd"
-	"github.com/canonical/workspace/internal/testutil"
-	"github.com/canonical/workspace/internal/workspacebackend"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/patch"
+	"github.com/canonical/workshop/internal/overlord/restart"
+	"github.com/canonical/workshop/internal/overlord/standby"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/systemd"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // Hook up check.v1 into the "go test" runner
 
 type daemonSuite struct {
-	workspaceDir    string
+	workshopDir     string
 	socketPath      string
 	httpAddress     string
 	statePath       string
@@ -60,8 +60,8 @@ type daemonSuite struct {
 var _ = check.Suite(&daemonSuite{})
 
 func (s *daemonSuite) SetUpTest(c *check.C) {
-	s.workspaceDir = c.MkDir()
-	s.statePath = filepath.Join(s.workspaceDir, "state.json")
+	s.workshopDir = c.MkDir()
+	s.statePath = filepath.Join(s.workshopDir, "state.json")
 	systemdSdNotify = func(notif string) error {
 		s.notified = append(s.notified, notif)
 		return nil
@@ -77,10 +77,10 @@ func (s *daemonSuite) TearDownTest(c *check.C) {
 
 func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
 	d, err := New(&Options{
-		Dir:         s.workspaceDir,
+		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,
 		HTTPAddress: s.httpAddress,
-	}, workspacebackend.NewFakeWorkspaceBackend())
+	}, workshopbackend.NewFakeWorkshopBackend())
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	return d
@@ -934,7 +934,7 @@ func (s *daemonSuite) TestRestartExpectedRebootGiveUp(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
-	c.Skip("no standby support for workspace yet")
+	c.Skip("no standby support for workshop yet")
 	notifySocket := filepath.Join(c.MkDir(), "notify.socket")
 	os.Setenv("NOTIFY_SOCKET", notifySocket)
 	defer os.Setenv("NOTIFY_SOCKET", "")
@@ -971,7 +971,7 @@ func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
-	c.Skip("no standby support for workspace yet")
+	c.Skip("no standby support for workshop yet")
 
 	os.Setenv("NOTIFY_SOCKET", c.MkDir())
 	defer os.Setenv("NOTIFY_SOCKET", "")
@@ -995,7 +995,7 @@ func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
 	select {
 	case <-d.Dying():
 		// Pretend we got change while shutting down, this can
-		// happen when e.g. the user requested a `workspace install
+		// happen when e.g. the user requested a `workshop install
 		// foo` at the same time as the code in the overlord
 		// checked that it can go into socket activated
 		// mode. I.e. the daemon was processing the request
