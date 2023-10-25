@@ -1,7 +1,7 @@
 .. _ref_workshop_stop:
 
 workshop stop
-==============
+=============
 
 Stops one or many workshops.
 

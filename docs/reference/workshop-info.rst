@@ -1,7 +1,7 @@
 .. _ref_workshop_info:
 
 workshop info
-==============
+=============
 
 Prints the current status and details of a workshop as YAML.
 

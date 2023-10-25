@@ -108,7 +108,7 @@ the CLI tool is run manually:
 
 
 Launch a workshop
-------------------
+-----------------
 
 Having installed |project|,
 use it to define, launch, start and stop your first
@@ -217,7 +217,7 @@ waiting for the workshop to comply.
 .. _tut_refresh:
 
 Refresh a workshop
--------------------
+------------------
 
 When an aspect of the workshop changes,
 refresh it to pick up the update.

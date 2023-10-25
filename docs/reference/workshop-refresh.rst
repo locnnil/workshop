@@ -1,7 +1,7 @@
 .. _ref_workshop_refresh:
 
 workshop refresh
-=================
+================
 
 Updates workshops according to their definitions.
 

@@ -1,7 +1,7 @@
 .. _how_debug_workshop_issues:
 
 Debug workshop issues
-======================
+=====================
 
 To trace the condition of a misbehaving
 :ref:`workshop <exp_workshop>`,
@@ -14,7 +14,7 @@ fails.
 
 
 List workshop changes
-----------------------
+---------------------
 
 Consider a workshop named ``ml-transformer``
 that uses an unstable

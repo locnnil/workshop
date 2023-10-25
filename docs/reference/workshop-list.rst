@@ -1,7 +1,7 @@
 .. _ref_workshop_list:
 
 workshop list
-==============
+=============
 
 Lists project workshops.
 

@@ -1,7 +1,7 @@
 .. _ref_workshop_launch:
 
 workshop launch
-================
+===============
 
 Constructs one or many workshops using their definitions.
 

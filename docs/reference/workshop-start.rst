@@ -1,7 +1,7 @@
 .. _ref_workshop_start:
 
 workshop start
-===============
+==============
 
 Starts one or many workshops.
 
