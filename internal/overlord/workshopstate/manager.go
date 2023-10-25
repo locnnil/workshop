@@ -48,7 +48,7 @@ func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId 
 			return "", workshopbackend.WorkspaceOff, err
 		}
 
-		status := w.workspaceState(wrkspc)
+		status := w.workshopState(wrkspc)
 		if !matchStatus(status) {
 			return name, status, nil
 		}
@@ -67,7 +67,7 @@ func (w *WorkspaceManager) Workshop(ctx context.Context, name, pId string) (*wor
 		return nil, err
 	}
 
-	wrkspc.SetState(w.workspaceState(wrkspc))
+	wrkspc.SetState(w.workshopState(wrkspc))
 	return wrkspc, nil
 }
 
@@ -83,7 +83,7 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 	}
 
 	for _, wrkspc := range workshops {
-		wrkspc.SetState(w.workspaceState(wrkspc))
+		wrkspc.SetState(w.workshopState(wrkspc))
 	}
 
 	return files, workshops, nil
@@ -92,7 +92,7 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked before the
 // call.
-func (w *WorkspaceManager) workspaceState(ws *workshopbackend.Workshop) workshopbackend.WorkspaceState {
+func (w *WorkspaceManager) workshopState(ws *workshopbackend.Workshop) workshopbackend.WorkspaceState {
 	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
 	if op != nil {
 		if ws.IsRunning() {

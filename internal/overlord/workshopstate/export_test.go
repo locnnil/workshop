@@ -10,5 +10,5 @@ var (
 	RemoveManyImpl    = removeMany
 
 	Launch         = launch
-	WorkspaceState = (*WorkspaceManager).workspaceState
+	WorkspaceState = (*WorkspaceManager).workshopState
 )

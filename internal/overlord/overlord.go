@@ -57,9 +57,9 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
-	stateDir         string
-	stateEng         *StateEngine
-	workspaceBackend workshopbackend.WorkspaceBackend
+	stateDir        string
+	stateEng        *StateEngine
+	workshopBackend workshopbackend.WorkspaceBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -113,7 +113,7 @@ func New(dir string, b workshopbackend.WorkspaceBackend, restartHandler restart.
 	for {
 		err = o.stateFileLock.TryLock()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "cannot start, could another workspaced be running?")
+			fmt.Fprintln(os.Stderr, "cannot start, could another workshopd be running?")
 			fmt.Fprintln(os.Stderr, "retry in 5 seconds...")
 
 			time.Sleep(5 * time.Second)
@@ -122,7 +122,7 @@ func New(dir string, b workshopbackend.WorkspaceBackend, restartHandler restart.
 		}
 	}
 
-	o.workspaceBackend = b
+	o.workshopBackend = b
 
 	statePath := filepath.Join(dir, "state.json")
 
@@ -144,19 +144,19 @@ func New(dir string, b workshopbackend.WorkspaceBackend, restartHandler restart.
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workshop = workshop.New(s, o.runner, o.workspaceBackend)
+	o.workshop = workshop.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.workshop)
 
-	o.sdk = sdkstate.New(o.runner, o.workspaceBackend)
+	o.sdk = sdkstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.sdk)
 
-	o.hook = hookstate.New(o.runner, o.workspaceBackend)
+	o.hook = hookstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.hook)
 
-	o.command = cmdstate.New(o.runner, o.workspaceBackend)
+	o.command = cmdstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.command)
 
-	o.ifacemgr = ifacestate.New(s, o.runner, o.workspaceBackend)
+	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.ifacemgr)
 
 	// the shared task runner should be added last!
@@ -458,7 +458,7 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 }
 
 func (o *Overlord) WorkspaceBackend() workshopbackend.WorkspaceBackend {
-	return o.workspaceBackend
+	return o.workshopBackend
 }
 
 func (o *Overlord) WorkspaceManager() *workshop.WorkspaceManager {

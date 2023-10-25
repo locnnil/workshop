@@ -31,7 +31,7 @@ import (
 // needs of a particular security system.
 type SecurityBackend interface {
 	// Initialize performs any initialization required by the backend.
-	// It is called during workspaced startup process.
+	// It is called during workshopd startup process.
 	Initialize(backend workshopbackend.WorkspaceBackend) error
 
 	// Name returns the name of the backend.

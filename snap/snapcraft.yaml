@@ -21,10 +21,10 @@ apps:
     environment:
       WORKSHOP: ${SNAP_COMMON}
     command: bin/workshop
-  workspaced:
+  workshopd:
     environment:
       WORKSHOP: ${SNAP_COMMON}
-    command: bin/workspaced run --create-dirs
+    command: bin/workshopd run --create-dirs
     daemon: simple
     plugs:
       - home

@@ -17,7 +17,7 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-type workspaceHandlers struct {
+type workshopHandlers struct {
 	fs      afero.Fs
 	backend *workshopbackend.FakeWorkspaceBackend
 	state   *state.State
@@ -28,7 +28,7 @@ type workspaceHandlers struct {
 	project *workshopbackend.Project
 }
 
-var _ = check.Suite(&workspaceHandlers{})
+var _ = check.Suite(&workshopHandlers{})
 
 func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
@@ -43,7 +43,7 @@ func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.T
 
 var ErrTrigger = errors.New("error out")
 
-func (s *workspaceHandlers) SetUpTest(c *check.C) {
+func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 
@@ -74,10 +74,10 @@ func (s *workspaceHandlers) SetUpTest(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
-func (s *workspaceHandlers) TearDownTest(c *check.C) {
+func (s *workshopHandlers) TearDownTest(c *check.C) {
 }
 
-func (s *workspaceHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
+func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws

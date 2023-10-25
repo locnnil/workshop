@@ -175,11 +175,11 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceLaunch(c *check.C) {
 	s.vars = map[string]string{"id": s.project.ProjectId}
 
 	// Mock workshop files
-	err := os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	err := os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws1.yaml"), []byte(`name: ws1
+	err = os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 	c.Assert(err, check.IsNil)
 
@@ -248,9 +248,9 @@ func (s *apiSuite) TestProjectsPostProjectRefreshWorkspaceContinue(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws1.yaml"), []byte(`name: ws1
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
@@ -392,7 +392,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceStart(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
@@ -470,7 +470,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceStop(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
@@ -544,7 +544,7 @@ func (s *apiSuite) TestProjectsPostProjectWorkspaceRemove(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")

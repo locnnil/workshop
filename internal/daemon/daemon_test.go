@@ -47,7 +47,7 @@ import (
 // Hook up check.v1 into the "go test" runner
 
 type daemonSuite struct {
-	workspaceDir    string
+	workshopDir     string
 	socketPath      string
 	httpAddress     string
 	statePath       string
@@ -60,8 +60,8 @@ type daemonSuite struct {
 var _ = check.Suite(&daemonSuite{})
 
 func (s *daemonSuite) SetUpTest(c *check.C) {
-	s.workspaceDir = c.MkDir()
-	s.statePath = filepath.Join(s.workspaceDir, "state.json")
+	s.workshopDir = c.MkDir()
+	s.statePath = filepath.Join(s.workshopDir, "state.json")
 	systemdSdNotify = func(notif string) error {
 		s.notified = append(s.notified, notif)
 		return nil
@@ -77,7 +77,7 @@ func (s *daemonSuite) TearDownTest(c *check.C) {
 
 func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
 	d, err := New(&Options{
-		Dir:         s.workspaceDir,
+		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,
 		HTTPAddress: s.httpAddress,
 	}, workshopbackend.NewFakeWorkspaceBackend())

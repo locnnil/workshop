@@ -33,9 +33,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var shortRunHelp = "Run the workspace daemon"
+var shortRunHelp = "Run the workshop daemon"
 var longRunHelp = `
-The run command workspace and starts accepting clients requests
+The run command workshop and starts accepting clients requests
 `
 
 type sharedRunEnterOpts struct {
@@ -45,7 +45,7 @@ type sharedRunEnterOpts struct {
 }
 
 var sharedRunEnterOptsHelp = map[string]string{
-	"create-dirs": "Create workspace directory on startup if it doesn't exist",
+	"create-dirs": "Create workshop directory on startup if it doesn't exist",
 	"http":        `Start HTTP API listening on this address (e.g., ":4000")`,
 	"verbose":     "Log all output from services to stdout",
 }
@@ -86,7 +86,7 @@ func (rcmd *cmdRun) run(ready chan<- func()) {
 			// This exit code must be in system'd SuccessExitStatus.
 			panic(&exitStatus{42})
 		}
-		fmt.Fprintf(os.Stderr, "cannot run workspace: %v\n", err)
+		fmt.Fprintf(os.Stderr, "cannot run workshop: %v\n", err)
 		panic(&exitStatus{1})
 	}
 }

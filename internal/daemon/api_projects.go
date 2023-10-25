@@ -35,7 +35,7 @@ type WorkspaceInfo struct {
 
 var ensureStateSoon = stateEnsureBefore
 
-func workspaceFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *WorkspaceInfo {
+func workshopFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
@@ -50,7 +50,7 @@ func workspaceFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *Works
 	return &ws
 }
 
-func workspacePropsToInfo(props *workshopbackend.Workshop) *WorkspaceInfo {
+func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkspaceInfo {
 	var ws WorkspaceInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
@@ -147,7 +147,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
 			continue
 		}
-		info := workspacePropsToInfo(w)
+		info := workshopPropsToInfo(w)
 		infoLst = append(infoLst, info)
 	}
 
@@ -156,7 +156,7 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	// as files, not instances)
 	if wstate == "all" || wstate == "off" {
 		for _, file := range files {
-			info := workspaceFileToInfo(file, projectId)
+			info := workshopFileToInfo(file, projectId)
 			infoLst = append(infoLst, info)
 		}
 	}
@@ -304,5 +304,5 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 		return statusNotFound("cannot load workshop: %v", err)
 	}
 
-	return SyncResponse(workspacePropsToInfo(workshop), http.StatusOK)
+	return SyncResponse(workshopPropsToInfo(workshop), http.StatusOK)
 }

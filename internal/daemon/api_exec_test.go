@@ -17,7 +17,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}/exec")
 
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
-	os.WriteFile(filepath.Join(s.workspaceDir, ".workshop.ws.yaml"), []byte(`name: ws
+	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")

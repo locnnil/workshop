@@ -31,10 +31,10 @@ type apiSuite struct {
 	d *Daemon
 	b workshopbackend.WorkspaceBackend
 
-	workspaceDir string
-	username     string
-	project      *workshopbackend.Project
-	ctx          context.Context
+	workshopDir string
+	username    string
+	project     *workshopbackend.Project
+	ctx         context.Context
 
 	vars map[string]string
 
@@ -47,10 +47,10 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
-	s.workspaceDir = c.MkDir()
+	s.workshopDir = c.MkDir()
 	s.username = "testuser"
 	s.project = &workshopbackend.Project{
-		Path:      s.workspaceDir,
+		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
 	s.b = workshopbackend.NewFakeWorkspaceBackend()
@@ -71,7 +71,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
-	s.workspaceDir = ""
+	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreUserLookup()
 	s.restoreProjectId()
@@ -85,7 +85,7 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
-	d, err := New(&Options{Dir: s.workspaceDir}, s.b)
+	d, err := New(&Options{Dir: s.workshopDir}, s.b)
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	s.d = d

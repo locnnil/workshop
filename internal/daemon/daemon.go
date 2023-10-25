@@ -75,7 +75,7 @@ type Options struct {
 type Daemon struct {
 	Version             string
 	StartTime           time.Time
-	workspaceDir        string
+	workshopDir         string
 	normalSocketPath    string
 	untrustedSocketPath string
 	httpAddress         string
@@ -491,10 +491,10 @@ func (d *Daemon) Start() error {
 		ConnState: d.connTracker.trackConn,
 	}
 
-	// TODO: Return standby handling to the workspaced
+	// TODO: Return standby handling to the workshopd
 	// when creating an actual distribution which launches
 	// the daemon and can listen to the activation sockets. In
-	// this case we would need to create a workspaced.socket unit
+	// this case we would need to create a workshopd.socket unit
 	// for systemd similarly to how snapd does it.
 	// d.initStandbyHandling()
 
@@ -763,7 +763,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 
 func New(opts *Options, be workshopbackend.WorkspaceBackend) (*Daemon, error) {
 	d := &Daemon{
-		workspaceDir:        opts.Dir,
+		workshopDir:         opts.Dir,
 		normalSocketPath:    opts.SocketPath,
 		untrustedSocketPath: opts.SocketPath + ".untrusted",
 		httpAddress:         opts.HTTPAddress,

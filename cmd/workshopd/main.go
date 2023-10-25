@@ -21,8 +21,8 @@ func (e *exitStatus) Error() string {
 	return fmt.Sprintf("internal error: exitStatus{%d} being handled as normal error", e.code)
 }
 
-var workspaced = &cobra.Command{
-	Use:              "workspace",
+var workshopd = &cobra.Command{
+	Use:              "workshop",
 	SilenceErrors:    false,
 	SilenceUsage:     true,
 	TraverseChildren: true,
@@ -51,8 +51,8 @@ func main() {
 		panic(err)
 	}
 
-	workspaced.AddCommand((&cmdRun{}).Command())
-	if err = workspaced.Execute(); err != nil {
+	workshopd.AddCommand((&cmdRun{}).Command())
+	if err = workshopd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
