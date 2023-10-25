@@ -344,3 +344,20 @@ To abort the operation and recover the last operational state:
     workshop refresh --abort nimble
 
         "nimble" aborted
+
+
+.. _tut_remove:
+
+Remove a workshop
+-----------------
+
+If you don't need a workshop anymore,
+:ref:`remove <ref_workshop_remove>` it:
+
+.. code:: shell
+
+    workshop remove nimble
+
+        "nimble" removed
+
+This leaves the workshop definition intact.

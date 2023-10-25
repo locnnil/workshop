@@ -12,5 +12,6 @@ such as :option:`!--help` or :option:`!-h`:
    workshop_launch
    workshop_list
    workshop_refresh
+   workshop_remove
    workshop_start
    workshop_stop

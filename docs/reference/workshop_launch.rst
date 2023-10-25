@@ -60,4 +60,5 @@ Explanation:
 Reference:
 
 - :ref:`workshop refresh (command) <ref_workshop_refresh>`
+- :ref:`workshop remove (command) <ref_workshop_remove>`
 - :ref:`workshop start (command) <ref_workshop_start>`
