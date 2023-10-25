@@ -71,9 +71,9 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkspaceDevice {
+func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkshopDevice {
 	/* Bind-mount the SDK to the workshop */
-	return workshopbackend.WorkspaceDevice{
+	return workshopbackend.WorkshopDevice{
 		Name: sdk.Name,
 		Properties: map[string]string{"type": "disk", "source": sdk.Filename(),
 			"path": filepath.Join("/root", filepath.Base(sdk.Filename()))},
@@ -81,7 +81,7 @@ func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkspaceDevice {
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -96,13 +96,13 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	sdkMount := sdkBlobDevice(sdkSetup)
 
-	if err = m.backend.AddWorkspaceDevice(ctx, workshop, sdkMount); err != nil {
+	if err = m.backend.AddWorkshopDevice(ctx, workshop, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		/* Make sure the SDK file will be unmounted once installed into the workshop */
-		if err := m.backend.RemoveWorkspaceDevice(ctx, workshop, sdkMount.Name); err != nil {
+		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, workshop, err)
 		}
 	}
@@ -110,7 +110,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	defer cleanup()
 
 	// example: /var/lib/workshop/sdk/cuda/712/
-	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, sdkSetup.Name,
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name,
 		strconv.Itoa(int(sdkSetup.Revision)))
 
 	// create a memory out/err to log the hook output into the task's log
@@ -159,7 +159,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -174,13 +174,13 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	sdkMount := sdkBlobDevice(blob)
 
-	fs, err := m.backend.GetWorkspaceFs(ctx, workshop)
+	fs, err := m.backend.GetWorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(dirs.WorkspaceSdksDir, blob.Name))
+	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, blob.Name))
 	if err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
 	}
@@ -189,7 +189,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkspace(ctx, workshop)
+	inst, err := m.backend.GetWorkshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkspace(ctx, workshop)
+	inst, err := m.backend.GetWorkshop(ctx, workshop)
 	if err != nil {
 		return err
 	}

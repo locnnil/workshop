@@ -71,7 +71,7 @@ function cleanup() {
   done
 }
 
-# Workspace sub-command wrappers
+# Workshop sub-command wrappers
 
 function workshop_exec() {
   sudo -u ubuntu 2>&1 -- workshop "$@"

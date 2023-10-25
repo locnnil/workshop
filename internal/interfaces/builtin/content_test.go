@@ -141,7 +141,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Analyze the mount specification.
-	expectedMnt := []*workshopbackend.WorkspaceDevice{{
+	expectedMnt := []*workshopbackend.WorkshopDevice{{
 		Name: plug.Name,
 		Properties: map[string]string{
 			"type":   "disk",

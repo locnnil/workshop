@@ -59,7 +59,7 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 type Overlord struct {
 	stateDir        string
 	stateEng        *StateEngine
-	workshopBackend workshopbackend.WorkspaceBackend
+	workshopBackend workshopbackend.WorkshopBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -73,7 +73,7 @@ type Overlord struct {
 	inited    bool
 	startedUp bool
 	sdk       *sdkstate.SdkManager
-	workshop  *workshop.WorkspaceManager
+	workshop  *workshop.WorkshopManager
 	hook      *hookstate.HookManager
 	command   *cmdstate.CommandManager
 	ifacemgr  *ifacestate.InterfaceManager
@@ -87,7 +87,7 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b workshopbackend.WorkspaceBackend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -457,11 +457,11 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkspaceBackend() workshopbackend.WorkspaceBackend {
+func (o *Overlord) WorkshopBackend() workshopbackend.WorkshopBackend {
 	return o.workshopBackend
 }
 
-func (o *Overlord) WorkspaceManager() *workshop.WorkspaceManager {
+func (o *Overlord) WorkshopManager() *workshop.WorkshopManager {
 	return o.workshop
 }
 

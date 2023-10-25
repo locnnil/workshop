@@ -269,7 +269,7 @@ func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
 }
 
 func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(dirs.WorkspaceSdksDir, sdkName, "current")
+	return filepath.Join(dirs.WorkshopSdksDir, sdkName, "current")
 }
 
 func SdkHooksDir(sdkName string) string {

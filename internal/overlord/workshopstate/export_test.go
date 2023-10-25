@@ -9,6 +9,6 @@ var (
 	StopManyImpl      = stopMany
 	RemoveManyImpl    = removeMany
 
-	Launch         = launch
-	WorkspaceState = (*WorkspaceManager).workshopState
+	Launch        = launch
+	WorkshopState = (*WorkshopManager).workshopState
 )

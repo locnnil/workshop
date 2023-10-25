@@ -22,7 +22,7 @@ type ListOptions struct {
 	ProjectId string
 }
 
-func (client *Client) ListWorkspaces(opts *ListOptions) ([]*Workshop, error) {
+func (client *Client) ListWorkshops(opts *ListOptions) ([]*Workshop, error) {
 	var workshops []*Workshop
 	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &workshops)
 	if err != nil {

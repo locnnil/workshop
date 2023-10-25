@@ -8,19 +8,19 @@ import (
 
 type HookSetup struct {
 	Sdk         workshopbackend.SdkRecord `json:"sdk"`
-	HookType    WorkspaceHookType         `json:"type"`
+	HookType    WorkshopHookType          `json:"type"`
 	Environment map[string]string         `json:"environment"`
 }
 
-type WorkspaceHookType int
+type WorkshopHookType int
 
 const (
-	SetupBase WorkspaceHookType = iota
+	SetupBase WorkshopHookType = iota
 	SaveState
 	RestoreState
 )
 
-func (s WorkspaceHookType) String() string {
+func (s WorkshopHookType) String() string {
 	return [...]string{"setup-base", "save-state", "restore-state"}[s]
 }
 
@@ -29,10 +29,10 @@ func (h *HookSetup) Type() string {
 }
 
 type HookManager struct {
-	backend workshopbackend.WorkspaceBackend
+	backend workshopbackend.WorkshopBackend
 }
 
-func New(runner *state.TaskRunner, server workshopbackend.WorkspaceBackend) *HookManager {
+func New(runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
 	manager := &HookManager{
 		backend: server,
 	}

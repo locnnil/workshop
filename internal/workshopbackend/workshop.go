@@ -15,40 +15,40 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type WorkspaceErrorType int
+type WorkshopErrorType int
 
 const (
-	WorkspaceStateDir = "/var/lib/workshop/state"
+	WorkshopStateDir = "/var/lib/workshop/state"
 )
 
 var InstallTimeNow = time.Now
 
-type WorkspaceState int
+type WorkshopState int
 
 const (
-	WorkspaceOff WorkspaceState = iota
-	WorkspaceReady
-	WorkspaceStopped
-	WorkspacePending
-	WorkspaceError
+	WorkshopOff WorkshopState = iota
+	WorkshopReady
+	WorkshopStopped
+	WorkshopPending
+	WorkshopError
 )
 
-func (s WorkspaceState) String() string {
+func (s WorkshopState) String() string {
 	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
 }
 
-func ParseWorkspaceState(s string) WorkspaceState {
-	refreshMap := map[string]WorkspaceState{
-		WorkspaceOff.String():     WorkspaceOff,
-		WorkspaceReady.String():   WorkspaceReady,
-		WorkspaceStopped.String(): WorkspaceStopped,
-		WorkspacePending.String(): WorkspacePending,
-		WorkspaceError.String():   WorkspaceError,
+func ParseWorkshopState(s string) WorkshopState {
+	refreshMap := map[string]WorkshopState{
+		WorkshopOff.String():     WorkshopOff,
+		WorkshopReady.String():   WorkshopReady,
+		WorkshopStopped.String(): WorkshopStopped,
+		WorkshopPending.String(): WorkshopPending,
+		WorkshopError.String():   WorkshopError,
 	}
 	return refreshMap[s]
 }
 
-func NewWorkspace(backend WorkspaceBackend, name, projectId string) *Workshop {
+func NewWorkshop(backend WorkshopBackend, name, projectId string) *Workshop {
 	return &Workshop{
 		Name:      name,
 		projectId: projectId,
@@ -57,16 +57,16 @@ func NewWorkspace(backend WorkspaceBackend, name, projectId string) *Workshop {
 }
 
 type Workshop struct {
-	backend   WorkspaceBackend
-	file      *WorkspaceFile
+	backend   WorkshopBackend
+	file      *WorkshopFile
 	projectId string
 	base      string
 	Name      string
 	Devices   map[string]map[string]string
 	content   map[string]sdk.Setup
-	errs      []WorkspaceErrorType
+	errs      []WorkshopErrorType
 	running   bool
-	state     WorkspaceState
+	state     WorkshopState
 }
 
 func (w *Workshop) Base() string {
@@ -85,11 +85,11 @@ func (w *Workshop) ProjectId() string {
 	return w.projectId
 }
 
-func (w *Workshop) Errors() []WorkspaceErrorType {
+func (w *Workshop) Errors() []WorkshopErrorType {
 	return w.errs
 }
 
-func (w *Workshop) AddError(err WorkspaceErrorType) {
+func (w *Workshop) AddError(err WorkshopErrorType) {
 	w.errs = append(w.errs, err)
 }
 
@@ -97,19 +97,19 @@ func (w *Workshop) Content() []sdk.Setup {
 	return maps.Values(w.content)
 }
 
-func (w *Workshop) File() *WorkspaceFile {
+func (w *Workshop) File() *WorkshopFile {
 	return w.file
 }
 
-func (w *Workshop) SetFile(f *WorkspaceFile) {
+func (w *Workshop) SetFile(f *WorkshopFile) {
 	w.file = f
 }
 
-func (w *Workshop) State() WorkspaceState {
+func (w *Workshop) State() WorkshopState {
 	return w.state
 }
 
-func (w *Workshop) SetState(st WorkspaceState) {
+func (w *Workshop) SetState(st WorkshopState) {
 	w.state = st
 }
 
@@ -122,8 +122,8 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 		return err
 	}
 
-	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
-		&WorkspaceConfigValue{
+	err = w.backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
 			Name:  "user.workshop.content",
 			Value: string(sequenceValue),
 		})
@@ -133,9 +133,9 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 
 	// Update the current link to point out to the newly installed SDK
-	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, s.Name)
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, s.Name)
 
-	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	fs, err := w.backend.GetWorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
@@ -153,8 +153,8 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 
 	/* Update the workshop config */
-	err = w.backend.AddWorkspaceConfig(ctx, w.Name,
-		&WorkspaceConfigValue{
+	err = w.backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
 			Name:  "user.workshop.content",
 			Value: string(newSequence),
 		})
@@ -163,7 +163,7 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 
 	/* Remove the 'current' link */
-	fs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	fs, err := w.backend.GetWorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
@@ -173,19 +173,19 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 }
 
 const (
-	None WorkspaceErrorType = iota
+	None WorkshopErrorType = iota
 	MissingProject
 	MissingFile
 	BrokenSdkRecord
 	WaitOnError
 )
 
-func (s WorkspaceErrorType) String() string {
+func (s WorkshopErrorType) String() string {
 	return [...]string{"", "missing-project", "missing-file", "invalid-sdk", "wait-on-error"}[s]
 }
 
-func ParseWorkspaceError(s string) WorkspaceErrorType {
-	wserrs := map[string]WorkspaceErrorType{
+func ParseWorkshopError(s string) WorkshopErrorType {
+	wserrs := map[string]WorkshopErrorType{
 		None.String():            None,
 		MissingProject.String():  MissingProject,
 		MissingFile.String():     MissingFile,
@@ -195,11 +195,11 @@ func ParseWorkspaceError(s string) WorkspaceErrorType {
 	return wserrs[s]
 }
 
-func WorkspaceFilePath(dir, name string) string {
-	return filepath.Join(dir, WorkspaceFileName(name))
+func WorkshopFilePath(dir, name string) string {
+	return filepath.Join(dir, WorkshopFileName(name))
 }
 
-func WorkspaceFileName(name string) string {
+func WorkshopFileName(name string) string {
 	return fmt.Sprintf(".workshop.%s.yaml", name)
 }
 
@@ -207,7 +207,7 @@ func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
 }
 
-func WorkspaceName(instance string) string {
+func WorkshopName(instance string) string {
 	idx := strings.LastIndex(instance, "-")
 	if idx == -1 {
 		return ""
@@ -217,7 +217,7 @@ func WorkspaceName(instance string) string {
 	return instance[:idx]
 }
 
-func WorkspaceStateVolumeName(ws, pid string) string {
+func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
 }
 
@@ -228,7 +228,7 @@ func WorkspaceStateVolumeName(ws, pid string) string {
 // if the filesystem of the container is not closed, it maintains the underlying
 // SFTP connection which stops the container from stoppping.
 func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
-	wsfs, err := w.backend.GetWorkspaceFs(ctx, w.Name)
+	wsfs, err := w.backend.GetWorkshopFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -14,11 +14,11 @@ import (
 
 type InterfaceManager struct {
 	state     *state.State
-	wsbackend workshopbackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkshopBackend
 	repo      *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkspaceBackend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend) *InterfaceManager {
 	m := &InterfaceManager{
 		state:     s,
 		wsbackend: be,
@@ -59,7 +59,7 @@ func (m *InterfaceManager) StartUp() error {
 		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
 		for _, prj := range projects {
 			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
-			_, wrksps, err := m.wsbackend.GetProjectWorkspaces(prjctx)
+			_, wrksps, err := m.wsbackend.GetProjectWorkshops(prjctx)
 			if err != nil {
 				return err
 			}

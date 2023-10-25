@@ -7,12 +7,12 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (cs *clientSuite) TestClientListProjectWorkspaces(c *check.C) {
+func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","state":"Ready",
 	"notes":["missing-project"],
 	"content":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z"}]
 	}]}`
-	prj, err := cs.cli.ListWorkspaces(&client.ListOptions{ProjectId: "42ws42ws"})
+	prj, err := cs.cli.ListWorkshops(&client.ListOptions{ProjectId: "42ws42ws"})
 	c.Assert(err, check.IsNil)
 	c.Assert(prj, check.DeepEquals, []*client.Workshop{
 		{

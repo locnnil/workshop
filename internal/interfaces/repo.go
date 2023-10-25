@@ -239,7 +239,7 @@ func (r *Repository) AllPlugs(interfaceName string) []*sdk.PlugInfo {
 			}
 		}
 	}
-	sort.Sort(byPlugWorkspaceSdkAndName(result))
+	sort.Sort(byPlugWorkshopSdkAndName(result))
 	return result
 }
 
@@ -254,7 +254,7 @@ func (r *Repository) Plugs(workshop, sdkName string) []*sdk.PlugInfo {
 	for _, plug := range r.plugs[key] {
 		result = append(result, plug)
 	}
-	sort.Sort(byPlugWorkspaceSdkAndName(result))
+	sort.Sort(byPlugWorkshopSdkAndName(result))
 	return result
 }
 
@@ -367,7 +367,7 @@ func (r *Repository) AllSlots(interfaceName string) []*sdk.SlotInfo {
 			}
 		}
 	}
-	sort.Sort(bySlotWorkspaceSdkAndName(result))
+	sort.Sort(bySlotWorkshopSdkAndName(result))
 	return result
 }
 
@@ -382,7 +382,7 @@ func (r *Repository) Slots(workshop, sdkName string) []*sdk.SlotInfo {
 	for _, slot := range r.slots[key] {
 		result = append(result, slot)
 	}
-	sort.Sort(bySlotWorkspaceSdkAndName(result))
+	sort.Sort(bySlotWorkshopSdkAndName(result))
 	return result
 }
 
@@ -566,7 +566,7 @@ func (e *NoPlugOrSlotError) Error() string {
 // Disconnect() finds a specific slot and a specific plug and disconnects that
 // plug from that slot. It is an error if plug or slot cannot be found or if
 // the connect does not exist.
-func (r *Repository) Disconnect(plugWorkspace, plugSdkName, plugName, slotWorkspace, slotSdkName, slotName string) error {
+func (r *Repository) Disconnect(plugWorkshop, plugSdkName, plugName, slotWorkshop, slotSdkName, slotName string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -584,8 +584,8 @@ func (r *Repository) Disconnect(plugWorkspace, plugSdkName, plugName, slotWorksp
 		return fmt.Errorf("cannot disconnect, slot name is empty")
 	}
 
-	plugKey := plugOrSlotKey(plugWorkspace, plugSdkName)
-	slotKey := plugOrSlotKey(slotWorkspace, slotSdkName)
+	plugKey := plugOrSlotKey(plugWorkshop, plugSdkName)
+	slotKey := plugOrSlotKey(slotWorkshop, slotSdkName)
 
 	// Ensure that such plug exists
 	plug := r.plugs[plugKey][plugName]
@@ -762,8 +762,8 @@ func (r *Repository) Interfaces() *Interfaces {
 		}
 	}
 
-	sort.Sort(byPlugWorkspaceSdkAndName(ifaces.Plugs))
-	sort.Sort(bySlotWorkspaceSdkAndName(ifaces.Slots))
+	sort.Sort(byPlugWorkshopSdkAndName(ifaces.Plugs))
+	sort.Sort(bySlotWorkshopSdkAndName(ifaces.Slots))
 	sort.Sort(byConnRef(ifaces.Connections))
 	return ifaces
 }

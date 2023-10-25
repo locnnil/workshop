@@ -8,44 +8,44 @@ import (
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
-type WorkspaceManager struct {
-	backend workshopbackend.WorkspaceBackend
+type WorkshopManager struct {
+	backend workshopbackend.WorkshopBackend
 	state   *state.State
 }
 
-func New(st *state.State, runner *state.TaskRunner, server workshopbackend.WorkspaceBackend) *WorkspaceManager {
-	manager := &WorkspaceManager{
+func New(st *state.State, runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *WorkshopManager {
+	manager := &WorkshopManager{
 		backend: server,
 		state:   st,
 	}
 
 	/* Workshop management */
-	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkspace), OnUndo(manager.undoCreateWorkspace))
+	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), OnUndo(manager.undoCreateWorkshop))
 	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUndo(manager.doStop))
 	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUndo(manager.doStart))
-	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkspace), nil)
+	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkshop), nil)
 	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
-	runner.AddHandler("remove-workshop-stash", OnDo(manager.doRemoveWorkspaceStash), nil)
-	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkspace), OnUndo(manager.undoStashWorkspace))
+	runner.AddHandler("remove-workshop-stash", OnDo(manager.doRemoveWorkshopStash), nil)
+	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), OnUndo(manager.undoStashWorkshop))
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
 	return manager
 }
 
-func (w *WorkspaceManager) Ensure() error {
+func (w *WorkshopManager) Ensure() error {
 	return nil
 }
 
 // Checks all of the provided list of workshops are in the required status as
 // per the matchStatus predicate. It returns the first workshop that does NOT
 // meet the predicate's condition.
-func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId string,
-	matchStatus func(status workshopbackend.WorkspaceState) bool) (string, workshopbackend.WorkspaceState, error) {
+func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string,
+	matchStatus func(status workshopbackend.WorkshopState) bool) (string, workshopbackend.WorkshopState, error) {
 	for _, name := range names {
 		wrkspc, err := w.Workshop(ctx, name, pId)
 		if err != nil {
-			return "", workshopbackend.WorkspaceOff, err
+			return "", workshopbackend.WorkshopOff, err
 		}
 
 		status := w.workshopState(wrkspc)
@@ -53,16 +53,16 @@ func (w *WorkspaceManager) CheckStatus(ctx context.Context, names []string, pId 
 			return name, status, nil
 		}
 	}
-	return "", workshopbackend.WorkspaceOff, nil
+	return "", workshopbackend.WorkshopOff, nil
 }
 
 // Loads a workshop, the state must be locked as it is used to find out the
 // workshop state
-func (w *WorkspaceManager) Workshop(ctx context.Context, name, pId string) (*workshopbackend.Workshop, error) {
+func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*workshopbackend.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
 
-	wrkspc, err := w.backend.GetWorkspace(pCtx, name)
+	wrkspc, err := w.backend.GetWorkshop(pCtx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +73,11 @@ func (w *WorkspaceManager) Workshop(ctx context.Context, name, pId string) (*wor
 
 // Loads all workshops for a project, the state must be locked as it is used to find out the
 // workshop state
-func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*workshopbackend.WorkspaceFile, []*workshopbackend.Workshop, error) {
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshopbackend.WorkshopFile, []*workshopbackend.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
 
-	files, workshops, err := w.backend.GetProjectWorkspaces(pCtx)
+	files, workshops, err := w.backend.GetProjectWorkshops(pCtx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,35 +92,35 @@ func (w *WorkspaceManager) Workspaces(ctx context.Context, pId string) ([]*works
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked before the
 // call.
-func (w *WorkspaceManager) workshopState(ws *workshopbackend.Workshop) workshopbackend.WorkspaceState {
+func (w *WorkshopManager) workshopState(ws *workshopbackend.Workshop) workshopbackend.WorkshopState {
 	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
 	if op != nil {
 		if ws.IsRunning() {
 			change := w.state.Change(op.ChangeId)
 			if change == nil {
-				return workshopbackend.WorkspaceError
+				return workshopbackend.WorkshopError
 			}
 			if change.Status() == state.WaitStatus {
 				ws.AddError(workshopbackend.WaitOnError)
-				return workshopbackend.WorkspacePending
+				return workshopbackend.WorkshopPending
 			}
 			if len(ws.Errors()) == 0 {
-				return workshopbackend.WorkspacePending
+				return workshopbackend.WorkshopPending
 			}
-			return workshopbackend.WorkspaceError
+			return workshopbackend.WorkshopError
 		} else {
 			if len(ws.Errors()) > 0 {
-				return workshopbackend.WorkspaceError
+				return workshopbackend.WorkshopError
 			}
-			return workshopbackend.WorkspacePending
+			return workshopbackend.WorkshopPending
 		}
 	} else {
 		if ws.IsRunning() && len(ws.Errors()) == 0 {
-			return workshopbackend.WorkspaceReady
+			return workshopbackend.WorkshopReady
 		}
 		if len(ws.Errors()) > 0 {
-			return workshopbackend.WorkspaceError
+			return workshopbackend.WorkshopError
 		}
-		return workshopbackend.WorkspaceStopped
+		return workshopbackend.WorkshopStopped
 	}
 }

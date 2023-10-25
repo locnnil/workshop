@@ -24,7 +24,7 @@ import (
 
 type H struct {
 	fs          afero.Fs
-	backend     *workshopbackend.FakeWorkspaceBackend
+	backend     *workshopbackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
@@ -45,7 +45,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", p)
@@ -59,7 +59,7 @@ func (s *H) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
 
-	s.backend = workshopbackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
 	s.project = &workshopbackend.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",
@@ -95,7 +95,7 @@ sdks:
     channel: latest/stable
 `), 0644)
 	c.Assert(err, check.IsNil)
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	var sdkYaml = `
@@ -110,8 +110,8 @@ plugs:
 }
 
 func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
-	sdkPath := filepath.Join(dirs.WorkspaceSdksDir, "test", "current", "meta", "sdk.yaml")
-	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, "test", "current", "meta", "sdk.yaml")
+	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
@@ -132,7 +132,7 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -155,7 +155,7 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	})
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, _ := s.backend.GetWorkspace(s.ctx, "ws")
+	props, _ := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 }
 
@@ -170,7 +170,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -185,7 +185,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
@@ -214,8 +214,8 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		fs, _ := s.backend.GetWorkspaceFs(ctx, name)
-		fs.MkdirAll(filepath.Join(dirs.WorkspaceSdksDir, "new"), 0755)
+		fs, _ := s.backend.GetWorkshopFs(ctx, name)
+		fs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "new"), 0755)
 		return workshopbackend.ExecContext{}, nil
 	}
 
@@ -226,13 +226,13 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	fs, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkspaceSdksDir, "new"))
+	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkshopSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
 }
 
@@ -248,7 +248,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -259,7 +259,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
@@ -292,7 +292,7 @@ slots:
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
@@ -320,7 +320,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	terr.WaitFor(link)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, link, t)
+	setWorkshopProject("ws", s.project, link, t)
 
 	chg.Set("user", "testuser")
 	chg.AddTask(link)
@@ -334,7 +334,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkspace(s.ctx, "ws")
+	props, err := s.backend.GetWorkshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 0)

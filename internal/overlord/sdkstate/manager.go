@@ -7,7 +7,7 @@ import (
 )
 
 type SdkManager struct {
-	backend backend.WorkspaceBackend
+	backend backend.WorkshopBackend
 }
 
 type SdkSequenceRecord struct {
@@ -15,7 +15,7 @@ type SdkSequenceRecord struct {
 	Revision int64  `json:"revision"`
 }
 
-func New(runner *state.TaskRunner, server backend.WorkspaceBackend) *SdkManager {
+func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)

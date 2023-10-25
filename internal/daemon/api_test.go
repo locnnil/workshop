@@ -29,7 +29,7 @@ var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d *Daemon
-	b workshopbackend.WorkspaceBackend
+	b workshopbackend.WorkshopBackend
 
 	workshopDir string
 	username    string
@@ -53,7 +53,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
-	s.b = workshopbackend.NewFakeWorkspaceBackend()
+	s.b = workshopbackend.NewFakeWorkshopBackend()
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil

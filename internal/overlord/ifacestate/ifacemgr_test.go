@@ -23,7 +23,7 @@ type interfaceManagerSuite struct {
 	state     *state.State
 	se        *overlord.StateEngine
 	ctx       context.Context
-	wsbackend workshopbackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkshopBackend
 	prj       *workshopbackend.Project
 }
 
@@ -36,7 +36,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.o = overlord.Fake()
 	s.state = s.o.State()
 	s.se = s.o.StateEngine()
-	s.wsbackend = workshopbackend.NewFakeWorkspaceBackend()
+	s.wsbackend = workshopbackend.NewFakeWorkshopBackend()
 	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
@@ -48,7 +48,7 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) mockWorkspaceWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
+func (s *interfaceManagerSuite) mockWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
 	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
 	err := os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), []byte(`name: ws
@@ -61,15 +61,15 @@ sdks:
 `), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchWorkspace(ctx, ws, "ubuntu@22.04")
+	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 
-	wsfs, err := s.wsbackend.GetWorkspaceFs(ctx, ws)
+	wsfs, err := s.wsbackend.GetWorkshopFs(ctx, ws)
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
 	for name, sdk := range sdkYamls {
-		sdkPath := filepath.Join(dirs.WorkspaceSdksDir, name, "current", "meta", "sdk.yaml")
+		sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
 		err = afero.WriteFile(wsfs, sdkPath, []byte(sdk), 0644)
 		c.Assert(err, check.IsNil)
 	}
@@ -94,7 +94,7 @@ slots:
   attr: slot-value
 `
 
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})
@@ -160,7 +160,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})
@@ -202,7 +202,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkspaceWithSDKs(c, "ws", map[string]string{
+	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
 		"consumer": consumerYaml,
 		"producer": producerYaml,
 	})

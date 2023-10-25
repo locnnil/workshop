@@ -21,7 +21,7 @@ import (
 type wsOps struct {
 	// per suite
 	lxdClient lxd.InstanceServer
-	be        workshopbackend.WorkspaceBackend
+	be        workshopbackend.WorkshopBackend
 
 	// per test
 	ctx                 context.Context
@@ -90,11 +90,11 @@ func (f *wsOps) SetUpTest(c *check.C) {
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshopbackend.NewProjectId)
-	launchTestWorkspace(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
 }
 
 func (f *wsOps) TearDownTest(c *check.C) {
-	defer f.be.RemoveWorkspace(f.ctx, "test")
+	defer f.be.RemoveWorkshop(f.ctx, "test")
 	err := f.daemon.Stop(nil)
 	c.Check(err, check.IsNil)
 	f.lookupUserRestore()
@@ -110,7 +110,7 @@ func createTestContext(username, projectId string) context.Context {
 	return ctx
 }
 
-func launchTestWorkspace(c *check.C, ctx context.Context, be workshopbackend.WorkspaceBackend, dir, username string) {
+func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.WorkshopBackend, dir, username string) {
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
 			Name:     username,
@@ -130,9 +130,9 @@ base: ubuntu@22.04
 
 	_, _, err = be.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
-	err = be.LaunchWorkspace(ctx, "test", "ubuntu@22.04")
+	err = be.LaunchWorkshop(ctx, "test", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
-	err = be.StartWorkspace(ctx, "test")
+	err = be.StartWorkshop(ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
@@ -143,30 +143,30 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	// Execute
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
-	defer f.be.RemoveWorkspace(f.ctx, "test-1")
+	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
+	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	_, err = f.be.GetWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendUnstashWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 	// Execute
-	err := f.be.StashWorkspace(f.ctx, "test")
+	err := f.be.StashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkspace(f.ctx, "test")
+	_, err = f.be.GetWorkshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.UnstashWorkspace(f.ctx, "test")
+	err = f.be.UnstashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkspace(f.ctx, "test")
+	_, err = f.be.GetWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 }
@@ -177,7 +177,7 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	vol, _, err := f.lxdClient.GetStoragePoolVolume("default", "custom", workshopbackend.WorkspaceStateVolumeName("test", f.project.ProjectId))
+	vol, _, err := f.lxdClient.GetStoragePoolVolume("default", "custom", workshopbackend.WorkshopStateVolumeName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
 	c.Assert(vol.ContentType, check.Equals, "filesystem")
 
@@ -188,40 +188,40 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendRemoveWorkspaceStash(c *check.C) {
+func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
-	defer f.be.RemoveWorkspace(f.ctx, "test-1")
+	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
+	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.be.StashWorkspace(f.ctx, "test-1")
+	err = f.be.StashWorkshop(f.ctx, "test-1")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	_, err = f.be.GetWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.RemoveWorkspaceStash(f.ctx, "test-1")
+	err = f.be.RemoveWorkshopStash(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 	cli := f.lxdClient.UseProject(workshopbackend.LxdSystemProjectName(f.username))
 	_, _, err = cli.GetInstance(workshopbackend.InstanceName("test-1", f.project.ProjectId))
 	c.Assert(err, check.ErrorMatches, "Instance not found")
 }
 
-func (f *wsOps) TestLxdBackendStartWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
-	defer f.be.RemoveWorkspace(f.ctx, "test-1")
+	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 
 	// Execute
-	err = f.be.StartWorkspace(f.ctx, "test-1")
+	err = f.be.StartWorkshop(f.ctx, "test-1")
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkspace(f.ctx, "test-1")
+	_, err = f.be.GetWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// now, ensure that the systemd is in the final state
@@ -255,14 +255,14 @@ func (f *wsOps) TestLxdBackendStartWorkspace(c *check.C) {
 	// c.Assert(string(buf), check.Equals, "running\n")
 }
 
-func (f *wsOps) TestLxdBackendDeleteWorkspace(c *check.C) {
+func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
-	err := f.be.LaunchWorkspace(f.ctx, "test-1", "ubuntu@22.04")
+	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
-	err = f.be.StartWorkspace(f.ctx, "test-1")
+	err = f.be.StartWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	//Validate
-	err = f.be.RemoveWorkspace(f.ctx, "test-1")
+	err = f.be.RemoveWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }

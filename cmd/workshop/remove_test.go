@@ -7,21 +7,21 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WorkspaceRemove struct {
-	BaseWorkspaceSuite
+type WorkshopRemove struct {
+	BaseWorkshopSuite
 	prjDir string
 	prjId  string
 }
 
-var _ = check.Suite(&WorkspaceRemove{})
+var _ = check.Suite(&WorkshopRemove{})
 
-func (m *WorkspaceRemove) SetUpTest(c *check.C) {
+func (m *WorkshopRemove) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
-	m.BaseWorkspaceSuite.SetUpTest(c)
+	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-func (m *WorkspaceRemove) TestStartSuccess(c *check.C) {
+func (m *WorkshopRemove) TestStartSuccess(c *check.C) {
 	cmd := &CmdRemove{}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {

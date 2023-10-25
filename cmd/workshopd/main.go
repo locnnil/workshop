@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// exitStatus can be used in panic(&exitStatus{code}) to cause Workspaces's main
+// exitStatus can be used in panic(&exitStatus{code}) to cause Workshops's main
 // function to exit with a given exit code, for the rare cases when you want
 // to return an exit code other than 0 or 1, or when an error return is not
 // possible.

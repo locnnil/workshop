@@ -80,7 +80,7 @@ func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
 		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,
 		HTTPAddress: s.httpAddress,
-	}, workshopbackend.NewFakeWorkspaceBackend())
+	}, workshopbackend.NewFakeWorkshopBackend())
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	return d

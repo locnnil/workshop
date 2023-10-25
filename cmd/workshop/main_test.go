@@ -12,14 +12,14 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type BaseWorkspaceSuite struct {
+type BaseWorkshopSuite struct {
 	testutil.BaseTest
 	stdin  *bytes.Buffer
 	stdout *bytes.Buffer
 	stderr *bytes.Buffer
 }
 
-func (s *BaseWorkspaceSuite) SetUpTest(c *check.C) {
+func (s *BaseWorkshopSuite) SetUpTest(c *check.C) {
 	dirs.SetRootDir(c.MkDir())
 
 	path := os.Getenv("PATH")
@@ -36,13 +36,13 @@ func (s *BaseWorkspaceSuite) SetUpTest(c *check.C) {
 	Stderr = s.stderr
 }
 
-func (s *BaseWorkspaceSuite) TearDownTest(c *check.C) {
+func (s *BaseWorkshopSuite) TearDownTest(c *check.C) {
 	Stdin = os.Stdin
 	Stdout = os.Stdout
 	Stderr = os.Stderr
 }
 
-func (s *BaseWorkspaceSuite) RedirectClientToTestServer(handler func(http.ResponseWriter, *http.Request)) {
+func (s *BaseWorkshopSuite) RedirectClientToTestServer(handler func(http.ResponseWriter, *http.Request)) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	s.BaseTest.AddCleanup(func() { server.Close() })
 	ClientConfig.BaseURL = server.URL

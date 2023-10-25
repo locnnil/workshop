@@ -142,7 +142,7 @@ const (
 )
 
 type ChangesOptions struct {
-	Workspaces  []string // if empty, no filtering by service is done
+	Workshops   []string // if empty, no filtering by service is done
 	ProjectPath string
 	Selector    ChangeSelector
 }
@@ -154,8 +154,8 @@ func (client *Client) Changes(opts *ChangesOptions) ([]*Change, error) {
 		if opts.Selector != 0 {
 			query.Set("select", opts.Selector.String())
 		}
-		if len(opts.Workspaces) > 0 {
-			query.Set("workshops", strings.Join(opts.Workspaces, ","))
+		if len(opts.Workshops) > 0 {
+			query.Set("workshops", strings.Join(opts.Workshops, ","))
 		}
 		if opts.ProjectPath != "" {
 			project, err := client.Project(opts.ProjectPath)

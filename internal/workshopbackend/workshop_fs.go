@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/afero/sftpfs"
 )
 
-type WorkspaceFs interface {
+type WorkshopFs interface {
 	afero.Fs
 	Symlink(old, new string, force bool) error
 	Close()
 }
 
-func NewWorkspaceFs(c *sftp.Client) WorkspaceFs {
+func NewWorkshopFs(c *sftp.Client) WorkshopFs {
 	var fs InstanceFs
 	fs.client = c
 	fs.Fs = sftpfs.New(fs.client)
@@ -49,7 +49,7 @@ type FakeInstanceFs struct {
 	afero.Fs
 }
 
-func NewFakeWorkspaceFs() WorkspaceFs {
+func NewFakeWorkshopFs() WorkshopFs {
 	var fs FakeInstanceFs
 	fs.Fs = afero.NewMemMapFs()
 	return &fs

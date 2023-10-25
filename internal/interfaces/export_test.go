@@ -25,17 +25,17 @@ func (c ByConnRef) Len() int           { return byConnRef(c).Len() }
 func (c ByConnRef) Swap(i, j int)      { byConnRef(c).Swap(i, j) }
 func (c ByConnRef) Less(i, j int) bool { return byConnRef(c).Less(i, j) }
 
-type ByPlugSdkAndName byPlugWorkspaceSdkAndName
+type ByPlugSdkAndName byPlugWorkshopSdkAndName
 
-func (c ByPlugSdkAndName) Len() int           { return byPlugWorkspaceSdkAndName(c).Len() }
-func (c ByPlugSdkAndName) Swap(i, j int)      { byPlugWorkspaceSdkAndName(c).Swap(i, j) }
-func (c ByPlugSdkAndName) Less(i, j int) bool { return byPlugWorkspaceSdkAndName(c).Less(i, j) }
+func (c ByPlugSdkAndName) Len() int           { return byPlugWorkshopSdkAndName(c).Len() }
+func (c ByPlugSdkAndName) Swap(i, j int)      { byPlugWorkshopSdkAndName(c).Swap(i, j) }
+func (c ByPlugSdkAndName) Less(i, j int) bool { return byPlugWorkshopSdkAndName(c).Less(i, j) }
 
-type BySlotSdkAndName bySlotWorkspaceSdkAndName
+type BySlotSdkAndName bySlotWorkshopSdkAndName
 
-func (c BySlotSdkAndName) Len() int           { return bySlotWorkspaceSdkAndName(c).Len() }
-func (c BySlotSdkAndName) Swap(i, j int)      { bySlotWorkspaceSdkAndName(c).Swap(i, j) }
-func (c BySlotSdkAndName) Less(i, j int) bool { return bySlotWorkspaceSdkAndName(c).Less(i, j) }
+func (c BySlotSdkAndName) Len() int           { return bySlotWorkshopSdkAndName(c).Len() }
+func (c BySlotSdkAndName) Swap(i, j int)      { bySlotWorkshopSdkAndName(c).Swap(i, j) }
+func (c BySlotSdkAndName) Less(i, j int) bool { return bySlotWorkshopSdkAndName(c).Less(i, j) }
 
 type ByInterfaceName byInterfaceName
 

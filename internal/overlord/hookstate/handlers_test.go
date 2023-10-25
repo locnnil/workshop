@@ -20,7 +20,7 @@ import (
 
 type hookSuite struct {
 	fs      afero.Fs
-	backend *workshopbackend.FakeWorkspaceBackend
+	backend *workshopbackend.FakeWorkshopBackend
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
@@ -37,7 +37,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -50,7 +50,7 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 
-	s.backend = workshopbackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -88,7 +88,7 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
@@ -97,7 +97,7 @@ base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
 
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -118,11 +118,11 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkspace(c, newSdk)
+	s.launchWorkshop(c, newSdk)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -135,7 +135,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -149,14 +149,14 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1)
+	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkspace(c, newSdk)
+	s.launchWorkshop(c, newSdk)
 
 	// setup state storage (usually already set by the save-state)
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
@@ -173,7 +173,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
 }
 
-func (s *hookSuite) launchWorkspace(c *check.C, newSdk workshopbackend.SdkRecord) {
+func (s *hookSuite) launchWorkshop(c *check.C, newSdk workshopbackend.SdkRecord) {
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
@@ -181,9 +181,9 @@ sdks:
     channel: latest/stable
 `), 0644)
 	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
-	ws, err := s.backend.GetWorkspaceFs(s.ctx, "ws")
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newSdk.Name), 0744)
 	c.Check(err, check.IsNil)

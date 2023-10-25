@@ -21,7 +21,7 @@ import (
 type wsExec struct {
 	// per suite
 	lxdClient lxd.InstanceServer
-	be        workshopbackend.WorkspaceBackend
+	be        workshopbackend.WorkshopBackend
 
 	// per test
 	ctx                 context.Context
@@ -91,11 +91,11 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return f.project.ProjectId, nil
 	}, &workshopbackend.NewProjectId)
 
-	launchTestWorkspace(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
 }
 
 func (f *wsExec) TearDownSuite(c *check.C) {
-	err := f.be.RemoveWorkspace(f.ctx, "test")
+	err := f.be.RemoveWorkshop(f.ctx, "test")
 	c.Check(err, check.IsNil)
 	err = f.daemon.Stop(nil)
 	c.Check(err, check.IsNil)

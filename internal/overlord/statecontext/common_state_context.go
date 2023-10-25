@@ -19,7 +19,7 @@ import (
 // 3. The error needs to be reported as is which will cause the abortion.
 func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
-		_, p, ws, err := UserProjectWorkspace(task)
+		_, p, ws, err := UserProjectWorkshop(task)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 
 func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
-		_, p, ws, err := UserProjectWorkspace(task)
+		_, p, ws, err := UserProjectWorkshop(task)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 	}
 }
 
-func UserProjectWorkspace(task *state.Task) (string, *workshopbackend.Project, string, error) {
+func UserProjectWorkshop(task *state.Task) (string, *workshopbackend.Project, string, error) {
 	st := task.State()
 	var prj workshopbackend.Project
 	var name string

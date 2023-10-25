@@ -20,7 +20,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 	return projectsCmd
 }
@@ -35,7 +35,7 @@ func (s *apiSuite) TestExecNoCommand(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
@@ -82,7 +82,7 @@ func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
 
 	for i, r := range requests {
 		// Execute
-		rsp := v1PostWorkspaceExec(projectsCmd, r, nil).(*resp)
+		rsp := v1PostWorkshopExec(projectsCmd, r, nil).(*resp)
 
 		// Verify
 		c.Assert(rsp.Type, check.Equals, expected[i].Type, check.Commentf("case: %v", i))
@@ -111,7 +111,7 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 	defer restoreEnsure()
 
 	// Execute
-	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
@@ -128,7 +128,7 @@ func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
@@ -141,7 +141,7 @@ func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	rsp = v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+	rsp = v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
@@ -164,7 +164,7 @@ func (s *apiSuite) TestExecSetEnvVariable(c *check.C) {
 	defer restoreEnsure()
 
 	// Execute
-	rsp := v1PostWorkspaceExec(projectsCmd, req, nil).(*resp)
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)

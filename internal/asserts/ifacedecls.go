@@ -24,11 +24,11 @@ var (
 
 	ruleSubrules = []string{"allow-installation", "deny-installation", "allow-connection", "deny-connection", "allow-auto-connection", "deny-auto-connection"}
 
-	validWorkspaceType = regexp.MustCompile(`^(?:core|sdk)$`)
+	validWorkshopType = regexp.MustCompile(`^(?:core|sdk)$`)
 
 	validIDConstraints = map[string]*regexp.Regexp{
-		"slot-type": validWorkspaceType,
-		"plug-type": validWorkspaceType,
+		"slot-type": validWorkshopType,
+		"plug-type": validWorkshopType,
 	}
 
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}

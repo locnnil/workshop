@@ -8,21 +8,21 @@ import (
 type ContextKeyProjectId string
 type ContextKeyUser string
 
-type WorkspaceConfigFilter func(config map[string]string) bool
-type WorkspaceDeviceFilter func(devices map[string]map[string]string) bool
+type WorkshopConfigFilter func(config map[string]string) bool
+type WorkshopDeviceFilter func(devices map[string]map[string]string) bool
 
 const (
 	ContextProjectId = ContextKeyProjectId("project-id")
 	ContextUser      = ContextKeyUser("user")
 )
 
-func NewWorkspaceConfigFilter(key string, value string) WorkspaceConfigFilter {
+func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
 	return func(config map[string]string) bool {
 		return config[key] == value
 	}
 }
 
-func EveryWorkspace() WorkspaceConfigFilter {
+func EveryWorkshop() WorkshopConfigFilter {
 	return func(config map[string]string) bool {
 		return true
 	}
@@ -36,17 +36,17 @@ func (e *ErrExec) Error() string {
 	return fmt.Sprintf("command exit code %d", e.Status)
 }
 
-type WorkspaceDevice struct {
+type WorkshopDevice struct {
 	Name       string
 	Properties map[string]string
 }
 
-type WorkspaceConfigValue struct {
+type WorkshopConfigValue struct {
 	Name  string
 	Value string
 }
 
-type WorkspaceBackend interface {
+type WorkshopBackend interface {
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -60,37 +60,37 @@ type WorkspaceBackend interface {
 
 	// Launch a barebone workshop instance using the base provided. The
 	// supported bases are ubuntu@20.04 and ubuntu@22.04.
-	LaunchWorkspace(ctx context.Context, name, base string) error
+	LaunchWorkshop(ctx context.Context, name, base string) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
-	RemoveWorkspace(ctx context.Context, name string) error
+	RemoveWorkshop(ctx context.Context, name string) error
 
 	// Starts a workshop and waits until it is ready
 	// to accept commands
-	StartWorkspace(ctx context.Context, name string) error
+	StartWorkshop(ctx context.Context, name string) error
 
 	// Stops workshop gracefully (i.e. waits for the graceful instance and all
 	// its running services termination) unless force is used.
-	StopWorkspace(ctx context.Context, name string, force bool) error
+	StopWorkshop(ctx context.Context, name string, force bool) error
 
 	// Make a stash of the workshop. The workshop will be stopped and will not
 	// be available to other workshop operations, e.g. list, stop, start and so
 	// on. A new workshop with the same name can be launched for the same
 	// project-id.
-	StashWorkspace(ctx context.Context, name string) error
+	StashWorkshop(ctx context.Context, name string) error
 
-	// Restore the workshop from the stash (if exists, see StashWorkspace). The
+	// Restore the workshop from the stash (if exists, see StashWorkshop). The
 	// workshop will be restored and become visible to the backend operations.
 	// Fails if a workshop with the same name exists.
-	UnstashWorkspace(ctx context.Context, name string) error
+	UnstashWorkshop(ctx context.Context, name string) error
 
 	// Delete the workshop from stash (if exists).
-	RemoveWorkspaceStash(ctx context.Context, name string) error
+	RemoveWorkshopStash(ctx context.Context, name string) error
 
 	// Create a temporary state storage volume for the workshop. It can be
 	// mounted to the instance separately. This does not mount the device to the
 	// workshop, it must be mounted to the required workshop as a separate
-	// operation (see AddWorkspaceDevice).
+	// operation (see AddWorkshopDevice).
 	CreateStateStorage(ctx context.Context, name string) error
 
 	// Delete a temporary state storage volume for the workshop. It does
@@ -98,25 +98,25 @@ type WorkspaceBackend interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 
 	// Adds a workshop device described by the properties.
-	AddWorkspaceDevice(ctx context.Context, name string, props WorkspaceDevice) error
+	AddWorkshopDevice(ctx context.Context, name string, props WorkshopDevice) error
 
 	// Removes a workshop device.
-	RemoveWorkspaceDevice(ctx context.Context, name string, device string) error
+	RemoveWorkshopDevice(ctx context.Context, name string, device string) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change
 	// any workshop property arbitrarily.
-	AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error
-	RemoveWorkspaceConfig(ctx context.Context, name string, key string) error
+	AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error
+	RemoveWorkshopConfig(ctx context.Context, name string, key string) error
 
 	// Loads a workshop instance.
-	GetWorkspace(ctx context.Context, name string) (*Workshop, error)
+	GetWorkshop(ctx context.Context, name string) (*Workshop, error)
 
 	// Returns a workshop's file system interface.
-	GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error)
+	GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
 
 	// Returns a list of workshops for the project in context.
-	GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workshop, error)
+	GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

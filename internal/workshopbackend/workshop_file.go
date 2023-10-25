@@ -18,7 +18,7 @@ type SdkRecord struct {
 
 type SdkList []SdkRecord
 
-type WorkspaceFile struct {
+type WorkshopFile struct {
 	Name string `yaml:"name" json:"name"`
 	Base string `yaml:"base" json:"base"`
 	Sdks SdkList
@@ -44,10 +44,10 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
+func ReadWorkshop(pathname string) (*WorkshopFile, error) {
 	var err error
 
-	var file = &WorkspaceFile{}
+	var file = &WorkshopFile{}
 
 	buf, err := os.ReadFile(pathname)
 
@@ -68,7 +68,7 @@ func ReadWorkspace(pathname string) (*WorkspaceFile, error) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 
-	if WorkspaceFileName(file.Name) != filepath.Base(pathname) {
+	if WorkshopFileName(file.Name) != filepath.Base(pathname) {
 		return nil, fmt.Errorf("%s's file must be named as .workshop.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 

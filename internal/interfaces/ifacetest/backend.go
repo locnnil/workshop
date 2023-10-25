@@ -49,7 +49,7 @@ type TestSetupCall struct {
 }
 
 // Initialize does nothing.
-func (b *TestSecurityBackend) Initialize(backend workshopbackend.WorkspaceBackend) error {
+func (b *TestSecurityBackend) Initialize(backend workshopbackend.WorkshopBackend) error {
 	return nil
 }
 

@@ -15,10 +15,10 @@ import (
 
 var StopLogInterval = 30 * time.Second
 
-var StopWorkspace = (workshopbackend.WorkspaceBackend).StopWorkspace
+var StopWorkshop = (workshopbackend.WorkshopBackend).StopWorkshop
 
-func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -26,11 +26,11 @@ func (m *WorkspaceManager) undoCreateWorkspace(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.RemoveWorkspace(ctx, workshop)
+	return m.backend.RemoveWorkshop(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -50,18 +50,18 @@ func (m *WorkspaceManager) doCreateWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	}
 
 	/* Launch a workshop with the required base */
-	return m.backend.LaunchWorkspace(ctx, workshop,
+	return m.backend.LaunchWorkshop(ctx, workshop,
 		base)
 }
 
-func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
 	/* Configure workshop core properties: project directory */
-	var prjMount = workshopbackend.WorkspaceDevice{
+	var prjMount = workshopbackend.WorkshopDevice{
 		Name:       workshopbackend.ProjectPathDevice,
 		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
 	}
@@ -69,15 +69,15 @@ func (m *WorkspaceManager) doMountProject(task *state.Task, tomb *tomb.Tomb) err
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.AddWorkspaceDevice(ctx, workshop, prjMount)
+	return m.backend.AddWorkshopDevice(ctx, workshop, prjMount)
 }
 
-func (m *WorkspaceManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -85,11 +85,11 @@ func (m *WorkspaceManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	return m.backend.StartWorkspace(ctx, workshop)
+	return m.backend.StartWorkshop(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doRemoveWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -97,11 +97,11 @@ func (m *WorkspaceManager) doRemoveWorkspace(task *state.Task, tomb *tomb.Tomb) 
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.RemoveWorkspace(ctx, workshop)
+	return m.backend.RemoveWorkshop(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -109,11 +109,11 @@ func (m *WorkspaceManager) doRemoveWorkspaceStash(task *state.Task, tomb *tomb.T
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.RemoveWorkspaceStash(ctx, workshop)
+	return m.backend.RemoveWorkshopStash(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -121,11 +121,11 @@ func (m *WorkspaceManager) doStashWorkspace(task *state.Task, tomb *tomb.Tomb) e
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.StashWorkspace(ctx, workshop)
+	return m.backend.StashWorkshop(ctx, workshop)
 }
 
-func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -133,11 +133,11 @@ func (m *WorkspaceManager) undoStashWorkspace(task *state.Task, tomb *tomb.Tomb)
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.UnstashWorkspace(ctx, workshop)
+	return m.backend.UnstashWorkshop(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	go func() {
 		// LXD has an internal timeout (30 seconds) for the operation,
 		// if exceeded, the dealine error will be returned
-		stopped <- StopWorkspace(m.backend, stopctx, workshop, force)
+		stopped <- StopWorkshop(m.backend, stopctx, workshop, force)
 	}()
 
 	for {
@@ -173,8 +173,8 @@ func (m *WorkspaceManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	}
 }
 
-func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -185,8 +185,8 @@ func (m *WorkspaceManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tom
 	return m.backend.CreateStateStorage(ctx, workshop)
 }
 
-func (m *WorkspaceManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}

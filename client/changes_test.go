@@ -194,7 +194,7 @@ func (cs *clientSuite) TestClientChanges(c *check.C) {
 		{Selector: client.ChangesAll},
 		{Selector: client.ChangesReady},
 		{Selector: client.ChangesInProgress},
-		{Workspaces: []string{"foo"}},
+		{Workshops: []string{"foo"}},
 		nil,
 	} {
 		chg, err := cs.cli.Changes(i)
@@ -212,7 +212,7 @@ func (cs *clientSuite) TestClientChanges(c *check.C) {
 			if i.Selector != 0 {
 				c.Check(cs.req.URL.RawQuery, check.Equals, "select="+i.Selector.String())
 			} else {
-				c.Check(cs.req.URL.RawQuery, check.Equals, "workshops="+strings.Join(i.Workspaces, ","))
+				c.Check(cs.req.URL.RawQuery, check.Equals, "workshops="+strings.Join(i.Workshops, ","))
 			}
 		}
 	}

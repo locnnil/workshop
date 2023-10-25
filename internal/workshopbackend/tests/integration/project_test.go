@@ -85,9 +85,9 @@ func (f *wsProject) TearDownTest(c *check.C) {
 	cleanUpLxdProject(c, f.client, workshopbackend.LxdSystemProjectName(f.username))
 }
 
-func TestWorkspaceBackendIntegration(t *testing.T) { check.TestingT(t) }
+func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
 
-func (f *wsProject) TestLxdBackendCreateProjectNoWorkspaceFiles(c *check.C) {
+func (f *wsProject) TestLxdBackendCreateProjectNoWorkshopFiles(c *check.C) {
 	// Setup
 	be := workshopbackend.LxdBackend{}
 

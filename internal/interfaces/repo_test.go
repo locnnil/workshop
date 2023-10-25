@@ -812,7 +812,7 @@ func (s *RepositorySuite) TestDisconnectSucceeds(c *C) {
 // Tests for Repository.Connected
 
 // Connected fails if sdk name is empty
-func (s *RepositorySuite) TestConnectedFailsWithEmptyWorkspaceName(c *C) {
+func (s *RepositorySuite) TestConnectedFailsWithEmptyWorkshopName(c *C) {
 	_, err := s.testRepo.Connected("ws", "", s.plug.Name)
 	c.Check(err, ErrorMatches, "internal error: cannot obtain sdk name while computing connections")
 }

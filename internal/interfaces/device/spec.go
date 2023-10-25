@@ -8,7 +8,7 @@ import (
 )
 
 type Specification struct {
-	devices map[string]*workshopbackend.WorkspaceDevice
+	devices map[string]*workshopbackend.WorkshopDevice
 	user    string
 	pid     string
 }
@@ -48,13 +48,13 @@ func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *inter
 	return nil
 }
 
-func (s *Specification) DeviceEntries() []*workshopbackend.WorkspaceDevice {
+func (s *Specification) DeviceEntries() []*workshopbackend.WorkshopDevice {
 	return maps.Values(s.devices)
 }
 
-func (s *Specification) AddDeviceEntry(dev *workshopbackend.WorkspaceDevice) error {
+func (s *Specification) AddDeviceEntry(dev *workshopbackend.WorkshopDevice) error {
 	if s.devices == nil {
-		s.devices = make(map[string]*workshopbackend.WorkspaceDevice)
+		s.devices = make(map[string]*workshopbackend.WorkshopDevice)
 	}
 	s.devices[dev.Name] = dev
 	return nil

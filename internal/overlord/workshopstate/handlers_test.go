@@ -19,11 +19,11 @@ import (
 
 type workshopHandlers struct {
 	fs      afero.Fs
-	backend *workshopbackend.FakeWorkspaceBackend
+	backend *workshopbackend.FakeWorkshopBackend
 	state   *state.State
 	runner  *state.TaskRunner
 	se      *overlord.StateEngine
-	wrkmgr  *workshopstate.WorkspaceManager
+	wrkmgr  *workshopstate.WorkshopManager
 	ctx     context.Context
 	project *workshopbackend.Project
 }
@@ -34,7 +34,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkspaceProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -47,7 +47,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 
-	s.backend = workshopbackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -85,24 +85,24 @@ base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
 
-	err = s.backend.LaunchWorkspace(s.ctx, "ws", "ubuntu@20.04")
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
 
 	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId, "1")
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkspaceProject("ws", s.project, t1.Tasks()...)
+	setWorkshopProject("ws", s.project, t1.Tasks()...)
 	chg.Set("user", "testuser")
 	chg.AddAll(t1)
 
 	oldInterval := workshopstate.StopLogInterval
 	workshopstate.StopLogInterval = 100 * time.Millisecond
 
-	restore := testutil.FakeFunc(func(_ workshopbackend.WorkspaceBackend, ctx context.Context, name string, force bool) error {
+	restore := testutil.FakeFunc(func(_ workshopbackend.WorkshopBackend, ctx context.Context, name string, force bool) error {
 		time.Sleep(150 * time.Millisecond)
 		return nil
-	}, &workshopstate.StopWorkspace)
+	}, &workshopstate.StopWorkshop)
 	defer restore()
 
 	s.state.Unlock()

@@ -18,14 +18,14 @@ const (
 	defaultWorkshopDir = "/var/lib/workshop/default"
 
 	// default root directory path for the SDKs to be installed into in a workshop
-	WorkspaceSdksDir = "/var/lib/workshop/sdk"
+	WorkshopSdksDir = "/var/lib/workshop/sdk"
 )
 
 var (
-	SdkDir          string
-	StateDir        string
-	BaseDir         string
-	WorkspaceSocket string
+	SdkDir         string
+	StateDir       string
+	BaseDir        string
+	WorkshopSocket string
 )
 
 func getEnvPaths() (workshopDir string, socketPath string) {
@@ -41,7 +41,7 @@ func getEnvPaths() (workshopDir string, socketPath string) {
 }
 
 func init() {
-	BaseDir, WorkspaceSocket = getEnvPaths()
+	BaseDir, WorkshopSocket = getEnvPaths()
 	SetRootDir(BaseDir)
 
 	var b [8]byte

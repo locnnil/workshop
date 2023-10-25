@@ -33,11 +33,11 @@ func (c byConnRef) Less(i, j int) bool {
 	return c[i].SortsBefore(c[j])
 }
 
-type byPlugWorkspaceSdkAndName []*sdk.PlugInfo
+type byPlugWorkshopSdkAndName []*sdk.PlugInfo
 
-func (c byPlugWorkspaceSdkAndName) Len() int      { return len(c) }
-func (c byPlugWorkspaceSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
-func (c byPlugWorkspaceSdkAndName) Less(i, j int) bool {
+func (c byPlugWorkshopSdkAndName) Len() int      { return len(c) }
+func (c byPlugWorkshopSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
+func (c byPlugWorkshopSdkAndName) Less(i, j int) bool {
 	if c[i].Sdk.Workshop != c[j].Sdk.Workshop {
 		return c[i].Sdk.Workshop < c[j].Sdk.Workshop
 	}
@@ -47,11 +47,11 @@ func (c byPlugWorkspaceSdkAndName) Less(i, j int) bool {
 	return c[i].Name < c[j].Name
 }
 
-type bySlotWorkspaceSdkAndName []*sdk.SlotInfo
+type bySlotWorkshopSdkAndName []*sdk.SlotInfo
 
-func (c bySlotWorkspaceSdkAndName) Len() int      { return len(c) }
-func (c bySlotWorkspaceSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
-func (c bySlotWorkspaceSdkAndName) Less(i, j int) bool {
+func (c bySlotWorkshopSdkAndName) Len() int      { return len(c) }
+func (c bySlotWorkshopSdkAndName) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
+func (c bySlotWorkshopSdkAndName) Less(i, j int) bool {
 	if c[i].Sdk.Workshop != c[j].Sdk.Workshop {
 		return c[i].Sdk.Workshop < c[j].Sdk.Workshop
 	}

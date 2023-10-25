@@ -15,7 +15,7 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -33,26 +33,26 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		err := h.backend.AddWorkspaceDevice(ctx, workshop, workshopbackend.WorkspaceDevice{
-			Name: workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId),
+		err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.WorkshopDevice{
+			Name: workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId),
 			Properties: map[string]string{"type": "disk",
 				"pool":   "default",
-				"path":   workshopbackend.WorkspaceStateDir,
-				"source": workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId)},
+				"path":   workshopbackend.WorkshopStateDir,
+				"source": workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
 		}
 
 		defer func() {
-			h.backend.RemoveWorkspaceDevice(ctx, workshop, workshopbackend.WorkspaceStateVolumeName(workshop, prj.ProjectId))
+			h.backend.RemoveWorkshopDevice(ctx, workshop, workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId))
 		}()
 	}
 
 	switch hook.HookType {
 	case SaveState:
 		{
-			fs, err := h.backend.GetWorkspaceFs(ctx, workshop)
+			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -65,7 +65,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	case RestoreState:
 		{
-			fs, err := h.backend.GetWorkspaceFs(ctx, workshop)
+			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -89,7 +89,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
 
 	//
-	wsFs, err := h.backend.GetWorkspaceFs(ctx, workshop)
+	wsFs, err := h.backend.GetWorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}

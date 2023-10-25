@@ -20,7 +20,7 @@ func (f *F) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
 }
 
-func (f *F) TestWorkspaceFileParse(c *check.C) {
+func (f *F) TestWorkshopFileParse(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
@@ -35,7 +35,7 @@ sdks:
 `)
 	dir := c.MkDir()
 	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
-	file, err := workshopbackend.ReadWorkspace(workshopbackend.WorkspaceFilePath(dir, "xbert-gpu"))
+	file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")

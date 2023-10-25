@@ -11,14 +11,14 @@ type Project struct {
 	Path string `json:"path"`
 }
 
-type WorkspaceActionOptions struct {
+type WorkshopActionOptions struct {
 	RefreshMode string `json:"refresh-mode,omitempty"`
 }
 
-type WorkspaceActionSetup struct {
+type WorkshopActionSetup struct {
 	Action  string
 	Names   []string
-	Options *WorkspaceActionOptions
+	Options *WorkshopActionOptions
 }
 
 func (client *Client) Projects() ([]*Project, error) {
@@ -53,11 +53,11 @@ func (client *Client) Project(path string) (*Project, error) {
 	return &project, nil
 }
 
-func (client *Client) doWorkspaceAction(projectId string, action *WorkspaceActionSetup) (changeId string, err error) {
+func (client *Client) doWorkshopAction(projectId string, action *WorkshopActionSetup) (changeId string, err error) {
 	var postData struct {
-		Names   []string                `json:"names"`
-		Action  string                  `json:"action"`
-		Options *WorkspaceActionOptions `json:"options,omitempty"`
+		Names   []string               `json:"names"`
+		Action  string                 `json:"action"`
+		Options *WorkshopActionOptions `json:"options,omitempty"`
 	}
 	postData.Names = action.Names
 	postData.Action = action.Action
@@ -71,38 +71,38 @@ func (client *Client) doWorkspaceAction(projectId string, action *WorkspaceActio
 }
 
 func (client *Client) Launch(projectId string, names []string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "launch",
 		Names:  names,
 	})
 }
 
 func (client *Client) Refresh(projectId string, names []string, mode string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "refresh",
 		Names:  names,
-		Options: &WorkspaceActionOptions{
+		Options: &WorkshopActionOptions{
 			RefreshMode: mode,
 		},
 	})
 }
 
 func (client *Client) Start(projectId string, names []string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "start",
 		Names:  names,
 	})
 }
 
 func (client *Client) Stop(projectId string, names []string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "stop",
 		Names:  names,
 	})
 }
 
 func (client *Client) Remove(projectId string, names []string) (changeId string, err error) {
-	return client.doWorkspaceAction(projectId, &WorkspaceActionSetup{
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "remove",
 		Names:  names,
 	})

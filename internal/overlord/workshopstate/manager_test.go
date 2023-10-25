@@ -16,9 +16,9 @@ import (
 
 type ManagerSuite struct {
 	state   *state.State
-	backend workshopbackend.WorkspaceBackend
+	backend workshopbackend.WorkshopBackend
 	runner  *state.TaskRunner
-	manager *workshopstate.WorkspaceManager
+	manager *workshopstate.WorkshopManager
 	ctx     context.Context
 	project *workshopbackend.Project
 }
@@ -27,7 +27,7 @@ var _ = check.Suite(&ManagerSuite{})
 
 func (s *ManagerSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.backend = workshopbackend.NewFakeWorkspaceBackend()
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner, s.backend)
 	ctx := context.WithValue(context.TODO(), workshopbackend.ContextUser, "testuser")
@@ -51,40 +51,40 @@ func (s *ManagerSuite) TestAddHandlers(c *check.C) {
 	})
 }
 
-func (s *ManagerSuite) setupWorkspace(running bool) *workshopbackend.Workshop {
-	wrkspc := workshopbackend.NewWorkspace(s.backend, "ws", "42424242")
+func (s *ManagerSuite) setupWorkshop(running bool) *workshopbackend.Workshop {
+	wrkspc := workshopbackend.NewWorkshop(s.backend, "ws", "42424242")
 	wrkspc.SetRunning(running)
 	return wrkspc
 }
 
-func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
+func (s *ManagerSuite) TestWorkshopStateChanges(c *check.C) {
 	type stateSetup struct {
 		status            state.Status
 		running           bool
 		refreshInProgress bool
 		hasErrors         bool
-		expectedState     workshopbackend.WorkspaceState
-		expectedErrors    []workshopbackend.WorkspaceErrorType
+		expectedState     workshopbackend.WorkshopState
+		expectedErrors    []workshopbackend.WorkshopErrorType
 	}
 	cases := []stateSetup{
 		// running, no operation in progress, no errors
-		{state.DefaultStatus, true, false, false, workshopbackend.WorkspaceReady, nil},
+		{state.DefaultStatus, true, false, false, workshopbackend.WorkshopReady, nil},
 		// running, no operation in prorgess, has errors
-		{state.DefaultStatus, true, false, true, workshopbackend.WorkspaceError, []workshopbackend.WorkspaceErrorType{workshopbackend.MissingFile}},
+		{state.DefaultStatus, true, false, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
 		// not running, no operation in prorgess, no errors
-		{state.DefaultStatus, false, false, false, workshopbackend.WorkspaceStopped, nil},
+		{state.DefaultStatus, false, false, false, workshopbackend.WorkshopStopped, nil},
 		// not running, no operation in prorgess, has errors
-		{state.DefaultStatus, false, false, true, workshopbackend.WorkspaceError, []workshopbackend.WorkspaceErrorType{workshopbackend.MissingFile}},
+		{state.DefaultStatus, false, false, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
 		// running, has operation in prorgess, waits on error
-		{state.WaitStatus, true, true, false, workshopbackend.WorkspacePending, []workshopbackend.WorkspaceErrorType{workshopbackend.WaitOnError}},
+		{state.WaitStatus, true, true, false, workshopbackend.WorkshopPending, []workshopbackend.WorkshopErrorType{workshopbackend.WaitOnError}},
 		// running, has operation in prorgess, no errors
-		{state.DoingStatus, true, true, false, workshopbackend.WorkspacePending, nil},
+		{state.DoingStatus, true, true, false, workshopbackend.WorkshopPending, nil},
 		// running, has operation in prorgess, has errors
-		{state.DoingStatus, true, true, true, workshopbackend.WorkspaceError, []workshopbackend.WorkspaceErrorType{workshopbackend.MissingFile}},
+		{state.DoingStatus, true, true, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
 		// not running, has operation in prorgess, no errors
-		{state.DoingStatus, false, true, false, workshopbackend.WorkspacePending, nil},
+		{state.DoingStatus, false, true, false, workshopbackend.WorkshopPending, nil},
 		// not running, has operation in prorgess, has errors
-		{state.DoingStatus, false, true, true, workshopbackend.WorkspaceError, []workshopbackend.WorkspaceErrorType{workshopbackend.MissingFile}},
+		{state.DoingStatus, false, true, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
 	}
 
 	s.state.Lock()
@@ -92,7 +92,7 @@ func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
 
 	for i, setup := range cases {
 		// setup
-		wrkspc := s.setupWorkspace(setup.running)
+		wrkspc := s.setupWorkshop(setup.running)
 		if setup.hasErrors {
 			// add any error to emulate error state
 			wrkspc.AddError(workshopbackend.MissingFile)
@@ -105,7 +105,7 @@ func (s *ManagerSuite) TestWorkspaceStateChanges(c *check.C) {
 		}
 
 		// validate
-		st := workshopstate.WorkspaceState(s.manager, wrkspc)
+		st := workshopstate.WorkshopState(s.manager, wrkspc)
 		c.Assert(st, check.Equals, setup.expectedState, check.Commentf("case num: %v", i))
 		c.Assert(wrkspc.Errors(), testutil.DeepUnsortedMatches, setup.expectedErrors, check.Commentf("case num: %v", i))
 		if setup.refreshInProgress {
@@ -126,7 +126,7 @@ sdks:
   test-sdk:
     channel: latest/stable
 `), 0644)
-	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
+	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	// a user added an SDK to the workshop file and called refresh
@@ -159,7 +159,7 @@ sdks:
   test-sdk:
     channel: latest/stable
 `), 0644)
-	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
+	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	// a user removed an SDK in the workshop file and called refresh
@@ -187,7 +187,7 @@ sdks:
   test-sdk:
     channel: latest/stable
 `), 0644)
-	err := s.backend.LaunchWorkspace(s.ctx, "test", "ubuntu@20.04")
+	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	// a user updated an SDK in the workshop file and called refresh

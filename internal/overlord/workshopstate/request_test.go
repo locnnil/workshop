@@ -27,7 +27,7 @@ func (s *S) SetUpTest(c *check.C) {
 	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
-func (s *S) ensureTaskHasWorkspaceAndProjectKeys(c *check.C, w string, ts []*state.Task) {
+func (s *S) ensureTaskHasWorkshopAndProjectKeys(c *check.C, w string, ts []*state.Task) {
 	for _, i := range ts {
 		var prj workshopbackend.Project
 		err := i.Get("project", &prj)
@@ -52,10 +52,10 @@ func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 	c.Assert(actual, testutil.DeepUnsortedMatches, expected)
 }
 
-func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
+func (s *S) TestLaunchWorkshopNoSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	file := &workshopbackend.WorkspaceFile{Name: "test", Base: "ubuntu@22.04"}
+	file := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
 	ts, err := workshopstate.Launch(s.state, file, s.project)
 
 	expected := []string{"create-workshop",
@@ -70,16 +70,16 @@ func (s *S) TestLaunchWorkspaceNoSdk(c *check.C) {
 	err = tasks[0].Get("base", &base)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(base, check.Equals, "ubuntu@22.04")
-	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", ts.Tasks())
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
 }
 
-func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
+func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 	sdk_2 := workshopbackend.SdkRecord{Name: "sdk_2", Channel: "latest/stable"}
 
-	file := &workshopbackend.WorkspaceFile{
+	file := &workshopbackend.WorkshopFile{
 		Name: "test",
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{sdk, sdk_2}}
@@ -134,14 +134,14 @@ func (s *S) TestLaunchWorkspaceWithSdks(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id2, check.Equals, tasks[4].ID())
 
-	s.ensureTaskHasWorkspaceAndProjectKeys(c, "test", tasks)
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", tasks)
 }
 
-func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
+func (s *S) TestRefreshEmptyWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	file := &workshopbackend.WorkspaceFile{
+	file := &workshopbackend.WorkshopFile{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{}}
@@ -164,16 +164,16 @@ func (s *S) TestRefreshEmptyWorkspace(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
-	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws", tasks)
 }
 
-func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
+func (s *S) TestRefreshManyEmptyWorkshopMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
 	test_sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshopbackend.WorkspaceFile{
+	files := []*workshopbackend.WorkshopFile{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -240,7 +240,7 @@ func (s *S) TestRefreshManyEmptyWorkspaceMany(c *check.C) {
 	})
 
 	for i, t := range ts {
-		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
+		s.ensureTaskHasWorkshopAndProjectKeys(c, files[i].Name, t.Tasks())
 	}
 }
 
@@ -250,7 +250,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 
 	testSdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	file := &workshopbackend.WorkspaceFile{
+	file := &workshopbackend.WorkshopFile{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{testSdk}}
@@ -284,7 +284,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
-	s.ensureTaskHasWorkspaceAndProjectKeys(c, "ws", tasks)
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws", tasks)
 }
 
 func (s *S) TestRefreshManyTasktest(c *check.C) {
@@ -293,7 +293,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 
 	testSdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshopbackend.WorkspaceFile{
+	files := []*workshopbackend.WorkshopFile{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -341,7 +341,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 	for i, t := range ts {
 		c.Assert(err, check.Equals, nil)
 		verifyExpectedTasks(c, t.Tasks(), expected)
-		s.ensureTaskHasWorkspaceAndProjectKeys(c, files[i].Name, t.Tasks())
+		s.ensureTaskHasWorkshopAndProjectKeys(c, files[i].Name, t.Tasks())
 	}
 
 }
@@ -352,7 +352,7 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 
 	testSdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshopbackend.WorkspaceFile{
+	files := []*workshopbackend.WorkshopFile{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -473,7 +473,7 @@ func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	file := &workshopbackend.WorkspaceFile{
+	file := &workshopbackend.WorkshopFile{
 		Name: "ws1",
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{},

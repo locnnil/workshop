@@ -33,7 +33,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
 	}
 
-	for num, i := range []hookstate.WorkspaceHookType{
+	for num, i := range []hookstate.WorkshopHookType{
 		hookstate.SetupBase,
 		hookstate.SaveState,
 		hookstate.RestoreState,

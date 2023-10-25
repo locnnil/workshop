@@ -66,21 +66,21 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 			return err
 		}
 
-		workshops, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: project.Id})
+		workshops, err := c.client.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
 		slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
 		/* List all workshops for the current project */
 		if len(workshops) != 0 {
-			printWorkspaces(workshops, project)
+			printWorkshops(workshops, project)
 		} else {
 			return err
 		}
 		return err
 	} else {
 		w := tabWriter()
-		fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
+		fmt.Fprintf(w, "Project\tWorkshop\tState\tNotes\n")
 
 		projects, err := c.client.Projects()
 		slices.SortFunc(projects, func(a, b *client.Project) bool { return a.Path < b.Path })
@@ -90,7 +90,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		for _, i := range projects {
-			workshops, err := c.client.ListWorkspaces(&client.ListOptions{ProjectId: i.Id})
+			workshops, err := c.client.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
 			slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
 
 			if err != nil {
@@ -103,7 +103,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 				// to the workshops that are in any other state, i.e. running instances, which we always know
 				// about from the workshop backend)
 				if j.State != "Off" {
-					fmt.Fprintln(w, strings.Join(printWorkspace(j, i), "\t"))
+					fmt.Fprintln(w, strings.Join(printWorkshop(j, i), "\t"))
 				}
 			}
 		}
@@ -114,18 +114,18 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func printWorkspaces(wsList []*client.Workshop, prj *client.Project) {
+func printWorkshops(wsList []*client.Workshop, prj *client.Project) {
 	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkspace\tState\tNotes\n")
+	fmt.Fprintf(w, "Project\tWorkshop\tState\tNotes\n")
 
 	for _, val := range wsList {
-		line := printWorkspace(val, prj)
+		line := printWorkshop(val, prj)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
 	}
 	w.Flush()
 }
 
-func printWorkspace(j *client.Workshop, prj *client.Project) []string {
+func printWorkshop(j *client.Workshop, prj *client.Project) []string {
 	comment := "-"
 	if len(j.Notes) > 0 {
 		comment = strings.Join(j.Notes, ",")

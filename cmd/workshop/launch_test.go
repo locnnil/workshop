@@ -7,21 +7,21 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WorkspaceLaunch struct {
-	BaseWorkspaceSuite
+type WorkshopLaunch struct {
+	BaseWorkshopSuite
 	prjDir string
 	prjId  string
 }
 
-var _ = check.Suite(&WorkspaceLaunch{})
+var _ = check.Suite(&WorkshopLaunch{})
 
-func (m *WorkspaceLaunch) SetUpTest(c *check.C) {
+func (m *WorkshopLaunch) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
-	m.BaseWorkspaceSuite.SetUpTest(c)
+	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-func (m *WorkspaceLaunch) TestLaunchSuccess(c *check.C) {
+func (m *WorkshopLaunch) TestLaunchSuccess(c *check.C) {
 	cmd := &CmdLaunch{}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {

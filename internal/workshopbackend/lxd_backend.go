@@ -62,7 +62,7 @@ type LxdBackend struct {
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 	// path used in workshop to mount the project directory
-	WorkspaceProjectPath = "/project"
+	WorkshopProjectPath = "/project"
 	// name prefix for the workshops that were made unavailable
 	StashNamePrefix = "stash-"
 )
@@ -72,10 +72,10 @@ var (
 	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
 
-	ErrWorkspaceNotFound = errors.New("workshop not found")
+	ErrWorkshopNotFound = errors.New("workshop not found")
 )
 
-func New() WorkspaceBackend {
+func New() WorkshopBackend {
 	server := LxdBackend{}
 	return &server
 }
@@ -287,7 +287,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 				}
 				// also, update configuration of all the project's workshops
 				projectCtx := context.WithValue(ctx, ContextProjectId, existingProject.ProjectId)
-				return existingProject, false, s.updateWorkspacesProjectPath(client, projectCtx, existingProject)
+				return existingProject, false, s.updateWorkshopsProjectPath(client, projectCtx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
@@ -315,7 +315,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 
 	// no project found, try to create one, note there is no ID yet at this stage
 	var project = Project{Path: projectDir}
-	workshops, err := project.EnumWorkspaceFiles()
+	workshops, err := project.EnumWorkshopFiles()
 	if err != nil {
 		return nil, false, err
 	}
@@ -347,16 +347,16 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
-func (s *LxdBackend) updateWorkspacesProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkspaceConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, existingProject.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	for _, i := range workshops {
-		err = s.AddWorkspaceDevice(ctx, WorkspaceName(i.Name), WorkspaceDevice{
+		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), WorkshopDevice{
 			Name:       ProjectPathDevice,
-			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkspaceProjectPath},
+			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkshopProjectPath},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
@@ -440,7 +440,7 @@ func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx 
 				prj.Path = newPath
 				if err = s.trackProject(client, ctx, prj); err == nil {
 					// update the workshops configuration with the new path
-					s.updateWorkspacesProjectPath(client, ctx, prj)
+					s.updateWorkshopsProjectPath(client, ctx, prj)
 				}
 				continue
 			}
@@ -462,7 +462,7 @@ func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx 
 }
 
 func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkspaceConfigFilter(ProjectIdConfig, p.ProjectId))
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, p.ProjectId))
 	if err != nil {
 		return "", err
 	}
@@ -501,7 +501,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 		}
 
 		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		meta, err := s.execCommand(conn, execCtx, WorkspaceName(i.Name), &args)
+		meta, err := s.execCommand(conn, execCtx, WorkshopName(i.Name), &args)
 		if err == nil {
 			err = meta.WaitExecution(ctx)
 			if err != nil {
@@ -527,7 +527,7 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 	return "", nil
 }
 
-func (s *LxdBackend) LaunchWorkspace(ctx context.Context, name, base string) error {
+func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
@@ -639,7 +639,7 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) StartWorkshop(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -671,7 +671,7 @@ func (s *LxdBackend) StartWorkspace(ctx context.Context, name string) error {
 	return exectx.WaitExecution(ctx)
 }
 
-func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool) error {
+func (s *LxdBackend) StopWorkshop(ctx context.Context, name string, force bool) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -679,7 +679,7 @@ func (s *LxdBackend) StopWorkspace(ctx context.Context, name string, force bool)
 	return s.updateInstanceState(conn, ctx, name, "stop", force)
 }
 
-func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *WorkspaceConfigValue) error {
+func (s *LxdBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -703,7 +703,7 @@ func (s *LxdBackend) AddWorkspaceConfig(ctx context.Context, name string, item *
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key string) error {
+func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -725,7 +725,7 @@ func (s *LxdBackend) RemoveWorkspaceConfig(ctx context.Context, name string, key
 	return op.Wait()
 }
 
-func (s *LxdBackend) AddWorkspaceDevice(ctx context.Context, name string, device WorkspaceDevice) error {
+func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device WorkshopDevice) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -746,7 +746,7 @@ func (s *LxdBackend) AddWorkspaceDevice(ctx context.Context, name string, device
 	return op.Wait()
 }
 
-func (s *LxdBackend) RemoveWorkspaceDevice(ctx context.Context, name string, device string) error {
+func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -836,7 +836,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (Ex
 	return s.execCommand(conn, ctx, name, args)
 }
 
-func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workshop, error) {
+func (s *LxdBackend) GetWorkshop(ctx context.Context, name string) (*Workshop, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -867,12 +867,12 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workshop, 
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil, ErrWorkspaceNotFound
+			return nil, ErrWorkshopNotFound
 		}
 		return nil, err
 	}
 
-	workshop, err := s.loadWorkspace(inst, p)
+	workshop, err := s.loadWorkshop(inst, p)
 	if err != nil {
 		return nil, err
 	}
@@ -880,12 +880,12 @@ func (s *LxdBackend) GetWorkspace(ctx context.Context, name string) (*Workshop, 
 	return workshop, nil
 }
 
-func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workshop, error) {
+func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
 	var err error
 	var running, ok bool
 	var pId string
 
-	name := WorkspaceName(inst.Name)
+	name := WorkshopName(inst.Name)
 
 	if pId, ok = inst.Config["user.workshop.project-id"]; !ok {
 		return nil, fmt.Errorf("no project assossiated with the workshop %q", name)
@@ -910,7 +910,7 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workshop, e
 
 	workshop.Devices = inst.Devices
 
-	file, err := p.WorkspaceFile(name)
+	file, err := p.WorkshopFile(name)
 	if err != nil {
 		workshop.AddError(MissingFile)
 	}
@@ -928,7 +928,7 @@ func (s *LxdBackend) loadWorkspace(inst *api.Instance, p *Project) (*Workshop, e
 	return workshop, nil
 }
 
-func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkspaceConfigFilter) ([]api.Instance, error) {
+func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkshopConfigFilter) ([]api.Instance, error) {
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
@@ -944,7 +944,7 @@ func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter 
 	return toReturn, nil
 }
 
-func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile, []*Workshop, error) {
+func (s *LxdBackend) GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -973,7 +973,7 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 
 	p = projects[user][idx]
 
-	files, err := p.EnumWorkspaceFiles()
+	files, err := p.EnumWorkshopFiles()
 	// if the dir does not exist it does not mean there are no workshops. It
 	// could be because the dir was removed with some workshops still operating
 	// resulting in a missing-project error
@@ -987,19 +987,19 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 		return nil, nil, err
 	}
 
-	var projectWorkspaces []*Workshop
+	var projectWorkshops []*Workshop
 	for _, i := range instances {
 		if i.Config[ProjectIdConfig] == p.ProjectId {
-			ws, err := s.loadWorkspace(&i, p)
+			ws, err := s.loadWorkshop(&i, p)
 			if err != nil {
 				logger.Debugf("error loading workshop: %v", err)
 				continue
 			}
-			projectWorkspaces = append(projectWorkspaces, ws)
+			projectWorkshops = append(projectWorkshops, ws)
 		}
 	}
 
-	wsFiles, wsInstances := mergeInstancesAndFiles(files, projectWorkspaces)
+	wsFiles, wsInstances := mergeInstancesAndFiles(files, projectWorkshops)
 	return wsFiles, wsInstances, nil
 }
 
@@ -1007,12 +1007,12 @@ func (s *LxdBackend) GetProjectWorkspaces(ctx context.Context) ([]*WorkspaceFile
 // lists. The first has *only* the workshop files that do not have any launched
 // workshops yet, the second contains workshops that are launched with or
 // without an associated file.
-func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workshop) ([]*WorkspaceFile, []*Workshop) {
-	files := make([]*WorkspaceFile, len(f))
+func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*WorkshopFile, []*Workshop) {
+	files := make([]*WorkshopFile, len(f))
 	copy(files, f)
 	/* Walk both lists from to build a list of workshops with their states */
 	for _, ws := range instances {
-		finder := func(p *WorkspaceFile) bool { return p.Name == ws.Name }
+		finder := func(p *WorkshopFile) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
 		if idx != -1 {
 			/* Both a file and instance exist */
@@ -1025,7 +1025,7 @@ func mergeInstancesAndFiles(f []*WorkspaceFile, instances []*Workshop) ([]*Works
 	return files, instances
 }
 
-func (s *LxdBackend) RemoveWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -1055,7 +1055,7 @@ func (s *LxdBackend) RemoveWorkspace(ctx context.Context, name string) error {
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (WorkspaceFs, error) {
+func (s *LxdBackend) GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -1071,10 +1071,10 @@ func (s *LxdBackend) GetWorkspaceFs(ctx context.Context, name string) (Workspace
 		return nil, err
 	}
 
-	return NewWorkspaceFs(sftp), nil
+	return NewWorkshopFs(sftp), nil
 }
 
-func (s *LxdBackend) RemoveWorkspaceStash(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -1098,7 +1098,7 @@ func (s *LxdBackend) RemoveWorkspaceStash(ctx context.Context, name string) erro
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) UnstashWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -1113,7 +1113,7 @@ func (s *LxdBackend) UnstashWorkspace(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *LxdBackend) StashWorkspace(ctx context.Context, name string) error {
+func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -1184,7 +1184,7 @@ func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error 
 
 	// Create the storage volume entry
 	vol := api.StorageVolumesPost{}
-	vol.Name = WorkspaceStateVolumeName(name, pid)
+	vol.Name = WorkshopStateVolumeName(name, pid)
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
@@ -1203,7 +1203,7 @@ func (s *LxdBackend) DeleteStateStorage(ctx context.Context, name string) error 
 		return fmt.Errorf("context key %s not found", ContextProjectId)
 	}
 
-	return conn.DeleteStoragePoolVolume("default", "custom", WorkspaceStateVolumeName(name, pid))
+	return conn.DeleteStoragePoolVolume("default", "custom", WorkshopStateVolumeName(name, pid))
 }
 
 func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {

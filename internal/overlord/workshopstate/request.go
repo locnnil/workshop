@@ -21,7 +21,7 @@ const (
 	EdgeCleanupRefresh                = state.TaskSetEdge("refresh-cleanup")
 )
 
-func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*workshopbackend.Project, error) {
+func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshopbackend.Project, error) {
 	username, ok := ctx.Value(workshopbackend.ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key user not found")
@@ -39,7 +39,7 @@ func (w *WorkspaceManager) loadProject(ctx context.Context, id string) (*worksho
 	return projects[username][idx], nil
 }
 
-func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, proje
 
 	taskset := make([]*state.TaskSet, 0, len(names))
 	for _, i := range names {
-		file, err := workshopbackend.ReadWorkspace(workshopbackend.WorkspaceFilePath(project.Path, i))
+		file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(project.Path, i))
 		if err != nil {
 			return nil, fmt.Errorf("cannot read %q file: %w", i, err)
 		}
@@ -56,7 +56,7 @@ func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, proje
 		if wrkspace != nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", i)
 		}
-		if !errors.Is(err, workshopbackend.ErrWorkspaceNotFound) {
+		if !errors.Is(err, workshopbackend.ErrWorkshopNotFound) {
 			return nil, err
 		}
 
@@ -96,7 +96,7 @@ func (w *WorkspaceManager) LaunchMany(ctx context.Context, names []string, proje
 	return taskset, nil
 }
 
-func launch(st *state.State, file *workshopbackend.WorkspaceFile, project *workshopbackend.Project) (*state.TaskSet, error) {
+func launch(st *state.State, file *workshopbackend.WorkshopFile, project *workshopbackend.Project) (*state.TaskSet, error) {
 	retrieve := state.NewTaskSet([]*state.Task{}...)
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
@@ -153,7 +153,7 @@ func launch(st *state.State, file *workshopbackend.WorkspaceFile, project *works
 	return set, nil
 }
 
-func (w *WorkspaceManager) RefreshMany(ctx context.Context,
+func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	names []string, projectId string, refreshMode statecontext.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
@@ -164,8 +164,8 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkspaceState) bool {
-			return status == workshopbackend.WorkspaceReady
+		func(status workshopbackend.WorkshopState) bool {
+			return status == workshopbackend.WorkshopReady
 		})
 	if err != nil {
 		return nil, fmt.Errorf("cannot refresh: %w", err)
@@ -175,12 +175,12 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 		return nil, fmt.Errorf("cannot refresh: %q is in %s; must be ready", invalid, strings.ToLower(status.String()))
 	}
 
-	_, workshops, err := w.Workspaces(ctx, projectId)
+	_, workshops, err := w.Workshops(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	files := make([]*workshopbackend.WorkspaceFile, 0)
+	files := make([]*workshopbackend.WorkshopFile, 0)
 	content := make([][]sdk.Setup, 0)
 	for _, i := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshopbackend.Workshop) bool { return w.Name == i })
@@ -210,7 +210,7 @@ func (w *WorkspaceManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, w []*workshopbackend.WorkspaceFile, content [][]sdk.Setup,
+func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
 	project *workshopbackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(w))
 
@@ -249,7 +249,7 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkspaceFile, content []
 				// start to Undo those workshops' refresh progress we will
 				// endup deleting the workshops that finished their refresh.
 				// Given that they have no copy already, the undo logic
-				// (undoMakeWorkspaceCopy) will delete the existing workshop
+				// (undoMakeWorkshopCopy) will delete the existing workshop
 				// and fail to restore from the copy. We don't want that. Hence,
 				// all the cleanup tasks are extracted into a separate lane. If
 				// any problem happens, the workshops which had finished their
@@ -265,7 +265,7 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkspaceFile, content []
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshopbackend.WorkspaceFile, content []sdk.Setup, p *workshopbackend.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.Setup, p *workshopbackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
@@ -359,7 +359,7 @@ func restoreStateHooks(st *state.State, content []sdk.Setup, newContent workshop
 	return stateHooks
 }
 
-func createStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkspaceHookType) *state.TaskSet {
+func createStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {
@@ -379,14 +379,14 @@ func createStateHooks(st *state.State, content []sdk.Setup, newContent workshopb
 	return stateHooks
 }
 
-func (w *WorkspaceManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	// check if all the workshops are stopped
 	invalid, status, err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkspaceState) bool {
-			return status == workshopbackend.WorkspaceStopped
+		func(status workshopbackend.WorkshopState) bool {
+			return status == workshopbackend.WorkshopStopped
 		})
 	if err != nil {
 		return nil, fmt.Errorf("cannot start: %w", err)
@@ -435,13 +435,13 @@ func startMany(st *state.State, names []string, project *workshopbackend.Project
 	return taskset, nil
 }
 
-func (w *WorkspaceManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	invalid, status, err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkspaceState) bool {
-			return status == workshopbackend.WorkspaceStopped || status == workshopbackend.WorkspaceReady
+		func(status workshopbackend.WorkshopState) bool {
+			return status == workshopbackend.WorkshopStopped || status == workshopbackend.WorkshopReady
 		})
 	if err != nil {
 		return nil, fmt.Errorf("cannot stop: %w", err)
@@ -496,13 +496,13 @@ type ExecMeta struct {
 	WorkingDir  string
 }
 
-func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, args *workshopbackend.ExecArgs) (*state.Task, error) {
+func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshopbackend.ExecArgs) (*state.Task, error) {
 	invalid, status, err := w.CheckStatus(
 		ctx,
 		[]string{name},
 		projectId,
-		func(status workshopbackend.WorkspaceState) bool {
-			return status == workshopbackend.WorkspaceReady || status == workshopbackend.WorkspacePending
+		func(status workshopbackend.WorkshopState) bool {
+			return status == workshopbackend.WorkshopReady || status == workshopbackend.WorkshopPending
 		})
 	if err != nil {
 		return nil, fmt.Errorf("cannot exec: %w", err)
@@ -518,7 +518,7 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	}
 
 	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
-	wrkspc, err := w.backend.GetWorkspaceFs(ctx, name)
+	wrkspc, err := w.backend.GetWorkshopFs(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -541,13 +541,13 @@ func (w *WorkspaceManager) Exec(ctx context.Context, name, projectId string, arg
 	return exec, nil
 }
 
-func (w *WorkspaceManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	invalid, status, err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkspaceState) bool {
-			return status != workshopbackend.WorkspacePending && status != workshopbackend.WorkspaceOff
+		func(status workshopbackend.WorkshopState) bool {
+			return status != workshopbackend.WorkshopPending && status != workshopbackend.WorkshopOff
 		})
 	if err != nil {
 		return nil, fmt.Errorf("cannot remove: %w", err)

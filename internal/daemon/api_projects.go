@@ -24,7 +24,7 @@ type SdkInfo struct {
 	InstallTime time.Time `json:"install-time"`
 }
 
-type WorkspaceInfo struct {
+type WorkshopInfo struct {
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
 	ProjectId string     `json:"project-id"`
@@ -35,12 +35,12 @@ type WorkspaceInfo struct {
 
 var ensureStateSoon = stateEnsureBefore
 
-func workshopFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *WorkspaceInfo {
-	var ws WorkspaceInfo
+func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *WorkshopInfo {
+	var ws WorkshopInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
 	ws.ProjectId = pid
-	ws.State = workshopbackend.WorkspaceOff.String()
+	ws.State = workshopbackend.WorkshopOff.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -50,8 +50,8 @@ func workshopFileToInfo(file *workshopbackend.WorkspaceFile, pid string) *Worksp
 	return &ws
 }
 
-func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkspaceInfo {
-	var ws WorkspaceInfo
+func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkshopInfo {
+	var ws WorkshopInfo
 	ws.Name = props.Name
 	ws.ProjectId = props.ProjectId()
 	ws.Base = props.Base()
@@ -79,9 +79,9 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	// In this scenario, we will have go walk all projects in the system
-	// and also make sure these are up-to-date, this is what RetrieveWorkspacesGlobal does
+	// and also make sure these are up-to-date, this is what RetrieveWorkshopsGlobal does
 	// and returns a list of workshops for every project found in the system
-	projects, err := c.d.overlord.WorkspaceBackend().Projects(r.Context())
+	projects, err := c.d.overlord.WorkshopBackend().Projects(r.Context())
 	if err != nil {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
@@ -108,7 +108,7 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
-	wBackend := c.d.overlord.WorkspaceBackend()
+	wBackend := c.d.overlord.WorkshopBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
 	if err != nil && !errors.Is(err, workshopbackend.ErrNotAProject) {
@@ -124,7 +124,7 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	}
 }
 
-func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	state := c.d.overlord.State()
 	state.Lock()
@@ -136,13 +136,13 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 		wstate = "all"
 	}
 
-	wrkmgr := c.d.overlord.WorkspaceManager()
-	files, workshops, err := wrkmgr.Workspaces(r.Context(), projectId)
+	wrkmgr := c.d.overlord.WorkshopManager()
+	files, workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	var infoLst = make([]*WorkspaceInfo, 0)
+	var infoLst = make([]*WorkshopInfo, 0)
 	for _, w := range workshops {
 		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
 			continue
@@ -164,12 +164,12 @@ func v1GetProjectWorkspaces(c *Command, r *http.Request, _ *userState) Response 
 	return SyncResponse(infoLst, http.StatusOK)
 }
 
-func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	wsmgr := c.d.overlord.WorkspaceManager()
+	wsmgr := c.d.overlord.WorkshopManager()
 
 	type actionOpts struct {
 		Mode string `json:"refresh-mode"`
@@ -281,7 +281,7 @@ func v1PostProjectWorkspace(c *Command, r *http.Request, _ *userState) Response 
 	return AsyncResponse(nil, change.ID())
 }
 
-func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	name := muxVars(r)["name"]
 
@@ -297,7 +297,7 @@ func v1GetProjectWorkspace(c *Command, r *http.Request, _ *userState) Response {
 	state.Lock()
 	defer state.Unlock()
 
-	wrkmgr := c.d.overlord.WorkspaceManager()
+	wrkmgr := c.d.overlord.WorkshopManager()
 
 	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {

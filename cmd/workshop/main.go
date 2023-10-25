@@ -38,7 +38,7 @@ var Project string
 // ClientConfig is the configuration of the Client used by all commands.
 var ClientConfig = client.Config{
 	// we need the powerful socket
-	Socket: dirs.WorkspaceSocket,
+	Socket: dirs.WorkshopSocket,
 }
 
 func main() {

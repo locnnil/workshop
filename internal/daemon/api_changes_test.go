@@ -49,7 +49,7 @@ func setupChanges(st *state.State) []string {
 	return []string{chg1.ID(), chg2.ID(), t1.ID(), t2.ID(), t3.ID()}
 }
 
-func (s *apiSuite) TestStateChangesProjectAndWorkspaceMustBeProvidedTogether(c *check.C) {
+func (s *apiSuite) TestStateChangesProjectAndWorkshopMustBeProvidedTogether(c *check.C) {
 	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 
@@ -190,7 +190,7 @@ func (s *apiSuite) TestStateChangesReady(c *check.C) {
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
-func (s *apiSuite) TestStateChangesForWorkspace(c *check.C) {
+func (s *apiSuite) TestStateChangesForWorkshop(c *check.C) {
 	restore := state.MockTime(time.Date(2016, 04, 21, 1, 2, 3, 0, time.UTC))
 	defer restore()
 

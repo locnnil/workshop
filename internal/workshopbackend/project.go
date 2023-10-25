@@ -21,7 +21,7 @@ const (
 	ProjectIdConfig   = "user.workshop.project-id"
 )
 
-var validWorkspaceFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
+var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 type Project struct {
 	Path      string `json:"path"`
@@ -63,21 +63,21 @@ func (w *Project) UpdateLockFile() error {
 	return os.WriteFile(LockPath(w.Path), []byte(w.ProjectId), 0644)
 }
 
-func (w *Project) WorkspaceFile(workshop string) (*WorkspaceFile, error) {
-	file, err := ReadWorkspace(filepath.Join(w.Path, WorkspaceFileName(workshop)))
+func (w *Project) WorkshopFile(workshop string) (*WorkshopFile, error) {
+	file, err := ReadWorkshop(filepath.Join(w.Path, WorkshopFileName(workshop)))
 	if err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
-func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceFile, error) {
+func (w *Project) EnumWorkshopFiles() ([]*WorkshopFile, error) {
 	files, err := os.ReadDir(w.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	var workshops = make([]*WorkspaceFile, 0, len(files))
+	var workshops = make([]*WorkshopFile, 0, len(files))
 
 	for _, info := range files {
 		if info.IsDir() || !info.Type().IsRegular() {
@@ -85,8 +85,8 @@ func (w *Project) EnumWorkspaceFiles() ([]*WorkspaceFile, error) {
 		}
 
 		/* The first element in names will contain the workshop name if matched */
-		if names := validWorkspaceFilename.FindStringSubmatch(info.Name()); names != nil {
-			file, err := ReadWorkspace(filepath.Join(w.Path, info.Name()))
+		if names := validWorkshopFilename.FindStringSubmatch(info.Name()); names != nil {
+			file, err := ReadWorkshop(filepath.Join(w.Path, info.Name()))
 			if err != nil {
 				return nil, err
 			}

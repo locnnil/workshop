@@ -26,11 +26,11 @@ type CommandManager struct {
 	executions      map[string]*execution
 	executionsCond  *sync.Cond
 	executionsMutex sync.Mutex
-	backend         workshopbackend.WorkspaceBackend
+	backend         workshopbackend.WorkshopBackend
 }
 
 // New creates a new CommandManager.
-func New(runner *state.TaskRunner, backend workshopbackend.WorkspaceBackend) *CommandManager {
+func New(runner *state.TaskRunner, backend workshopbackend.WorkshopBackend) *CommandManager {
 	manager := &CommandManager{
 		executions:     make(map[string]*execution),
 		executionsCond: sync.NewCond(&sync.Mutex{}),

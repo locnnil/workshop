@@ -59,7 +59,7 @@ type execution struct {
 }
 
 func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkspace(task)
+	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (e *execution) waitIOConnected(ctx context.Context, execID string) error {
 }
 
 // do actually runs the command.
-func (e *execution) do(ctx context.Context, task *state.Task, backend workshopbackend.WorkspaceBackend) error {
+func (e *execution) do(ctx context.Context, task *state.Task, backend workshopbackend.WorkshopBackend) error {
 	// Wait till client has connected to "stdio" websocket (and "stderr" if
 	// separating stderr), to avoid race conditions forwarding I/O.
 	err := e.waitIOConnected(ctx, task.ID())

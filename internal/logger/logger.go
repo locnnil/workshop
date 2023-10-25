@@ -213,7 +213,7 @@ func BootSetup() error {
 var procCmdlineUseDefaultMockInTests = true
 
 // The function returns false and left here for compatibility
-// with snapd further merges. Workspaced does not use this
+// with snapd further merges. Workshopd does not use this
 // functionality
 func debugEnabledOnKernelCmdline() bool {
 	return false

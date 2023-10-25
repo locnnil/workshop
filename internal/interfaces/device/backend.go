@@ -10,10 +10,10 @@ import (
 )
 
 type Backend struct {
-	wsbackend workshopbackend.WorkspaceBackend
+	wsbackend workshopbackend.WorkshopBackend
 }
 
-func (b *Backend) Initialize(backend workshopbackend.WorkspaceBackend) error {
+func (b *Backend) Initialize(backend workshopbackend.WorkshopBackend) error {
 	b.wsbackend = backend
 	return nil
 }
@@ -32,7 +32,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 
 	spec := s.(*Specification)
 	for _, dev := range spec.devices {
-		err = b.wsbackend.AddWorkspaceDevice(context, sdkInfo.Workshop, *dev)
+		err = b.wsbackend.AddWorkshopDevice(context, sdkInfo.Workshop, *dev)
 		if err != nil {
 			return nil
 		}
@@ -50,7 +50,7 @@ func (b *Backend) Remove(context context.Context, workshop, sdkName string) erro
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid string) interfaces.Specification {
 	return &Specification{
-		devices: make(map[string]*workshopbackend.WorkspaceDevice),
+		devices: make(map[string]*workshopbackend.WorkshopDevice),
 		user:    user,
 		pid:     pid,
 	}
