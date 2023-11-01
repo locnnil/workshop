@@ -132,7 +132,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
 	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
@@ -140,6 +140,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
 	c.Assert(info.IsDir(), check.Equals, true)
+	c.Assert(t1.Log(), check.HasLen, 0)
 }
 
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
@@ -169,8 +170,51 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-xue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/restore-state"})
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/restore-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
+}
+
+func (s *hookSuite) TestHookFailed(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
+	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, newSdk)
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return errors.New("hook execution error")
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
+
+	// ensure that the save-state handler has created the required state directory
+	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
+	c.Check(err, check.IsNil)
+	c.Assert(info.IsDir(), check.Equals, true)
+	c.Assert(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error")
 }
 
 func (s *hookSuite) launchWorkshop(c *check.C, newSdk workshopbackend.SdkRecord) {
