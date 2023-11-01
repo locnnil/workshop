@@ -113,7 +113,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 			GroupId: 0,
 			Command: []string{
 				"bash",
-				"-xue",
+				"-ue",
 				"-o",
 				"pipefail",
 				"-c",
@@ -140,7 +140,9 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
-	task.Logf(string(hookLog))
+	if len(hookLog) > 0 {
+		task.Logf(string(hookLog))
+	}
 
 	return err
 }
