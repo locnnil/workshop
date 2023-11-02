@@ -164,7 +164,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopState) bool {
+		func(status workshopbackend.WorkshopStatus) bool {
 			return status == workshopbackend.WorkshopReady
 		})
 	if err != nil {
@@ -385,7 +385,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopState) bool {
+		func(status workshopbackend.WorkshopStatus) bool {
 			return status == workshopbackend.WorkshopStopped
 		})
 	if err != nil {
@@ -440,7 +440,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopState) bool {
+		func(status workshopbackend.WorkshopStatus) bool {
 			return status == workshopbackend.WorkshopStopped || status == workshopbackend.WorkshopReady
 		})
 	if err != nil {
@@ -501,7 +501,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		ctx,
 		[]string{name},
 		projectId,
-		func(status workshopbackend.WorkshopState) bool {
+		func(status workshopbackend.WorkshopStatus) bool {
 			return status == workshopbackend.WorkshopReady || status == workshopbackend.WorkshopPending
 		})
 	if err != nil {
@@ -546,7 +546,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopState) bool {
+		func(status workshopbackend.WorkshopStatus) bool {
 			return status != workshopbackend.WorkshopPending && status != workshopbackend.WorkshopOff
 		})
 	if err != nil {

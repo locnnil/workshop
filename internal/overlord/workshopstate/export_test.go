@@ -10,5 +10,5 @@ var (
 	RemoveManyImpl    = removeMany
 
 	Launch        = launch
-	WorkshopState = (*WorkshopManager).workshopState
+	WorkshopState = (*WorkshopManager).workshopStatus
 )

@@ -123,7 +123,7 @@ base: ubuntu@20.04
 		{
 			Name:      "ws-test",
 			ProjectId: s.project.ProjectId,
-			State:     "Ready",
+			Status:    "Ready",
 			Content: []*SdkInfo{
 				{
 					Name:        "go",
@@ -164,7 +164,7 @@ base: ubuntu@20.04
 	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
 		Name:      "ws-test",
 		ProjectId: s.project.ProjectId,
-		State:     "Ready",
+		Status:    "Ready",
 	})
 }
 
@@ -458,7 +458,7 @@ base: ubuntu@20.04`), 0644)
 	s.d.overlord.State().Lock()
 	ws, err := s.d.overlord.WorkshopManager().Workshop(s.ctx, "ws", s.project.ProjectId)
 	c.Assert(err, check.IsNil)
-	c.Assert(ws.State(), check.Equals, workshopbackend.WorkshopPending)
+	c.Assert(ws.Status(), check.Equals, workshopbackend.WorkshopPending)
 	s.d.overlord.State().Unlock()
 
 	// all successful responses must initiate the ensure call

@@ -23,22 +23,22 @@ const (
 
 var InstallTimeNow = time.Now
 
-type WorkshopState int
+type WorkshopStatus int
 
 const (
-	WorkshopOff WorkshopState = iota
+	WorkshopOff WorkshopStatus = iota
 	WorkshopReady
 	WorkshopStopped
 	WorkshopPending
 	WorkshopError
 )
 
-func (s WorkshopState) String() string {
+func (s WorkshopStatus) String() string {
 	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
 }
 
-func ParseWorkshopState(s string) WorkshopState {
-	refreshMap := map[string]WorkshopState{
+func ParseWorkshopStatus(s string) WorkshopStatus {
+	refreshMap := map[string]WorkshopStatus{
 		WorkshopOff.String():     WorkshopOff,
 		WorkshopReady.String():   WorkshopReady,
 		WorkshopStopped.String(): WorkshopStopped,
@@ -66,7 +66,7 @@ type Workshop struct {
 	content   map[string]sdk.Setup
 	errs      []WorkshopErrorType
 	running   bool
-	state     WorkshopState
+	status    WorkshopStatus
 }
 
 func (w *Workshop) Base() string {
@@ -105,12 +105,12 @@ func (w *Workshop) SetFile(f *WorkshopFile) {
 	w.file = f
 }
 
-func (w *Workshop) State() WorkshopState {
-	return w.state
+func (w *Workshop) Status() WorkshopStatus {
+	return w.status
 }
 
-func (w *Workshop) SetState(st WorkshopState) {
-	w.state = st
+func (w *Workshop) SetStatus(st WorkshopStatus) {
+	w.status = st
 }
 
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
