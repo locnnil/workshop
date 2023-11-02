@@ -8,7 +8,7 @@ import (
 )
 
 func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","state":"Ready",
+	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
 	"notes":["missing-project"],
 	"content":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z"}]
 	}]}`
@@ -19,7 +19,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 			ProjectId: "42ws42ws",
 			Name:      "workshop",
 			Base:      "ubuntu@20.04",
-			State:     "Ready",
+			Status:    "Ready",
 			Notes:     []string{"missing-project"},
 			Content: []*client.Sdk{
 				{Name: "go", Channel: "latest/stable", Revision: "453", InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)},

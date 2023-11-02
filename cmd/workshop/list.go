@@ -28,7 +28,7 @@ This command enumerates all workshops in the project, printing a compact list:
 
 - Project: absolute pathname of the project where this workshop belongs
 - Workshop: workshop name, as set by its definition
-- State: workshop status, such as *Off*, *Ready*, *Pending* and so on
+- Status: workshop status, such as *Off*, *Ready*, *Pending* and so on
 - Notes: internal remarks on the overall state of the workshop
 
 The '--global' option lists all workshops from *all* projects in the system;
@@ -46,11 +46,14 @@ Notes:
 }
 
 func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
-	/* check if both --project and --global were provided */
+	// check if both --project and --global were provided
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
 		return fmt.Errorf("cannot list: '--project' incompatible with '--global'")
 	}
+	return c.runList()
+}
 
+func (c *CmdList) runList() error {
 	var err error
 
 	cli, err := client.New(&ClientConfig)
@@ -80,7 +83,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 		return err
 	} else {
 		w := tabWriter()
-		fmt.Fprintf(w, "Project\tWorkshop\tState\tNotes\n")
+		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 
 		projects, err := c.client.Projects()
 		slices.SortFunc(projects, func(a, b *client.Project) bool { return a.Path < b.Path })
@@ -102,7 +105,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 				// and, thus, will not know all the available Off workshops (contrary
 				// to the workshops that are in any other state, i.e. running instances, which we always know
 				// about from the workshop backend)
-				if j.State != "Off" {
+				if j.Status != "Off" {
 					fmt.Fprintln(w, strings.Join(printWorkshop(j, i), "\t"))
 				}
 			}
@@ -116,7 +119,7 @@ func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
 
 func printWorkshops(wsList []*client.Workshop, prj *client.Project) {
 	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkshop\tState\tNotes\n")
+	fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 
 	for _, val := range wsList {
 		line := printWorkshop(val, prj)
@@ -133,7 +136,7 @@ func printWorkshop(j *client.Workshop, prj *client.Project) []string {
 	line := []string{
 		contractHomeDirectory(prj.Path),
 		j.Name,
-		j.State,
+		j.Status,
 		comment,
 	}
 	return line

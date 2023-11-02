@@ -28,7 +28,7 @@ type WorkshopInfo struct {
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
 	ProjectId string     `json:"project-id"`
-	State     string     `json:"state"`
+	Status    string     `json:"status"`
 	Content   []*SdkInfo `json:"content,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
@@ -40,7 +40,7 @@ func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *Worksho
 	ws.Name = file.Name
 	ws.Base = file.Base
 	ws.ProjectId = pid
-	ws.State = workshopbackend.WorkshopOff.String()
+	ws.Status = workshopbackend.WorkshopOff.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -68,7 +68,7 @@ func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkshopInfo {
 		ws.Notes = append(ws.Notes, err.String())
 	}
 
-	ws.State = props.State().String()
+	ws.Status = props.Status().String()
 
 	return &ws
 }
@@ -144,7 +144,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	var infoLst = make([]*WorkshopInfo, 0)
 	for _, w := range workshops {
-		if wstate != "all" && strings.ToLower(w.State().String()) != wstate {
+		if wstate != "all" && strings.ToLower(w.Status().String()) != wstate {
 			continue
 		}
 		info := workshopPropsToInfo(w)

@@ -21,7 +21,7 @@ func (m *WorkshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","state":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{}

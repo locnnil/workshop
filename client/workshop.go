@@ -13,7 +13,7 @@ type Workshop struct {
 	ProjectId string   `json:"project-id"`
 	Name      string   `json:"name"`
 	Base      string   `json:"base"`
-	State     string   `json:"state"`
+	Status    string   `json:"status"`
 	Content   []*Sdk   `json:"content,omitempty"`
 	Notes     []string `json:"notes,omitempty"`
 }

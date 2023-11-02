@@ -41,14 +41,14 @@ func (w *WorkshopManager) Ensure() error {
 // per the matchStatus predicate. It returns the first workshop that does NOT
 // meet the predicate's condition.
 func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string,
-	matchStatus func(status workshopbackend.WorkshopState) bool) (string, workshopbackend.WorkshopState, error) {
+	matchStatus func(status workshopbackend.WorkshopStatus) bool) (string, workshopbackend.WorkshopStatus, error) {
 	for _, name := range names {
 		wrkspc, err := w.Workshop(ctx, name, pId)
 		if err != nil {
 			return "", workshopbackend.WorkshopOff, err
 		}
 
-		status := w.workshopState(wrkspc)
+		status := w.workshopStatus(wrkspc)
 		if !matchStatus(status) {
 			return name, status, nil
 		}
@@ -67,7 +67,7 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 		return nil, err
 	}
 
-	wrkspc.SetState(w.workshopState(wrkspc))
+	wrkspc.SetStatus(w.workshopStatus(wrkspc))
 	return wrkspc, nil
 }
 
@@ -83,7 +83,7 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 	}
 
 	for _, wrkspc := range workshops {
-		wrkspc.SetState(w.workshopState(wrkspc))
+		wrkspc.SetStatus(w.workshopStatus(wrkspc))
 	}
 
 	return files, workshops, nil
@@ -92,7 +92,7 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked before the
 // call.
-func (w *WorkshopManager) workshopState(ws *workshopbackend.Workshop) workshopbackend.WorkshopState {
+func (w *WorkshopManager) workshopStatus(ws *workshopbackend.Workshop) workshopbackend.WorkshopStatus {
 	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
 	if op != nil {
 		if ws.IsRunning() {

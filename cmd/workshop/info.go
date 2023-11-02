@@ -61,7 +61,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
 	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
 	fmt.Fprintf(w, "project:\t%s\n", project.Path)
-	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.State))
+	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.Status))
 	notes := strings.Join(workshop.Notes, ",")
 	if len(workshop.Notes) == 0 {
 		notes = "-"

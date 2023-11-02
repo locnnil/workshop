@@ -63,7 +63,7 @@ func (s *ManagerSuite) TestWorkshopStateChanges(c *check.C) {
 		running           bool
 		refreshInProgress bool
 		hasErrors         bool
-		expectedState     workshopbackend.WorkshopState
+		expectedState     workshopbackend.WorkshopStatus
 		expectedErrors    []workshopbackend.WorkshopErrorType
 	}
 	cases := []stateSetup{
