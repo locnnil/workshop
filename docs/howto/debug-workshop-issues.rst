@@ -1,7 +1,7 @@
-.. _how_debug_workshop_issues:
+.. _how_debug_issues_workshops:
 
-Debug workshop issues
-=====================
+How to debug issues in workshops
+================================
 
 To trace the condition of a misbehaving
 :ref:`workshop <exp_workshop>`,
