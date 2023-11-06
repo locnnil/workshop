@@ -58,7 +58,7 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 - If stdin and stdout are terminals, the mode is interactive
 - Otherwise, it's non-interactive
 
-To separate the 'exec' subcommand options from the command itself,
+To separate the 'exec' subcommand from the command itself,
 use shell syntax such as '--':
 
   $ workshop exec nimble -- echo -n foo bar

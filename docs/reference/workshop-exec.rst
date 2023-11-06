@@ -31,7 +31,7 @@ If neither is supplied,
 - If :samp:`stdin` and :samp:`stdout` are terminals, the mode is interactive
 - Otherwise, it's non-interactive
 
-To separate the :program:`exec` subcommand options from the command itself,
+To separate the :program:`exec` subcommand from the command itself,
 use shell syntax such as :samp:`--`:
 
 .. code:: shell
