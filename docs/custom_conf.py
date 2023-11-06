@@ -71,6 +71,17 @@ html_context = {
     'github_issues': 'enabled'
 }
 
+
+html_sidebars = {
+    "**": [
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "sidebar/scroll-end.html",
+    ]
+}
+
 ############################################################
 ### Redirects
 ############################################################
