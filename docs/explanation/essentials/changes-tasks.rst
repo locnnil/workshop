@@ -26,9 +26,20 @@ to ensure the integrity of the workshop on errors.
 By default, a failed change reverts the workshop
 to the last operational state.
 
+
 See also
 --------
 
-How-to guides: :ref:`how_debug_workshop_issues`
+How-to guides:
 
-Tutorial: :ref:`tut_refresh_wait_on_error`
+- :ref:`how_debug_workshop_issues`
+
+
+Reference:
+
+- :ref:`workshop changes (command) <ref_workshop_changes>`
+
+
+Tutorial:
+
+- :ref:`tut_refresh_wait_on_error`

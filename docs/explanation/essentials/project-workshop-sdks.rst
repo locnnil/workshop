@@ -1,5 +1,5 @@
 Project, workshop, SDKs
-========================
+=======================
 
 Projects, workshops, workshop definitions and SDKs
 are the key building blocks of |project|.
@@ -28,7 +28,7 @@ and become unavailable for any commands except :command:`remove`.
 .. _exp_workshop:
 
 Workshop
----------
+--------
 
 A *workshop* is a container that is described in a definition file.
 
@@ -36,7 +36,7 @@ A *workshop* is a container that is described in a definition file.
 .. _exp_workshop_def:
 
 Workshop definition
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 This is a file named :file:`.workshop.<NAME>.yaml`
 that lists the base image of the workshop

@@ -108,7 +108,7 @@ the CLI tool is run manually:
 
 
 Launch a workshop
-------------------
+-----------------
 
 Having installed |project|,
 use it to define, launch, start and stop your first
@@ -217,7 +217,7 @@ waiting for the workshop to comply.
 .. _tut_refresh:
 
 Refresh a workshop
--------------------
+------------------
 
 When an aspect of the workshop changes,
 refresh it to pick up the update.
@@ -305,7 +305,8 @@ All progress is saved, up to the specific *task* that caused the error.
 Then, you can explore the paused workshop
 and choose to abort or continue the refresh operation.
 
-To investigate the issue, check the recent *changes and tasks*:
+To investigate the issue, check the recent
+:ref:`changes <ref_workshop_changes>`:
 
 .. code:: shell
 
@@ -314,6 +315,10 @@ To investigate the issue, check the recent *changes and tasks*:
        ID  Status  Spawn                Ready                Summary
        ...
        81  Error   ...                  ...                  ...
+
+
+Having found the problematic change, explore its
+:ref:`tasks <ref_workshop_tasks>`:
 
    workshop tasks 81
 
@@ -344,3 +349,54 @@ To abort the operation and recover the last operational state:
     workshop refresh --abort nimble
 
         "nimble" aborted
+
+
+.. _tut_exec:
+
+Execute commands
+----------------
+
+When the workshop is ready,
+execute arbitrary commands in it using :ref:`ref_workshop_exec`:
+
+.. code:: shell
+
+   workshop exec nimble go build
+
+
+To define environment variables and visibly separate the command's options:
+
+.. code:: shell
+
+   workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
+
+
+You can run an interactive shell as well:
+
+.. code:: shell
+
+   workshop exec nimble bash
+
+   uname -a
+
+       Linux nimble-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+
+Persistent changes are saved in the project directory and the workshop itself.
+
+
+.. _tut_remove:
+
+Remove a workshop
+-----------------
+
+If you don't need a workshop anymore,
+:ref:`remove <ref_workshop_remove>` it:
+
+.. code:: shell
+
+    workshop remove nimble
+
+        "nimble" removed
+
+This leaves the workshop definition intact.

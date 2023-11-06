@@ -1,7 +1,7 @@
 .. _ref_workshop_refresh:
 
 workshop refresh
-=================
+================
 
 Updates workshops according to their definitions.
 
@@ -74,8 +74,9 @@ See also
 
 Explanation:
 
-- :ref:`project <exp_project>`
+- :ref:`project (concept) <exp_project>`
 - :ref:`workshop (concept) <exp_workshop>`
+- :ref:`workshop definition (concept) <exp_workshop_def>`
 
 Reference:
 

@@ -1,7 +1,7 @@
 .. _ref_workshop_start:
 
 workshop start
-===============
+==============
 
 Starts one or many workshops.
 
@@ -52,5 +52,6 @@ Explanation:
 
 Reference:
 
+- :ref:`workshop exec (command) <ref_workshop_exec>`
 - :ref:`workshop launch (command) <ref_workshop_launch>`
 - :ref:`workshop stop (command) <ref_workshop_stop>`
