@@ -150,8 +150,8 @@ Define
 
       workshop list
 
-          Project                Workshop   State  Notes
-          ~/hello-workshop       nimble     Off    -
+          Project                Workshop   Status  Notes
+          ~/hello-workshop       nimble     Off     -
 
 
    Note that a newly created workshop is *Off*.
