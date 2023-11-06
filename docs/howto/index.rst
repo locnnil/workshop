@@ -8,4 +8,4 @@ that arise when you use |project|.
 .. toctree::
    :maxdepth: 1
 
-   debug-workshop-issues
+   Debug issues in workshops <debug-workshop-issues>

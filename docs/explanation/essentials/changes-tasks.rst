@@ -32,7 +32,7 @@ See also
 
 How-to guides:
 
-- :ref:`how_debug_workshop_issues`
+- :ref:`how_debug_issues_workshops`
 
 
 Reference:

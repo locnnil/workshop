@@ -91,6 +91,7 @@ we'll help you get it out there.
    :hidden:
    :maxdepth: 2
 
+   Home <self>
    tutorial/index
    howto/index
    explanation/index
