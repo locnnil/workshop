@@ -9,3 +9,4 @@ and explain how they fit together.
 
    essentials/project-workshop-sdks
    essentials/changes-tasks
+   essentials/workshop-cli
