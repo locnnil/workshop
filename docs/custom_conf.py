@@ -15,8 +15,9 @@ import datetime
 ############################################################
 
 # Product name
-project = 'Workshop'
-author = 'Canonical Group Ltd'
+project = "Workshop"
+author = "Canonical Group Ltd"
+html_title = ""
 
 # Uncomment if your product uses release numbers
 # release = '1.0'
@@ -27,60 +28,49 @@ author = 'Canonical Group Ltd'
 #   -H 'Accept: application/vnd.github.v3.raw' \
 #   https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
 
-copyright = '%s, %s' % ('2022–' + str(datetime.date.today().year), author)
+copyright = "%s, %s" % ("2022–" + str(datetime.date.today().year), author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
-ogp_site_url = 'https://canonical-workshop.readthedocs-hosted.com/'
+ogp_site_url = "https://canonical-workshop.readthedocs-hosted.com/"
 # The documentation website name (usually the same as the product name)
 ogp_site_name = project
 # An image or logo that is used in the preview
-ogp_image = 'https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg'
+ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg"
 
 # Update with the favicon for your product (default is the circle of friends)
-html_favicon = '.sphinx/_static/favicon.png'
+html_favicon = ".sphinx/_static/favicon.png"
 
 # (Some settings must be part of the html_context dictionary, while others
 #  are on root level. Don't move the settings.)
 html_context = {
-
     # Change to the link to your product website (without "https://")
-    'product_page': 'documentation.ubuntu.com',
-
+    "product_page": "documentation.ubuntu.com",
     # Add your product tag to ".sphinx/_static" and change the path
     # here (start with "_static"), default is the circle of friends
-    'product_tag': '_static/tag.png',
-
+    "product_tag": "_static/tag.png",
     # Change to the discourse instance you want to be able to link to
     # using the :discourse: metadata at the top of a file
     # (use an empty value if you don't want to link)
-    'discourse': 'https://discourse.ubuntu.com',
-
+    "discourse": "https://discourse.ubuntu.com",
     # Change to the GitHub info for your project
-    'github_url': 'https://github.com/canonical/workshop',
-
+    "github_url": "https://github.com/canonical/workshop",
     # Change to the branch for this version of the documentation
-    'github_version': 'main',
-
+    "github_version": "main",
     # Change to the folder that contains the documentation
     # (usually "/" or "/docs/")
-    'github_folder': '/',
-
+    "github_folder": "/",
     # Change to an empty value if your GitHub repo doesn't have issues enabled.
     # This will disable the feedback button and the issue link in the footer.
-    'github_issues': 'enabled'
+    "github_issues": "enabled",
+    # Controls the existence of Previous / Next buttons at the bottom of pages
+    # Valid options: none, prev, next, both
+    "sequential_nav": "none",
 }
 
-
-html_sidebars = {
-    "**": [
-        "sidebar/search.html",
-        "sidebar/scroll-start.html",
-        "sidebar/navigation.html",
-        "sidebar/ethical-ads.html",
-        "sidebar/scroll-end.html",
-    ]
-}
+# If your project is on documentation.ubuntu.com, specify the project
+# slug (for example, "lxd") here.
+slug = ""
 
 ############################################################
 ### Redirects
@@ -97,11 +87,11 @@ redirects = {}
 
 # Links to ignore when checking links
 
-linkcheck_ignore = [
-    'http://127.0.0.1:8000',
-    'https://github.com/canonical/workshop/issues',
-    'https://github.com/canonical/workshop'
-    ]
+linkcheck_ignore = ["http://127.0.0.1:8000", "https://github.com/canonical/workshop"]
+# Pages on which to ignore anchors
+# (This list will be appended to linkcheck_anchors_ignore_for_url)
+
+custom_linkcheck_anchors_ignore_for_url = []
 
 ############################################################
 ### Additions to default configuration
@@ -113,6 +103,9 @@ linkcheck_ignore = [
 # Add extensions
 custom_extensions = []
 
+# Add MyST extensions
+custom_myst_extensions = []
+
 # Add files or directories that should be excluded from processing.
 custom_excludes = []
 
@@ -121,6 +114,10 @@ custom_html_css_files = []
 
 # Add JavaScript files (located in .sphinx/_static/)
 custom_html_js_files = []
+
+# Add tags that you want to use for conditional inclusion of text
+# (https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#tags)
+custom_tags = []
 
 ## The following settings override the default configuration.
 
@@ -146,9 +143,8 @@ disable_feedback_button = False
 # Code origin:
 # https://github.com/sphinx-doc/sphinx/issues/4054#issuecomment-329097229
 
-ultimate_replacements = {
-    "|project|" : project
-}
+ultimate_replacements = {"|project|": project}
+
 
 def ultimateReplace(app, docname, source):
     result = source[0]
@@ -156,6 +152,7 @@ def ultimateReplace(app, docname, source):
         result = result.replace(key, app.config.ultimate_replacements[key])
     source[0] = result
 
+
 def setup(app):
-   app.add_config_value('ultimate_replacements', {}, True)
-   app.connect('source-read', ultimateReplace)
+    app.add_config_value("ultimate_replacements", {}, True)
+    app.connect("source-read", ultimateReplace)

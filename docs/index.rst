@@ -43,7 +43,7 @@ In this documentation
       **Starter instructions** for new users of |project|
 
 
-   .. grid-item:: :doc:`How-to guides <howto/index>`
+   .. grid-item:: :doc:`How-to guides <how-to/index>`
 
       **Step-by-step guides** covering common tasks
 
@@ -93,6 +93,6 @@ we'll help you get it out there.
 
    Home <self>
    tutorial/index
-   howto/index
+   how-to/index
    explanation/index
    reference/index

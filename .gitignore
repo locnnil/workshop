@@ -6,3 +6,8 @@ workshop
 __debug_bin*
 *.snap
 cover.out
+docs/.sphinx/venv/
+docs/.sphinx/warnings.txt
+docs/.sphinx/.wordlist.dic
+docs/.sphinx/.doctrees/
+docs/_build
