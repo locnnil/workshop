@@ -99,7 +99,9 @@ Run
 The snap installs two major components:
 
 - The :program:`workshopd` daemon that exposes a REST API
-- The :program:`workshop` CLI tool that uses this API to command |project|
+- The :program:`workshop`
+  :ref:`CLI tool <exp_workshop_cli>`
+  that uses this API to command |project|
 
 The daemon starts automatically after installation;
 the CLI tool is run manually:
