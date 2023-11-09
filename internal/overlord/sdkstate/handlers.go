@@ -71,15 +71,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func sdkBlobDevice(sdk sdk.Setup) workshopbackend.WorkshopDevice {
-	/* Bind-mount the SDK to the workshop */
-	return workshopbackend.WorkshopDevice{
-		Name: sdk.Name,
-		Properties: map[string]string{"type": "disk", "source": sdk.Filename(),
-			"path": filepath.Join("/root", filepath.Base(sdk.Filename()))},
-	}
-}
-
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -94,14 +85,18 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	sdkMount := sdkBlobDevice(sdkSetup)
+	sdkMount := workshopbackend.WorkshopDevice{
+		Name: sdkSetup.Name,
+		Properties: map[string]string{"type": "disk", "source": sdkSetup.Filename(),
+			"path": filepath.Join("/root", filepath.Base(sdkSetup.Filename()))},
+	}
 
 	if err = m.backend.AddWorkshopDevice(ctx, workshop, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
-		/* Make sure the SDK file will be unmounted once installed into the workshop */
+		// Make sure the SDK file will be unmounted once installed into the workshop
 		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, workshop, err)
 		}
@@ -148,9 +143,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	err = exectx.WaitExecution(ctx)
-
-	if err != nil {
+	if err = exectx.WaitExecution(ctx); err != nil {
 		hookLog, _ := afero.ReadFile(memFs, out.Name())
 		return fmt.Errorf("%w: %v", err, string(hookLog))
 	}
@@ -167,12 +160,10 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	blob, err := SdkSetup(task)
+	sdkSetup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
-
-	sdkMount := sdkBlobDevice(blob)
 
 	fs, err := m.backend.GetWorkshopFs(ctx, workshop)
 	if err != nil {
@@ -180,9 +171,9 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, blob.Name))
+	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name))
 	if err != nil {
-		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkMount.Name, err)
+		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkSetup.Name, err)
 	}
 
 	return nil

@@ -720,7 +720,10 @@ func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key 
 	}
 
 	delete(inst.Config, key)
-	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	if err != nil {
+		return err
+	}
 
 	return op.Wait()
 }
@@ -741,7 +744,10 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 		return err
 	}
 	inst.Devices[device.Name] = device.Properties
-	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	if err != nil {
+		return err
+	}
 
 	return op.Wait()
 }

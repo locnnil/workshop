@@ -123,9 +123,8 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 
 	for _, s := range ws.File().Sdks {
 		ws.LinkSdk(ctx, sdk.Setup{
-			Workshop: name,
-			Name:     s.Name,
-			Channel:  s.Channel,
+			Name:    s.Name,
+			Channel: s.Channel,
 		})
 	}
 	return nil
