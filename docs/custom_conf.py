@@ -68,6 +68,18 @@ html_context = {
     "sequential_nav": "none",
 }
 
+# Dropping the variant selector snippet:
+# https://pradyunsg.me/furo/customisation/sidebar/
+html_sidebars = {
+    "**": [
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "sidebar/scroll-end.html",
+    ]
+}
+
 # If your project is on documentation.ubuntu.com, specify the project
 # slug (for example, "lxd") here.
 slug = ""
