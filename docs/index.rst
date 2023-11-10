@@ -2,10 +2,10 @@
 
 .. _home:
 
-|project|
-=========
+Workshop
+========
 
-**|project| is a tool that automates intricate prerequisite setup
+**Workshop is a tool that automates intricate prerequisite setup
 for your projects**.
 
 **Define your dev environment in straightforward YAML**.
@@ -23,7 +23,7 @@ workshops enhance issue reproduction across platforms,
 facilitate collaboration in code reviews,
 and confine hackish experiments in lightweight containers.
 
-**Mitigate your setup's complexity with |project|.**
+**Mitigate your setup's complexity with Workshop.**
 AI/ML, robotics, IoT, EdTech, and similar domains
 commonly have less-than-trivial project layouts
 that depend on multiple Linux distributions,
