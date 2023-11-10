@@ -188,8 +188,8 @@ move it, then run :command:`workshop list`:
    workshop list
 
 
-       Project                Workshop   State  Notes
-       ~/hi-workshop          nimble     Ready  -
+       Project                Workshop   Status  Notes
+       ~/hi-workshop          nimble     Ready   -
 
 
 Start and stop
