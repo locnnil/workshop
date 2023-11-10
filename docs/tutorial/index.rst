@@ -324,6 +324,8 @@ To investigate the issue, check the recent
 Having found the problematic change, explore its
 :ref:`tasks <ref_workshop_tasks>`:
 
+.. code:: shell
+
    workshop tasks 81
 
        ...
