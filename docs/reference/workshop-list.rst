@@ -7,7 +7,7 @@ Lists project workshops.
 
 .. code:: shell
 
-   workshop list [--global] [global options]
+   $ workshop list [--global] [global options]
 
 
 Synopsis

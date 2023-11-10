@@ -154,3 +154,9 @@ disable_feedback_button = False
 ############################################################
 
 ## Add any configuration that is not covered by the common conf.py file.
+
+# Exclude command line output when copypasting samples
+# (https://sphinx-copybutton.readthedocs.io/en/latest/use.html)
+# Note that this explicitly violates the SG, but does so for a reason:
+# https://docs.ubuntu.com/styleguide/en#code-examples-in-documentation
+copybutton_prompt_text = "$ "

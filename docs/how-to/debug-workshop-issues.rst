@@ -36,7 +36,7 @@ operation:
 
 .. code:: shell
 
-    workshop refresh ml-transformer
+   $ workshop refresh ml-transformer
 
         Error: cannot perform the following tasks:
         - Run hook "setup-base" for "huggingface" SDK (command failed with an error code (1))
@@ -48,7 +48,7 @@ list the *changes* in the workshop to find the one that failed:
 
 .. code:: shell
 
-   workshop changes
+   $ workshop changes
 
        ID  Status  Spawn                Ready                Summary
        ...
@@ -63,7 +63,7 @@ list its *tasks* to see the cause:
 
 .. code:: shell
 
-   workshop tasks 81
+   $ workshop tasks 81
 
        ID    Status  Spawn                Ready                Summary
        ...

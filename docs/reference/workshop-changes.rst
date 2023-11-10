@@ -7,7 +7,7 @@ Lists recent changes to the workshops in a project.
 
 .. code:: shell
 
-   workshop changes [global options]
+   $ workshop changes [global options]
 
 
 Synopsis

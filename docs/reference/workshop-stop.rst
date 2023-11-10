@@ -7,7 +7,7 @@ Stops one or many workshops.
 
 .. code:: shell
 
-   workshop stop <WORKSHOP>... [global options]
+   $ workshop stop <WORKSHOP>... [global options]
 
 
 Synopsis

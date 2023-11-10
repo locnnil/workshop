@@ -7,7 +7,7 @@ Starts one or many workshops.
 
 .. code:: shell
 
-   workshop start <WORKSHOP>... [global options]
+   $ workshop start <WORKSHOP>... [global options]
 
 
 Synopsis

@@ -7,7 +7,7 @@ Removes one or many workshops.
 
 .. code:: shell
 
-   workshop remove <WORKSHOP>... [global options]
+   $ workshop remove <WORKSHOP>... [global options]
 
 
 Synopsis
