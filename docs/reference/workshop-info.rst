@@ -7,7 +7,7 @@ Prints the current status and details of a workshop as YAML.
 
 .. code:: shell
 
-   workshop info <WORKSHOP> [global options]
+   $ workshop info <WORKSHOP> [global options]
 
 
 Synopsis

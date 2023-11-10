@@ -7,7 +7,7 @@ Lists tasks for a specific change.
 
 .. code:: shell
 
-   workshop tasks <CHANGE ID> [global options]
+   $ workshop tasks <CHANGE ID> [global options]
 
 
 Synopsis

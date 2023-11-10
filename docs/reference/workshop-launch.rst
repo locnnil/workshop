@@ -7,7 +7,7 @@ Constructs one or many workshops using their definitions.
 
 .. code:: shell
 
-   workshop launch <WORKSHOP>... [global options]
+   $ workshop launch <WORKSHOP>... [global options]
 
 
 Synopsis

@@ -138,6 +138,13 @@ custom_tags = []
 # file into each reST file).
 # custom_rst_epilog = ''
 
+# Link Python config variables to reST replacements via rst_prolog
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
+# (not so easy with reuse/substitutions.txt in default custom_rst_epilog)
+rst_prolog = f"""
+.. |project| replace:: {project}
+"""
+
 # By default, the documentation includes a feedback button at the top.
 # You can disable it by setting the following configuration to True.
 disable_feedback_button = False
@@ -148,23 +155,8 @@ disable_feedback_button = False
 
 ## Add any configuration that is not covered by the common conf.py file.
 
-
-# Add source read hook to use global replacements with Sphinx's app.config:
-# https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
-#
-# Code origin:
-# https://github.com/sphinx-doc/sphinx/issues/4054#issuecomment-329097229
-
-ultimate_replacements = {"|project|": project}
-
-
-def ultimateReplace(app, docname, source):
-    result = source[0]
-    for key in app.config.ultimate_replacements:
-        result = result.replace(key, app.config.ultimate_replacements[key])
-    source[0] = result
-
-
-def setup(app):
-    app.add_config_value("ultimate_replacements", {}, True)
-    app.connect("source-read", ultimateReplace)
+# Exclude command line output when copypasting samples
+# (https://sphinx-copybutton.readthedocs.io/en/latest/use.html)
+# Note that this explicitly violates the SG, but does so for a reason:
+# https://docs.ubuntu.com/styleguide/en#code-examples-in-documentation
+copybutton_prompt_text = "$ "

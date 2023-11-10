@@ -7,7 +7,7 @@ Runs a command and waits for it to complete.
 
 .. code:: shell
 
-   workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND>
+   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND>
 
 
 Synopsis

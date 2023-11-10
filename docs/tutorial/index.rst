@@ -36,8 +36,8 @@ It's available as a snap:
 
       .. code:: shell
 
-         sudo snap install lxd
-         sudo lxd init --auto
+         $ sudo snap install lxd
+         $ sudo lxd init --auto
 
 
    .. group-tab:: Other ways
@@ -57,8 +57,8 @@ is enabled and running:
 
       .. code:: shell
 
-         sudo snap start --enable lxd.daemon
-         snap services lxd.daemon
+         $ sudo snap start --enable lxd.daemon
+         $ snap services lxd.daemon
 
    .. group-tab:: Other ways
 
@@ -78,19 +78,19 @@ from the |project| source code on
 
 .. code:: shell
 
-   git clone git@github.com:canonical/workshop.git
+   $ git clone git@github.com:canonical/workshop.git
    # -- or --
-   git clone https://github.com/canonical/workshop.git
-   cd workshop
-   sudo snap install snapcraft --classic
-   snapcraft
+   # git clone https://github.com/canonical/workshop.git
+   $ cd workshop
+   $ sudo snap install snapcraft --classic
+   $ snapcraft
 
 Install the resulting :file:`.snap` file,
 for example:
 
 .. code:: shell
 
-   sudo snap install --devmode ./workshop_0.1.0_amd64.snap
+   $ sudo snap install --devmode ./workshop_0.1.0_amd64.snap
 
 
 Run
@@ -108,7 +108,7 @@ the CLI tool is run manually:
 
 .. code:: shell
 
-   workshop --help
+   $ workshop --help
 
 
 Launch a workshop
@@ -128,8 +128,8 @@ Define
 
    .. code:: shell
 
-      mkdir hello-workshop
-      cd hello-workshop
+      $ mkdir hello-workshop
+      $ cd hello-workshop
 
 
 #. In the project directory,
@@ -152,7 +152,7 @@ Define
 
    .. code:: shell
 
-      workshop list
+      $ workshop list
 
           Project                Workshop   Status  Notes
           ~/hello-workshop       nimble     Off     -
@@ -169,7 +169,7 @@ you :ref:`launch <ref_workshop_launch>` it:
 
 .. code:: shell
 
-   workshop launch nimble
+   $ workshop launch nimble
 
        "nimble" launched
 
@@ -182,14 +182,13 @@ move it, then run :command:`workshop list`:
 
 .. code:: shell
 
-   cd ..
-   mv hello-workshop hi-workshop
-   cd hi-workshop
-   workshop list
+   $ cd ..
+   $ mv hello-workshop hi-workshop
+   $ cd hi-workshop
+   $ workshop list
 
-
-       Project                Workshop   State  Notes
-       ~/hi-workshop          nimble     Ready  -
+       Project                Workshop   Status  Notes
+       ~/hi-workshop          nimble     Ready   -
 
 
 Start and stop
@@ -200,7 +199,7 @@ If you're done with the workshop for now,
 
 .. code:: shell
 
-   workshop stop nimble
+   $ workshop stop nimble
 
        "nimble" stopped
 
@@ -209,7 +208,7 @@ To resume, *start* the workshop again:
 
 .. code:: shell
 
-   workshop start nimble
+   $ workshop start nimble
 
        "nimble" started
 
@@ -239,7 +238,7 @@ are updated,
 
 .. code:: shell
 
-   workshop refresh nimble
+   $ workshop refresh nimble
 
        "nimble" refreshed
 
@@ -251,7 +250,7 @@ To refresh multiple workshops at once:
 
 .. code:: shell
 
-   workshop refresh nimble huggingface ...
+   $ workshop refresh nimble huggingface ...
 
 .. note::
 
@@ -278,7 +277,7 @@ update the definition file and refresh the workshop:
 
 .. code:: shell
 
-   workshop refresh nimble
+   $ workshop refresh nimble
 
        "nimble" refreshed
 
@@ -298,12 +297,13 @@ add the :option:`!--wait-on-error` option:
 
 .. code:: shell
 
-   workshop refresh --wait-on-error nimble
+   $ workshop refresh --wait-on-error nimble
 
        ERROR command failed with an error code (1): The edge version is not stable
 
-       Error: "nimble" refresh failed, resolve all errors and run "workshop refresh --continue".
-       To abort and get back to the state before run "workshop refresh --abort"
+       cannot refresh; fix the errors reported by "workshop info",
+       then run "workshop refresh --continue nimble".
+       To abort and revert, run "workshop refresh --abort nimble".
 
 All progress is saved, up to the specific *task* that caused the error.
 Then, you can explore the paused workshop
@@ -314,7 +314,7 @@ To investigate the issue, check the recent
 
 .. code:: shell
 
-   workshop changes
+   $ workshop changes
 
        ID  Status  Spawn                Ready                Summary
        ...
@@ -326,7 +326,7 @@ Having found the problematic change, explore its
 
 .. code:: shell
 
-   workshop tasks 81
+   $ workshop tasks 81
 
        ...
        1391  Undone  today at 12:17       today at 12:18       Link "go" SDK
@@ -343,7 +343,7 @@ To continue the refresh operation:
 
 .. code:: shell
 
-    workshop refresh --continue nimble
+   $ workshop refresh --continue nimble
 
         "nimble" refreshed
 
@@ -352,7 +352,7 @@ To abort the operation and recover the last operational state:
 
 .. code:: shell
 
-    workshop refresh --abort nimble
+   $ workshop refresh --abort nimble
 
         "nimble" aborted
 
@@ -367,23 +367,22 @@ execute arbitrary commands in it using :ref:`ref_workshop_exec`:
 
 .. code:: shell
 
-   workshop exec nimble go build
+   $ workshop exec nimble go build
 
 
 To define environment variables and visibly separate the command's options:
 
 .. code:: shell
 
-   workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
+   $ workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
 
 
 You can run an interactive shell as well:
 
 .. code:: shell
 
-   workshop exec nimble bash
-
-   uname -a
+   $ workshop exec nimble bash
+   $ uname -a
 
        Linux nimble-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
 
@@ -401,7 +400,7 @@ If you don't need a workshop anymore,
 
 .. code:: shell
 
-    workshop remove nimble
+   $ workshop remove nimble
 
         "nimble" removed
 
