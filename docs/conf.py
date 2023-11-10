@@ -65,6 +65,7 @@ exclude_patterns.extend(custom_excludes)
 
 rst_epilog = """
 .. include:: /reuse/links.txt
+.. include:: /reuse/substitutions.txt
 """
 if "custom_rst_epilog" in locals():
     rst_epilog = custom_rst_epilog

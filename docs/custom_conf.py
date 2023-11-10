@@ -138,6 +138,13 @@ custom_tags = []
 # file into each reST file).
 # custom_rst_epilog = ''
 
+# Link Python config variables to reST replacements via rst_prolog
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
+# (not so easy with reuse/substitutions.txt in default custom_rst_epilog)
+rst_prolog = f"""
+.. |project| replace:: {project}
+"""
+
 # By default, the documentation includes a feedback button at the top.
 # You can disable it by setting the following configuration to True.
 disable_feedback_button = False
