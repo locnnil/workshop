@@ -160,3 +160,5 @@ disable_feedback_button = False
 # Note that this explicitly violates the SG, but does so for a reason:
 # https://docs.ubuntu.com/styleguide/en#code-examples-in-documentation
 copybutton_prompt_text = "$ "
+copybutton_here_doc_delimiter = "EOF"
+copybutton_line_continuation_character = "\\"
