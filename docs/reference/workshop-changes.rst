@@ -5,7 +5,7 @@ workshop changes
 
 Lists recent changes to the workshops in a project.
 
-.. code:: shell
+.. code:: console
 
    $ workshop changes [global options]
 

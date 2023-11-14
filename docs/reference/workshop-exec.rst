@@ -5,7 +5,7 @@ workshop exec
 
 Runs a command and waits for it to complete.
 
-.. code:: shell
+.. code:: console
 
    $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND>
 
@@ -34,7 +34,7 @@ If neither is supplied,
 To separate the :program:`exec` subcommand from the command itself,
 use shell syntax such as :samp:`--`:
 
-.. code:: shell
+.. code:: console
 
    workshop exec nimble -- echo -n foo bar
 

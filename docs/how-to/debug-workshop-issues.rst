@@ -34,7 +34,7 @@ Suppose something goes during a
 :ref:`refresh <tut_refresh>`
 operation:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh ml-transformer
 
@@ -46,7 +46,7 @@ operation:
 To investigate the failure,
 list the *changes* in the workshop to find the one that failed:
 
-.. code:: shell
+.. code:: console
 
    $ workshop changes
 
@@ -61,7 +61,7 @@ List tasks in a change
 When the problematic change is found,
 list its *tasks* to see the cause:
 
-.. code:: shell
+.. code:: console
 
    $ workshop tasks 81
 
