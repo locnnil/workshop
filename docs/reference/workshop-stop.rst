@@ -5,7 +5,7 @@ workshop stop
 
 Stops one or many workshops.
 
-.. code:: shell
+.. code:: console
 
    $ workshop stop <WORKSHOP>... [global options]
 

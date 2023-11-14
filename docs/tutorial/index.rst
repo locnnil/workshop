@@ -34,7 +34,7 @@ It's available as a snap:
 .. tabs::
    .. group-tab:: Using :program:`snap`
 
-      .. code:: shell
+      .. code:: console
 
          $ sudo snap install lxd
          $ sudo lxd init --auto
@@ -55,7 +55,7 @@ is enabled and running:
 .. tabs::
    .. group-tab:: Using :program:`snap`
 
-      .. code:: shell
+      .. code:: console
 
          $ sudo snap start --enable lxd.daemon
          $ snap services lxd.daemon
@@ -76,7 +76,7 @@ from the |project| source code on
 `GitHub
 <https://github.com/canonical/workshop>`_:
 
-.. code:: shell
+.. code:: console
 
    $ git clone git@github.com:canonical/workshop.git
    # -- or --
@@ -88,7 +88,7 @@ from the |project| source code on
 Install the resulting :file:`.snap` file,
 for example:
 
-.. code:: shell
+.. code:: console
 
    $ sudo snap install --devmode ./workshop_0.1.0_amd64.snap
 
@@ -106,7 +106,7 @@ The snap installs two major components:
 The daemon starts automatically after installation;
 the CLI tool is run manually:
 
-.. code:: shell
+.. code:: console
 
    $ workshop --help
 
@@ -126,7 +126,7 @@ Define
    :ref:`project directory <exp_project>`
    named :file:`hello-workshop`:
 
-   .. code:: shell
+   .. code:: console
 
       $ mkdir hello-workshop
       $ cd hello-workshop
@@ -150,7 +150,7 @@ Define
    by *listing* the workshops
    in the project directory:
 
-   .. code:: shell
+   .. code:: console
 
       $ workshop list
 
@@ -167,7 +167,7 @@ Launch
 To prepare a workshop for action,
 you :ref:`launch <ref_workshop_launch>` it:
 
-.. code:: shell
+.. code:: console
 
    $ workshop launch nimble
 
@@ -180,7 +180,7 @@ to build, debug and run code.
 To make sure |project| watches the changes in the project directory,
 move it, then run :command:`workshop list`:
 
-.. code:: shell
+.. code:: console
 
    $ cd ..
    $ mv hello-workshop hi-workshop
@@ -197,7 +197,7 @@ Start and stop
 If you're done with the workshop for now,
 *stop* it to conserve resources:
 
-.. code:: shell
+.. code:: console
 
    $ workshop stop nimble
 
@@ -206,7 +206,7 @@ If you're done with the workshop for now,
 
 To resume, *start* the workshop again:
 
-.. code:: shell
+.. code:: console
 
    $ workshop start nimble
 
@@ -236,7 +236,7 @@ listed in the
 are updated,
 :ref:`refresh <ref_workshop_refresh>` the workshop to apply the changes:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh nimble
 
@@ -248,7 +248,7 @@ then the SDKs are updated from their respective channels.
 
 To refresh multiple workshops at once:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh nimble huggingface ...
 
@@ -275,7 +275,7 @@ update the definition file and refresh the workshop:
        channel: latest/edge
 
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh nimble
 
@@ -295,7 +295,7 @@ To pause the refresh operation on error
 instead of cancelling it outright,
 add the :option:`!--wait-on-error` option:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh --wait-on-error nimble
 
@@ -312,7 +312,7 @@ and choose to abort or continue the refresh operation.
 To investigate the issue, check the recent
 :ref:`changes <ref_workshop_changes>`:
 
-.. code:: shell
+.. code:: console
 
    $ workshop changes
 
@@ -324,7 +324,7 @@ To investigate the issue, check the recent
 Having found the problematic change, explore its
 :ref:`tasks <ref_workshop_tasks>`:
 
-.. code:: shell
+.. code:: console
 
    $ workshop tasks 81
 
@@ -341,7 +341,7 @@ Having found the problematic change, explore its
 
 To continue the refresh operation:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh --continue nimble
 
@@ -350,7 +350,7 @@ To continue the refresh operation:
 
 To abort the operation and recover the last operational state:
 
-.. code:: shell
+.. code:: console
 
    $ workshop refresh --abort nimble
 
@@ -365,21 +365,21 @@ Execute commands
 When the workshop is ready,
 execute arbitrary commands in it using :ref:`ref_workshop_exec`:
 
-.. code:: shell
+.. code:: console
 
    $ workshop exec nimble go build
 
 
 To define environment variables and visibly separate the command's options:
 
-.. code:: shell
+.. code:: console
 
    $ workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
 
 
 You can run an interactive shell as well:
 
-.. code:: shell
+.. code:: console
 
    $ workshop exec nimble bash
    $ uname -a
@@ -398,7 +398,7 @@ Remove a workshop
 If you don't need a workshop anymore,
 :ref:`remove <ref_workshop_remove>` it:
 
-.. code:: shell
+.. code:: console
 
    $ workshop remove nimble
 
