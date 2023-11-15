@@ -45,14 +45,14 @@ Workshop requires
 `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
 for low-level operation:
 
-.. code-block:: bash
+.. code-block:: console
 
    sudo snap install lxd
    sudo lxd init --auto
 
 Build and install the ``workshop`` snap:
 
-.. code-block:: bash
+.. code-block:: console
 
    git clone git@github.com:canonical/workshop.git
    # -- or --
@@ -72,7 +72,7 @@ create a workshop definition file named ``.workshop.<NAME>.yaml``
 to list your project's prerequisites,
 then run ``workshop launch <NAME>``:
 
-.. code-block:: bash
+.. code-block:: console
 
    cat > .workshop.nimble.yaml <<EOF -
    name: nimble
@@ -95,7 +95,7 @@ Testing
 Workshop uses a ``go test``-compatible
 `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_:
 
-.. code-block:: bash
+.. code-block:: console
 
    go test ./...
    go test -check.f <TestName|SuiteName>
@@ -104,7 +104,7 @@ Workshop uses a ``go test``-compatible
 To run end-to-end tests and integration tests with
 `Spread <https://github.com/snapcore/spread>`_:
 
-.. code-block:: bash
+.. code-block:: console
 
    go install github.com/snapcore/spread/cmd/spread@latest
    spread
