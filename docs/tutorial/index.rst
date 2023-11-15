@@ -250,7 +250,7 @@ To refresh multiple workshops at once:
 
 .. code:: console
 
-   $ workshop refresh nimble huggingface ...
+   $ workshop refresh nimble nimble-volatile ...
 
 .. note::
 
@@ -270,8 +270,6 @@ update the definition file and refresh the workshop:
    base: ubuntu@22.04
    sdks:
      go:
-       channel: latest/stable
-     huggingface:
        channel: latest/edge
 
 
