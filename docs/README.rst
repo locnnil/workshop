@@ -80,8 +80,6 @@ then run ``workshop launch <NAME>``:
    sdks:
      go:
        channel: latest/stable
-     openjdk:
-       channel: latest/stable
    EOF
 
    workshop launch nimble

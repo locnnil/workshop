@@ -16,17 +16,17 @@ fails.
 List workshop changes
 ---------------------
 
-Consider a workshop named ``ml-transformer``
+Consider a workshop named ``nimble-volatile``
 that uses an unstable
 :ref:`SDK <exp_sdk>`
 from the ``latest/edge`` channel:
 
 .. code:: yaml
 
-   name: ml-transformer
+   name: nimble-volatile
    base: ubuntu@22.04
    sdks:
-     huggingface:
+     go:
        channel: latest/edge
 
 
@@ -36,10 +36,10 @@ operation:
 
 .. code:: console
 
-   $ workshop refresh ml-transformer
+   $ workshop refresh nimble-volatile
 
         Error: cannot perform the following tasks:
-        - Run hook "setup-base" for "huggingface" SDK (command failed with an error code (1))
+        - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
         Refresh aborted
 
 
@@ -52,7 +52,7 @@ list the *changes* in the workshop to find the one that failed:
 
        ID  Status  Spawn                Ready                Summary
        ...
-       81  Error   today at 12:20       today at 12:23       Refresh workshops "ml-transformer"
+       81  Error   today at 12:20       today at 12:23       Refresh workshops "nimble-volatile"
 
 
 List tasks in a change
