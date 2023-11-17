@@ -7,6 +7,20 @@ This is a practical introduction
 that takes you on a tour
 of the essential |project| activities.
 
+Here, you will put into practice all major steps in the life cycle of a
+*workshop*, from defining and launching it to using it with your project and
+deleting it.  The commands you're about to run comprise the majority of your
+daily needs with |project|.
+
+.. tip::
+
+   | Refer to the :ref:`explanation <exp_index>`
+     if you need a more descriptive overview.
+   | For comprehensive details,
+     see the :ref:`reference <ref_workshop_cli>`.
+   | Finally, see the :ref:`how-to guides <howto_index>`
+     if you're looking for advanced practical steps.
+
 
 Install |project|
 -----------------
@@ -403,3 +417,7 @@ If you don't need a workshop anymore,
         "nimble" removed
 
 This leaves the workshop definition intact.
+
+That was the last step of the tutorial;
+you are now familiar with the essential operations |project| provides
+and have had your first taste of what it can accomplish for you.
