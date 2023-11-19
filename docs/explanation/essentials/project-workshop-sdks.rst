@@ -5,24 +5,78 @@ Projects, workshops, workshop definitions and SDKs
 are the key building blocks of |project|.
 
 
+Introduction
+------------
+
+To start using |project|,
+it is important to understand how these concepts fit together.
+
+You can view a *project* as your working directory,
+doing all the things you would usually do there:
+create and populate repositories, write and build code, run models, and so on.
+However, the difference starts with the software dependencies
+you would earlier install as system-wide packages, container images,
+or in myriad other ways.
+Instead, they are wrapped and published as |project|-ready, isolated *SDKs*
+which you list while defining a *workshop*.
+
+A single workshop always points to a project,
+and a project may have multiple workshops referencing it,
+with each workshop containing a number of SDKs.
+
+What do you get out of this multitude?
+
+First, |project| is transactional in nature;
+you won't have to trace residual files and libraries all across your system
+after you uninstall a package that turned out too unstable to your taste.
+Even if an SDK dumps something unexpected onto the disk,
+it's contained within the workshop.
+|project| aims to encapsulate each part of functionality you may need,
+keeping things clean and tidy.
+
+Third, it's portable;
+imagine sending a *compact* tarball of your project to a coworker
+who then recreates it with exactly the same dependency versions that you used.
+What's better, this is achieved without manually customised,
+high-maintenance image definitions or configurations;
+all the work of keeping the SDKs in your workshop operational
+is done by the people who are actually responsible for it
+(namely, the publishers).
+
 .. _exp_project:
 
 Project
 -------
 
-A project is a directory that contains one or many workshop definitions.
+Technically, a project is a directory
+that contains one or many workshop definitions.
 
-When a workshop runs,
-this directory is mounted as :file:`/project/`;
-the changes to the directory are tracked
-to keep the workshop configuration in sync.
-Thus, if the directory is moved or copied,
-the mount points in related workshops are updated.
+To initialise a directory as a project,
+create a :ref:`workshop definition <exp_workshop_def>` in it
+and run :ref:`ref_workshop_launch`.
+Launching a workshop from a project
+establishes the relationship between these two,
+which is required to actually start a workshop.
 
-If the directory is deleted,
-the workshops that still refer to it
-switch to the *Error* state
-and become unavailable for any commands except :command:`remove`.
+When the workshop is then started with :ref:`ref_workshop_start`,
+the project is mounted to it as :file:`/project/`,
+and the :ref:`ref_workshop_stop` command unmounts it.
+
+.. note::
+
+   There are more :ref:`workshop <ref_workshop_cli>` commands;
+   some have a :option:`!--project` option
+   that accepts a pathname to use as the project directory.
+
+External changes to the project are tracked by the |project| daemon.
+Thus, if the project moved or copied,
+all workshops referencing it are updated
+so you can continue working uninterrupted.
+
+If the project is deleted by external means,
+workshops still referencing it
+enter the *Error* state;
+the only applicable command will be :ref:`ref_workshop_remove`.
 
 
 .. _exp_workshop:
@@ -30,7 +84,10 @@ and become unavailable for any commands except :command:`remove`.
 Workshop
 --------
 
-A *workshop* is a container that is described in a definition file.
+A *workshop* (lowercase) is a container that is described in a definition file.
+Currently, these containers are hosted by
+`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`__,
+but relying on this implementation detail isn't recommended.
 
 
 .. _exp_workshop_def:
@@ -90,7 +147,7 @@ SDKs are distributed via channels similar to
 An SDK has a state that persists SDK-specific data,
 such as a model training configuration.
 |project| saves the state before applying any changes to the SDK,
-such as in a :ref:`refresh <tut_refresh>` operation.
+which usually arrive with a :ref:`ref_workshop_refresh` operation.
 After a successful change, the state is restored.
 The specific save and restore actions
 are implemented by the publisher.

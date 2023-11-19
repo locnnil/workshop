@@ -37,6 +37,7 @@ snapd
 subcommand
 transactional
 uid
+unmounts
 webhook
 workshopd
 yaml

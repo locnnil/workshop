@@ -1,3 +1,5 @@
+.. _ref_workshop_cli:
+
 Reference (CLI)
 ===============
 
