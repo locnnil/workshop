@@ -54,7 +54,7 @@ that contains one or many workshop definitions.
 To initialise a directory as a project,
 create a :ref:`workshop definition <exp_workshop_def>` in it
 and run :ref:`ref_workshop_launch`.
-Launching a workspace from a project
+Launching a workshop from a project
 establishes the relationship between these two,
 which is required to actually start a workshop.
 
