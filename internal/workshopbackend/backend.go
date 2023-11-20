@@ -22,12 +22,6 @@ func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
 	}
 }
 
-func EveryWorkshop() WorkshopConfigFilter {
-	return func(config map[string]string) bool {
-		return true
-	}
-}
-
 type ErrExec struct {
 	Status int
 }

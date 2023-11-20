@@ -45,7 +45,7 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	task := sdkstate.Retrieve(i.state, &sdk)
 
 	var s workshopbackend.SdkRecord
-	task.Get("sdk-setup", &s)
+	task.Get("sdk-record", &s)
 	c.Check(s, check.DeepEquals, sdk)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
 	c.Check(task.Summary(), check.Equals, "Retrieve \"sdk\" SDK from channel \"latest/stable\"")

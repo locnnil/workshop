@@ -22,7 +22,6 @@ func (s *SdkSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 
 	s.setup = sdk.Setup{
-		Workshop:    "ws",
 		Name:        "sdk",
 		Channel:     "latest/stable",
 		Revision:    1,
@@ -41,7 +40,7 @@ func (s *SdkSuite) TestSimple(c *check.C) {
 base: ubuntu@20.04
 `)
 
-	info, err := sdk.ReadSdkInfo(mockYaml, s.setup)
+	info, err := sdk.ReadSdkInfo(mockYaml, "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Base, check.Equals, "ubuntu@20.04")
 	c.Assert(info.Name, check.Equals, "sdk")
@@ -61,7 +60,7 @@ plugs:
     target: /project
 `)
 
-	info, err := sdk.ReadSdkInfo(mockYaml, s.setup)
+	info, err := sdk.ReadSdkInfo(mockYaml, "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Plugs, check.HasLen, 1)
 	c.Assert(info.Slots, check.HasLen, 0)
@@ -82,7 +81,7 @@ slots:
     source: /project
 `)
 
-	info, err := sdk.ReadSdkInfo(mockYaml, s.setup)
+	info, err := sdk.ReadSdkInfo(mockYaml, "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Slots, check.HasLen, 1)
 	c.Assert(info.Plugs, check.HasLen, 0)
@@ -106,7 +105,7 @@ plugs:
         m:
           a: A
           b: B
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Plugs, check.HasLen, 1)
 	c.Assert(info.Slots, check.HasLen, 0)
@@ -133,7 +132,7 @@ plugs:
     net:
         interface: content
         attr: 2
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Plugs, check.HasLen, 1)
 	c.Assert(info.Slots, check.HasLen, 0)
@@ -152,7 +151,7 @@ name: sdk
 plugs:
     content:
         ipv6-aware: true
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 1)
 	c.Check(info.Slots, check.HasLen, 0)
@@ -171,7 +170,7 @@ name: sdk
 plugs:
     bool-file:
         label: Disk I/O indicator
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 
 	c.Check(info.Plugs, check.HasLen, 1)
@@ -193,7 +192,7 @@ plugs:
     net:
         interface: 1.0
         ipv6-aware: true
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `interface name on plug "net" is not a string \(found float64\)`)
 }
 
@@ -204,7 +203,7 @@ name: sdk
 plugs:
     bool-file:
         label: 1.0
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `label of plug "bool-file" is not a string \(found float64\)`)
 }
 
@@ -215,7 +214,7 @@ name: sdk
 plugs:
     net:
         1: ok
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `plug "net" has attribute key that is not a string \(found int\)`)
 }
 
@@ -226,7 +225,7 @@ name: sdk
 plugs:
     net:
         "": ok
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `plug "net" has an empty attribute key`)
 }
 
@@ -236,7 +235,7 @@ func (s *SdkSuite) TestUnmarshalCorruptedPlugWithUnexpectedType(c *check.C) {
 name: sdk
 plugs:
     net: 5
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `plug "net" has malformed definition \(found int\)`)
 }
 
@@ -248,7 +247,7 @@ plugs:
     serial:
         interface: serial-port
         $baud-rate: [9600]
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `plug "serial" uses reserved attribute "\$baud-rate"`)
 }
 
@@ -260,7 +259,7 @@ plugs:
     serial:
         interface: serial-port
         foo: null
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `attribute "foo" of plug \"serial\": invalid scalar:.*`)
 }
 
@@ -274,7 +273,7 @@ plugs:
         bar:
           baz:
           - 1: A
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `attribute "bar" of plug \"serial\": non-string key: 1`)
 }
 
@@ -286,7 +285,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneImplicitSlot(c *check.C) {
 name: sdk
 slots:
     content:
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -303,7 +302,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneAbbreviatedSlot(c *check.C) {
 name: sdk
 slots:
     net: content
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -322,7 +321,7 @@ slots:
     net:
         interface: content
         ipv6-aware: true
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -345,7 +344,7 @@ slots:
         l: [1,2]
         m:
           a: "A"
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -372,7 +371,7 @@ slots:
     net:
         interface: content
         attr: 2
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -391,7 +390,7 @@ name: sdk
 slots:
     content:
         ipv6-aware: true
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -411,7 +410,7 @@ slots:
     led0:
         interface: bool-file
         label: Front panel LED (red)
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
@@ -431,7 +430,7 @@ slots:
     net:
         interface: 1.0
         ipv6-aware: true
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `interface name on slot "net" is not a string \(found float64\)`)
 }
 
@@ -442,7 +441,7 @@ name: sdk
 slots:
     bool-file:
         label: 1.0
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `label of slot "bool-file" is not a string \(found float64\)`)
 }
 
@@ -453,7 +452,7 @@ name: sdk
 slots:
     net:
         1: ok
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `slot "net" has attribute key that is not a string \(found int\)`)
 }
 
@@ -464,7 +463,7 @@ name: sdk
 slots:
     net:
         "": ok
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `slot "net" has an empty attribute key`)
 }
 
@@ -474,7 +473,7 @@ func (s *SdkSuite) TestUnmarshalCorruptedSlotWithUnexpectedType(c *check.C) {
 name: sdk
 slots:
     net: 5
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `slot "net" has malformed definition \(found int\)`)
 }
 
@@ -486,7 +485,7 @@ slots:
     serial:
         interface: serial-port
         $baud-rate: [9600]
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `slot "serial" uses reserved attribute "\$baud-rate"`)
 }
 
@@ -498,6 +497,6 @@ slots:
     serial:
         interface: serial-port
         foo: null
-`), s.setup)
+`), "ws", s.setup)
 	c.Assert(err, check.ErrorMatches, `attribute "foo" of slot \"serial\": invalid scalar:.*`)
 }

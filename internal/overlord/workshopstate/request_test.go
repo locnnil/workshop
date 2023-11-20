@@ -105,11 +105,11 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 	verifyExpectedTasks(c, tasks, expected)
 
 	var s1, s2 workshopbackend.SdkRecord
-	err = tasks[3].Get("sdk-setup", &s1)
+	err = tasks[3].Get("sdk-record", &s1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(s1, check.Equals, sdk)
 
-	err = tasks[4].Get("sdk-setup", &s2)
+	err = tasks[4].Get("sdk-record", &s2)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(s2, check.Equals, sdk_2)
 

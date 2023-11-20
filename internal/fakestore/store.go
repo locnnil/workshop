@@ -82,7 +82,7 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (sdk.
 		if atr, err := obj.Attrs(ctx); err != nil {
 			return s, err
 		} else {
-			/* A simple modulo to keep revision numbers in a readble form for testing */
+			// A simple modulo to keep revision numbers in a readble form for testing
 			revision = atr.Generation % 1000
 		}
 

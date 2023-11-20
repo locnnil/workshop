@@ -240,7 +240,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -284,7 +284,7 @@ slots:
 `
 	s.mockTestSdk(c, sdkYaml)
 
-	testSdk := sdk.Setup{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)

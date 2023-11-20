@@ -246,7 +246,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, s)
+	info, err := sdk.ReadSdkInfo(yamlData, w.Name, s)
 	if err != nil {
 		return nil, err
 	}

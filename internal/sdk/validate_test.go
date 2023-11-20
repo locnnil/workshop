@@ -63,7 +63,7 @@ func (s *ValidateSuite) TestValidateSlotPlugInterfaceName(c *check.C) {
 
 func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
-`), sdk.Setup{})
+`), "ws", sdk.Setup{})
 	c.Assert(err, check.IsNil)
 
 	err = sdk.Validate(info)
@@ -73,7 +73,7 @@ func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 func (s *ValidateSuite) TestIllegalSdkBase(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
 base: ubuntu@20.04
-`), sdk.Setup{})
+`), "ws", sdk.Setup{})
 	c.Assert(err, check.IsNil)
 
 	err = sdk.Validate(info)
