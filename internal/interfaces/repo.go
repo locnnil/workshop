@@ -35,9 +35,9 @@ type Repository struct {
 	// Protects the internals from concurrent access.
 	m      sync.Mutex
 	ifaces map[string]Interface
-	// Indexed by [workshop-sdk][plugName]
+	// Indexed by [project-id-workshop-sdk][plugName]
 	plugs map[string]map[string]*sdk.PlugInfo
-	// Indexed by [workshop-sdk][plugName]
+	// Indexed by [project-id-workshop-sdk][slotName]
 	slots map[string]map[string]*sdk.SlotInfo
 	// given a slot and a plug, are they connected?
 	slotPlugs map[*sdk.SlotInfo]map[*sdk.PlugInfo]*Connection
@@ -59,8 +59,8 @@ func NewRepository() *Repository {
 	return repo
 }
 
-func plugOrSlotKey(workshop, sdkName string) string {
-	return strings.Join([]string{workshop, sdkName}, "-")
+func plugOrSlotKey(projectId, workshop, sdkName string) string {
+	return strings.Join([]string{projectId, workshop, sdkName}, "-")
 }
 
 // Interface returns an interface with a given name.
@@ -244,11 +244,11 @@ func (r *Repository) AllPlugs(interfaceName string) []*sdk.PlugInfo {
 }
 
 // Plugs returns the plugs offered by the named sdk.
-func (r *Repository) Plugs(workshop, sdkName string) []*sdk.PlugInfo {
+func (r *Repository) Plugs(projectId, workshop, sdkName string) []*sdk.PlugInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	var result []*sdk.PlugInfo
 	for _, plug := range r.plugs[key] {
@@ -259,19 +259,19 @@ func (r *Repository) Plugs(workshop, sdkName string) []*sdk.PlugInfo {
 }
 
 // Plug returns the specified plug from the named sdk.
-func (r *Repository) Plug(workshop, sdkName, plugName string) *sdk.PlugInfo {
+func (r *Repository) Plug(projectId, workshop, sdkName, plugName string) *sdk.PlugInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	return r.plugs[key][plugName]
 }
 
 // Connection returns the specified Connection object or an error.
 func (r *Repository) Connection(connRef *ConnRef) (*Connection, error) {
-	plugkey := plugOrSlotKey(connRef.PlugRef.Workshop, connRef.PlugRef.Sdk)
-	slotkey := plugOrSlotKey(connRef.SlotRef.Workshop, connRef.SlotRef.Sdk)
+	plugkey := plugOrSlotKey(connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop, connRef.PlugRef.Sdk)
+	slotkey := plugOrSlotKey(connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop, connRef.SlotRef.Sdk)
 
 	// Ensure that such plug exists
 	plug := r.plugs[plugkey][connRef.PlugRef.Name]
@@ -306,7 +306,7 @@ func (r *Repository) AddPlug(plug *sdk.PlugInfo) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(plug.Sdk.Workshop, plug.Sdk.Name)
+	key := plugOrSlotKey(plug.Sdk.ProjectId, plug.Sdk.Workshop, plug.Sdk.Name)
 
 	// Reject plugs with invalid names
 	if err := sdk.ValidatePlugName(plug.Name); err != nil {
@@ -331,11 +331,11 @@ func (r *Repository) AddPlug(plug *sdk.PlugInfo) error {
 
 // RemovePlug removes the named plug provided by a given sdk.
 // The removed plug must exist and must not be used anywhere.
-func (r *Repository) RemovePlug(workshop, sdkName, plugName string) error {
+func (r *Repository) RemovePlug(projectId, workshop, sdkName, plugName string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	// Ensure that such plug exists
 	plug := r.plugs[key][plugName]
@@ -372,11 +372,11 @@ func (r *Repository) AllSlots(interfaceName string) []*sdk.SlotInfo {
 }
 
 // Slots returns the slots offered by the named sdk.
-func (r *Repository) Slots(workshop, sdkName string) []*sdk.SlotInfo {
+func (r *Repository) Slots(projectId, workshop, sdkName string) []*sdk.SlotInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	var result []*sdk.SlotInfo
 	for _, slot := range r.slots[key] {
@@ -387,11 +387,11 @@ func (r *Repository) Slots(workshop, sdkName string) []*sdk.SlotInfo {
 }
 
 // Slot returns the specified slot from the named sdk.
-func (r *Repository) Slot(workshop, sdkName, slotName string) *sdk.SlotInfo {
+func (r *Repository) Slot(projectId, workshop, sdkName, slotName string) *sdk.SlotInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	return r.slots[key][slotName]
 }
@@ -403,7 +403,7 @@ func (r *Repository) AddSlot(slot *sdk.SlotInfo) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(slot.Sdk.Workshop, slot.Sdk.Name)
+	key := plugOrSlotKey(slot.Sdk.ProjectId, slot.Sdk.Workshop, slot.Sdk.Name)
 
 	// Reject slots with invalid names
 	if err := sdk.ValidateSlotName(slot.Name); err != nil {
@@ -430,11 +430,11 @@ func (r *Repository) AddSlot(slot *sdk.SlotInfo) error {
 // RemoveSlot removes a named slot from the given sdk.
 // Removing a slot that doesn't exist returns an error.
 // Removing a slot that is connected to a plug returns an error.
-func (r *Repository) RemoveSlot(workshop, sdkName, slotName string) error {
+func (r *Repository) RemoveSlot(projectId, workshop, sdkName, slotName string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	// Ensure that such slot exists
 	slot := r.slots[key][slotName]
@@ -476,8 +476,8 @@ func (r *Repository) Connect(ref *ConnRef, plugStaticAttrs, plugDynamicAttrs, sl
 	slotSdkName := ref.SlotRef.Sdk
 	slotName := ref.SlotRef.Name
 
-	plugKey := plugOrSlotKey(ref.PlugRef.Workshop, plugSdkName)
-	slotKey := plugOrSlotKey(ref.SlotRef.Workshop, slotSdkName)
+	plugKey := plugOrSlotKey(ref.PlugRef.ProjectId, ref.PlugRef.Workshop, plugSdkName)
+	slotKey := plugOrSlotKey(ref.SlotRef.ProjectId, ref.SlotRef.Workshop, slotSdkName)
 
 	// Ensure that such plug exists
 	plug := r.plugs[plugKey][plugName]
@@ -566,7 +566,7 @@ func (e *NoPlugOrSlotError) Error() string {
 // Disconnect() finds a specific slot and a specific plug and disconnects that
 // plug from that slot. It is an error if plug or slot cannot be found or if
 // the connect does not exist.
-func (r *Repository) Disconnect(plugWorkshop, plugSdkName, plugName, slotWorkshop, slotSdkName, slotName string) error {
+func (r *Repository) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugName, slotProjectId, slotWorkshop, slotSdkName, slotName string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -584,8 +584,8 @@ func (r *Repository) Disconnect(plugWorkshop, plugSdkName, plugName, slotWorksho
 		return fmt.Errorf("cannot disconnect, slot name is empty")
 	}
 
-	plugKey := plugOrSlotKey(plugWorkshop, plugSdkName)
-	slotKey := plugOrSlotKey(slotWorkshop, slotSdkName)
+	plugKey := plugOrSlotKey(plugProjectId, plugWorkshop, plugSdkName)
+	slotKey := plugOrSlotKey(slotProjectId, slotWorkshop, slotSdkName)
 
 	// Ensure that such plug exists
 	plug := r.plugs[plugKey][plugName]
@@ -620,8 +620,8 @@ func (r *Repository) DisconnectAll(conns []*ConnRef) {
 	defer r.m.Unlock()
 
 	for _, conn := range conns {
-		plugkey := plugOrSlotKey(conn.PlugRef.Workshop, conn.PlugRef.Sdk)
-		slotkey := plugOrSlotKey(conn.SlotRef.Workshop, conn.SlotRef.Sdk)
+		plugkey := plugOrSlotKey(conn.PlugRef.ProjectId, conn.PlugRef.Workshop, conn.PlugRef.Sdk)
+		slotkey := plugOrSlotKey(conn.SlotRef.ProjectId, conn.SlotRef.Workshop, conn.SlotRef.Sdk)
 
 		plug := r.plugs[plugkey][conn.PlugRef.Name]
 		slot := r.slots[slotkey][conn.SlotRef.Name]
@@ -645,14 +645,14 @@ func (r *Repository) disconnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) {
 
 // Connected returns references for all connections that are currently
 // established with the provided plug or slot.
-func (r *Repository) Connected(workshop, sdkName, plugOrSlotName string) ([]*ConnRef, error) {
+func (r *Repository) Connected(projectId, workshop, sdkName, plugOrSlotName string) ([]*ConnRef, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	return r.connected(workshop, sdkName, plugOrSlotName)
+	return r.connected(projectId, workshop, sdkName, plugOrSlotName)
 }
 
-func (r *Repository) connected(workshop, sdk, plugOrSlotName string) ([]*ConnRef, error) {
+func (r *Repository) connected(projectId, workshop, sdk, plugOrSlotName string) ([]*ConnRef, error) {
 	if workshop == "" {
 		return nil, fmt.Errorf("internal error: cannot obtain workshop name while computing connections")
 	}
@@ -661,7 +661,7 @@ func (r *Repository) connected(workshop, sdk, plugOrSlotName string) ([]*ConnRef
 		return nil, fmt.Errorf("internal error: cannot obtain sdk name while computing connections")
 	}
 
-	key := plugOrSlotKey(workshop, sdk)
+	key := plugOrSlotKey(projectId, workshop, sdk)
 
 	var conns []*ConnRef
 	if plugOrSlotName == "" {
@@ -692,7 +692,7 @@ func (r *Repository) connected(workshop, sdk, plugOrSlotName string) ([]*ConnRef
 	return conns, nil
 }
 
-func (r *Repository) Connections(workshop, sdk string) ([]*ConnRef, error) {
+func (r *Repository) Connections(projectId, workshop, sdk string) ([]*ConnRef, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 	if workshop == "" {
@@ -703,7 +703,7 @@ func (r *Repository) Connections(workshop, sdk string) ([]*ConnRef, error) {
 		return nil, fmt.Errorf("internal error: cannot obtain sdk name while computing connections")
 	}
 
-	key := plugOrSlotKey(workshop, sdk)
+	key := plugOrSlotKey(projectId, workshop, sdk)
 
 	var conns []*ConnRef
 	for _, plugInfo := range r.plugs[key] {
@@ -796,7 +796,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 
 	spec := backend.NewSpecification(user, projectId)
 
-	key := plugOrSlotKey(sdkInfo.Workshop, sdkInfo.Name)
+	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
 
 	// XXX: If either of the AddConnected{Plug,Slot} methods for a connection
 	// fail resiliently as-in they can never succeed (such as the case where a
@@ -859,7 +859,7 @@ func (r *Repository) AddSdk(sdkInfo *sdk.Info) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(sdkInfo.Workshop, sdkInfo.Name)
+	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
 
 	if r.plugs[key] != nil || r.slots[key] != nil {
 		return fmt.Errorf("cannot register interfaces for %q SDK more than once", key)
@@ -895,11 +895,11 @@ func (r *Repository) AddSdk(sdkInfo *sdk.Info) error {
 // RemoveSdk does not remove connections. The caller is responsible for
 // ensuring that connections are broken before calling this method. If this
 // constraint is violated then no changes are made and an error is returned.
-func (r *Repository) RemoveSdk(workshop, sdkName string) error {
+func (r *Repository) RemoveSdk(projectId, workshop, sdkName string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	for plugName, plug := range r.plugs[key] {
 		if len(r.plugSlots[plug]) > 0 {
@@ -927,11 +927,11 @@ func (r *Repository) RemoveSdk(workshop, sdkName string) error {
 // DisconnectSdk disconnects all the connections to and from a given sdk.
 //
 // The return value is a list of names that were affected.
-func (r *Repository) DisconnectSdk(workshop, sdkName string) ([]string, error) {
+func (r *Repository) DisconnectSdk(projectId, workshop, sdkName string) ([]string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, sdkName)
+	key := plugOrSlotKey(projectId, workshop, sdkName)
 
 	seen := make(map[*sdk.Info]bool)
 
@@ -970,11 +970,11 @@ type SideArity interface {
 
 // AutoConnectCandidateSlots finds and returns viable auto-connection candidates
 // for a given plug.
-func (r *Repository) AutoConnectCandidateSlots(workshop, plugSdkName, plugName string, policyCheck func(*ConnectedPlug, *ConnectedSlot) (bool, error)) []*sdk.SlotInfo {
+func (r *Repository) AutoConnectCandidateSlots(projectId, workshop, plugSdkName, plugName string, policyCheck func(*ConnectedPlug, *ConnectedSlot) (bool, error)) []*sdk.SlotInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, plugSdkName)
+	key := plugOrSlotKey(projectId, workshop, plugSdkName)
 
 	plugInfo := r.plugs[key][plugName]
 	if plugInfo == nil {
@@ -1005,11 +1005,11 @@ func (r *Repository) AutoConnectCandidateSlots(workshop, plugSdkName, plugName s
 
 // AutoConnectCandidatePlugs finds and returns viable auto-connection candidates
 // for a given slot.
-func (r *Repository) AutoConnectCandidatePlugs(workshop, slotSdkName, slotName string, policyCheck func(*ConnectedPlug, *ConnectedSlot) (bool, error)) []*sdk.PlugInfo {
+func (r *Repository) AutoConnectCandidatePlugs(projectId, workshop, slotSdkName, slotName string, policyCheck func(*ConnectedPlug, *ConnectedSlot) (bool, error)) []*sdk.PlugInfo {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	key := plugOrSlotKey(workshop, slotSdkName)
+	key := plugOrSlotKey(projectId, workshop, slotSdkName)
 
 	slotInfo := r.slots[key][slotName]
 	if slotInfo == nil {

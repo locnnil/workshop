@@ -228,6 +228,11 @@ func WorkshopStateVolumeName(ws, pid string) string {
 // if the filesystem of the container is not closed, it maintains the underlying
 // SFTP connection which stops the container from stoppping.
 func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key project-id not found")
+	}
+
 	wsfs, err := w.backend.GetWorkshopFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
@@ -246,7 +251,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, w.Name, s)
+	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name, s)
 	if err != nil {
 		return nil, err
 	}

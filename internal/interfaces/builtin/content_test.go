@@ -34,7 +34,8 @@ import (
 )
 
 type ContentSuite struct {
-	iface interfaces.Interface
+	iface     interfaces.Interface
+	projectId string
 }
 
 func Test(t *testing.T) {
@@ -44,6 +45,10 @@ func Test(t *testing.T) {
 var _ = check.Suite(&ContentSuite{
 	iface: builtin.MustInterface("content"),
 })
+
+func (s *ContentSuite) SetUpTest(c *check.C) {
+	s.projectId = "42424242"
+}
 
 func (s *ContentSuite) TestName(c *check.C) {
 	c.Assert(s.iface.Name(), check.Equals, "content")
@@ -56,7 +61,7 @@ slots:
  content-slot:
   interface: content
 `
-	info := sdk.MockInfo(c, mockSdkYaml, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
 	slot := info.Slots["content-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
@@ -69,7 +74,7 @@ plugs:
   interface: content
   target: import
 `
-	info := sdk.MockInfo(c, mockSdkYaml, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 }
@@ -82,7 +87,7 @@ plugs:
   interface: content
   content: mycont
 `
-	info := sdk.MockInfo(c, mockSdkYaml, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content plug must contain target path")
 }
@@ -96,7 +101,7 @@ plugs:
   content: mycont
   target: ../foo
 `
-	info := sdk.MockInfo(c, mockSdkYaml, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content interface path is not clean:.*")
 }
@@ -111,14 +116,14 @@ base: ubuntu@22.04
 plugs:
  content:
   target: /project/training
-`, "ws", sdk.Setup{}, "content")
+`, s.projectId, "ws", sdk.Setup{}, "content")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
 base: ubuntu@22.04
 slots:
  content:
-`, "ws", sdk.Setup{}, "content")
+`, s.projectId, "ws", sdk.Setup{}, "content")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec := &device.Specification{}
 

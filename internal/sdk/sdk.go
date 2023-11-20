@@ -41,12 +41,13 @@ func (t Type) String() string {
 }
 
 type Info struct {
-	Workshop string
-	Name     string
-	Base     string
-	Type     Type
-	Channel  string
-	Revision int64
+	ProjectId string
+	Workshop  string
+	Name      string
+	Base      string
+	Type      Type
+	Channel   string
+	Revision  int64
 
 	Plugs map[string]*PlugInfo
 	Slots map[string]*SlotInfo
@@ -58,7 +59,7 @@ var SanitizePlugsSlots = func(snapInfo *Info) {
 	panic("SanitizePlugsSlots function not set")
 }
 
-func ReadSdkInfo(yamlData []byte, workshop string, setup Setup) (*Info, error) {
+func ReadSdkInfo(yamlData []byte, projectId, workshop string, setup Setup) (*Info, error) {
 	var sdkYaml sdkYaml
 	err := yaml.Unmarshal(yamlData, &sdkYaml)
 	if err != nil {
@@ -70,6 +71,7 @@ func ReadSdkInfo(yamlData []byte, workshop string, setup Setup) (*Info, error) {
 	}
 
 	sdkInfo := &Info{
+		ProjectId:     projectId,
 		Workshop:      workshop,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
@@ -289,10 +291,10 @@ func MockSanitizePlugsSlots(f func(snapInfo *Info)) (restore func()) {
 	return func() { SanitizePlugsSlots = old }
 }
 
-func MockInfo(c *check.C, yamlText string, workshop string, setup Setup) *Info {
+func MockInfo(c *check.C, yamlText string, projectId, workshop string, setup Setup) *Info {
 	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
 	defer restoreSanitize()
-	info, err := ReadSdkInfo([]byte(yamlText), workshop, setup)
+	info, err := ReadSdkInfo([]byte(yamlText), projectId, workshop, setup)
 	c.Assert(err, check.IsNil)
 
 	err = Validate(info)
@@ -304,7 +306,7 @@ func MockInvalidInfo(c *check.C, yamlText string, setup Setup) *Info {
 	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
 	defer restoreSanitize()
 
-	sdkInfo, err := ReadSdkInfo([]byte(yamlText), "ws", setup)
+	sdkInfo, err := ReadSdkInfo([]byte(yamlText), "invalid", "ws", setup)
 	c.Assert(err, check.IsNil)
 	err = Validate(sdkInfo)
 	c.Assert(err, check.NotNil)

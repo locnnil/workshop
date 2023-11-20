@@ -31,8 +31,9 @@ import (
 
 type connSuite struct {
 	testutil.BaseTest
-	plug *sdk.PlugInfo
-	slot *sdk.SlotInfo
+	plug      *sdk.PlugInfo
+	slot      *sdk.SlotInfo
+	projectId string
 }
 
 var _ = check.Suite(&connSuite{})
@@ -40,6 +41,7 @@ var _ = check.Suite(&connSuite{})
 func (s *connSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
+	s.projectId = "42424242"
 	consumer := sdk.MockInfo(c, `
 name: consumer
 base: ubuntu@22.04
@@ -49,7 +51,7 @@ plugs:
         attr: value
         complex:
             c: d
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	s.plug = consumer.Plugs["plug"]
 	producer := sdk.MockInfo(c, `
 name: producer
@@ -61,7 +63,7 @@ slots:
         number: 100
         complex:
             a: b
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	s.slot = producer.Slots["slot"]
 }
 

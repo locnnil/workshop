@@ -60,9 +60,10 @@ var ByName = func(name string) (iface Interface, err error) {
 
 // PlugRef is a reference to a plug.
 type PlugRef struct {
-	Workshop string `json:"workshop"`
-	Sdk      string `json:"sdk"`
-	Name     string `json:"plug"`
+	ProjectId string `json:"project-id"`
+	Workshop  string `json:"workshop"`
+	Sdk       string `json:"sdk"`
+	Name      string `json:"plug"`
 }
 
 // String returns the "sdk:plug" representation of a plug reference.
@@ -93,9 +94,10 @@ func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 
 // SlotRef is a reference to a slot.
 type SlotRef struct {
-	Workshop string `json:"workshop"`
-	Sdk      string `json:"sdk"`
-	Name     string `json:"slot"`
+	ProjectId string `json:"project-id"`
+	Workshop  string `json:"workshop"`
+	Sdk       string `json:"sdk"`
+	Name      string `json:"slot"`
 }
 
 // String returns the "sdk:slot" representation of a slot reference.
@@ -136,14 +138,16 @@ type ConnRef struct {
 // NewConnRef creates a connection reference for given plug and slot
 func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 	return &ConnRef{
-		PlugRef: PlugRef{Sdk: plug.Sdk.Name, Name: plug.Name, Workshop: plug.Sdk.Workshop},
-		SlotRef: SlotRef{Sdk: slot.Sdk.Name, Name: slot.Name, Workshop: slot.Sdk.Workshop},
+		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Sdk: plug.Sdk.Name, Name: plug.Name, Workshop: plug.Sdk.Workshop},
+		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Sdk: slot.Sdk.Name, Name: slot.Name, Workshop: slot.Sdk.Workshop},
 	}
 }
 
 // ID returns a string identifying a given connection.
 func (conn *ConnRef) ID() string {
-	return fmt.Sprintf("%s:%s:%s %s:%s:%s", conn.PlugRef.Workshop, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Workshop, conn.SlotRef.Sdk, conn.SlotRef.Name)
+	return fmt.Sprintf("%s:%s:%s:%s %s:%s:%s:%s",
+		conn.PlugRef.ProjectId, conn.PlugRef.Workshop, conn.PlugRef.Sdk, conn.PlugRef.Name,
+		conn.SlotRef.ProjectId, conn.SlotRef.Workshop, conn.SlotRef.Sdk, conn.SlotRef.Name)
 }
 
 // SortsBefore returns true when connection should be sorted before the other
@@ -163,16 +167,19 @@ func ParseConnRef(id string) (*ConnRef, error) {
 	}
 	plugParts := strings.Split(parts[0], ":")
 	slotParts := strings.Split(parts[1], ":")
-	if len(plugParts) != 3 || len(slotParts) != 3 {
+	if len(plugParts) != 4 || len(slotParts) != 4 {
 		return nil, fmt.Errorf("malformed connection identifier: %q", id)
 	}
 
-	conn.PlugRef.Workshop = plugParts[0]
-	conn.PlugRef.Sdk = plugParts[1]
-	conn.PlugRef.Name = plugParts[2]
-	conn.SlotRef.Workshop = slotParts[0]
-	conn.SlotRef.Sdk = slotParts[1]
-	conn.SlotRef.Name = slotParts[2]
+	conn.PlugRef.ProjectId = plugParts[0]
+	conn.PlugRef.Workshop = plugParts[1]
+	conn.PlugRef.Sdk = plugParts[2]
+	conn.PlugRef.Name = plugParts[3]
+
+	conn.SlotRef.ProjectId = slotParts[0]
+	conn.SlotRef.Workshop = slotParts[1]
+	conn.SlotRef.Sdk = slotParts[2]
+	conn.SlotRef.Name = slotParts[3]
 	return &conn, nil
 }
 

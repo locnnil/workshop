@@ -79,7 +79,7 @@ func (m *InterfaceManager) StartUp() error {
 
 	}
 
-	if _, err := m.reloadConnections("", ""); err != nil {
+	if _, err := m.reloadConnections(""); err != nil {
 		return err
 	}
 	return nil
@@ -94,7 +94,7 @@ func (m *InterfaceManager) Ensure() error {
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(workshop, sdkName string) (map[string]string, error) {
+func (m *InterfaceManager) reloadConnections(workshop string) (map[string]string, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
@@ -118,8 +118,8 @@ func (m *InterfaceManager) reloadConnections(workshop, sdkName string) (map[stri
 			continue
 		}
 
-		plugInfo := m.repo.Plug(connRef.PlugRef.Workshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
-		slotInfo := m.repo.Slot(connRef.SlotRef.Workshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
+		plugInfo := m.repo.Plug(connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name)
+		slotInfo := m.repo.Slot(connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name)
 
 		// The connection refers to a plug or slot that doesn't exist anymore, e.g. because of a refresh
 		// to a new sdk revision that doesn't have the given plug/slot.
