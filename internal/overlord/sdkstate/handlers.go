@@ -26,7 +26,7 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	defer st.Unlock()
 
 	var retrieveId string
-	var blob sdk.Setup
+	var sdkSetup sdk.Setup
 
 	err := task.Get("sdk-retrieve-task", &retrieveId)
 
@@ -39,10 +39,10 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 		return sdk.Setup{}, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
 	}
 
-	if err = retrieve.Get("sdk-setup", &blob); err != nil {
+	if err = retrieve.Get("sdk-setup", &sdkSetup); err != nil {
 		return sdk.Setup{}, err
 	}
-	return blob, nil
+	return sdkSetup, nil
 }
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -50,7 +50,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	var sdk workshopbackend.SdkRecord
 
 	st.Lock()
-	err := task.Get("sdk-setup", &sdk)
+	err := task.Get("sdk-record", &sdk)
 	st.Unlock()
 
 	if err != nil {

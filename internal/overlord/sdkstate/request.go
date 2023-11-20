@@ -9,7 +9,7 @@ import (
 
 func Retrieve(st *state.State, sdk *workshopbackend.SdkRecord) *state.Task {
 	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve %q SDK from channel %q", sdk.Name, sdk.Channel))
-	download.Set("sdk-setup", sdk)
+	download.Set("sdk-record", sdk)
 	return download
 }
 

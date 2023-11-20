@@ -232,7 +232,7 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][
 		// task of our refresh will wait until all the other refresh operations
 		// finished. This will ensure that we start to remove the workshops'
 		// previous copies once all the refresh operations were successful (at
-		// this stage, we only need to remove a copy, the newly refreshed
+		// this stage, we only need to remove a stashed copy, the newly refreshed
 		// workshop is already up and running). Thus, every CleanupEdge will
 		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
 		// other changes before execution.
@@ -249,7 +249,7 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][
 				// start to Undo those workshops' refresh progress we will
 				// endup deleting the workshops that finished their refresh.
 				// Given that they have no copy already, the undo logic
-				// (undoMakeWorkshopCopy) will delete the existing workshop
+				// (stash-workshop) will delete the existing workshop
 				// and fail to restore from the copy. We don't want that. Hence,
 				// all the cleanup tasks are extracted into a separate lane. If
 				// any problem happens, the workshops which had finished their
