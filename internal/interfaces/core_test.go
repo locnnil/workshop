@@ -38,6 +38,7 @@ func Test(t *testing.T) {
 
 type CoreSuite struct {
 	testutil.BaseTest
+	projectId string
 }
 
 var _ = Suite(&CoreSuite{})
@@ -45,6 +46,7 @@ var _ = Suite(&CoreSuite{})
 func (s *CoreSuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
+	s.projectId = "42424242"
 }
 
 func (s *CoreSuite) TearDownTest(c *C) {
@@ -70,19 +72,19 @@ func (s *CoreSuite) TestSlotRefString(c *C) {
 // ConnRef.ID works as expected
 func (s *CoreSuite) TestConnRefID(c *C) {
 	conn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
 	}
-	c.Check(conn.ID(), Equals, "ws:consumer:plug ws:producer:slot")
+	c.Check(conn.ID(), Equals, fmt.Sprintf("%s:ws:consumer:plug %s:ws:producer:slot", s.projectId, s.projectId))
 }
 
 // ParseConnRef works as expected
 func (s *CoreSuite) TestParseConnRef(c *C) {
-	ref, err := interfaces.ParseConnRef("ws:consumer:plug ws:producer:slot")
+	ref, err := interfaces.ParseConnRef("42424242:ws:consumer:plug 42424242:ws:producer:slot")
 	c.Assert(err, IsNil)
 	c.Check(ref, DeepEquals, &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
 	})
 	_, err = interfaces.ParseConnRef("garbage")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: "garbage"`)
@@ -149,7 +151,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mock-service-snippets
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["plug"]
 
 	snips, err := interfaces.PermanentPlugServiceSnippets(iface, plug)
@@ -173,7 +175,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: unclean-service-snippets
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["plug"]
 
 	iface, err := interfaces.ByName("unclean-service-snippets")
@@ -191,7 +193,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: iface
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	plug := info.Plugs["plug"]
 	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
 		InterfaceName: "iface",
@@ -212,7 +214,7 @@ base: ubuntu@22.04
 slots:
   slot:
     interface: iface
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	slot := info.Slots["slot"]
 	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
 		InterfaceName: "iface",

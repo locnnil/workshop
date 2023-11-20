@@ -8,6 +8,7 @@ import (
 
 type ValidateSuite struct {
 	testutil.BaseTest
+	projectId string
 }
 
 var _ = check.Suite(&ValidateSuite{})
@@ -15,6 +16,7 @@ var _ = check.Suite(&ValidateSuite{})
 func (s *ValidateSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.projectId = "prj-4242"
 }
 
 func (s *ValidateSuite) TearDownTest(c *check.C) {
@@ -63,7 +65,7 @@ func (s *ValidateSuite) TestValidateSlotPlugInterfaceName(c *check.C) {
 
 func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
-`), "ws", sdk.Setup{})
+`), s.projectId, "ws", sdk.Setup{})
 	c.Assert(err, check.IsNil)
 
 	err = sdk.Validate(info)
@@ -73,7 +75,7 @@ func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 func (s *ValidateSuite) TestIllegalSdkBase(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
 base: ubuntu@20.04
-`), "ws", sdk.Setup{})
+`), s.projectId, "ws", sdk.Setup{})
 	c.Assert(err, check.IsNil)
 
 	err = sdk.Validate(info)

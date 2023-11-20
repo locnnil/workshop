@@ -39,8 +39,9 @@ type RepositorySuite struct {
 	slot      *sdk.SlotInfo
 	emptyRepo *Repository
 	// Repository pre-populated with s.iface
-	testRepo *Repository
-	context  context.Context
+	testRepo  *Repository
+	context   context.Context
+	projectId string
 }
 
 var _ = Suite(&RepositorySuite{
@@ -77,9 +78,9 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 
-	consumer := sdk.MockInfo(c, consumerYaml, "ws", sdk.Setup{Name: "plug-sdk"})
+	consumer := sdk.MockInfo(c, consumerYaml, s.projectId, "ws", sdk.Setup{Name: "plug-sdk"})
 	s.plug = consumer.Plugs["plug"]
-	producer := sdk.MockInfo(c, producerYaml, "ws", sdk.Setup{Name: "slot-sdk"})
+	producer := sdk.MockInfo(c, producerYaml, s.projectId, "ws", sdk.Setup{Name: "slot-sdk"})
 	s.slot = producer.Slots["slot"]
 	s.plugSelf = producer.Plugs["self"]
 
@@ -87,7 +88,8 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	s.testRepo = NewRepository()
 	err := s.testRepo.AddInterface(s.iface)
 	c.Assert(err, IsNil)
-	s.context = ifacetest.CreateTestContext("user", "42424242")
+	s.projectId = "42424242"
+	s.context = ifacetest.CreateTestContext("user", s.projectId)
 }
 
 func (s *RepositorySuite) TearDownTest(c *C) {
@@ -99,10 +101,10 @@ type instanceNameAndYaml struct {
 	Yaml string
 }
 
-func addPlugsSlotsFromInstances(c *C, repo *Repository, iys []instanceNameAndYaml) []*sdk.Info {
+func addPlugsSlotsFromInstances(c *C, repo *Repository, projectId string, iys []instanceNameAndYaml) []*sdk.Info {
 	result := make([]*sdk.Info, 0, len(iys))
 	for _, iy := range iys {
-		info := sdk.MockInfo(c, iy.Yaml, "ws-"+iy.Name, sdk.Setup{})
+		info := sdk.MockInfo(c, iy.Yaml, projectId, "ws-"+iy.Name, sdk.Setup{})
 		if iy.Name != "" {
 			c.Assert(sdk.Validate(info), IsNil)
 		}
@@ -231,14 +233,14 @@ func (s *RepositorySuite) TestAddPlugClashingPlug(c *C) {
 }
 
 func (s *RepositorySuite) TestAddPlugClashingSlot(c *C) {
-	snapInfo := &sdk.Info{Name: "sdk"}
+	sdkInfo := &sdk.Info{ProjectId: s.projectId, Workshop: "ws", Name: "sdk"}
 	plug := &sdk.PlugInfo{
-		Sdk:       snapInfo,
+		Sdk:       sdkInfo,
 		Name:      "clashing",
 		Interface: "interface",
 	}
 	slot := &sdk.SlotInfo{
-		Sdk:       snapInfo,
+		Sdk:       sdkInfo,
 		Name:      "clashing",
 		Interface: "interface",
 	}
@@ -247,7 +249,7 @@ func (s *RepositorySuite) TestAddPlugClashingSlot(c *C) {
 	err = s.testRepo.AddPlug(plug)
 	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllSlots(""), HasLen, 1)
-	c.Assert(s.testRepo.Slot(slot.Sdk.Workshop, slot.Sdk.Name, slot.Name), DeepEquals, slot)
+	c.Assert(s.testRepo.Slot(slot.Sdk.ProjectId, slot.Sdk.Workshop, slot.Sdk.Name, slot.Name), DeepEquals, slot)
 }
 
 func (s *RepositorySuite) TestAddPlugFailsWithInvalidPlugName(c *C) {
@@ -274,13 +276,13 @@ func (s *RepositorySuite) TestAddPlugParallelInstance(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 1)
 
-	consumer := sdk.MockInfo(c, consumerYaml, "ws-instance", sdk.Setup{})
+	consumer := sdk.MockInfo(c, consumerYaml, s.projectId, "ws-instance", sdk.Setup{})
 	err = s.testRepo.AddPlug(consumer.Plugs["plug"])
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 2)
 
-	c.Assert(s.testRepo.Plug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), DeepEquals, s.plug)
-	c.Assert(s.testRepo.Plug(consumer.Workshop, consumer.Name, "plug"), DeepEquals, consumer.Plugs["plug"])
+	c.Assert(s.testRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), DeepEquals, s.plug)
+	c.Assert(s.testRepo.Plug(consumer.ProjectId, consumer.Workshop, consumer.Name, "plug"), DeepEquals, consumer.Plugs["plug"])
 }
 
 // Tests for Repository.Plug()
@@ -288,12 +290,12 @@ func (s *RepositorySuite) TestAddPlugParallelInstance(c *C) {
 func (s *RepositorySuite) TestPlug(c *C) {
 	err := s.testRepo.AddPlug(s.plug)
 	c.Assert(err, IsNil)
-	c.Assert(s.emptyRepo.Plug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), IsNil)
-	c.Assert(s.testRepo.Plug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), DeepEquals, s.plug)
+	c.Assert(s.emptyRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), IsNil)
+	c.Assert(s.testRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name), DeepEquals, s.plug)
 }
 
 func (s *RepositorySuite) TestPlugSearch(c *C) {
-	addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "xx", Yaml: `
 name: xx
 base: ubuntu@22.04
@@ -320,15 +322,15 @@ plugs:
 `},
 	})
 	// Plug() correctly finds plugs
-	c.Assert(s.testRepo.Plug("ws-xx", "xx", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-xx", "xx", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-xx", "xx", "c"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-yy", "yy", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-yy", "yy", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-yy", "yy", "c"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-zz_instance", "zz", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-zz_instance", "zz", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug("ws-zz_instance", "zz", "c"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "a"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "b"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "c"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "a"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "b"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "c"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "a"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "b"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "c"), Not(IsNil))
 }
 
 // Tests for Repository.RemovePlug()
@@ -336,13 +338,13 @@ plugs:
 func (s *RepositorySuite) TestRemovePlugSucceedsWhenPlugExistsAndDisconnected(c *C) {
 	err := s.testRepo.AddPlug(s.plug)
 	c.Assert(err, IsNil)
-	err = s.testRepo.RemovePlug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	err = s.testRepo.RemovePlug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 0)
 }
 
 func (s *RepositorySuite) TestRemovePlugFailsWhenPlugDoesntExist(c *C) {
-	err := s.emptyRepo.RemovePlug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	err := s.emptyRepo.RemovePlug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", no such plug`)
 }
 
@@ -355,17 +357,17 @@ func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
 	_, err = s.testRepo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 	// Removing a plug used by a slot returns an appropriate error
-	err = s.testRepo.RemovePlug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	err = s.testRepo.RemovePlug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", it is still connected`)
 	// The plug is still there
-	slot := s.testRepo.Plug(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	slot := s.testRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(slot, Not(IsNil))
 }
 
 // Tests for Repository.AllPlugs()
 
 func (s *RepositorySuite) TestAllPlugsWithoutInterfaceName(c *C) {
-	sdks := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	sdks := addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "sdk-a", Yaml: `
 name: sdk-a
 base: ubuntu@22.04
@@ -407,7 +409,7 @@ func (s *RepositorySuite) TestAllPlugsWithInterfaceName(c *C) {
 	// Add another interface so that we can look for it
 	err := s.testRepo.AddInterface(&ifacetest.TestInterface{InterfaceName: "other-interface"})
 	c.Assert(err, IsNil)
-	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	snaps := addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "sdk-a", Yaml: `
 name: sdk-a
 base: ubuntu@22.04
@@ -441,7 +443,7 @@ plugs:
 // Tests for Repository.Plugs()
 
 func (s *RepositorySuite) TestPlugs(c *C) {
-	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	snaps := addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "sdk-a", Yaml: `
 name: sdk-a
 base: ubuntu@22.04
@@ -461,19 +463,19 @@ plugs:
 	})
 	c.Assert(snaps, HasLen, 2)
 	// The result is sorted by sdk and name
-	c.Assert(s.testRepo.Plugs("ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.PlugInfo{
+	c.Assert(s.testRepo.Plugs(s.projectId, "ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.PlugInfo{
 		snaps[0].Plugs["name-a"],
 		snaps[0].Plugs["name-b"],
 		snaps[0].Plugs["name-c"],
 	})
-	c.Assert(s.testRepo.Plugs("ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.PlugInfo{
+	c.Assert(s.testRepo.Plugs(s.projectId, "ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.PlugInfo{
 		snaps[1].Plugs["name-a"],
 		snaps[1].Plugs["name-b"],
 		snaps[1].Plugs["name-c"],
 	})
 	// The result is empty if the sdk is not known
-	c.Assert(s.testRepo.Plugs("ws-sdk-a", "sdk-x"), HasLen, 0)
-	c.Assert(s.testRepo.Plugs("ws-sdk-b", "sdk-b_other"), HasLen, 0)
+	c.Assert(s.testRepo.Plugs(s.projectId, "ws-sdk-a", "sdk-x"), HasLen, 0)
+	c.Assert(s.testRepo.Plugs(s.projectId, "ws-sdk-b", "sdk-b_other"), HasLen, 0)
 }
 
 // Tests for Repository.AllSlots()
@@ -481,7 +483,7 @@ plugs:
 func (s *RepositorySuite) TestAllSlots(c *C) {
 	err := s.testRepo.AddInterface(&ifacetest.TestInterface{InterfaceName: "other-interface"})
 	c.Assert(err, IsNil)
-	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	snaps := addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "sdk-a", Yaml: `
 name: sdk-a
 base: ubuntu@22.04
@@ -520,7 +522,7 @@ slots:
 // Tests for Repository.Slots()
 
 func (s *RepositorySuite) TestSlots(c *C) {
-	snaps := addPlugsSlotsFromInstances(c, s.testRepo, []instanceNameAndYaml{
+	snaps := addPlugsSlotsFromInstances(c, s.testRepo, s.projectId, []instanceNameAndYaml{
 		{Name: "sdk-a", Yaml: `
 name: sdk-a
 base: ubuntu@22.04
@@ -536,20 +538,20 @@ slots:
 `},
 	})
 	// Slots("sdk-a") returns slots present in that sdk
-	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.SlotInfo{
+	c.Assert(s.testRepo.Slots(s.projectId, "ws-sdk-a", "sdk-a"), DeepEquals, []*sdk.SlotInfo{
 		snaps[0].Slots["name-a"],
 		snaps[0].Slots["name-b"],
 	})
 	// Slots("sdk-b") returns slots present in that sdk
-	c.Assert(s.testRepo.Slots("ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.SlotInfo{
+	c.Assert(s.testRepo.Slots(s.projectId, "ws-sdk-b", "sdk-b"), DeepEquals, []*sdk.SlotInfo{
 		snaps[1].Slots["name-a"],
 	})
 	// Slots("sdk-c") returns no slots (because that sdk doesn't exist)
-	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-c"), HasLen, 0)
+	c.Assert(s.testRepo.Slots(s.projectId, "ws-sdk-a", "sdk-c"), HasLen, 0)
 	// Slots("sdk-b_other") returns no slots (the sdk does not exist)
-	c.Assert(s.testRepo.Slots("ws-sdk-a", "sdk-b_other"), HasLen, 0)
+	c.Assert(s.testRepo.Slots(s.projectId, "ws-sdk-a", "sdk-b_other"), HasLen, 0)
 	// Slots("") returns no slots
-	c.Assert(s.testRepo.Slots("ws-sdk-a", ""), HasLen, 0)
+	c.Assert(s.testRepo.Slots(s.projectId, "ws-sdk-a", ""), HasLen, 0)
 }
 
 // Tests for Repository.Slot()
@@ -557,12 +559,12 @@ slots:
 func (s *RepositorySuite) TestSlotSucceedsWhenSlotExists(c *C) {
 	err := s.testRepo.AddSlot(s.slot)
 	c.Assert(err, IsNil)
-	slot := s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(slot, DeepEquals, s.slot)
 }
 
 func (s *RepositorySuite) TestSlotFailsWhenSlotDoesntExist(c *C) {
-	slot := s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(slot, IsNil)
 }
 
@@ -610,13 +612,13 @@ func (s *RepositorySuite) TestAddSlotClashingPlug(c *C) {
 	err = s.testRepo.AddSlot(slot)
 	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 1)
-	c.Assert(s.testRepo.Plug(plug.Sdk.Workshop, plug.Sdk.Name, plug.Name), DeepEquals, plug)
+	c.Assert(s.testRepo.Plug(plug.Sdk.ProjectId, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name), DeepEquals, plug)
 }
 
 func (s *RepositorySuite) TestAddSlotStoresCorrectData(c *C) {
 	err := s.testRepo.AddSlot(s.slot)
 	c.Assert(err, IsNil)
-	slot := s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	// The added slot has the same data
 	c.Assert(slot, DeepEquals, s.slot)
 }
@@ -628,13 +630,13 @@ func (s *RepositorySuite) TestAddSlotParallelInstance(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.AllSlots(""), HasLen, 1)
 
-	producer := sdk.MockInfo(c, producerYaml, "ws-instance", sdk.Setup{})
+	producer := sdk.MockInfo(c, producerYaml, s.projectId, "ws-instance", sdk.Setup{})
 	err = s.testRepo.AddSlot(producer.Slots["slot"])
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.AllSlots(""), HasLen, 2)
 
-	c.Assert(s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name), DeepEquals, s.slot)
-	c.Assert(s.testRepo.Slot(producer.Workshop, producer.Name, "slot"), DeepEquals, producer.Slots["slot"])
+	c.Assert(s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name), DeepEquals, s.slot)
+	c.Assert(s.testRepo.Slot(producer.ProjectId, producer.Workshop, producer.Name, "slot"), DeepEquals, producer.Slots["slot"])
 }
 
 // Tests for Repository.RemoveSlot()
@@ -643,16 +645,16 @@ func (s *RepositorySuite) TestRemoveSlotSuccedsWhenSlotExistsAndDisconnected(c *
 	err := s.testRepo.AddSlot(s.slot)
 	c.Assert(err, IsNil)
 	// Removing a vacant slot simply works
-	err = s.testRepo.RemoveSlot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err = s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, IsNil)
 	// The slot is gone now
-	slot := s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(slot, IsNil)
 }
 
 func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotDoesntExist(c *C) {
 	// Removing a slot that doesn't exist returns an appropriate error
-	err := s.testRepo.RemoveSlot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err := s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, Not(IsNil))
 	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", no such slot`)
 }
@@ -666,10 +668,10 @@ func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotIsConnected(c *C) {
 	_, err = s.testRepo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 	// Removing a slot occupied by a plug returns an appropriate error
-	err = s.testRepo.RemoveSlot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err = s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", it is still connected`)
 	// The slot is still there
-	slot := s.testRepo.Slot(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(slot, Not(IsNil))
 }
 
@@ -726,8 +728,9 @@ func (s *RepositorySuite) TestConnectFailsWhenSlotAndPlugAreIncompatible(c *C) {
 	err := s.testRepo.AddInterface(otherInterface)
 	plug := &sdk.PlugInfo{
 		Sdk: &sdk.Info{
-			Workshop: "ws",
-			Name:     "consumer"},
+			ProjectId: s.projectId,
+			Workshop:  "ws",
+			Name:      "consumer"},
 		Name:      "plug",
 		Interface: "other-interface",
 	}
@@ -757,10 +760,10 @@ func (s *RepositorySuite) TestConnectSucceeds(c *C) {
 
 // Disconnect fails if any argument is empty
 func (s *RepositorySuite) TestDisconnectFailsOnEmptyArgs(c *C) {
-	err1 := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, "")
-	err2 := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, "", s.slot.Name)
-	err3 := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, "", s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	err4 := s.testRepo.Disconnect(s.plug.Sdk.Workshop, "", s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err1 := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, "")
+	err2 := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, "", s.slot.Name)
+	err3 := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, "", s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err4 := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, "", s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err1, ErrorMatches, `cannot disconnect, slot name is empty`)
 	c.Assert(err2, ErrorMatches, `cannot disconnect, slot sdk name is empty`)
 	c.Assert(err3, ErrorMatches, `cannot disconnect, plug name is empty`)
@@ -770,7 +773,7 @@ func (s *RepositorySuite) TestDisconnectFailsOnEmptyArgs(c *C) {
 // Disconnect fails if plug doesn't exist
 func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 	c.Assert(s.testRepo.AddSlot(s.slot), IsNil)
-	err := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, ErrorMatches, `sdk "consumer" has no plug named "plug"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
@@ -779,7 +782,7 @@ func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 // Disconnect fails if slot doesn't exist
 func (s *RepositorySuite) TestDisconnectFailsWithutSlot(c *C) {
 	c.Assert(s.testRepo.AddPlug(s.plug), IsNil)
-	err := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, ErrorMatches, `sdk "producer" has no slot named "slot"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
@@ -789,7 +792,7 @@ func (s *RepositorySuite) TestDisconnectFailsWithutSlot(c *C) {
 func (s *RepositorySuite) TestDisconnectFailsWhenNotConnected(c *C) {
 	c.Assert(s.testRepo.AddPlug(s.plug), IsNil)
 	c.Assert(s.testRepo.AddSlot(s.slot), IsNil)
-	err := s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, ErrorMatches, `cannot disconnect consumer:plug from producer:slot, it is not connected`)
 	e, _ := err.(*NotConnectedError)
 	c.Check(e, NotNil)
@@ -803,7 +806,7 @@ func (s *RepositorySuite) TestDisconnectSucceeds(c *C) {
 	c.Assert(err, IsNil)
 	_, err = s.testRepo.Connect(NewConnRef(s.plug, s.slot), nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
-	err = s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err = s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, IsNil)
 	c.Assert(s.testRepo.Interfaces(), DeepEquals, &Interfaces{
 		Plugs: []*sdk.PlugInfo{s.plug},
@@ -815,25 +818,25 @@ func (s *RepositorySuite) TestDisconnectSucceeds(c *C) {
 
 // Connected fails if sdk name is empty
 func (s *RepositorySuite) TestConnectedFailsWithEmptyWorkshopName(c *C) {
-	_, err := s.testRepo.Connected("ws", "", s.plug.Name)
+	_, err := s.testRepo.Connected(s.projectId, "ws", "", s.plug.Name)
 	c.Check(err, ErrorMatches, "internal error: cannot obtain sdk name while computing connections")
 }
 
 func (s *RepositorySuite) TestConnectedFailsWithEmptySdkName(c *C) {
-	_, err := s.testRepo.Connected("", "ws", s.plug.Name)
+	_, err := s.testRepo.Connected(s.projectId, "", "ws", s.plug.Name)
 	c.Check(err, ErrorMatches, "internal error: cannot obtain workshop name while computing connections")
 }
 
 // Connected fails if plug or slot name is empty
 func (s *RepositorySuite) TestConnectedFailsWithEmptyPlugSlotName(c *C) {
-	_, err := s.testRepo.Connected("ws", s.plug.Sdk.Name, "")
+	_, err := s.testRepo.Connected(s.projectId, "ws", s.plug.Sdk.Name, "")
 	c.Check(err, ErrorMatches, "plug or slot name is empty")
 }
 
 // Connected fails if plug or slot doesn't exist
 func (s *RepositorySuite) TestConnectedFailsWithoutPlugOrSlot(c *C) {
-	_, err1 := s.testRepo.Connected(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
-	_, err2 := s.testRepo.Connected(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	_, err1 := s.testRepo.Connected(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	_, err2 := s.testRepo.Connected(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Check(err1, ErrorMatches, `sdk "consumer" has no plug or slot named "plug"`)
 	e, _ := err1.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
@@ -849,11 +852,11 @@ func (s *RepositorySuite) TestConnectedFindsConnections(c *C) {
 	_, err := s.testRepo.Connect(NewConnRef(s.plug, s.slot), nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	conns, err := s.testRepo.Connected(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
+	conns, err := s.testRepo.Connected(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plug, s.slot)})
 
-	conns, err = s.testRepo.Connected(s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	conns, err = s.testRepo.Connected(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plug, s.slot)})
 }
@@ -865,15 +868,15 @@ func (s *RepositorySuite) TestConnections(c *C) {
 	_, err := s.testRepo.Connect(NewConnRef(s.plug, s.slot), nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	conns, err := s.testRepo.Connections(s.plug.Sdk.Workshop, s.plug.Sdk.Name)
+	conns, err := s.testRepo.Connections(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plug, s.slot)})
 
-	conns, err = s.testRepo.Connections(s.slot.Sdk.Workshop, s.slot.Sdk.Name)
+	conns, err = s.testRepo.Connections(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plug, s.slot)})
 
-	conns, err = s.testRepo.Connections("ws", "abc")
+	conns, err = s.testRepo.Connections(s.projectId, "ws", "abc")
 	c.Assert(err, IsNil)
 	c.Assert(conns, HasLen, 0)
 }
@@ -884,11 +887,11 @@ func (s *RepositorySuite) TestConnectionsWithSelfConnected(c *C) {
 	_, err := s.testRepo.Connect(NewConnRef(s.plugSelf, s.slot), nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	conns, err := s.testRepo.Connections(s.plug.Sdk.Workshop, s.plugSelf.Sdk.Name)
+	conns, err := s.testRepo.Connections(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plugSelf.Sdk.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plugSelf, s.slot)})
 
-	conns, err = s.testRepo.Connections(s.slot.Sdk.Workshop, s.slot.Sdk.Name)
+	conns, err = s.testRepo.Connections(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name)
 	c.Assert(err, IsNil)
 	c.Check(conns, DeepEquals, []*ConnRef{NewConnRef(s.plugSelf, s.slot)})
 }
@@ -927,7 +930,7 @@ func (s *RepositorySuite) TestInterfacesSmokeTest(c *C) {
 		Connections: []*ConnRef{NewConnRef(s.plug, s.slot)},
 	})
 	// After disconnecting the connections become empty
-	err = s.testRepo.Disconnect(s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
+	err = s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, IsNil)
 	ifaces = s.testRepo.Interfaces()
 	c.Assert(ifaces, DeepEquals, &Interfaces{
@@ -1078,26 +1081,26 @@ base: ubuntu@22.04
 plugs:
     auto:
     manual:
-`, "ws", sdk.Setup{Name: "consumer"})
+`, s.projectId, "ws", sdk.Setup{Name: "consumer"})
 	producer := sdk.MockInfo(c, `
 name: producer
 base: ubuntu@22.04
 slots:
     auto:
     manual:
-`, "ws", sdk.Setup{Name: "producer"})
+`, s.projectId, "ws", sdk.Setup{Name: "producer"})
 	err = repo.AddSdk(producer)
 	c.Assert(err, IsNil)
 	err = repo.AddSdk(consumer)
 	c.Assert(err, IsNil)
 
-	candidateSlots := repo.AutoConnectCandidateSlots("ws", "consumer", "auto", policyCheck)
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws", "consumer", "auto", policyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Sdk.Name, Equals, "producer")
 	c.Check(candidateSlots[0].Interface, Equals, "auto")
 	c.Check(candidateSlots[0].Name, Equals, "auto")
 
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws", "producer", "auto", policyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws", "producer", "auto", policyCheck)
 	c.Assert(candidatePlugs, HasLen, 1)
 	c.Check(candidatePlugs[0].Sdk.Name, Equals, "consumer")
 	c.Check(candidatePlugs[0].Interface, Equals, "auto")
@@ -1120,7 +1123,7 @@ name: producer
 base: ubuntu@22.04
 slots:
     auto:
-`, "ws", sdk.Setup{Name: "producer"})
+`, s.projectId, "ws", sdk.Setup{Name: "producer"})
 	err = repo.AddSdk(producer)
 	c.Assert(err, IsNil)
 
@@ -1130,7 +1133,7 @@ name: consumer1
 base: ubuntu@22.04
 plugs:
     auto:
-`, "ws", sdk.Setup{Name: "consumer1"})
+`, s.projectId, "ws", sdk.Setup{Name: "consumer1"})
 
 	err = repo.AddSdk(consumer1)
 	c.Assert(err, IsNil)
@@ -1141,19 +1144,19 @@ name: consumer2
 base: ubuntu@22.04
 plugs:
     auto:
-`, "ws", sdk.Setup{Name: "consumer2"})
+`, s.projectId, "ws", sdk.Setup{Name: "consumer2"})
 
 	err = repo.AddSdk(consumer2)
 	c.Assert(err, IsNil)
 
 	// Both can auto-connect
-	candidateSlots := repo.AutoConnectCandidateSlots("ws", "consumer1", "auto", policyCheck)
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws", "consumer1", "auto", policyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Sdk.Name, Equals, "producer")
 	c.Check(candidateSlots[0].Interface, Equals, "auto")
 	c.Check(candidateSlots[0].Name, Equals, "auto")
 
-	candidateSlots = repo.AutoConnectCandidateSlots("ws", "consumer2", "auto", policyCheck)
+	candidateSlots = repo.AutoConnectCandidateSlots(s.projectId, "ws", "consumer2", "auto", policyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Sdk.Name, Equals, "producer")
 	c.Check(candidateSlots[0].Interface, Equals, "auto")
@@ -1161,7 +1164,7 @@ plugs:
 
 	// Plugs candidates seen from the producer (for example if
 	// it's installed after) should be the same
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws", "producer", "auto", policyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws", "producer", "auto", policyCheck)
 	c.Assert(candidatePlugs, HasLen, 2)
 }
 
@@ -1169,7 +1172,8 @@ plugs:
 
 type AddRemoveSuite struct {
 	testutil.BaseTest
-	repo *Repository
+	repo      *Repository
+	projectId string
 }
 
 var _ = Suite(&AddRemoveSuite{})
@@ -1191,10 +1195,11 @@ func (s *AddRemoveSuite) SetUpTest(c *C) {
 
 func (s *AddRemoveSuite) TearDownTest(c *C) {
 	s.BaseTest.TearDownTest(c)
+	s.projectId = "42424242"
 }
 
-func (s *AddRemoveSuite) addSdk(c *C, yaml string) (*sdk.Info, error) {
-	sdkInfo := sdk.MockInfo(c, yaml, "ws", sdk.Setup{})
+func (s *AddRemoveSuite) addSdk(c *C, yaml string, projectId string) (*sdk.Info, error) {
+	sdkInfo := sdk.MockInfo(c, yaml, projectId, "ws", sdk.Setup{})
 	return sdkInfo, s.repo.AddSdk(sdkInfo)
 }
 
@@ -1206,25 +1211,25 @@ plugs:
   bogus-plug:
 slots:
   bogus-slot:
-`)
+`, s.projectId)
 	c.Assert(err, IsNil)
 	// the sdk knowns about the bogus plug and slot
 	c.Assert(info.Plugs["bogus-plug"], NotNil)
 	c.Assert(info.Slots["bogus-slot"], NotNil)
 	// but the repository ignores them
-	c.Assert(s.repo.Plug("ws", "bogus", "bogus-plug"), IsNil)
-	c.Assert(s.repo.Slot("ws", "bogus", "bogus-slot"), IsNil)
+	c.Assert(s.repo.Plug(s.projectId, "ws", "bogus", "bogus-plug"), IsNil)
+	c.Assert(s.repo.Slot(s.projectId, "ws", "bogus", "bogus-slot"), IsNil)
 }
 
-type DisconnectSnapSuite struct {
+type DisconnectSdkSuite struct {
 	testutil.BaseTest
 	repo               *Repository
 	s1, s2, s2Instance *sdk.Info
 }
 
-var _ = Suite(&DisconnectSnapSuite{})
+var _ = Suite(&DisconnectSdkSuite{})
 
-func (s *DisconnectSnapSuite) SetUpTest(c *C) {
+func (s *DisconnectSdkSuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 
@@ -1244,7 +1249,7 @@ plugs:
     iface-a:
 slots:
     iface-b:
-`, "ws", setup)
+`, "42424242", "ws", setup)
 	err = s.repo.AddSdk(s.s1)
 	c.Assert(err, IsNil)
 
@@ -1255,7 +1260,7 @@ plugs:
     iface-b:
 slots:
     iface-a:
-`, "ws", setup)
+`, "42424242", "ws", setup)
 	c.Assert(err, IsNil)
 	err = s.repo.AddSdk(s.s2)
 	c.Assert(err, IsNil)
@@ -1266,71 +1271,83 @@ plugs:
     iface-b:
 slots:
     iface-a:
-`, "ws", setup)
+`, "42424242", "ws", setup)
 	c.Assert(err, IsNil)
 	err = s.repo.AddSdk(s.s2Instance)
 	c.Assert(err, IsNil)
 }
 
-func (s *DisconnectSnapSuite) TearDownTest(c *C) {
+func (s *DisconnectSdkSuite) TearDownTest(c *C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *DisconnectSnapSuite) TestNotConnected(c *C) {
-	affected, err := s.repo.DisconnectSdk("ws", "s1")
+func (s *DisconnectSdkSuite) TestNotConnected(c *C) {
+	affected, err := s.repo.DisconnectSdk("42424242", "ws", "s1")
 	c.Assert(err, IsNil)
 	c.Check(affected, HasLen, 0)
 }
 
-func (s *DisconnectSnapSuite) TestOutgoingConnection(c *C) {
-	connRef := &ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "iface-a"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s2", Name: "iface-a"}}
+func (s *DisconnectSdkSuite) TestOutgoingConnection(c *C) {
+	connRef := &ConnRef{
+		PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-a"},
+		SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2", Name: "iface-a"}}
 	_, err := s.repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 	// Disconnect s1 with which has an outgoing connection to s2
-	affected, err := s.repo.DisconnectSdk("ws", "s1")
+	affected, err := s.repo.DisconnectSdk("42424242", "ws", "s1")
 	c.Assert(err, IsNil)
 	c.Check(affected, testutil.Contains, "s1")
 	c.Check(affected, testutil.Contains, "s2")
 }
 
-func (s *DisconnectSnapSuite) TestIncomingConnection(c *C) {
-	connRef := &ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s2", Name: "iface-b"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s1", Name: "iface-b"}}
+func (s *DisconnectSdkSuite) TestIncomingConnection(c *C) {
+	connRef := &ConnRef{
+		PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2", Name: "iface-b"},
+		SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-b"}}
 	_, err := s.repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 	// Disconnect s1 with which has an incoming connection from s2
-	affected, err := s.repo.DisconnectSdk("ws", "s1")
+	affected, err := s.repo.DisconnectSdk("42424242", "ws", "s1")
 	c.Assert(err, IsNil)
 	c.Check(affected, testutil.Contains, "s1")
 	c.Check(affected, testutil.Contains, "s2")
 }
 
-func (s *DisconnectSnapSuite) TestCrossConnection(c *C) {
+func (s *DisconnectSdkSuite) TestCrossConnection(c *C) {
 	// This test is symmetric wrt s1 <-> s2 connections
 	for _, sdkName := range []string{"s1", "s2"} {
-		connRef1 := &ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "iface-a"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s2", Name: "iface-a"}}
+		connRef1 := &ConnRef{
+			PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-a"},
+			SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2", Name: "iface-a"}}
 		_, err := s.repo.Connect(connRef1, nil, nil, nil, nil, nil)
 		c.Assert(err, IsNil)
-		connRef2 := &ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s2", Name: "iface-b"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s1", Name: "iface-b"}}
+		connRef2 := &ConnRef{
+			PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2", Name: "iface-b"},
+			SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-b"}}
 		_, err = s.repo.Connect(connRef2, nil, nil, nil, nil, nil)
 		c.Assert(err, IsNil)
-		affected, err := s.repo.DisconnectSdk("ws", sdkName)
+		affected, err := s.repo.DisconnectSdk("42424242", "ws", sdkName)
 		c.Assert(err, IsNil)
 		c.Check(affected, testutil.Contains, "s1")
 		c.Check(affected, testutil.Contains, "s2")
 	}
 }
 
-func (s *DisconnectSnapSuite) TestParallelInstances(c *C) {
-	_, err := s.repo.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "iface-a"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s2-instance", Name: "iface-a"}}, nil, nil, nil, nil, nil)
+func (s *DisconnectSdkSuite) TestParallelInstances(c *C) {
+	_, err := s.repo.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-a"},
+		SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2-instance", Name: "iface-a"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
-	affected, err := s.repo.DisconnectSdk("ws", "s1")
+	affected, err := s.repo.DisconnectSdk("42424242", "ws", "s1")
 	c.Assert(err, IsNil)
 	c.Check(affected, testutil.Contains, "s1")
 	c.Check(affected, testutil.Contains, "s2-instance")
 
-	_, err = s.repo.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s2-instance", Name: "iface-b"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s1", Name: "iface-b"}}, nil, nil, nil, nil, nil)
+	_, err = s.repo.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s2-instance", Name: "iface-b"},
+		SlotRef: SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "s1", Name: "iface-b"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
-	affected, err = s.repo.DisconnectSdk("ws", "s1")
+	affected, err = s.repo.DisconnectSdk("42424242", "ws", "s1")
 	c.Assert(err, IsNil)
 	c.Check(affected, testutil.Contains, "s1")
 	c.Check(affected, testutil.Contains, "s2-instance")
@@ -1346,7 +1363,7 @@ func contentAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 
 // internal helper that creates a new repository with two snaps, one
 // is a content plug and one a content slot
-func makeContentConnectionTestSdks(c *C, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
+func makeContentConnectionTestSdks(c *C, projectId, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
 	repo := NewRepository()
 	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "content", AutoConnectCallback: contentAutoConnect})
 	c.Assert(err, IsNil)
@@ -1358,7 +1375,7 @@ plugs:
   imported-content:
     interface: content
     content: %s
-`, plugContentToken), "ws-importer", sdk.Setup{})
+`, plugContentToken), projectId, "ws-importer", sdk.Setup{})
 	slotSnap := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-slot-sdk
 base: ubuntu@22.04
@@ -1366,7 +1383,7 @@ slots:
   exported-content:
     interface: content
     content: %s
-`, slotContentToken), "ws-exporter", sdk.Setup{})
+`, slotContentToken), projectId, "ws-exporter", sdk.Setup{})
 
 	err = repo.AddSdk(plugSnap)
 	c.Assert(err, IsNil)
@@ -1377,29 +1394,29 @@ slots:
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceSimple(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "mylib")
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
+	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "mylib")
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Name, Equals, "exported-content")
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 1)
 	c.Check(candidatePlugs[0].Name, Equals, "imported-content")
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceOSWorksCorrectly(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "otherlib")
+	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "otherlib")
 
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 0)
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceNoMatchingContent(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, "mylib", "otherlib")
-	candidateSlots := repo.AutoConnectCandidateSlots("ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
+	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "otherlib")
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
 	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs("ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 0)
 }
 
@@ -1441,16 +1458,18 @@ func (s *RepositorySuite) TestBeforeConnectValidation(c *C) {
 	})
 	c.Assert(err, IsNil)
 
-	s1 := sdk.MockInfo(c, ifacehooksSnap1, "ws-s1", sdk.Setup{})
+	s1 := sdk.MockInfo(c, ifacehooksSnap1, s.projectId, "ws-s1", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s1), IsNil)
-	s2 := sdk.MockInfo(c, ifacehooksSnap2, "ws-s2", sdk.Setup{})
+	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
 	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
 	slotDynAttrs := map[string]interface{}{"attr1": "val1"}
 
 	policyCheck := func(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) { return true, nil }
-	conn, err := s.emptyRepo.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws-s1", Sdk: "s1", Name: "consumer"}, SlotRef: SlotRef{Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
+	conn, err := s.emptyRepo.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws-s1", Sdk: "s1", Name: "consumer"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
 	c.Assert(err, IsNil)
 	c.Assert(conn, NotNil)
 
@@ -1475,9 +1494,9 @@ func (s *RepositorySuite) TestBeforeConnectValidationFailure(c *C) {
 	})
 	c.Assert(err, IsNil)
 
-	s1 := sdk.MockInfo(c, ifacehooksSnap1, "ws-s1", sdk.Setup{})
+	s1 := sdk.MockInfo(c, ifacehooksSnap1, s.projectId, "ws-s1", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s1), IsNil)
-	s2 := sdk.MockInfo(c, ifacehooksSnap2, "ws-s2", sdk.Setup{})
+	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
 	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
@@ -1485,7 +1504,9 @@ func (s *RepositorySuite) TestBeforeConnectValidationFailure(c *C) {
 
 	policyCheck := func(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) { return true, nil }
 
-	conn, err := s.emptyRepo.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws-s1", Sdk: "s1", Name: "consumer"}, SlotRef: SlotRef{Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
+	conn, err := s.emptyRepo.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws-s1", Sdk: "s1", Name: "consumer"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, `cannot connect plug "consumer" of sdk "s1": invalid plug`)
 	c.Assert(conn, IsNil)
@@ -1499,9 +1520,9 @@ func (s *RepositorySuite) TestBeforeConnectValidationPolicyCheckFailure(c *C) {
 	})
 	c.Assert(err, IsNil)
 
-	s1 := sdk.MockInfo(c, ifacehooksSnap1, "ws-s1", sdk.Setup{})
+	s1 := sdk.MockInfo(c, ifacehooksSnap1, s.projectId, "ws-s1", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s1), IsNil)
-	s2 := sdk.MockInfo(c, ifacehooksSnap2, "ws-s2", sdk.Setup{})
+	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2", sdk.Setup{})
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
 	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
@@ -1511,7 +1532,9 @@ func (s *RepositorySuite) TestBeforeConnectValidationPolicyCheckFailure(c *C) {
 		return false, fmt.Errorf("policy check failed")
 	}
 
-	conn, err := s.emptyRepo.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws-s1", Sdk: "s1", Name: "consumer"}, SlotRef: SlotRef{Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
+	conn, err := s.emptyRepo.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws-s1", Sdk: "s1", Name: "consumer"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws-s2", Sdk: "s2", Name: "producer"}}, nil, plugDynAttrs, nil, slotDynAttrs, policyCheck)
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, `policy check failed`)
 	c.Assert(conn, IsNil)
@@ -1534,12 +1557,16 @@ func (s *RepositorySuite) TestConnection(c *C) {
 	c.Assert(conn.Plug.Name(), Equals, "plug")
 	c.Assert(conn.Slot.Name(), Equals, "slot")
 
-	_, err = s.testRepo.Connection(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "a", Name: "b"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"}})
+	_, err = s.testRepo.Connection(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "a", Name: "b"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"}})
 	c.Assert(err, ErrorMatches, `sdk "a" has no plug named "b"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 
-	_, err = s.testRepo.Connection(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "a", Name: "b"}})
+	_, err = s.testRepo.Connection(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "a", Name: "b"}})
 	c.Assert(err, ErrorMatches, `sdk "a" has no slot named "b"`)
 	e, _ = err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
@@ -1582,7 +1609,7 @@ base: ubuntu@22.04
 plugs:
   i1:
   i2:
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	c.Assert(r.AddSdk(s1), IsNil)
 
 	s2 := sdk.MockInfo(c, `
@@ -1591,7 +1618,7 @@ base: ubuntu@22.04
 slots: 
   i1:
   i3:
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	c.Assert(r.AddSdk(s2), IsNil)
 
 	s3 := sdk.MockInfo(c, `
@@ -1600,22 +1627,28 @@ base: ubuntu@22.04
 type: core
 slots:
   i2:
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	c.Assert(r.AddSdk(s3), IsNil)
 	s4 := sdk.MockInfo(c, `
 name: s4
 base: ubuntu@22.04
 plugs:
   i2:
-`, "ws", sdk.Setup{})
+`, s.projectId, "ws", sdk.Setup{})
 	c.Assert(r.AddSdk(s4), IsNil)
 
 	// Connect a few things for the tests below.
-	_, err := r.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "i1"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
+	_, err := r.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s1", Name: "i1"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
-	_, err = r.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "i1"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
+	_, err = r.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s1", Name: "i1"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s2", Name: "i1"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
-	_, err = r.Connect(&ConnRef{PlugRef: PlugRef{Workshop: "ws", Sdk: "s1", Name: "i2"}, SlotRef: SlotRef{Workshop: "ws", Sdk: "s3", Name: "i2"}}, nil, nil, nil, nil, nil)
+	_, err = r.Connect(&ConnRef{
+		PlugRef: PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s1", Name: "i2"},
+		SlotRef: SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s3", Name: "i2"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
 	// Without any names or options we get the summary of all the interfaces.

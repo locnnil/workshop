@@ -2,6 +2,7 @@ package ifacestate_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -100,8 +101,9 @@ slots:
 	})
 
 	s.state.Lock()
+	key := fmt.Sprintf("%s:ws:consumer:plug %s:ws:producer:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
-		"ws:consumer:plug ws:producer:slot": map[string]interface{}{
+		key: map[string]interface{}{
 			"interface": "content",
 			"plug-static": map[string]interface{}{
 				"content": "foo",
@@ -123,7 +125,9 @@ slots:
 
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 1)
-	cref := &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Workshop: "ws", Sdk: "consumer", Name: "plug"}, SlotRef: interfaces.SlotRef{Workshop: "ws", Sdk: "producer", Name: "slot"}}
+	cref := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)
@@ -166,8 +170,9 @@ slots:
 	})
 
 	s.state.Lock()
+	key := fmt.Sprintf("%s:ws:consumer:plug %s:core:producer:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
-		"ws:consumer:plug core:producer:slot": map[string]interface{}{
+		key: map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -208,8 +213,10 @@ slots:
 	})
 
 	s.state.Lock()
+	key := fmt.Sprintf("%s:ws:consumer:plug-1 %s:core:producer:slot-1", s.prj.ProjectId, s.prj.ProjectId)
+
 	s.state.Set("conns", map[string]interface{}{
-		"ws:consumer:plug-1 core:producer:slot-1": map[string]interface{}{
+		key: map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
