@@ -101,6 +101,7 @@ func (m *InterfaceManager) StartUp() error {
 	if _, err := m.reloadConnections(""); err != nil {
 		return err
 	}
+
 	return nil
 }
 

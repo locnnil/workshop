@@ -32,8 +32,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 
 	spec := s.(*Specification)
 	for _, dev := range spec.devices {
-		err = b.wsbackend.AddWorkshopDevice(context, sdkInfo.Workshop, *dev)
-		if err != nil {
+		if err := b.wsbackend.AddWorkshopDevice(context, sdkInfo.Workshop, *dev); err != nil {
 			return nil
 		}
 	}

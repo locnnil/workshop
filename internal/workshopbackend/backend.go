@@ -40,7 +40,24 @@ type WorkshopConfigValue struct {
 	Value string
 }
 
+type Stash interface {
+	// Make a stash of the workshop. The workshop will be stopped and will not
+	// be available to other workshop operations, e.g. list, stop, start and so
+	// on. A new workshop with the same name can be launched for the same
+	// project-id.
+	StashWorkshop(ctx context.Context, name string) error
+
+	// Restore the workshop from the stash (if exists, see StashWorkshop). The
+	// workshop will be restored and become visible to the backend operations.
+	// Fails if a workshop with the same name exists.
+	UnstashWorkshop(ctx context.Context, name string) error
+
+	// Delete the workshop from stash (if exists).
+	RemoveWorkshopStash(ctx context.Context, name string) error
+}
+
 type WorkshopBackend interface {
+	Stash
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -66,20 +83,6 @@ type WorkshopBackend interface {
 	// Stops workshop gracefully (i.e. waits for the graceful instance and all
 	// its running services termination) unless force is used.
 	StopWorkshop(ctx context.Context, name string, force bool) error
-
-	// Make a stash of the workshop. The workshop will be stopped and will not
-	// be available to other workshop operations, e.g. list, stop, start and so
-	// on. A new workshop with the same name can be launched for the same
-	// project-id.
-	StashWorkshop(ctx context.Context, name string) error
-
-	// Restore the workshop from the stash (if exists, see StashWorkshop). The
-	// workshop will be restored and become visible to the backend operations.
-	// Fails if a workshop with the same name exists.
-	UnstashWorkshop(ctx context.Context, name string) error
-
-	// Delete the workshop from stash (if exists).
-	RemoveWorkshopStash(ctx context.Context, name string) error
 
 	// Create a temporary state storage volume for the workshop. It can be
 	// mounted to the instance separately. This does not mount the device to the
@@ -117,7 +120,6 @@ type WorkshopBackend interface {
 	// the command (i.e. the workshop does not exist) and the errors that were
 	// produced by the command itself (i.e. return code != 0). If the latter, an
 	// instance of ErrExec with the status code will be returned.
-
 	// The callback ExecContext.WaitExecution will initite the command execution
 	// and redirect its IO using args.ExecControls. ExecContext.Environment will
 	// contain full (actual)
