@@ -56,6 +56,6 @@ func (s *Specification) AddDeviceEntry(dev *workshopbackend.WorkshopDevice) erro
 	if s.devices == nil {
 		s.devices = make(map[string]*workshopbackend.WorkshopDevice)
 	}
-	s.devices[dev.Name] = dev
+	s.devices[dev.Name()] = dev
 	return nil
 }

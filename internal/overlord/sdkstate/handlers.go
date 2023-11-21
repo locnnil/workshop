@@ -85,20 +85,16 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	sdkMount := workshopbackend.WorkshopDevice{
-		Name: sdkSetup.Name,
-		Properties: map[string]string{"type": "disk", "source": sdkSetup.Filename(),
-			"path": filepath.Join("/root", filepath.Base(sdkSetup.Filename()))},
-	}
-
+	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
+	sdkMount := workshopbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
 	if err = m.backend.AddWorkshopDevice(ctx, workshop, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, workshop, err)
+		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name()); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name(), workshop, err)
 		}
 	}
 
@@ -125,7 +121,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 				"tar",
 				"--extract",
 				"--file",
-				sdkMount.Properties["path"],
+				target,
 				"--one-top-level=" + sdkPath,
 				"--no-same-owner",
 			},

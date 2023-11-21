@@ -128,11 +128,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	var entry = workshopbackend.WorkshopDevice{
-		Name: plug.Name(),
-		Properties: map[string]string{"type": "disk", "source": source,
-			"path": iface.mount(plug)},
-	}
+	var entry = workshopbackend.Mount(plug.Name(), source, iface.mount(plug))
 	return spec.AddDeviceEntry(&entry)
 }
 

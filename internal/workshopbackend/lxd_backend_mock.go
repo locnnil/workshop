@@ -160,7 +160,7 @@ func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
-	f.Workshops[projectId][name].Devices[props.Name] = props.Properties
+	f.Workshops[projectId][name].Devices[props.Name()] = props.properties
 	return nil
 }
 
@@ -171,6 +171,10 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 	}
 	delete(f.Workshops[projectId][name].Devices, device)
 	return nil
+}
+
+func (s *FakeWorkshopBackend) AssignSdkProfile(ctx context.Context, profile SdkProfile) error {
+	panic("not implemented")
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {

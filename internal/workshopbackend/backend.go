@@ -31,8 +31,47 @@ func (e *ErrExec) Error() string {
 }
 
 type WorkshopDevice struct {
-	Name       string
-	Properties map[string]string
+	name       string
+	properties map[string]string
+}
+
+func (d WorkshopDevice) Name() string {
+	return d.name
+}
+
+func Mount(name, source, target string) WorkshopDevice {
+	return WorkshopDevice{
+		name: name,
+		properties: map[string]string{"type": "disk", "source": source,
+			"path": target},
+	}
+}
+
+func Volume(name, path, volume string) WorkshopDevice {
+	return WorkshopDevice{
+		name: name,
+		properties: map[string]string{"type": "disk",
+			"pool":   "default",
+			"path":   path,
+			"source": volume},
+	}
+}
+
+type SdkProfile struct {
+	sdk     string
+	devices map[string]WorkshopDevice
+}
+
+func (s SdkProfile) Name() string {
+	return s.sdk
+}
+
+func (s SdkProfile) AddDevice(dev WorkshopDevice) error {
+	if _, ok := s.devices[dev.Name()]; ok {
+		return fmt.Errorf("device %s already exists in the %s SDK profile", dev.Name(), s.Name())
+	}
+	s.devices[dev.Name()] = dev
+	return nil
 }
 
 type WorkshopConfigValue struct {
@@ -82,6 +121,15 @@ type WorkshopBackend interface {
 	// has a username that the corresponding projects belong to as a key.
 	Projects(ctx context.Context) (map[string][]*Project, error)
 
+	// Loads a workshop instance.
+	Workshop(ctx context.Context, name string) (*Workshop, error)
+
+	// Returns a workshop's file system interface.
+	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
+
+	// Returns a list of workshops for the project in context.
+	ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
+
 	// Launch a barebone workshop instance using the base provided. The
 	// supported bases are ubuntu@20.04 and ubuntu@22.04.
 	LaunchWorkshop(ctx context.Context, name, base string) error
@@ -98,25 +146,18 @@ type WorkshopBackend interface {
 	StopWorkshop(ctx context.Context, name string, force bool) error
 
 	// Adds a workshop device described by the properties.
-	AddWorkshopDevice(ctx context.Context, name string, props WorkshopDevice) error
+	AddWorkshopDevice(ctx context.Context, name string, device WorkshopDevice) error
 
 	// Removes a workshop device.
 	RemoveWorkshopDevice(ctx context.Context, name string, device string) error
+
+	AssignSdkProfile(ctx context.Context, profile SdkProfile) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change
 	// any workshop property arbitrarily.
 	AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error
 	RemoveWorkshopConfig(ctx context.Context, name string, key string) error
-
-	// Loads a workshop instance.
-	Workshop(ctx context.Context, name string) (*Workshop, error)
-
-	// Returns a workshop's file system interface.
-	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
-
-	// Returns a list of workshops for the project in context.
-	ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

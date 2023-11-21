@@ -146,14 +146,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Analyze the mount specification.
-	expectedMnt := []*workshopbackend.WorkshopDevice{{
-		Name: plug.Name,
-		Properties: map[string]string{
-			"type":   "disk",
-			"source": filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"),
-			"path":   "/project/training",
-		},
-	}}
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, expectedMnt)
 
+	expectedMnt := workshopbackend.Mount(plug.Name, filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"), "/project/training")
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []*workshopbackend.WorkshopDevice{&expectedMnt})
 }

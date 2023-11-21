@@ -18,7 +18,9 @@ var (
 const (
 	ProjectLock       = ".workshop.lock"
 	ProjectPathDevice = "workshop.project"
-	ProjectIdConfig   = "user.workshop.project-id"
+	// path used in workshop to mount the project directory
+	WorkshopProjectPath = "/project"
+	ProjectIdConfig     = "user.workshop.project-id"
 )
 
 var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)

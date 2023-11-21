@@ -61,8 +61,6 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
-	// path used in workshop to mount the project directory
-	WorkshopProjectPath = "/project"
 	// name prefix for the workshops that were made unavailable
 	StashNamePrefix = "stash-"
 )
@@ -354,10 +352,8 @@ func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx con
 	}
 
 	for _, i := range workshops {
-		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), WorkshopDevice{
-			Name:       ProjectPathDevice,
-			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkshopProjectPath},
-		})
+		project := Mount(ProjectPathDevice, existingProject.Path, WorkshopProjectPath)
+		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
 		}
@@ -743,13 +739,17 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	if err != nil {
 		return err
 	}
-	inst.Devices[device.Name] = device.Properties
+	inst.Devices[device.Name()] = device.properties
 	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
 	if err != nil {
 		return err
 	}
 
 	return op.Wait()
+}
+
+func (s *LxdBackend) AssignSdkProfile(ctx context.Context, profile SdkProfile) error {
+	return nil
 }
 
 func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
