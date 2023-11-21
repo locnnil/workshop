@@ -135,7 +135,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	// Update the current link to point out to the newly installed SDK
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, s.Name)
 
-	fs, err := w.backend.GetWorkshopFs(ctx, w.Name)
+	fs, err := w.backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 
 	/* Remove the 'current' link */
-	fs, err := w.backend.GetWorkshopFs(ctx, w.Name)
+	fs, err := w.backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	wsfs, err := w.backend.GetWorkshopFs(ctx, w.Name)
+	wsfs, err := w.backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
 	}

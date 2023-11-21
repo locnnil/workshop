@@ -842,7 +842,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (Ex
 	return s.execCommand(conn, ctx, name, args)
 }
 
-func (s *LxdBackend) GetWorkshop(ctx context.Context, name string) (*Workshop, error) {
+func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -950,7 +950,7 @@ func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter 
 	return toReturn, nil
 }
 
-func (s *LxdBackend) GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
+func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -1061,7 +1061,7 @@ func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) error {
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
+func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err

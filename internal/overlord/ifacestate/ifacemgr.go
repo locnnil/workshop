@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
 
 	backend "github.com/canonical/workshop/internal/interfaces/backends"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
@@ -59,7 +60,7 @@ func (m *InterfaceManager) StartUp() error {
 		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
 		for _, prj := range projects {
 			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
-			_, wrksps, err := m.wsbackend.GetProjectWorkshops(prjctx)
+			_, wrksps, err := m.wsbackend.ProjectWorkshops(prjctx)
 			if err != nil {
 				return err
 			}
@@ -76,7 +77,25 @@ func (m *InterfaceManager) StartUp() error {
 				}
 			}
 		}
+	}
 
+	coreSdk := &sdk.Info{
+		ProjectId:     "core",
+		Workshop:      "core",
+		Name:          "core",
+		Base:          "ubuntu@22.04",
+		Type:          sdk.Core,
+		Plugs:         make(map[string]*sdk.PlugInfo),
+		Slots:         make(map[string]*sdk.SlotInfo),
+		BadInterfaces: make(map[string]string),
+	}
+
+	if err := m.addImplicitSlots(coreSdk); err != nil {
+		return err
+	}
+
+	if err := m.repo.AddSdk(coreSdk); err != nil {
+		return err
 	}
 
 	if _, err := m.reloadConnections(""); err != nil {
@@ -152,4 +171,31 @@ func (m *InterfaceManager) reloadConnections(workshop string) (map[string]string
 		setConns(m.state, conns)
 	}
 	return affected, nil
+}
+
+func (m *InterfaceManager) addImplicitSlots(sdkInfo *sdk.Info) error {
+	if sdkInfo.Type != sdk.Core {
+		return nil
+	}
+
+	// Ask each interface if it wants to be implicitly added.
+	for _, iface := range builtin.Interfaces() {
+		si := interfaces.StaticInfoOf(iface)
+		if si.ImplicitOnCore {
+			ifaceName := iface.Name()
+			if _, ok := sdkInfo.Slots[ifaceName]; !ok {
+				sdkInfo.Slots[ifaceName] = makeImplicitSlot(sdkInfo, ifaceName)
+			}
+		}
+	}
+
+	return nil
+}
+
+func makeImplicitSlot(sdkInfo *sdk.Info, ifaceName string) *sdk.SlotInfo {
+	return &sdk.SlotInfo{
+		Sdk:       sdkInfo,
+		Name:      ifaceName,
+		Interface: ifaceName,
+	}
 }

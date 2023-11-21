@@ -106,7 +106,7 @@ base: ubuntu@20.04
 	c.Assert(err, check.IsNil)
 	err = b.LaunchWorkshop(req.Context(), "ws-test", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
-	ws, err := b.GetWorkshop(req.Context(), "ws-test")
+	ws, err := b.Workshop(req.Context(), "ws-test")
 	c.Assert(err, check.IsNil)
 	ws.LinkSdk(req.Context(), sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 

@@ -135,7 +135,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) e
 }
 
 func (s *FakeWorkshopBackend) StartWorkshop(ctx context.Context, name string) error {
-	w, err := s.GetWorkshop(ctx, name)
+	w, err := s.Workshop(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (s *FakeWorkshopBackend) StartWorkshop(ctx context.Context, name string) er
 }
 
 func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, force bool) error {
-	w, err := s.GetWorkshop(ctx, name)
+	w, err := s.Workshop(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshopConfig(ctx context.Context, name str
 	return nil
 }
 
-func (f *FakeWorkshopBackend) GetWorkshop(ctx context.Context, name string) (*Workshop, error) {
+func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*Workshop, error) {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (f *FakeWorkshopBackend) GetWorkshop(ctx context.Context, name string) (*Wo
 	return workshop.Workshop, nil
 }
 
-func (f *FakeWorkshopBackend) GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
+func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -225,7 +225,7 @@ func (f *FakeWorkshopBackend) GetProjectWorkshops(ctx context.Context) ([]*Works
 
 	var workshops = make([]*Workshop, 0)
 	for _, i := range f.Workshops[projectId] {
-		ws, _ := f.GetWorkshop(ctx, i.Name)
+		ws, _ := f.Workshop(ctx, i.Name)
 		workshops = append(workshops, ws)
 	}
 	return nil, workshops, nil
@@ -247,7 +247,7 @@ func (f *FakeWorkshopBackend) GetWorkshopsByDevices(ctx context.Context, filter 
 	panic("not implemented") // TODO: Implement
 }
 
-func (s *FakeWorkshopBackend) GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
+func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return nil, err

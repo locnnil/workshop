@@ -8,6 +8,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -65,7 +66,7 @@ sdks:
 	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 
-	wsfs, err := s.wsbackend.GetWorkshopFs(ctx, ws)
+	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
@@ -73,6 +74,23 @@ sdks:
 		sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
 		err = afero.WriteFile(wsfs, sdkPath, []byte(sdk), 0644)
 		c.Assert(err, check.IsNil)
+	}
+}
+
+func (s *interfaceManagerSuite) TestManagerAddImplicitSlots(c *check.C) {
+	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	err := mgr.StartUp()
+	c.Assert(err, check.IsNil)
+
+	repo := mgr.Repository()
+
+	for _, iface := range builtin.Interfaces() {
+		si := interfaces.StaticInfoOf(iface)
+		if si.ImplicitOnCore {
+			slots := repo.AllSlots(iface.Name())
+			c.Assert(slots, check.HasLen, 1)
+			c.Assert(slots[0].Sdk.Type, check.Equals, sdk.Core)
+		}
 	}
 }
 

@@ -518,7 +518,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	}
 
 	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
-	wrkspc, err := w.backend.GetWorkshopFs(ctx, name)
+	wrkspc, err := w.backend.WorkshopFs(ctx, name)
 	if err != nil {
 		return nil, err
 	}

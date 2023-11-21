@@ -104,13 +104,13 @@ type WorkshopBackend interface {
 	RemoveWorkshopConfig(ctx context.Context, name string, key string) error
 
 	// Loads a workshop instance.
-	GetWorkshop(ctx context.Context, name string) (*Workshop, error)
+	Workshop(ctx context.Context, name string) (*Workshop, error)
 
 	// Returns a workshop's file system interface.
-	GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
+	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
 
 	// Returns a list of workshops for the project in context.
-	GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
+	ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

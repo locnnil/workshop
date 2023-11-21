@@ -165,7 +165,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	fs, err := m.backend.GetWorkshopFs(ctx, workshop)
+	fs, err := m.backend.WorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.backend.GetWorkshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, workshop)
 	if err != nil {
 		return err
 	}

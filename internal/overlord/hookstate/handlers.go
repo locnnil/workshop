@@ -52,7 +52,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	switch hook.HookType {
 	case SaveState:
 		{
-			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -65,7 +65,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	case RestoreState:
 		{
-			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -89,7 +89,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
 
 	//
-	wsFs, err := h.backend.GetWorkshopFs(ctx, workshop)
+	wsFs, err := h.backend.WorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}

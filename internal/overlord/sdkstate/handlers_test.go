@@ -111,7 +111,7 @@ plugs:
 
 func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, "test", "current", "meta", "sdk.yaml")
-	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
@@ -155,7 +155,7 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	})
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, _ := s.backend.GetWorkshop(s.ctx, "ws")
+	props, _ := s.backend.Workshop(s.ctx, "ws")
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 }
 
@@ -185,7 +185,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkshop(s.ctx, "ws")
+	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
@@ -214,7 +214,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 
 	/* emulate install behaviour that unpacks an SDK to a certain directory */
 	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		fs, _ := s.backend.GetWorkshopFs(ctx, name)
+		fs, _ := s.backend.WorkshopFs(ctx, name)
 		fs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "new"), 0755)
 		return workshopbackend.ExecContext{}, nil
 	}
@@ -226,11 +226,11 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkshop(s.ctx, "ws")
+	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	/* make sure SDK dir was removed */
-	fs, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkshopSdksDir, "new"))
 	c.Check(exist, check.Equals, false)
@@ -259,7 +259,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, err := s.backend.GetWorkshop(s.ctx, "ws")
+	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 1)
@@ -334,7 +334,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	}
 	s.state.Lock()
 
-	props, err := s.backend.GetWorkshop(s.ctx, "ws")
+	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content()
 	c.Check(info, check.HasLen, 0)

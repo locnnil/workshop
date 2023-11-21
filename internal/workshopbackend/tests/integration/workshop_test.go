@@ -148,7 +148,7 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }
 
@@ -158,7 +158,7 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test")
+	_, err = f.be.Workshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
 	// Execute
@@ -166,7 +166,7 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test")
+	_, err = f.be.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 }
@@ -199,7 +199,7 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.NotNil)
 
 	// Execute
@@ -221,7 +221,7 @@ func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// now, ensure that the systemd is in the final state
