@@ -56,8 +56,21 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
+type StateStorage interface {
+	// Create a temporary state storage volume for the workshop. It can be
+	// mounted to the instance separately. This does not mount the device to the
+	// workshop, it must be mounted to the required workshop as a separate
+	// operation (see AddWorkshopDevice).
+	CreateStateStorage(ctx context.Context, name string) error
+
+	// Delete a temporary state storage volume for the workshop. It does
+	// not unmount the volume from the workshop if mounted.
+	DeleteStateStorage(ctx context.Context, name string) error
+}
+
 type WorkshopBackend interface {
 	Stash
+	StateStorage
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -83,16 +96,6 @@ type WorkshopBackend interface {
 	// Stops workshop gracefully (i.e. waits for the graceful instance and all
 	// its running services termination) unless force is used.
 	StopWorkshop(ctx context.Context, name string, force bool) error
-
-	// Create a temporary state storage volume for the workshop. It can be
-	// mounted to the instance separately. This does not mount the device to the
-	// workshop, it must be mounted to the required workshop as a separate
-	// operation (see AddWorkshopDevice).
-	CreateStateStorage(ctx context.Context, name string) error
-
-	// Delete a temporary state storage volume for the workshop. It does
-	// not unmount the volume from the workshop if mounted.
-	DeleteStateStorage(ctx context.Context, name string) error
 
 	// Adds a workshop device described by the properties.
 	AddWorkshopDevice(ctx context.Context, name string, props WorkshopDevice) error
