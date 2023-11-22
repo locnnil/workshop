@@ -748,9 +748,7 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	return op.Wait()
 }
 
-func (s *LxdBackend) AssignSdkProfile(ctx context.Context, profile SdkProfile) error {
-	return nil
-}
+
 
 func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
 	conn, err := s.LxdClient(ctx)

@@ -129,7 +129,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	}
 
 	var entry = workshopbackend.Mount(plug.Name(), source, iface.mount(plug))
-	return spec.AddDeviceEntry(&entry)
+	return spec.AddDeviceEntry(entry)
 }
 
 func init() {

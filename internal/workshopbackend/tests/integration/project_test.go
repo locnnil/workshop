@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package lxdbackend_integration_test
+package workshopbackend_test
 
 import (
 	"context"
@@ -74,6 +74,15 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 		if err == nil {
 			c.Check(op.Wait(), check.IsNil)
 		}
+	}
+
+	profiles, err := cli.GetProfileNames()
+	for _, p := range profiles {
+		if p == "default" {
+			continue
+		}
+		err := cli.DeleteProfile(p)
+		c.Check(err, check.IsNil)
 	}
 
 	err = cli.DeleteProject(project)

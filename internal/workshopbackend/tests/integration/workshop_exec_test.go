@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package lxdbackend_integration_test
+package workshopbackend_test
 
 import (
 	"bytes"

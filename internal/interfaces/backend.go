@@ -32,7 +32,7 @@ import (
 type SecurityBackend interface {
 	// Initialize performs any initialization required by the backend.
 	// It is called during workshopd startup process.
-	Initialize(backend workshopbackend.WorkshopBackend) error
+	Initialize(backend workshopbackend.Profile) error
 
 	// Name returns the name of the backend.
 	// This is intended for diagnostic messages.

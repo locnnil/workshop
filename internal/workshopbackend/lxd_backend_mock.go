@@ -173,7 +173,11 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 	return nil
 }
 
-func (s *FakeWorkshopBackend) AssignSdkProfile(ctx context.Context, profile SdkProfile) error {
+func (s *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
+	panic("not implemented")
+}
+
+func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
 	panic("not implemented")
 }
 

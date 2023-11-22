@@ -62,6 +62,13 @@ type SdkProfile struct {
 	devices map[string]WorkshopDevice
 }
 
+func NewSdkProfile(name string) SdkProfile {
+	return SdkProfile{
+		sdk:     name,
+		devices: make(map[string]WorkshopDevice),
+	}
+}
+
 func (s SdkProfile) Name() string {
 	return s.sdk
 }
@@ -107,9 +114,15 @@ type StateStorage interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
+type Profile interface {
+	AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error
+	RemoveProfile(ctx context.Context, workshop string, profile string) error
+}
+
 type WorkshopBackend interface {
 	Stash
 	StateStorage
+	Profile
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -150,8 +163,6 @@ type WorkshopBackend interface {
 
 	// Removes a workshop device.
 	RemoveWorkshopDevice(ctx context.Context, name string, device string) error
-
-	AssignSdkProfile(ctx context.Context, profile SdkProfile) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change

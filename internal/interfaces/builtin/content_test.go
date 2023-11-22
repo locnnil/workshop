@@ -148,5 +148,5 @@ slots:
 	// Analyze the mount specification.
 
 	expectedMnt := workshopbackend.Mount(plug.Name, filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"), "/project/training")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []*workshopbackend.WorkshopDevice{&expectedMnt})
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.WorkshopDevice{expectedMnt})
 }
