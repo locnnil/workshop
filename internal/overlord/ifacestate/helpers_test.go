@@ -41,6 +41,15 @@ func (s *helpersSuite) SetUpTest(c *check.C) {
 	s.st = state.New(nil)
 }
 
+var workshopTemplate = `name: ws
+base: ubuntu@20.04
+sdks:
+  {{ range . }}
+  {{- .Name}}:
+      channel: {{.Channel}}
+  {{ end }} 
+`
+
 func (s *helpersSuite) TestGetConns(c *check.C) {
 	s.st.Lock()
 	defer s.st.Unlock()

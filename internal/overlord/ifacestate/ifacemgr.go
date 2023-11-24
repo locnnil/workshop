@@ -11,6 +11,8 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
+
+	. "github.com/canonical/workshop/internal/overlord/statecontext"
 )
 
 type InterfaceManager struct {
@@ -25,6 +27,8 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 		wsbackend: be,
 		repo:      interfaces.NewRepository(),
 	}
+
+	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), OnDo(m.undoAutoConnect))
 
 	return m
 }
@@ -98,7 +102,7 @@ func (m *InterfaceManager) StartUp() error {
 		return err
 	}
 
-	if _, err := m.reloadConnections(""); err != nil {
+	if _, err := m.reloadConnections("", "", ""); err != nil {
 		return err
 	}
 
@@ -114,7 +118,7 @@ func (m *InterfaceManager) Ensure() error {
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(workshop string) (map[string]string, error) {
+func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (map[string]string, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
@@ -134,8 +138,16 @@ func (m *InterfaceManager) reloadConnections(workshop string) (map[string]string
 		// Apply filtering, this allows us to reload only a subset of
 		// connections (and similarly, refresh the static attributes of only a
 		// subset of connections).
-		if workshop != "" && connRef.PlugRef.Workshop != workshop && connRef.SlotRef.Workshop != workshop {
-			continue
+		if projectId != "" && workshop != "" && sdk != "" {
+			if connRef.PlugRef.ProjectId != projectId && connRef.SlotRef.ProjectId != projectId {
+				continue
+			}
+			if connRef.PlugRef.Workshop != workshop && connRef.SlotRef.Workshop != workshop {
+				continue
+			}
+			if connRef.PlugRef.Sdk != sdk && connRef.SlotRef.Sdk != sdk {
+				continue
+			}
 		}
 
 		plugInfo := m.repo.Plug(connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name)

@@ -19,6 +19,7 @@ type FakeWorkshop struct {
 	*Workshop
 	Config             map[string]string
 	WorkshopFilesystem WorkshopFs
+	Profiles           []SdkProfile
 }
 
 type ExecCall struct {
@@ -127,6 +128,8 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 			Channel: s.Channel,
 		})
 	}
+
+	ws.Profiles = make([]SdkProfile, 0)
 	return nil
 }
 
@@ -173,8 +176,13 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 	return nil
 }
 
-func (s *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
-	panic("not implemented")
+func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
+	f.Workshops[projectId][workshop].Profiles = append(f.Workshops[projectId][workshop].Profiles, profile)
+	return nil
 }
 
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {

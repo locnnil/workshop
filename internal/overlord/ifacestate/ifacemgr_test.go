@@ -1,8 +1,10 @@
 package ifacestate_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
+	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 )
 
@@ -24,6 +27,7 @@ type interfaceManagerSuite struct {
 	o         *overlord.Overlord
 	state     *state.State
 	se        *overlord.StateEngine
+	runner    *state.TaskRunner
 	ctx       context.Context
 	wsbackend workshopbackend.WorkshopBackend
 	prj       *workshopbackend.Project
@@ -37,7 +41,10 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.o = overlord.Fake()
 	s.state = s.o.State()
+
 	s.se = s.o.StateEngine()
+	s.runner = state.NewTaskRunner(s.state)
+
 	s.wsbackend = workshopbackend.NewFakeWorkshopBackend()
 	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
@@ -50,29 +57,28 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) mockWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[string]string) {
+func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, sdkYamls map[sdk.Setup]string) {
 	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
-	err := os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@22.04
-sdks:
-  consumer:
-    channel: latest/stable
-  producer:
-    channel: latest/stable
-`), 0644)
+	t, err := template.New("workshop").Parse(workshopTemplate)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
+	var workshopFile = bytes.NewBuffer([]byte{})
+	t.Execute(workshopFile, maps.Keys(sdkYamls))
+
+	err = os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)
+	err = s.wsbackend.LaunchWorkshop(ctx, "ws", "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+
+	wsfs, err := s.wsbackend.WorkshopFs(ctx, "ws")
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	for name, sdk := range sdkYamls {
-		sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
-		err = afero.WriteFile(wsfs, sdkPath, []byte(sdk), 0644)
+	for sdk, yaml := range sdkYamls {
+		sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdk.Name, "current", "meta", "sdk.yaml")
+		err = afero.WriteFile(wsfs, sdkPath, []byte(yaml), 0644)
 		c.Assert(err, check.IsNil)
 	}
 }
@@ -113,9 +119,9 @@ slots:
   attr: slot-value
 `
 
-	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
-		"consumer": consumerYaml,
-		"producer": producerYaml,
+	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
+		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
 
 	s.state.Lock()
@@ -182,9 +188,9 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
-		"consumer": consumerYaml,
-		"producer": producerYaml,
+	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
+		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
 
 	s.state.Lock()
@@ -225,9 +231,9 @@ slots:
   interface: content
   attr2: value2
 `
-	s.mockWorkshopWithSDKs(c, "ws", map[string]string{
-		"consumer": consumerYaml,
-		"producer": producerYaml,
+	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
+		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
 
 	s.state.Lock()

@@ -28,6 +28,7 @@ import (
 
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
+	"golang.org/x/exp/maps"
 )
 
 // Repository stores all known plugs and slots and ifaces.
@@ -927,7 +928,7 @@ func (r *Repository) RemoveSdk(projectId, workshop, sdkName string) error {
 // DisconnectSdk disconnects all the connections to and from a given sdk.
 //
 // The return value is a list of names that were affected.
-func (r *Repository) DisconnectSdk(projectId, workshop, sdkName string) ([]string, error) {
+func (r *Repository) DisconnectSdk(projectId, workshop, sdkName string) ([]*sdk.Info, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -951,12 +952,7 @@ func (r *Repository) DisconnectSdk(projectId, workshop, sdkName string) ([]strin
 		}
 	}
 
-	result := make([]string, 0, len(seen))
-	for info := range seen {
-		result = append(result, info.Name)
-	}
-	sort.Strings(result)
-	return result, nil
+	return maps.Keys(seen), nil
 }
 
 // SideArity conveys the arity constraints for an allowed auto-connection.

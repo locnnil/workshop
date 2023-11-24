@@ -171,6 +171,27 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 
 }
 
+func (f *wsOps) TestLxdBackendUnstashWorkshopRecoverProfiles(c *check.C) {
+	// Setup
+	// Change the stash project name to invalid to emulate
+	// migration failure. The instance must preserve its
+	// list of the SDK profiles
+	old := workshopbackend.StashNamePrefix
+	workshopbackend.StashNamePrefix = "?"
+	defer func() { workshopbackend.StashNamePrefix = old }()
+	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
+	profiles := inst.Profiles
+
+	// Execute
+	err = f.be.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.NotNil)
+
+	// Validate
+	inst, _, err = f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, profiles)
+}
+
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	// Execute
 	err := f.be.CreateStateStorage(f.ctx, "test")

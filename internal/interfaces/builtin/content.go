@@ -124,7 +124,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	if err = os.Chown(source, uid, gid); err != nil {
+	if err = workshopbackend.Chown(source, uid, gid); err != nil {
 		return err
 	}
 

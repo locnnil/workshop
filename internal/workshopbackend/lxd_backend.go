@@ -59,15 +59,17 @@ type ExecContext struct {
 type LxdBackend struct {
 }
 
+var StashNamePrefix string = "stash-"
+
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 	// name prefix for the workshops that were made unavailable
-	StashNamePrefix = "stash-"
 )
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	LookupUsername       = user.Lookup
+	Chown                = os.Chown
 	NewProjectId         = allocateProjectId
 
 	ErrWorkshopNotFound = errors.New("workshop not found")
@@ -748,8 +750,6 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	return op.Wait()
 }
 
-
-
 func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -1133,8 +1133,7 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 // moved to the LXD project which is not available to the users (e.g. for
 // hiding a workshop temporarily). Otherwise, the workshop will be move to
 // the regular project visible by the user specified in the ctx context.
-func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Context, name string, system bool) error {
-	var err error
+func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Context, name string, system bool) (err error) {
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key %s not found", ContextUser)
@@ -1147,32 +1146,62 @@ func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Co
 
 	var op lxd.Operation
 	instance := InstanceName(name, projectId)
+
 	if system {
+		// for the migration to the stash project to be successful, we will have
+		// to remove all the SDK profiles
+		inst, etag, err := conn.GetInstance(instance)
+		if err != nil {
+			return err
+		}
+
+		oldProfiles := slices.Clone(inst.Profiles)
+		inst.Profiles = []string{"default"}
+
+		if op, err = conn.UpdateInstance(instance, inst.InstancePut, etag); err != nil {
+			return err
+		}
+
+		if err = op.Wait(); err != nil {
+			return err
+		}
+
+		defer func() {
+			if err != nil {
+				// try to recover the list of the isntance profiles
+				// as the stash operation failed, which means the instance
+				// must return to the project untouched
+				inst.InstancePut.Profiles = oldProfiles
+				op, erru := conn.UpdateInstance(instance, inst.InstancePut, "")
+				if erru == nil {
+					op.Wait()
+				}
+			}
+		}()
+
 		// the new name must not be the same, otherwise the LXD's DNS will fail
 		// the new instance creation
-		op, err = conn.MigrateInstance(instance, api.InstancePost{
+		if op, err = conn.MigrateInstance(instance, api.InstancePost{
 			Name:      StashNamePrefix + instance,
 			Project:   LxdSystemProjectName(user),
 			Migration: true,
-		})
+		}); err != nil {
+			return err
+		}
 	} else {
 		// the instance of interest is in the system project now, so let's
 		// switch the project for the connection first to make the reverse
 		// migration successful (i.e. from system -> user project)
 		conn = conn.UseProject(LxdSystemProjectName(user))
-		op, err = conn.MigrateInstance(StashNamePrefix+instance, api.InstancePost{
+		if op, err = conn.MigrateInstance(StashNamePrefix+instance, api.InstancePost{
 			Name:      instance,
 			Project:   LxdProjectName(user),
 			Migration: true,
-		})
+		}); err != nil {
+			return err
+		}
 	}
-
-	if err != nil {
-		return err
-	}
-
-	err = op.WaitContext(ctx)
-	return err
+	return op.WaitContext(ctx)
 }
 
 func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error {

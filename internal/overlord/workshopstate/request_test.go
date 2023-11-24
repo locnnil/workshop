@@ -96,6 +96,8 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 		"install-sdk",
 		"link-sdk",
 		"link-sdk",
+		"auto-connect",
+		"auto-connect",
 		"run-hook",
 		"run-hook"}
 
@@ -125,7 +127,7 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 	c.Assert(id2, check.Equals, tasks[3].ID())
 
 	// install-sdk task for sdk_2
-	err = tasks[7].Get("sdk-retrieve-task", &id1)
+	err = tasks[8].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id1, check.Equals, tasks[4].ID())
 
@@ -218,6 +220,7 @@ func (s *S) TestRefreshManyEmptyWorkshopMany(c *check.C) {
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect",
 		"run-hook",
 		"run-hook", // restore state hook
 	}
@@ -275,6 +278,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect",
 		"run-hook",
 		"run-hook", // restore state hook
 	}
@@ -333,6 +337,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect",
 		"run-hook",
 		"run-hook", // restore state hook
 		"remove-workshop-stash",
