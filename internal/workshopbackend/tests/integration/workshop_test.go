@@ -104,6 +104,11 @@ func (f *wsOps) TearDownTest(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
+func (f *wsOps) TearDownSuite(c *check.C) {
+	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
+}
+
 func createTestContext(username, projectId string) context.Context {
 	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
 	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
@@ -136,11 +141,6 @@ base: ubuntu@22.04
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TearDownSuite(c *check.C) {
-	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
-}
-
 func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	// Execute
 	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
@@ -154,7 +154,11 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 
 func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 	// Execute
-	err := f.be.StashWorkshop(f.ctx, "test")
+	profile := workshopbackend.NewSdkProfile("test-profile")
+	err := f.be.AssignProfile(f.ctx, "test", profile)
+	c.Assert(err, check.IsNil)
+	err = f.be.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -168,28 +172,57 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 	c.Assert(err, check.IsNil)
 	_, err = f.be.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-
+	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-test-profile"})
 }
 
 func (f *wsOps) TestLxdBackendUnstashWorkshopRecoverProfiles(c *check.C) {
 	// Setup
-	// Change the stash project name to invalid to emulate
+	// When we stash a workshop in LXD by moving it to a separate
+	// project, we must remove its assigned profiles as otherwise
+	// LXD will fail with an error by not finding those profiles
+	// existing in the new project. However, if stashing has failed
+	// we must return the instance back to the original project
+	// as is, i.e. including its profiles assigned as before.
+
+	// Change the stash name prefix to invalid to emulate
 	// migration failure. The instance must preserve its
 	// list of the SDK profiles
 	old := workshopbackend.StashNamePrefix
 	workshopbackend.StashNamePrefix = "?"
 	defer func() { workshopbackend.StashNamePrefix = old }()
-	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
-	profiles := inst.Profiles
 
-	// Execute
+	profile := workshopbackend.NewSdkProfile("test-profile-recovery")
+	err := f.be.AssignProfile(f.ctx, "test", profile)
+	c.Assert(err, check.IsNil)
+
+	// Execute (will fail due to the incorrect stash instance name)
 	err = f.be.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
-	// Validate
-	inst, _, err = f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
+	// Validate (the recovered instance still has its profiles assigned)
+	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
-	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, profiles)
+	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-test-profile-recovery"})
+}
+
+func (f *wsOps) TestLxdBackendRemoveWorkshopFromStash(c *check.C) {
+	// Execute
+	err := f.be.StashWorkshop(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	_, err = f.be.Workshop(f.ctx, "test")
+	c.Assert(err, check.NotNil)
+
+	// Execute
+	err = f.be.RemoveWorkshopStash(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+
+	// Validate
+	err = f.be.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.ErrorMatches, "workshop not found")
 }
 
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {

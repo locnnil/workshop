@@ -25,6 +25,11 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 
 // Setup creates mount profile specific to a given sdk.
 func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+	// Don't generate an SDK profile for the core SDK
+	if sdkInfo.Type == sdk.Core {
+		return nil
+	}
+
 	s, err := repo.SdkSpecification(context, b.Name(), sdkInfo)
 	if err != nil {
 		return fmt.Errorf("cannot obtain device snippets for workshop %q: %s", sdkInfo.Workshop, err)

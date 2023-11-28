@@ -186,7 +186,17 @@ func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string
 }
 
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
-	panic("not implemented")
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+	profiles := s.Workshops[projectId][workshop].Profiles
+	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == profile })
+	if idx != -1 {
+		s.Workshops[projectId][workshop].Profiles = slices.Delete(profiles, idx, idx+1)
+		return nil
+	}
+	return errors.New("profile not found")
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {

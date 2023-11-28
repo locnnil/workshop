@@ -1,0 +1,4 @@
+summary: Run LXD integration tests for SDK profiles
+
+execute: |
+  go test $SPREAD_PATH/internal/workshopbackend/tests/integration -tags=integration -check.f profileTest

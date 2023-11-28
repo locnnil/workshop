@@ -49,6 +49,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	s.ctx = context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 }
@@ -57,22 +58,22 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, sdkYamls map[sdk.Setup]string) {
+func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[sdk.Setup]string) {
 	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
-	t, err := template.New("workshop").Parse(workshopTemplate)
+	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, maps.Keys(sdkYamls))
 
-	err = os.WriteFile(filepath.Join(s.prj.Path, ".workshop.ws.yaml"), workshopFile.Bytes(), 0644)
+	err = os.WriteFile(filepath.Join(s.prj.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchWorkshop(ctx, "ws", "ubuntu@22.04")
+	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
 
-	wsfs, err := s.wsbackend.WorkshopFs(ctx, "ws")
+	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
@@ -119,7 +120,7 @@ slots:
   attr: slot-value
 `
 
-	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
@@ -188,7 +189,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
@@ -231,7 +232,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.launchWorkshopWithSDKs(c, map[sdk.Setup]string{
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})

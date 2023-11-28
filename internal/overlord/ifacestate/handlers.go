@@ -33,13 +33,12 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	sdkInfo, err := inst.SdkInfo(ctx, sdkSetup)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
-
 	// this can be a refresh for an existing SDK, hence, reconnect the SDK's
 	// connections from scratch. Consider the following scenarios for an
 	// SDK:
@@ -66,6 +65,10 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	if len(sdkInfo.BadInterfaces) > 0 {
 		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
+	}
+
+	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkInfo.Name); err != nil {
+		return err
 	}
 
 	conns, err := getConns(st)
@@ -114,6 +117,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		}
 	}
 
+	// build an SDK profile for the SDK being installed
 	for _, backend := range m.repo.Backends() {
 		if err = backend.Setup(ctx, sdkInfo, m.repo); err != nil {
 			return err
@@ -122,7 +126,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	// rebuild SDK profiles for the affected SDKs
 	for _, sdk := range disconnectedSdks {
-		if sdk.Name != sdkInfo.Name && sdk.Workshop != sdkInfo.Workshop && sdk.ProjectId != sdkInfo.ProjectId {
+		if sdk.Name != sdkInfo.Name || sdk.Workshop != sdkInfo.Workshop || sdk.ProjectId != sdkInfo.ProjectId {
 			for _, backend := range m.repo.Backends() {
 				if err = backend.Setup(ctx, sdk, m.repo); err != nil {
 					return err
@@ -136,5 +140,53 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 }
 
 func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, workshop, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
+
+	sdkSetup, err := sdkstate.SdkSetup(task)
+	if err != nil {
+		return err
+	}
+
+	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkSetup.Name)
+	if err != nil {
+		return err
+	}
+
+	if err := m.repo.RemoveSdk(project.ProjectId, workshop, sdkSetup.Name); err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkSetup.Name); err != nil {
+		return err
+	}
+
+	// rebuild SDK profiles for the affected SDKs
+	for _, sdk := range disconnectedSdks {
+		if sdk.Name != sdkSetup.Name || sdk.Workshop != workshop || sdk.ProjectId != project.ProjectId {
+			for _, backend := range m.repo.Backends() {
+				if err = backend.Setup(ctx, sdk, m.repo); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Remove the SDK profile from the backends
+	for _, backend := range m.repo.Backends() {
+		if err := backend.Remove(ctx, workshop, sdkSetup.Name); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

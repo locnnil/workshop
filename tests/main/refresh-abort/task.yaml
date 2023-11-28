@@ -12,7 +12,7 @@ restore: |
 
 debug: |
   workshop changes
-  workshop tasks 1
+  workshop tasks 2
 
 execute: |
   . "$TESTSLIB"/utils.sh

@@ -62,9 +62,9 @@ type SdkProfile struct {
 	devices map[string]WorkshopDevice
 }
 
-func NewSdkProfile(name string) SdkProfile {
+func NewSdkProfile(sdkName string) SdkProfile {
 	return SdkProfile{
-		sdk:     name,
+		sdk:     sdkName,
 		devices: make(map[string]WorkshopDevice),
 	}
 }
@@ -116,7 +116,7 @@ type StateStorage interface {
 
 type Profile interface {
 	AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error
-	RemoveProfile(ctx context.Context, workshop string, profile string) error
+	RemoveProfile(ctx context.Context, workshop, profile string) error
 }
 
 type WorkshopBackend interface {

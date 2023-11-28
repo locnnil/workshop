@@ -1,8 +1,7 @@
-name: go
-title: go
+name: test-sdk-basic
+title: test-sdk-basic
 base: ubuntu@20.04
 
-summary: Go SDK
+summary: test-sdk-basic SDK
 description: |
-  Go SDK
-
+  test-sdk-basic SDK

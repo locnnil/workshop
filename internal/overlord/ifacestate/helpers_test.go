@@ -41,7 +41,7 @@ func (s *helpersSuite) SetUpTest(c *check.C) {
 	s.st = state.New(nil)
 }
 
-var workshopTemplate = `name: ws
+var workshopTemplate = `name: %s
 base: ubuntu@20.04
 sdks:
   {{ range . }}

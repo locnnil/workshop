@@ -81,5 +81,38 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 }
 
 func (s *LxdBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
-	return nil
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	projectId, ok := ctx.Value(ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	inst, etag, err := conn.GetInstance(InstanceName(workshop, projectId))
+	if err != nil {
+		return err
+	}
+
+	// 1. Untie the profile from the workshop
+	lxdname := profileName(projectId, workshop, profile)
+	if idx := slices.Index(inst.Profiles, lxdname); idx != -1 {
+		inst.Profiles = slices.Delete(inst.Profiles, idx, idx+1)
+		op, err := conn.UpdateInstance(InstanceName(workshop, projectId), inst.Writable(), etag)
+		if err != nil {
+			return err
+		}
+		if err := op.Wait(); err != nil {
+			return err
+		}
+	}
+
+	// 2. Delete the profile
+	err = conn.DeleteProfile(profileName(projectId, workshop, profile))
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return fmt.Errorf("workshop %q has no %q SDK profile", workshop, profile)
+	}
+	return err
 }
