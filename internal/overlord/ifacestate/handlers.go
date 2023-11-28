@@ -1,16 +1,29 @@
 package ifacestate
 
 import (
+	"strings"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
-	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"gopkg.in/tomb.v2"
 )
+
+func sdkName(task *state.Task) (string, error) {
+	var sdkName string
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	if err := task.Get("sdk", &sdkName); err != nil {
+		return "", err
+	}
+	return sdkName, nil
+}
 
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
 	user, project, workshop, err := UserProjectWorkshop(task)
@@ -21,17 +34,17 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	sdkSetup, err := sdkstate.SdkSetup(task)
-	if err != nil {
-		return err
-	}
-
 	inst, err := m.wsbackend.Workshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
 
-	sdkInfo, err := inst.SdkInfo(ctx, sdkSetup)
+	sdkName, err := sdkName(task)
+	if err != nil {
+		return err
+	}
+
+	sdkInfo, err := inst.SdkInfo(ctx, sdkName)
 	if err != nil {
 		return err
 	}
@@ -50,6 +63,17 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// - remove the SDK from the repository (e.g. remove all its plugs and slots)
 	// - find and connect candidates for the SDK plug and slot
 	// - rebuild SDK profiles for the affected SDKs and assign them to the corresponding workshops
+
+	// The sdk may have been updated so perform the following operation to
+	// ensure that we are always working on the correct state:
+	//
+	// - disconnect all connections to/from the given sdk
+	//   - remembering the sdks that were affected by this operation
+	// - remove the (old) sdk from the interfaces repository
+	// - add the (new) sdk to the interfaces repository
+	// - restore connections based on what is kept in the state
+	//   - if a connection cannot be restored then remove it from the state
+	// - setup the backend of all the affected sdks
 	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkInfo.Name)
 	if err != nil {
 		return err
@@ -67,10 +91,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
 	}
 
-	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkInfo.Name); err != nil {
-		return err
-	}
-
 	conns, err := getConns(st)
 	if err != nil {
 		return err
@@ -78,6 +98,10 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	// At the moment, only searching for auto-connect-able slots
 	// is supported
+	var connected = make(map[string]*sdk.Info, 0)
+	sdkKey := func(info *sdk.Info) string {
+		return strings.Join([]string{info.ProjectId, info.Workshop, info.Name}, "-")
+	}
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(plug.Sdk.ProjectId, workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 
@@ -97,6 +121,8 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 			if err != nil || conn == nil {
 				return err
 			}
+			connected[sdkKey(conn.Plug.Sdk())] = conn.Plug.Sdk()
+			connected[sdkKey(conn.Slot.Sdk())] = conn.Slot.Sdk()
 			defer func() {
 				if err != nil {
 					if err := m.repo.Disconnect(plug.Sdk.ProjectId, workshop, plug.Sdk.Name, plug.Name, slot.Sdk.ProjectId,
@@ -117,11 +143,16 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		}
 	}
 
-	// build an SDK profile for the SDK being installed
-	for _, backend := range m.repo.Backends() {
-		if err = backend.Setup(ctx, sdkInfo, m.repo); err != nil {
-			return err
+	setConns(st, conns)
+
+	for _, sdk := range connected {
+		// build an SDK profile for the SDK being installed
+		for _, backend := range m.repo.Backends() {
+			if err = backend.Setup(ctx, sdk, m.repo); err != nil {
+				return err
+			}
 		}
+
 	}
 
 	// rebuild SDK profiles for the affected SDKs
@@ -134,8 +165,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 			}
 		}
 	}
-	setConns(st, conns)
-
 	return nil
 }
 
@@ -148,17 +177,17 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	sdkSetup, err := sdkstate.SdkSetup(task)
+	sdkName, err := sdkName(task)
 	if err != nil {
 		return err
 	}
 
-	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkSetup.Name)
+	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkName)
 	if err != nil {
 		return err
 	}
 
-	if err := m.repo.RemoveSdk(project.ProjectId, workshop, sdkSetup.Name); err != nil {
+	if err := m.repo.RemoveSdk(project.ProjectId, workshop, sdkName); err != nil {
 		return err
 	}
 
@@ -166,13 +195,13 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 	st.Lock()
 	defer st.Unlock()
 
-	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkSetup.Name); err != nil {
+	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkName); err != nil {
 		return err
 	}
 
 	// rebuild SDK profiles for the affected SDKs
 	for _, sdk := range disconnectedSdks {
-		if sdk.Name != sdkSetup.Name || sdk.Workshop != workshop || sdk.ProjectId != project.ProjectId {
+		if sdk.Name != sdkName || sdk.Workshop != workshop || sdk.ProjectId != project.ProjectId {
 			for _, backend := range m.repo.Backends() {
 				if err = backend.Setup(ctx, sdk, m.repo); err != nil {
 					return err
@@ -183,7 +212,7 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 
 	// Remove the SDK profile from the backends
 	for _, backend := range m.repo.Backends() {
-		if err := backend.Remove(ctx, workshop, sdkSetup.Name); err != nil {
+		if err := backend.Remove(ctx, workshop, sdkName); err != nil {
 			return err
 		}
 	}

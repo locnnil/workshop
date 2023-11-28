@@ -26,7 +26,7 @@ func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
 	tasks = append(tasks, link)
 
 	autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect %q SDK interfaces", sdk))
-	autoconnect.Set("sdk-retrieve-task", retrieveId)
+	autoconnect.Set("sdk", sdk)
 	autoconnect.WaitFor(link)
 	tasks = append(tasks, autoconnect)
 

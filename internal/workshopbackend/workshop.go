@@ -227,7 +227,7 @@ func WorkshopStateVolumeName(ws, pid string) string {
 // callers responsibility to get and close the filesystem due to the LXD's bug:
 // if the filesystem of the container is not closed, it maintains the underlying
 // SFTP connection which stops the container from stoppping.
-func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) {
+func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
@@ -239,7 +239,12 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 	}
 	defer wsfs.Close()
 
-	sdkPath := sdk.SdkCurrentPath(s.Name)
+	sdkSetup, ok := w.content[sdkName]
+	if !ok {
+		return nil, fmt.Errorf("%q SDK not installed in %q workshop", sdkName, w.Name)
+	}
+
+	sdkPath := sdk.SdkCurrentPath(sdkSetup.Name)
 	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {
 		return nil, err
@@ -251,7 +256,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name, s)
+	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name, sdkSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +267,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, s sdk.Setup) (*sdk.Info, error) 
 func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	var infos = make([]*sdk.Info, 0, len(w.content))
 	for _, sdk := range w.content {
-		info, err := w.SdkInfo(ctx, sdk)
+		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err
 		}

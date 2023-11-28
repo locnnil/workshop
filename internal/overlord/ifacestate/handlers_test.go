@@ -68,10 +68,14 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 base: ubuntu@22.04
 slots:
   slot:
-    interface: mock-network
-`
+    interface: mock-network`
 
-	err := s.mgr.Repository().AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws",
+	psetup := sdk.Setup{Name: "producer", Channel: "latest/stable"}
+	s.launchWorkshopWithSDKs(c, "ws-producer", map[sdk.Setup]string{
+		psetup: producer,
+	})
+
+	err := s.mgr.Repository().AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer",
 		sdk.Setup{Name: "producer", Channel: "latest/stable"}))
 	c.Assert(err, check.IsNil)
 
@@ -89,14 +93,11 @@ plugs:
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", csetup)
 	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", "consumer")
 
 	setWorkshopProject("ws", s.prj, t1)
 	chg.Set("user", "testuser")
-	chg.AddTask(t)
 	chg.AddTask(t1)
 	s.state.Unlock()
 
@@ -105,7 +106,18 @@ plugs:
 		s.se.Wait()
 	}
 	s.state.Lock()
-	c.Check(chg.Err(), check.Equals, nil)
+	c.Check(chg.Err(), check.IsNil)
+
+	ref, err := s.mgr.Repository().Connected(s.prj.ProjectId, "ws", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	ref, err = s.mgr.Repository().Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(s.wsbackend.RemoveProfile(s.ctx, "ws", "consumer"), check.IsNil)
+	c.Assert(s.wsbackend.RemoveProfile(s.ctx, "ws-producer", "producer"), check.IsNil)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
@@ -138,16 +150,13 @@ plugs:
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", csetup)
 	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", "sdk")
 	t2 := s.state.NewTask("error-trigger", "...")
 
 	setWorkshopProject("ws", s.prj, t1)
 	setWorkshopProject("ws", s.prj, t2)
 	chg.Set("user", "testuser")
-	chg.AddTask(t)
 	chg.AddTask(t1)
 	chg.AddTask(t2)
 	s.state.Unlock()

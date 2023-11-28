@@ -198,7 +198,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sdkInfo, err := inst.SdkInfo(ctx, setup)
+	sdkInfo, err := inst.SdkInfo(ctx, setup.Name)
 	if err != nil {
 		return nil
 	}
