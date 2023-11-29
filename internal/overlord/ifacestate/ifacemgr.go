@@ -113,22 +113,18 @@ func (m *InterfaceManager) Ensure() error {
 	return nil
 }
 
-type sdkConnection struct {
-	project, workshop, sdk string
-}
-
 // reloadConnections reloads connections stored in the state in the repository.
 // Using non-empty sdkName the operation can be scoped to connections
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (map[sdkConnection]bool, error) {
+func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string) (map[sdk.Ref]bool, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
 	}
 	connStateChanged := false
-	affected := make(map[sdkConnection]bool)
+	affected := make(map[sdk.Ref]bool)
 	for connId, connState := range conns {
 		// Skip entries that just mark a connection as undesired. Those don't
 		// carry attributes that can go stale.
@@ -142,14 +138,14 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (m
 		// Apply filtering, this allows us to reload only a subset of
 		// connections (and similarly, refresh the static attributes of only a
 		// subset of connections).
-		if projectId != "" && workshop != "" && sdk != "" {
+		if projectId != "" && workshop != "" && sdkName != "" {
 			if connRef.PlugRef.ProjectId != projectId && connRef.SlotRef.ProjectId != projectId {
 				continue
 			}
 			if connRef.PlugRef.Workshop != workshop && connRef.SlotRef.Workshop != workshop {
 				continue
 			}
-			if connRef.PlugRef.Sdk != sdk && connRef.SlotRef.Sdk != sdk {
+			if connRef.PlugRef.Sdk != sdkName && connRef.SlotRef.Sdk != sdkName {
 				continue
 			}
 		}
@@ -180,8 +176,8 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (m
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[sdkConnection{connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop, connRef.PlugRef.Sdk}] = true
-			affected[sdkConnection{connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop, connRef.SlotRef.Sdk}] = true
+			affected[sdk.Ref{ProjectId: connRef.PlugRef.ProjectId, Workshop: connRef.PlugRef.Workshop, Sdk: connRef.PlugRef.Sdk}] = true
+			affected[sdk.Ref{ProjectId: connRef.SlotRef.ProjectId, Workshop: connRef.SlotRef.Workshop, Sdk: connRef.SlotRef.Sdk}] = true
 		}
 	}
 	if connStateChanged {

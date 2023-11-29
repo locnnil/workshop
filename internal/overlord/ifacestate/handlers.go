@@ -1,8 +1,6 @@
 package ifacestate
 
 import (
-	"strings"
-
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
@@ -74,7 +72,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// - restore connections based on what is kept in the state
 	//   - if a connection cannot be restored then remove it from the state
 	// - setup the backend of all the affected sdks
-	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkInfo.Name)
+	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkInfo.Name)
 	if err != nil {
 		return err
 	}
@@ -104,10 +102,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	// At the moment, only searching for auto-connect-able slots
 	// is supported
-	var connected = make(map[string]*sdk.Info, 0)
-	sdkKey := func(info *sdk.Info) string {
-		return strings.Join([]string{info.ProjectId, info.Workshop, info.Name}, "-")
-	}
+	var connected = make(map[sdk.Ref]*sdk.Info, 0)
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(plug.Sdk.ProjectId, workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 
@@ -128,8 +123,8 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 			if err != nil || conn == nil {
 				return err
 			}
-			connected[sdkKey(conn.Plug.Sdk())] = conn.Plug.Sdk()
-			connected[sdkKey(conn.Slot.Sdk())] = conn.Slot.Sdk()
+			connected[conn.Plug.Sdk().Ref()] = conn.Plug.Sdk()
+			connected[conn.Slot.Sdk().Ref()] = conn.Slot.Sdk()
 			defer func() {
 				if err != nil {
 					if err := m.repo.Disconnect(plug.Sdk.ProjectId, workshop, plug.Sdk.Name, plug.Name, slot.Sdk.ProjectId,
@@ -152,22 +147,21 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 	setConns(st, conns)
 
-	for _, sdk := range connected {
-		// build an SDK profile for the SDK being installed
-		for _, backend := range m.repo.Backends() {
-			if err = backend.Setup(ctx, sdk, m.repo); err != nil {
-				return err
-			}
-		}
+	affectedSet := make(map[sdk.Ref]*sdk.Info, len(connected)+len(disconnected))
+
+	for ref, s := range connected {
+		affectedSet[ref] = s
+	}
+
+	for _, s := range disconnected {
+		affectedSet[s.Ref()] = s
 	}
 
 	// rebuild SDK profiles for the affected SDKs
-	for _, sdk := range disconnectedSdks {
-		if sdk.Name != sdkInfo.Name || sdk.Workshop != sdkInfo.Workshop || sdk.ProjectId != sdkInfo.ProjectId {
-			for _, backend := range m.repo.Backends() {
-				if err = backend.Setup(ctx, sdk, m.repo); err != nil {
-					return err
-				}
+	for _, s := range affectedSet {
+		for _, backend := range m.repo.Backends() {
+			if err = backend.Setup(ctx, s, m.repo); err != nil {
+				return err
 			}
 		}
 	}
@@ -188,7 +182,9 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	disconnectedSdks, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkName)
+	sdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: sdkName}
+
+	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkName)
 	if err != nil {
 		return err
 	}
@@ -206,10 +202,10 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 	}
 
 	// rebuild SDK profiles for the affected SDKs
-	for _, sdk := range disconnectedSdks {
-		if sdk.Name != sdkName || sdk.Workshop != workshop || sdk.ProjectId != project.ProjectId {
+	for _, s := range disconnected {
+		if sdkRef != s.Ref() {
 			for _, backend := range m.repo.Backends() {
-				if err = backend.Setup(ctx, sdk, m.repo); err != nil {
+				if err = backend.Setup(ctx, s, m.repo); err != nil {
 					return err
 				}
 			}

@@ -55,6 +55,20 @@ type Info struct {
 	BadInterfaces map[string]string
 }
 
+func (i *Info) Ref() Ref {
+	return Ref{
+		ProjectId: i.ProjectId,
+		Workshop:  i.Workshop,
+		Sdk:       i.Name,
+	}
+}
+
+type Ref struct {
+	ProjectId string
+	Workshop  string
+	Sdk       string
+}
+
 var SanitizePlugsSlots = func(snapInfo *Info) {
 	panic("SanitizePlugsSlots function not set")
 }

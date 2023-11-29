@@ -235,8 +235,69 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemovesNonexistingConnections(c 
 	c.Assert(maps.Keys(conns), check.Not(testutil.Contains), "42424242:ws:consumer:plug 42424242:ws-producer:producer:slot")
 
 	// ensure that backend profiles were set for both SDKs
-	// however, when refreshing only the producer's profile will be regenerated
-	// as the consumer does not have any plugs
-	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+1)
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestAutoconnectReconnectsExistingConnections(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a candidate SDK/slot
+	repo := s.mgr.Repository()
+	s.launchWorkshopWithSDKs(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer", psetup)), check.IsNil)
+
+	// Launch another workshop with a candidate plug
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
+
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("auto-connect", "...")
+	t1.Set("sdk", "consumer")
+	setWorkshopProject("ws", s.prj, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	// simulate refresh, which will install the consumer SDK again
+	// hence the existing autoconnectios must be restored
+	chg = s.state.NewChange("refresh", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	chg.AddTask(t2)
+	chg.Set("user", "testuser")
+	setWorkshopProject("ws", s.prj, t2)
+
+	c.Assert(s.wsbackend.RemoveWorkshop(s.ctx, "ws"), check.IsNil)
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	c.Assert(t2.Status(), check.Equals, state.DoneStatus)
+
+	var conns map[string]interface{}
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, map[string]interface{}{
+		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
+			"interface":   "mock-network",
+			"auto":        true,
+			"plug-static": map[string]interface{}{"attribute": "one"},
+		},
+	})
+
+	// ensure that backend profiles were set for both SDKs
+	// in the first and the second runs. First, when consumer
+	// was installed for the first time and, second, when consumer
+	// was refreshed but did not have any changes and had its auto
+	// connections restored
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
