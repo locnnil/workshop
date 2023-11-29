@@ -34,7 +34,7 @@ it's contained within the workshop.
 |project| aims to encapsulate each part of functionality you may need,
 keeping things clean and tidy.
 
-Third, it's portable;
+Next, it's portable;
 imagine sending a *compact* tarball of your project to a coworker
 who then recreates it with exactly the same dependency versions that you used.
 What's better, this is achieved without manually customised,
@@ -42,6 +42,7 @@ high-maintenance image definitions or configurations;
 all the work of keeping the SDKs in your workshop operational
 is done by the people who are actually responsible for it
 (namely, the publishers).
+
 
 .. _exp_project:
 
