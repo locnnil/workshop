@@ -28,6 +28,7 @@ type ExecCall struct {
 }
 
 type FakeWorkshopBackend struct {
+	// the key is a project-id - workshop name
 	Workshops map[string]map[string]*FakeWorkshop
 	// the key is a username
 	projects map[string][]*Project
@@ -134,7 +135,19 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 }
 
 func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	user, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	prj := f.project(user, projectId)
+
+	if _, ok := f.Workshops[prj.ProjectId][name]; !ok {
+		return ErrWorkshopNotFound
+	}
+
+	delete(f.Workshops[prj.ProjectId], name)
+	return nil
 }
 
 func (s *FakeWorkshopBackend) StartWorkshop(ctx context.Context, name string) error {

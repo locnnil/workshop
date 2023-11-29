@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -24,13 +25,16 @@ import (
 
 type interfaceManagerSuite struct {
 	testutil.BaseTest
-	o         *overlord.Overlord
-	state     *state.State
-	se        *overlord.StateEngine
-	runner    *state.TaskRunner
-	ctx       context.Context
-	wsbackend workshopbackend.WorkshopBackend
-	prj       *workshopbackend.Project
+	o          *overlord.Overlord
+	state      *state.State
+	se         *overlord.StateEngine
+	runner     *state.TaskRunner
+	ctx        context.Context
+	wsbackend  workshopbackend.WorkshopBackend
+	prj        *workshopbackend.Project
+	secBackend *ifacetest.TestSecurityBackend
+
+	restoreProjectId func()
 }
 
 var _ = check.Suite(&interfaceManagerSuite{})
@@ -44,6 +48,9 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.se = s.o.StateEngine()
 	s.runner = state.NewTaskRunner(s.state)
+	s.secBackend = &ifacetest.TestSecurityBackend{}
+
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshopbackend.NewProjectId)
 
 	s.wsbackend = workshopbackend.NewFakeWorkshopBackend()
 	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
@@ -55,6 +62,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 }
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
+	s.restoreProjectId()
 	s.BaseTest.TearDownTest(c)
 }
 

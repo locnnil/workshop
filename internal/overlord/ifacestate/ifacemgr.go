@@ -40,8 +40,8 @@ func (m *InterfaceManager) Repository() *interfaces.Repository {
 func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()
-	for _, backend := range backend.All() {
-		if err := backend.Initialize(m.wsbackend); err != nil {
+	for _, backend := range allSecurityBackends() {
+		if err := backend.Initialize(m.wsbackend.(workshopbackend.Profile)); err != nil {
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
@@ -113,18 +113,22 @@ func (m *InterfaceManager) Ensure() error {
 	return nil
 }
 
+type sdkConnection struct {
+	project, workshop, sdk string
+}
+
 // reloadConnections reloads connections stored in the state in the repository.
 // Using non-empty sdkName the operation can be scoped to connections
 // affecting a given sdk.
 //
 // The return value is the list of affected sdk names.
-func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (map[string]string, error) {
+func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (map[sdkConnection]bool, error) {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return nil, err
 	}
 	connStateChanged := false
-	affected := make(map[string]string)
+	affected := make(map[sdkConnection]bool)
 	for connId, connState := range conns {
 		// Skip entries that just mark a connection as undesired. Those don't
 		// carry attributes that can go stale.
@@ -176,8 +180,8 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdk string) (m
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[connRef.PlugRef.Workshop] = connRef.PlugRef.Sdk
-			affected[connRef.SlotRef.Workshop] = connRef.SlotRef.Sdk
+			affected[sdkConnection{connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop, connRef.PlugRef.Sdk}] = true
+			affected[sdkConnection{connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop, connRef.SlotRef.Sdk}] = true
 		}
 	}
 	if connStateChanged {
@@ -211,4 +215,27 @@ func makeImplicitSlot(sdkInfo *sdk.Info, ifaceName string) *sdk.SlotInfo {
 		Name:      ifaceName,
 		Interface: ifaceName,
 	}
+}
+
+var securityBackendsOverride []interfaces.SecurityBackend
+
+// allSecurityBackends returns a set of the available security backends or the mocked ones, ready to be initialized.
+func allSecurityBackends() []interfaces.SecurityBackend {
+	if securityBackendsOverride != nil {
+		return securityBackendsOverride
+	}
+	return backend.All()
+}
+
+// MockSecurityBackends mocks the list of security backends that are used for setting up security.
+//
+// This function is public because it is referenced in the daemon
+func MockSecurityBackends(be []interfaces.SecurityBackend) func() {
+	if be == nil {
+		// nil is a marker, use an empty slice instead
+		be = []interfaces.SecurityBackend{}
+	}
+	old := securityBackendsOverride
+	securityBackendsOverride = be
+	return func() { securityBackendsOverride = old }
 }

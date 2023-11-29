@@ -91,6 +91,12 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
 	}
 
+	// reload the existing connections to make sure that those that are getting
+	// removed with this auto-connect task are also removed from the state
+	if _, err := m.reloadConnections("", "", ""); err != nil {
+		return err
+	}
+
 	conns, err := getConns(st)
 	if err != nil {
 		return err
@@ -116,8 +122,9 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 				// a normal and common condition.
 				continue
 			}
-
-			conn, err := m.repo.Connect(connRef, nil, nil, nil, nil, nil)
+			// no policy check passed in here as it has beeb checked when looked
+			// up the candidates.
+			conn, err := m.repo.Connect(connRef, plug.Attrs, nil, slot.Attrs, nil, nil)
 			if err != nil || conn == nil {
 				return err
 			}
@@ -152,7 +159,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 				return err
 			}
 		}
-
 	}
 
 	// rebuild SDK profiles for the affected SDKs
