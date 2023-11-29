@@ -141,6 +141,44 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
+func (s *interfaceHandlersSuite) TestAutoconnectNoConnections(c *check.C) {
+	// Setup
+
+	repo := s.mgr.Repository()
+	// Launch another workshop with a candidate plug
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
+
+	// Execute
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("auto-connect", "...")
+	t1.Set("sdk", "consumer")
+	t2 := s.state.NewTask("error-trigger", "...")
+	setWorkshopProject("ws", s.prj, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate
+	c.Assert(t1.Status(), check.Equals, state.UndoneStatus)
+	_, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug")
+	c.Assert(err, check.ErrorMatches, "sdk \"consumer\" has no plug or slot named \"plug\"")
+
+	var conns map[string]interface{}
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, map[string]interface{}{})
+
+	// ensure that backend profiles were set for both SDKs
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
 func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot

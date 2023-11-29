@@ -209,15 +209,13 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 					return err
 				}
 			}
+		} else {
+			for _, backend := range m.repo.Backends() {
+				if err := backend.Remove(ctx, workshop, sdkName); err != nil {
+					return err
+				}
+			}
 		}
 	}
-
-	// Remove the SDK profile from the backends
-	for _, backend := range m.repo.Backends() {
-		if err := backend.Remove(ctx, workshop, sdkName); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
