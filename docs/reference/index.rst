@@ -1,22 +1,19 @@
-.. _ref_workshop_cli:
+Reference
+=========
 
-Reference (CLI)
-===============
-
-The :program:`workshop` CLI tool exposes the following commands,
-each with its own set of options, and also has a number of global options
-such as :option:`!--help` or :option:`!-h`:
+Workshops
+---------
 
 .. toctree::
    :maxdepth: 1
 
-   workshop-changes
-   workshop-exec
-   workshop-info
-   workshop-launch
-   workshop-list
-   workshop-refresh
-   workshop-remove
-   workshop-start
-   workshop-stop
-   workshop-tasks
+   workshop-definition
+
+
+Command-line interface
+----------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   cli/index

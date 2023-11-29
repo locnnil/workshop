@@ -1,0 +1,36 @@
+{
+    "$schema":"https://json-schema.org/draft/2020-12/schema",
+    "$id":"https://canonical.com/.workshop.name.yaml",
+    "type":"object",
+    "properties":{
+        "name":{
+            "type":"string"
+        },
+        "base":{
+            "type":"string",
+            "enum":[
+                "ubuntu@20.04",
+                "ubuntu@22.04"
+            ]
+        },
+        "sdks":{
+            "type":"object",
+            "additionalProperties":{
+                "type":"object",
+                "properties":{
+                    "channel":{
+                        "type":"string"
+                    }
+                },
+                "required":[
+                    "channel"
+                ]
+            }
+        }
+    },
+    "required":[
+        "name",
+        "base",
+        "sdks"
+    ]
+}
