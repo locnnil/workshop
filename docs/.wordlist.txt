@@ -3,6 +3,7 @@ CLI
 EdTech
 IDEs
 IoT
+JSON
 Jupyter
 JupyterLab
 LXD
@@ -16,6 +17,7 @@ SDKs
 UI
 YAML
 backend
+basename
 cwd
 dev
 distributions
@@ -23,6 +25,7 @@ env
 favicon
 gid
 gocheck
+golang
 gopkg
 https
 installable
