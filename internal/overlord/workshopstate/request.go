@@ -103,7 +103,6 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("base", file.Base)
-	create.WaitAll(retrieve)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
@@ -139,6 +138,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 
 	install.WaitFor(start)
 	setupHook.WaitAll(install)
+	create.WaitAll(retrieve)
 
 	set := state.NewTaskSet(create, mountProject, start)
 	set.AddAll(retrieve)

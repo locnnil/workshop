@@ -31,6 +31,4 @@ execute: |
 
   echo "Check the workshop refresh --abort reverts to the previous state"
   workshop_exec refresh --project $project --abort ws | MATCH "\"ws\" refresh aborted"
-
-  echo "Check the workshop is in Ready state"
   list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
