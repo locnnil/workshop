@@ -37,7 +37,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 
 	var name string
 	tasks[2].Get("sdk", &name)
-	c.Check(tasks[2].Summary(), check.Equals, "Auto-connect \"sdk\" SDK interfaces")
+	c.Check(tasks[2].Summary(), check.Equals, "Auto-connect eligible plugs and slots of \"sdk\" SDK")
 	c.Check(name, check.Equals, sdk.Name)
 }
 

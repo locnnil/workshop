@@ -41,7 +41,7 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 	lxdname := profileName(projectId, workshop, profile.Name())
 	newProfile := api.ProfilePut{
 		Devices:     profile.lxdDevices(),
-		Description: fmt.Sprintf("%s SDK profile for %s workshop", profile.Name(), workshop),
+		Description: fmt.Sprintf("%q SDK profile for %q workshop", profile.Name(), workshop),
 	}
 
 	// Either create or update an existing LXD profile for the SDK so that later
