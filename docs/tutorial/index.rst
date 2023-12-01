@@ -12,14 +12,15 @@ Here, you will put into practice all major steps in the life cycle of a
 deleting it.  The commands you're about to run comprise the majority of your
 daily needs with |project|.
 
-.. tip::
+Refer to the :ref:`explanation <exp_index>` if you need a more descriptive
+overview. For comprehensive details, see the :ref:`reference
+<ref_workshop_cli>`. Finally, see the :ref:`how-to guides <howto_index>` if
+you're looking for advanced practical steps.
 
-   | Refer to the :ref:`explanation <exp_index>`
-     if you need a more descriptive overview.
-   | For comprehensive details,
-     see the :ref:`reference <ref_workshop_cli>`.
-   | Finally, see the :ref:`how-to guides <howto_index>`
-     if you're looking for advanced practical steps.
+.. attention::
+
+   One technical detail before you start:
+   currently, |project| supports only :samp:`amd64`.
 
 
 Install |project|
@@ -99,6 +100,16 @@ from the |project| source code on
    $ sudo snap install snapcraft --classic
    $ snapcraft
 
+.. tip::
+
+   In case of :program:`lxd`-related issues with :program:`snapcraft`,
+   ensure you're a member of the :samp:`lxd` group:
+   
+   .. code:: console
+      
+      $ id -nG <USERNAME>
+      $ sudo adduser <USERNAME> lxd
+
 Install the resulting :file:`.snap` file,
 for example:
 
@@ -149,11 +160,12 @@ Define
 #. In the project directory,
    create a
    :ref:`workshop definition <exp_workshop_def>`
-   named :file:`.workshop.nimble.yaml`:
+   named :file:`.workshop.golang.yaml`:
 
-   .. code:: yaml
+   .. code-block:: yaml
+      :caption: .workshop.golang.yaml
 
-      name: nimble
+      name: golang
       base: ubuntu@22.04
       sdks:
         go:
@@ -169,7 +181,7 @@ Define
       $ workshop list
 
           Project                Workshop   Status  Notes
-          ~/hello-workshop       nimble     Off     -
+          ~/hello-workshop       golang     Off     -
 
 
    Note that a newly created workshop is *Off*.
@@ -183,9 +195,9 @@ you :ref:`launch <ref_workshop_launch>` it:
 
 .. code:: console
 
-   $ workshop launch nimble
+   $ workshop launch golang
 
-       "nimble" launched
+       "golang" launched
 
 
 Now, the workshop is *Ready*
@@ -202,7 +214,9 @@ move it, then run :command:`workshop list`:
    $ workshop list
 
        Project                Workshop   Status  Notes
-       ~/hi-workshop          nimble     Ready   -
+       ~/hi-workshop          golang     Ready   -
+
+Note that the workshop stays operational with no extra steps.
 
 
 Start and stop
@@ -213,18 +227,18 @@ If you're done with the workshop for now,
 
 .. code:: console
 
-   $ workshop stop nimble
+   $ workshop stop golang
 
-       "nimble" stopped
+       "golang" stopped
 
 
 To resume, *start* the workshop again:
 
 .. code:: console
 
-   $ workshop start nimble
+   $ workshop start golang
 
-       "nimble" started
+       "golang" started
 
 
 Both commands operate gracefully,
@@ -243,28 +257,28 @@ refresh it to pick up the update.
 Update components
 ~~~~~~~~~~~~~~~~~
 
-If the
-:ref:`SDKs <exp_sdk>`
+If an
+:ref:`SDK <exp_sdk>`
 listed in the
-:ref:`workshop definition <exp_workshop_def>`
-are updated,
+:ref:`definition <exp_workshop_def>`
+is updated by its publisher,
 :ref:`refresh <ref_workshop_refresh>` the workshop to apply the changes:
 
 .. code:: console
 
-   $ workshop refresh nimble
+   $ workshop refresh golang
 
-       "nimble" refreshed
+       "golang" refreshed
 
 The workshop is rebuilt from the
 :ref:`base <exp_workshop_base>`;
 then the SDKs are updated from their respective channels.
 
-To refresh multiple workshops at once:
+To refresh multiple workshops at once, list them all:
 
 .. code:: console
 
-   $ workshop refresh nimble nimble-volatile ...
+   $ workshop refresh golang ...
 
 .. note::
 
@@ -272,15 +286,18 @@ To refresh multiple workshops at once:
    **all** changes in **all** listed workshops are reverted.
 
 
-Add or remove an SDK
-~~~~~~~~~~~~~~~~~~~~
+Add, switch or remove an SDK
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add a new SDK to your workshop,
-update the definition file and refresh the workshop:
+To add or remove an SDK,
+or just change the channel,
+update the definition
+and refresh the workshop:
 
-.. code:: yaml
+.. code-block:: yaml
+   :emphasize-lines: 5
 
-   name: nimble
+   name: golang
    base: ubuntu@22.04
    sdks:
      go:
@@ -289,13 +306,7 @@ update the definition file and refresh the workshop:
 
 .. code:: console
 
-   $ workshop refresh nimble
-
-       "nimble" refreshed
-
-
-To remove an SDK,
-delete it from the definition and refresh the workshop.
+   $ workshop refresh golang
 
 
 .. _tut_refresh_wait_on_error:
@@ -303,19 +314,19 @@ delete it from the definition and refresh the workshop.
 Wait on error
 ~~~~~~~~~~~~~
 
-To pause the refresh operation on error
-instead of cancelling it outright,
+If a refresh fails, any changes are reverted by default;
+to pause instead,
 add the :option:`!--wait-on-error` option:
 
 .. code:: console
 
-   $ workshop refresh --wait-on-error nimble
+   $ workshop refresh --wait-on-error golang
 
        ERROR command failed with an error code (1): The edge version is not stable
 
        cannot refresh; fix the errors reported by "workshop info",
-       then run "workshop refresh --continue nimble".
-       To abort and revert, run "workshop refresh --abort nimble".
+       then run "workshop refresh --continue golang".
+       To abort and revert, run "workshop refresh --abort golang".
 
 All progress is saved, up to the specific *task* that caused the error.
 Then, you can explore the paused workshop
@@ -355,18 +366,18 @@ To continue the refresh operation:
 
 .. code:: console
 
-   $ workshop refresh --continue nimble
+   $ workshop refresh --continue golang
 
-        "nimble" refreshed
+        "golang" refreshed
 
 
 To abort the operation and recover the last operational state:
 
 .. code:: console
 
-   $ workshop refresh --abort nimble
+   $ workshop refresh --abort golang
 
-        "nimble" aborted
+        "golang" aborted
 
 
 .. _tut_exec:
@@ -377,29 +388,47 @@ Execute commands
 When the workshop is ready,
 execute arbitrary commands in it using :ref:`ref_workshop_exec`:
 
+.. code-block:: go
+   :caption: main.go
+
+   package main
+
+   import "fmt"
+
+   func main() {
+     fmt.Println("Hello, Workshop")
+   }
+
+
 .. code:: console
 
-   $ workshop exec nimble go build
+   $ workshop exec golang go build main.go
 
 
 To define environment variables and visibly separate the command's options:
 
 .. code:: console
 
-   $ workshop exec nimble --env GOARCH=linux -- go build -x nimble.go
+   $ workshop exec golang --env GO111MODULE=off -- go build -x
 
 
 You can run an interactive shell as well:
 
 .. code:: console
 
-   $ workshop exec nimble bash
+   $ workshop exec golang bash
    $ uname -a
 
-       Linux nimble-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+       Linux golang-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
 
 
-Persistent changes are saved in the project directory and the workshop itself.
+Changes are persisted in the project directory,
+thus also visible in the workshop itself:
+
+.. code:: console
+
+   $ ls -l
+   $ workshop exec -- bash -c "ls -l"
 
 
 .. _tut_remove:
@@ -412,11 +441,16 @@ If you don't need a workshop anymore,
 
 .. code:: console
 
-   $ workshop remove nimble
+   $ workshop remove golang
 
-        "nimble" removed
+        "golang" removed
 
 This leaves the workshop definition intact.
+
+.. attention::
+
+   Don't delete the project directory without removing the workshop first.
+
 
 That was the last step of the tutorial;
 you are now familiar with the essential operations |project| provides

@@ -74,15 +74,15 @@ then run ``workshop launch <NAME>``:
 
 .. code-block:: console
 
-   cat > .workshop.nimble.yaml <<EOF -
-   name: nimble
+   cat > .workshop.golang.yaml <<EOF -
+   name: golang
    base: ubuntu@22.04
    sdks:
      go:
        channel: latest/stable
    EOF
 
-   workshop launch nimble
+   workshop launch golang
 
 
 Workshop downloads and installs the SDKs your definition lists;

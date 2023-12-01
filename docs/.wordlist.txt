@@ -30,12 +30,14 @@ gopkg
 https
 installable
 iteratively
+lxd
 onboarding
 pathname
 reST
 reStructuredText
 readme
 roadmap
+snapcraft
 snapd
 subcommand
 transactional

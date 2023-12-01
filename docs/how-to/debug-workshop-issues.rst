@@ -16,14 +16,14 @@ fails.
 List workshop changes
 ---------------------
 
-Consider a workshop named ``nimble-volatile``
+Consider a workshop named ``golang-volatile``
 that uses an unstable
 :ref:`SDK <exp_sdk>`
 from the ``latest/edge`` channel:
 
 .. code:: yaml
 
-   name: nimble-volatile
+   name: golang-volatile
    base: ubuntu@22.04
    sdks:
      go:
@@ -36,7 +36,7 @@ operation:
 
 .. code:: console
 
-   $ workshop refresh nimble-volatile
+   $ workshop refresh golang-volatile
 
         Error: cannot perform the following tasks:
         - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
@@ -52,7 +52,7 @@ list the *changes* in the workshop to find the one that failed:
 
        ID  Status  Spawn                Ready                Summary
        ...
-       81  Error   today at 12:20       today at 12:23       Refresh workshops "nimble-volatile"
+       81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
 
 
 List tasks in a change

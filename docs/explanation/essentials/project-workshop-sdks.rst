@@ -108,7 +108,7 @@ A simple definition may look like this:
 
 .. code-block:: yaml
 
-   name: nimble
+   name: golang
    base: ubuntu@22.04
    sdks:
      go:
