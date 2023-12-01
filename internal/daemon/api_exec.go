@@ -24,6 +24,8 @@ type execPayload struct {
 	Height      int               `json:"height"`
 }
 
+var defaultUID, defaultGID = 1000, 1000
+
 func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
 	if usrId != nil && grpId == nil {
 		return 0, 0, errors.New("must specify group, not just user")
@@ -33,11 +35,11 @@ func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
 		return 0, 0, errors.New("must specify user, not just group")
 	}
 
-	userId := 1000
+	userId := defaultUID
 	if usrId != nil {
 		userId = *usrId
 	}
-	groupId := 1000
+	groupId := defaultGID
 	if grpId != nil {
 		groupId = *grpId
 	}
@@ -71,6 +73,12 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 		reqData.WorkingDir = workshopbackend.WorkshopProjectPath
 	}
 
+	var environment = make(map[string]string)
+
+	for k, e := range reqData.Environment {
+		environment[k] = e
+	}
+
 	var timeout time.Duration
 	if reqData.Timeout != "" {
 		var err error
@@ -85,6 +93,23 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: %v", err)
 	}
 
+	// We do not set PATH here as it's something LXD takes care of. Set HOME and
+	// USER if the user is a known default user.
+	if userId == defaultUID {
+		if environment["HOME"] == "" {
+			environment["HOME"] = "/home/workshop"
+		}
+		if environment["USER"] == "" {
+			environment["USER"] = "workshop"
+		}
+	}
+
+	// Set default value for LANG.
+	_, ok := environment["LANG"]
+	if !ok {
+		environment["LANG"] = "C.UTF-8"
+	}
+
 	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot exec: user is not in context")
@@ -92,7 +117,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	var execArgs = &workshopbackend.ExecArgs{
 		Command:     reqData.Command,
-		Environment: reqData.Environment,
+		Environment: environment,
 		WorkDir:     reqData.WorkingDir,
 		UserId:      userId,
 		GroupId:     groupId,

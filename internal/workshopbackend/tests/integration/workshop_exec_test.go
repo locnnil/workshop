@@ -182,7 +182,7 @@ func (f *wsExec) TestLxdBackendExecCustomUserGroup(c *check.C) {
 func (f *wsExec) TestLxdBackendExecAddEnvVar(c *check.C) {
 	// Setup
 	opts := &client.ExecOptions{
-		Command:     []string{"/bin/sh", "-c", "echo -n $FOO"},
+		Command:     []string{"/bin/sh", "-c", "printenv"},
 		WorkingDir:  "/",
 		Environment: map[string]string{"FOO": "BAR"},
 	}
@@ -192,7 +192,14 @@ func (f *wsExec) TestLxdBackendExecAddEnvVar(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout, check.Equals, "BAR")
+	c.Assert(stdout, check.Equals, `USER=workshop
+HOME=/home/workshop
+container=lxc
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+FOO=BAR
+LANG=C.UTF-8
+PWD=/
+`)
 	c.Assert(stderr, check.Equals, "")
 }
 
