@@ -33,6 +33,7 @@ iteratively
 lxd
 onboarding
 pathname
+repo
 reST
 reStructuredText
 readme
@@ -45,4 +46,6 @@ uid
 unmounts
 webhook
 workshopd
+worktree
+worktrees
 yaml

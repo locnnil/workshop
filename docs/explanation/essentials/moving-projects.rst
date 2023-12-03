@@ -1,3 +1,5 @@
+.. _exp_moving_projects:
+
 Moving projects around
 ======================
 

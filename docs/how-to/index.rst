@@ -11,3 +11,4 @@ that arise when you use |project|.
    :maxdepth: 1
 
    Debug issues in workshops <debug-workshop-issues>
+   Use workshops with Git <git-workshop>
