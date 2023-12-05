@@ -428,7 +428,7 @@ thus also visible in the workshop itself:
 .. code:: console
 
    $ ls -l
-   $ workshop exec -- bash -c "ls -l"
+   $ workshop exec golang -- bash -c "ls -l"
 
 
 .. _tut_remove:
