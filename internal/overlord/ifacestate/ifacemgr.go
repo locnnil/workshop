@@ -66,17 +66,20 @@ func (m *InterfaceManager) StartUp() error {
 			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
 			_, wrksps, err := m.wsbackend.ProjectWorkshops(prjctx)
 			if err != nil {
-				return err
+				logger.Noticef("Cannot load workshops from %s: %v", prj.Path, err)
+				continue
 			}
 			for _, wrksp := range wrksps {
 				infos, err := wrksp.ContentInfo(prjctx)
 				if err != nil {
-					return err
+					logger.Noticef("Cannot obtain the list of installed SDKs for %q workshop: %v", wrksp.Name, err)
+					continue
 				}
 
 				for _, info := range infos {
 					if err = m.repo.AddSdk(info); err != nil {
-						return err
+						logger.Noticef("Cannot register %q SDK interfaces:%v", info.Name, err)
+						continue
 					}
 				}
 			}

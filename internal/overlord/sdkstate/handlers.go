@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
@@ -19,6 +20,8 @@ import (
 
 	"gopkg.in/tomb.v2"
 )
+
+var InstallTimeNow = time.Now
 
 func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	st := task.State()
@@ -200,7 +203,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	sdkInfo, err := inst.SdkInfo(ctx, setup.Name)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if err = policy.CheckInterfaces(sdkInfo); err != nil {
@@ -216,7 +219,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	blob, err := SdkSetup(task)
+	sdkSetup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
@@ -229,5 +232,5 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return inst.UnlinkSdk(ctx, blob)
+	return inst.UnlinkSdk(ctx, sdkSetup.Name)
 }

@@ -3,8 +3,10 @@ package workshopbackend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -113,6 +115,9 @@ func (w *Workshop) SetStatus(st WorkshopStatus) {
 	w.status = st
 }
 
+// Associate an SDK with the workshop by creating a 'current' symlink and adding
+// the SDK to the workshop content. This method is idempotent, so if an SDK
+// existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	s.InstallTime = InstallTimeNow()
 	w.content[s.Name] = s
@@ -141,12 +146,22 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	defer fs.Close()
 
-	return fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(s.Revision))),
-		filepath.Join(sdkPath, "current"), true)
+	current := filepath.Join(sdkPath, "current")
+
+	// the link could already be existing  (e.g. was created before and
+	// due to the refresh --continue the link task gets executed again)
+	if err = fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(s.Revision))),
+		current); !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	return nil
 }
 
-func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
-	delete(w.content, s.Name)
+// Stop associating an SDK with the workshop by removing a 'current' symlink and
+// removing the SDK to the workshop content. This method is idempotent, so if an
+// SDK did not exist, the result will be a no-op
+func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
+	delete(w.content, name)
 	newSequence, err := json.Marshal(w.content)
 	if err != nil {
 		return err
@@ -162,14 +177,14 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, s sdk.Setup) error {
 		return err
 	}
 
-	/* Remove the 'current' link */
+	// Remove the 'current' link
 	fs, err := w.backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	return fs.Remove(sdk.SdkCurrentPath(s.Name))
+	return fs.Remove(sdk.SdkCurrentPath(name))
 }
 
 const (
@@ -247,7 +262,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	sdkPath := sdk.SdkCurrentPath(sdkSetup.Name)
 	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot read %q SDK metadata (%v)", sdkSetup.Name, err)
 	}
 	defer sdkYamlFile.Close()
 
