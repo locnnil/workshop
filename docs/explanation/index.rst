@@ -10,5 +10,6 @@ and explain how they fit together.
    :maxdepth: 1
 
    essentials/project-workshop-sdks
+   essentials/moving-projects
    essentials/changes-tasks
    essentials/workshop-cli

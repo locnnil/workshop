@@ -30,12 +30,15 @@ gopkg
 https
 installable
 iteratively
+lxd
 onboarding
 pathname
+repo
 reST
 reStructuredText
 readme
 roadmap
+snapcraft
 snapd
 subcommand
 transactional
@@ -43,4 +46,6 @@ uid
 unmounts
 webhook
 workshopd
+worktree
+worktrees
 yaml

@@ -79,8 +79,8 @@ In turn, any single entry in :samp:`sdks` must define one and only one key:
 
        It uses a
        `snap-like format <https://snapcraft.io/docs/channels>`__
-       of :samp:`<TRACK>/<RISK>/<BRANCH>`;
-       only :samp:`<BRANCH>` is optional.
+       of :samp:`<TRACK>/<RISK>`
+       without the :samp:`<BRANCH>` part.
 
 
 JSON Schema
