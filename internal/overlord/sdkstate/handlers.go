@@ -8,7 +8,6 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
-	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -198,15 +197,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if err = inst.LinkSdk(ctx, setup); err != nil {
-		return err
-	}
-
-	sdkInfo, err := inst.SdkInfo(ctx, setup.Name)
-	if err != nil {
-		return err
-	}
-
-	if err = policy.CheckInterfaces(sdkInfo); err != nil {
 		return err
 	}
 

@@ -13,6 +13,9 @@ import (
 var StashNamePrefix string = "stash-"
 
 func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
+	rev := revert.New()
+	defer rev.Fail()
+
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key %s not found", ContextUser)
@@ -33,7 +36,14 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	return s.moveInstanceAndProfiles(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user))
+	rev.Add(func() { s.updateInstanceState(conn, ctx, name, "start", false) })
+
+	if err = s.moveInstanceAndProfiles(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
 }
 
 func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {

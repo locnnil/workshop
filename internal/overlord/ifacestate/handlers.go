@@ -1,14 +1,17 @@
 package ifacestate
 
 import (
+	"context"
+
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
+	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
-
-	"github.com/canonical/workshop/internal/overlord/state"
-	"gopkg.in/tomb.v2"
 )
 
 func sdkName(task *state.Task) (string, error) {
@@ -47,6 +50,13 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
+	if err = policy.CheckInterfaces(sdkInfo); err != nil {
+		return err
+	}
+	return m.setupSdkConnections(task, ctx, project.ProjectId, workshop, sdkInfo)
+}
+
+func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Context, projectId string, workshop string, sdkInfo *sdk.Info) (err error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
@@ -72,12 +82,12 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// - restore connections based on what is kept in the state
 	//   - if a connection cannot be restored then remove it from the state
 	// - setup the backend of all the affected sdks
-	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkInfo.Name)
+	disconnected, err := m.repo.DisconnectSdk(projectId, workshop, sdkInfo.Name)
 	if err != nil {
 		return err
 	}
 
-	if err := m.repo.RemoveSdk(project.ProjectId, workshop, sdkInfo.Name); err != nil {
+	if err := m.repo.RemoveSdk(projectId, workshop, sdkInfo.Name); err != nil {
 		return err
 	}
 
@@ -101,7 +111,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	}
 
 	// At the moment, only searching for auto-connect-able slots
-	// is supported
 	var connected = make(map[sdk.Ref]*sdk.Info, 0)
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(plug.Sdk.ProjectId, workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
@@ -157,7 +166,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		affectedSet[s.Ref()] = s
 	}
 
-	// rebuild SDK profiles for the affected SDKs
 	for _, s := range affectedSet {
 		for _, backend := range m.repo.Backends() {
 			if err = backend.Setup(ctx, s, m.repo); err != nil {

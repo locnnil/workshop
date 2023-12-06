@@ -129,7 +129,43 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.UnstashWorkshop(ctx, workshop)
+	if err = m.backend.UnstashWorkshop(ctx, workshop); err != nil {
+		return err
+	}
+
+	inst, err := m.backend.Workshop(ctx, workshop)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	autoconnect := []*state.Task{}
+	prev := (*state.Task)(nil)
+	for _, s := range inst.Content() {
+		// every task here joins a separate lane so if one of the reconnection
+		// job fails it does not abort any of the others
+		lane := st.NewLane()
+		reconnect := st.NewTask("auto-connect", fmt.Sprintf("Re-connect %q SDK eligible plugs and slots", s.Name))
+		reconnect.Set("project", prj)
+		reconnect.Set("workshop", workshop)
+		reconnect.Set("sdk", s.Name)
+		reconnect.JoinLane(lane)
+		if prev != nil {
+			reconnect.WaitFor(prev)
+		}
+		prev = reconnect
+		autoconnect = append(autoconnect, reconnect)
+	}
+
+	if len(autoconnect) > 0 {
+		chg := task.Change()
+		chg.AddAll(state.NewTaskSet(autoconnect...))
+		st.EnsureBefore(0)
+	}
+	return nil
 }
 
 func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {

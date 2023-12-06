@@ -271,41 +271,6 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	c.Assert(sdkInfo.Slots, check.HasLen, 0)
 }
 
-func (s *H) TestDoLinkSdkFailPolicyCheck(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	var sdkYaml = `
-name: test
-base: ubuntu@22.04
-slots:
-  slot:
-    interface: content
-`
-	s.mockTestSdk(c, sdkYaml)
-
-	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
-
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", testSdk)
-	t1 := s.state.NewTask("link-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-	chg.AddTask(t)
-
-	s.state.Unlock()
-	s.se.Ensure()
-	s.se.Wait()
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
-}
-
 func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()

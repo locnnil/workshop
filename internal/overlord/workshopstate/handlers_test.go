@@ -117,3 +117,60 @@ base: ubuntu@20.04
 	c.Check(chg.Err(), check.Equals, nil)
 	workshopstate.StopLogInterval = oldInterval
 }
+
+func (s *workshopHandlers) TestUndoStash(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04
+sdks:
+  test:
+    channel: latest/stable
+  test2:
+    channel: latest/edge
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("stash-workshop", "...")
+	t2 := s.state.NewTask("error-trigger", "...")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.UndoneStatus)
+	lane1 := chg.LaneTasks(1)
+	c.Assert(lane1, check.HasLen, 1)
+	c.Assert(lane1[0].Kind(), check.Equals, "auto-connect")
+
+	lane2 := chg.LaneTasks(2)
+	c.Assert(lane2, check.HasLen, 1)
+	c.Assert(lane2[0].Kind(), check.Equals, "auto-connect")
+
+	for _, t := range append(lane1, lane2...) {
+		var name string
+		c.Assert(t.Get("sdk", &name), check.IsNil)
+		c.Assert(name, check.Matches, "^test.?$")
+
+		c.Assert(t.Get("workshop", &name), check.IsNil)
+		c.Assert(name, check.Equals, "ws")
+
+		var prj workshopbackend.Project
+		c.Assert(t.Get("project", &prj), check.IsNil)
+		c.Assert(prj, check.DeepEquals, *s.project)
+	}
+	c.Assert(lane1[0].HaltTasks(), testutil.DeepUnsortedMatches, lane2[0:])
+	c.Assert(lane1[0].WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{})
+}

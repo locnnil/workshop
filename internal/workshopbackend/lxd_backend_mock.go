@@ -30,6 +30,8 @@ type ExecCall struct {
 type FakeWorkshopBackend struct {
 	// the key is a project-id - workshop name
 	Workshops map[string]map[string]*FakeWorkshop
+	// workshops put to stash (e.g. during refresh)
+	StashedWorkshops map[string]map[string]*FakeWorkshop
 	// the key is a username
 	projects map[string][]*Project
 
@@ -40,6 +42,7 @@ type FakeWorkshopBackend struct {
 func NewFakeWorkshopBackend() *FakeWorkshopBackend {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
+	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
 	be.projects = make(map[string][]*Project)
 
 	be.DoExec = DoExecDefault
@@ -310,11 +313,39 @@ func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name stri
 }
 
 func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	workshop := s.StashedWorkshops[projectId][StashNamePrefix+name]
+	if workshop == nil {
+		return ErrWorkshopNotFound
+	}
+	delete(s.StashedWorkshops[projectId], StashNamePrefix+name)
+	workshop.Name = name
+	s.Workshops[projectId][name] = workshop
+	return nil
 }
 
 func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	workshop := s.Workshops[projectId][name]
+	if workshop == nil {
+		return ErrWorkshopNotFound
+	}
+
+	if s.StashedWorkshops[projectId] == nil {
+		s.StashedWorkshops[projectId] = make(map[string]*FakeWorkshop)
+	}
+	s.StashedWorkshops[projectId][StashNamePrefix+name] = workshop
+	workshop.Name = StashNamePrefix + name
+	delete(s.Workshops[projectId], name)
+	return nil
 }
 
 func (s *FakeWorkshopBackend) CreateStateStorage(ctx context.Context, name string) error {

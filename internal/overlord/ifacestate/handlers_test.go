@@ -339,3 +339,34 @@ func (s *interfaceHandlersSuite) TestAutoconnectReconnectsExistingConnections(c 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
+
+func (s *interfaceHandlersSuite) TestDoAutoconnectFailInstallPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	var sdkYaml = `
+name: consumer
+base: ubuntu@22.04
+slots:
+  slot:
+    interface: content
+`
+
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: sdkYaml})
+
+	t1 := s.state.NewTask("auto-connect", "test")
+	t1.Set("sdk", "consumer")
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.prj, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
+}
