@@ -36,7 +36,7 @@ use shell syntax such as :samp:`--`:
 
 .. code:: console
 
-   workshop exec golang -- echo -n foo bar
+   $ workshop exec golang -- echo -n foo bar
 
 
 Notes

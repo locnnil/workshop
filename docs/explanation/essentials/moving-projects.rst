@@ -16,33 +16,44 @@ is just that: a :ref:`definition file <exp_workshop_def>`
 which behaves like any good file should.
 Things start changing *after* you run :command:`workshop launch`:
 
+.. code-block:: yaml
+   :caption: /home/user/old/.workshop.golang.yaml
+
+   name: golang
+   base: ubuntu@22.04
+   sdks:
+     go:
+       channel: latest/stable
+
+
 .. code:: console
 
-   $ cd /home/user/project/
-   $ workshop launch golang
-
-     "golang" launched
+   $ workshop launch golang --project /home/user/old/
 
 
 Moving a project
 ----------------
 
-This is the most transparent scenario:
+This is the most basic scenario.
+Start in the same project directory where you launched the workshop:
 
 .. code:: console
 
    $ workshop list --global
 
        Project                 Workshop  Status  Notes
-       /home/user/project      golang    Ready   -
+       /home/user/old          golang    Ready   -
 
-   $cd ..
-   $ mv /project/ PROJECT/
 
+Move the project directory and check the workshop:
+
+.. code:: console
+
+   $ mv /home/user/old/ /home/user/new/
    $ workshop list --global
 
        Project                 Workshop  Status  Notes
-       /home/user/PROJECT      golang    Ready   -
+       /home/user/new          golang    Ready   -
 
 
 |project| handles the project's move seamlessly
@@ -58,21 +69,27 @@ that are not specific to |project|.
 Copying a project
 -----------------
 
-Now let's copy the project directory instead:
+Now let's copy the project directory.
+Again, start with the directory where the workshop resides:
 
 .. code:: console
 
    $ workshop list --global
 
        Project                 Workshop  Status  Notes
-       /home/user/PROJECT      golang    Ready   -
+       /home/user/old          golang    Ready   -
 
-   $ cp -r /home/user/PROJECT/ /home/user/project/
+
+Copy the project directory and check the workshops:
+
+.. code:: console
+
+   $ cp -r /home/user/old/ /home/user/new/
 
    $ workshop list --global
 
        Project                 Workshop  Status  Notes
-       /home/user/PROJECT      golang    Ready   -
+       /home/user/old          golang    Ready   -
 
 
 |project| doesn't launch the workshop in the new directory,
@@ -81,13 +98,12 @@ but what happens if you do it yourself?
 
 .. code:: console
 
-   $ cd project/
-   $ workshop launch golang
+   $ workshop launch golang --project /home/user/new/
    $ workshop list --global
 
        Project                 Workshop  Status  Notes
-       /home/user/project      golang    Ready   -
-       /home/user/PROJECT      golang    Ready   -
+       /home/user/old          golang    Ready   -
+       /home/user/new          golang    Ready   -
 
 
 Now, these are two independent workshops that happen to have the same name,
@@ -105,6 +121,5 @@ before deleting the project directory:
 
 .. code:: console
 
-   $ workshop remove golang
-   $ cd ..
-   $ rm -rf /home/user/PROJECT/
+   $ workshop remove golang --project /home/user/old/
+   $ rm -rf /home/user/old/

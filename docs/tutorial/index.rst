@@ -93,9 +93,7 @@ from the |project| source code on
 
 .. code:: console
 
-   $ git clone git@github.com:canonical/workshop.git
-   # -- or --
-   # git clone https://github.com/canonical/workshop.git
+   $ git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
    $ cd workshop
    $ sudo snap install snapcraft --classic
    $ snapcraft
@@ -115,7 +113,7 @@ for example:
 
 .. code:: console
 
-   $ sudo snap install --devmode ./workshop_0.1.0_amd64.snap
+   $ sudo snap install --devmode ./workshop_<VERSION>_amd64.snap
 
 
 Run
@@ -197,8 +195,6 @@ you :ref:`launch <ref_workshop_launch>` it:
 
    $ workshop launch golang
 
-       "golang" launched
-
 
 Now, the workshop is *Ready*
 to build, debug and run code.
@@ -229,16 +225,12 @@ If you're done with the workshop for now,
 
    $ workshop stop golang
 
-       "golang" stopped
-
 
 To resume, *start* the workshop again:
 
 .. code:: console
 
    $ workshop start golang
-
-       "golang" started
 
 
 Both commands operate gracefully,
@@ -268,7 +260,6 @@ is updated by its publisher,
 
    $ workshop refresh golang
 
-       "golang" refreshed
 
 The workshop is rebuilt from the
 :ref:`base <exp_workshop_base>`;
@@ -368,16 +359,12 @@ To continue the refresh operation:
 
    $ workshop refresh --continue golang
 
-        "golang" refreshed
-
 
 To abort the operation and recover the last operational state:
 
 .. code:: console
 
    $ workshop refresh --abort golang
-
-        "golang" aborted
 
 
 .. _tut_exec:
@@ -417,9 +404,7 @@ You can run an interactive shell as well:
 .. code:: console
 
    $ workshop exec golang bash
-   $ uname -a
-
-       Linux golang-bf3a1040 6.2.0-35-generic #35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct  6 10:23:26 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+   workshop@golang-cd03e2cd:/project$ uname -a
 
 
 Changes are persisted in the project directory,
@@ -443,7 +428,6 @@ If you don't need a workshop anymore,
 
    $ workshop remove golang
 
-        "golang" removed
 
 This leaves the workshop definition intact.
 
