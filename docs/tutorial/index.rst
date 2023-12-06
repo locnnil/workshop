@@ -246,24 +246,25 @@ When an aspect of the workshop changes,
 refresh it to pick up the update.
 
 
-Update components
-~~~~~~~~~~~~~~~~~
+When base or SDKs update
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-If an
-:ref:`SDK <exp_sdk>`
-listed in the
+If the
+:ref:`base <exp_workshop_base>`
+or
+:ref:`SDKs <exp_sdk>`
+in the
 :ref:`definition <exp_workshop_def>`
-is updated by its publisher,
-:ref:`refresh <ref_workshop_refresh>` the workshop to apply the changes:
+are updated by their publishers,
+:ref:`refresh <ref_workshop_refresh>` the workshop to update it:
 
 .. code:: console
 
    $ workshop refresh golang
 
 
-The workshop is rebuilt from the
-:ref:`base <exp_workshop_base>`;
-then the SDKs are updated from their respective channels.
+The workshop is rebuilt from the base image,
+then the SDKs are retrieved from respective channels.
 
 To refresh multiple workshops at once, list them all:
 
@@ -277,19 +278,20 @@ To refresh multiple workshops at once, list them all:
    **all** changes in **all** listed workshops are reverted.
 
 
-Add, switch or remove an SDK
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When definition changes
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To add or remove an SDK,
-or just change the channel,
+To switch bases,
+realign SDK layout or toggle channels,
 update the definition
 and refresh the workshop:
 
 .. code-block:: yaml
-   :emphasize-lines: 5
+   :caption: .workshop.golang.yaml
+   :emphasize-lines: 2, 5
 
    name: golang
-   base: ubuntu@22.04
+   base: ubuntu@20.04
    sdks:
      go:
        channel: latest/edge
