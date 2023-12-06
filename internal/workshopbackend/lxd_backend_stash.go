@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
@@ -36,9 +37,14 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	rev.Add(func() { s.updateInstanceState(conn, ctx, name, "start", false) })
+	rev.Add(func() {
+		err := s.updateInstanceState(conn, ctx, name, "start", false)
+		if err != nil {
+			logger.Debugf("Cannot restart %q workshop after failed stash operation", name)
+		}
+	})
 
-	if err = s.moveInstanceAndProfiles(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+	if err = s.moveInstanceAndProfiles(conn, ctx, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
 		return err
 	}
 
@@ -63,7 +69,7 @@ func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.moveInstanceAndProfiles(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
+	if err := s.moveInstanceAndProfiles(conn, ctx, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
 		return err
 	}
 
@@ -78,12 +84,12 @@ func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 // instanceTo - the instance's dest name (must be different due to LXD DNS conflicts)
 // source - the LXD project name to move instance from
 // target - the LXD project name to move instance to
-func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom, instanceTo, source, target string) error {
+func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, ctx context.Context, instanceFrom, instanceTo, source, target string) error {
 	rev := revert.New()
 	defer rev.Fail()
 
 	conn = conn.UseProject(source)
-	inst, _, err := conn.GetInstance(instanceFrom)
+	inst, etag, err := conn.GetInstance(instanceFrom)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return ErrWorkshopNotFound
@@ -91,28 +97,25 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFr
 		return err
 	}
 
-	// 1. Copy the SDK profiles to the stash area
-	for _, p := range inst.Profiles {
-		if p == "default" {
-			continue
-		}
-		conn = conn.UseProject(source)
-		if profile, _, err := conn.GetProfile(p); err != nil {
-			return err
-		} else {
-			conn = conn.UseProject(target)
-			if err = conn.CreateProfile(api.ProfilesPost{
-				Name:       profile.Name,
-				ProfilePut: profile.Writable(),
-			}); err != nil {
-				return err
-			}
-			rev.Add(func() {
-				conn = conn.UseProject(target)
-				conn.DeleteProfile(profile.Name)
-			})
-		}
+	var profiles = make([]string, len(inst.Profiles))
+	copy(profiles, inst.Profiles)
+	inst.Profiles = []string{"default"}
+
+	// 1. Unassign all the isntances profiles except default
+	if op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag); err != nil {
+		return err
+	} else if err = op.WaitContext(ctx); err != nil {
+		return err
 	}
+
+	// if stashing to another project fails, we have to restore
+	// the instance configuration as is.
+	rev.Add(func() {
+		inst.Profiles = profiles
+		if op, err := conn.UpdateInstance(inst.Name, inst.Writable(), ""); err != nil {
+			op.WaitContext(ctx)
+		}
+	})
 
 	// 2. Stash the workshop
 	// the new name must not be the same, otherwise the LXD's DNS will fail
@@ -127,46 +130,32 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFr
 	} else if err = op.Wait(); err != nil {
 		return err
 	}
-	rev.Add(func() {
-		conn = conn.UseProject(target)
-		conn.MigrateInstance(instanceTo, api.InstancePost{
-			Name:      instanceFrom,
-			Project:   source,
-			Migration: true,
-		})
-	})
-
-	// 3. Remove the SDK profiles that are now stashed
-	conn = conn.UseProject(source)
-	if err := s.removeProfiles(conn, inst.Profiles); err != nil {
-		return err
-	}
 
 	rev.Success()
+
+	// 3. Remove the SDK profiles as the workshop is successfully stashed now.
+	conn = conn.UseProject(source)
+	if err := s.removeProfiles(conn, profiles); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (s *LxdBackend) removeProfiles(conn lxd.InstanceServer, profiles []string) error {
-	rev := revert.New()
-	defer rev.Fail()
-
 	for _, p := range profiles {
+		if p == "default" {
+			continue
+		}
+
 		profile, _, err := conn.GetProfile(p)
 		if err != nil {
 			return err
 		}
 
-		if profile.Name == "default" {
-			continue
-		}
-
 		if err := conn.DeleteProfile(profile.Name); err != nil {
 			return err
 		}
-		rev.Add(func() { conn.CreateProfile(api.ProfilesPost{ProfilePut: profile.ProfilePut, Name: p}) })
 	}
-
-	rev.Success()
 	return nil
 }
 

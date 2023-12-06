@@ -66,6 +66,12 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
+func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshopbackend.WorkshopFs, name, yaml string) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
+	err := afero.WriteFile(fs, sdkPath, []byte(yaml), 0644)
+	c.Assert(err, check.IsNil)
+}
+
 func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[sdk.Setup]string) {
 	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
@@ -86,9 +92,7 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	defer wsfs.Close()
 
 	for sdk, yaml := range sdkYamls {
-		sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdk.Name, "current", "meta", "sdk.yaml")
-		err = afero.WriteFile(wsfs, sdkPath, []byte(yaml), 0644)
-		c.Assert(err, check.IsNil)
+		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
 }
 

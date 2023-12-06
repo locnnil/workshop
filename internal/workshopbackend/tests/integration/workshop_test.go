@@ -152,7 +152,7 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	// Execute
 	profile := workshopbackend.NewSdkProfile("test-profile")
 	err := f.be.AssignProfile(f.ctx, "test", profile)
@@ -174,10 +174,10 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 	c.Assert(err, check.IsNil)
 	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
-	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-test-profile"})
+	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default"})
 }
 
-func (f *wsOps) TestLxdBackendUnstashWorkshopRecoverProfiles(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopStashRecoverProfilesIfFailed(c *check.C) {
 	// Setup
 	// When we stash a workshop in LXD by moving it to a separate
 	// project, we must remove its assigned profiles as otherwise
@@ -207,7 +207,7 @@ func (f *wsOps) TestLxdBackendUnstashWorkshopRecoverProfiles(c *check.C) {
 	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-test-profile-recovery"})
 }
 
-func (f *wsOps) TestLxdBackendRemoveWorkshopFromStash(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	// Execute
 	err := f.be.StashWorkshop(f.ctx, "test")
 

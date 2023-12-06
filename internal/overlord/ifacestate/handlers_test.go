@@ -9,9 +9,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 )
@@ -223,21 +221,18 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
-func (s *interfaceHandlersSuite) TestAutoconnectRemovesNonexistingConnections(c *check.C) {
+func (s *interfaceHandlersSuite) TestAutoconnectRemovesNonExistingConnections(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshopWithSDKs(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
-	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer", psetup)), check.IsNil)
-
-	// Launch another workshop with a candidate plug
-	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	s.launchWorkshopWithSDKs(c, "ws-consumer", map[sdk.Setup]string{csetup: consumer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-consumer", psetup)), check.IsNil)
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("auto-connect", "...")
 	t1.Set("sdk", "consumer")
-	setWorkshopProject("ws", s.prj, t1)
+	setWorkshopProject("ws-consumer", s.prj, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	s.state.Unlock()
@@ -245,18 +240,24 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemovesNonexistingConnections(c 
 	s.o.Settle(5 * time.Second)
 
 	s.state.Lock()
-	// simulate refresh, which will install the consumer SDK but now, the
-	// connection must be gone as consumer does not have any plugs in this
-	// revision
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+
+	// simulate refresh, which will install the consumer SDK again
 	chg = s.state.NewChange("refresh", "...")
 	t2 := s.state.NewTask("auto-connect", "...")
 	t2.Set("sdk", "consumer")
 	chg.AddTask(t2)
 	chg.Set("user", "testuser")
-	setWorkshopProject("ws", s.prj, t2)
+	setWorkshopProject("ws-consumer", s.prj, t2)
 
-	c.Assert(s.wsbackend.RemoveWorkshop(s.ctx, "ws"), check.IsNil)
-	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumerNoPlugs})
+	// overwrite the SDK meta file so the auto-connect task will
+	// now be installing an SDK with no plugs
+	// for simplicity of the test it does so into the same workshop
+	// but in practice this scenario is possible when the workshop is refreshed
+	// and some of the SDKs have their plugs and slots changed.
+	fs, err := s.wsbackend.WorkshopFs(s.ctx, "ws-consumer")
+	c.Assert(err, check.IsNil)
+	s.writeSDKMetaFile(c, fs, csetup.Name, consumerNoPlugs)
 	s.state.Unlock()
 
 	s.o.Settle(5 * time.Second)
@@ -265,14 +266,16 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemovesNonexistingConnections(c 
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	// Confirm that the previously existing connection of the mock-network
+	// interface has now been removed from the connections list.
 	c.Assert(t2.Status(), check.Equals, state.DoneStatus)
 
-	conns, err := ifacestate.GetConns(s.state)
-	c.Assert(err, check.IsNil)
-	c.Assert(maps.Keys(conns), check.Not(testutil.Contains), "42424242:ws:consumer:plug 42424242:ws-producer:producer:slot")
+	var conns map[string]interface{}
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, map[string]interface{}{})
 
-	// ensure that backend profiles were set for both SDKs
+	// Also confirm that the SDK profile does not exist any more as
+	// the plug has been removed.
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
