@@ -5,7 +5,7 @@ workshop remove
 
 Removes one or many workshops.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop remove <WORKSHOP>... [global options]
 

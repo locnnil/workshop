@@ -5,7 +5,7 @@ workshop launch
 
 Constructs one or many workshops using their definitions.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop launch <WORKSHOP>... [global options]
 

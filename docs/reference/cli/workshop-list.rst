@@ -5,7 +5,7 @@ workshop list
 
 Lists project workshops.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop list [--global] [global options]
 

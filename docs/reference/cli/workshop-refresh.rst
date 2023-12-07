@@ -5,7 +5,7 @@ workshop refresh
 
 Updates workshops according to their definitions.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [global options]
 

@@ -14,7 +14,7 @@ Initialisation
 To start, place the :ref:`workshop definition <exp_workshop_def>`
 in your repository:
 
-.. code:: console
+.. code-block:: console
 
    $ git init original
    $ cd original/
@@ -34,7 +34,7 @@ Next,
 :ref:`launch <ref_workshop_launch>` the workshop
 and start working on your code:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop launch golang
 
@@ -55,7 +55,7 @@ Mind that any activities
 that rely on the workshop's contents
 should now occur inside the workshop:
 
-.. code:: console
+.. code-block:: console
 
    $ git add . && git commit -m "initial commit"
    $ workshop exec golang -- go build -x main.go
@@ -63,7 +63,7 @@ should now occur inside the workshop:
 
 However, the resulting artefacts are exposed in the project directory:
 
-.. code:: console
+.. code-block:: console
 
    $ ./main
 
@@ -72,7 +72,7 @@ However, the resulting artefacts are exposed in the project directory:
 
 They stay there even if you remove the workshop:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop remove golang
    $ ./main
@@ -85,7 +85,7 @@ They stay there even if you remove the workshop:
    If you actually remove the workshop at this step of the guide,
    relaunch it before proceeding further:
 
-   .. code:: console
+   .. code-block:: console
 
       $ workshop launch golang
 
@@ -120,7 +120,7 @@ such as frameworks or system versions.
 Suppose you want to investigate an issue that appears on an older OS version,
 so you create a new worktree just for that:
 
-.. code:: console
+.. code-block:: console
 
    $ git worktree add ../hotfix
    $ cd ../hotfix/
@@ -143,7 +143,7 @@ to change the :ref:`base image <exp_workshop_base>`:
 
 Next, you launch the redefined workshop to work on the problem:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop launch golang
    $ # Hacking away until the problem is solved
@@ -156,7 +156,7 @@ Just like :ref:`with regular directories <exp_moving_projects>`,
 |project| cooperates nicely with
 :literalref:`git worktree move<https://git-scm.com/docs/git-worktree#_commands>`:
 
-.. code:: console
+.. code-block:: console
 
    $ git worktree move ../hotfix/ ../resolved/
    $ workshop list --global
@@ -171,7 +171,7 @@ when it comes to clean-up,
 remove all workshops
 before running :samp:`git worktree remove`:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop remove golang --project /home/user/resolved/
    $ git worktree remove ../resolved/

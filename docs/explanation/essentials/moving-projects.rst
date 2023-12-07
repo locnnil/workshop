@@ -26,7 +26,7 @@ Things start changing *after* you run :command:`workshop launch`:
        channel: latest/stable
 
 
-.. code:: console
+.. code-block:: console
 
    $ workshop launch golang --project /home/user/old/
 
@@ -37,7 +37,7 @@ Moving a project
 This is the most basic scenario.
 Start in the same project directory where you launched the workshop:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop list --global
 
@@ -47,7 +47,7 @@ Start in the same project directory where you launched the workshop:
 
 Move the project directory and check the workshop:
 
-.. code:: console
+.. code-block:: console
 
    $ mv /home/user/old/ /home/user/new/
    $ workshop list --global
@@ -72,7 +72,7 @@ Copying a project
 Now let's copy the project directory.
 Again, start with the directory where the workshop resides:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop list --global
 
@@ -82,7 +82,7 @@ Again, start with the directory where the workshop resides:
 
 Copy the project directory and check the workshops:
 
-.. code:: console
+.. code-block:: console
 
    $ cp -r /home/user/old/ /home/user/new/
 
@@ -96,7 +96,7 @@ Copy the project directory and check the workshops:
 which is probably the reasonable default here,
 but what happens if you do it yourself?
 
-.. code:: console
+.. code-block:: console
 
    $ workshop launch golang --project /home/user/new/
    $ workshop list --global
@@ -119,7 +119,7 @@ Removing a project
 make sure to remove all workshops
 before deleting the project directory:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop remove golang --project /home/user/old/
    $ rm -rf /home/user/old/

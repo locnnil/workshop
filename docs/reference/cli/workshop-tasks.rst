@@ -5,7 +5,7 @@ workshop tasks
 
 Lists tasks for a specific change.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop tasks <CHANGE ID> [global options]
 
