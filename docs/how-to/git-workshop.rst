@@ -57,6 +57,7 @@ should now occur inside the workshop:
 
 .. code:: console
 
+   $ git add . && git commit -m "initial commit"
    $ workshop exec golang -- go build -x main.go
 
 
@@ -121,7 +122,7 @@ so you create a new worktree just for that:
 
 .. code:: console
 
-   $ git worktree add ../hotfix/
+   $ git worktree add ../hotfix
    $ cd ../hotfix/
 
 
@@ -140,14 +141,14 @@ to change the :ref:`base image <exp_workshop_base>`:
        channel: latest/stable
 
 
-Next, you launch the redefined workshop to work :
+Next, you launch the redefined workshop to work on the problem:
 
 .. code:: console
 
    $ workshop launch golang
    $ # Hacking away until the problem is solved
    $ git commit -m "solve problem with hotfix"
-   $ cd ../original
+   $ cd ../original/
    $ git merge hotfix
 
 
@@ -158,6 +159,11 @@ Just like :ref:`with regular directories <exp_moving_projects>`,
 .. code:: console
 
    $ git worktree move ../hotfix/ ../resolved/
+   $ workshop list --global
+
+       Project                 Workshop  Status  Notes
+       /home/user/original     golang    Ready   -
+       /home/user/resolved     golang    Ready   -
 
 
 Accordingly,
@@ -167,9 +173,7 @@ before running :samp:`git worktree remove`:
 
 .. code:: console
 
-   $ cd ../resolved/
-   $ workshop remove golang
-   $ cd ../original/
+   $ workshop remove golang --project /home/user/resolved/
    $ git worktree remove ../resolved/
 
 
