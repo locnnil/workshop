@@ -17,7 +17,7 @@ in your repository:
 .. code:: console
 
    $ git init original
-   $ cd original
+   $ cd original/
 
 
 .. code-block:: yaml
@@ -60,8 +60,7 @@ should now occur inside the workshop:
    $ workshop exec golang -- go build -x main.go
 
 
-However, the resulting artefacts are exposed in the project directory
-even if you remove the workshop:
+However, the resulting artefacts are exposed in the project directory:
 
 .. code:: console
 
@@ -69,8 +68,12 @@ even if you remove the workshop:
 
        hello, Workshop
 
-   $ workshop remove golang
 
+They stay there even if you remove the workshop:
+
+.. code:: console
+
+   $ workshop remove golang
    $ ./main
 
        hello, Workshop
@@ -78,9 +81,8 @@ even if you remove the workshop:
 
 .. tip::
 
-   If you actually remove the workshop,
-   don't forget to relaunch it
-   before proceeding further with this guide:
+   If you actually remove the workshop at this step of the guide,
+   relaunch it before proceeding further:
 
    .. code:: console
 
@@ -119,8 +121,8 @@ so you create a new worktree just for that:
 
 .. code:: console
 
-   $ git worktree add ../hotfix
-   $ cd ../hotfix
+   $ git worktree add ../hotfix/
+   $ cd ../hotfix/
 
 
 Instead of troubling yourself with virtual machines,
@@ -138,15 +140,15 @@ to change the :ref:`base image <exp_workshop_base>`:
        channel: latest/stable
 
 
-Next, you launch the redefined workshop:
+Next, you launch the redefined workshop to work :
 
 .. code:: console
 
    $ workshop launch golang
    $ # Hacking away until the problem is solved
-   $ git push
+   $ git commit -m "solve problem with hotfix"
    $ cd ../original
-   $ git pull hotfix
+   $ git merge hotfix
 
 
 Just like :ref:`with regular directories <exp_moving_projects>`,
@@ -168,7 +170,7 @@ before running :samp:`git worktree remove`:
    $ cd ../resolved/
    $ workshop remove golang
    $ cd ../original/
-   $ git worktree remove ../resolved
+   $ git worktree remove ../resolved/
 
 
 Thus, using :command:`git worktree` reduces the effort to sync, stash and pull,

@@ -21,7 +21,8 @@ that uses an unstable
 :ref:`SDK <exp_sdk>`
 from the ``latest/edge`` channel:
 
-.. code:: yaml
+.. code-block:: yaml
+   :caption: .workshop.golang-volatile.yaml
 
    name: golang-volatile
    base: ubuntu@22.04

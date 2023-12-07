@@ -107,6 +107,7 @@ so you can edit and update the workshop definition iteratively.
 A simple definition may look like this:
 
 .. code-block:: yaml
+   :caption: .workshop.golang.yaml
 
    name: golang
    base: ubuntu@22.04

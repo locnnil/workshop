@@ -10,4 +10,6 @@ docs/.sphinx/venv/
 docs/.sphinx/warnings.txt
 docs/.sphinx/.wordlist.dic
 docs/.sphinx/.doctrees/
+docs/.sphinx/node_modules/
+package*.json
 docs/_build
