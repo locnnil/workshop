@@ -154,10 +154,7 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	// Execute
-	profile := workshopbackend.NewSdkProfile("test-profile")
-	err := f.be.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.IsNil)
-	err = f.be.StashWorkshop(f.ctx, "test")
+	err := f.be.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -172,20 +169,10 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	_, err = f.be.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
-	c.Assert(err, check.IsNil)
-	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default"})
 }
 
-func (f *wsOps) TestLxdBackendWorkshopStashRecoverProfilesIfFailed(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopStashRestartIfFailed(c *check.C) {
 	// Setup
-	// When we stash a workshop in LXD by moving it to a separate
-	// project, we must remove its assigned profiles as otherwise
-	// LXD will fail with an error by not finding those profiles
-	// existing in the new project. However, if stashing has failed
-	// we must return the instance back to the original project
-	// as is, i.e. including its profiles assigned as before.
-
 	// Change the stash name prefix to invalid to emulate
 	// migration failure. The instance must preserve its
 	// list of the SDK profiles
@@ -193,18 +180,14 @@ func (f *wsOps) TestLxdBackendWorkshopStashRecoverProfilesIfFailed(c *check.C) {
 	workshopbackend.StashNamePrefix = "?"
 	defer func() { workshopbackend.StashNamePrefix = old }()
 
-	profile := workshopbackend.NewSdkProfile("test-profile-recovery")
-	err := f.be.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.IsNil)
-
 	// Execute (will fail due to the incorrect stash instance name)
-	err = f.be.StashWorkshop(f.ctx, "test")
+	err := f.be.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
-	// Validate (the recovered instance still has its profiles assigned)
+	// Validate
 	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
-	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-test-profile-recovery"})
+	c.Assert(inst.Status, check.Equals, "Running")
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {

@@ -275,8 +275,26 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
+	saveStateHooks.WaitFor(createStateStorage)
+
+	// disconnect and remove SDKs plugs and slots
+	disconnectSet := []*state.Task{}
+	prev := (*state.Task)(nil)
+	for _, s := range content {
+		disc := st.NewTask("disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
+		disc.Set("sdk", s.Name)
+		if prev != nil {
+			disc.WaitFor(prev)
+		}
+		disconnectSet = append(disconnectSet, disc)
+	}
+	disconnect := state.NewTaskSet(disconnectSet...)
+	disconnect.WaitAll(saveStateHooks)
 
 	putToStash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
+	putToStash.WaitAll(disconnect)
+	putToStash.WaitAll(saveStateHooks)
+	putToStash.WaitFor(createStateStorage)
 
 	launch, err := launch(st, file, p)
 	if err != nil {
@@ -300,16 +318,11 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 		// SDKs, i.e. it will not be running any hooks. Thus,
 		// the point of no return is the last launch task (i.e.
 		// before the moment when we delete the copy of the workshop
-		// after the refresh operation)
+		// after the refresh operation).
 		launch.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
 	}
+
 	launch.WaitFor(putToStash)
-	if len(saveStateHooks.Tasks()) > 0 {
-		putToStash.WaitAll(saveStateHooks)
-		saveStateHooks.WaitFor(createStateStorage)
-	} else {
-		putToStash.WaitFor(createStateStorage)
-	}
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
 	refresh.AddTask(createStateStorage)
@@ -317,6 +330,7 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	refresh.AddAllWithEdges(launch)
 	refresh.AddAllWithEdges(restoreStateHooks)
 	refresh.AddTask(putToStash)
+	refresh.AddAll(disconnect)
 	refresh.AddTask(removeStateStorage)
 	refresh.AddTask(removeFromStash)
 

@@ -12,6 +12,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 func sdkName(task *state.Task) (string, error) {
@@ -190,6 +191,11 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
+	// rebuild SDK profiles for the affected SDKs
+	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
+}
+
+func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, project *workshopbackend.Project, workshop string, sdkName string) error {
 	sdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: sdkName}
 
 	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkName)
@@ -209,7 +215,6 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	// rebuild SDK profiles for the affected SDKs
 	for _, s := range disconnected {
 		if sdkRef != s.Ref() {
 			for _, backend := range m.repo.Backends() {
@@ -226,4 +231,21 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 		}
 	}
 	return nil
+}
+
+func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	user, project, workshop, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
+
+	sdkName, err := sdkName(task)
+	if err != nil {
+		return err
+	}
+
+	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
 }

@@ -215,6 +215,7 @@ func (s *S) TestRefreshManyEmptyWorkshopMany(c *check.C) {
 		"remove-workshop-stash",
 		"run-hook",
 		"stash-workshop",
+		"disconnect",
 		"mount-project",
 		"start-workshop",
 		"retrieve-sdk",
@@ -273,6 +274,7 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		"remove-workshop-stash",
 		"run-hook",
 		"stash-workshop",
+		"disconnect",
 		"mount-project",
 		"start-workshop",
 		"retrieve-sdk",
@@ -331,6 +333,7 @@ func (s *S) TestRefreshManyTasktest(c *check.C) {
 		"remove-state-storage",
 		"run-hook",
 		"stash-workshop",
+		"disconnect",
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
@@ -394,34 +397,34 @@ func (s *S) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c *check.C) {
 	c.Assert(lastChanceWs1, check.NotNil)
 	c.Assert(lastChanceWs1.Kind(), check.Equals, "run-hook")
 
-	// Ensure that the delete-copy for ws will wait on the own
+	// Ensure that the remove-stash for ws will wait on the own
 	// remove-state-storage and ws1's (i.e. all the other workshops') restore
 	// state hooks
 	removeWsStStorage := ts[0].MaybeEdge(workshopstate.EdgeCleanupRefresh)
-	deleteCopy := removeWsStStorage.HaltTasks()[0]
+	removeStash := removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs, lastChanceWs1})
 
-	// Ensure that the copy and state storage removals belong to a separate
+	// Ensure that the stash and state storage removals belong to a separate
 	// lane. In the case of their abortion it must not trigger abortion of the
 	// refresh that, by that moment, is already done
 	c.Assert(removeWsStStorage.Lanes()[0], check.Not(check.Equals), lastChanceWs.Lanes()[0])
-	c.Assert(deleteCopy.Lanes()[0], check.Not(check.Equals), lastChanceWs.Lanes()[0])
-	c.Assert(deleteCopy.Lanes(), check.HasLen, 1)
+	c.Assert(removeStash.Lanes()[0], check.Not(check.Equals), lastChanceWs.Lanes()[0])
+	c.Assert(removeStash.Lanes(), check.HasLen, 1)
 	c.Assert(removeWsStStorage.Lanes(), check.HasLen, 1)
 
 	// Ensure that the delete-copy for ws1 will wait on the own
 	// remove-state-storage and ws's (i.e. all the other workshops') restore
 	// state hooks
 	removeWsStStorage = ts[1].MaybeEdge(workshopstate.EdgeCleanupRefresh)
-	deleteCopy = removeWsStStorage.HaltTasks()[0]
+	removeStash = removeWsStStorage.HaltTasks()[0]
 	c.Assert(removeWsStStorage.WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{lastChanceWs1, lastChanceWs})
 
-	// Ensure that the copy and state storage removals belong to a separate
+	// Ensure that the stash and state storage removals belong to a separate
 	// lane. In the case of their abortion it must not trigger abortion of the
 	// refresh that, by that moment, is already done
 	c.Assert(removeWsStStorage.Lanes()[0], check.Not(check.Equals), lastChanceWs1.Lanes()[0])
-	c.Assert(deleteCopy.Lanes()[0], check.Not(check.Equals), lastChanceWs1.Lanes()[0])
-	c.Assert(deleteCopy.Lanes(), check.HasLen, 1)
+	c.Assert(removeStash.Lanes()[0], check.Not(check.Equals), lastChanceWs1.Lanes()[0])
+	c.Assert(removeStash.Lanes(), check.HasLen, 1)
 	c.Assert(removeWsStStorage.Lanes(), check.HasLen, 1)
 }
 
