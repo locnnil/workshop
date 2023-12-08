@@ -35,7 +35,7 @@ Suppose something goes during a
 :ref:`refresh <tut_refresh>`
 operation:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop refresh golang-volatile
 
@@ -47,7 +47,7 @@ operation:
 To investigate the failure,
 list the *changes* in the workshop to find the one that failed:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop changes
 
@@ -62,7 +62,7 @@ List tasks in a change
 When the problematic change is found,
 list its *tasks* to see the cause:
 
-.. code:: console
+.. code-block:: console
 
    $ workshop tasks 81
 

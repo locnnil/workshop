@@ -5,7 +5,7 @@ workshop start
 
 Starts one or many workshops.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop start <WORKSHOP>... [global options]
 

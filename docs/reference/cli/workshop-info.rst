@@ -5,7 +5,7 @@ workshop info
 
 Prints the current status and details of a workshop as YAML.
 
-.. code:: console
+.. code-block:: console
 
    $ workshop info <WORKSHOP> [global options]
 
