@@ -1,6 +1,12 @@
 package workshopstate_test
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"html/template"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -9,13 +15,15 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
-	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
 )
 
 type S struct {
 	state   *state.State
 	project *workshopbackend.Project
+	backend workshopbackend.WorkshopBackend
+	mgr     *workshopstate.WorkshopManager
+	ctx     context.Context
 }
 
 var _ = check.Suite(&S{})
@@ -24,7 +32,35 @@ func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *S) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
+
+	s.backend = workshopbackend.NewFakeWorkshopBackend()
+	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state), s.backend)
+	s.project, _, _ = s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
+	s.ctx = context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+}
+
+var workshopTemplate = `name: %s
+base: ubuntu@20.04
+sdks:
+  {{ range . }}
+  {{- .Name}}:
+      channel: {{.Channel}}
+  {{ end }} 
+`
+
+func (s *S) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.Setup) {
+	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
+	c.Assert(err, check.IsNil)
+
+	var workshopFile = bytes.NewBuffer([]byte{})
+	t.Execute(workshopFile, sdks)
+
+	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
+	c.Assert(err, check.IsNil)
+
+	err = s.backend.LaunchWorkshop(s.ctx, ws, "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
 }
 
 func (s *S) ensureTaskHasWorkshopAndProjectKeys(c *check.C, w string, ts []*state.Task) {
@@ -46,10 +82,19 @@ func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 	for _, i := range ts {
 		actual = append(actual, i.Kind())
 	}
-	slices.Sort(actual)
-	slices.Sort(expected)
 
 	c.Assert(actual, testutil.DeepUnsortedMatches, expected)
+}
+
+func verifyDisconnectDependencies(c *check.C, ts *state.TaskSet) {
+	prev := (*state.Task)(nil)
+	for i, t := range ts.Tasks() {
+		if t.Kind() == "disconnect" {
+			if prev != nil {
+				c.Assert(t.WaitTasks(), testutil.DeepUnsortedMatches, ts.Tasks()[i-1])
+			}
+		}
+	}
 }
 
 func (s *S) TestLaunchWorkshopNoSdk(c *check.C) {
@@ -252,18 +297,17 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	testSdk := workshopbackend.SdkRecord{Name: "sdk-1", Channel: "latest/stable"}
+	testSdk2 := workshopbackend.SdkRecord{Name: "sdk-2", Channel: "latest/stable"}
 
 	file := &workshopbackend.WorkshopFile{
 		Name: "ws",
 		Base: "ubuntu@22.04",
-		Sdks: workshopbackend.SdkList{testSdk}}
+		Sdks: workshopbackend.SdkList{testSdk, testSdk2}}
 
 	ts, err := workshopstate.Refresh(s.state, file, []sdk.Setup{
-		{
-			Name:    "sdk",
-			Channel: "latest/stable",
-		},
+		{Name: "sdk-1", Channel: "latest/stable"},
+		{Name: "sdk-2", Channel: "latest/stable"},
 	}, s.project)
 	c.Assert(err, check.IsNil)
 
@@ -273,22 +317,31 @@ func (s *S) TestRefreshWithAnSDK(c *check.C) {
 		"create-workshop",
 		"remove-workshop-stash",
 		"run-hook",
+		"run-hook",
 		"stash-workshop",
+		"disconnect",
 		"disconnect",
 		"mount-project",
 		"start-workshop",
 		"retrieve-sdk",
 		"install-sdk",
 		"link-sdk",
+		"retrieve-sdk",
+		"install-sdk",
+		"link-sdk",
+		"auto-connect",
 		"auto-connect",
 		"run-hook",
 		"run-hook", // restore state hook
+		"run-hook",
+		"run-hook",
 	}
 
 	tasks := ts.Tasks()
 
 	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
+	verifyDisconnectDependencies(c, ts)
 
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws", tasks)
 }
@@ -533,21 +586,29 @@ func (s *S) TestStopMany(c *check.C) {
 func (s *S) TestRemoveMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
+	content := []sdk.Setup{
+		{Name: "sdk-1", Channel: "latest/stable"},
+		{Name: "sdk-2", Channel: "latest/stable"},
+		{Name: "sdk-3", Channel: "latest/stable"},
+	}
 
-	ts, err := workshopstate.RemoveManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
+	s.launchWorkshopWithSDKs(c, "ws-1", content)
+
+	ts, err := s.mgr.RemoveMany(s.ctx, []string{"ws-1"}, s.project.ProjectId, "1")
 	c.Assert(err, check.IsNil)
-	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "remove-workshop")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "remove-workshop")
+	c.Assert(ts.Tasks(), check.HasLen, 4)
 
-	var force bool
-	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
+	verifyDisconnectDependencies(c, ts)
+	for i, t := range ts.Tasks()[0:3] {
+		c.Assert(t.Kind(), check.Equals, "disconnect")
+		var sdkName string
+		err = t.Get("sdk", &sdkName)
+		c.Assert(err, check.IsNil)
+		c.Assert(sdkName, check.Equals, content[i].Name)
+		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
+	}
+	c.Assert(ts.Tasks()[3].Kind(), check.Equals, "remove-workshop")
 	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-	ts.Tasks()[0].Get("force", &force)
-	c.Assert(force, check.Equals, false)
-
-	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
-	ts.Tasks()[1].Get("force", &force)
-	c.Assert(force, check.Equals, false)
+	c.Assert(ts.Tasks()[3].Has("stop-operation"), check.Equals, true)
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts.Tasks())
 }

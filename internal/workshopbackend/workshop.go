@@ -8,6 +8,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/exp/slices"
+
 	"strconv"
 	"strings"
 	"time"
@@ -96,7 +99,9 @@ func (w *Workshop) AddError(err WorkshopErrorType) {
 }
 
 func (w *Workshop) Content() []sdk.Setup {
-	return maps.Values(w.content)
+	content := maps.Values(w.content)
+	slices.SortFunc(content, func(a, b sdk.Setup) bool { return a.Name < b.Name })
+	return content
 }
 
 func (w *Workshop) File() *WorkshopFile {

@@ -249,3 +249,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 
 	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
 }
+
+func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	return nil
+}

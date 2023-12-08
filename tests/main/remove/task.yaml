@@ -27,16 +27,21 @@ execute: |
 
   echo "Check the workshop can be removed if in Ready"
   workshop_exec remove --project $project ws
-  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Stopped"
   workshop_exec launch --project $project ws
   workshop_exec stop --project $project ws
   workshop_exec remove --project $project ws
-  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  
+  echo "Check the workshop can be removed and SDKs disconnected"
+  workshop_exec launch --project $WORKSHOPS/workshops-sdk/test-sdk-content ws
+  workshop_exec remove --project $WORKSHOPS/workshops-sdk/test-sdk-content ws
+  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Error"
   workshop_exec launch --project $project ws
   rm -f "$project"/.workshop.ws.yaml
   workshop_exec remove --project $project ws
-  list "$project" | NOMATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  list "$project" | MATCH "^$"

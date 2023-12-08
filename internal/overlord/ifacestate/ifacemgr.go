@@ -28,8 +28,8 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 		repo:      interfaces.NewRepository(),
 	}
 
-	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), OnDo(m.undoAutoConnect))
-	r.AddHandler("disconnect", OnDo(m.doDisconnect), nil)
+	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), OnUndo(m.undoAutoConnect))
+	r.AddHandler("disconnect", OnDo(m.doDisconnect), OnUndo(m.undoDisconnect))
 
 	return m
 }
