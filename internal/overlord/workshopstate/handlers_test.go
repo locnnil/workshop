@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -18,14 +20,16 @@ import (
 )
 
 type workshopHandlers struct {
-	fs      afero.Fs
-	backend *workshopbackend.FakeWorkshopBackend
-	state   *state.State
-	runner  *state.TaskRunner
-	se      *overlord.StateEngine
-	wrkmgr  *workshopstate.WorkshopManager
-	ctx     context.Context
-	project *workshopbackend.Project
+	fs                afero.Fs
+	backend           *workshopbackend.FakeWorkshopBackend
+	state             *state.State
+	runner            *state.TaskRunner
+	se                *overlord.StateEngine
+	wrkmgr            *workshopstate.WorkshopManager
+	ctx               context.Context
+	project           *workshopbackend.Project
+	homeDir           string
+	lookupUserRestore func()
 }
 
 var _ = check.Suite(&workshopHandlers{})
@@ -53,6 +57,17 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+	s.homeDir = c.MkDir()
+	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     "testuser",
+			Username: "testuser",
+			Uid:      "1000",
+			Gid:      "1000",
+			HomeDir:  s.homeDir,
+		}
+		return u, nil
+	}, &workshopbackend.LookupUsername)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -75,6 +90,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 }
 
 func (s *workshopHandlers) TearDownTest(c *check.C) {
+	s.lookupUserRestore()
 }
 
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
@@ -154,4 +170,63 @@ sdks:
 	c.Assert(s.backend.StashedWorkshops[s.project.ProjectId], check.HasLen, 0)
 	c.Assert(s.backend.Workshops[s.project.ProjectId], check.HasLen, 1)
 	c.Assert(s.backend.Workshops[s.project.ProjectId]["ws"], check.NotNil)
+}
+
+func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
+base: ubuntu@20.04
+sdks:
+  test:
+    channel: latest/stable
+  test2:
+    channel: latest/edge
+`), 0644)
+	c.Check(err, check.IsNil)
+
+	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	c.Check(err, check.IsNil)
+
+	// create content plugs directories
+	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "content")
+	var plugs = []string{"ws_test_plug1.sdk", "ws_test_plug2.sdk", "another-ws_test_plug3.sdk"}
+	for _, p := range plugs {
+		err = os.MkdirAll(filepath.Join(projectContent, p), 0744)
+		c.Assert(err, check.IsNil)
+	}
+	_, err = os.Create(filepath.Join(projectContent, "ws_test_plug4.sdk"))
+	c.Assert(err, check.IsNil)
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("remove-workshop", "...")
+
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	ws, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(ws, check.IsNil)
+	c.Assert(err, testutil.ErrorIs, workshopbackend.ErrWorkshopNotFound)
+
+	exist, _, _ := osutil.ExistsIsDir(filepath.Join(projectContent, plugs[0]))
+	c.Assert(exist, check.Equals, false)
+
+	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, plugs[1]))
+	c.Assert(exist, check.Equals, false)
+
+	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, plugs[2]))
+	c.Assert(exist, check.Equals, true)
+
+	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, "ws_test_plug4.sdk"))
+	c.Assert(exist, check.Equals, true)
+
 }

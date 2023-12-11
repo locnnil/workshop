@@ -64,7 +64,11 @@ execute: |
   # the source directory shall still exist after refresh
   test -d "$source_one"
   test -d "$source_two"
-
+  
+  echo "Check remove will also clean up the default content interface host locations"
+  workshop_exec remove --project $project ws
+  test ! -d "$source_one"
+  test ! -d "$source_two"
   
 
   
