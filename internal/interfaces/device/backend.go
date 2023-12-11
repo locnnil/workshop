@@ -25,22 +25,20 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 
 // Setup creates mount profile specific to a given sdk.
 func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
-	// Don't generate an SDK profile for the core SDK
-	if sdkInfo.Type == sdk.Core {
-		return nil
-	}
-
 	s, err := repo.SdkSpecification(context, b.Name(), sdkInfo)
 	if err != nil {
 		return fmt.Errorf("cannot obtain device snippets for workshop %q: %s", sdkInfo.Workshop, err)
 	}
 
 	spec := s.(*Specification)
-	profile := workshopbackend.NewSdkProfile(sdkInfo.Name)
-	for _, dev := range spec.devices {
-		profile.AddDevice(dev)
+	if len(spec.devices) > 0 {
+		profile := workshopbackend.NewSdkProfile(sdkInfo.Name)
+		for _, dev := range spec.devices {
+			profile.AddDevice(dev)
+		}
+		return b.wsbackend.AssignProfile(context, sdkInfo.Workshop, profile)
 	}
-	return b.wsbackend.AssignProfile(context, sdkInfo.Workshop, profile)
+	return nil
 }
 
 // Remove removes profile of a given sdk.
@@ -53,7 +51,7 @@ func (b *Backend) Remove(context context.Context, workshop, sdkName string) erro
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid string) interfaces.Specification {
 	return &Specification{
-		devices: make(map[string]workshopbackend.WorkshopDevice),
+		devices: make(map[string]workshopbackend.Device),
 		user:    user,
 		pid:     pid,
 	}

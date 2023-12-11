@@ -76,7 +76,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 					tsk.Set("stop-operation", true)
 				}
 			} else {
-				if tsk.Kind() == "run-hook" && len(tsk.HaltTasks()) == 0 {
+				if tsk.Kind() == "auto-connect" && len(tsk.HaltTasks()) == 0 {
 					tsk.Set("stop-operation", true)
 				}
 			}
@@ -94,6 +94,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 	retrieve := state.NewTaskSet([]*state.Task{}...)
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
+	autoConnectSet := state.NewTaskSet([]*state.Task{}...)
 
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("base", file.Base)
@@ -106,6 +107,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 
 	prevInstall := (*state.TaskSet)(nil)
 	prevSetup := (*state.Task)(nil)
+	prevAuto := (*state.Task)(nil)
 	for _, sdk := range file.Sdks {
 		r := sdkstate.Retrieve(st, &sdk)
 		retrieve.AddTask(r)
@@ -126,18 +128,26 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 			setupHookTask.WaitFor(prevSetup)
 		}
 		prevSetup = setupHookTask
-
 		setupHook.AddTask(setupHookTask)
-	}
 
+		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", sdk.Name))
+		autoconnect.Set("sdk", sdk.Name)
+		autoConnectSet.AddTask(autoconnect)
+		if prevAuto != nil {
+			autoconnect.WaitFor(prevAuto)
+		}
+		prevAuto = autoconnect
+	}
+	create.WaitAll(retrieve)
 	install.WaitFor(start)
 	setupHook.WaitAll(install)
-	create.WaitAll(retrieve)
+	autoConnectSet.WaitAll(setupHook)
 
 	set := state.NewTaskSet(create, mountProject, start)
 	set.AddAll(retrieve)
 	set.AddAll(install)
 	set.AddAll(setupHook)
+	set.AddAll(autoConnectSet)
 
 	for _, i := range set.Tasks() {
 		i.Set("workshop", file.Name)

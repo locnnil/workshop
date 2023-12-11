@@ -67,7 +67,6 @@ const (
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	LookupUsername       = user.Lookup
-	Chown                = os.Chown
 	NewProjectId         = allocateProjectId
 
 	ErrWorkshopNotFound = errors.New("workshop not found")
@@ -724,7 +723,7 @@ func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key 
 	return op.Wait()
 }
 
-func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device WorkshopDevice) error {
+func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device Device) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err

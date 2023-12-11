@@ -30,57 +30,6 @@ func (e *ErrExec) Error() string {
 	return fmt.Sprintf("command exit code %d", e.Status)
 }
 
-type WorkshopDevice struct {
-	name       string
-	properties map[string]string
-}
-
-func (d WorkshopDevice) Name() string {
-	return d.name
-}
-
-func Mount(name, source, target string) WorkshopDevice {
-	return WorkshopDevice{
-		name: name,
-		properties: map[string]string{"type": "disk", "source": source,
-			"path": target},
-	}
-}
-
-func Volume(name, path, volume string) WorkshopDevice {
-	return WorkshopDevice{
-		name: name,
-		properties: map[string]string{"type": "disk",
-			"pool":   "default",
-			"path":   path,
-			"source": volume},
-	}
-}
-
-type SdkProfile struct {
-	sdk     string
-	devices map[string]WorkshopDevice
-}
-
-func NewSdkProfile(sdkName string) SdkProfile {
-	return SdkProfile{
-		sdk:     sdkName,
-		devices: make(map[string]WorkshopDevice),
-	}
-}
-
-func (s SdkProfile) Name() string {
-	return s.sdk
-}
-
-func (s SdkProfile) AddDevice(dev WorkshopDevice) error {
-	if _, ok := s.devices[dev.Name()]; ok {
-		return fmt.Errorf("device %s already exists in the %s SDK profile", dev.Name(), s.Name())
-	}
-	s.devices[dev.Name()] = dev
-	return nil
-}
-
 type WorkshopConfigValue struct {
 	Name  string
 	Value string
@@ -159,7 +108,7 @@ type WorkshopBackend interface {
 	StopWorkshop(ctx context.Context, name string, force bool) error
 
 	// Adds a workshop device described by the properties.
-	AddWorkshopDevice(ctx context.Context, name string, device WorkshopDevice) error
+	AddWorkshopDevice(ctx context.Context, name string, device Device) error
 
 	// Removes a workshop device.
 	RemoveWorkshopDevice(ctx context.Context, name string, device string) error

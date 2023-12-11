@@ -25,7 +25,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 
-	c.Check(tasks, check.HasLen, 3)
+	c.Check(tasks, check.HasLen, 2)
 	c.Check(tasks[1].WaitTasks(), check.HasLen, 1)
 	var id string
 	tasks[0].Get("sdk-retrieve-task", &id)
@@ -34,11 +34,6 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	tasks[1].Get("sdk-retrieve-task", &id)
 	c.Check(tasks[1].Summary(), check.Equals, "Link \"sdk\" SDK")
 	c.Check(id, check.Equals, "retrieve")
-
-	var name string
-	tasks[2].Get("sdk", &name)
-	c.Check(tasks[2].Summary(), check.Equals, "Auto-connect eligible plugs and slots of \"sdk\" SDK")
-	c.Check(name, check.Equals, sdk.Name)
 }
 
 func (i *SdkStateTasks) TestRetrieve(c *check.C) {

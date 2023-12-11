@@ -151,26 +151,7 @@ sdks:
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.UndoneStatus)
-	lane1 := chg.LaneTasks(1)
-	c.Assert(lane1, check.HasLen, 1)
-	c.Assert(lane1[0].Kind(), check.Equals, "auto-connect")
-
-	lane2 := chg.LaneTasks(2)
-	c.Assert(lane2, check.HasLen, 1)
-	c.Assert(lane2[0].Kind(), check.Equals, "auto-connect")
-
-	for _, t := range append(lane1, lane2...) {
-		var name string
-		c.Assert(t.Get("sdk", &name), check.IsNil)
-		c.Assert(name, check.Matches, "^test.?$")
-
-		c.Assert(t.Get("workshop", &name), check.IsNil)
-		c.Assert(name, check.Equals, "ws")
-
-		var prj workshopbackend.Project
-		c.Assert(t.Get("project", &prj), check.IsNil)
-		c.Assert(prj, check.DeepEquals, *s.project)
-	}
-	c.Assert(lane1[0].HaltTasks(), testutil.DeepUnsortedMatches, lane2[0:])
-	c.Assert(lane1[0].WaitTasks(), testutil.DeepUnsortedMatches, []*state.Task{})
+	c.Assert(s.backend.StashedWorkshops[s.project.ProjectId], check.HasLen, 0)
+	c.Assert(s.backend.Workshops[s.project.ProjectId], check.HasLen, 1)
+	c.Assert(s.backend.Workshops[s.project.ProjectId]["ws"], check.NotNil)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type Specification struct {
-	devices map[string]workshopbackend.WorkshopDevice
+	devices map[string]workshopbackend.Device
 	user    string
 	pid     string
 }
@@ -33,6 +33,12 @@ func (s *Specification) AddPermanentPlug(iface interfaces.Interface, plug *sdk.P
 
 // AddConnectedSlot records side-effects of having a connected slot.
 func (s *Specification) AddConnectedSlot(iface interfaces.Interface, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+	type definer interface {
+		MountConnectedSlot(spec *Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
+	}
+	if iface, ok := iface.(definer); ok {
+		return iface.MountConnectedSlot(s, plug, slot)
+	}
 	return nil
 }
 
@@ -48,13 +54,13 @@ func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *inter
 	return nil
 }
 
-func (s *Specification) DeviceEntries() []workshopbackend.WorkshopDevice {
+func (s *Specification) DeviceEntries() []workshopbackend.Device {
 	return maps.Values(s.devices)
 }
 
-func (s *Specification) AddDeviceEntry(dev workshopbackend.WorkshopDevice) error {
+func (s *Specification) AddDeviceEntry(dev workshopbackend.Device) error {
 	if s.devices == nil {
-		s.devices = make(map[string]workshopbackend.WorkshopDevice)
+		s.devices = make(map[string]workshopbackend.Device)
 	}
 	s.devices[dev.Name()] = dev
 	return nil

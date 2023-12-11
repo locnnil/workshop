@@ -174,7 +174,7 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 	return nil
 }
 
-func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string, props WorkshopDevice) error {
+func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string, props Device) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err

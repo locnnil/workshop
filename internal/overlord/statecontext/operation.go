@@ -98,6 +98,10 @@ func ResumeRefresh(st *state.State,
 		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)
 	}
 
+	if op.Operation != OperationRefresh {
+		return nil, fmt.Errorf("cannot resume, no refresh in progress (%q is in progress)", op.Operation)
+	}
+
 	change := st.Change(op.ChangeId)
 	if change == nil {
 		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)

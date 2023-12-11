@@ -21,10 +21,10 @@ execute: |
   function validate_plugs() {
     test -d "$source_one"
     test -d "$source_two"
-    workshop_exec exec --project $project ws -- bash -c "test -d /home/workshop/one"
-    workshop_exec exec --project $project ws -- bash -c "test -d /two"
-    workshop_exec exec --project $project ws -- bash -c "touch /two/output"
-    test -f "$source_two"/output
+    workshop_exec exec --project $project ws -- bash -c "test -d /home/workshop"
+    workshop_exec exec --project $project ws -- bash -c "test -d /opt"
+    workshop_exec exec --project $project ws -- bash -c "touch /home/workshop/output"
+    test -f "$source_one"/output
   }
   
   echo "Check the content interface plug can be installed and auto-connected"

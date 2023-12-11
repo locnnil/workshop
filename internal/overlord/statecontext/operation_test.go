@@ -31,6 +31,20 @@ func (s *OperationSuite) TestResumeRefreshNothingInProgress(c *check.C) {
 	c.Check(err, check.ErrorMatches, ".* no refresh in progress")
 }
 
+func (s *OperationSuite) TestResumeRefreshAnotherOperationInProgress(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	statecontext.StartOperation(s.state, "ws", s.project.ProjectId, statecontext.Operation{ChangeId: "1", Operation: statecontext.OperationStart, WaitOnError: true})
+	change := s.state.NewChange("start", "...")
+	task := s.state.NewTask("no-op", "...")
+	task.SetToWait(state.DoingStatus)
+	change.AddTask(task)
+
+	_, err := statecontext.ResumeRefresh(s.state, "ws", s.project.ProjectId, statecontext.RefreshContinue)
+	c.Check(err, check.ErrorMatches, ".*cannot resume, no refresh in progress.*")
+}
+
 func (s *OperationSuite) TestResumeRefreshContinue(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()

@@ -251,5 +251,28 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 }
 
 func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	return nil
+	user, project, workshop, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, project)
+	defer cancel()
+
+	sdkName, err := sdkName(task)
+	if err != nil {
+		return err
+	}
+
+	inst, err := m.wsbackend.Workshop(ctx, workshop)
+	if err != nil {
+		return err
+	}
+
+	sdkInfo, err := inst.SdkInfo(ctx, sdkName)
+	if err != nil {
+		return err
+	}
+
+	return m.setupSdkConnections(task, ctx, project.ProjectId, workshop, sdkInfo)
 }

@@ -8,7 +8,7 @@ description: |
 plugs:
   content-plug-one:
     interface: content
-    target: /home/workshop/one
+    target: /home/workshop
   content-plug-two:
     interface: content
-    target: /two
+    target: /opt

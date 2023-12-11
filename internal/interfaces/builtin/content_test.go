@@ -27,6 +27,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -145,8 +146,16 @@ slots:
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
-	// Analyze the mount specification.
+	// Validate the mount specification.
+	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
+	expectedMnt := workshopbackend.Mount(plug.Name, sourceDir, "/project/training")
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedMnt})
 
-	expectedMnt := workshopbackend.Mount(plug.Name, filepath.Join(homeDir, "/.local/share/workshop/project/content/ws_consumer_content.sdk"), "/project/training")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.WorkshopDevice{expectedMnt})
+	// Validate the source directory was created correctly
+	c.Assert(deviceSpec.AddConnectedSlot(s.iface, connectedPlug, connectedSlot), check.IsNil)
+	exists, isDir, err := osutil.ExistsIsDir(sourceDir)
+	c.Assert(exists, check.Equals, true)
+	c.Assert(isDir, check.Equals, true)
+	c.Assert(err, check.IsNil)
+
 }
