@@ -6,33 +6,8 @@ environment:
       TESTSLIB: $SPREAD_PATH/tests/lib
       SDKCONTENT: $SPREAD_PATH/tests/lib/sdk
       SDK_STORE_BUCKET_DIR: /data/sdk-store
-
-prepare: |
-      . "$TESTSLIB"/utils.sh
-
-      apt-get install -y --no-install-recommends jq
-      snap install go --classic
-
-      snap install lxd --classic
-      cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workshop/
-      lxd init --auto
-
-      # run fake GCS bucket storage to emulate SDK store
-      publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
-      /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
-
-
-      echo "Waiting fake SDK store to launch on 8080..."
-      while ! nc -z localhost 8080; do
-        sleep 0.1 # wait for 1/10 of the second before check again
-      done
-
 debug: |
       lxc list -f compact --all-projects
-
-restore: |
-      rm -rf /data
-      rm -rf /storage
 backends:
   multipass:
     type: adhoc
@@ -83,8 +58,22 @@ backends:
 suites:
   tests/main/:
     summary: Core workshop scenarios
+    prepare: |
+      . "$TESTSLIB"/utils.sh
+      prepare_environment
+    restore: |
+      . "$TESTSLIB"/utils.sh
+      cleanup_environment
   tests/integration/:
     summary: LXD integration tests
+    prepare: |
+      . "$TESTSLIB"/utils.sh
+      prepare_environment
+    restore: |
+      . "$TESTSLIB"/utils.sh
+      cleanup_environment
+  tests/documentation/:
+    summary: Documentation tests
 
 path: /remote
 exclude:
