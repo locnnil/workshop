@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+# LXD removes empty dirs when unmounts the disk device, so make /opt non-empty
+touch /opt/.no-remove
+echo "Set up base ran successfully!"

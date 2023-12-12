@@ -51,3 +51,19 @@ sdks:
 	c.Assert(file.Sdks[3].Name, check.Equals, "zookeeper")
 	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/candidate")
 }
+
+func (f *F) TestWorkshopFileDuplicateSdks(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  cuda:
+    channel: latest/stable
+  cuda:
+    channel: latest/edge
+`)
+	dir := c.MkDir()
+	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
+	file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(dir, "xbert-gpu"))
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.NotNil)
+}

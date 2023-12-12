@@ -3,6 +3,10 @@ package workshopstate
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
@@ -60,12 +64,8 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 		return err
 	}
 
-	/* Configure workshop core properties: project directory */
-	var prjMount = workshopbackend.WorkshopDevice{
-		Name:       workshopbackend.ProjectPathDevice,
-		Properties: map[string]string{"type": "disk", "source": prj.Path, "path": "/project"},
-	}
-
+	// Configure workshop core properties: project directory
+	var prjMount = workshopbackend.Mount(workshopbackend.ProjectPathDevice, prj.Path, workshopbackend.WorkshopProjectPath)
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
@@ -97,7 +97,18 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.RemoveWorkshop(ctx, workshop)
+	if err := m.backend.RemoveWorkshop(ctx, workshop); err != nil {
+		return err
+	}
+
+	if err = m.cleanUpWorkshopAfterRemoval(user, prj.ProjectId, workshop); err != nil {
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
+		task.Logf("%v", err)
+	}
+
+	return nil
 }
 
 func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {
@@ -121,7 +132,10 @@ func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) err
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.StashWorkshop(ctx, workshop)
+	if err = m.backend.StashWorkshop(ctx, workshop); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -133,7 +147,10 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
-	return m.backend.UnstashWorkshop(ctx, workshop)
+	if err = m.backend.UnstashWorkshop(ctx, workshop); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
@@ -195,4 +212,50 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	defer cancel()
 
 	return m.backend.DeleteStateStorage(ctx, workshop)
+}
+
+type cleanupError struct {
+	errs []error
+}
+
+func (e *cleanupError) Error() string {
+	return fmt.Sprintf("workshop cleanup errors: %v", e.errs)
+}
+
+func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop string) error {
+	usr, err := workshopbackend.LookupUsername(user)
+	if err != nil {
+		return err
+	}
+
+	var errors []error
+	projectContent := filepath.Join(usr.HomeDir, ".local", "share", "workshop", "project", projectId, "content")
+	var contentDirs []fs.DirEntry
+	if contentDirs, err = os.ReadDir(projectContent); err != nil {
+		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", workshop, err))
+	}
+
+	// Remove all the possible workshop default content interface 'source'
+	// locations that could have existed over the workshop's lifecycle. These
+	// are not only the ones that exist by the time we remove the workshop.
+	// Imagine the following scenario. An SDK added to a workshop and created a
+	// content interface plug. Then, the SDK was removed from the workshop via
+	// refresh. When we call 'workshop remove', the plug does not exist anymore
+	// (nor the SDK profile for this plug); however, the content is still stored
+	// on the host and must also be removed alongside the workshop.
+	for _, dir := range contentDirs {
+		// Remove all default content dirs that belong the workshop. These will be
+		// named as <workshop>_<sdk>_<plug>.sdk
+		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), workshop+"_") {
+			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return &cleanupError{errs: errors}
+	}
+
+	return nil
 }

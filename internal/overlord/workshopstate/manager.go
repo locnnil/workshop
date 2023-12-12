@@ -62,7 +62,7 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
 
-	wrkspc, err := w.backend.GetWorkshop(pCtx, name)
+	wrkspc, err := w.backend.Workshop(pCtx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
 
-	files, workshops, err := w.backend.GetProjectWorkshops(pCtx)
+	files, workshops, err := w.backend.ProjectWorkshops(pCtx)
 	if err != nil {
 		return nil, nil, err
 	}

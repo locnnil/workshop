@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package lxdbackend_integration_test
+package workshopbackend_test
 
 import (
 	"bytes"
@@ -32,11 +32,14 @@ type wsExec struct {
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
 	newProjectidRestore func()
+	restoreImageServer  func()
 }
 
 var _ = check.Suite(&wsExec{})
 
 func (f *wsExec) SetUpSuite(c *check.C) {
+	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
+
 	socketPath := c.MkDir() + ".workshop.socket"
 	f.be = workshopbackend.New()
 
@@ -102,7 +105,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.lookupUserRestore()
 	f.lookupUserIdRestore()
 	f.newProjectidRestore()
-
+	f.restoreImageServer()
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
 }

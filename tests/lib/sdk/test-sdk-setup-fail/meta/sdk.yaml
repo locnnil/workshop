@@ -1,8 +1,7 @@
-name: go
-title: go
+name: test-sdk-setup-fail
+title: test-sdk-setup-fail
 base: ubuntu@20.04
 
-summary: Go SDK
+summary: test-sdk-setup-fail SDK
 description: |
-  Go SDK
-
+  test-sdk-setup-fail SDK

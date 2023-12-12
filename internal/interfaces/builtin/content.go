@@ -21,13 +21,13 @@ package builtin
 
 import (
 	"fmt"
-	"os"
+	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
@@ -54,7 +54,7 @@ func (iface *contentInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              contentSummary,
 		BaseDeclarationSlots: contentBaseDeclarationSlots,
-
+		ImplicitOnCore:       true,
 		AffectsPlugOnRefresh: true,
 	}
 }
@@ -86,18 +86,29 @@ func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	return nil
 }
 
-func (iface *contentInterface) mount(attrs interfaces.Attrer) string {
-	var source string
+func (iface *contentInterface) target(attrs interfaces.Attrer) string {
+	var target string
 
-	if err := attrs.Attr("target", &source); err == nil {
-		return source
+	if err := attrs.Attr("target", &target); err == nil {
+		return target
 	}
 	return ""
+}
+
+func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) string {
+	// <workshop>_<sdk>_plug.sdk
+	dir := strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_") + ".sdk"
+	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
+	return source
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	// allow what declarations allowed
 	return true
+}
+
+func (iface *contentInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+	return nil
 }
 
 // Interactions with the mount backend.
@@ -106,34 +117,17 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	if err != nil {
 		return err
 	}
+	source := iface.source(user, plug)
 
-	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", spec.ProjectId(), "content",
-		strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
-
-	if err = os.MkdirAll(source, 0744); err != nil {
-		return err
-	}
-
-	uid, err := strconv.Atoi(user.Uid)
+	uid, gid, err := osutil.UidGid(user)
 	if err != nil {
 		return err
 	}
 
-	gid, err := strconv.Atoi(user.Gid)
-	if err != nil {
-		return err
+	if err = osutil.MkdirAllChown(source, 0744, uid, gid); err != nil {
+		return nil
 	}
-
-	if err = os.Chown(source, uid, gid); err != nil {
-		return err
-	}
-
-	var entry = workshopbackend.WorkshopDevice{
-		Name: plug.Name(),
-		Properties: map[string]string{"type": "disk", "source": source,
-			"path": iface.mount(plug)},
-	}
-	return spec.AddDeviceEntry(&entry)
+	return spec.AddDeviceEntry(workshopbackend.Mount(plug.Name(), source, iface.target(plug)))
 }
 
 func init() {

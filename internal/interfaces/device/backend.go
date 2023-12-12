@@ -10,11 +10,11 @@ import (
 )
 
 type Backend struct {
-	wsbackend workshopbackend.WorkshopBackend
+	profile workshopbackend.Profile
 }
 
-func (b *Backend) Initialize(backend workshopbackend.WorkshopBackend) error {
-	b.wsbackend = backend
+func (b *Backend) Initialize(profile workshopbackend.Profile) error {
+	b.profile = profile
 	return nil
 }
 
@@ -31,26 +31,27 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 	}
 
 	spec := s.(*Specification)
-	for _, dev := range spec.devices {
-		err = b.wsbackend.AddWorkshopDevice(context, sdkInfo.Workshop, *dev)
-		if err != nil {
-			return nil
+	if len(spec.devices) > 0 {
+		profile := workshopbackend.NewSdkProfile(sdkInfo.Name)
+		for _, dev := range spec.devices {
+			profile.AddDevice(dev)
 		}
+		return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
 	}
 	return nil
 }
 
-// Remove removes mount configuration of a given sdk.
+// Remove removes profile of a given sdk.
 //
 // This method should be called after removing a sdk.
 func (b *Backend) Remove(context context.Context, workshop, sdkName string) error {
-	return nil
+	return b.profile.RemoveProfile(context, workshop, sdkName)
 }
 
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid string) interfaces.Specification {
 	return &Specification{
-		devices: make(map[string]*workshopbackend.WorkshopDevice),
+		devices: make(map[string]workshopbackend.Device),
 		user:    user,
 		pid:     pid,
 	}

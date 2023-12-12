@@ -16,7 +16,8 @@ import (
 // happen if a user cancells or something gets interrupted during the execution
 // due to abortion, e.g. a running hook is called off because their change was
 // aborted.
-// 3. The error needs to be reported as is which will cause the abortion.
+// 3. The error needs to be reported as is which will abort the change (or the
+// affected lanes).
 func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		_, p, ws, err := UserProjectWorkshop(task)

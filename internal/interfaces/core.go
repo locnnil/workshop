@@ -30,7 +30,7 @@ import (
 func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 	if iface.Name() != plugInfo.Interface {
 		return fmt.Errorf("cannot sanitize plug %q (interface %q) using interface %q",
-			PlugRef{Sdk: plugInfo.Sdk.Name, Name: plugInfo.Name}, plugInfo.Interface, iface.Name())
+			PlugRef{Workshop: plugInfo.Sdk.Workshop, Sdk: plugInfo.Sdk.Name, Name: plugInfo.Name}, plugInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(PlugSanitizer); ok {
@@ -42,7 +42,7 @@ func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 func BeforeConnectPlug(iface Interface, plug *ConnectedPlug) error {
 	if iface.Name() != plug.plugInfo.Interface {
 		return fmt.Errorf("cannot sanitize connection for plug %q (interface %q) using interface %q",
-			PlugRef{Sdk: plug.plugInfo.Sdk.Name, Name: plug.plugInfo.Name}, plug.plugInfo.Interface, iface.Name())
+			PlugRef{Workshop: plug.plugInfo.Sdk.Workshop, Sdk: plug.plugInfo.Sdk.Name, Name: plug.plugInfo.Name}, plug.plugInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(ConnPlugSanitizer); ok {
@@ -66,9 +66,9 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
-// String returns the "sdk:plug" representation of a plug reference.
+// String returns the "workshop:sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
-	return fmt.Sprintf("%s:%s", ref.Sdk, ref.Name)
+	return fmt.Sprintf("%s:%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when plug should be sorted before the other
@@ -83,7 +83,7 @@ func (ref PlugRef) SortsBefore(other PlugRef) bool {
 func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 	if iface.Name() != slotInfo.Interface {
 		return fmt.Errorf("cannot sanitize slot %q (interface %q) using interface %q",
-			SlotRef{Sdk: slotInfo.Sdk.Name, Name: slotInfo.Name}, slotInfo.Interface, iface.Name())
+			SlotRef{Workshop: slotInfo.Sdk.Workshop, Sdk: slotInfo.Sdk.Name, Name: slotInfo.Name}, slotInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(SlotSanitizer); ok {
@@ -100,9 +100,9 @@ type SlotRef struct {
 	Name      string `json:"slot"`
 }
 
-// String returns the "sdk:slot" representation of a slot reference.
+// String returns the "workshop:sdk:slot" representation of a slot reference.
 func (ref SlotRef) String() string {
-	return fmt.Sprintf("%s:%s", ref.Sdk, ref.Name)
+	return fmt.Sprintf("%s:%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when slot should be sorted before the other
@@ -221,6 +221,9 @@ type SlotSanitizer interface {
 type StaticInfo struct {
 	Summary string `json:"summary,omitempty"`
 	DocURL  string `json:"doc-url,omitempty"`
+
+	// ImplicitOnCore controls if a slot is automatically added to core (non-classic) systems.
+	ImplicitOnCore bool `json:"implicit-on-core,omitempty"`
 
 	// AffectsPlugOnRefresh tells if refreshing of a sdk with a slot of this interface
 	// is disruptive for the sdk on the plug side (when the interface is connected),

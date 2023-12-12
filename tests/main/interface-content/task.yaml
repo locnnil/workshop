@@ -1,0 +1,75 @@
+summary: Check content interface scenarios
+environment:
+  WORKSHOPS: $SPREAD_PATH/tests/lib
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_workshopd
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup "$WORKSHOPS"
+  uninstall_workshopd
+
+debug: |
+  workshop changes
+  workshop tasks 1
+  workshop tasks 2
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+    
+  function validate_plugs() {
+    test -d "$source_one"
+    test -d "$source_two"
+    workshop_exec exec --project $project ws -- bash -c "test -d /home/workshop"
+    workshop_exec exec --project $project ws -- bash -c "test -d /opt"
+    workshop_exec exec --project $project ws -- bash -c "touch /home/workshop/output"
+    test -f "$source_one"/output
+  }
+  
+  echo "Check the content interface plug can be installed and auto-connected"
+  project="$WORKSHOPS"/workshops-sdk/test-sdk-content
+  workshop_exec launch --project $project ws
+  
+  project_id=$(cat "$project"/.workshop.lock)
+  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  
+  source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-one.sdk"
+  source_two="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-two.sdk"
+  validate_plugs
+
+  echo "Check the content interface plugs auto-reconnected after refresh"
+  workshop_exec refresh --project $project ws
+  validate_plugs
+  
+  echo "Check the content interface plugs auto-reconnected if refresh fails"
+  sed -i 's/test-sdk-content/test-sdk-fail/g' $project/.workshop.ws.yaml
+  workshop_exec refresh --project $project ws || true
+  sed -i 's/test-sdk-fail/test-sdk-content/g' $project/.workshop.ws.yaml
+  validate_plugs
+  
+  echo "Check the content interface slots cannot be installed by a workshop"
+  sed -i 's/test-sdk-content/test-sdk-content-broken/g' $project/.workshop.ws.yaml
+  workshop_exec refresh --project $project ws 2>&1 | MATCH ".*installation not allowed by \"one\" slot rule of interface \"content\".*"
+  sed -i 's/test-sdk-content-broken/test-sdk-content/g' $project/.workshop.ws.yaml
+  validate_plugs
+  
+  echo "Check the content interface plugs removed after refresh if they don't exist anymore"
+  sed -i 's/test-sdk-content/test-sdk-basic/g' $project/.workshop.ws.yaml
+  workshop_exec refresh --project $project ws
+  sed -i 's/test-sdk-basic/test-sdk-content/g' $project/.workshop.ws.yaml
+  # no bind mounts in the workshop after refresh
+  workshop_exec exec --project $project ws -- bash -c "test ! -d /home/workshop/one"
+  workshop_exec exec --project $project ws -- bash -c "test ! -d /two"
+  # the source directory shall still exist after refresh
+  test -d "$source_one"
+  test -d "$source_two"
+  
+  echo "Check remove will also clean up the default content interface host locations"
+  workshop_exec remove --project $project ws
+  test ! -d "$source_one"
+  test ! -d "$source_two"
+  
+
+  
+  

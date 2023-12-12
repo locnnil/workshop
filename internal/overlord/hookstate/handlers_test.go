@@ -135,7 +135,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
-	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -157,7 +157,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.launchWorkshop(c, newSdk)
 
 	// setup state storage (usually already set by the save-state)
-	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
@@ -208,7 +208,7 @@ func (s *hookSuite) TestHookFailed(c *check.C) {
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
-	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -227,7 +227,7 @@ sdks:
 	c.Check(err, check.IsNil)
 	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
-	ws, err := s.backend.GetWorkshopFs(s.ctx, "ws")
+	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newSdk.Name), 0744)
 	c.Check(err, check.IsNil)

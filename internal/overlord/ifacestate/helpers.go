@@ -15,10 +15,10 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
-func autoConnectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func autoConnectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (bool, error) {
 	baseDecl := asserts.BuiltinBaseDeclaration()
 	if baseDecl == nil {
-		return fmt.Errorf("internal error: cannot find base declaration")
+		return false, fmt.Errorf("internal error: cannot find base declaration")
 	}
 
 	ic := policy.ConnectCandidate{
@@ -27,7 +27,7 @@ func autoConnectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.Connected
 		BaseDeclaration: baseDecl,
 	}
 	_, err := ic.CheckAutoConnect()
-	return err
+	return true, err
 }
 
 // getConns returns information about connections from the state.

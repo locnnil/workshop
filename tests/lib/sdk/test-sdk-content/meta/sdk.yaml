@@ -1,0 +1,14 @@
+name: test-sdk-content
+title: test-sdk-content
+base: ubuntu@20.04
+
+summary: test-sdk-content SDK
+description: |
+  test-sdk-content SDK
+plugs:
+  content-plug-one:
+    interface: content
+    target: /home/workshop
+  content-plug-two:
+    interface: content
+    target: /opt

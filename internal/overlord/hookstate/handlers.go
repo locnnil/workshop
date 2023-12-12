@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
@@ -33,26 +34,22 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.WorkshopDevice{
-			Name: workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId),
-			Properties: map[string]string{"type": "disk",
-				"pool":   "default",
-				"path":   workshopbackend.WorkshopStateDir,
-				"source": workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)},
-		})
-		if err != nil {
+		volume := workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)
+		if err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.Volume(volume, workshopbackend.WorkshopStateDir, volume)); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
 		}
 
 		defer func() {
-			h.backend.RemoveWorkshopDevice(ctx, workshop, workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId))
+			if err := h.backend.RemoveWorkshopDevice(ctx, workshop, volume); err != nil {
+				logger.Noticef("Cannot remove SDK state storage volume %s", volume)
+			}
 		}()
 	}
 
 	switch hook.HookType {
 	case SaveState:
 		{
-			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -65,7 +62,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
 	case RestoreState:
 		{
-			fs, err := h.backend.GetWorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
@@ -89,7 +86,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
 
 	//
-	wsFs, err := h.backend.GetWorkshopFs(ctx, workshop)
+	wsFs, err := h.backend.WorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
 	}

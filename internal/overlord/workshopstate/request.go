@@ -10,6 +10,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"golang.org/x/exp/slices"
@@ -75,7 +76,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 					tsk.Set("stop-operation", true)
 				}
 			} else {
-				if tsk.Kind() == "run-hook" && len(tsk.HaltTasks()) == 0 {
+				if tsk.Kind() == "auto-connect" && len(tsk.HaltTasks()) == 0 {
 					tsk.Set("stop-operation", true)
 				}
 			}
@@ -83,15 +84,8 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		taskset = append(taskset, tasks)
 	}
 
-	for _, name := range names {
-		err = statecontext.StartOperation(w.state, name, projectId,
-			statecontext.Operation{
-				ChangeId:  opChangeId,
-				Operation: statecontext.OperationLaunch,
-			})
-		if err != nil {
-			return nil, err
-		}
+	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationLaunch}); err != nil {
+		return nil, err
 	}
 	return taskset, nil
 }
@@ -100,10 +94,10 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 	retrieve := state.NewTaskSet([]*state.Task{}...)
 	install := state.NewTaskSet([]*state.Task{}...)
 	setupHook := state.NewTaskSet([]*state.Task{}...)
+	autoConnectSet := state.NewTaskSet([]*state.Task{}...)
 
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("base", file.Base)
-	create.WaitAll(retrieve)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
@@ -113,6 +107,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 
 	prevInstall := (*state.TaskSet)(nil)
 	prevSetup := (*state.Task)(nil)
+	prevAuto := (*state.Task)(nil)
 	for _, sdk := range file.Sdks {
 		r := sdkstate.Retrieve(st, &sdk)
 		retrieve.AddTask(r)
@@ -133,17 +128,26 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 			setupHookTask.WaitFor(prevSetup)
 		}
 		prevSetup = setupHookTask
-
 		setupHook.AddTask(setupHookTask)
-	}
 
+		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", sdk.Name))
+		autoconnect.Set("sdk", sdk.Name)
+		autoConnectSet.AddTask(autoconnect)
+		if prevAuto != nil {
+			autoconnect.WaitFor(prevAuto)
+		}
+		prevAuto = autoconnect
+	}
+	create.WaitAll(retrieve)
 	install.WaitFor(start)
 	setupHook.WaitAll(install)
+	autoConnectSet.WaitAll(setupHook)
 
 	set := state.NewTaskSet(create, mountProject, start)
 	set.AddAll(retrieve)
 	set.AddAll(install)
 	set.AddAll(setupHook)
+	set.AddAll(autoConnectSet)
 
 	for _, i := range set.Tasks() {
 		i.Set("workshop", file.Name)
@@ -196,17 +200,14 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	for _, name := range names {
-		err = statecontext.StartOperation(w.state, name, projectId,
-			statecontext.Operation{
-				ChangeId:    opChangeId,
-				Operation:   statecontext.OperationRefresh,
-				WaitOnError: refreshMode == statecontext.RefreshWaitOnError,
-			})
-		if err != nil {
-			return nil, err
-		}
+	if err = w.startOperation(names, projectId, statecontext.Operation{
+		ChangeId:    opChangeId,
+		Operation:   statecontext.OperationRefresh,
+		WaitOnError: refreshMode == statecontext.RefreshWaitOnError,
+	}); err != nil {
+		return nil, err
 	}
+
 	return taskset, nil
 }
 
@@ -275,8 +276,16 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	saveStateHooks := saveStateHooks(st, content, file.Sdks)
+	saveStateHooks.WaitFor(createStateStorage)
+
+	// disconnect and remove SDKs plugs and slots
+	disconnect := disconnectSdks(content, st)
+	disconnect.WaitAll(saveStateHooks)
 
 	putToStash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
+	putToStash.WaitAll(disconnect)
+	putToStash.WaitAll(saveStateHooks)
+	putToStash.WaitFor(createStateStorage)
 
 	launch, err := launch(st, file, p)
 	if err != nil {
@@ -300,16 +309,11 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 		// SDKs, i.e. it will not be running any hooks. Thus,
 		// the point of no return is the last launch task (i.e.
 		// before the moment when we delete the copy of the workshop
-		// after the refresh operation)
+		// after the refresh operation).
 		launch.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
 	}
+
 	launch.WaitFor(putToStash)
-	if len(saveStateHooks.Tasks()) > 0 {
-		putToStash.WaitAll(saveStateHooks)
-		saveStateHooks.WaitFor(createStateStorage)
-	} else {
-		putToStash.WaitFor(createStateStorage)
-	}
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
 	refresh.AddTask(createStateStorage)
@@ -317,6 +321,7 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	refresh.AddAllWithEdges(launch)
 	refresh.AddAllWithEdges(restoreStateHooks)
 	refresh.AddTask(putToStash)
+	refresh.AddAll(disconnect)
 	refresh.AddTask(removeStateStorage)
 	refresh.AddTask(removeFromStash)
 
@@ -336,6 +341,21 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	}
 
 	return refresh, nil
+}
+
+func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
+	disconnectSet := []*state.Task{}
+	prev := (*state.Task)(nil)
+	for _, s := range content {
+		disc := st.NewTask("disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
+		disc.Set("sdk", s.Name)
+		if prev != nil {
+			disc.WaitFor(prev)
+		}
+		disconnectSet = append(disconnectSet, disc)
+		prev = disc
+	}
+	return state.NewTaskSet(disconnectSet...)
 }
 
 func saveStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList,
@@ -405,15 +425,8 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		return nil, err
 	}
 
-	for _, name := range names {
-		err = statecontext.StartOperation(w.state, name, projectId,
-			statecontext.Operation{
-				ChangeId:  opChangeId,
-				Operation: statecontext.OperationStart,
-			})
-		if err != nil {
-			return nil, err
-		}
+	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationStart}); err != nil {
+		return nil, err
 	}
 	return taskset, nil
 }
@@ -460,15 +473,8 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		return nil, err
 	}
 
-	for _, name := range names {
-		err = statecontext.StartOperation(w.state, name, projectId,
-			statecontext.Operation{
-				ChangeId:  opChangeId,
-				Operation: statecontext.OperationStop,
-			})
-		if err != nil {
-			return nil, err
-		}
+	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationStop}); err != nil {
+		return nil, err
 	}
 	return taskset, nil
 }
@@ -518,7 +524,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	}
 
 	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
-	wrkspc, err := w.backend.GetWorkshopFs(ctx, name)
+	wrkspc, err := w.backend.WorkshopFs(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -562,39 +568,74 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		return nil, err
 	}
 
-	taskset, err := removeMany(w.state, names, project)
+	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
+
+	var workshops = make([]*workshopbackend.Workshop, 0, len(names))
+	for _, name := range names {
+		if workshop, err := w.backend.Workshop(ctx, name); err != nil {
+			return nil, err
+		} else {
+			workshops = append(workshops, workshop)
+		}
+	}
+
+	taskset, err := removeMany(w.state, workshops, project)
 	if err != nil {
 		return nil, err
 	}
 
+	if err := w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationRemove}); err != nil {
+		return nil, err
+	}
+
+	return taskset, nil
+}
+
+func (w *WorkshopManager) startOperation(names []string, projectId string, op statecontext.Operation) error {
+	rev := revert.New()
 	for _, name := range names {
-		err = statecontext.StartOperation(w.state, name, projectId,
-			statecontext.Operation{
-				ChangeId:  opChangeId,
-				Operation: statecontext.OperationRemove,
-			})
+		err := statecontext.StartOperation(w.state, name, projectId, op)
 		if err != nil {
-			// TODO: stop operation for the workshops that
-			// had them started successfully
+			return err
+		}
+		name := name // go loop var capturing issue
+		rev.Add(func() {
+			statecontext.StopOperation(w.state, name, projectId, op.Operation)
+		})
+	}
+	rev.Success()
+	return nil
+}
+
+func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
+	taskset := state.NewTaskSet([]*state.Task{}...)
+	for _, name := range workshops {
+		remove, err := remove(st, name, project)
+		if err != nil {
 			return nil, err
 		}
+		taskset.AddAll(remove)
 	}
 	return taskset, nil
 }
 
-func removeMany(st *state.State, names []string, project *workshopbackend.Project) (*state.TaskSet, error) {
-	taskset := state.NewTaskSet([]*state.Task{}...)
-
-	for _, name := range names {
-		remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", name))
-		// remove is a single task, so it is the beginning and the end of the operation
+func remove(st *state.State, workshop *workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
+	removeSet := state.NewTaskSet()
+	disconnectSet := disconnectSdks(workshop.Content(), st)
+	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))
+	if len(disconnectSet.Tasks()) > 0 {
+		disconnectSet.Tasks()[0].Set("start-operation", true)
+	} else {
 		remove.Set("start-operation", true)
-		remove.Set("stop-operation", true)
-		taskset.AddTask(remove)
-
-		remove.Set("workshop", name)
-		remove.Set("project", *project)
 	}
+	remove.Set("stop-operation", true)
+	remove.WaitAll(disconnectSet)
+	removeSet.AddAll(disconnectSet)
+	removeSet.AddTask(remove)
 
-	return taskset, nil
+	for _, i := range removeSet.Tasks() {
+		i.Set("workshop", workshop.Name)
+		i.Set("project", project)
+	}
+	return removeSet, nil
 }

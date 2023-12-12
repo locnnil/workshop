@@ -1,19 +1,19 @@
 //go:build integration
 // +build integration
 
-package lxdbackend_integration_test
+package workshopbackend_test
 
 import (
 	"context"
 	"os"
 	"os/user"
-	"path/filepath"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	lxd "github.com/lxc/lxd/client"
+	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
@@ -32,6 +32,8 @@ type wsOps struct {
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
 	newProjectidRestore func()
+	restoreDevices      func()
+	restoreImageServer  func()
 }
 
 var _ = check.Suite(&wsOps{})
@@ -104,41 +106,23 @@ func (f *wsOps) TearDownTest(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
-func createTestContext(username, projectId string) context.Context {
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
-	return ctx
-}
-
-func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.WorkshopBackend, dir, username string) {
-	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     username,
-			Username: username,
-			Uid:      "1000",
-			Gid:      "1000",
-		}
-		return u, nil
-	}, &workshopbackend.LookupUsername)
-	defer restore()
-
-	var err error
-
-	os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@22.04
-`), 0644)
-
-	_, _, err = be.CreateOrLoadProject(ctx, dir)
-	c.Assert(err, check.IsNil)
-	err = be.LaunchWorkshop(ctx, "test", "ubuntu@22.04")
-	c.Assert(err, check.IsNil)
-	err = be.StartWorkshop(ctx, "test")
+func (f *wsOps) SetUpSuite(c *check.C) {
+	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
+	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
+	ctx := createTestContext(f.username, "42424242")
+	be := &workshopbackend.LxdBackend{}
+	client, _ := be.LxdClient(ctx)
+	err := client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
 	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TearDownSuite(c *check.C) {
+	err := f.lxdClient.DeleteStoragePool("testZfsProfile")
+	c.Check(err, check.IsNil)
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
+	f.restoreDevices()
+	f.restoreImageServer()
 }
 
 func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
@@ -148,17 +132,18 @@ func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	// Execute
 	err := f.be.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test")
+	_, err = f.be.Workshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
 	// Execute
@@ -166,9 +151,45 @@ func (f *wsOps) TestLxdBackendUnstashWorkshop(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test")
+	_, err = f.be.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopStashRestartIfFailed(c *check.C) {
+	// Setup
+	// Change the stash name prefix to invalid to emulate
+	// migration failure. The instance must preserve its
+	// list of the SDK profiles
+	old := workshopbackend.StashNamePrefix
+	workshopbackend.StashNamePrefix = "?"
+	defer func() { workshopbackend.StashNamePrefix = old }()
+
+	// Execute (will fail due to the incorrect stash instance name)
+	err := f.be.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.NotNil)
+
+	// Validate
+	inst, _, err := f.lxdClient.GetInstance(workshopbackend.InstanceName("test", f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+	c.Assert(inst.Status, check.Equals, "Running")
+}
+
+func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
+	// Execute
+	err := f.be.StashWorkshop(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	_, err = f.be.Workshop(f.ctx, "test")
+	c.Assert(err, check.NotNil)
+
+	// Execute
+	err = f.be.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
+	// Validate
+	err = f.be.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.ErrorMatches, "workshop not found")
 }
 
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
@@ -199,7 +220,7 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.NotNil)
 
 	// Execute
@@ -221,7 +242,7 @@ func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 
 	//Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.GetWorkshop(f.ctx, "test-1")
+	_, err = f.be.Workshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
 	// now, ensure that the systemd is in the final state

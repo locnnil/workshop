@@ -78,9 +78,6 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 	st.Lock()
 	defer st.Unlock()
 
-	// In this scenario, we will have go walk all projects in the system
-	// and also make sure these are up-to-date, this is what RetrieveWorkshopsGlobal does
-	// and returns a list of workshops for every project found in the system
 	projects, err := c.d.overlord.WorkshopBackend().Projects(r.Context())
 	if err != nil {
 		return statusInternalError("cannot get projects list: %v", err)

@@ -1,7 +1,6 @@
 package workshopbackend
 
 import (
-	"errors"
 	"os"
 
 	"github.com/pkg/sftp"
@@ -11,7 +10,7 @@ import (
 
 type WorkshopFs interface {
 	afero.Fs
-	Symlink(old, new string, force bool) error
+	Symlink(old, new string) error
 	Close()
 }
 
@@ -27,14 +26,9 @@ type InstanceFs struct {
 	client *sftp.Client
 }
 
-func (w *InstanceFs) Symlink(source, target string, force bool) error {
-	if force {
-		err := w.Remove(target)
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return w.client.Symlink(source, target)
-		} else {
-			return err
-		}
+func (w *InstanceFs) Symlink(source, target string) error {
+	if _, err := w.client.Stat(target); err == nil {
+		return os.ErrExist
 	}
 	return w.client.Symlink(source, target)
 }
@@ -43,7 +37,7 @@ func (w *InstanceFs) Close() {
 	w.client.Close()
 }
 
-/* Fake wokrspace fs implementation for tests */
+/* Fake workshop fs implementation for tests */
 
 type FakeInstanceFs struct {
 	afero.Fs
@@ -55,14 +49,7 @@ func NewFakeWorkshopFs() WorkshopFs {
 	return &fs
 }
 
-func (w *FakeInstanceFs) Symlink(source, target string, force bool) error {
-	if force {
-		_, err := w.Stat(target)
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return w.Fs.Mkdir(target, os.ModeSymlink)
-		}
-		return nil
-	}
+func (w *FakeInstanceFs) Symlink(source, target string) error {
 	return w.Fs.Mkdir(target, os.ModeSymlink)
 }
 

@@ -55,18 +55,18 @@ func (s *CoreSuite) TearDownTest(c *C) {
 
 // PlugRef.String works as expected
 func (s *CoreSuite) TestPlugRefString(c *C) {
-	ref := interfaces.PlugRef{Sdk: "sdk", Name: "plug"}
-	c.Check(ref.String(), Equals, "sdk:plug")
-	refPtr := &interfaces.PlugRef{Sdk: "sdk", Name: "plug"}
-	c.Check(refPtr.String(), Equals, "sdk:plug")
+	ref := interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	c.Check(ref.String(), Equals, "ws:sdk:plug")
+	refPtr := &interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	c.Check(refPtr.String(), Equals, "ws:sdk:plug")
 }
 
 // SlotRef.String works as expected
 func (s *CoreSuite) TestSlotRefString(c *C) {
-	ref := interfaces.SlotRef{Sdk: "sdk", Name: "slot"}
-	c.Check(ref.String(), Equals, "sdk:slot")
-	refPtr := &interfaces.SlotRef{Sdk: "sdk", Name: "slot"}
-	c.Check(refPtr.String(), Equals, "sdk:slot")
+	ref := interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	c.Check(ref.String(), Equals, "ws:sdk:slot")
+	refPtr := &interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	c.Check(refPtr.String(), Equals, "ws:sdk:slot")
 }
 
 // ConnRef.ID works as expected
@@ -204,7 +204,7 @@ plugs:
 	}, plug), ErrorMatches, "broken")
 	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
 		InterfaceName: "other",
-	}, plug), ErrorMatches, `cannot sanitize plug "sdk:plug" \(interface "iface"\) using interface "other"`)
+	}, plug), ErrorMatches, `cannot sanitize plug "ws:sdk:plug" \(interface "iface"\) using interface "other"`)
 }
 
 func (s *CoreSuite) TestSanitizeSlot(c *C) {
@@ -225,5 +225,5 @@ slots:
 	}, slot), ErrorMatches, "broken")
 	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
 		InterfaceName: "other",
-	}, slot), ErrorMatches, `cannot sanitize slot "sdk:slot" \(interface "iface"\) using interface "other"`)
+	}, slot), ErrorMatches, `cannot sanitize slot "ws:sdk:slot" \(interface "iface"\) using interface "other"`)
 }

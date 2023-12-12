@@ -1,0 +1,10 @@
+name: test-sdk-content-broken
+title: test-sdk-content-broken
+base: ubuntu@20.04
+
+summary: test-sdk-content-broken SDK
+description: |
+  test-sdk-content-broken SDK
+slots:
+  one:
+    interface: content

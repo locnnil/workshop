@@ -61,18 +61,17 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
-	// path used in workshop to mount the project directory
-	WorkshopProjectPath = "/project"
 	// name prefix for the workshops that were made unavailable
-	StashNamePrefix = "stash-"
 )
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
+	defaultDevices       = createDefaultDevices
 
 	ErrWorkshopNotFound = errors.New("workshop not found")
+	imageServer         = "https://cloud-images.ubuntu.com/releases/"
 )
 
 func New() WorkshopBackend {
@@ -354,10 +353,8 @@ func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx con
 	}
 
 	for _, i := range workshops {
-		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), WorkshopDevice{
-			Name:       ProjectPathDevice,
-			Properties: map[string]string{"type": "disk", "source": existingProject.Path, "path": WorkshopProjectPath},
-		})
+		project := Mount(ProjectPathDevice, existingProject.Path, WorkshopProjectPath)
+		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
 		}
@@ -627,7 +624,7 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 30,
+		Timeout: 45,
 		Force:   force,
 	}
 
@@ -728,7 +725,7 @@ func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key 
 	return op.Wait()
 }
 
-func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device WorkshopDevice) error {
+func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device Device) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -743,7 +740,7 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	if err != nil {
 		return err
 	}
-	inst.Devices[device.Name] = device.Properties
+	inst.Devices[device.Name()] = device.properties
 	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
 	if err != nil {
 		return err
@@ -842,7 +839,7 @@ func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (Ex
 	return s.execCommand(conn, ctx, name, args)
 }
 
-func (s *LxdBackend) GetWorkshop(ctx context.Context, name string) (*Workshop, error) {
+func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -950,7 +947,7 @@ func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter 
 	return toReturn, nil
 }
 
-func (s *LxdBackend) GetProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
+func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -1061,7 +1058,7 @@ func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) error {
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) GetWorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
+func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -1078,103 +1075,6 @@ func (s *LxdBackend) GetWorkshopFs(ctx context.Context, name string) (WorkshopFs
 	}
 
 	return NewWorkshopFs(sftp), nil
-}
-
-func (s *LxdBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	user, ok := ctx.Value(ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
-	}
-
-	projectId, ok := ctx.Value(ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	system := conn.UseProject(LxdSystemProjectName(user))
-	op, err := system.DeleteInstance(InstanceName(StashNamePrefix+name, projectId))
-	if err != nil {
-		return err
-	}
-	return op.WaitContext(ctx)
-}
-
-func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	if err := s.moveInstanceProject(conn, ctx, name, false); err != nil {
-		return err
-	}
-
-	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop", false); err != nil {
-		return err
-	}
-
-	return s.moveInstanceProject(conn, ctx, name, true)
-}
-
-// Moves the instance between projects. If system is true the project will be
-// moved to the LXD project which is not available to the users (e.g. for
-// hiding a workshop temporarily). Otherwise, the workshop will be move to
-// the regular project visible by the user specified in the ctx context.
-func (s *LxdBackend) moveInstanceProject(conn lxd.InstanceServer, ctx context.Context, name string, system bool) error {
-	var err error
-	user, ok := ctx.Value(ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
-	}
-
-	projectId, ok := ctx.Value(ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	var op lxd.Operation
-	instance := InstanceName(name, projectId)
-	if system {
-		// the new name must not be the same, otherwise the LXD's DNS will fail
-		// the new instance creation
-		op, err = conn.MigrateInstance(instance, api.InstancePost{
-			Name:      StashNamePrefix + instance,
-			Project:   LxdSystemProjectName(user),
-			Migration: true,
-		})
-	} else {
-		// the instance of interest is in the system project now, so let's
-		// switch the project for the connection first to make the reverse
-		// migration successful (i.e. from system -> user project)
-		conn = conn.UseProject(LxdSystemProjectName(user))
-		op, err = conn.MigrateInstance(StashNamePrefix+instance, api.InstancePost{
-			Name:      instance,
-			Project:   LxdProjectName(user),
-			Migration: true,
-		})
-	}
-
-	if err != nil {
-		return err
-	}
-
-	err = op.WaitContext(ctx)
-	return err
 }
 
 func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error {
@@ -1228,7 +1128,7 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 	}
 }
 
-func defaultDevices() map[string]map[string]string {
+func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
@@ -1255,7 +1155,7 @@ users:
 func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
 	var image *api.Image
 
-	imageServer, err := ConnectSimpleStreams("https://cloud-images.ubuntu.com/releases/", nil)
+	imageServer, err := ConnectSimpleStreams(imageServer, nil)
 	if err != nil {
 		return nil, nil, err
 	}
