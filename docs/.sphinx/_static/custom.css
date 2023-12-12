@@ -187,3 +187,25 @@ details summary {
     color: var(--color-version-popup);
     font-weight: bolder;
 }
+
+input[type=submit] {
+    border: 2px solid #d6410d;
+    padding: var(--sidebar-search-input-spacing-vertical) var(--sidebar-search-input-spacing-horizontal);
+    background: #d6410d;
+    font-weight: bold;
+    font-size: var(--font-size--small);
+    cursor: pointer;
+}
+
+input[type=submit]:hover {
+    text-decoration: underline;
+}
+
+.highlight .o {
+    color: #bb5400;
+}
+
+.highlight .s,
+.highlight .s2 {
+    color: #3f8100;
+}

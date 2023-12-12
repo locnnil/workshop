@@ -5,5 +5,5 @@
     ]
   },
   "reporter": "cli",
-  "standard": "WCAG2A"
+  "standard": "WCAG2AA"
 }
