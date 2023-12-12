@@ -2,6 +2,31 @@
 
 # Install and uninstall workshopd
 
+function prepare_environment() {
+  apt-get install -y --no-install-recommends jq
+  snap install go --classic
+
+  snap install lxd --classic
+  cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workshop/
+  lxd init --auto
+
+  # run fake GCS bucket storage to emulate SDK store
+  publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
+  /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
+
+
+  echo "Waiting fake SDK store to launch on 8080..."
+  while ! nc -z localhost 8080; do
+    sleep 0.1 # wait for 1/10 of the second before check again
+  done
+}
+
+function cleanup_environment() {
+  rm -rf /data
+  rm -rf /storage
+  rm -f /usr/bin/workshopd
+}
+
 function install_workshopd() {
   # make sure there is no existing changes
     go install -buildvcs=false /remote/cmd/workshopd
