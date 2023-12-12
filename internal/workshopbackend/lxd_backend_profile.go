@@ -2,8 +2,10 @@ package workshopbackend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -66,13 +68,13 @@ func Mount(name, source, target string) Device {
 	}
 }
 
-func Volume(name, path, volume string) Device {
+func Volume(name, mountTo, volume string) Device {
 	return Device{
 		name:       name,
 		deviceType: DiskVolume,
 		properties: map[string]string{"type": "disk",
 			"pool":   "default",
-			"path":   path,
+			"path":   mountTo,
 			"source": volume},
 	}
 }
@@ -113,17 +115,18 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 		if dev.Type() == BindMount {
 			// confirm the target path exists
 			target := dev.properties["path"]
-			if _, err := fs.Stat(target); err != nil {
+			if info, err := fs.Stat(target); err != nil {
 				return fmt.Errorf("cannot create a workshop mount with target %q: %v", target, err)
-			} else {
-				// We have to workaround the LXD issue here as it would remove
-				// the target directory on unmount if it was empty. It should
-				// not touch the directories that it has not created.
-				// https://github.com/canonical/lxd/issues/12648
-				_, err := fs.Create(filepath.Join(target, fmt.Sprintf(".workshop.%s.%s", projectId, workshop)))
-				if err != nil {
-					logger.Noticef(`Could not prevent "target" in %q workshop from removing`, workshop)
-				}
+			} else if !info.IsDir() {
+				return fmt.Errorf("cannot create a workshop mount with target %q: the target is not a directory", target)
+			}
+			// We have to workaround the LXD issue here as it would remove
+			// the target directory on unmount if it was empty. It should
+			// not touch the directories that it has not created.
+			// https://github.com/canonical/lxd/issues/12648
+			_, err := fs.Create(filepath.Join(target, fmt.Sprintf(".workshop.%s.%s", projectId, workshop)))
+			if err != nil && !errors.Is(err, os.ErrExist) {
+				logger.Noticef(`Cannot not prevent "target" in %q workshop from removing: %v`, workshop, err)
 			}
 		}
 	}
@@ -155,7 +158,7 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 	}
 
 	if slices.Index(inst.Profiles, lxdname) == -1 {
-		// Assigning profile for the first time
+		// Assigning the profile for the first time
 		put := inst.InstancePut
 		put.Profiles = append(put.Profiles, lxdname)
 		op, err := conn.UpdateInstance(InstanceName(workshop, projectId), put, etag)
@@ -166,7 +169,6 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 		return op.WaitContext(ctx)
 	}
 
-	// Do nothing if the profile has been assigned already
 	return nil
 }
 

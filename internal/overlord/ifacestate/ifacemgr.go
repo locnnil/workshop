@@ -16,16 +16,16 @@ import (
 )
 
 type InterfaceManager struct {
-	state     *state.State
-	wsbackend workshopbackend.WorkshopBackend
-	repo      *interfaces.Repository
+	state   *state.State
+	backend workshopbackend.WorkshopBackend
+	repo    *interfaces.Repository
 }
 
 func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend) *InterfaceManager {
 	m := &InterfaceManager{
-		state:     s,
-		wsbackend: be,
-		repo:      interfaces.NewRepository(),
+		state:   s,
+		backend: be,
+		repo:    interfaces.NewRepository(),
 	}
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), OnUndo(m.undoAutoConnect))
@@ -42,7 +42,7 @@ func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()
 	for _, backend := range allSecurityBackends() {
-		if err := backend.Initialize(m.wsbackend.(workshopbackend.Profile)); err != nil {
+		if err := backend.Initialize(m.backend.(workshopbackend.Profile)); err != nil {
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
@@ -56,7 +56,7 @@ func (m *InterfaceManager) StartUp() error {
 		}
 	}
 
-	allprojects, err := m.wsbackend.Projects(context.Background())
+	allprojects, err := m.backend.Projects(context.Background())
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (m *InterfaceManager) StartUp() error {
 		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
 		for _, prj := range projects {
 			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
-			_, wrksps, err := m.wsbackend.ProjectWorkshops(prjctx)
+			_, wrksps, err := m.backend.ProjectWorkshops(prjctx)
 			if err != nil {
 				logger.Noticef("Cannot load workshops from %s: %v", prj.Path, err)
 				continue

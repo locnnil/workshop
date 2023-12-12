@@ -68,8 +68,10 @@ var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
+	defaultDevices       = createDefaultDevices
 
 	ErrWorkshopNotFound = errors.New("workshop not found")
+	imageServer         = "https://cloud-images.ubuntu.com/releases/"
 )
 
 func New() WorkshopBackend {
@@ -622,7 +624,7 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 30,
+		Timeout: 45,
 		Force:   force,
 	}
 
@@ -1126,7 +1128,7 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 	}
 }
 
-func defaultDevices() map[string]map[string]string {
+func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
@@ -1153,7 +1155,7 @@ users:
 func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
 	var image *api.Image
 
-	imageServer, err := ConnectSimpleStreams("https://cloud-images.ubuntu.com/releases/", nil)
+	imageServer, err := ConnectSimpleStreams(imageServer, nil)
 	if err != nil {
 		return nil, nil, err
 	}

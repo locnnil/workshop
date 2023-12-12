@@ -152,10 +152,8 @@ slots:
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedMnt})
 
 	// Validate the source directory was created correctly
-	c.Assert(deviceSpec.AddConnectedSlot(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	exists, isDir, err := osutil.ExistsIsDir(sourceDir)
 	c.Assert(exists, check.Equals, true)
 	c.Assert(isDir, check.Equals, true)
 	c.Assert(err, check.IsNil)
-
 }

@@ -40,55 +40,6 @@ func (f *wsProject) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
-	cli := client.UseProject(project)
-	fingers, err := cli.GetImageFingerprints()
-	c.Check(err, check.IsNil)
-	for _, i := range fingers {
-		op, err := cli.DeleteImage(i)
-		c.Check(err, check.IsNil)
-		if err == nil {
-			c.Check(op.Wait(), check.IsNil)
-		}
-	}
-
-	instances, err := cli.GetInstances(api.InstanceType("container"))
-	c.Check(err, check.IsNil)
-	for _, i := range instances {
-		if i.Status == "Running" {
-			req := api.InstanceStatePut{
-				Action:  "stop",
-				Timeout: 1,
-				Force:   true,
-			}
-
-			op, err := cli.UpdateInstanceState(i.Name, req, "")
-			c.Check(err, check.IsNil)
-			if err == nil {
-				c.Check(op.Wait(), check.IsNil)
-			}
-		}
-
-		op, err := cli.DeleteInstance(i.Name)
-		c.Check(err, check.IsNil)
-		if err == nil {
-			c.Check(op.Wait(), check.IsNil)
-		}
-	}
-
-	profiles, err := cli.GetProfileNames()
-	for _, p := range profiles {
-		if p == "default" {
-			continue
-		}
-		err := cli.DeleteProfile(p)
-		c.Check(err, check.IsNil)
-	}
-
-	err = cli.DeleteProject(project)
-	c.Check(err, check.IsNil)
-}
-
 func (f *wsProject) TearDownTest(c *check.C) {
 	cleanUpLxdProject(c, f.client, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.client, workshopbackend.LxdSystemProjectName(f.username))

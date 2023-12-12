@@ -7,13 +7,13 @@ import (
 	"context"
 	"os"
 	"os/user"
-	"path/filepath"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	lxd "github.com/lxc/lxd/client"
+	"github.com/lxc/lxd/shared/api"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
@@ -32,6 +32,8 @@ type wsOps struct {
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
 	newProjectidRestore func()
+	restoreDevices      func()
+	restoreImageServer  func()
 }
 
 var _ = check.Suite(&wsOps{})
@@ -104,41 +106,23 @@ func (f *wsOps) TearDownTest(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
+func (f *wsOps) SetUpSuite(c *check.C) {
+	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
+	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
+	ctx := createTestContext(f.username, "42424242")
+	be := &workshopbackend.LxdBackend{}
+	client, _ := be.LxdClient(ctx)
+	err := client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
+	c.Assert(err, check.IsNil)
+}
+
 func (f *wsOps) TearDownSuite(c *check.C) {
+	err := f.lxdClient.DeleteStoragePool("testZfsProfile")
+	c.Check(err, check.IsNil)
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
-}
-
-func createTestContext(username, projectId string) context.Context {
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
-	return ctx
-}
-
-func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.WorkshopBackend, dir, username string) {
-	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     username,
-			Username: username,
-			Uid:      "1000",
-			Gid:      "1000",
-		}
-		return u, nil
-	}, &workshopbackend.LookupUsername)
-	defer restore()
-
-	var err error
-
-	os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@22.04
-`), 0644)
-
-	_, _, err = be.CreateOrLoadProject(ctx, dir)
-	c.Assert(err, check.IsNil)
-	err = be.LaunchWorkshop(ctx, "test", "ubuntu@22.04")
-	c.Assert(err, check.IsNil)
-	err = be.StartWorkshop(ctx, "test")
-	c.Assert(err, check.IsNil)
+	f.restoreDevices()
+	f.restoreImageServer()
 }
 
 func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {

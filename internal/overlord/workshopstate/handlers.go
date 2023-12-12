@@ -230,7 +230,7 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop 
 
 	var errors []error
 	projectContent := filepath.Join(usr.HomeDir, ".local", "share", "workshop", "project", projectId, "content")
-	var contentDirs = make([]fs.DirEntry, 0)
+	var contentDirs []fs.DirEntry
 	if contentDirs, err = os.ReadDir(projectContent); err != nil {
 		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", workshop, err))
 	}
@@ -244,7 +244,8 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop 
 	// (nor the SDK profile for this plug); however, the content is still stored
 	// on the host and must also be removed alongside the workshop.
 	for _, dir := range contentDirs {
-		// Remove all default content dirs that belong the workshop
+		// Remove all default content dirs that belong the workshop. These will be
+		// named as <workshop>_<sdk>_<plug>.sdk
 		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), workshop+"_") {
 			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
 				errors = append(errors, err)

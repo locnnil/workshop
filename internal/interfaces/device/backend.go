@@ -10,11 +10,11 @@ import (
 )
 
 type Backend struct {
-	wsbackend workshopbackend.Profile
+	profile workshopbackend.Profile
 }
 
-func (b *Backend) Initialize(backend workshopbackend.Profile) error {
-	b.wsbackend = backend
+func (b *Backend) Initialize(profile workshopbackend.Profile) error {
+	b.profile = profile
 	return nil
 }
 
@@ -36,7 +36,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 		for _, dev := range spec.devices {
 			profile.AddDevice(dev)
 		}
-		return b.wsbackend.AssignProfile(context, sdkInfo.Workshop, profile)
+		return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
 	}
 	return nil
 }
@@ -45,7 +45,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interf
 //
 // This method should be called after removing a sdk.
 func (b *Backend) Remove(context context.Context, workshop, sdkName string) error {
-	return b.wsbackend.RemoveProfile(context, workshop, sdkName)
+	return b.profile.RemoveProfile(context, workshop, sdkName)
 }
 
 // NewSpecification returns a new mount specification.

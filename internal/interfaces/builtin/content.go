@@ -96,8 +96,9 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 }
 
 func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) string {
-	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content",
-		strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_")+".sdk")
+	// <workshop>_<sdk>_plug.sdk
+	dir := strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_") + ".sdk"
+	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
 	return source
 }
 

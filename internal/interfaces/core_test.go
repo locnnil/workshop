@@ -55,16 +55,16 @@ func (s *CoreSuite) TearDownTest(c *C) {
 
 // PlugRef.String works as expected
 func (s *CoreSuite) TestPlugRefString(c *C) {
-	ref := interfaces.PlugRef{Sdk: "sdk", Name: "plug"}
-	c.Check(ref.String(), Equals, ":sdk:plug")
+	ref := interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	c.Check(ref.String(), Equals, "ws:sdk:plug")
 	refPtr := &interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
 	c.Check(refPtr.String(), Equals, "ws:sdk:plug")
 }
 
 // SlotRef.String works as expected
 func (s *CoreSuite) TestSlotRefString(c *C) {
-	ref := interfaces.SlotRef{Sdk: "sdk", Name: "slot"}
-	c.Check(ref.String(), Equals, ":sdk:slot")
+	ref := interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	c.Check(ref.String(), Equals, "ws:sdk:slot")
 	refPtr := &interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
 	c.Check(refPtr.String(), Equals, "ws:sdk:slot")
 }

@@ -368,3 +368,15 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	}
 	return userName, projectId, nil
 }
+
+func FakeDefaultDevices(f func() map[string]map[string]string) func() {
+	oldDefault := defaultDevices
+	defaultDevices = f
+	return func() { defaultDevices = oldDefault }
+}
+
+func FakeImageServer(server string) func() {
+	oldImageServer := imageServer
+	imageServer = server
+	return func() { imageServer = oldImageServer }
+}

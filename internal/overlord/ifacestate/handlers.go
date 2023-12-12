@@ -36,7 +36,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	ctx, cancel := BackendContext(tomb, user, project)
 	defer cancel()
 
-	inst, err := m.wsbackend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
@@ -72,17 +72,6 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	// - remove the SDK from the repository (e.g. remove all its plugs and slots)
 	// - find and connect candidates for the SDK plug and slot
 	// - rebuild SDK profiles for the affected SDKs and assign them to the corresponding workshops
-
-	// The sdk may have been updated so perform the following operation to
-	// ensure that we are always working on the correct state:
-	//
-	// - disconnect all connections to/from the given sdk
-	//   - remembering the sdks that were affected by this operation
-	// - remove the (old) sdk from the interfaces repository
-	// - add the (new) sdk to the interfaces repository
-	// - restore connections based on what is kept in the state
-	//   - if a connection cannot be restored then remove it from the state
-	// - setup the backend of all the affected sdks
 	disconnected, err := m.repo.DisconnectSdk(projectId, workshop, sdkInfo.Name)
 	if err != nil {
 		return err
@@ -264,7 +253,7 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 		return err
 	}
 
-	inst, err := m.wsbackend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, workshop)
 	if err != nil {
 		return err
 	}
