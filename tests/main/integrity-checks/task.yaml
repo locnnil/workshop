@@ -11,24 +11,37 @@ restore: |
   . "$TESTSLIB"/utils.sh
   cleanup "$WORKSHOPS"
   uninstall_workshopd
-
-debug: |
-  lxc project switch workshop.ubuntu
-  lxc list -f compact
-  ls "$WORKSHOPS"/*
+  rm -rf "$WORKSHOPS"/new-project
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   launch "$PROJECT" ws
 
-  echo "Should recover .lock file if removed for an existing project"
+  echo "Check recover .lock file if removed for an existing project"
   rm -f "$PROJECT"/.workshop.lock
   list "$PROJECT"
   test -f "$PROJECT"/.workshop.lock
 
-  echo "Should report a workshop state as Error if there is no workshop file"
+  echo "Check report a workshop state as Error if there is no workshop file"
   mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
   list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
   mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
   list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  
+  workshop_exec remove --project "$PROJECT" ws
+  
+  echo "Check recreating project dir with the same name"
+  mkdir -p "$WORKSHOPS"/new-project
+  cp "$PROJECT"/.workshop.ws.yaml "$WORKSHOPS"/new-project/
+  workshop_exec launch --project "$WORKSHOPS"/new-project/ ws
+  workshop_exec remove --project "$WORKSHOPS"/new-project/ ws
+  rm -rf "$WORKSHOPS"/new-project/
+  mkdir -p "$WORKSHOPS"/new-project/
+  cp "$PROJECT"/.workshop.ws.yaml "$WORKSHOPS"/new-project/
+  workshop_exec launch --project "$WORKSHOPS"/new-project/  ws
+  workshop_exec list --project "$WORKSHOPS"/new-project | MATCH "^$WORKSHOPS/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  
+  
+  

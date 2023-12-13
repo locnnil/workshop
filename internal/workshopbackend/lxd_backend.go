@@ -61,7 +61,6 @@ type LxdBackend struct {
 
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
-	// name prefix for the workshops that were made unavailable
 )
 
 var (
@@ -212,6 +211,125 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
 
+func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+	if err != nil {
+		return err
+	}
+
+	for _, i := range workshops {
+		project := Mount(ProjectPathDevice, existingProject.Path, WorkshopProjectPath)
+		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
+		if err != nil {
+			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
+		}
+	}
+	return nil
+}
+
+func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, p.ProjectId))
+	if err != nil {
+		return "", err
+	}
+
+	/* memFs to story temporary results of the commands execution output */
+	memFs := afero.NewMemMapFs()
+	for _, i := range workshops {
+		// attempt to execute the command only in a running instance
+		if i.StatusCode != api.Ready && i.StatusCode != api.Running {
+			continue
+		}
+
+		/* Take the first instance from the group, we need any running
+		and ready to execute commands to validate the project directory */
+		out, err := memFs.Create(i.Name)
+		if err != nil {
+			return "", err
+		}
+		defer out.Close()
+
+		/* Get the mount point device/directory from findmnt and extract the path without a device
+		using awk */
+		args := Execution{
+			ExecArgs: ExecArgs{
+				UserId:  0,
+				GroupId: 0,
+				Command: []string{"bash", "-c",
+					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+				WorkDir: "/",
+			},
+			ExecControls: ExecControls{
+				Stdin:  nil,
+				Stdout: out,
+				Stderr: out,
+			},
+		}
+
+		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
+		meta, err := s.execCommand(conn, execCtx, WorkshopName(i.Name), &args)
+		if err == nil {
+			err = meta.WaitExecution(ctx)
+			if err != nil {
+				outbuf, _ := afero.ReadFile(memFs, out.Name())
+				logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, string(outbuf))
+				continue
+			}
+		} else {
+			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
+			continue
+		}
+
+		/* Process the findmnt results */
+		if currentPath, err := afero.ReadFile(memFs, i.Name); err == nil {
+			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
+			if ok, isDir, err := osutil.ExistsIsDir(string(currentPath)); ok && isDir {
+				return string(currentPath), nil
+			} else if err != nil && !osutil.IsDirNotExist(err) {
+				return "", nil
+			}
+		}
+	}
+	return "", nil
+}
+
+// Ensures that every project has a valid existing path. If not, tries to
+// recover the path from the actual bind mount of the '/project'. If recovery
+// went unsuccessful, stop project tracking (it is likely that the directory was
+// removed already)
+func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) ([]*Project, error) {
+	for idx, prj := range projects {
+		if ok, _, err := osutil.ExistsIsDir(prj.Path); !ok {
+			// If got here then there is no project directory for the projectId
+			// anymore. It can mean moving or deletion happened in the past. Try
+			// to recover the new project path
+			newPath, _ := s.findProjectPathFromBindMounts(client, ctx, prj)
+			if newPath != "" {
+				// start tracking this project under a new path
+				prj.Path = newPath
+				if err = s.trackProject(client, ctx, prj); err == nil {
+					// update the workshops configuration with the new path
+					s.updateWorkshopsProjectPath(client, ctx, prj)
+				}
+				continue
+			}
+			// Could not recover the directory, reconcile the project from the
+			// list of projects that we track (only if there are no remaining
+			// workshops for this project)
+			inst, err := s.filterLxdInstancesByConfig(client, func(config map[string]string) bool {
+				return config["user.workshop.project-id"] == prj.ProjectId
+			})
+			if err == nil && len(inst) == 0 {
+				if err = s.untrackProject(client, ctx, prj); err != nil {
+					return nil, err
+				}
+				projects = slices.Delete(projects, idx, idx+1)
+			}
+		}
+	}
+	return projects, nil
+}
+
 // projectPath returns a project path for the cwd provided
 // if cwd is a sub-directory of the project. Otherwise, cwd
 // is returned unchanged
@@ -239,6 +357,9 @@ func ProjectPath(cwd string) (string, error) {
 		path = filepath.Join(path, "..", string(os.PathSeparator))
 	}
 
+	if cwd, err = filepath.EvalSymlinks(cwd); err != nil {
+		return "", err
+	}
 	return cwd, nil
 }
 
@@ -346,22 +467,6 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
-func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, existingProject.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	for _, i := range workshops {
-		project := Mount(ProjectPathDevice, existingProject.Path, WorkshopProjectPath)
-		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
-		if err != nil {
-			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
-		}
-	}
-	return nil
-}
-
 func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error) {
 	if user, ok := ctx.Value(ContextUser).(string); ok {
 		client, err := s.LxdClient(ctx)
@@ -419,109 +524,6 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 		}
 		return allProjects, nil
 	}
-}
-
-// Ensures that every project has a valid existing path. If not, tries to
-// recover the path from the actual bind mount of the '/project'. If recovery
-// went unsuccessful, stop project tracking (it is likely that the directory was
-// removed already)
-func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) ([]*Project, error) {
-	for idx, prj := range projects {
-		if ok, _, err := osutil.ExistsIsDir(prj.Path); !ok && err == nil {
-			// If got here then there is no project directory for the projectId
-			// anymore. It can mean moving or deletion happened in the past. Try
-			// to recover the new project path
-			newPath, _ := s.findProjectPathFromBindMounts(client, ctx, prj)
-			if newPath != "" {
-				// start tracking this project under a new path
-				prj.Path = newPath
-				if err = s.trackProject(client, ctx, prj); err == nil {
-					// update the workshops configuration with the new path
-					s.updateWorkshopsProjectPath(client, ctx, prj)
-				}
-				continue
-			}
-			// Could not recover the directory, reconcile the project from the
-			// list of projects that we track (only if there are no remaining
-			// workshops for this project)
-			inst, err := s.filterLxdInstancesByConfig(client, func(config map[string]string) bool {
-				return config["user.workshop.project-id"] == prj.ProjectId
-			})
-			if err == nil && len(inst) == 0 {
-				if err = s.untrackProject(client, ctx, prj); err != nil {
-					return nil, err
-				}
-				projects = slices.Delete(projects, idx, idx+1)
-			}
-		}
-	}
-	return projects, nil
-}
-
-func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, p.ProjectId))
-	if err != nil {
-		return "", err
-	}
-
-	/* memFs to story temporary results of the commands execution output */
-	memFs := afero.NewMemMapFs()
-	for _, i := range workshops {
-		// attempt to execute the command only in a running instance
-		if i.StatusCode != api.Ready && i.StatusCode != api.Running {
-			continue
-		}
-
-		/* Take the first instance from the group, we need any running
-		and ready to execute commands to validate the project directory */
-		out, err := memFs.Create(i.Name)
-		if err != nil {
-			return "", err
-		}
-		defer out.Close()
-
-		/* Get the mount point device/directory from findmnt and extract the path without a device
-		using awk */
-		args := Execution{
-			ExecArgs: ExecArgs{
-				UserId:  0,
-				GroupId: 0,
-				Command: []string{"bash", "-c",
-					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
-				WorkDir: "/",
-			},
-			ExecControls: ExecControls{
-				Stdin:  nil,
-				Stdout: out,
-				Stderr: out,
-			},
-		}
-
-		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		meta, err := s.execCommand(conn, execCtx, WorkshopName(i.Name), &args)
-		if err == nil {
-			err = meta.WaitExecution(ctx)
-			if err != nil {
-				outbuf, _ := afero.ReadFile(memFs, out.Name())
-				logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, string(outbuf))
-				continue
-			}
-		} else {
-			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
-			continue
-		}
-
-		/* Process the findmnt results */
-		if currentPath, err := afero.ReadFile(memFs, i.Name); err == nil {
-			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
-			if ok, isDir, err := osutil.ExistsIsDir(string(currentPath)); ok && isDir {
-				return string(currentPath), nil
-			} else if err != nil && !osutil.IsDirNotExist(err) {
-				return "", nil
-			}
-		}
-	}
-	return "", nil
 }
 
 func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) error {
@@ -1028,7 +1030,7 @@ func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*Worksh
 	return files, instances
 }
 
-func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) error {
+func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -1055,7 +1057,10 @@ func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	return op.WaitContext(ctx)
+	if err = op.WaitContext(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
