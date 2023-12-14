@@ -5,7 +5,7 @@
 workshop (CLI)
 ==============
 
-|project| includes an eponymous command-line utility,
+|project_markup| includes an eponymous command-line utility,
 :program:`workshop`;
 it is the daily go-to instrument for regular users,
 with a set of commands that govern the entire life cycle of a
@@ -13,7 +13,7 @@ with a set of commands that govern the entire life cycle of a
 
 .. note::
 
-   The utility talks to the |project| daemon,
+   The utility talks to the |project_markup| daemon,
    :program:`workshopd`, via a REST API,
    so alternatives are possible and, in fact, encouraged.
 

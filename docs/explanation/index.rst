@@ -3,7 +3,7 @@
 Explanation
 ===========
 
-These detailed articles elaborate on various |project| concepts
+These detailed articles elaborate on various |project_markup| concepts
 and explain how they fit together.
 
 .. toctree::

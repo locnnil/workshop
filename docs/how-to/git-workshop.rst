@@ -91,7 +91,7 @@ They stay there even if you remove the workshop:
 
 
 From here, do with your repo as you please
-because |project| handles
+because |project_markup| handles
 :ref:`moving files around <exp_moving_projects>`
 quite well.
 
@@ -114,7 +114,7 @@ Using worktrees
 Let's now use a feature of Git that overlaps nicely with workshops,
 namely :literalref:`git worktree<https://git-scm.com/docs/git-worktree>`.
 
-One of |project|'s goals is
+One of |project_markup|'s goals is
 to simplify toggling external dependencies
 such as frameworks or system versions.
 Suppose you want to investigate an issue that appears on an older OS version,
@@ -153,7 +153,7 @@ Next, you launch the redefined workshop to work on the problem:
 
 
 Just like :ref:`with regular directories <exp_moving_projects>`,
-|project| cooperates nicely with
+|project_markup| cooperates nicely with
 :literalref:`git worktree move<https://git-scm.com/docs/git-worktree#_commands>`:
 
 .. code-block:: console
@@ -178,6 +178,6 @@ before running :samp:`git worktree remove`:
 
 
 Thus, using :command:`git worktree` reduces the effort to sync, stash and pull,
-while |project| enables you to hot-swap an entire OS
+while |project_markup| enables you to hot-swap an entire OS
 or other complex dependencies
 by changing from one directory to another.

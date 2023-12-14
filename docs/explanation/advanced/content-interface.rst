@@ -49,11 +49,11 @@ that does the following:
 - Points the :samp:`target` directory *inside the workshop*
   to :file:`/home/workshop/go/pkg/mod/`;
   it will be mounted a file directory on the host system
-  that Workshop designates at run-time
+  that |project_markup| designates at run-time
 
 Overall, the intent of this declaration is
 to use a directory
-(which Workshop automatically allocates for the slot)
+(which |project_markup| automatically allocates for the slot)
 for persisting the
 `module cache <https://go.dev/ref/mod#module-cache>`__
 in the host file system
@@ -64,18 +64,18 @@ Content interface slot
 ----------------------
 
 To let SDKs access the host file system,
-Workshop creates a slot per each content interface plug.
+|project_markup| creates a slot per each content interface plug.
 
 .. note::
 
-   Currently, content can only be exposed by Workshop itself,
+   Currently, content can only be exposed by |project_markup| itself,
    but can't be shared between two workshops directly.
 
 
 At run-time, the plug is connected to the slot;
 after that, it's time for some
 :ref:` validation and policy checks <exp_interfaces_validation>`
-that Workshop does internally.
+that |project_markup| does internally.
 This involves making sure that the plug declaration is correct;
 the plug is allowed to be installed and auto-connected;
 and the destination directory actually exists.

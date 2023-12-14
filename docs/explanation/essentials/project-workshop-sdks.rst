@@ -2,13 +2,13 @@ Project, workshop, SDKs
 =======================
 
 Projects, workshops, workshop definitions and SDKs
-are the key building blocks of |project|.
+are the key building blocks of |project_markup|.
 
 
 Introduction
 ------------
 
-To start using |project|,
+To start using |project_markup|,
 it is important to understand how these concepts fit together.
 
 You can view a *project* as your working directory,
@@ -17,7 +17,7 @@ create and populate repositories, write and build code, run models, and so on.
 However, the difference starts with the software dependencies
 you would earlier install as system-wide packages, container images,
 or in myriad other ways.
-Instead, they are wrapped and published as |project|-ready, isolated *SDKs*
+Instead, they are wrapped and published as |project_markup|-ready, isolated *SDKs*
 which you list while defining a *workshop*.
 
 A single workshop always points to a project,
@@ -26,12 +26,12 @@ with each workshop containing a number of SDKs.
 
 What do you get out of this multitude?
 
-First, |project| is transactional in nature;
+First, |project_markup| is transactional in nature;
 you won't have to trace residual files and libraries all across your system
 after you uninstall a package that turned out too unstable to your taste.
 Even if an SDK dumps something unexpected onto the disk,
 it's contained within the workshop.
-|project| aims to encapsulate each part of functionality you may need,
+|project_markup| aims to encapsulate each part of functionality you may need,
 keeping things clean and tidy.
 
 Next, it's portable;
@@ -69,7 +69,7 @@ and the :ref:`ref_workshop_stop` command unmounts it.
    some have a :option:`!--project` option
    that accepts a pathname to use as the project directory.
 
-External changes to the project are tracked by the |project| daemon.
+External changes to the project are tracked by the |project_markup| daemon.
 Thus, if the project moved or copied,
 all workshops referencing it are updated
 so you can continue working uninterrupted.
@@ -154,11 +154,11 @@ An SDK may store any data specific to it,
 such as a model training configuration,
 within the workshop.
 The publisher of the SDK implements save and restore actions
-to let |project| handle such data consistently as the *SDK state*.
+to let |project_markup| handle such data consistently as the *SDK state*.
 
 Before applying any changes to the SDK,
 usually during a :ref:`ref_workshop_refresh`,
-|project| saves the workshop's SDK states
+|project_markup| saves the workshop's SDK states
 by invoking their save actions.
 After a successful change,
 the states are respectively restored.
@@ -194,7 +194,7 @@ Interfaces, plugs and slots
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To make SDKs customisable and extensible,
-Workshop implements a counterpart to
+|project_markup| implements a counterpart to
 :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__,
 controlling whether an individual SDK can use resources beyond its confinement.
@@ -202,7 +202,7 @@ You can think of specific interfaces as resource *types*:
 file system, hardware, computational and so on.
 
 In order to provide access to these resource types,
-Workshop exposes so-called *interface slots*.
+|project_markup| exposes so-called *interface slots*.
 For instance, a :ref:`content interface slot <exp_content_interface>`
 creates a designated host directory to be mounted inside the workshop;
 think of the slot as the provider of the resource.
@@ -217,7 +217,7 @@ note that a slot can handle connections with multiple plugs.
 
 Eventually, this mechanism starts whirring when the workshop itself is started;
 the plugs defined by its SDKs are automatically connected to the slots,
-provided the definition contains everything Workshop needs to make a match.
+provided the definition contains everything |project_markup| needs to make a match.
 
 
 .. _exp_interfaces_validation:
@@ -226,7 +226,7 @@ Interface validation and policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now, to make sure plugs can be installed and auto-connected,
-Workshop uses a set of rules called policies,
+|project_markup| uses a set of rules called policies,
 with each interface having its own.
 For example, the content interface plug can be installed and auto-connected
 based on its policy alone.
