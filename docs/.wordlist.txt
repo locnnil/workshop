@@ -18,6 +18,7 @@ UI
 YAML
 backend
 basename
+customisable
 cwd
 dev
 distributions
@@ -33,11 +34,13 @@ iteratively
 lxd
 onboarding
 pathname
+pre
 repo
 reST
 reStructuredText
 readme
 roadmap
+sdk
 snapcraft
 snapd
 subcommand
@@ -46,6 +49,8 @@ uid
 unmounts
 webhook
 workshopd
+workspace
+workspaces
 worktree
 worktrees
 yaml
