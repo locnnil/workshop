@@ -40,7 +40,7 @@ jobs:
         with:
           # Cause the check to fail on any broke rules
           fail-on-error: true
-          woke-args: "*.rst **/*.rst -c https://github.com/canonical-web-and-design/Inclusive-naming/raw/main/config.yml"
+          woke-args: "*.rst **/*.rst -c https://github.com/canonical/Inclusive-naming/raw/main/config.yml"
 
   linkcheck:
     name: Link check
@@ -56,3 +56,18 @@ jobs:
       - name: Run linkchecker
         run: |
           make -C docs linkcheck
+
+  pa11y:
+    name: Accessibility check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install the doc framework
+        run: |
+          make -C docs install
+
+      - name: Run pa11y
+        run: |
+          make -C docs pa11y

@@ -4,6 +4,6 @@
       "--no-sandbox"
     ]
   },
-  "reporter": "cli",
+  "reporter": "json",
   "standard": "WCAG2AA"
 }

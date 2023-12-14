@@ -1,30 +1,31 @@
 Workshop
 ========
 
-**Workshop is a tool that automates intricate prerequisite setup
-for your projects**.
+**Workshop is a tool that fractions development environment prerequisites
+into manageable pieces**.
 
-**Define your dev environment in straightforward YAML**.
-The tool consumes the definition to create a contained workshop,
-installs the dependencies it lists as a number of SDKs,
-and attaches their life cycle hooks for run-time control.
-IDEs such as Visual Studio Code or JupyterLab
-can discover workshops and use them in their operation,
+**Define your environment in simple YAML**.
+Workshop consumes the definition to create a contained workshop,
+installs the dependencies as a set of SDKs
+and attaches custom actions for run-time control.
+IDEs such as Visual Studio Code or JupyterLab can discover workshops
+and use them in day-to-day operations,
 tidying up your system and streamlining your work.
 
-**Untangle the know-how that was weaved into your project**.
-An environment that could take hours of setup
-can be launched with one command;
-workshops enhance issue reproduction across platforms,
-facilitate collaboration in code reviews,
-and confine hackish experiments in lightweight containers.
+**Untangle the know-how woven into your project**.
+An environment that could take hours to set up
+can now be launched with a single command.
+Workshop improves cross-platform issue reproduction,
+preserves context in discussions or reviews
+and confines bold experiments to transparent sandboxes.
 
-**Mitigate your setup's complexity with Workshop.**
-AI/ML, robotics, IoT, EdTech, and similar domains
-commonly have less-than-trivial project layouts
-that depend on multiple Linux distributions,
-a plethora of SDKs from different publishers,
-and a grocery list of libraries and programming languages.
+**Mitigate the complexity of your setup**.
+AI/ML, robotics, IoT, EdTech and similar domains
+typically use less-than-trivial project layouts
+that depend on multiple Linux distributions or images,
+a plethora of SDKs from many vendors
+and a grocery list of libraries and languages.
+That’s where Workshop thrives.
 
 
 Getting Started
