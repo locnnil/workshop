@@ -5,12 +5,12 @@ Tutorial
 
 This is a practical introduction
 that takes you on a tour
-of the essential |project| activities.
+of the essential |project_markup| activities.
 
 Here, you will put into practice all major steps in the life cycle of a
 *workshop*, from defining and launching it to using it with your project and
 deleting it.  The commands you're about to run comprise the majority of your
-daily needs with |project|.
+daily needs with |project_markup|.
 
 Refer to the :ref:`explanation <exp_index>` if you need a more descriptive
 overview. For comprehensive details, see the :ref:`reference
@@ -20,21 +20,21 @@ you're looking for advanced practical steps.
 .. attention::
 
    One technical detail before you start:
-   currently, |project| supports only :samp:`amd64`.
+   currently, |project_markup| supports only :samp:`amd64`.
 
 
-Install |project|
------------------
+Install |project_markup|
+------------------------
 
 Check the prerequisites,
-build and install |project|,
+build and install |project_markup|,
 then make sure it runs.
 
 
 Check prerequisites
 ~~~~~~~~~~~~~~~~~~~
 
-|project| requires
+|project_markup| requires
 `LXD <https://ubuntu.com/lxd>`_
 for low-level operation,
 using its
@@ -87,7 +87,7 @@ Install
 ~~~~~~~
 
 Build the ``workshop`` snap
-from the |project| source code on
+from the |project_markup| source code on
 `GitHub
 <https://github.com/canonical/workshop>`_:
 
@@ -124,7 +124,7 @@ The snap installs two major components:
 - The :program:`workshopd` daemon that exposes a REST API
 - The :program:`workshop`
   :ref:`CLI tool <exp_workshop_cli>`
-  that uses this API to command |project|
+  that uses this API to command |project_markup|
 
 The daemon starts automatically after installation;
 the CLI tool is run manually:
@@ -137,7 +137,7 @@ the CLI tool is run manually:
 Launch a workshop
 -----------------
 
-Having installed |project|,
+Having installed |project_markup|,
 use it to define, launch, start and stop your first
 :ref:`workshop <exp_workshop>`.
 
@@ -170,7 +170,7 @@ Define
           channel: latest/stable
 
 
-#. Make sure |project| can find the definition
+#. Make sure |project_markup| can find the definition
    by *listing* the workshops
    in the project directory:
 
@@ -199,7 +199,7 @@ you :ref:`launch <ref_workshop_launch>` it:
 Now, the workshop is *Ready*
 to build, debug and run code.
 
-To make sure |project| watches the changes in the project directory,
+To make sure |project_markup| watches the changes in the project directory,
 move it, then run :command:`workshop list`:
 
 .. code-block:: console
@@ -439,5 +439,5 @@ This leaves the workshop definition intact.
 
 
 That was the last step of the tutorial;
-you are now familiar with the essential operations |project| provides
+you are now familiar with the essential operations |project_markup| provides
 and have had your first taste of what it can accomplish for you.

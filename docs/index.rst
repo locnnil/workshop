@@ -2,35 +2,33 @@
 
 .. _home:
 
-Workshop
-========
+|project_markup|
+================
 
-**Workshop is a tool that fractions
-development environment prerequisites
-into manageable pieces**.
+**A tool for defining and managing complex development environments**.
 
-**Define your environment in simple YAML**.
-|project| consumes the definition to create a contained workshop,
-installs the dependencies as a set of SDKs
+**Define your prerequisites and dependencies in simple YAML**.
+|project_markup| consumes the definition to create a contained workshop,
+installs the components as a set of SDKs
 and attaches custom actions for run-time control.
-IDEs such as Visual Studio Code or JupyterLab
-can discover workshops and use them in day-to-day operations,
+IDEs such as Visual Studio Code or JupyterLab can discover workshops
+and use them in day-to-day operations,
 tidying up your system and streamlining your work.
 
-**Untangle the know-how woven into your project**.
-An environment that could take hours to set up
+**Focus on your project, not your setup**.
+An environment that could take hours to configure
 can now be launched with a single command.
-Workshop improves cross-platform issue reproduction,
+|project_markup| improves cross-platform issue reproduction,
 preserves context in discussions or reviews
 and confines bold experiments to transparent sandboxes.
 
-**Mitigate the complexity of your setup.**
+**For those who build and maintain complex, error-prone workspaces**.
 AI/ML, robotics, IoT, EdTech and similar domains
 typically use less-than-trivial project layouts
 that depend on multiple Linux distributions or images,
 a plethora of SDKs from many vendors
 and a grocery list of libraries and languages.
-That's where |project| thrives.
+That’s where |project_markup| thrives.
 
 ---------
 
@@ -42,7 +40,7 @@ In this documentation
 
    .. grid-item:: :doc:`Tutorial <tutorial/index>`
 
-      **Starter instructions** for new users of |project|
+      **Starter instructions** for new users of |project_markup|
 
 
    .. grid-item:: :doc:`How-to guides <how-to/index>`
@@ -65,15 +63,15 @@ In this documentation
 Project and community
 ---------------------
 
-|project| is an emergent project
+|project_markup| is an emergent project
 within the Enterprise Engineering department here at Canonical.
 
 Come and talk to us if you have a project in AI/ML, robotics or any other area
 where setting up an environment is a daily or weekly activity
 that can easily shave hours off your schedule.
 Share with us the frustrating parts of your experience,
-and we'll see what |project| can do.
-Let us know if you have an SDK or a framework you’d like to try with |project|:
+and we'll see what |project_markup| can do.
+Let us know if you have an SDK or a framework you’d like to try with |project_markup|:
 we'll help you get it out there.
 
 
