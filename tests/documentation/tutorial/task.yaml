@@ -1,6 +1,7 @@
 summary: Run tutorial commands to ensure it's operational
 prepare: |
   chmod u+x "$TESTSLIB"/documentation/tutorial.sh
+  chown ubuntu:ubuntu "$TESTSLIB"/documentation/tutorial.sh
   mkdir -p /home/ubuntu/workshop
   cp -R /remote/* /home/ubuntu/workshop
   chown -R ubuntu:ubuntu /home/ubuntu/workshop
