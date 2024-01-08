@@ -15,7 +15,7 @@ function prepare_environment() {
   /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
 
 
-  echo "Waiting fake SDK store to launch on 8080..."
+  echo "Waiting for the fake SDK store to start on port 8080..."
   while ! nc -z localhost 8080; do
     sleep 0.1 # wait for 1/10 of the second before check again
   done
