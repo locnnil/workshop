@@ -122,7 +122,7 @@ woke:
 
 .PHONY: pa11y
 pa11y: html
-	find $(BUILDDIR) -name *.html -exec $(PA11Y) {} \;
+	find $(BUILDDIR) -name *.html -print0 | xargs -n 1 -0 $(PA11Y)
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
