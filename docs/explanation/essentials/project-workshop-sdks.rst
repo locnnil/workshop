@@ -147,6 +147,8 @@ SDKs are distributed via channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 
 
+.. _exp_sdk_state:
+
 SDK state
 ~~~~~~~~~
 
@@ -254,7 +256,8 @@ and connecting the two.
 Upon :ref:`refresh <ref_workshop_refresh>`,
 existing connections are preserved in the refreshed workshop
 if their plugs were connected before the operation.
-Stale connections are removed,
+A newer version of an SDK may drop a plug that was previously connected;
+such connections are removed,
 but the content remains.
 
 On :ref:`remove <ref_workshop_remove>`,
