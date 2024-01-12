@@ -48,7 +48,7 @@ that does the following:
 
 - Points the :samp:`target` directory *inside the workshop*
   to :file:`/home/workshop/go/pkg/mod/`;
-  it will be mounted a file directory on the host system
+  it will be mounted to a file directory on the host system
   that |project_markup| designates at run-time
 
 Overall, the intent of this declaration is
@@ -74,7 +74,7 @@ To let SDKs access the host file system,
 
 At run-time, the plug is connected to the slot;
 after that, it's time for some
-:ref:` validation and policy checks <exp_interfaces_validation>`
+:ref:`validation and policy checks <exp_interfaces_validation>`
 that |project_markup| does internally.
 This involves making sure that the plug declaration is correct;
 the plug is allowed to be installed and auto-connected;
