@@ -51,6 +51,12 @@ cd hi-workshop
 workshop list
 
 
+# Note: Changes and tasks after launch
+
+workshop changes
+workshop tasks $(workshop changes | awk 'END{print $1}')
+
+
 # Start and stop
 
 workshop stop nimble
@@ -76,7 +82,7 @@ EOF
 workshop refresh --wait-on-error nimble || true
 
 
-# Wait on error
+# Wait on error/Note: Changes and tasks after refresh
 
 workshop changes
 workshop tasks $(workshop changes | awk 'END{print $1}')

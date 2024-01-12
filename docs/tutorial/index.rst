@@ -142,6 +142,8 @@ use it to define, launch, start and stop your first
 :ref:`workshop <exp_workshop>`.
 
 
+.. _tut_define:
+
 Define
 ~~~~~~
 
@@ -185,6 +187,8 @@ Define
    Note that a newly created workshop is *Off*.
 
 
+.. _tut_launch:
+
 Launch
 ~~~~~~
 
@@ -212,7 +216,48 @@ move it, then run :command:`workshop list`:
        Project                Workshop   Status  Notes
        ~/hi-workshop          golang     Ready   -
 
-Note that the workshop stays operational with no extra steps.
+Mind that the workshop stays operational with no extra steps.
+
+.. note::
+
+   Check the recent :ref:`changes <ref_workshop_changes>`
+   to see what goes into launching a workshop:
+
+   .. code-block:: console
+
+      $ workshop changes
+
+         ID  Status  Spawn               Ready               Summary
+         34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
+
+   To investigate this change in detail,
+   supply its ID to the
+   :ref:`tasks <ref_workshop_tasks>`
+   command:
+
+   .. code-block:: console
+
+      $ workshop tasks 34
+
+         ID   Status  Spawn               Ready               Summary
+         133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "golang" workshop
+         134  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "hello-workshop"
+         135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "golang" workshop
+         136  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
+         137  Done    today at 11:32 GMT  today at 11:32 GMT  Install "go" SDK
+         138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
+         139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+         140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
+
+   Here, the project directory is mounted to the workshop as :file:`/project/`;
+   the workshop is *started*, in other words, brought online;
+   then the :samp:`go` SDK,
+   which was referenced in the :ref:`definition <tut_define>`,
+   is retrieved, installed and set up inside the workshop;
+   finally, the SDK is connected to the host system
+   via an :ref:`interface <exp_interfaces_plugs_slots>`.
+
+   For details, see :ref:`exp_changes_tasks`.
 
 
 Start and stop
@@ -226,7 +271,7 @@ If you're done with the workshop for now,
    $ workshop stop golang
 
 
-To resume, *start* the workshop again:
+To resume, start the workshop again:
 
 .. code-block:: console
 
@@ -369,6 +414,56 @@ To abort the operation and recover the last operational state:
    $ workshop refresh --abort golang
 
 
+.. note::
+
+   Even with no errors,
+   check the recent changes
+   to see what goes into refreshing a workshop:
+
+   .. code-block:: console
+
+      $ workshop changes
+
+         ID  Status  Spawn               Ready               Summary
+         35  Done    today at 12:15 GMT  today at 12:16 GMT  Launch "golang" workshop
+
+   To investigate this change in detail,
+   supply its ID to the
+   :ref:`tasks <ref_workshop_tasks>`
+   command:
+
+   .. code-block:: console
+
+      $ workshop tasks 35
+
+          ID   Status  Spawn               Ready               Summary
+          141  Done    today at 12:15 GMT  today at 12:15 GMT  Create SDK state storage
+          142  Done    today at 12:15 GMT  today at 12:15 GMT  Run hook "save-state" for "go" SDK
+          143  Done    today at 12:15 GMT  today at 12:15 GMT  Disconnect interfaces of "go" SDK
+          144  Done    today at 12:15 GMT  today at 12:15 GMT  Stash previous "golang" workshop
+          145  Done    today at 12:15 GMT  today at 12:16 GMT  Create new "golang" workshop
+          146  Done    today at 12:15 GMT  today at 12:16 GMT  Mount project directory "hi-workshop"
+          147  Done    today at 12:15 GMT  today at 12:16 GMT  Start "golang" workshop
+          148  Done    today at 12:15 GMT  today at 12:15 GMT  Retrieve "go" SDK from channel "latest/stable"
+          149  Done    today at 12:15 GMT  today at 12:16 GMT  Install "go" SDK
+          150  Done    today at 12:15 GMT  today at 12:16 GMT  Link "go" SDK
+          151  Done    today at 12:15 GMT  today at 12:16 GMT  Run hook "setup-base" for "go" SDK
+          152  Done    today at 12:15 GMT  today at 12:16 GMT  Auto-connect interfaces of "go" SDK
+          153  Done    today at 12:15 GMT  today at 12:16 GMT  Run hook "restore-state" for "go" SDK
+          154  Done    today at 12:15 GMT  today at 12:16 GMT  Remove SDK state storage
+          155  Done    today at 12:15 GMT  today at 12:16 GMT  Remove "golang" workshop from stash
+
+
+   This largely resembles the events at :ref:`launch <tut_launch>`;
+   however, :ref:`SDK states <exp_sdk_state>` are *stashed*
+   and :ref:`interfaces <exp_interfaces_plugs_slots>` are disconnected
+   before the refresh actually starts.
+   After updating the workshop on success
+   or rolling back to the stashed version on failure,
+   |project_markup| recovers SDK states
+   and reconnects the interfaces.
+
+
 .. _tut_exec:
 
 Execute commands
@@ -431,7 +526,10 @@ If you don't need a workshop anymore,
    $ workshop remove golang
 
 
-This leaves the workshop definition intact.
+This doesn't affect the files in the project directory,
+including the workshop definition,
+and any other content that was stored outside the workshop,
+e.g. via the :ref:`content interface <exp_content_interface>`.
 
 .. attention::
 

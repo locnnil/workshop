@@ -11,5 +11,6 @@ docs/.sphinx/warnings.txt
 docs/.sphinx/.wordlist.dic
 docs/.sphinx/.doctrees/
 docs/.sphinx/node_modules/
+docs/__pycache__/
 package*.json
 docs/_build
