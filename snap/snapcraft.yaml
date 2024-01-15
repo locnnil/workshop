@@ -2,18 +2,17 @@ name: workshop
 title: Workshop
 base: core22
 version: 0.1.0
-summary: Workshop automates intricate prerequisite setup for your development projects
+summary: A tool for defining and managing complex development environments
 description: |
-  Workshop automates intricate prerequisite setup for your projects, allowing
-  you to define development environments in straightforward YAML.
+  Define your prerequisites and dependencies in simple YAML.
 
-  The tool consumes the definition to create a contained workshop, installs the
-  dependencies it lists as a number of SDKs, and attaches their life cycle hooks
-  for run-time control.
+  Workshop consumes the definition to create a contained workshop,
+  installs the components as a set of SDKs
+  and attaches custom actions for run-time control.
 
-  IDEs such as Visual Studio Code or JupyterLab can discover workshops and
-  leverage them in their operation, tidying up your system and streamlining your
-  work.
+  IDEs such as Visual Studio Code or JupyterLab can discover workshops
+  and use them in day-to-day operations,
+  tidying up your system and streamlining your work.
 confinement: devmode
 grade: devel
 apps:
