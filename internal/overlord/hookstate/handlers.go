@@ -94,6 +94,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	info, err := wsFs.Stat(hookPath)
 	wsFs.Close()
 	if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
+		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk.Name, hook.Type())
 		return nil
 	}
 
