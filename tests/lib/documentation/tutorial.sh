@@ -19,7 +19,7 @@ sudo snap install snapcraft --classic  # needed to build from source only
 snapcraft
 
 sudo snap install --devmode ./workshop_0.1.0_amd64.snap
-sleep 2 # wait until the workshopd is up and running
+sleep 5 # wait until the workshopd is up and running
 
 
 # Run

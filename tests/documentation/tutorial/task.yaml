@@ -13,5 +13,8 @@ restore: |
   for c in $(lxc list | awk '{print $2}'  | grep ^snapcraft- | grep -v snapcraft-dev); do
     lxc delete $c --force
   done
+debug: |
+  snap services workshop
+  which workshop
 execute: |
   sudo -u ubuntu 2>&1 -- bash -c "$TESTSLIB"/documentation/tutorial.sh
