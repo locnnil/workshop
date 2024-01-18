@@ -61,8 +61,10 @@ suites:
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment
+      start_sdk_store
     restore: |
       . "$TESTSLIB"/utils.sh
+      stop_sdk_store
       cleanup_environment
   tests/integration/:
     summary: LXD integration tests
@@ -73,7 +75,7 @@ suites:
       . "$TESTSLIB"/utils.sh
       cleanup_environment
   tests/documentation/:
-    summary: Documentation tests
+   summary: Documentation tests
 
 path: /remote
 exclude:

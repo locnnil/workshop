@@ -33,7 +33,7 @@ execute: |
   echo "\"Fix\" the SDK error by replacing the setup-base hook"
   project_id=$(cat "$project"/.workshop.lock)
   instance=ws-"$project_id"
-  lxc exec "$instance" --project workshop.ubuntu -- sed -i "s/exit 1/exit 0/g" /var/lib/workshop/sdk/test-sdk-setup-fail/current/hooks/setup-base
+  lxc exec "$instance" --project workshop.ubuntu -- sed -i "s/exit 1/exit 0/g" /var/lib/workshop/sdk/test-sdk-setup-fail/current/sdk/hooks/setup-base
 
   echo "Check the workshop refresh --continue reverts to the previous state"
   workshop_exec refresh --project $project --continue ws | MATCH "\"ws\" refreshed"

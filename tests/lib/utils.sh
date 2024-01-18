@@ -9,9 +9,15 @@ function prepare_environment() {
   snap install lxd --classic
   cd /remote; GOBIN=/usr/bin go install -buildvcs=false /remote/cmd/workshop/
   lxd init --auto
+}
 
-  # run fake GCS bucket storage to emulate SDK store
+function start_sdk_store() {
+    # run fake GCS bucket storage to emulate SDK store
   publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
+  chown -R ubuntu.ubuntu /data # a bug with fake-gcs-server that returns 404 if not owned by the user
+  mkdir -p /storage
+  chown -R ubuntu.ubuntu /storage
+  
   /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
 
 
@@ -21,9 +27,13 @@ function prepare_environment() {
   done
 }
 
-function cleanup_environment() {
+function stop_sdk_store() {
+  pkill -f fake-gcs-server
   rm -rf /data
   rm -rf /storage
+}
+
+function cleanup_environment() {
   rm -f /usr/bin/workshopd
 }
 

@@ -288,7 +288,7 @@ func SdkCurrentPath(sdkName string) string {
 }
 
 func SdkHooksDir(sdkName string) string {
-	return filepath.Join(SdkCurrentPath(sdkName), "hooks")
+	return filepath.Join(SdkCurrentPath(sdkName), "sdk", "hooks")
 }
 
 func SdkHookPath(sdkName, hookName string) string {

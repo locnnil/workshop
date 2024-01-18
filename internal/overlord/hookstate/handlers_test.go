@@ -132,7 +132,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
@@ -170,7 +170,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/restore-state"})
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/restore-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
 }
 
@@ -205,7 +205,7 @@ func (s *hookSuite) TestHookFailed(c *check.C) {
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/hooks/save-state"})
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state directory
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
