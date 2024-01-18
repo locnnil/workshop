@@ -48,7 +48,7 @@ type ObjectStoreClient struct {
 func storeConnect() (*storage.Client, error) {
 	if url := os.Getenv("SDK_STORE_URL"); url != "" {
 		// Set STORAGE_EMULATOR_HOST environment variable for GSC.
-		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:9000")
+		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:8080")
 		if err != nil {
 			return nil, err
 		}
