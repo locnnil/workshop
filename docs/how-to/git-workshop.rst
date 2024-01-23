@@ -11,7 +11,7 @@ Let's see how you can integrate workshops into your repo.
 Initialisation
 --------------
 
-To start, place the :ref:`workshop definition <exp_workshop_def>`
+To start, place the workshop definition
 in your repository:
 
 .. code-block:: console
@@ -31,7 +31,7 @@ in your repository:
 
 
 Next,
-:ref:`launch <ref_workshop_launch>` the workshop
+:command:`launch` the workshop
 and start working on your code:
 
 .. code-block:: console
@@ -92,13 +92,12 @@ They stay there even if you remove the workshop:
 
 From here, do with your repo as you please
 because |project_markup| handles
-:ref:`moving files around <exp_moving_projects>`
-quite well.
+moving files around quite well.
 
 With your dependencies factored out like this,
 recovering your build system after cloning the repo elsewhere
 comes down to re-launching the workshop from a new
-:ref:`project directory <exp_project>`.
+*project directory*.
 
 But what if you have to maintain several branches
 that require different versions of the same workshop?
@@ -128,7 +127,7 @@ so you create a new worktree just for that:
 
 Instead of troubling yourself with virtual machines,
 amend the definition
-to change the :ref:`base image <exp_workshop_base>`:
+to change the base image:
 
 .. code-block:: yaml
    :caption: .workshop.golang.yaml
@@ -152,7 +151,7 @@ Next, you launch the redefined workshop to work on the problem:
    $ git merge hotfix
 
 
-Just like :ref:`with regular directories <exp_moving_projects>`,
+Just like with regular directories,
 |project_markup| cooperates nicely with
 :literalref:`git worktree move<https://git-scm.com/docs/git-worktree#_commands>`:
 
@@ -181,3 +180,21 @@ Thus, using :command:`git worktree` reduces the effort to sync, stash and pull,
 while |project_markup| enables you to hot-swap an entire OS
 or other complex dependencies
 by changing from one directory to another.
+
+
+See also
+--------
+
+Explanation:
+
+- :ref:`project directory <exp_project>`,
+  :ref:`moving projects <exp_moving_projects>`
+- :ref:`workshop base (concept) <exp_workshop_base>`
+- :ref:`workshop definition (file) <exp_workshop_def>`
+
+
+Reference:
+
+
+- :ref:`workshop launch (command) <ref_workshop_launch>`
+- :ref:`workshop remove (command) <ref_workshop_remove>`

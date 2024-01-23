@@ -6,11 +6,10 @@ Content interface
 Introduction
 ------------
 
-The content
-:ref:`interface <exp_interfaces_plugs_slots>`
+The content interface
 exposes host file system locations
 to individual SDKs
-by mounting them inside the :ref:`workshop <exp_workshop>`
+by mounting them inside the workshop
 that references these SDKs.
 
 
@@ -18,7 +17,7 @@ Content interface plug
 ----------------------
 
 An essential element here is the content interface plug
-that is declared in the :ref:`SDK definition <exp_sdk_def>`.
+that is declared in the SDK definition.
 A basic structure includes the name of the plug itself,
 the interface (:samp:`content`)
 and the intended target path inside the workshop:
@@ -74,7 +73,7 @@ To let SDKs access the host file system,
 
 At run-time, the plug is connected to the slot;
 after that, it's time for some
-:ref:`validation and policy checks <exp_interfaces_validation>`
+validation and policy checks
 that |project_markup| does internally.
 This involves making sure that the plug declaration is correct;
 the plug is allowed to be installed and auto-connected;
@@ -85,6 +84,23 @@ the :samp:`target` directory, as defined by the plug,
 is mounted on the host file system.
 That's where the module cache from our example will end up;
 the best part is that it will be preserved between workshop operations such as
-:ref:`refresh <ref_workshop_refresh>`,
-:ref:`start <ref_workshop_start>` and :ref:`stop <ref_workshop_stop>`,
+:command:`refresh`, :command:`start` and :command:`stop`,
 so you can benefit from a pre-populated module cache without doing extra work.
+
+
+See also
+--------
+
+Explanation:
+
+- :ref:`SDK definition (concept) <exp_sdk_def>`
+- :ref:`SDK interface (concept) <exp_interfaces_plugs_slots>`
+- :ref:`workshop base (concept) <exp_workshop_base>`
+- :ref:`workshop definition (concept) <exp_workshop_def>`
+
+
+Reference:
+
+- :ref:`workshop refresh (command) <ref_workshop_refresh>`
+- :ref:`workshop start (command) <ref_workshop_start>`
+- :ref:`workshop stop (command) <ref_workshop_stop>`

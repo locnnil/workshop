@@ -57,8 +57,8 @@ Explanation:
 - :ref:`workshop base (concept) <exp_workshop_base>`
 - :ref:`workshop definition (concept) <exp_workshop_def>`
 
+
 Reference:
 
 - :ref:`workshop refresh (command) <ref_workshop_refresh>`
 - :ref:`workshop remove (command) <ref_workshop_remove>`
-- :ref:`workshop start (command) <ref_workshop_start>`

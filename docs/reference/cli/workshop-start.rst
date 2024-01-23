@@ -27,7 +27,7 @@ Notes
 
 - If a workshop is already started or wasn't yet launched, an error occurs
 - When interrupted, the command attempts to gracefully revert its actions
-- To stop a started workshop, use 'workshop stop'
+- To stop a started workshop, use :ref:`ref_workshop_stop`
 
 
 Global options
@@ -50,8 +50,8 @@ Explanation:
 - :ref:`project (concept) <exp_project>`
 - :ref:`workshop (concept) <exp_workshop>`
 
+
 Reference:
 
-- :ref:`workshop exec (command) <ref_workshop_exec>`
 - :ref:`workshop launch (command) <ref_workshop_launch>`
 - :ref:`workshop stop (command) <ref_workshop_stop>`

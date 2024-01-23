@@ -53,19 +53,21 @@ Technically, a project is a directory
 that contains one or many workshop definitions.
 
 To initialise a directory as a project,
-create a :ref:`workshop definition <exp_workshop_def>` in it
-and run :ref:`ref_workshop_launch`.
+create a
+:ref:`workshop definition <exp_workshop_def>`
+in it
+and run :command:`workshop launch`.
 Launching a workshop from a project
 establishes the relationship between these two,
 which is required to actually start a workshop.
 
-When the workshop is then started with :ref:`ref_workshop_start`,
+When the workshop is then started with :command:`workshop start`,
 the project is mounted to it as :file:`/project/`,
-and the :ref:`ref_workshop_stop` command unmounts it.
+and the :command:`workshop stop` command unmounts it.
 
 .. note::
 
-   There are more :ref:`workshop <ref_workshop_cli>` commands;
+   There are more workshop CLI commands;
    some have a :option:`!--project` option
    that accepts a pathname to use as the project directory.
 
@@ -77,7 +79,7 @@ so you can continue working uninterrupted.
 If the project is deleted by external means,
 workshops still referencing it
 enter the *Error* state;
-the only applicable command will be :ref:`ref_workshop_remove`.
+the only applicable command will be :command:`workshop remove`.
 
 
 .. _exp_workshop:
@@ -159,7 +161,7 @@ The publisher of the SDK implements save and restore actions
 to let |project_markup| handle such data consistently as the *SDK state*.
 
 Before applying any changes to the SDK,
-usually during a :ref:`ref_workshop_refresh`,
+usually during a :command:`workshop refresh`,
 |project_markup| saves the workshop's SDK states
 by invoking their save actions.
 After a successful change,
@@ -244,23 +246,23 @@ the SDKs are able to use the external resources.
 Interfaces and workshop operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A number of basic :ref:`workshop operations <ref_workshop_cli>`
+A number of basic workshop operations
 affect plugs and slots in different ways.
 
-When you :ref:`launch <ref_workshop_launch>` a workshop,
+When you :command:`launch` a workshop,
 an auto-connect task handles the content interface plug,
 finding a candidate slot,
 verifying the plug's eligibility for the slot based on their declarations
 and connecting the two.
 
-Upon :ref:`refresh <ref_workshop_refresh>`,
+Upon :command:`refresh`,
 existing connections are preserved in the refreshed workshop
 if their plugs were connected before the operation.
 A newer version of an SDK may drop a plug that was previously connected;
 such connections are removed,
 but the content remains.
 
-On :ref:`remove <ref_workshop_remove>`,
+On :command:`remove`,
 both the interface connections and the host directories
 (if any were created, for example, to accommodate content slots)
 are removed.
@@ -272,3 +274,16 @@ are removed.
    Thus, at least some workshop operations will delete this data
    to prevent it from piling up in hidden locations,
    where it's unlikely to be used again.
+
+
+See also
+--------
+
+Reference:
+
+- :ref:`ref_workshop_cli`
+- :ref:`workshop launch (command) <ref_workshop_launch>`
+- :ref:`workshop refresh (command) <ref_workshop_refresh>`
+- :ref:`workshop remove (command) <ref_workshop_remove>`
+- :ref:`workshop start (command) <ref_workshop_start>`
+- :ref:`workshop stop (command) <ref_workshop_stop>`

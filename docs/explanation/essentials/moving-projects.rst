@@ -11,7 +11,7 @@ Let's spend some time talking about different aspects here.
 Before launch
 -------------
 
-A workshop that you didn't :ref:`launch <ref_workshop_launch>`
+A workshop that you didn't :command:`launch`
 is just that: a :ref:`definition file <exp_workshop_def>`
 which behaves like any good file should.
 Things start changing *after* you run :command:`workshop launch`:
@@ -123,3 +123,13 @@ before deleting the project directory:
 
    $ workshop remove golang --project /home/user/old/
    $ rm -rf /home/user/old/
+
+
+See also
+--------
+
+Reference:
+
+- :ref:`workshop launch (command) <ref_workshop_launch>`
+- :ref:`workshop list (command) <ref_workshop_list>`
+- :ref:`workshop remove (command) <ref_workshop_remove>`

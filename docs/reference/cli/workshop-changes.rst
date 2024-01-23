@@ -55,4 +55,6 @@ Explanation:
 
 Reference:
 
+- :ref:`workshop info (command) <ref_workshop_info>`
+- :ref:`workshop list (command) <ref_workshop_list>`
 - :ref:`workshop tasks (command) <ref_workshop_tasks>`

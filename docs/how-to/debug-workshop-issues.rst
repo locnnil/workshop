@@ -3,23 +3,18 @@
 How to debug issues in workshops
 ================================
 
-To trace the condition of a misbehaving
-:ref:`workshop <exp_workshop>`,
-you can explore its underlying
-:ref:`changes and tasks <exp_changes_tasks>`.
+To trace the condition of a misbehaving workshop,
+you can explore its underlying changes and tasks.
 This may help identify the root cause
-if a
-:ref:`refresh <tut_refresh>`
-fails.
+if a :command:`refresh` fails.
 
 
 List workshop changes
 ---------------------
 
-Consider a workshop named ``golang-volatile``
-that uses an unstable
-:ref:`SDK <exp_sdk>`
-from the ``latest/edge`` channel:
+Consider a workshop named :samp:`golang-volatile`
+that uses an unstable SDK
+from the :samp:`latest/edge` channel:
 
 .. code-block:: yaml
    :caption: .workshop.golang-volatile.yaml
@@ -31,9 +26,7 @@ from the ``latest/edge`` channel:
        channel: latest/edge
 
 
-Suppose something goes during a
-:ref:`refresh <tut_refresh>`
-operation:
+Suppose something goes during a :command:`refresh`:
 
 .. code-block:: console
 
@@ -84,3 +77,20 @@ list its *tasks* to see the cause:
        ModuleNotFoundError: No module named 'tensorrt.tensorrt'
 
 The SDK-specific reason can be addressed individually.
+
+
+See also
+--------
+
+Explanation:
+
+- :ref:`changes, tasks (concept) <exp_changes_tasks>`
+- :ref:`SDK (concept) <exp_sdk>`
+- :ref:`workshop (concept) <exp_workshop>`
+
+
+Reference:
+
+- :ref:`workshop changes (command) <ref_workshop_changes>`
+- :ref:`workshop refresh (command) <ref_workshop_refresh>`
+- :ref:`workshop tasks (command) <ref_workshop_tasks>`

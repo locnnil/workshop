@@ -22,34 +22,43 @@ There are several categories of commands that vary by their purpose:
 .. list-table::
    :header-rows: 1
    :width: 95
-   :widths: 1 1 2
+   :widths: 10 11 20
 
    * - Actions
      - Commands
      - What they do
 
    * - Create, update, delete
-     - :ref:`launch <ref_workshop_launch>`,
-       :ref:`refresh <ref_workshop_refresh>`,
-       :ref:`remove <ref_workshop_remove>`
+     - :command:`launch`,
+       :command:`refresh`,
+       :command:`remove`
      - Control a workshop's existence;
        not to be confused with starting or stopping a workshop.
 
    * - Start, stop
-     - :ref:`start <ref_workshop_start>`,
-       :ref:`stop <ref_workshop_stop>`
+     - :command:`start`,
+       :command:`stop`
      - Begin and end the run-time life cycle of an existing workshop.
 
    * - Explore, troubleshoot
-     - :ref:`list <ref_workshop_list>`,
-       :ref:`info <ref_workshop_info>`,
-       :ref:`changes <ref_workshop_changes>`,
-       :ref:`tasks <ref_workshop_tasks>`
+     - :command:`list`,
+       :command:`info`,
+       :command:`changes`,
+       :command:`tasks`
      - Enumerate workshops, list their details and recent activities.
 
    * - Utilise
-     - :ref:`exec <ref_workshop_exec>`
+     - :command:`exec`
      - Run commands inside a workshop.
+
 
 For an end-to-end example of putting these commands to use,
 refer to the :ref:`tutorial <tutorial>`.
+
+
+See also
+--------
+
+Reference:
+
+- :ref:`ref_workshop_cli`

@@ -1,6 +1,10 @@
 Workshop
 ========
 
+.. image:: https://readthedocs.com/projects/canonical-workshop/badge/?version=latest&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
+   :target: https://canonical-workshop.readthedocs-hosted.com/en/latest/?badge=latest
+   :alt: Documentation Status
+
 **A tool for defining and managing complex development environments**.
 
 **Define your prerequisites and dependencies in simple YAML**.
