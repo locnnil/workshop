@@ -24,7 +24,7 @@ backends:
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi
-      multipass launch --disk 20G --memory 8G --cpus 8 --name "$instance_name" "$image"
+      multipass launch --disk 20G --memory 4G --cpus 8 --name "$instance_name" "$image"
       # Get the IP from the instance
       ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d\, -f3)
       # Enable PasswordAuthertication for root over SSH.
@@ -76,6 +76,7 @@ suites:
       cleanup_environment
   tests/documentation/:
    summary: Documentation tests
+   kill-timeout: 30m
 
 path: /remote
 exclude:

@@ -7,11 +7,14 @@ on:
   schedule:
     - cron: "0 0 */2 * *"
   workflow_dispatch:
-
+  
 jobs:
   snap-tests:
-    runs-on: [self-hosted, Linux, X64]
-
+    strategy:
+      matrix:
+        os: [ubuntu-22.04-64]
+        suite: [main, documentation, integration]
+    runs-on: [self-hosted, Linux, X64, large]
     steps:
       - name: Cleanup job workspace
         run: |
@@ -31,4 +34,4 @@ jobs:
       - name: Install spread
         run: go install github.com/snapcore/spread/cmd/spread@latest
       - name: Run spread
-        run: spread
+        run: spread tests/${{matrix.suite}}/
