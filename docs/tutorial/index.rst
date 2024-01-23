@@ -7,15 +7,22 @@ This is a practical introduction
 that takes you on a tour
 of the essential |project_markup| activities.
 
-Here, you will put into practice all major steps in the life cycle of a
-*workshop*, from defining and launching it to using it with your project and
-deleting it.  The commands you're about to run comprise the majority of your
-daily needs with |project_markup|.
+Here, you will put into practice all major steps
+in the life cycle of a *workshop*,
+from defining and launching it
+to using it with your project and deleting it.
+The commands you're about to run
+comprise the majority of your daily needs with |project_markup|.
 
-Refer to the :ref:`explanation <exp_index>` if you need a more descriptive
-overview. For comprehensive details, see the :ref:`reference
-<ref_workshop_cli>`. Finally, see the :ref:`how-to guides <howto_index>` if
-you're looking for advanced practical steps.
+Refer to the
+:ref:`explanation <exp_index>`
+if you need a more descriptive overview.
+For comprehensive details, explore the
+:ref:`reference <ref_workshop_cli>`.
+Finally, see the
+:ref:`how-to guides <howto_index>`
+if you're looking for advanced practical steps.
+
 
 .. attention::
 
