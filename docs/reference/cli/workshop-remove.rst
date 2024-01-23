@@ -52,4 +52,5 @@ Explanation:
 Reference:
 
 - :ref:`workshop launch (command) <ref_workshop_launch>`
+- :ref:`workshop refresh (command) <ref_workshop_refresh>`
 - :ref:`workshop stop (command) <ref_workshop_stop>`

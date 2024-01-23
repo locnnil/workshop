@@ -6,8 +6,7 @@ Workshop definition
 Filename convention
 -------------------
 
-The name of the
-:ref:`workshop definition <exp_workshop_def>`
+The name of the workshop definition
 file must have the following format: :file:`.workshop.<NAME>.yaml`.
 
 .. tip:: Note the dot at the start.
@@ -43,15 +42,14 @@ and include the following three keys:
 
    * - :samp:`base`
      - string
-     - Workshop's :ref:`base image <exp_workshop_base>`
+     - Workshop's base image
        that provides the underlying OS capabilities.
 
        It can be :samp:`ubuntu@20.04` or :samp:`ubuntu@22.04`.
 
    * - :samp:`sdks`
      - object
-     - List of individual
-       :ref:`SDKs <exp_sdk>`
+     - List of individual SDKs
        from the store to include in the workshop.
 
        Each entry here points to an existing SDK

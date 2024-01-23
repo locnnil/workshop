@@ -81,3 +81,4 @@ Explanation:
 Reference:
 
 - :ref:`workshop launch (command) <ref_workshop_launch>`
+- :ref:`workshop remove (command) <ref_workshop_remove>`

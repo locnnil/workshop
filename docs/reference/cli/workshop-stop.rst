@@ -26,7 +26,7 @@ Notes
 
 - If a workshop wasn't yet started or even launched, an error occurs
 - When interrupted, the command attempts to gracefully revert its actions
-- To start a stopped workshop, use 'workshop start'
+- To start a stopped workshop, use :ref:`ref_workshop_start`
 
 
 Global options
@@ -48,6 +48,7 @@ Explanation:
 
 - :ref:`project (concept) <exp_project>`
 - :ref:`workshop (concept) <exp_workshop>`
+
 
 Reference:
 

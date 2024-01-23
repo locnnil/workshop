@@ -47,3 +47,10 @@ Explanation:
 - :ref:`SDK (concept) <exp_sdk>`
 - :ref:`workshop base (concept) <exp_workshop_base>`
 - :ref:`workshop definition (concept) <exp_workshop_def>`
+
+
+Reference:
+
+- :ref:`workshop changes (command) <ref_workshop_changes>`
+- :ref:`workshop list (command) <ref_workshop_list>`
+- :ref:`workshop tasks (command) <ref_workshop_tasks>`
