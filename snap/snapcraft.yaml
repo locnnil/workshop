@@ -25,6 +25,7 @@ apps:
       WORKSHOP: ${SNAP_COMMON}
     command: bin/workshopd run --create-dirs
     daemon: simple
+    restart-condition: on-failure
     plugs:
       - home
       - lxd

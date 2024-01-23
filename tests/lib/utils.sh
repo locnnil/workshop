@@ -11,6 +11,10 @@ function prepare_environment() {
   lxd init --auto
 }
 
+function cleanup_environment() {
+  rm -f /usr/bin/workshop
+}
+
 function start_sdk_store() {
     # run fake GCS bucket storage to emulate SDK store
   publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
@@ -31,10 +35,6 @@ function stop_sdk_store() {
   pkill -f fake-gcs-server
   rm -rf /data
   rm -rf /storage
-}
-
-function cleanup_environment() {
-  rm -f /usr/bin/workshopd
 }
 
 function install_workshopd() {

@@ -1,7 +1,7 @@
 summary: Run tutorial commands to ensure it's operational
 prepare: |
-  chmod u+x "$TESTSLIB"/documentation/tutorial.sh
-  chown ubuntu:ubuntu "$TESTSLIB"/documentation/tutorial.sh
+  chmod u+x ./tutorial.sh
+  chown ubuntu:ubuntu ./tutorial.sh
   mkdir -p /home/ubuntu/workshop
   cp -R /remote/* /home/ubuntu/workshop
   chown -R ubuntu:ubuntu /home/ubuntu/workshop
@@ -17,4 +17,4 @@ debug: |
   snap services workshop
   which workshop
 execute: |
-  sudo -u ubuntu 2>&1 -- bash -c "$TESTSLIB"/documentation/tutorial.sh
+  sudo -u ubuntu 2>&1 -- bash -c ./tutorial.sh
