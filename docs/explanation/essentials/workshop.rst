@@ -34,8 +34,9 @@ A simple definition may look like this:
        channel: latest/stable
 
 This specifies a *base* and an *SDK*.
-A more complete definition would usually list
-multiple SDKs, interfaces, packages and life cycle hooks.
+A more complete definition would usually list multiple SDKs
+that use different :ref:`interfaces <exp_interfaces>`,
+packages and :ref:`life cycle hooks <exp_sdk_hooks>`.
 
 
 .. _exp_workshop_base:

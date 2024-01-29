@@ -17,8 +17,8 @@ SDKs are distributed via channels similar to
 
 .. _exp_sdk_state:
 
-SDK state
----------
+State
+-----
 
 An SDK may store any data specific to it,
 such as a model training configuration,
@@ -29,15 +29,15 @@ to let |project_markup| handle such data consistently as the *SDK state*.
 Before applying any changes to the SDK,
 usually during a :command:`workshop refresh`,
 |project_markup| saves the workshop's SDK states
-by invoking their save actions.
+by invoking their :ref:`life cycle hooks <exp_sdk_hooks>`.
 After a successful change,
 the states are respectively restored.
 
 
 .. _exp_sdk_def:
 
-SDK definition
---------------
+Definition
+----------
 
 An SDK is defined in a file named :file:`sdk.yaml` that may look like this:
 
@@ -57,6 +57,30 @@ An SDK is defined in a file named :file:`sdk.yaml` that may look like this:
        interface: content
        target: /home/workshop/go/pkg/mod
 
+
+.. _exp_sdk_hooks:
+
+Life cycle hooks
+----------------
+
+SDK publishers can define optional *hooks*
+that control and extend the workshop's internal behaviour
+to make any framework wrapped as an SDK
+compatible with |project_markup|'s logic.
+
+Each hook packs domain-aware actions into a shell script
+that |project_markup| runs in the workshop
+at a certain life cycle phase
+to ensure the SDK stays functional.
+Specific examples include :samp:`setup-base`,
+:samp:`save-state` and :samp:`restore-state`.
+
+You may see individual hooks mentioned
+when running :program:`workshop changes` and :program:`workshop tasks` commands;
+understanding the events that trigger them may help you with troubleshooting.
+
+
+.. _exp_interfaces:
 
 Interfaces
 ----------
@@ -158,8 +182,4 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_cli`
-- :ref:`workshop launch (command) <ref_workshop_launch>`
-- :ref:`workshop refresh (command) <ref_workshop_refresh>`
-- :ref:`workshop remove (command) <ref_workshop_remove>`
-- :ref:`workshop start (command) <ref_workshop_start>`
-- :ref:`workshop stop (command) <ref_workshop_stop>`
+- :ref:`ref_sdk_hooks`
