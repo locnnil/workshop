@@ -1,7 +1,7 @@
 Project, workshop, SDKs
 =======================
 
-Projects, workshops, workshop definitions and SDKs
+Projects, workshops and their SDKs
 are the key building blocks of |project_markup|.
 
 
