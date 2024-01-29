@@ -192,10 +192,8 @@ An SDK is defined in a file named :file:`sdk.yaml` that may look like this:
        target: /home/workshop/go/pkg/mod
 
 
-.. _exp_interfaces_plugs_slots:
-
-Interfaces, plugs and slots
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interfaces
+~~~~~~~~~~
 
 To make SDKs customisable and extensible,
 |project_markup| implements a counterpart to
@@ -204,6 +202,12 @@ To make SDKs customisable and extensible,
 controlling whether an individual SDK can use resources beyond its confinement.
 You can think of specific interfaces as resource *types*:
 file system, hardware, computational and so on.
+
+
+.. _exp_interfaces_plugs_slots:
+
+Plugs and slots
+^^^^^^^^^^^^^^^
 
 In order to provide access to these resource types,
 |project_markup| exposes so-called *interface slots*.
@@ -226,8 +230,8 @@ provided the definition contains everything |project_markup| needs to make a mat
 
 .. _exp_interfaces_validation:
 
-Interface validation and policies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Validation and policies
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Now, to make sure plugs can be installed and auto-connected,
 |project_markup| uses a set of rules called policies,
@@ -243,8 +247,8 @@ the SDKs are able to use the external resources.
 
 .. _exp_interfaces_cli_operations:
 
-Interfaces and workshop operations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Related CLI operations
+^^^^^^^^^^^^^^^^^^^^^^
 
 A number of basic workshop operations
 affect plugs and slots in different ways.
