@@ -1,4 +1,4 @@
-:relatedlinks: [LXD](https://documentation.ubuntu.com/lxd/en/latest/), [Snap](https://snapcraft.io/docs)
+:relatedlinks: [SDKcraft](https://canonical-sdkcraft.readthedocs-hosted.com/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
 
 .. _home:
 
@@ -64,7 +64,16 @@ Project and community
 ---------------------
 
 |project_markup| is an emergent project
-within the Enterprise Engineering department here at Canonical.
+within the Enterprise Engineering department here at Canonical;
+`SDKcraft <https://canonical-sdkcraft.readthedocs-hosted.com/>`_
+is a sibling project,
+aimed at publishers who create and distribute SDKs for |project_markup|.
+
+At its core, |project_markup| relies on
+`LXD <https://documentation.ubuntu.com/lxd/>`_
+to handle the low-level details that make the magic happen;
+it also follows the tooling paradigm exemplified by
+`Snap <https://snapcraft.io/docs/>`_.
 
 Come and talk to us if you have a project in AI/ML, robotics or any other area
 where setting up an environment is a daily or weekly activity
