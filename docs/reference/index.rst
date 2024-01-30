@@ -1,15 +1,6 @@
 Reference
 =========
 
-Workshops
----------
-
-.. toctree::
-   :maxdepth: 1
-
-   workshop-definition
-
-
 Command-line interface
 ----------------------
 
@@ -17,3 +8,13 @@ Command-line interface
    :maxdepth: 1
 
    cli/index
+
+
+Workshops, SDKs
+---------------
+
+.. toctree::
+   :maxdepth: 1
+
+   sdk-hooks
+   workshop-definition
