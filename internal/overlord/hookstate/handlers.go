@@ -51,12 +51,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		{
 			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 			err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
 			fs.Close()
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 		}
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
@@ -64,12 +64,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		{
 			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 			info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
 			fs.Close()
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk.Name, err)
 			}
 
 			if !info.IsDir() {
