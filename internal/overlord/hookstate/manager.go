@@ -1,6 +1,8 @@
 package hookstate
 
 import (
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -23,11 +25,12 @@ type Handler interface {
 }
 
 type HookSetup struct {
-	Sdk         workshopbackend.SdkRecord `json:"sdk"`
-	HookType    WorkshopHookType          `json:"type"`
-	Environment map[string]string         `json:"environment"`
-	Timeout     time.Duration             `json:"timeout"`
-	IgnoreError bool                      `json:"bool"`
+	Workshop    string            `json:"workshop"`
+	Sdk         string            `json:"sdk"`
+	HookType    WorkshopHookType  `json:"type"`
+	Environment map[string]string `json:"environment"`
+	Timeout     time.Duration     `json:"timeout"`
+	IgnoreError bool              `json:"bool"`
 }
 
 type WorkshopHookType int
@@ -47,11 +50,16 @@ func (h *HookSetup) Type() string {
 }
 
 type HookManager struct {
+	state   *state.State
 	backend workshopbackend.WorkshopBackend
+
+	contextsMutex sync.RWMutex
+	contexts      map[string]*Context
 }
 
-func New(runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
+func New(s *state.State, runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
 	manager := &HookManager{
+		state:   s,
 		backend: server,
 	}
 
@@ -62,4 +70,37 @@ func New(runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *Hook
 
 func (w *HookManager) Ensure() error {
 	return nil
+}
+
+func (m *HookManager) ephemeralContext(cookieID string) (context *Context, err error) {
+	var contexts map[string]string
+	m.state.Lock()
+	defer m.state.Unlock()
+	err = m.state.Get("workshop-cookies", &contexts)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get workshop cookies: %v", err)
+	}
+	if workshop, ok := contexts[cookieID]; ok {
+		// create new ephemeral context
+		context, err = NewContext(nil, m.state, &HookSetup{Workshop: workshop}, nil, cookieID)
+		return context, err
+	}
+	return nil, fmt.Errorf("invalid workshop cookie requested")
+}
+
+// Context obtains the context for the given cookie ID.
+func (m *HookManager) Context(cookieID string) (*Context, error) {
+	m.contextsMutex.RLock()
+	defer m.contextsMutex.RUnlock()
+
+	var err error
+	context, ok := m.contexts[cookieID]
+	if !ok {
+		context, err = m.ephemeralContext(cookieID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return context, nil
 }

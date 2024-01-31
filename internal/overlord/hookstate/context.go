@@ -32,7 +32,7 @@ import (
 	"github.com/canonical/x-go/randutil"
 )
 
-// Context represents the context under which the snap is calling back into snapd.
+// Context represents the context under which the workshop is calling back into workshopd.
 // It is associated with a task when the callback is happening from within a hook,
 // or otherwise considered an ephemeral context in that its associated data will
 // be discarded once that individual call is finished.

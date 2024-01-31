@@ -35,7 +35,7 @@ type MissingContextError struct {
 }
 
 func (e *MissingContextError) Error() string {
-	return fmt.Sprintf(`cannot invoke workshopctl operation commands (here %q) from outside of a snap`, e.subcommand)
+	return fmt.Sprintf(`cannot invoke workshopctl operation commands (here %q) from outside of a workshop`, e.subcommand)
 }
 
 type baseCommand struct {
@@ -135,7 +135,7 @@ func (f ForbiddenCommandError) Error() string {
 
 // nonRootAllowed lists the commands that can be performed even when workshopctl
 // is invoked not by root.
-var nonRootAllowed = []string{"get", "services", "set-health", "is-connected", "system-mode", "model"}
+var nonRootAllowed = []string{"set-health"}
 
 // Run runs the requested command.
 func Run(context *hookstate.Context, args []string, uid uint32) (stdout, stderr []byte, err error) {
@@ -175,7 +175,7 @@ func isAllowedToRun(uid uint32, args []string) bool {
 	//	* It runs as root
 	//	* It's contained in nonRootAllowed
 	//	* It's used with the -h or --help flags
-	// note: commands still need valid context and snaps can only access own config.
+	// note: commands still need valid context and workshops can only access own config.
 	return uid == 0 ||
 		strutil.ListContains(nonRootAllowed, args[0]) ||
 		strutil.ListContains(args, "-h") ||

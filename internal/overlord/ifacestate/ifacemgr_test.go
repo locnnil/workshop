@@ -58,7 +58,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
 
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
 }
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {

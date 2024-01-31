@@ -29,7 +29,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -48,7 +47,7 @@ func (s *ctlcmdSuite) SetUpTest(c *C) {
 	defer state.Unlock()
 
 	task := state.NewTask("test-task", "my test task")
-	setup := &hookstate.HookSetup{Sdk: workshopbackend.SdkRecord{Name: "test-sdk", Channel: "latest/stable"}, HookType: hookstate.SetupBase}
+	setup := &hookstate.HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: hookstate.SetupBase}
 
 	var err error
 	s.mockContext, err = hookstate.NewContext(task, task.State(), setup, handler, "")
@@ -88,7 +87,7 @@ func (s *ctlcmdSuite) TestHiddenCommand(c *C) {
 	// Type as flags.ErrHelp
 	c.Assert(err, FitsTypeOf, &flags.Error{})
 	c.Check(err.(*flags.Error).Type, Equals, flags.ErrHelp)
-	// workshopctl is mentioned (not snapd)
+	// workshopctl is mentioned (not workshopd)
 	c.Check(err.Error(), testutil.Contains, "workshopctl")
 	// mock-shown is in the help message
 	c.Check(err.Error(), testutil.Contains, "  mock-shown\n")

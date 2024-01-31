@@ -62,7 +62,7 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.hookmgr = hookstate.New(s.runner, s.backend)
+	s.hookmgr = hookstate.New(s.state, s.runner, s.backend)
 
 	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
@@ -83,9 +83,8 @@ func (s *hookSuite) TearDownTest(c *check.C) {
 func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workshopbackend.SdkRecord{Name: "new", Channel: "latest/stable"}
 
-	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SetupBase)
+	t1 := hookstate.SetupHook(s.state, "ws", "new", hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -114,15 +113,14 @@ base: ubuntu@20.04
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
-	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkshop(c, newSdk)
+	s.launchWorkshop(c, "one")
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -146,15 +144,14 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
-	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.RestoreState)
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkshop(c, newSdk)
+	s.launchWorkshop(c, "one")
 
 	// setup state storage (usually already set by the save-state)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
@@ -177,15 +174,14 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 func (s *hookSuite) TestHookFailed(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := workshopbackend.SdkRecord{Name: "one", Channel: "latest/stable"}
-	t1 := hookstate.SetupHook(s.state, &newSdk, hookstate.SaveState)
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkshop(c, newSdk)
+	s.launchWorkshop(c, "one")
 	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		return workshopbackend.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
@@ -217,7 +213,7 @@ func (s *hookSuite) TestHookFailed(c *check.C) {
 	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error")
 }
 
-func (s *hookSuite) launchWorkshop(c *check.C, newSdk workshopbackend.SdkRecord) {
+func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 sdks:
@@ -229,12 +225,12 @@ sdks:
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	err = ws.MkdirAll(sdk.SdkHooksDir(newSdk.Name), 0744)
+	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)
 	c.Check(err, check.IsNil)
-	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.SaveState.String()))
+	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.SaveState.String()))
 	c.Check(err, check.IsNil)
-	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.RestoreState.String()))
+	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.RestoreState.String()))
 	c.Check(err, check.IsNil)
-	_, err = ws.Create(sdk.SdkHookPath(newSdk.Name, hookstate.SetupBase.String()))
+	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.SetupBase.String()))
 	c.Check(err, check.IsNil)
 }
