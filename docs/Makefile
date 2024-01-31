@@ -3,9 +3,9 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?= -c . -d .sphinx/.doctrees
-SPHINXBUILD   ?= sphinx-build
 SPHINXDIR     = .sphinx
+SPHINXOPTS    ?= -c . -d $(SPHINXDIR)/.doctrees
+SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 VENVDIR       = $(SPHINXDIR)/venv
@@ -15,14 +15,33 @@ VENV          = $(VENVDIR)/bin/activate
 
 # Put it first so that "make" without argument is like "make help".
 .PHONY: help
-help: install
-	. $(VENV); $(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" \
-        $(SPHINXOPTS) $(O)
+help:
+	@echo "\n" \
+        "--------------------------------------------------------------- \n" \
+        "* watch, build and serve the documentation: make run \n" \
+        "* only build: make html \n" \
+        "* only serve: make serve \n" \
+        "* clean built doc files: make clean-doc \n" \
+        "* clean full environment: make clean \n" \
+        "* check links: make linkcheck \n" \
+        "* check spelling: make spelling \n" \
+        "* check inclusive language: make woke \n" \
+        "* check accessibility: make pa11y \n" \
+        "* other possible targets: make <press TAB twice> \n" \
+        "--------------------------------------------------------------- \n"
+
+.PHONY: full-help
+full-help: $(VENVDIR)
+	@. $(VENV); $(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "\n\033[1;31mNOTE: This help texts shows unsupported targets!\033[0m"
+	@echo "Run 'make help' to see supported targets."
 
 
-# Explicit target avoids fall-through to the "Makefile" target.
+# Must not assume the venv module is available because Reasons (capital R):
+# https://bugs.launchpad.net/ubuntu/+source/python3.4/+bug/1290847
 $(SPHINXDIR)/requirements.txt:
-	test -f $(SPHINXDIR)/requirements.txt
+	python3 build_requirements.py
+	sudo apt install python3-venv
 
 
 # If requirements are updated, venv should be rebuilt and timestamped.
@@ -35,19 +54,6 @@ $(VENVDIR): $(SPHINXDIR)/requirements.txt
 	@test ! -f $(VENVDIR)/pip_list.txt || \
             mv $(VENVDIR)/pip_list.txt $(VENVDIR)/pip_list.txt.bak
 	@. $(VENV); pip list --local --format=freeze > $(VENVDIR)/pip_list.txt
-	@echo "\n" \
-	        "--------------------------------------------------------------- \n" \
-        "* watch, build and serve the documentation: make run \n" \
-        "* only build: make html \n" \
-        "* only serve: make serve \n" \
-        "* clean built doc files: make clean-doc \n" \
-        "* clean full environment: make clean \n" \
-        "* check links: make linkcheck \n" \
-        "* check spelling: make spelling \n" \
-        "* check inclusive language: make woke \n" \
-		"* check accessibility: make pa11y \n" \
-        "* other possible targets: make <press TAB twice> \n" \
-        "--------------------------------------------------------------- \n"
 	@touch $(VENVDIR)
 
 
@@ -55,6 +61,7 @@ $(VENVDIR): $(SPHINXDIR)/requirements.txt
 woke-install:
 	@type woke >/dev/null 2>&1 || \
 		{ echo "Installing \"woke\" snap... \n"; sudo snap install woke; }
+
 
 .PHONY:  pa11y-install
 pa11y-install:
@@ -66,7 +73,7 @@ pa11y-install:
 
 
 .PHONY:  install
-install: $(VENVDIR) woke-install pa11y-install
+install: $(VENVDIR)
 
 
 .PHONY: run
@@ -78,13 +85,13 @@ run: install
 .PHONY: html
 html: install
 	. $(VENV); $(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" \
-		-w .sphinx/warnings.txt $(SPHINXOPTS)
+		-w $(SPHINXDIR)/warnings.txt $(SPHINXOPTS)
 
 
 .PHONY: epub
 epub: install
 	. $(VENV); $(SPHINXBUILD) -b epub "$(SOURCEDIR)" "$(BUILDDIR)" \
-		-w .sphinx/warnings.txt $(SPHINXOPTS)
+		-w $(SPHINXDIR)/warnings.txt $(SPHINXOPTS)
 
 
 .PHONY: serve
@@ -97,17 +104,19 @@ clean: clean-doc
 	@test ! -e "$(VENVDIR)" -o -d "$(VENVDIR)" -a \
 		"$(abspath $(VENVDIR))" != "$(VENVDIR)"
 	rm -rf $(VENVDIR)
-	rm -rf .sphinx/.doctrees
-	rm -rf .sphinx/node_modules
+	rm -f $(SPHINXDIR)/requirements.txt
+	rm -rf $(SPHINXDIR)/node_modules/
+
 
 .PHONY: clean-doc
 clean-doc:
 	git clean -fx "$(BUILDDIR)"
+	rm -rf $(SPHINXDIR)/.doctrees
 
 
 .PHONY: spelling
 spelling: html
-	. $(VENV) ; python3 -m pyspelling -c .sphinx/spellingcheck.yaml
+	. $(VENV) ; python3 -m pyspelling -c $(SPHINXDIR)/spellingcheck.yaml -j $(shell nproc)
 
 
 .PHONY: linkcheck
@@ -116,12 +125,12 @@ linkcheck: install
 
 
 .PHONY: woke
-woke:
+woke: woke-install
 	woke *.rst **/*.rst --exit-1-on-failure \
 	    -c https://github.com/canonical/Inclusive-naming/raw/main/config.yml
 
 .PHONY: pa11y
-pa11y: html
+pa11y: pa11y-install html
 	find $(BUILDDIR) -name *.html -print0 | xargs -n 1 -0 $(PA11Y)
 
 # Catch-all target: route all unknown targets to Sphinx using the new

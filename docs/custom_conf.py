@@ -28,7 +28,7 @@ html_title = ""
 #   -H 'Accept: application/vnd.github.v3.raw' \
 #   https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
 
-copyright = "%s, %s" % ("2022–" + str(datetime.date.today().year), author)
+copyright = '%s, %s' % (datetime.date.today().year, author)
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output
@@ -54,6 +54,9 @@ html_context = {
     # (use an empty value if you don't want to link)
     "discourse": "https://discourse.ubuntu.com",
     # Change to the GitHub info for your project
+# Change to the Mattermost channel you want to link to
+    # (use an empty value if you don't want to link)
+    'mattermost': 'https://chat.canonical.com/canonical/channels/SDK',
     "github_url": "https://github.com/canonical/workshop",
     # Change to the branch for this version of the documentation
     "github_version": "main",
@@ -112,14 +115,31 @@ custom_linkcheck_anchors_ignore_for_url = []
 ## The following settings are appended to the default configuration.
 ## Use them to extend the default functionality.
 
-# Add extensions
-custom_extensions = []
+# Add custom Sphinx extensions as needed. 
+# This array contains recommended extensions that should be used.
+# NOTE: The following extensions are handled automatically and do 
+# not need to be added here: myst_parser, sphinx_copybutton, sphinx_design,
+# sphinx_reredirects, sphinxcontrib.jquery, sphinxext.opengraph
+custom_extensions = [
+    'sphinx_tabs.tabs',
+    'canonical.youtube-links',
+    'canonical.related-links',
+    'canonical.custom-rst-roles',
+    'canonical.terminal-output'
+    ]
 
-# Add MyST extensions
-custom_myst_extensions = []
+# Add custom required Python modules that must be added to the
+# .sphinx/requirements.txt file.
+# NOTE: The following modules are handled automatically and do not need to be
+# added here: canonical-sphinx-extensions, furo, linkify-it-py, myst-parser,
+# pyspelling, sphinx, sphinx-autobuild, sphinx-copybutton, sphinx-design,
+# sphinx-reredirects, sphinx-tabs, sphinxcontrib-jquery, sphinxext-opengraph
+custom_required_modules = []
 
 # Add files or directories that should be excluded from processing.
-custom_excludes = []
+custom_excludes = [
+    "README.rst"
+    ]
 
 # Add CSS files (located in .sphinx/_static/)
 custom_html_css_files = []
@@ -142,12 +162,19 @@ custom_tags = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
 # (not so easy with reuse/substitutions.txt in default custom_rst_epilog)
 rst_prolog = f"""
+.. role:: center
+   :class: align-center
+
 .. |project| replace:: {project}
 """
 
 # By default, the documentation includes a feedback button at the top.
 # You can disable it by setting the following configuration to True.
 disable_feedback_button = False
+
+# Add tags that you want to use for conditional inclusion of text
+# (https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#tags)
+custom_tags = []
 
 ############################################################
 ### Additional configuration
