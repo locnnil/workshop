@@ -1,15 +1,33 @@
 package hookstate
 
 import (
+	"time"
+
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
+// Handler is the interface a client must satify to handle hooks.
+type Handler interface {
+	// Before is called right before the hook is to be run.
+	Before() error
+
+	// Done is called right after the hook has finished successfully.
+	Done() error
+
+	// Error is called if the hook encounters an error while running.
+	// The returned bool flag indicates if the original hook error should be
+	// ignored by hook manager.
+	Error(hookErr error) (ignoreHookErr bool, err error)
+}
+
 type HookSetup struct {
 	Sdk         workshopbackend.SdkRecord `json:"sdk"`
 	HookType    WorkshopHookType          `json:"type"`
 	Environment map[string]string         `json:"environment"`
+	Timeout     time.Duration             `json:"timeout"`
+	IgnoreError bool                      `json:"bool"`
 }
 
 type WorkshopHookType int
