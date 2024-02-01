@@ -41,7 +41,7 @@ full-help: $(VENVDIR)
 # https://bugs.launchpad.net/ubuntu/+source/python3.4/+bug/1290847
 $(SPHINXDIR)/requirements.txt:
 	python3 build_requirements.py
-	sudo apt install python3-venv
+	python3 -c "import venv" || sudo apt install python3-venv
 
 
 # If requirements are updated, venv should be rebuilt and timestamped.
