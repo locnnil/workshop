@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/gorilla/websocket"
@@ -1137,6 +1138,7 @@ func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"workshop.socket":  {"type": "disk", "source": dirs.SocketPath + ".untrusted", "path": filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted")},
 	}
 }
 

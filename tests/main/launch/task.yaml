@@ -9,19 +9,26 @@ prepare: |
 
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
+  cleanup ./
   uninstall_workshopd
 
 debug: |
   lxc project switch workshop.ubuntu
   lxc list -f compact
-  ls "$WORKSHOPS"/*
+  ls ./*
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Test launch for all the supported bases"
-  for path in "$WORKSHOPS"/*; do
-    launch "$path" ws
-    list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
-  done
+  
+  function launch_and_validate() {
+    workshop_exec launch "$1"
+    workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
+    # ensure the workshop has a socket for workshopctl
+    workshop_exec exec "$1" -- test -S /var/lib/workshop/.workshop.socket.untrusted
+  }
+  
+  launch_and_validate ws-20
+  launch_and_validate ws-22
+  

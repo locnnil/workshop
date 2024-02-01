@@ -1,6 +1,7 @@
 package workshopbackend
 
 import (
+	"fmt"
 	"net/http"
 
 	lxd "github.com/lxc/lxd/client"
@@ -9,6 +10,9 @@ import (
 
 // Initialise the Workshop project namespace.
 func InitProject(conn lxd.InstanceServer, username string) error {
+	if username == "" {
+		return fmt.Errorf("cannot init LXD project: username is empty")
+	}
 	if err := createOrLoadLxdProject(conn, LxdProjectName(username)); err != nil {
 		return err
 	}
