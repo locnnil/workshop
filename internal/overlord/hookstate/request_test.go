@@ -25,8 +25,6 @@ func (s *S) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	var sdk = workshopbackend.SdkRecord{Name: "go", Channel: "latest/stable"}
-
 	envs := []map[string]string{
 		{},
 		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
@@ -38,13 +36,14 @@ func (s *S) TestCreateHook(c *check.C) {
 		hookstate.SaveState,
 		hookstate.RestoreState,
 	} {
-		task := hookstate.SetupHook(s.state, &sdk, i)
+		task := hookstate.SetupHook(s.state, "test", "go", i)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)
 		c.Assert(err, check.IsNil)
 		c.Assert(hookSetup.Type(), check.Equals, i.String())
-		c.Assert(hookSetup.Sdk, check.DeepEquals, sdk)
+		c.Assert(hookSetup.Workshop, check.DeepEquals, "test")
+		c.Assert(hookSetup.Sdk, check.DeepEquals, "go")
 		c.Assert(hookSetup.Environment, check.DeepEquals, envs[num])
 		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 	}

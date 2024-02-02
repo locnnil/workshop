@@ -219,9 +219,9 @@ func (*ManagerSuite) validateStateHooksTasksSetup(c *check.C, ts []*state.TaskSe
 			c.Assert(err, check.IsNil)
 			switch setup.HookType {
 			case hookstate.SaveState:
-				obtainedSave = append(obtainedSave, setup.Sdk.Name)
+				obtainedSave = append(obtainedSave, setup.Sdk)
 			case hookstate.RestoreState:
-				obtainedRestore = append(obtainedRestore, setup.Sdk.Name)
+				obtainedRestore = append(obtainedRestore, setup.Sdk)
 			}
 		}
 	}

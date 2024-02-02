@@ -36,7 +36,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)
 		if err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.Volume(volume, workshopbackend.WorkshopStateDir, volume)); err != nil {
-			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk.Name, err)
+			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
 		defer func() {
@@ -51,12 +51,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		{
 			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 			}
 			err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
 			fs.Close()
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 			}
 		}
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
@@ -64,16 +64,16 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		{
 			fs, err := h.backend.WorkshopFs(ctx, workshop)
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
 			}
 			info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
 			fs.Close()
 			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk.Name, err)
+				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
 			}
 
 			if !info.IsDir() {
-				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk.Name)
+				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk)
 			}
 		}
 		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
@@ -83,9 +83,8 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workshop, projectId string, hook *HookSetup) error {
-	hookPath := sdk.SdkHookPath(hook.Sdk.Name, hook.Type())
+	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
 
-	//
 	wsFs, err := h.backend.WorkshopFs(ctx, workshop)
 	if err != nil {
 		return err
@@ -94,11 +93,11 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	info, err := wsFs.Stat(hookPath)
 	wsFs.Close()
 	if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
-		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk.Name, hook.Type())
+		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
 		return nil
 	}
 
-	/* create a memory out/err to log the hook output into the task's log */
+	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
 	out, err := memFs.Create(workshopbackend.InstanceName(workshop, projectId))
 	if err != nil {
@@ -118,7 +117,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 				hookPath,
 			},
 			Environment: hook.Environment,
-			WorkDir:     sdk.SdkHooksDir(hook.Sdk.Name),
+			WorkDir:     sdk.SdkHooksDir(hook.Sdk),
 		},
 		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,

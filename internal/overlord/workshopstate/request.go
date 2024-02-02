@@ -123,7 +123,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.SetupHook(st, &sdk, hookstate.SetupBase)
+		setupHookTask := hookstate.SetupHook(st, file.Name, sdk.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -275,7 +275,7 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	// 6. Delete the old workshop
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
-	saveStateHooks := saveStateHooks(st, content, file.Sdks)
+	saveStateHooks := saveStateHooks(st, file.Name, content, file.Sdks)
 	saveStateHooks.WaitFor(createStateStorage)
 
 	// disconnect and remove SDKs plugs and slots
@@ -292,7 +292,7 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 		return nil, err
 	}
 
-	restoreStateHooks := restoreStateHooks(st, content, file.Sdks)
+	restoreStateHooks := restoreStateHooks(st, file.Name, content, file.Sdks)
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 	removeFromStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
@@ -358,13 +358,13 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	return state.NewTaskSet(disconnectSet...)
 }
 
-func saveStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList,
+func saveStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList,
 ) *state.TaskSet {
-	return createStateHooks(st, content, newContent, hookstate.SaveState)
+	return createStateHooks(st, workshop, content, newContent, hookstate.SaveState)
 }
 
-func restoreStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList) *state.TaskSet {
-	stateHooks := createStateHooks(st, content, newContent, hookstate.RestoreState)
+func restoreStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList) *state.TaskSet {
+	stateHooks := createStateHooks(st, workshop, content, newContent, hookstate.RestoreState)
 
 	// if the restore hooks are not present (i.e. workshop has no SDKs after
 	// the refresh), we should mark the last launch task as last before the
@@ -379,7 +379,7 @@ func restoreStateHooks(st *state.State, content []sdk.Setup, newContent workshop
 	return stateHooks
 }
 
-func createStateHooks(st *state.State, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func createStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {
@@ -389,7 +389,7 @@ func createStateHooks(st *state.State, content []sdk.Setup, newContent workshopb
 			continue
 		}
 
-		stateHook := hookstate.SetupHook(st, &newsdk, hooktype)
+		stateHook := hookstate.SetupHook(st, workshop, newsdk.Name, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
 			stateHook.WaitFor(prevRestore)

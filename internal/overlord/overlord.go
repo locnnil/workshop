@@ -46,8 +46,6 @@ var (
 	abortWait      = 24 * time.Hour * 7
 
 	pruneMaxChanges = 500
-
-	defaultCachedDownloads = 5
 )
 
 var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
@@ -70,14 +68,14 @@ type Overlord struct {
 	pruneTicker *time.Ticker
 
 	// managers
-	inited    bool
-	startedUp bool
-	sdk       *sdkstate.SdkManager
-	workshop  *workshop.WorkshopManager
-	hook      *hookstate.HookManager
-	command   *cmdstate.CommandManager
-	ifacemgr  *ifacestate.InterfaceManager
-	runner    *state.TaskRunner
+	inited      bool
+	startedUp   bool
+	sdk         *sdkstate.SdkManager
+	workshopmgr *workshop.WorkshopManager
+	hookmgr     *hookstate.HookManager
+	commandmgr  *cmdstate.CommandManager
+	ifacemgr    *ifacestate.InterfaceManager
+	runner      *state.TaskRunner
 
 	startOfOperationTime time.Time
 
@@ -144,17 +142,17 @@ func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.H
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workshop = workshop.New(s, o.runner, o.workshopBackend)
-	o.addManager(o.workshop)
+	o.workshopmgr = workshop.New(s, o.runner, o.workshopBackend)
+	o.addManager(o.workshopmgr)
 
 	o.sdk = sdkstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.sdk)
 
-	o.hook = hookstate.New(o.runner, o.workshopBackend)
-	o.addManager(o.hook)
+	o.hookmgr = hookstate.New(s, o.runner, o.workshopBackend)
+	o.addManager(o.hookmgr)
 
-	o.command = cmdstate.New(o.runner, o.workshopBackend)
-	o.addManager(o.command)
+	o.commandmgr = cmdstate.New(o.runner, o.workshopBackend)
+	o.addManager(o.commandmgr)
 
 	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.ifacemgr)
@@ -462,11 +460,15 @@ func (o *Overlord) WorkshopBackend() workshopbackend.WorkshopBackend {
 }
 
 func (o *Overlord) WorkshopManager() *workshop.WorkshopManager {
-	return o.workshop
+	return o.workshopmgr
 }
 
 func (o *Overlord) CommandManager() *cmdstate.CommandManager {
-	return o.command
+	return o.commandmgr
+}
+
+func (o *Overlord) HookManager() *hookstate.HookManager {
+	return o.hookmgr
 }
 
 // Fake creates an Overlord without any managers and with a backend

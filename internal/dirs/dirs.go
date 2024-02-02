@@ -11,37 +11,40 @@ import (
 	"github.com/spf13/afero"
 )
 
-const (
-	// defaultWorkshopDir is the Workshop directory used if $WORKSHOP is not set. It is
+var (
+	// defaultWorkshopdDir is the Workshop directory used if $WORKSHOP is not set. It is
 	// created by the daemon ("workshopd run") if it doesn't exist, and also used by
 	// the workshop client.
-	defaultWorkshopDir = "/var/lib/workshop/default"
+	defaultWorkshopdDir = "/var/lib/workshop/default"
 
-	// default root directory path for the SDKs to be installed into in a workshop
-	WorkshopSdksDir = "/var/lib/workshop/sdk"
+	// base directory inside a workshop
+	WorkshopBaseDir = "/var/lib/workshop"
+
+	// SDKs directory to install an SDK in a workshop
+	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 )
 
 var (
-	SdkDir         string
-	StateDir       string
-	BaseDir        string
-	WorkshopSocket string
+	SdkDir     string
+	StateDir   string
+	BaseDir    string
+	SocketPath string
 )
 
-func getEnvPaths() (workshopDir string, socketPath string) {
-	workshopDir = os.Getenv("WORKSHOP")
-	if workshopDir == "" {
-		workshopDir = defaultWorkshopDir
+func getEnvPaths() (workshopdDir string, socketPath string) {
+	workshopdDir = os.Getenv("WORKSHOP")
+	if workshopdDir == "" {
+		workshopdDir = defaultWorkshopdDir
 	}
 	socketPath = os.Getenv("WORKSHOP_SOCKET")
 	if socketPath == "" {
-		socketPath = filepath.Join(workshopDir, ".workshop.socket")
+		socketPath = filepath.Join(workshopdDir, ".workshop.socket")
 	}
-	return workshopDir, socketPath
+	return workshopdDir, socketPath
 }
 
 func init() {
-	BaseDir, WorkshopSocket = getEnvPaths()
+	BaseDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
 
 	var b [8]byte

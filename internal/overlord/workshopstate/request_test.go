@@ -492,7 +492,7 @@ func (s *S) TestRefreshManyRestoreStateHooksExecutedSequentially(c *check.C) {
 	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
 	two := sdk.Setup{Name: "two", Channel: "latest/stable"}
 
-	ts := workshopstate.RestoreStateHooks(s.state,
+	ts := workshopstate.RestoreStateHooks(s.state, "ws",
 		[]sdk.Setup{one, two}, workshopbackend.SdkList{oneinst, twoinst})
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
@@ -518,7 +518,7 @@ func (s *S) TestRefreshManySaveStateHooksExecutedSequentially(c *check.C) {
 	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
 	two := sdk.Setup{Name: "two", Channel: "latest/stable"}
 
-	ts := workshopstate.SaveStateHooks(s.state, []sdk.Setup{one, two}, installed)
+	ts := workshopstate.SaveStateHooks(s.state, "ws", []sdk.Setup{one, two}, installed)
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 
 	prev := (*state.Task)(nil)
@@ -540,7 +540,7 @@ func (s *S) TestRefreshManyNoRestoreStateHooks(c *check.C) {
 		Sdks: workshopbackend.SdkList{},
 	}
 
-	ts := workshopstate.RestoreStateHooks(s.state, []sdk.Setup{}, file.Sdks)
+	ts := workshopstate.RestoreStateHooks(s.state, "ws", []sdk.Setup{}, file.Sdks)
 	c.Assert(ts.Tasks(), check.HasLen, 0)
 }
 

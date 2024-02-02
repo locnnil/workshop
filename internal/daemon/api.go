@@ -60,12 +60,15 @@ var api = []*Command{{
 	Path:   "/v1/tasks/{task-id}/websocket/{websocket-id}",
 	UserOK: true,
 	GET:    v1GetTaskWebsocket,
-}}
+}, {
+	Path:        "/v1/workshopctl",
+	UserOK:      true,
+	UntrustedOK: true,
+	POST:        v1PostWorkshopCtl,
+},
+}
 
 var (
-	stateOkayWarnings    = (*state.State).OkayWarnings
-	stateAllWarnings     = (*state.State).AllWarnings
-	statePendingWarnings = (*state.State).PendingWarnings
-	stateEnsureBefore    = (*state.State).EnsureBefore
-	muxVars              = mux.Vars
+	stateEnsureBefore = (*state.State).EnsureBefore
+	muxVars           = mux.Vars
 )

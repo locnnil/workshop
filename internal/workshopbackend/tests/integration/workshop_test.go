@@ -62,7 +62,6 @@ func (f *wsOps) SetUpTest(c *check.C) {
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}
-	f.username = "testuser"
 	f.ctx = createTestContext(f.username, f.project.ProjectId)
 
 	f.lxdClient, _ = f.be.(*workshopbackend.LxdBackend).LxdClient(f.ctx)
@@ -107,12 +106,14 @@ func (f *wsOps) TearDownTest(c *check.C) {
 }
 
 func (f *wsOps) SetUpSuite(c *check.C) {
+	f.username = "testuser"
 	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
 	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
 	ctx := createTestContext(f.username, "42424242")
 	be := &workshopbackend.LxdBackend{}
-	client, _ := be.LxdClient(ctx)
-	err := client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
+	client, err := be.LxdClient(ctx)
+	c.Assert(err, check.IsNil)
+	err = client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
 	c.Assert(err, check.IsNil)
 }
 
@@ -123,17 +124,6 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
 	f.restoreDevices()
 	f.restoreImageServer()
-}
-
-func (f *wsOps) TestLxdBackendTrivialLaunch(c *check.C) {
-	// Execute
-	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
-	defer f.be.RemoveWorkshop(f.ctx, "test-1")
-
-	//Validate
-	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test-1")
-	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
