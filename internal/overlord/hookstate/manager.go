@@ -2,6 +2,7 @@ package hookstate
 
 import (
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
@@ -23,6 +24,9 @@ type Handler interface {
 	// ignored by hook manager.
 	Error(hookErr error) (ignoreHookErr bool, err error)
 }
+
+// HandlerGenerator is the function signature required to register for hooks.
+type HandlerGenerator func(*Context) Handler
 
 type HookSetup struct {
 	Workshop    string            `json:"workshop"`
@@ -50,8 +54,9 @@ func (h *HookSetup) Type() string {
 }
 
 type HookManager struct {
-	state   *state.State
-	backend workshopbackend.WorkshopBackend
+	state      *state.State
+	repository *repository
+	backend    workshopbackend.WorkshopBackend
 
 	contextsMutex sync.RWMutex
 	contexts      map[string]*Context
@@ -59,11 +64,14 @@ type HookManager struct {
 
 func New(s *state.State, runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
 	manager := &HookManager{
-		state:   s,
-		backend: server,
+		state:      s,
+		backend:    server,
+		repository: newRepository(),
 	}
 
 	runner.AddHandler("run-hook", OnDo(manager.doRunHook), nil)
+
+	setupHooks(manager)
 
 	return manager
 }
@@ -103,4 +111,35 @@ func (m *HookManager) Context(cookieID string) (*Context, error) {
 	}
 
 	return context, nil
+}
+
+// Register registers a function to create Handler values whenever hooks
+// matching the provided pattern are run.
+func (m *HookManager) Register(pattern *regexp.Regexp, generator HandlerGenerator) {
+	m.repository.addHandlerGenerator(pattern, generator)
+}
+
+type workshopHookHandler struct {
+}
+
+func (h *workshopHookHandler) Before() error {
+	return nil
+}
+
+func (h *workshopHookHandler) Done() error {
+	return nil
+}
+
+func (h *workshopHookHandler) Error(err error) (bool, error) {
+	return false, nil
+}
+
+func setupHooks(hookMgr *HookManager) {
+	handlerGenerator := func(context *Context) Handler {
+		return &workshopHookHandler{}
+	}
+
+	hookMgr.Register(regexp.MustCompile("^setup-base$"), handlerGenerator)
+	hookMgr.Register(regexp.MustCompile("^save-state$"), handlerGenerator)
+	hookMgr.Register(regexp.MustCompile("^restore-state$"), handlerGenerator)
 }

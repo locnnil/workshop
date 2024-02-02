@@ -189,9 +189,9 @@ func (s *contextSuite) TestChangeErrorf(c *C) {
 	mockLog, restore := logger.MockLogger()
 	defer restore()
 
-	if v, ok := os.LookupEnv("SNAPD_DEBUG"); ok {
-		os.Unsetenv("SNAPD_DEBUG")
-		defer os.Setenv("SNAPD_DEBUG=%v", v)
+	if v, ok := os.LookupEnv("WORKSHOPD_DEBUG"); ok {
+		os.Unsetenv("WORKSHOPD_DEBUG")
+		defer os.Setenv("WORKSHOPD_DEBUG=%v", v)
 	}
 
 	s.state.Lock()
