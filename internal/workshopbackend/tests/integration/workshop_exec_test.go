@@ -15,6 +15,7 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	lxd "github.com/lxc/lxd/client"
+	"github.com/lxc/lxd/shared/api"
 	"gopkg.in/check.v1"
 )
 
@@ -33,6 +34,7 @@ type wsExec struct {
 	lookupUserIdRestore func()
 	newProjectidRestore func()
 	restoreImageServer  func()
+	restoreDevices      func()
 }
 
 var _ = check.Suite(&wsExec{})
@@ -90,6 +92,11 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return u, nil
 	}, &daemon.LookupUserId)
 
+	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
+
+	err = f.lxdClient.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
+	c.Assert(err, check.IsNil)
+
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshopbackend.NewProjectId)
@@ -102,10 +109,13 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	c.Check(err, check.IsNil)
 	err = f.daemon.Stop(nil)
 	c.Check(err, check.IsNil)
+	err = f.lxdClient.DeleteStoragePool("testZfsProfile")
+	c.Check(err, check.IsNil)
 	f.lookupUserRestore()
 	f.lookupUserIdRestore()
 	f.newProjectidRestore()
 	f.restoreImageServer()
+	f.restoreDevices()
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
 }
