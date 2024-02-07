@@ -10,11 +10,6 @@ type SdkManager struct {
 	backend backend.WorkshopBackend
 }
 
-type SdkSequenceRecord struct {
-	Channel  string `json:"channel"`
-	Revision int64  `json:"revision"`
-}
-
 func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 

@@ -67,7 +67,7 @@ type Workshop struct {
 	projectId string
 	base      string
 	Name      string
-	Devices   map[string]map[string]string
+	devices   map[string]map[string]string
 	content   map[string]sdk.Setup
 	errs      []WorkshopErrorType
 	running   bool

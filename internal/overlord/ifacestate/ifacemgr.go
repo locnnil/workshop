@@ -2,7 +2,9 @@ package ifacestate
 
 import (
 	"context"
+	"path/filepath"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
 
@@ -63,17 +65,24 @@ func (m *InterfaceManager) StartUp() error {
 
 	for user, projects := range allprojects {
 		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
-		for _, prj := range projects {
-			prjctx := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
-			_, wrksps, err := m.backend.ProjectWorkshops(prjctx)
+		for _, project := range projects {
+			pctx := context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
+			_, workshops, err := m.backend.ProjectWorkshops(pctx)
 			if err != nil {
-				logger.Noticef("Cannot load workshops from %s: %v", prj.Path, err)
+				logger.Noticef("Cannot load workshops from %s: %v", project.Path, err)
 				continue
 			}
-			for _, wrksp := range wrksps {
-				infos, err := wrksp.ContentInfo(prjctx)
+			for _, workshop := range workshops {
+				// recreate the socket device for every workshop to ensure
+				// workshopctl can function (if the daemon was stopped the
+				// socket will render /deleted)
+				if err := m.recreateInternalMounts(pctx, workshop); err != nil {
+					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
+				}
+
+				infos, err := workshop.ContentInfo(pctx)
 				if err != nil {
-					logger.Noticef("Cannot obtain the list of installed SDKs for %q workshop: %v", wrksp.Name, err)
+					logger.Noticef("Cannot obtain the list of installed SDKs for %q workshop: %v", workshop.Name, err)
 					continue
 				}
 
@@ -110,6 +119,20 @@ func (m *InterfaceManager) StartUp() error {
 		return err
 	}
 
+	return nil
+}
+
+func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, wshp *workshopbackend.Workshop) error {
+	// there is a LXD backend limitation: profiles cannot be used to create file
+	// bind mounts, but individual devices can
+	socketDevice := workshopbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
+		filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted"))
+
+	_ = m.backend.RemoveWorkshopDevice(pctx, wshp.Name, socketDevice.Name())
+
+	if err := m.backend.AddWorkshopDevice(pctx, wshp.Name, socketDevice); err != nil {
+		return err
+	}
 	return nil
 }
 

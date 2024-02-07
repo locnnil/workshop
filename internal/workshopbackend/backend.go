@@ -80,7 +80,7 @@ type WorkshopBackend interface {
 	CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error)
 
 	// Returns a list of projects known to the backend. The returned map
-	// has a username that the corresponding projects belong to as a key.
+	// has a username key that the corresponding projects belong to.
 	Projects(ctx context.Context) (map[string][]*Project, error)
 
 	// Loads a workshop instance.

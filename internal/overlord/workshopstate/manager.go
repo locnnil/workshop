@@ -33,6 +33,10 @@ func New(st *state.State, runner *state.TaskRunner, server workshopbackend.Works
 	return manager
 }
 
+func (m *WorkshopManager) StartUp() error {
+	return nil
+}
+
 func (w *WorkshopManager) Ensure() error {
 	return nil
 }

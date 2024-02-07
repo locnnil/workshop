@@ -912,9 +912,8 @@ func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, er
 		Name:      name,
 		running:   running,
 		base:      base,
+		devices:   inst.Devices,
 	}
-
-	workshop.Devices = inst.Devices
 
 	file, err := p.WorkshopFile(name)
 	if err != nil {
