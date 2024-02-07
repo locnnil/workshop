@@ -24,9 +24,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj)
 	defer cancel()
 
+	var hook HookSetup
 	st := task.State()
 	st.Lock()
-	var hook HookSetup
 	err = task.Get("hook-setup", &hook)
 	st.Unlock()
 	if err != nil {
@@ -97,6 +97,26 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 		return nil
 	}
 
+	hookCtx, err := createHookContext(task, h.repository, hook)
+	if err != nil {
+		return err
+	}
+
+	contextID := hookCtx.ID()
+	h.contextsMutex.Lock()
+	h.contexts[contextID] = hookCtx
+	h.contextsMutex.Unlock()
+
+	defer func() {
+		h.contextsMutex.Lock()
+		delete(h.contexts, contextID)
+		h.contextsMutex.Unlock()
+	}()
+
+	if err := hookCtx.Handler().Before(); err != nil {
+		return err
+	}
+
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
 	out, err := memFs.Create(workshopbackend.InstanceName(workshop, projectId))
@@ -104,6 +124,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 		return err
 	}
 
+	hook.Environment["WORKSHOP_CONTEXT"] = hookCtx.ID()
 	args := workshopbackend.Execution{
 		ExecArgs: workshopbackend.ExecArgs{
 			UserId:  0,
@@ -127,19 +148,63 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	}
 
 	exectx, err := h.backend.Exec(ctx, workshop, &args)
+	// Handle errors that are unrelated to the command, for example, LXD-related
+	// issues. An error here means the execution has not started at all.
 	if err != nil {
 		return err
 	}
 
 	err = exectx.WaitExecution(ctx)
-	hookLog, _ := afero.ReadFile(memFs, out.Name())
 
 	st := task.State()
-	st.Lock()
-	defer st.Unlock()
+	hookLog, _ := afero.ReadFile(memFs, out.Name())
 	if len(hookLog) > 0 {
+		st.Lock()
 		task.Logf(string(hookLog))
+		st.Unlock()
+	}
+
+	// Handle the command execution errors; all the errors that are related to
+	// the backend that was executing the command should have been handled above
+	// already.
+	if err != nil {
+		ignore, handlerError := hookCtx.Handler().Error(err)
+		if handlerError != nil {
+			return handlerError
+		}
+		if ignore {
+			return nil
+		}
+		return err
+	}
+
+	if err = hookCtx.Handler().Done(); err != nil {
+		return err
+	}
+
+	hookCtx.Lock()
+	defer hookCtx.Unlock()
+	if err = hookCtx.Done(); err != nil {
+		return err
 	}
 
 	return err
+}
+
+func createHookContext(task *state.Task, repo *repository, hook *HookSetup) (*Context, error) {
+	hookCtx, err := NewContext(task, task.State(), hook, nil, "")
+	if err != nil {
+		return nil, err
+	}
+
+	handlers := repo.generateHandlers(hookCtx)
+	handlersCount := len(handlers)
+	if handlersCount == 0 {
+		return nil, fmt.Errorf("internal error: no registered handlers for hook %q", hook.HookType)
+	}
+	if handlersCount > 1 {
+		return nil, fmt.Errorf("internal error: %d handlers registered for hook %q, expected 1", handlersCount, hook.HookType)
+	}
+	hookCtx.handler = handlers[0]
+	return hookCtx, nil
 }

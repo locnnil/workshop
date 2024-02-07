@@ -43,10 +43,12 @@ const (
 	SetupBase WorkshopHookType = iota
 	SaveState
 	RestoreState
+
+	fakeHook // tests only
 )
 
 func (s WorkshopHookType) String() string {
-	return [...]string{"setup-base", "save-state", "restore-state"}[s]
+	return [...]string{"setup-base", "save-state", "restore-state", "fake-hook"}[s]
 }
 
 func (h *HookSetup) Type() string {
@@ -67,6 +69,7 @@ func New(s *state.State, runner *state.TaskRunner, server workshopbackend.Worksh
 		state:      s,
 		backend:    server,
 		repository: newRepository(),
+		contexts:   make(map[string]*Context),
 	}
 
 	runner.AddHandler("run-hook", OnDo(manager.doRunHook), nil)
