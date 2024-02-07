@@ -140,7 +140,7 @@ var nonRootAllowed = []string{"set-health"}
 // Run runs the requested command.
 func Run(context *hookstate.Context, args []string, uid uint32) (stdout, stderr []byte, err error) {
 	if len(args) == 0 {
-		return nil, nil, fmt.Errorf("internal error: workshopctl cannot run without args")
+		return nil, nil, fmt.Errorf("workshopctl cannot run without args")
 	}
 
 	if !isAllowedToRun(uid, args) {

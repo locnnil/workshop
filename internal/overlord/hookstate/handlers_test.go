@@ -143,7 +143,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
-	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_CONTEXT"], check.NotNil)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
 }
 
@@ -176,7 +176,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/restore-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
-	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_CONTEXT"], check.NotNil)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
 	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
 }
 

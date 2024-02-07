@@ -124,7 +124,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 		return err
 	}
 
-	hook.Environment["WORKSHOP_CONTEXT"] = hookCtx.ID()
+	hook.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
 	args := workshopbackend.Execution{
 		ExecArgs: workshopbackend.ExecArgs{
 			UserId:  0,

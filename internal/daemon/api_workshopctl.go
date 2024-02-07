@@ -3,6 +3,9 @@ package daemon
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/canonical/workshop/internal/overlord/hookstate/ctlcmd"
+	"github.com/jessevdk/go-flags"
 )
 
 // workshopCtlOptions holds the various options with which workshopctl is invoked.
@@ -24,7 +27,7 @@ type workshopCtlPostData struct {
 	Stdin []byte `json:"stdin,omitempty"`
 }
 
-type snapctlOutput struct {
+type workshopctlOutput struct {
 	Stdout string `json:"stdout"`
 	Stderr string `json:"stderr"`
 }
@@ -37,12 +40,14 @@ func v1PostWorkshopCtl(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
+	_, uid, _, err := ucrednetGet(r.RemoteAddr)
+	if err != nil {
+		return statusForbidden("cannot get remote user: %s", err)
+	}
+
 	// Ignore missing context error to allow 'workshopctl -h' without a context;
 	// Actual context is validated later by get/set.
-	context, err := c.d.overlord.HookManager().Context(reqData.ContextID)
-	if err != nil {
-		return statusNotFound(err.Error())
-	}
+	context, _ := c.d.overlord.HookManager().Context(reqData.ContextID)
 
 	if reqData.Stdin != nil {
 		context.Lock()
@@ -50,9 +55,16 @@ func v1PostWorkshopCtl(c *Command, r *http.Request, _ *userState) Response {
 		context.Unlock()
 	}
 
-	var stdout, stderr []byte
+	stdout, stderr, err := ctlcmd.Run(context, reqData.Args, uid)
+	if err != nil {
+		if e, ok := err.(*flags.Error); ok && e.Type == flags.ErrHelp {
+			stdout = []byte(e.Error())
+		} else {
+			return statusBadRequest("%s", err)
+		}
+	}
 
-	result := snapctlOutput{
+	result := workshopctlOutput{
 		Stdout: string(stdout),
 		Stderr: string(stderr),
 	}
