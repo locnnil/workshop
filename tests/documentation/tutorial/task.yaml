@@ -3,7 +3,7 @@ prepare: |
   chmod u+x ./tutorial.sh
   chown ubuntu:ubuntu ./tutorial.sh
   mkdir -p /home/ubuntu/workshop
-  cp -R /remote/* /home/ubuntu/workshop
+  cp -R /workshop/* /home/ubuntu/workshop
   chown -R ubuntu:ubuntu /home/ubuntu/workshop
 restore: |
   rm -rf /home/ubuntu/workshop
@@ -13,8 +13,5 @@ restore: |
   for c in $(lxc list | awk '{print $2}'  | grep ^snapcraft- | grep -v snapcraft-dev); do
     lxc delete $c --force
   done
-debug: |
-  snap services workshop
-  which workshop
 execute: |
   sudo -u ubuntu 2>&1 -- bash -c ./tutorial.sh
