@@ -76,7 +76,7 @@ func (m *InterfaceManager) StartUp() error {
 				// recreate the socket device for every workshop to ensure
 				// workshopctl can function (if the daemon was stopped the
 				// socket will render /deleted)
-				if err := m.recreateInternalMounts(pctx, workshop); err != nil {
+				if err := m.recreateInternalMounts(pctx, workshop.Name); err != nil {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
@@ -122,17 +122,32 @@ func (m *InterfaceManager) StartUp() error {
 	return nil
 }
 
-func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, wshp *workshopbackend.Workshop) error {
-	// there is a LXD backend limitation: profiles cannot be used to create file
-	// bind mounts, but individual devices can
-	socketDevice := workshopbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
+// Ensure the mounts required by a workshop to function properly were created:
+// workshopctl, socket. These mounts are created at the time of launch but can
+// become invalid on the daemon restart / update. Thus, recreating them upon
+// every daemon restart makes sure they still point to the correct files.
+func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, workshop string) error {
+	socket := workshopbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
 		filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted"))
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, wshp.Name, socketDevice.Name())
+	_ = m.backend.RemoveWorkshopDevice(pctx, workshop, socket.Name())
 
-	if err := m.backend.AddWorkshopDevice(pctx, wshp.Name, socketDevice); err != nil {
+	if err := m.backend.AddWorkshopDevice(pctx, workshop, socket); err != nil {
 		return err
 	}
+
+	// Recreate workshopctl bind mount, this has to be done if, for example,
+	// workshopctl was updated to a new version and is shown as /deleted in a
+	// workshop.
+	workshopctl := workshopbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
+		"/usr/bin/workshopctl")
+
+	_ = m.backend.RemoveWorkshopDevice(pctx, workshop, workshopctl.Name())
+
+	if err := m.backend.AddWorkshopDevice(pctx, workshop, workshopctl); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -13,7 +13,7 @@ description: |
   IDEs such as Visual Studio Code or JupyterLab can discover workshops
   and use them in day-to-day operations,
   tidying up your system and streamlining your work.
-confinement: devmode
+confinement: classic
 grade: devel
 apps:
   workshop:
@@ -23,17 +23,27 @@ apps:
   workshopd:
     environment:
       WORKSHOP: ${SNAP_COMMON}
-    command: bin/workshopd run --create-dirs
+    command: commands/run_daemon
     daemon: simple
     restart-condition: on-failure
     plugs:
       - home
       - lxd
       - network
+  workshopctl:
+    environment:
+      WORKSHOP: ${SNAP_COMMON}
+    command: bin/workshopctl
 parts:
   workshop:
     plugin: go
     source: .
     source-type: local
     build-snaps:
-        - go/latest/stable
+      - go/latest/stable
+
+  wrappers:
+    plugin: dump
+    source: snap/local/
+    organize:
+      hooks/: snap/hooks/

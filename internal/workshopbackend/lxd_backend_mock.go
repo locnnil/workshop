@@ -285,10 +285,6 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter W
 	return res, nil
 }
 
-func (f *FakeWorkshopBackend) GetWorkshopsByDevices(ctx context.Context, filter WorkshopDeviceFilter) (map[string]*Workshop, error) {
-	panic("not implemented") // TODO: Implement
-}
-
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {

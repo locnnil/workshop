@@ -34,7 +34,7 @@ type StoreResult struct {
 }
 
 type StoreClient interface {
-	RetrieveSdk(name, channel, localSdkDir string) (sdk.Setup, error)
+	RetrieveSdk(ctx context.Context, name, channel, localSdkDir string) (sdk.Setup, error)
 }
 
 func NewStoreClient() StoreClient {
@@ -45,23 +45,21 @@ type ObjectStoreClient struct {
 	Fs afero.Fs
 }
 
-func storeConnect() (*storage.Client, error) {
-	if url := os.Getenv("SDK_STORE_URL"); url != "" {
-		// Set STORAGE_EMULATOR_HOST environment variable for GSC.
+func storeConnect(ctx context.Context) (*storage.Client, error) {
+	if url := os.Getenv("SDK_STORE_URL"); url != "" { // Set STORAGE_EMULATOR_HOST environment variable for GSC.
 		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:8080")
 		if err != nil {
 			return nil, err
 		}
-		client, err := storage.NewClient(context.Background(),
+		client, err := storage.NewClient(ctx,
 			option.WithEndpoint(url))
 		return client, err
-
 	}
-	client, err := storage.NewClient(context.Background(), option.WithoutAuthentication())
+	client, err := storage.NewClient(ctx, option.WithoutAuthentication())
 	return client, err
 }
 
-func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (sdk.Setup, error) {
+func (c *ObjectStoreClient) RetrieveSdk(ctx context.Context, name, channel, localSdkDir string) (sdk.Setup, error) {
 	var track, risk string
 	var s sdk.Setup
 	var revision int64
@@ -72,8 +70,7 @@ func (c *ObjectStoreClient) RetrieveSdk(name, channel, localSdkDir string) (sdk.
 		track, risk = sa[0], sa[1]
 	}
 
-	ctx := context.Background()
-	if client, err := storeConnect(); err != nil {
+	if client, err := storeConnect(ctx); err != nil {
 		return s, err
 	} else {
 		bkt := client.Bucket("sdk-store")

@@ -1,34 +1,21 @@
-summary: Check a failed refresh can be aborted successfully
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
+summary: Check a failed non-transactional refresh can be aborted successfully
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  workshop changes
-  workshop tasks 2
-
+  cleanup ./
 execute: |
   . "$TESTSLIB"/utils.sh
-
-  echo "Launch a workshop"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-fail
-  launch $project ws
+ 
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws
 
   echo "Update the workshop file to include a failing SDK"
   sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' $project/.workshop.ws.yaml
-  workshop_exec refresh --project $project --wait-on-error ws || true
+  workshop_exec refresh --project "$project" --wait-on-error ws || true
   sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workshop.ws.yaml
 
   echo "Check the workshop is in Pending state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
+   workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
 
   echo "Check the workshop refresh --abort reverts to the previous state"
-  workshop_exec refresh --project $project --abort ws | MATCH "\"ws\" refresh aborted"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec refresh --project "$project" --abort ws | MATCH "\"ws\" refresh aborted"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

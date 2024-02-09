@@ -109,7 +109,7 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
 	if err != nil && !errors.Is(err, workshopbackend.ErrNotAProject) {
-		return statusInternalError("cannot create or load project: %v", err)
+		return statusInternalError("cannot create or load project at %q: %v", reqData.Path, err)
 	} else if errors.Is(err, workshopbackend.ErrNotAProject) {
 		return statusBadRequest("%v", err)
 	}

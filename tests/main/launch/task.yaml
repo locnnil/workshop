@@ -1,22 +1,7 @@
 summary: Test 'workshop launch' for the supported workshop bases
-
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
-
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup ./
-  uninstall_workshopd
-
-debug: |
-  lxc project switch workshop.ubuntu
-  lxc list -f compact
-  ls ./*
-
 execute: |
   . "$TESTSLIB"/utils.sh
 

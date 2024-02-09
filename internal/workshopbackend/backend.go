@@ -9,7 +9,6 @@ type ContextKeyProjectId string
 type ContextKeyUser string
 
 type WorkshopConfigFilter func(config map[string]string) bool
-type WorkshopDeviceFilter func(devices map[string]map[string]string) bool
 
 const (
 	ContextProjectId = ContextKeyProjectId("project-id")

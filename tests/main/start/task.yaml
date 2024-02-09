@@ -1,37 +1,21 @@
 summary: Check workshop start
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  lxc list -f compact --all-projects
-  workshop changes
-  workshop tasks 1
+  cleanup ./
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Launch a workshop"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-basic
-  launch $project ws
-
-  # Stop the workshop instance
-  project_id=$(cat "$project"/.workshop.lock)
-  instance=ws-"$project_id"
-  lxc stop "$instance" --project workshop.ubuntu
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws
+  workshop_exec --project "$project" stop ws
 
   echo "Check the workshop is in Stopped state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Start the workshop"
-  workshop_exec start --project $project ws
+  workshop_exec --project "$project" start ws
 
   echo "Check the workshop is in Ready state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

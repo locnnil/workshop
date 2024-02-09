@@ -1135,9 +1135,10 @@ func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) 
 
 func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "default", "path": "/"},
-		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-		"workshop.socket":  {"type": "disk", "source": dirs.SocketPath + ".untrusted", "path": filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted")},
+		"root":                 {"type": "disk", "pool": "default", "path": "/"},
+		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"workshop.socket":      {"type": "disk", "source": dirs.SocketPath + ".untrusted", "path": filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted")},
+		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
 	}
 }
 

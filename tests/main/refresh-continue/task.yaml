@@ -1,34 +1,21 @@
 summary: Check a failed refresh can be fixed and continued successfully
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  lxc list -f compact --all-projects
-  workshop changes
-  workshop tasks 1
-
+  cleanup ./
+  
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a workshop"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-fail
-  launch $project ws
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws
 
   echo "Update the workshop file to include a failing SDK"
-  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' $project/.workshop.ws.yaml
-  workshop_exec refresh --project $project --wait-on-error ws || true
-  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workshop.ws.yaml
+  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' "$project"/.workshop.ws.yaml
+  workshop_exec --project "$project" refresh --wait-on-error ws || true
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' "$project"/.workshop.ws.yaml
 
   echo "Check the workshop is in Pending state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
 
   echo "\"Fix\" the SDK error by replacing the setup-base hook"
   project_id=$(cat "$project"/.workshop.lock)
@@ -36,7 +23,7 @@ execute: |
   lxc exec "$instance" --project workshop.ubuntu -- sed -i "s/exit 1/exit 0/g" /var/lib/workshop/sdk/test-sdk-setup-fail/current/sdk/hooks/setup-base
 
   echo "Check the workshop refresh --continue reverts to the previous state"
-  workshop_exec refresh --project $project --continue ws | MATCH "\"ws\" refreshed"
+  workshop_exec refresh --project "$project" --continue ws | MATCH "\"ws\" refreshed"
 
   echo "Check the workshop is in Ready state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
