@@ -1,46 +1,40 @@
 summary: Error states tracking and recovery for the .workshop.lock
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
-  PROJECT: $WORKSHOPS/test-empty-ubuntu20
-
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-  rm -rf "$WORKSHOPS"/new-project
-
+  cleanup ./
+  rm -rf ./new-project
 execute: |
   . "$TESTSLIB"/utils.sh
+  
+  PROJECT=$(pwd)/project
 
-  launch "$PROJECT" ws
+  workshop_exec --project "$PROJECT" launch ws
 
   echo "Check recover .lock file if removed for an existing project"
   rm -f "$PROJECT"/.workshop.lock
-  list "$PROJECT"
+  workshop_exec --project "$PROJECT" list
   test -f "$PROJECT"/.workshop.lock
 
   echo "Check report a workshop state as Error if there is no workshop file"
   mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
-  list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
+  workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
   mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
-  list "$PROJECT" | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   
   workshop_exec remove --project "$PROJECT" ws
   
-  echo "Check recreating project dir with the same name"
-  mkdir -p "$WORKSHOPS"/new-project
-  cp "$PROJECT"/.workshop.ws.yaml "$WORKSHOPS"/new-project/
-  workshop_exec launch --project "$WORKSHOPS"/new-project/ ws
-  workshop_exec remove --project "$WORKSHOPS"/new-project/ ws
-  rm -rf "$WORKSHOPS"/new-project/
-  mkdir -p "$WORKSHOPS"/new-project/
-  cp "$PROJECT"/.workshop.ws.yaml "$WORKSHOPS"/new-project/
-  workshop_exec launch --project "$WORKSHOPS"/new-project/  ws
-  workshop_exec list --project "$WORKSHOPS"/new-project | MATCH "^$WORKSHOPS/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  echo "Check recreating project dir with the same name does not cause conflicts"
+  mkdir -p ./new-project
+  cp "$PROJECT"/.workshop.ws.yaml ./new-project/
+  workshop_exec launch --project $(pwd)/new-project ws
+  workshop_exec remove --project $(pwd)/new-project ws
+  rm -rf ./new-project
+  mkdir -p ./new-project
+  cp "$PROJECT"/.workshop.ws.yaml ./new-project/
+  workshop_exec launch --project $(pwd)/new-project/  ws
+  workshop_exec list --project $(pwd)/new-project | MATCH "^$(pwd)/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec remove --project $(pwd)/new-project ws
+
 
   
   

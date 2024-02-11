@@ -1,6 +1,7 @@
 package sdkstate
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -48,20 +49,28 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 }
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
-	st := task.State()
-	var sdk workshopbackend.SdkRecord
-
-	st.Lock()
-	err := task.Get("sdk-record", &sdk)
-	st.Unlock()
-
+	user, project, _, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
+	st := task.State()
+	var sdk workshopbackend.SdkRecord
+
+	st.Lock()
+	err = task.Get("sdk-record", &sdk)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
+	ctx, _ := BackendContext(tomb, user, project)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
 	client := store.NewStoreClient()
 
-	blob, err := client.RetrieveSdk(sdk.Name, sdk.Channel, dirs.SdkDir)
+	blob, err := client.RetrieveSdk(ctx, sdk.Name, sdk.Channel, dirs.SdkDir)
 	if err != nil {
 		return err
 	}

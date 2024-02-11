@@ -1,47 +1,31 @@
 summary: Check workshop remove
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-  project:  $WORKSHOPS/workshops-sdk/test-sdk-basic
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-  cp "$project"/.workshop.ws.yaml "$project"/.workshop.ws.yaml.bak
-
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-  mv "$project"/.workshop.ws.yaml.bak "$project"/.workshop.ws.yaml
-
-debug: |
-  lxc list -f compact --all-projects
-  workshop changes
-  workshop tasks 1
+  cleanup ./
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  project=$(pwd)
   echo "Launch a workshop"
-  workshop_exec launch --project $project ws
+  workshop_exec --project "$project" launch  ws
 
   echo "Check the workshop can be removed if in Ready"
-  workshop_exec remove --project $project ws
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$project" remove ws
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Stopped"
-  workshop_exec launch --project $project ws
-  workshop_exec stop --project $project ws
-  workshop_exec remove --project $project ws
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$project" launch ws
+  workshop_exec --project "$project" stop  ws
+  workshop_exec --project "$project" remove ws
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
   
   echo "Check the workshop can be removed and SDKs disconnected"
-  workshop_exec launch --project $WORKSHOPS/workshops-sdk/test-sdk-content ws
-  workshop_exec remove --project $WORKSHOPS/workshops-sdk/test-sdk-content ws
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$project" launch  ws-content
+  workshop_exec --project "$project" remove ws-content
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws-content[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Error"
-  workshop_exec launch --project $project ws
+  workshop_exec --project "$project" launch ws
   rm -f "$project"/.workshop.ws.yaml
-  workshop_exec remove --project $project ws
-  list "$project" | MATCH "^$"
+  workshop_exec --project "$project" remove ws

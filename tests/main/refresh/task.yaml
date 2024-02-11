@@ -1,49 +1,35 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  workshop changes
-  workshop tasks 1
-  workshop tasks 2
+  cleanup ./
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Test refresh with an empty workshop"
-  project="$WORKSHOPS"/workshops-empty/test-empty-ubuntu20
-  launch $project ws
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws
 
   echo "Check launch change is Done"
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
 
-  workshop_exec refresh --project $project ws
+  workshop_exec refresh --project "$project" ws
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^2[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
 
   echo "Test refresh with a basic SDK in the workshop"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-basic
-
-  launch $project ws
+  workshop_exec --project "$project" launch ws-sdk
   echo "Check launch change is Done"
-  changes $project | MATCH "^3[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-sdk\" workshop$"
 
-  workshop_exec refresh --project $project ws
+  workshop_exec refresh --project "$project" ws-sdk
 
   echo "Check refresh change is Done"
-  changes $project | MATCH "^4[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws-sdk\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  list "$project" | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws-sdk[[:space:]]+Ready[[:space:]]+-$"

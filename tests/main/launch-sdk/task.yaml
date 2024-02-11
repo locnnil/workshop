@@ -1,33 +1,19 @@
 summary: Ensure that 'workshop launch' creates a core LXD config correctly
-environment:
-  WORKSHOPS_SDK: $SPREAD_PATH/tests/lib/workshops-sdk
-
+prepare: |
+  apt install jq -y --no-install-recommends
+  snap install yq
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS_SDK"
-  uninstall_workshopd
-
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
-debug: |
-  lxc project switch workshop.ubuntu
-  lxc list -f compact
-  ls "$WORKSHOPS_SDK"/*
-
+  cleanup ./
+  snap remove ya --purge
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a test workshop with an SDK should succeed"
-  path="$WORKSHOPS_SDK"/test-sdk-basic
-  launch "$path" ws
-  list "$path" | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
-
-  echo "SDKs must be configured correctly"
-  # TODO reimplement using the workshop info when ready
-  project_id=$(cat "$path"/.workshop.lock)
-  info=$(sudo -u ubuntu curl -X GET -sS --unix-socket "$WORKSHOP"/.workshop.socket http://localhost/v1/projects/"$project_id"/workshops/ws)
-
-  echo "$info" | jq ".result.content[0].name" | MATCH "test-sdk-basic"
-  echo "$info" | jq ".result.content[0].channel" | MATCH "latest/stable"
+  echo "Check workshop can be launched with a basic SDK"
+  path=$(pwd)
+  workshop_exec --project "$path" launch ws
+  workshop_exec --project "$path" list | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
+  
+  # Ensure there is one installed SDK that was provided in the workshop definition
+  workshop_exec --project "$path" info ws | grep -v notes | yq ".content | length == 1"
+  workshop_exec --project "$path" info ws | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"

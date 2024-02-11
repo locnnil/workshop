@@ -18,7 +18,7 @@ cd ~/workshop
 sudo snap install snapcraft --classic  # needed to build from source only
 snapcraft
 
-sudo snap install --devmode ./workshop_0.1.0_amd64.snap
+sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 sleep 5 # naively wait for the service to start, FIXME
 # Run
 workshop --help

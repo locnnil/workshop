@@ -1,20 +1,7 @@
 summary: Check content interface scenarios
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  workshop changes
-  workshop tasks 1
-  workshop tasks 2
-
+  cleanup ./
 execute: |
   . "$TESTSLIB"/utils.sh
     
@@ -28,11 +15,11 @@ execute: |
   }
   
   echo "Check the content interface plug can be installed and auto-connected"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-content
+  project=$(pwd)
   workshop_exec launch --project $project ws
   
   project_id=$(cat "$project"/.workshop.lock)
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec --project $project changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
   
   source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-one.sdk"
   source_two="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-two.sdk"

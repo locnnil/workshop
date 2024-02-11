@@ -1,13 +1,14 @@
 project: workshop
-
+path: /workshop
 environment:
       PATH: $PATH:~/go/bin
-      WORKSHOP: /var/lib/workshop/default
-      TESTSLIB: $SPREAD_PATH/tests/lib
-      SDKCONTENT: $SPREAD_PATH/tests/lib/sdk
+      PROJECT_PATH: /workshop
+      TESTSLIB: $PROJECT_PATH/tests/lib
+      SDKCONTENT: $PROJECT_PATH/tests/lib/sdk
       SDK_STORE_BUCKET_DIR: /data/sdk-store
-debug: |
-      lxc list -f compact --all-projects
+repack: |
+    test -f tests/*.snap || snapcraft -o tests/
+    cat <&3 >&4
 backends:
   multipass:
     type: adhoc
@@ -49,7 +50,7 @@ backends:
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi
-      multipass delete --purge "$instance_name"
+      #multipass delete --purge "$instance_name"
     systems:
       - ubuntu-22.04-64:
           workers: 1
@@ -77,8 +78,6 @@ suites:
   tests/documentation/:
    summary: Documentation tests
    kill-timeout: 30m
-
-path: /remote
 exclude:
   - .git
   - .workshop.lock

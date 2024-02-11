@@ -428,6 +428,7 @@ const (
 	ErrorKindSystemRestart     = "system-restart"
 	ErrorKindDaemonRestart     = "daemon-restart"
 	ErrorKindNoDefaultServices = "no-default-services"
+	ErrorKindUnsuccessful      = "unsuccessful"
 )
 
 func (rsp *response) err(cli *Client) error {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -46,10 +45,6 @@ func main() {
 			panic(v)
 		}
 	}()
-
-	if err := dirs.CreateDirs(); err != nil {
-		panic(err)
-	}
 
 	workshopd.AddCommand((&cmdRun{}).Command())
 	if err = workshopd.Execute(); err != nil {

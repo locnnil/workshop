@@ -7,34 +7,38 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-
-	"github.com/spf13/afero"
 )
 
-var (
-	// defaultWorkshopdDir is the Workshop directory used if $WORKSHOP is not set. It is
-	// created by the daemon ("workshopd run") if it doesn't exist, and also used by
-	// the workshop client.
-	defaultWorkshopdDir = "/var/lib/workshop/default"
+// defaultBaseDir is the Workshop directory used if $WORKSHOP is not set. It is
+// created by the daemon ("workshopd run") if it doesn't exist, and also used by
+// the workshop client.
+const defaultBaseDir = "/var/lib/workshop"
 
+// Variables for paths inside a workshop
+var (
 	// base directory inside a workshop
-	WorkshopBaseDir = "/var/lib/workshop"
+	WorkshopBaseDir = defaultBaseDir
 
 	// SDKs directory to install an SDK in a workshop
 	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 )
 
+// Variables for workshopd (host paths)
 var (
-	SdkDir     string
-	StateDir   string
-	BaseDir    string
+	// Work directory
+	ExecDir string
+	// Base directory for workshopd
+	BaseDir string
+	// The directory to store downloaded SDKs
+	SdkDir string
+	// Path to the daemon's unix socket
 	SocketPath string
 )
 
 func getEnvPaths() (workshopdDir string, socketPath string) {
 	workshopdDir = os.Getenv("WORKSHOP")
 	if workshopdDir == "" {
-		workshopdDir = defaultWorkshopdDir
+		workshopdDir = defaultBaseDir
 	}
 	socketPath = os.Getenv("WORKSHOP_SOCKET")
 	if socketPath == "" {
@@ -44,11 +48,19 @@ func getEnvPaths() (workshopdDir string, socketPath string) {
 }
 
 func init() {
+	var err error
+	var execPath string
+	execPath, err = os.Executable()
+	if err != nil {
+		panic("cannot get working directory")
+	}
+
+	ExecDir = filepath.Dir(execPath)
 	BaseDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
 
 	var b [8]byte
-	_, err := crypto_rand.Read(b[:])
+	_, err = crypto_rand.Read(b[:])
 	if err != nil {
 		panic("cannot seed math/rand package")
 	}
@@ -57,22 +69,18 @@ func init() {
 
 func SetRootDir(rootdir string) {
 	if !filepath.IsAbs(rootdir) {
-		panic(fmt.Sprintf("supplied path is not absolute %q", rootdir))
+		panic(fmt.Sprintf("cannot set root dir: path %q is not absolute", rootdir))
 	}
 
-	StateDir = rootdir
 	SdkDir = filepath.Join(rootdir, "sdk")
 }
 
 func CreateDirs() error {
-	localFs := afero.NewOsFs()
-
-	err := localFs.MkdirAll(StateDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(BaseDir, 0755); err != nil {
 		return err
 	}
 
-	if err := localFs.MkdirAll(SdkDir, 0755); err != nil {
+	if err := os.MkdirAll(SdkDir, 0755); err != nil {
 		return err
 	}
 	return nil

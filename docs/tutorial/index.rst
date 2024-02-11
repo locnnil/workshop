@@ -120,7 +120,7 @@ for example:
 
 .. code-block:: console
 
-   $ sudo snap install --devmode ./workshop_<VERSION>_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 
 
 Run

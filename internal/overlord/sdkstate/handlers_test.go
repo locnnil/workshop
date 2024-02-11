@@ -125,7 +125,7 @@ func (s *H) TearDownTest(c *check.C) {
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -138,10 +138,8 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t)
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
 
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
@@ -149,14 +147,12 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"tar",
 		"--extract",
 		"--file",
-		"/root/test_2.sdk",
-		"--one-top-level=/var/lib/workshop/sdk/test/2",
+		"/root/test-2_2.sdk",
+		"--one-top-level=/var/lib/workshop/sdk/test-2/2",
 		"--no-same-owner",
 	})
 
-	c.Check(chg.Err(), check.Equals, nil)
-	props, _ := s.backend.Workshop(s.ctx, "ws")
-	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
 func (s *H) TestDoInstallSdkExecFail(c *check.C) {
@@ -185,9 +181,6 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.se.Wait()
 	s.state.Lock()
 
-	props, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
 }
 
@@ -195,7 +188,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -212,7 +205,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
-	/* emulate install behaviour that unpacks an SDK to a certain directory */
+	// emulate install behaviour that unpacks an SDK to a certain directory
 	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		fs, _ := s.backend.WorkshopFs(ctx, name)
 		fs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "new"), 0755)
@@ -220,16 +213,11 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
 
-	props, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	c.Check(props.Devices["new"], check.DeepEquals, map[string]string(nil))
-	/* make sure SDK dir was removed */
+	// make sure SDK dir was removed
 	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	exist, _ := afero.Exists(fs, filepath.Join(dirs.WorkshopSdksDir, "new"))

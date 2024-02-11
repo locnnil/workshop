@@ -1,0 +1,5 @@
+#!/bin/sh
+
+SDK_STORE_URL=$(snapctl get store.url)
+export SDK_STORE_URL
+"$SNAP"/bin/workshopd run --create-dirs

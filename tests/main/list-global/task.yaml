@@ -1,50 +1,32 @@
 summary: Test workshop list with a --global flag on
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
-
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
-  for path in "$WORKSHOPS"/*; do
-    launch $path ws
-  done
-  lxc project switch workshop.ubuntu
-
-
-debug: |
-  lxc project switch workshop.ubuntu
-  lxc list -f compact
-  ls $WORKSHOPS/*
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  uninstall_workshopd
-
-  cleanup "$WORKSHOPS"
-  for path in "$WORKSHOPS"/{*-copy,*-new}; do
+  cleanup ./
+  for path in ./{*-copy,*-new}; do
     rm -rf "$path"
   done
 
 execute: |
   . "$TESTSLIB"/utils.sh
+  
+  projects=$(pwd)
+  
+  workshop_exec --project "$projects"/project-1 launch ws
+  workshop_exec --project "$projects"/project-2 launch ws
+  
   echo "(1) make sure every required workshop present in the global list output"
-  for path in "$WORKSHOPS"/*; do
-   list_global | MATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-  done
+  workshop_exec list --global | MATCH "^$projects/project-1[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | MATCH "^$projects/project-2[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
 
   echo "(2) move a directory and validate it has an updated path in the output"
-  for path in "$WORKSHOPS"/*; do
-   sudo -u ubuntu mv "$path" "$path"-new
-   list_global | MATCH "^$path-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-   list_global | NOMATCH "^$path[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-   sudo -u ubuntu mv "$path"-new "$path"
-  done
-
+  mv project-1 project-new
+  workshop_exec list --global | MATCH "^$projects/project-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | NOMATCH "^$projects/project-1[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  mv project-new project-1
+  
   echo "(3) delete a directory and validate it has a correct state in the output"
-  for path in "$WORKSHOPS"/*; do
-   sudo -u ubuntu cp -R "$path" "$path"-copy
-   launch "$path"-copy ws
-   rm -rf "$path"-copy
-   list_global | MATCH "^$path-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file,missing-project$"
-  done
+  cp -R project-2 project-2-copy
+  workshop_exec --project $projects/project-2-copy launch ws
+  rm -rf project-2-copy
+  workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file,missing-project$"
+  

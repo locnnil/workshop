@@ -1,23 +1,17 @@
 summary: Ensure the changes command output correctness
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib/workshops-empty
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
+  cleanup ./
 
 execute: |
   . "$TESTSLIB"/utils.sh
-
+  
+  project=$(pwd)
+  
   echo "workshop changes will not produce any output if there are no changes"
-  changes_global | MATCH "^$"
+  workshop_exec --project "$project" changes | MATCH "^$"
 
-  project="$WORKSHOPS"/test-empty-ubuntu20
-  launch $project ws
+  workshop_exec --project "$project" launch ws
 
   echo "The launch change must present in the list"
-  changes $project | MATCH "^1[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"

@@ -117,7 +117,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 
 	ws.Workshop = &Workshop{backend: f,
 		Name:      name,
-		Devices:   defaultDevices(),
+		devices:   defaultDevices(),
 		running:   true,
 		projectId: projectId,
 		content:   make(map[string]sdk.Setup),
@@ -179,7 +179,7 @@ func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
-	f.Workshops[projectId][name].Devices[props.Name()] = props.properties
+	f.Workshops[projectId][name].devices[props.Name()] = props.properties
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 	if err != nil {
 		return err
 	}
-	delete(f.Workshops[projectId][name].Devices, device)
+	delete(f.Workshops[projectId][name].devices, device)
 	return nil
 }
 
@@ -283,10 +283,6 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter W
 		}
 	}
 	return res, nil
-}
-
-func (f *FakeWorkshopBackend) GetWorkshopsByDevices(ctx context.Context, filter WorkshopDeviceFilter) (map[string]*Workshop, error) {
-	panic("not implemented") // TODO: Implement
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {

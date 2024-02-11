@@ -5,10 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
@@ -19,14 +21,15 @@ import (
 )
 
 type hookSuite struct {
-	fs      afero.Fs
-	backend *workshopbackend.FakeWorkshopBackend
-	state   *state.State
-	runner  *state.TaskRunner
-	se      *overlord.StateEngine
-	hookmgr *hookstate.HookManager
-	ctx     context.Context
-	project *workshopbackend.Project
+	fs          afero.Fs
+	backend     *workshopbackend.FakeWorkshopBackend
+	state       *state.State
+	runner      *state.TaskRunner
+	se          *overlord.StateEngine
+	hookmgr     *hookstate.HookManager
+	ctx         context.Context
+	project     *workshopbackend.Project
+	mockHandler *hooktest.MockHandler
 }
 
 var _ = check.Suite(&hookSuite{})
@@ -44,8 +47,6 @@ func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Ta
 	}
 }
 
-var ErrTrigger = errors.New("error out")
-
 func (s *hookSuite) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
@@ -62,11 +63,15 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
+	s.mockHandler = hooktest.NewMockHandler()
 	s.hookmgr = hookstate.New(s.state, s.runner, s.backend)
+	s.hookmgr.Register(regexp.MustCompile("^fake-hook$"), func(context *hookstate.Context) hookstate.Handler {
+		return s.mockHandler
+	})
 
 	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
-		return ErrTrigger
+		return errors.New("error out")
 	}
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
 
@@ -77,10 +82,7 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
-func (s *hookSuite) TearDownTest(c *check.C) {
-}
-
-func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
+func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -91,23 +93,21 @@ func (s *hookSuite) TestExecSetupBaseNoHook(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
+	// Launch a workshop provinding no hooks
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
 `), 0644)
 	c.Check(err, check.IsNil)
-
 	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
 
 	c.Assert(s.backend.ExecCalls, check.HasLen, 0)
-	c.Check(chg.Err(), check.Equals, nil)
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
 func (s *hookSuite) TestExecSaveState(c *check.C) {
@@ -123,10 +123,8 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.launchWorkshop(c, "one")
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
@@ -139,6 +137,14 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Assert(info.IsDir(), check.Equals, true)
 	c.Assert(t1.Log(), check.HasLen, 0)
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+
+	c.Check(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
 }
 
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
@@ -160,18 +166,21 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
-	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+
+	c.Check(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/restore-state"})
-	c.Assert(s.backend.ExecCalls[0].Args.Environment, testutil.DeepUnsortedMatches, map[string]string{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/one"})
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
+	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
 }
 
-func (s *hookSuite) TestHookFailed(c *check.C) {
+func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.SaveState)
@@ -194,23 +203,234 @@ func (s *hookSuite) TestHookFailed(c *check.C) {
 	}()
 
 	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
+	s.se.Ensure()
+	s.se.Wait()
 	s.state.Lock()
-	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+
+	c.Check(s.backend.ExecCalls, check.HasLen, 1)
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
-	// ensure that the save-state handler has created the required state directory
-	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
-	c.Check(err, check.IsNil)
-	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
-	c.Check(err, check.IsNil)
-	c.Assert(info.IsDir(), check.Equals, true)
-	c.Assert(t1.Log(), check.HasLen, 1)
-	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error")
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error$")
+}
+
+func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+	c.Check(t1.Log(), check.HasLen, 0)
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, true)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, false)
+}
+
+func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return errors.New("hook execution error")
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.launchWorkshop(c, "one")
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error$")
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, false)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, true)
+}
+
+func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	// The context handler will return an error that must be the final error of
+	// the task.
+	s.mockHandler.ErrorError = true
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return errors.New("hook execution error")
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*Error failed at user request$")
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, false)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, true)
+}
+
+func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	s.mockHandler.IgnoreOriginalErr = true
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return errors.New("hook execution error")
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Log(), check.HasLen, 0)
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, false)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, true)
+}
+
+func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	s.mockHandler.BeforeError = true
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*Before failed at user request$")
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, false)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, false)
+
+	c.Assert(s.backend.ExecCalls, check.HasLen, 0)
+}
+
+func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	s.mockHandler.DoneError = true
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*Done failed at user request$")
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, true)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, true)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, false)
+}
+
+func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	s.hookmgr.Register(regexp.MustCompile("^fake-*"), func(context *hookstate.Context) hookstate.Handler {
+		return s.mockHandler
+	})
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, `.*2 handlers registered for hook "fake-hook".*`)
+
+	c.Check(s.mockHandler.BeforeCalled, check.Equals, false)
+	c.Check(s.mockHandler.DoneCalled, check.Equals, false)
+	c.Check(s.mockHandler.ErrorCalled, check.Equals, false)
 }
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
@@ -232,5 +452,7 @@ sdks:
 	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.RestoreState.String()))
 	c.Check(err, check.IsNil)
 	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.SetupBase.String()))
+	c.Check(err, check.IsNil)
+	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.FakeHook.String()))
 	c.Check(err, check.IsNil)
 }

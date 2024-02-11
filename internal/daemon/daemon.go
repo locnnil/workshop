@@ -57,7 +57,7 @@ var (
 
 // Options holds the daemon setup required for the initialization of a new daemon.
 type Options struct {
-	// Dir is the workshop directory where all setup is found. Defaults to /var/lib/workshop/default.
+	// Dir is the workshop directory where all setup is found. Defaults to /var/lib/workshop.
 	Dir string
 
 	// SocketPath is an optional path for the unix socket used for the client

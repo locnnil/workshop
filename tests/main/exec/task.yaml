@@ -1,39 +1,28 @@
 summary: Check major workshop exec scenarios
-environment:
-  WORKSHOPS: $SPREAD_PATH/tests/lib
-  WORKSHOP_DEBUG: 1
-prepare: |
-  . "$TESTSLIB"/utils.sh
-  install_workshopd
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup "$WORKSHOPS"
-  uninstall_workshopd
-
-debug: |
-  systemctl status workshopd.service
+  cleanup ./
 
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Launch a workshop"
-  project="$WORKSHOPS"/workshops-sdk/test-sdk-basic
-  launch $project ws
+  project=$(pwd)
+  workshop_exec --project ""$project"" launch ws
 
   echo "Check an environment variable can be set"
-  workshop_exec exec --project $project --env 'Foo=bar'  ws -- bash -c 'echo -n $Foo' | MATCH bar
+  workshop_exec exec --project "$project" --env 'Foo=bar'  ws -- bash -c 'echo -n $Foo' | MATCH bar
 
   echo "Check default user and group"
-  workshop_exec exec --project $project ws -- bash -c 'id -u -n' | MATCH workshop
-  workshop_exec exec --project $project ws -- bash -c 'id -g -n' | MATCH workshop
+  workshop_exec exec --project "$project" ws -- bash -c 'id -u -n' | MATCH workshop
+  workshop_exec exec --project "$project" ws -- bash -c 'id -g -n' | MATCH workshop
 
   echo "Check working directory setup"
-  workshop_exec exec --project $project ws -- pwd | MATCH '/project'
-  workshop_exec exec --project $project -w /home/workshop ws -- pwd | MATCH '/home/workshop'
+  workshop_exec exec --project "$project" ws -- pwd | MATCH '/project'
+  workshop_exec exec --project "$project" -w /home/workshop ws -- pwd | MATCH '/home/workshop'
 
   echo "Check enforce non-interactive mode"
-  workshop_exec exec --project $project -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
+  workshop_exec exec --project "$project" -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
 
   #FIXME: this works in a terminal but not under spread This is due to the
   #websocket client implementation that closes the connection when a reader from
@@ -43,15 +32,14 @@ execute: |
   #by the time already (note: it is only relevant for the interactive sessions
   #where one websocket used for in/out)
   #echo "Check enforce interactive mode"
-  #workshop_exec exec --project $project --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
+  #workshop_exec exec --project "$project" --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
 
   echo "Check timeout"
-  workshop_exec exec --project $project --timeout 1s ws -- bash -c 'sleep 5' || true
-  workshop_exec tasks 8 | MATCH ".*timed out after 1s.*"
+  workshop_exec exec --project "$project" --timeout 1s ws -- bash -c 'sleep 5' | MATCH ".*timed out after 1s.*"
 
   echo "Check stderr (workshop exec redirects stderr to stdout for MATCH to work)"
-  workshop_exec exec --project $project -I ws -- bash -c '>&2 echo -n stderr' | MATCH stderr
+  workshop_exec exec --project "$project" -I ws -- bash -c '>&2 echo -n stderr' | MATCH stderr
 
   echo "Check stopped workshop"
-  workshop_exec stop --project $project ws
-  workshop_exec exec --project $project ws pwd | MATCH '.*"ws" is in stopped; must be ready or pending$'
+  workshop_exec stop --project "$project" ws
+  workshop_exec exec --project "$project" ws pwd | MATCH '.*"ws" is in stopped; must be ready or pending$'
