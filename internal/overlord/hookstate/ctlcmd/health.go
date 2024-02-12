@@ -18,11 +18,13 @@
 package ctlcmd
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
 )
 
 var (
@@ -105,6 +107,10 @@ func (c *healthCommand) Execute([]string) error {
 	}
 	ctx.Lock()
 	defer ctx.Unlock()
+
+	if ctx.HookName() != hookstate.CheckHealth.String() {
+		return errors.New(`"set-health" is only allowed from a "check-health" hook`)
+	}
 
 	health := &healthstate.HealthState{
 		Timestamp: time.Now(),

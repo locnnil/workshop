@@ -136,3 +136,19 @@ func (s *healthSuite) TestMessageTruncation(c *check.C) {
 	c.Check(health.Message, check.Equals, "Sometimes messages will get a little bit too verbose and this can lea…")
 	c.Check(health.Code, check.Equals, "some-code")
 }
+
+func (s *healthSuite) TestRegularRunIncorrectHook(c *check.C) {
+	setup := &hookstate.HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: hookstate.SetupBase}
+	task, _ := s.mockContext.Task()
+	ctx, err := hookstate.NewContext(task, s.state, setup, s.mockHandler, "")
+	c.Assert(err, check.IsNil)
+
+	_, _, err = ctlcmd.Run(ctx, []string{"set-health", "waiting", "message", "--code=some-code"}, 0)
+	c.Assert(err, check.ErrorMatches, `"set-health" is only allowed from a "check-health" hook`)
+
+	s.mockContext.Lock()
+	defer s.mockContext.Unlock()
+
+	var health healthstate.HealthState
+	c.Assert(s.mockContext.Get("health", &health), testutil.ErrorIs, state.ErrNoState)
+}
