@@ -43,12 +43,13 @@ const (
 	SetupBase WorkshopHookType = iota
 	SaveState
 	RestoreState
+	CheckHealth
 
 	fakeHook // tests only
 )
 
 func (s WorkshopHookType) String() string {
-	return [...]string{"setup-base", "save-state", "restore-state", "fake-hook"}[s]
+	return [...]string{"setup-base", "save-state", "restore-state", "check-health", "fake-hook"}[s]
 }
 
 func (h *HookSetup) Type() string {

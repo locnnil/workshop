@@ -123,7 +123,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.SetupHook(st, file.Name, sdk.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, file.Name, sdk.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -389,7 +389,7 @@ func createStateHooks(st *state.State, workshop string, content []sdk.Setup, new
 			continue
 		}
 
-		stateHook := hookstate.SetupHook(st, workshop, newsdk.Name, hooktype)
+		stateHook := hookstate.Hook(st, workshop, newsdk.Name, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
 			stateHook.WaitFor(prevRestore)

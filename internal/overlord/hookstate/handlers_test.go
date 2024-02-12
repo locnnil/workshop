@@ -15,13 +15,11 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 )
 
 type hookSuite struct {
-	fs          afero.Fs
 	backend     *workshopbackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
@@ -48,11 +46,9 @@ func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Ta
 }
 
 func (s *hookSuite) SetUpTest(c *check.C) {
-	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
-
 	s.backend = workshopbackend.NewFakeWorkshopBackend()
 
+	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
@@ -86,7 +82,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	t1 := hookstate.SetupHook(s.state, "ws", "new", hookstate.SetupBase)
+	t1 := hookstate.Hook(s.state, "ws", "new", hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -113,7 +109,7 @@ base: ubuntu@20.04
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -150,7 +146,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.RestoreState)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -183,7 +179,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -219,7 +215,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -243,7 +239,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -279,7 +275,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 	// The context handler will return an error that must be the final error of
 	// the task.
 	s.mockHandler.ErrorError = true
@@ -318,7 +314,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 	s.mockHandler.IgnoreOriginalErr = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -354,7 +350,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 	s.mockHandler.BeforeError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -382,7 +378,7 @@ func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 	s.mockHandler.DoneError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -408,7 +404,7 @@ func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.SetupHook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
 	s.hookmgr.Register(regexp.MustCompile("^fake-*"), func(context *hookstate.Context) hookstate.Handler {
 		return s.mockHandler
 	})

@@ -55,7 +55,6 @@ func (s *ctlcmdSuite) SetUpTest(c *C) {
 }
 
 func (s *ctlcmdSuite) TestNonExistingCommand(c *C) {
-	c.Skip("Need at least one command added to the parser")
 	stdout, stderr, err := ctlcmd.Run(s.mockContext, []string{"foo"}, 0)
 	c.Check(string(stdout), Equals, "")
 	c.Check(string(stderr), Equals, "")
@@ -118,11 +117,11 @@ func (s *ctlcmdSuite) TestRunOnlyHelp(c *C) {
 }
 
 func (s *ctlcmdSuite) TestRunHelpAtAnyPosition(c *C) {
-	_, _, err := ctlcmd.Run(s.mockContext, []string{"start", "a", "-h"}, 1000)
+	_, _, err := ctlcmd.Run(s.mockContext, []string{"set-health", "a", "-h"}, 1000)
 	c.Check(err, NotNil)
 	c.Assert(strings.HasPrefix(err.Error(), "Usage:"), Equals, true)
 
-	_, _, err = ctlcmd.Run(s.mockContext, []string{"start", "a", "b", "--help"}, 1000)
+	_, _, err = ctlcmd.Run(s.mockContext, []string{"set-health", "a", "b", "--help"}, 1000)
 	c.Check(err, NotNil)
 	c.Assert(strings.HasPrefix(err.Error(), "Usage:"), Equals, true)
 }

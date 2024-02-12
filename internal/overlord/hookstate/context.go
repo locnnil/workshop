@@ -92,6 +92,11 @@ func newEphemeralHookContextWithData(st *state.State, setup *HookSetup, contextD
 	return context, nil
 }
 
+// Sdk returns the name of the SDK in this context.
+func (c *Context) Sdk() string {
+	return c.setup.Sdk
+}
+
 // Task returns the task associated with the hook or (nil, false) if the context is ephemeral
 // and task is not available.
 func (c *Context) Task() (*state.Task, bool) {
