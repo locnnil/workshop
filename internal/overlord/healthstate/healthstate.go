@@ -14,28 +14,37 @@ import (
 type HealthStatus int
 
 const (
-	UnknownStatus = HealthStatus(iota)
-	OkayStatus
-	WaitingStatus
+	UnknownStatus HealthStatus = iota
+	ReadyStatus
+	PendingStatus
 	ErrorStatus
+	StoppedStatus
+	OffStatus
 )
 
-var knownStatuses = []string{"unknown", "okay", "waiting", "error"}
-
-func StatusLookup(str string) (HealthStatus, error) {
-	for i, k := range knownStatuses {
-		if k == str {
-			return HealthStatus(i), nil
-		}
-	}
-	return -1, fmt.Errorf("invalid status %q, must be one of %s", str, strutil.Quoted(knownStatuses))
-}
-
 func (s HealthStatus) String() string {
-	if s < 0 || s >= HealthStatus(len(knownStatuses)) {
+	statuses := [...]string{"Unknown", "Ready", "Pending", "Error", "Stopped", "Off"}
+	if s < 0 || int(s) >= len(statuses) {
 		return fmt.Sprintf("invalid (%d)", s)
 	}
-	return knownStatuses[s]
+	return statuses[s]
+}
+
+var knownSetHealthStatuses = []string{"unknown", "okay", "waiting", "error"}
+
+func SetHealthStatusLookup(str string) (HealthStatus, error) {
+	switch str {
+	case "okay":
+		return ReadyStatus, nil
+	case "waiting":
+		return PendingStatus, nil
+	case "error":
+		return ErrorStatus, nil
+	case "unknown":
+		return UnknownStatus, nil
+	}
+
+	return -1, fmt.Errorf("invalid status %q, must be one of %s", str, strutil.Quoted(knownSetHealthStatuses))
 }
 
 type HealthState struct {
@@ -43,7 +52,7 @@ type HealthState struct {
 	Status    HealthStatus `json:"status"`
 	Message   string       `json:"message,omitempty"`
 	Code      string       `json:"code,omitempty"`
-	Retries   int          `json:"retries,omitempty"`
+	Sdk       string       `json:"sdk,omitempty"`
 }
 
 func Init(hookManager *hookstate.HookManager) {
@@ -70,7 +79,13 @@ func (h *healthHandler) Before() error {
 		h.context.Set("health", HealthState{
 			Status:  UnknownStatus,
 			Message: "The health status is unknown",
+			Sdk:     h.context.Sdk(),
 		})
+	}
+	var counter int
+	err = h.context.Get("retry-counter", &counter)
+	if errors.Is(err, state.ErrNoState) {
+		h.context.Set("retry-counter", 0)
 	}
 	return nil
 }
@@ -80,6 +95,7 @@ var retriesAllowed = 10
 
 func (h *healthHandler) Done() error {
 	var health HealthState
+	var retryCounter int
 
 	h.context.Lock()
 	err := h.context.Get("health", &health)
@@ -90,14 +106,22 @@ func (h *healthHandler) Done() error {
 		return err
 	}
 
-	if health.Retries >= retriesAllowed && (health.Status == WaitingStatus || health.Status == UnknownStatus) {
+	h.context.Lock()
+	err = h.context.Get("retry-counter", &retryCounter)
+	h.context.Unlock()
+
+	if err != nil {
+		// note it can't actually be state.ErrNoState because Before sets it
+		return err
+	}
+
+	if retryCounter >= retriesAllowed && (health.Status == PendingStatus || health.Status == UnknownStatus) {
 		return fmt.Errorf("SDK %q status is not healthy after multiple checks", h.context.Sdk())
 	}
 
-	if health.Status == WaitingStatus || health.Status == UnknownStatus {
-		health.Retries = health.Retries + 1
+	if health.Status == PendingStatus || health.Status == UnknownStatus {
 		h.context.Lock()
-		h.context.Set("health", health)
+		h.context.Set("retry-counter", retryCounter+1)
 		h.context.Unlock()
 		return &state.Retry{After: retryTimeout, Reason: health.Message}
 	}

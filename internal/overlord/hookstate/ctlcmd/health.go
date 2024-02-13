@@ -70,7 +70,7 @@ func (c *healthCommand) Execute([]string) error {
 		return fmt.Errorf(`when status is "okay", message and code must be empty`)
 	}
 
-	status, err := healthstate.StatusLookup(c.Status)
+	status, err := healthstate.SetHealthStatusLookup(c.Status)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (c *healthCommand) Execute([]string) error {
 		}
 	}
 
-	if status != healthstate.OkayStatus {
+	if status != healthstate.ReadyStatus {
 		if len(c.Message) == 0 {
 			return fmt.Errorf(`when status is not "okay", message is required`)
 		}

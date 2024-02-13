@@ -28,50 +28,22 @@ const (
 
 var InstallTimeNow = time.Now
 
-type WorkshopStatus int
-
-const (
-	WorkshopOff WorkshopStatus = iota
-	WorkshopReady
-	WorkshopStopped
-	WorkshopPending
-	WorkshopError
-)
-
-func (s WorkshopStatus) String() string {
-	return [...]string{"Off", "Ready", "Stopped", "Pending", "Error"}[s]
-}
-
-func ParseWorkshopStatus(s string) WorkshopStatus {
-	refreshMap := map[string]WorkshopStatus{
-		WorkshopOff.String():     WorkshopOff,
-		WorkshopReady.String():   WorkshopReady,
-		WorkshopStopped.String(): WorkshopStopped,
-		WorkshopPending.String(): WorkshopPending,
-		WorkshopError.String():   WorkshopError,
-	}
-	return refreshMap[s]
-}
-
-func NewWorkshop(backend WorkshopBackend, name, projectId string) *Workshop {
+func NewWorkshop(backend WorkshopBackend, project *Project, name string) *Workshop {
 	return &Workshop{
-		Name:      name,
-		projectId: projectId,
-		backend:   backend,
+		Name:    name,
+		project: project,
+		backend: backend,
 	}
 }
 
 type Workshop struct {
-	backend   WorkshopBackend
-	file      *WorkshopFile
-	projectId string
-	base      string
-	Name      string
-	devices   map[string]map[string]string
-	content   map[string]sdk.Setup
-	errs      []WorkshopErrorType
-	running   bool
-	status    WorkshopStatus
+	backend WorkshopBackend
+	project *Project
+	base    string
+	Name    string
+	devices map[string]map[string]string
+	content map[string]sdk.Setup
+	running bool
 }
 
 func (w *Workshop) Base() string {
@@ -86,38 +58,18 @@ func (w *Workshop) SetRunning(run bool) {
 	w.running = run
 }
 
-func (w *Workshop) ProjectId() string {
-	return w.projectId
+func (w *Workshop) Project() *Project {
+	return w.project
 }
 
-func (w *Workshop) Errors() []WorkshopErrorType {
-	return w.errs
-}
-
-func (w *Workshop) AddError(err WorkshopErrorType) {
-	w.errs = append(w.errs, err)
+func (w *Workshop) File() (*WorkshopFile, error) {
+	return w.project.WorkshopFile(w.Name)
 }
 
 func (w *Workshop) Content() []sdk.Setup {
 	content := maps.Values(w.content)
 	slices.SortFunc(content, func(a, b sdk.Setup) bool { return a.Name < b.Name })
 	return content
-}
-
-func (w *Workshop) File() *WorkshopFile {
-	return w.file
-}
-
-func (w *Workshop) SetFile(f *WorkshopFile) {
-	w.file = f
-}
-
-func (w *Workshop) Status() WorkshopStatus {
-	return w.status
-}
-
-func (w *Workshop) SetStatus(st WorkshopStatus) {
-	w.status = st
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
@@ -190,29 +142,6 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	defer fs.Close()
 
 	return fs.Remove(sdk.SdkCurrentPath(name))
-}
-
-const (
-	None WorkshopErrorType = iota
-	MissingProject
-	MissingFile
-	BrokenSdkRecord
-	WaitOnError
-)
-
-func (s WorkshopErrorType) String() string {
-	return [...]string{"", "missing-project", "missing-file", "invalid-sdk", "wait-on-error"}[s]
-}
-
-func ParseWorkshopError(s string) WorkshopErrorType {
-	wserrs := map[string]WorkshopErrorType{
-		None.String():            None,
-		MissingProject.String():  MissingProject,
-		MissingFile.String():     MissingFile,
-		BrokenSdkRecord.String(): BrokenSdkRecord,
-		WaitOnError.String():     WaitOnError,
-	}
-	return wserrs[s]
 }
 
 func WorkshopFilePath(dir, name string) string {

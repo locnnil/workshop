@@ -28,5 +28,5 @@ execute: |
   cp -R project-2 project-2-copy
   workshop_exec --project $projects/project-2-copy launch ws
   rm -rf project-2-copy
-  workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file,missing-project$"
+  workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
   

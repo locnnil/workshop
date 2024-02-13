@@ -118,7 +118,7 @@ func (s *healthSuite) TestRegularRun(c *check.C) {
 
 	var health healthstate.HealthState
 	c.Assert(s.mockContext.Get("health", &health), check.IsNil)
-	c.Check(health.Status, check.Equals, healthstate.WaitingStatus)
+	c.Check(health.Status, check.Equals, healthstate.PendingStatus)
 	c.Check(health.Message, check.Equals, "message")
 	c.Check(health.Code, check.Equals, "some-code")
 }

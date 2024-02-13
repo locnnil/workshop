@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -164,19 +164,13 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	invalid, status, err := w.CheckStatus(
+	err = w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopStatus) bool {
-			return status == workshopbackend.WorkshopReady
-		})
+		[]healthstate.HealthStatus{healthstate.ReadyStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot refresh: %w", err)
-	}
-
-	if len(invalid) > 0 {
-		return nil, fmt.Errorf("cannot refresh: %q is in %s; must be ready", invalid, strings.ToLower(status.String()))
 	}
 
 	_, workshops, err := w.Workshops(ctx, projectId)
@@ -191,7 +185,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		if idx == -1 {
 			return nil, fmt.Errorf("%q workshop not found", i)
 		}
-		files = append(files, workshops[idx].File())
+		file, err := project.WorkshopFile(workshops[idx].Name)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, file)
 		content = append(content, workshops[idx].Content())
 	}
 
@@ -401,19 +399,13 @@ func createStateHooks(st *state.State, workshop string, content []sdk.Setup, new
 
 func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
 	// check if all the workshops are stopped
-	invalid, status, err := w.CheckStatus(
+	err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopStatus) bool {
-			return status == workshopbackend.WorkshopStopped
-		})
+		[]healthstate.HealthStatus{healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot start: %w", err)
-	}
-
-	if len(invalid) > 0 {
-		return nil, fmt.Errorf("cannot start: %q is in %s; must be stopped", invalid, strings.ToLower(status.String()))
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -449,19 +441,13 @@ func startMany(st *state.State, names []string, project *workshopbackend.Project
 }
 
 func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
-	invalid, status, err := w.CheckStatus(
+	err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopStatus) bool {
-			return status == workshopbackend.WorkshopStopped || status == workshopbackend.WorkshopReady
-		})
+		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot stop: %w", err)
-	}
-
-	if len(invalid) > 0 {
-		return nil, fmt.Errorf("cannot stop: %q is in %s; must be stopped or ready", invalid, strings.ToLower(status.String()))
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -503,19 +489,13 @@ type ExecMeta struct {
 }
 
 func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshopbackend.ExecArgs) (*state.Task, error) {
-	invalid, status, err := w.CheckStatus(
+	err := w.CheckStatus(
 		ctx,
 		[]string{name},
 		projectId,
-		func(status workshopbackend.WorkshopStatus) bool {
-			return status == workshopbackend.WorkshopReady || status == workshopbackend.WorkshopPending
-		})
+		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.PendingStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot exec: %w", err)
-	}
-
-	if len(invalid) > 0 {
-		return nil, fmt.Errorf("cannot exec: %q is in %s; must be ready or pending", invalid, strings.ToLower(status.String()))
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -548,19 +528,13 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
-	invalid, status, err := w.CheckStatus(
+	err := w.CheckStatus(
 		ctx,
 		names,
 		projectId,
-		func(status workshopbackend.WorkshopStatus) bool {
-			return status != workshopbackend.WorkshopPending && status != workshopbackend.WorkshopOff
-		})
+		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot remove: %w", err)
-	}
-
-	if len(invalid) > 0 {
-		return nil, fmt.Errorf("cannot remove: %q is in %s; must be ready, stopped or error", invalid, strings.ToLower(status.String()))
 	}
 
 	project, err := w.loadProject(ctx, projectId)

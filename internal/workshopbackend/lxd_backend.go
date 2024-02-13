@@ -300,7 +300,8 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 // removed already)
 func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) ([]*Project, error) {
 	for idx, prj := range projects {
-		if ok, _, err := osutil.ExistsIsDir(prj.Path); !ok {
+		if !prj.Exists() {
+			var err error
 			// If got here then there is no project directory for the projectId
 			// anymore. It can mean moving or deletion happened in the past. Try
 			// to recover the new project path
@@ -888,14 +889,9 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 
 func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
 	var err error
-	var running, ok bool
-	var pId string
+	var running bool
 
 	name := WorkshopName(inst.Name)
-
-	if pId, ok = inst.Config["user.workshop.project-id"]; !ok {
-		return nil, fmt.Errorf("no project assossiated with the workshop %q", name)
-	}
 
 	if inst.StatusCode == api.Running || inst.StatusCode == api.Ready {
 		running = true
@@ -907,22 +903,12 @@ func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, er
 	}
 
 	var workshop = &Workshop{
-		backend:   s,
-		projectId: pId,
-		Name:      name,
-		running:   running,
-		base:      base,
-		devices:   inst.Devices,
-	}
-
-	file, err := p.WorkshopFile(name)
-	if err != nil {
-		workshop.AddError(MissingFile)
-	}
-	workshop.SetFile(file)
-
-	if exists, isDir, _ := osutil.ExistsIsDir(p.Path); !exists || !isDir {
-		workshop.AddError(MissingProject)
+		backend: s,
+		project: p,
+		Name:    name,
+		running: running,
+		base:    base,
+		devices: inst.Devices,
 	}
 
 	// Fetch information about the installed SDKs

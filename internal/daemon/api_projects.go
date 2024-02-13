@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -40,7 +41,7 @@ func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *Worksho
 	ws.Name = file.Name
 	ws.Base = file.Base
 	ws.ProjectId = pid
-	ws.Status = workshopbackend.WorkshopOff.String()
+	ws.Status = healthstate.OffStatus.String()
 	for _, i := range file.Sdks {
 		ws.Content = append(ws.Content, &SdkInfo{
 			Name:    i.Name,
@@ -50,10 +51,10 @@ func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *Worksho
 	return &ws
 }
 
-func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkshopInfo {
+func workshopPropsToInfo(props *workshopbackend.Workshop, health healthstate.HealthState) *WorkshopInfo {
 	var ws WorkshopInfo
 	ws.Name = props.Name
-	ws.ProjectId = props.ProjectId()
+	ws.ProjectId = props.Project().ProjectId
 	ws.Base = props.Base()
 
 	for _, val := range props.Content() {
@@ -64,12 +65,8 @@ func workshopPropsToInfo(props *workshopbackend.Workshop) *WorkshopInfo {
 			InstallTime: val.InstallTime})
 	}
 
-	for _, err := range props.Errors() {
-		ws.Notes = append(ws.Notes, err.String())
-	}
-
-	ws.Status = props.Status().String()
-
+	ws.Notes = append(ws.Notes, health.Code)
+	ws.Status = health.Status.String()
 	return &ws
 }
 
@@ -141,10 +138,11 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	var infoLst = make([]*WorkshopInfo, 0)
 	for _, w := range workshops {
-		if wstate != "all" && strings.ToLower(w.Status().String()) != wstate {
+		health := wrkmgr.WorkshopHealth(w)
+		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
 			continue
 		}
-		info := workshopPropsToInfo(w)
+		info := workshopPropsToInfo(w, health)
 		infoLst = append(infoLst, info)
 	}
 
@@ -301,5 +299,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusNotFound("cannot load workshop: %v", err)
 	}
 
-	return SyncResponse(workshopPropsToInfo(workshop), http.StatusOK)
+	health := wrkmgr.WorkshopHealth(workshop)
+
+	return SyncResponse(workshopPropsToInfo(workshop, health), http.StatusOK)
 }

@@ -55,52 +55,13 @@ sdks:
 	c.Assert(err, check.IsNil)
 	c.Assert(ws.Name, check.Equals, "ws")
 	c.Assert(ws.IsRunning(), check.Equals, true)
-	c.Assert(ws.Errors(), check.HasLen, 0)
-	c.Assert(ws.ProjectId(), check.Equals, f.project.ProjectId)
+	c.Assert(ws.Project().ProjectId, check.Equals, f.project.ProjectId)
 	c.Assert(ws.Content(), testutil.DeepUnsortedMatches, []sdk.Setup{{
 		Name:     "go",
 		Channel:  "latest/stable",
 		Revision: 277,
 	},
 	})
-}
-
-func (f *LxdBeTests) TestLoadWorkshopMissingErrors(c *check.C) {
-	// Setup
-	project := workshopbackend.Project{ProjectId: f.project.ProjectId, Path: f.project.Path}
-
-	b := &workshopbackend.LxdBackend{}
-
-	// Execute
-	ws, err := workshopbackend.LoadWorkshop(b, &api.Instance{
-		Name: workshopbackend.InstanceName("ws", f.project.ProjectId),
-		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workshop.project-id": f.project.ProjectId,
-		},
-		}}, &project)
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	c.Assert(ws.Name, check.Equals, "ws")
-	c.Assert(ws.Errors(), testutil.Contains, workshopbackend.MissingFile)
-	c.Assert(ws.Errors(), check.HasLen, 1)
-
-	// Setup
-	os.RemoveAll(f.project.Path)
-
-	// Execute
-	ws, err = workshopbackend.LoadWorkshop(b, &api.Instance{
-		Name: workshopbackend.InstanceName("ws", f.project.ProjectId),
-		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workshop.project-id": f.project.ProjectId,
-		},
-		}}, &project)
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	c.Assert(ws.Errors(), testutil.Contains, workshopbackend.MissingFile)
-	c.Assert(ws.Errors(), testutil.Contains, workshopbackend.MissingProject)
-	c.Assert(ws.Errors(), check.HasLen, 2)
 }
 
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
@@ -131,8 +92,6 @@ base: ubuntu@20.04`), 0644)
 	c.Assert(merged, check.HasLen, 2)
 	c.Assert(merged[0].IsRunning(), check.Equals, true)
 	c.Assert(merged[1].IsRunning(), check.Equals, true)
-	c.Assert(merged[0].Errors(), check.HasLen, 0)
-	c.Assert(merged[1].Errors(), check.HasLen, 0)
 }
 
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesWorkshopOff(c *check.C) {
@@ -162,7 +121,6 @@ base: ubuntu@20.04`), 0644)
 	c.Assert(wsFiles, check.HasLen, 1)
 
 	c.Assert(merged[0].IsRunning(), check.Equals, true)
-	c.Assert(merged[0].Errors(), check.HasLen, 0)
 }
 
 func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {

@@ -114,15 +114,14 @@ sdks:
 
 func (*healthSuite) TestStatusHappy(c *check.C) {
 	for i, str := range healthstate.KnownStatuses {
-		status, err := healthstate.StatusLookup(str)
+		status, err := healthstate.SetHealthStatusLookup(str)
 		c.Check(err, check.IsNil, check.Commentf("%v", str))
 		c.Check(status, check.Equals, healthstate.HealthStatus(i), check.Commentf("%v", str))
-		c.Check(healthstate.HealthStatus(i).String(), check.Equals, str, check.Commentf("%v", str))
 	}
 }
 
 func (*healthSuite) TestStatusUnhappy(c *check.C) {
-	status, err := healthstate.StatusLookup("rabbits")
+	status, err := healthstate.SetHealthStatusLookup("rabbits")
 	c.Check(status, check.Equals, healthstate.HealthStatus(-1))
 	c.Check(err, check.ErrorMatches, `invalid status "rabbits".*`)
 	c.Check(status.String(), check.Equals, "invalid (-1)")

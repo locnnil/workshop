@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/canonical/workshop/internal/osutil"
 )
 
 var (
@@ -28,6 +30,11 @@ var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z
 type Project struct {
 	Path      string `json:"path"`
 	ProjectId string `json:"id"`
+}
+
+func (p *Project) Exists() bool {
+	exists, dir, _ := osutil.ExistsIsDir(p.Path)
+	return exists && dir
 }
 
 func ReadProjects(jsonData []byte) ([]*Project, error) {

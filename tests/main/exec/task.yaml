@@ -42,4 +42,4 @@ execute: |
 
   echo "Check stopped workshop"
   workshop_exec stop --project "$project" ws
-  workshop_exec exec --project "$project" ws pwd | MATCH '.*"ws" is in stopped; must be ready or pending$'
+  workshop_exec exec --project "$project" ws pwd | MATCH '.*"ws" status is "Stopped", must be one of: "Ready", "Pending"$'

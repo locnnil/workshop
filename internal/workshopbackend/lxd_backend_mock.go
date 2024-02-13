@@ -107,26 +107,25 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 	}
 
 	ws := &FakeWorkshop{}
-	file, err := prj.WorkshopFile(name)
-	if err != nil {
-		return err
-	}
-
 	ws.Config = make(map[string]string)
 	ws.WorkshopFilesystem = NewFakeWorkshopFs()
 
 	ws.Workshop = &Workshop{backend: f,
-		Name:      name,
-		devices:   defaultDevices(),
-		running:   true,
-		projectId: projectId,
-		content:   make(map[string]sdk.Setup),
-		file:      file,
+		Name:    name,
+		devices: defaultDevices(),
+		running: true,
+		project: prj,
+		content: make(map[string]sdk.Setup),
+		base:    base,
 	}
 
 	f.Workshops[projectId][name] = ws
 
-	for _, s := range ws.File().Sdks {
+	file, err := prj.WorkshopFile(name)
+	if err != nil {
+		return err
+	}
+	for _, s := range file.Sdks {
 		ws.LinkSdk(ctx, sdk.Setup{
 			Name:    s.Name,
 			Channel: s.Channel,
@@ -246,10 +245,6 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*Works
 	workshop := f.Workshops[projectId][name]
 	if workshop == nil {
 		return nil, ErrWorkshopNotFound
-	}
-	workshop.file, err = project.WorkshopFile(workshop.Name)
-	if err != nil {
-		return nil, err
 	}
 
 	workshop.content, err = InstalledContent(f.Workshops[projectId][name].Config)

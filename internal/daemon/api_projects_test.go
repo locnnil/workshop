@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
@@ -122,6 +123,7 @@ base: ubuntu@20.04
 	c.Check(rsp.Result, check.DeepEquals, []*WorkshopInfo{
 		{
 			Name:      "ws-test",
+			Base:      "ubuntu@20.04",
 			ProjectId: s.project.ProjectId,
 			Status:    "Ready",
 			Content: []*SdkInfo{
@@ -132,6 +134,7 @@ base: ubuntu@20.04
 					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 				},
 			},
+			Notes: []string{"-"},
 		},
 	})
 }
@@ -163,8 +166,10 @@ base: ubuntu@20.04
 	c.Assert(err, check.IsNil)
 	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
 		Name:      "ws-test",
+		Base:      "ubuntu@20.04",
 		ProjectId: s.project.ProjectId,
 		Status:    "Ready",
+		Notes:     []string{"-"},
 	})
 }
 
@@ -312,7 +317,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: \"ws\" is in pending; must be ready",
+			Message: `cannot refresh: "ws" status is "Pending", must be one of: "Ready"`,
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -421,12 +426,12 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot start: \"ws\" is in pending; must be stopped",
+			Message: `cannot start: "ws" status is "Pending", must be one of: "Stopped"`,
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: \"ws\" is in pending; must be ready",
+			Message: `cannot refresh: "ws" status is "Pending", must be one of: "Ready"`,
 		},
 	}
 
@@ -456,9 +461,10 @@ base: ubuntu@20.04`), 0644)
 	}
 
 	s.d.overlord.State().Lock()
-	ws, err := s.d.overlord.WorkshopManager().Workshop(s.ctx, "ws", s.project.ProjectId)
+	workshopMgr := s.d.overlord.WorkshopManager()
+	ws, err := workshopMgr.Workshop(s.ctx, "ws", s.project.ProjectId)
 	c.Assert(err, check.IsNil)
-	c.Assert(ws.Status(), check.Equals, workshopbackend.WorkshopPending)
+	c.Assert(workshopMgr.WorkshopHealth(ws).Status, check.Equals, healthstate.PendingStatus)
 	s.d.overlord.State().Unlock()
 
 	// all successful responses must initiate the ensure call
@@ -497,7 +503,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot stop: \"ws\" is in pending; must be stopped or ready",
+			Message: `cannot stop: "ws" status is "Pending", must be one of: "Ready", "Stopped"`,
 		},
 		{
 			Type:   ResponseTypeAsync,
@@ -568,7 +574,7 @@ base: ubuntu@20.04`), 0644)
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot stop: \"ws\" is in pending; must be ready, stopped or error",
+			Message: `cannot remove: "ws" status is "Pending", must be one of: "Ready", "Error", "Stopped"`,
 		},
 	}
 
@@ -591,6 +597,9 @@ base: ubuntu@20.04`), 0644)
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)
 		c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v, msg: %v", num, rsp.Result))
+		if rsp.Type == ResponseTypeError {
+			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+		}
 
 		s.d.state.Lock()
 		op := statecontext.OperationInProgress(s.d.state, "ws", s.project.ProjectId)
