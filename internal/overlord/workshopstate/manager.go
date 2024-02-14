@@ -8,6 +8,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -47,7 +48,7 @@ func (w *WorkshopManager) Ensure() error {
 }
 
 // Checks all of the provided list of workshops are in the required health status.
-func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string, allowedStatuses []healthstate.HealthStatus) error {
+func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string, allowedStatuses []healthstate.Status) error {
 	for _, name := range names {
 		workshop, err := w.Workshop(ctx, name, pId)
 		if err != nil {
@@ -94,13 +95,27 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 	return files, workshops, nil
 }
 
+// Examine the tasks of the change to fetch possible check-health hook results
+// for the workshop's SDKs.
+func sdksHealthCheckSummary(chg *state.Change) map[string]healthstate.HealthCheck {
+	var SdkChecks = map[string]healthstate.HealthCheck{}
+	for _, task := range chg.Tasks() {
+		if task.Kind() == "run-hook" {
+			var healthCheck healthstate.HealthCheck
+			if err := task.Get("health", &healthCheck); err == nil {
+				SdkChecks[healthCheck.Sdk] = healthCheck
+			}
+		}
+	}
+	return SdkChecks
+}
+
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked before the
 // call.
 func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthstate.HealthState {
 	var healthState = healthstate.HealthState{
 		Timestamp: time.Now(),
-		Code:      "-",
 	}
 
 	// check the project directory exists
@@ -117,15 +132,19 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 		return healthState
 	}
 
-	op := OperationInProgress(w.state, ws.Name, ws.Project().ProjectId)
+	op := operation.OperationInProgress(w.state, ws.Name, ws.Project().ProjectId)
 	if op != nil {
 		change := w.state.Change(op.ChangeId)
+		// a change could have gone as a result of pruning TODO: when prune
+		// changes, abort all the outstanding operations connected with it
 		if change == nil {
 			healthState.Status = healthstate.ErrorStatus
 		}
 		if change.Status() == state.WaitStatus {
 			healthState.Code = "wait-on-error"
 		}
+
+		healthState.SdkHealth = sdksHealthCheckSummary(change)
 		healthState.Status = healthstate.PendingStatus
 	} else {
 		if ws.IsRunning() {

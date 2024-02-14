@@ -7,9 +7,9 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -84,7 +84,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		taskset = append(taskset, tasks)
 	}
 
-	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationLaunch}); err != nil {
+	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationLaunch}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -158,7 +158,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 }
 
 func (w *WorkshopManager) RefreshMany(ctx context.Context,
-	names []string, projectId string, refreshMode statecontext.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
+	names []string, projectId string, refreshMode operation.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		ctx,
 		names,
 		projectId,
-		[]healthstate.HealthStatus{healthstate.ReadyStatus})
+		[]healthstate.Status{healthstate.ReadyStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot refresh: %w", err)
 	}
@@ -198,10 +198,10 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, statecontext.Operation{
+	if err = w.startOperation(names, projectId, operation.Operation{
 		ChangeId:    opChangeId,
-		Operation:   statecontext.OperationRefresh,
-		WaitOnError: refreshMode == statecontext.RefreshWaitOnError,
+		Operation:   operation.OperationRefresh,
+		WaitOnError: refreshMode == operation.RefreshWaitOnError,
 	}); err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		ctx,
 		names,
 		projectId,
-		[]healthstate.HealthStatus{healthstate.StoppedStatus})
+		[]healthstate.Status{healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot start: %w", err)
 	}
@@ -417,7 +417,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationStart}); err != nil {
+	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStart}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -445,7 +445,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		ctx,
 		names,
 		projectId,
-		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.StoppedStatus})
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot stop: %w", err)
 	}
@@ -459,7 +459,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationStop}); err != nil {
+	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStop}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -493,7 +493,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		ctx,
 		[]string{name},
 		projectId,
-		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.PendingStatus})
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot exec: %w", err)
 	}
@@ -532,7 +532,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		ctx,
 		names,
 		projectId,
-		[]healthstate.HealthStatus{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus})
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus})
 	if err != nil {
 		return nil, fmt.Errorf("cannot remove: %w", err)
 	}
@@ -558,23 +558,23 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		return nil, err
 	}
 
-	if err := w.startOperation(names, projectId, statecontext.Operation{ChangeId: opChangeId, Operation: statecontext.OperationRemove}); err != nil {
+	if err := w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationRemove}); err != nil {
 		return nil, err
 	}
 
 	return taskset, nil
 }
 
-func (w *WorkshopManager) startOperation(names []string, projectId string, op statecontext.Operation) error {
+func (w *WorkshopManager) startOperation(names []string, projectId string, op operation.Operation) error {
 	rev := revert.New()
 	for _, name := range names {
-		err := statecontext.StartOperation(w.state, name, projectId, op)
+		err := operation.StartOperation(w.state, name, projectId, op)
 		if err != nil {
 			return err
 		}
 		name := name // go loop var capturing issue
 		rev.Add(func() {
-			statecontext.StopOperation(w.state, name, projectId, op.Operation)
+			operation.StopOperation(w.state, name, projectId, op.Operation)
 		})
 	}
 	rev.Success()

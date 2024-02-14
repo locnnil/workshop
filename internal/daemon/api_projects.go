@@ -10,19 +10,27 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
+type HealthCheckInfo struct {
+	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message,omitempty"`
+	Code      string    `json:"code,omitempty"`
+}
+
 type SdkInfo struct {
-	Name        string    `json:"name"`
-	Channel     string    `json:"channel"`
-	Revision    string    `json:"revision"`
-	InstallTime time.Time `json:"install-time"`
+	Name        string           `json:"name"`
+	Channel     string           `json:"channel"`
+	Revision    string           `json:"revision"`
+	InstallTime time.Time        `json:"install-time"`
+	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 }
 
 type WorkshopInfo struct {
@@ -52,22 +60,33 @@ func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *Worksho
 }
 
 func workshopPropsToInfo(props *workshopbackend.Workshop, health healthstate.HealthState) *WorkshopInfo {
-	var ws WorkshopInfo
-	ws.Name = props.Name
-	ws.ProjectId = props.Project().ProjectId
-	ws.Base = props.Base()
+	var info WorkshopInfo
+	info.Name = props.Name
+	info.ProjectId = props.Project().ProjectId
+	info.Base = props.Base()
 
 	for _, val := range props.Content() {
-		ws.Content = append(ws.Content, &SdkInfo{
+		var healthInfo *HealthCheckInfo
+		if sdkHealth, ok := health.SdkHealth[val.Name]; ok {
+			healthInfo = &HealthCheckInfo{
+				Timestamp: sdkHealth.Timestamp,
+				Message:   sdkHealth.Message,
+				Code:      sdkHealth.Code,
+			}
+		}
+
+		info.Content = append(info.Content, &SdkInfo{
 			Name:        val.Name,
 			Channel:     val.Channel,
 			Revision:    strconv.FormatInt(val.Revision, 10),
-			InstallTime: val.InstallTime})
+			InstallTime: val.InstallTime,
+			Health:      healthInfo,
+		})
 	}
 
-	ws.Notes = append(ws.Notes, health.Code)
-	ws.Status = health.Status.String()
-	return &ws
+	info.Notes = append(info.Notes, health.Code)
+	info.Status = health.Status.String()
+	return &info
 }
 
 func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
@@ -213,13 +232,13 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			change.AddAll(tset)
 		}
 	case "refresh":
-		refreshMode := statecontext.ParseRefreshMode(reqData.Options.Mode)
+		refreshMode := operation.ParseRefreshMode(reqData.Options.Mode)
 
-		if len(reqData.Names) > 1 && refreshMode != statecontext.RefreshTransactional {
+		if len(reqData.Names) > 1 && refreshMode != operation.RefreshTransactional {
 			return statusBadRequest("wait-on-error is not supported for multiple workshops")
 		}
 
-		if refreshMode == statecontext.RefreshTransactional || refreshMode == statecontext.RefreshWaitOnError {
+		if refreshMode == operation.RefreshTransactional || refreshMode == operation.RefreshWaitOnError {
 			change = st.NewChange("refresh", summary)
 			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
 			if err != nil {
@@ -230,9 +249,9 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			}
 		}
 
-		if refreshMode == statecontext.RefreshContinue || refreshMode == statecontext.RefreshAbort {
+		if refreshMode == operation.RefreshContinue || refreshMode == operation.RefreshAbort {
 			var err error
-			change, err = statecontext.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
+			change, err = operation.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
@@ -276,6 +295,8 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	return AsyncResponse(nil, change.ID())
 }
 
+var workshopHealth = (*workshopstate.WorkshopManager).WorkshopHealth
+
 func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	name := muxVars(r)["name"]
@@ -293,13 +314,10 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer state.Unlock()
 
 	wrkmgr := c.d.overlord.WorkshopManager()
-
 	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
 		return statusNotFound("cannot load workshop: %v", err)
 	}
-
-	health := wrkmgr.WorkshopHealth(workshop)
-
+	health := workshopHealth(wrkmgr, workshop)
 	return SyncResponse(workshopPropsToInfo(workshop, health), http.StatusOK)
 }

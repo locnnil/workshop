@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,8 +11,9 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -68,7 +70,7 @@ func (s *apiSuite) TestProjectsPostProjectDoesNotExist(c *check.C) {
 	c.Check(string(res), check.Matches, `.*{"path":"/home/testuser/project","id":"b8639dea"}.*`)
 }
 
-func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
+func (s *apiSuite) TestProjectsPostProjectExist(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects")
@@ -90,26 +92,32 @@ func (s *apiSuite) TestProjectsPostProjectExists(c *check.C) {
 		fmt.Sprintf(`.*{"path":"%s","id":"%s"}.*`, s.project.Path, s.project.ProjectId))
 }
 
+func (s *apiSuite) launchWorkshop(ctx context.Context, name string, c *check.C) *workshopbackend.Workshop {
+	b := s.d.overlord.WorkshopBackend()
+	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
+base: ubuntu@20.04
+`, name)), 0644)
+	c.Assert(err, check.IsNil)
+	err = b.LaunchWorkshop(ctx, name, "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+	ws, err := b.Workshop(ctx, name)
+	c.Assert(err, check.IsNil)
+	return ws
+}
+
 func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 	// Setup
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops", nil)
+	c.Assert(err, check.IsNil)
+
 	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
 	defer restore()
 
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops", nil)
-	c.Assert(err, check.IsNil)
-	b := s.d.overlord.WorkshopBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
-base: ubuntu@20.04
-`), 0644)
-	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkshop(req.Context(), "ws-test", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
-	ws, err := b.Workshop(req.Context(), "ws-test")
-	c.Assert(err, check.IsNil)
-	ws.LinkSdk(req.Context(), sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
+	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
+	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
 	rsp := v1GetProjectWorkshops(projectsCmd, req, nil).(*resp)
@@ -134,7 +142,7 @@ base: ubuntu@20.04
 					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 				},
 			},
-			Notes: []string{"-"},
+			Notes: []string{""},
 		},
 	})
 }
@@ -144,19 +152,22 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws-test"}
-
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/ws-test", nil)
 	c.Assert(err, check.IsNil)
-	b := s.d.overlord.WorkshopBackend()
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws-test.yaml"), []byte(`name: ws-test
-base: ubuntu@20.04
-`), 0644)
-	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkshop(s.ctx, "ws-test", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+
+	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
+	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
+	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
+	restore()
 
 	// Execute
+	restore = FakeWorkshopHealth(func(mgr *workshopstate.WorkshopManager, w *workshopbackend.Workshop) healthstate.HealthState {
+		return healthstate.HealthState{Status: healthstate.ReadyStatus, SdkHealth: map[string]healthstate.HealthCheck{
+			"go": {Sdk: "go", Message: "test health check message", Code: "check-waiting", CheckResult: healthstate.CheckWaiting},
+		}}
+	})
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
+	restore()
 
 	// Verify
 	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
@@ -169,7 +180,19 @@ base: ubuntu@20.04
 		Base:      "ubuntu@20.04",
 		ProjectId: s.project.ProjectId,
 		Status:    "Ready",
-		Notes:     []string{"-"},
+		Notes:     []string{""},
+		Content: []*SdkInfo{
+			{
+				Name:        "go",
+				Channel:     "latest/stable",
+				Revision:    "234",
+				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				Health: &HealthCheckInfo{
+					Message: "test health check message",
+					Code:    "check-waiting",
+				},
+			},
+		},
 	})
 }
 
@@ -179,16 +202,11 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopLaunch(c *check.C) {
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
 
-	// Mock workshop files
-	err := os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
-	c.Assert(err, check.IsNil)
+	s.launchWorkshop(s.ctx, "ws", c)
 
-	err = os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
+	// Mock another workshop file
+	err := os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
 base: ubuntu@20.04`), 0644)
-	c.Assert(err, check.IsNil)
-
-	err = s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
@@ -253,10 +271,6 @@ func (s *apiSuite) TestProjectsPostProjectRefreshWorkshopContinue(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws1.yaml"), []byte(`name: ws1
-base: ubuntu@20.04`), 0644)
 
 	buffers := []*bytes.Buffer{
 		// try continue without starting wait-on-error
@@ -363,17 +377,14 @@ base: ubuntu@20.04`), 0644)
 	soon := 0
 	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
 		if mockRefreshChanges[soon] == state.DoneStatus {
-			statecontext.StopOperation(st, "ws", s.project.ProjectId, statecontext.OperationRefresh)
+			operation.StopOperation(st, "ws", s.project.ProjectId, operation.OperationRefresh)
 		}
 		soon++
 	}, &ensureStateSoon)
 	defer restoreEnsure()
 
-	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
-
-	err = s.b.LaunchWorkshop(s.ctx, "ws1", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+	s.launchWorkshop(s.ctx, "ws", c)
+	s.launchWorkshop(s.ctx, "ws1", c)
 
 	for num, i := range requests {
 		// Execute
@@ -397,12 +408,9 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopStart(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
-	err = s.b.StopWorkshop(s.ctx, "ws", false)
+	s.launchWorkshop(s.ctx, "ws", c)
+	err := s.b.StopWorkshop(s.ctx, "ws", false)
 	c.Assert(err, check.IsNil)
 
 	buffers := []*bytes.Buffer{
@@ -476,11 +484,8 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopStop(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+	s.launchWorkshop(s.ctx, "ws", c)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"stop"}`),
@@ -535,7 +540,7 @@ base: ubuntu@20.04`), 0644)
 
 			s.d.state.Lock()
 			// stop the workshop stop operation here, so it is ready for the next command
-			err := statecontext.StopOperation(s.d.state, "ws", s.project.ProjectId, statecontext.OperationStop)
+			err := operation.StopOperation(s.d.state, "ws", s.project.ProjectId, operation.OperationStop)
 			c.Assert(err, check.IsNil)
 			s.b.StopWorkshop(s.ctx, "ws", false)
 			s.d.state.Unlock()
@@ -550,11 +555,8 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopRemove(c *check.C) {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
 
-	err := s.b.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+	s.launchWorkshop(s.ctx, "ws", c)
 
 	buffers := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["ws"],"action":"remove"}`),
@@ -602,9 +604,9 @@ base: ubuntu@20.04`), 0644)
 		}
 
 		s.d.state.Lock()
-		op := statecontext.OperationInProgress(s.d.state, "ws", s.project.ProjectId)
+		op := operation.OperationInProgress(s.d.state, "ws", s.project.ProjectId)
 		c.Assert(op, check.NotNil)
-		c.Assert(op.Operation, check.Equals, statecontext.OperationRemove)
+		c.Assert(op.Operation, check.Equals, operation.OperationRemove)
 		s.d.state.Unlock()
 	}
 	// all successful responses must initiate the ensure call

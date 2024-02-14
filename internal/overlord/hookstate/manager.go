@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
@@ -73,7 +73,7 @@ func New(s *state.State, runner *state.TaskRunner, server workshopbackend.Worksh
 		contexts:   make(map[string]*Context),
 	}
 
-	runner.AddHandler("run-hook", OnDo(manager.doRunHook), nil)
+	runner.AddHandler("run-hook", statecontext.OnDo(manager.doRunHook), nil)
 
 	setupHooks(manager)
 

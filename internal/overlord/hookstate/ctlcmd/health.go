@@ -70,11 +70,11 @@ func (c *healthCommand) Execute([]string) error {
 		return fmt.Errorf(`when status is "okay", message and code must be empty`)
 	}
 
-	status, err := healthstate.SetHealthStatusLookup(c.Status)
+	status, err := healthstate.SetHealthLookup(c.Status)
 	if err != nil {
 		return err
 	}
-	if status == healthstate.UnknownStatus {
+	if status == healthstate.CheckUnknown {
 		return fmt.Errorf(`status cannot be manually set to "unknown"`)
 	}
 
@@ -87,7 +87,7 @@ func (c *healthCommand) Execute([]string) error {
 		}
 	}
 
-	if status != healthstate.ReadyStatus {
+	if status != healthstate.CheckOkay {
 		if len(c.Message) == 0 {
 			return fmt.Errorf(`when status is not "okay", message is required`)
 		}
@@ -112,11 +112,12 @@ func (c *healthCommand) Execute([]string) error {
 		return errors.New(`"set-health" is only allowed from a "check-health" hook`)
 	}
 
-	health := &healthstate.HealthState{
-		Timestamp: time.Now(),
-		Status:    status,
-		Message:   c.Message,
-		Code:      c.Code,
+	health := &healthstate.HealthCheck{
+		Sdk:         ctx.Sdk(),
+		Timestamp:   time.Now(),
+		CheckResult: status,
+		Message:     c.Message,
+		Code:        c.Code,
 	}
 
 	ctx.Set("health", health)

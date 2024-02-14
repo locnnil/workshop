@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
+
 	"gopkg.in/tomb.v2"
 )
 
@@ -35,9 +37,9 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 			// see if the task finishes the chain of tasks representing an
 			// operation launch, refresh, etc.
 			if task.Has("stop-operation") {
-				op := OperationInProgress(st, ws, p.ProjectId)
+				op := operation.OperationInProgress(st, ws, p.ProjectId)
 				if op != nil {
-					if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+					if e := operation.StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
 						return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
 					}
 				}
@@ -48,17 +50,17 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 			// the context cancellation here means the change was aborted and
 			// the undo logic chain started. we don't report the context
 			// cancellation as error here as it is an expected interruption
-			op := OperationInProgress(st, ws, p.ProjectId)
+			op := operation.OperationInProgress(st, ws, p.ProjectId)
 			if op != nil {
-				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+				if e := operation.StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
 					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
 				}
 			}
 			return nil
 		case err != nil:
-			op := OperationInProgress(st, ws, p.ProjectId)
+			op := operation.OperationInProgress(st, ws, p.ProjectId)
 			if op != nil {
-				if op.Operation == OperationRefresh && op.WaitOnError {
+				if op.Operation == operation.OperationRefresh && op.WaitOnError {
 					task.Logf("Setting the task to wait until the refresh is either aborted or continued...")
 					task.Errorf("%v", err)
 					return &state.Wait{
@@ -67,7 +69,7 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 					}
 				}
 
-				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+				if e := operation.StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
 					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
 				}
 			}
@@ -96,9 +98,9 @@ func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 		// task that has just completed its undoing logic, i.e. the
 		// workshop is ready for the new commands again
 		if task.Has("start-operation") {
-			op := OperationInProgress(st, ws, p.ProjectId)
+			op := operation.OperationInProgress(st, ws, p.ProjectId)
 			if op != nil {
-				if e := StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
+				if e := operation.StopOperation(st, ws, p.ProjectId, op.Operation); e != nil {
 					return fmt.Errorf("internal error: cannot stop %s for %q: %v, error: %v", op.Operation, ws, e, err)
 				}
 			}

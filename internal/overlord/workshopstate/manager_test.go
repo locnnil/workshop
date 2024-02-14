@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -141,7 +141,7 @@ sdks:
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, operation.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate
@@ -169,7 +169,7 @@ base: ubuntu@20.04
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, operation.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate
@@ -200,7 +200,7 @@ sdks:
 	c.Check(err, check.IsNil)
 
 	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
+	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, operation.RefreshTransactional, "1")
 	c.Check(err, check.IsNil)
 
 	// Validate

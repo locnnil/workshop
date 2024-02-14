@@ -2,11 +2,18 @@ package client
 
 import "time"
 
+type HealthCheck struct {
+	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message,omitempty"`
+	Code      string    `json:"code,omitempty"`
+}
+
 type Sdk struct {
-	Name        string    `json:"name"`
-	Channel     string    `json:"channel"`
-	Revision    string    `json:"revision"`
-	InstallTime time.Time `json:"install-time"`
+	Name        string       `json:"name"`
+	Channel     string       `json:"channel"`
+	Revision    string       `json:"revision"`
+	InstallTime time.Time    `json:"install-time"`
+	Health      *HealthCheck `json:"health-check,omitempty"`
 }
 
 type Workshop struct {

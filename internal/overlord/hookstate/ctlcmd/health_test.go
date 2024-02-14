@@ -116,9 +116,9 @@ func (s *healthSuite) TestRegularRun(c *check.C) {
 	s.mockContext.Lock()
 	defer s.mockContext.Unlock()
 
-	var health healthstate.HealthState
+	var health healthstate.HealthCheck
 	c.Assert(s.mockContext.Get("health", &health), check.IsNil)
-	c.Check(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Check(health.CheckResult, check.Equals, healthstate.CheckWaiting)
 	c.Check(health.Message, check.Equals, "message")
 	c.Check(health.Code, check.Equals, "some-code")
 }
@@ -130,9 +130,9 @@ func (s *healthSuite) TestMessageTruncation(c *check.C) {
 	s.mockContext.Lock()
 	defer s.mockContext.Unlock()
 
-	var health healthstate.HealthState
+	var health healthstate.HealthCheck
 	c.Assert(s.mockContext.Get("health", &health), check.IsNil)
-	c.Check(health.Status, check.Equals, healthstate.ErrorStatus)
+	c.Check(health.CheckResult, check.Equals, healthstate.CheckError)
 	c.Check(health.Message, check.Equals, "Sometimes messages will get a little bit too verbose and this can lea…")
 	c.Check(health.Code, check.Equals, "some-code")
 }

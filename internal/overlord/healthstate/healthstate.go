@@ -11,10 +11,10 @@ import (
 	"github.com/canonical/x-go/strutil"
 )
 
-type HealthStatus int
+type Status int
 
 const (
-	UnknownStatus HealthStatus = iota
+	UnknownStatus Status = iota
 	ReadyStatus
 	PendingStatus
 	ErrorStatus
@@ -22,7 +22,7 @@ const (
 	OffStatus
 )
 
-func (s HealthStatus) String() string {
+func (s Status) String() string {
 	statuses := [...]string{"Unknown", "Ready", "Pending", "Error", "Stopped", "Off"}
 	if s < 0 || int(s) >= len(statuses) {
 		return fmt.Sprintf("invalid (%d)", s)
@@ -30,29 +30,53 @@ func (s HealthStatus) String() string {
 	return statuses[s]
 }
 
-var knownSetHealthStatuses = []string{"unknown", "okay", "waiting", "error"}
+type HealthCheckResult int
 
-func SetHealthStatusLookup(str string) (HealthStatus, error) {
+const (
+	CheckUnknown HealthCheckResult = iota
+	CheckWaiting
+	CheckOkay
+	CheckError
+)
+
+var knownSetHealthStatuses = []string{"unknown", "waiting", "okay", "error"}
+
+func SetHealthLookup(str string) (HealthCheckResult, error) {
 	switch str {
 	case "okay":
-		return ReadyStatus, nil
+		return CheckOkay, nil
 	case "waiting":
-		return PendingStatus, nil
+		return CheckWaiting, nil
 	case "error":
-		return ErrorStatus, nil
+		return CheckError, nil
 	case "unknown":
-		return UnknownStatus, nil
+		return CheckUnknown, nil
 	}
 
 	return -1, fmt.Errorf("invalid status %q, must be one of %s", str, strutil.Quoted(knownSetHealthStatuses))
 }
 
+func (s HealthCheckResult) String() string {
+	if s < 0 || int(s) >= len(knownSetHealthStatuses) {
+		return fmt.Sprintf("invalid (%d)", s)
+	}
+	return knownSetHealthStatuses[s]
+}
+
+type HealthCheck struct {
+	Sdk         string            `json:"sdk"`
+	Timestamp   time.Time         `json:"timestamp"`
+	CheckResult HealthCheckResult `json:"check-result"`
+	Message     string            `json:"message,omitempty"`
+	Code        string            `json:"code,omitempty"`
+}
+
 type HealthState struct {
-	Timestamp time.Time    `json:"timestamp"`
-	Status    HealthStatus `json:"status"`
-	Message   string       `json:"message,omitempty"`
-	Code      string       `json:"code,omitempty"`
-	Sdk       string       `json:"sdk,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	Status    Status                 `json:"status"`
+	Message   string                 `json:"message,omitempty"`
+	Code      string                 `json:"code,omitempty"`
+	SdkHealth map[string]HealthCheck `json:"sdk-health,omitempty"`
 }
 
 func Init(hookManager *hookstate.HookManager) {
@@ -71,15 +95,14 @@ type healthHandler struct {
 func (h *healthHandler) Before() error {
 	h.context.Lock()
 	defer h.context.Unlock()
-	var health HealthState
+	var health HealthCheck
 	err := h.context.Get("health", &health)
 	// the handler is being called for the first time
 	// (the health is set already if it is a retry)
 	if errors.Is(err, state.ErrNoState) {
-		h.context.Set("health", HealthState{
-			Status:  UnknownStatus,
-			Message: "The health status is unknown",
-			Sdk:     h.context.Sdk(),
+		h.context.Set("health", HealthCheck{
+			Sdk:         h.context.Sdk(),
+			CheckResult: CheckUnknown,
 		})
 	}
 	var counter int
@@ -94,7 +117,7 @@ var retryTimeout = 1 * time.Second
 var retriesAllowed = 10
 
 func (h *healthHandler) Done() error {
-	var health HealthState
+	var health HealthCheck
 	var retryCounter int
 
 	h.context.Lock()
@@ -115,18 +138,18 @@ func (h *healthHandler) Done() error {
 		return err
 	}
 
-	if retryCounter >= retriesAllowed && (health.Status == PendingStatus || health.Status == UnknownStatus) {
-		return fmt.Errorf("SDK %q status is not healthy after multiple checks", h.context.Sdk())
+	if retryCounter >= retriesAllowed && (health.CheckResult == CheckWaiting || health.CheckResult == CheckUnknown) {
+		return fmt.Errorf("SDK %q is not healthy after multiple checks", h.context.Sdk())
 	}
 
-	if health.Status == PendingStatus || health.Status == UnknownStatus {
+	if health.CheckResult == CheckWaiting || health.CheckResult == CheckUnknown {
 		h.context.Lock()
 		h.context.Set("retry-counter", retryCounter+1)
 		h.context.Unlock()
 		return &state.Retry{After: retryTimeout, Reason: health.Message}
 	}
 
-	if health.Status == ErrorStatus {
+	if health.CheckResult == CheckError {
 		return errors.New(health.Message)
 	}
 
