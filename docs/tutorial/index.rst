@@ -50,6 +50,16 @@ using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to configure individual *workshops*.
 
+.. note::
+
+   This means you can use regular :command:`lxc` commands
+   to monitor |project_markup| activities, for example:
+
+   .. code-block:: console
+
+      $ lxc list --all-projects
+
+
 First, install and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
