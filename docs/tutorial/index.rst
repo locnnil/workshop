@@ -18,7 +18,7 @@ Refer to the
 :ref:`explanation <exp_index>`
 if you need a more descriptive overview.
 For comprehensive details, explore the
-:ref:`reference <ref_workshop_cli>`.
+:ref:`reference <ref_index>`.
 Finally, see the
 :ref:`how-to guides <howto_index>`
 if you're looking for advanced practical steps.
@@ -42,7 +42,7 @@ Check prerequisites
 ~~~~~~~~~~~~~~~~~~~
 
 |project_markup| requires
-`LXD <https://ubuntu.com/lxd>`_
+`LXD <https://canonical.com/lxd>`_
 for low-level operation,
 using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
@@ -93,10 +93,9 @@ is enabled and running:
 Install
 ~~~~~~~
 
-Build the ``workshop`` snap
+Build the :program:`workshop` snap
 from the |project_markup| source code on
-`GitHub
-<https://github.com/canonical/workshop>`_:
+`GitHub`_:
 
 .. code-block:: console
 
