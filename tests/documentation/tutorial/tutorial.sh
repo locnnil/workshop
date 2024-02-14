@@ -102,6 +102,17 @@ fmt.Println("hello, Workshop")
 EOF
 
 workshop exec nimble go build main.go
+
+# Variable injection
 workshop exec nimble --env GO111MODULE=off -- go build -x
+
+# Omitting 'Interactive shell' in testing
 workshop exec nimble -- bash -c "uname -a"
+
+# Changes in project
+touch outside.txt
+workshop exec nimble -- bash -c "ls -l"
+workshop exec nimble -- touch inside.txt
+ls -l
+
 workshop remove nimble

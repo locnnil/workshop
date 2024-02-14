@@ -42,6 +42,7 @@ reStructuredText
 readme
 roadmap
 sdk
+sdkcraft
 snapcraft
 snapd
 subcommand

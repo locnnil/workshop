@@ -9,9 +9,11 @@ of the essential |project_markup| activities.
 
 Here, you will put into practice all major steps
 in the life cycle of a *workshop*,
-from defining and launching it
-to using it with your project and deleting it.
-The commands you're about to run
+from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
+and :ref:`refreshing <tut_refresh>` it
+to :ref:`executing commands <tut_exec>` in the workshop environment
+and finally :ref:`deleting <tut_remove>` it.
+The actions you're about to take
 comprise the majority of your daily needs with |project_markup|.
 
 Refer to the
@@ -475,7 +477,7 @@ To abort the operation and recover the last operational state:
 Execute commands
 ----------------
 
-When the workshop is ready,
+When the workshop is *Ready*,
 execute arbitrary commands in it using :ref:`ref_workshop_exec`:
 
 .. code-block:: go
@@ -495,12 +497,18 @@ execute arbitrary commands in it using :ref:`ref_workshop_exec`:
    $ workshop exec golang go build main.go
 
 
+Variable injection
+~~~~~~~~~~~~~~~~~~
+
 To define environment variables and visibly separate the command's options:
 
 .. code-block:: console
 
    $ workshop exec golang --env GO111MODULE=off -- go build -x
 
+
+Interactive shell
+~~~~~~~~~~~~~~~~~
 
 You can run an interactive shell as well:
 
@@ -510,13 +518,19 @@ You can run an interactive shell as well:
    workshop@golang-cd03e2cd:/project$ uname -a
 
 
-Changes are persisted in the project directory,
-thus also visible in the workshop itself:
+Changes in project
+~~~~~~~~~~~~~~~~~~
+
+Any changes you introduce under :file:`/project/` inside the workshop
+are persisted in the project directory, and vice versa:
 
 .. code-block:: console
 
-   $ ls -l
+   $ touch outside.txt
    $ workshop exec golang -- bash -c "ls -l"
+   $ workshop exec golang -- touch inside.txt
+   $ ls -l
+
 
 
 .. _tut_remove:
