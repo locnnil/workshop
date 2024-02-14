@@ -1,2 +1,3 @@
 .. _Canonical website: https://canonical.com/
 .. _GitHub: https://github.com/canonical/workshop
+.. _SDKcraft: https://canonical-sdkcraft.readthedocs-hosted.com/

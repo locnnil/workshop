@@ -18,12 +18,26 @@ Content interface plug
 
 An essential element here is the content interface plug
 that is declared in the SDK definition.
+
+.. attention::
+
+   An SDK definition, usually named :file:`sdkcraft.yaml`,
+   is different from a
+   :ref:`workshop definition <exp_workshop_def>`,
+   usually named :file:`.workshop.<NAME>.yaml`;
+   the former is used to build SDKs with `SDKcraft`_
+   and isn't normally needed with |project_markup|,
+   whereas the latter is a crucial element of daily |project_markup| activities.
+
+   The following example is provided only to detail how content interface works.
+
+
 A basic structure includes the name of the plug itself,
 the interface (:samp:`content`)
 and the intended target path inside the workshop:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: go
    title: Go SDK
