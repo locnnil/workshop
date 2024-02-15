@@ -524,8 +524,15 @@ You can run an interactive shell as well:
 
 .. code-block:: console
 
-   $ workshop exec golang bash
-   workshop@golang-cd03e2cd:/project$ uname -a
+   $ workshop exec golang -- sudo su workshop -l
+   workshop@golang-6b79e889:~$ pwd
+
+     /home/workshop
+
+   workshop@golang-6b79e889:~$ uname -a
+
+The command above launches the login shell for :samp:`workshop`,
+the default non-privileged user in a workshop.
 
 
 Changes in project
