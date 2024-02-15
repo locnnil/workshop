@@ -84,7 +84,9 @@ func workshopPropsToInfo(props *workshopbackend.Workshop, health healthstate.Hea
 		})
 	}
 
-	info.Notes = append(info.Notes, health.Code)
+	if len(health.Code) > 0 {
+		info.Notes = append(info.Notes, health.Code)
+	}
 	info.Status = health.Status.String()
 	return &info
 }

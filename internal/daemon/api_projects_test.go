@@ -142,7 +142,7 @@ func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 				},
 			},
-			Notes: []string{""},
+			Notes: nil,
 		},
 	})
 }
@@ -158,6 +158,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
 	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
 	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
+	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "java", Channel: "latest/stable", Revision: 324})
 	restore()
 
 	// Execute
@@ -180,7 +181,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 		Base:      "ubuntu@20.04",
 		ProjectId: s.project.ProjectId,
 		Status:    "Ready",
-		Notes:     []string{""},
+		Notes:     nil,
 		Content: []*SdkInfo{
 			{
 				Name:        "go",
@@ -191,6 +192,12 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 					Message: "test health check message",
 					Code:    "check-waiting",
 				},
+			},
+			{
+				Name:        "java",
+				Channel:     "latest/stable",
+				Revision:    "324",
+				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 			},
 		},
 	})

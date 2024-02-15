@@ -139,6 +139,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 		// changes, abort all the outstanding operations connected with it
 		if change == nil {
 			healthState.Status = healthstate.ErrorStatus
+			return healthState
 		}
 		if change.Status() == state.WaitStatus {
 			healthState.Code = "wait-on-error"
