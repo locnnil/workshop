@@ -295,7 +295,9 @@ func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *Execu
 
 func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	return ExecContext{
-		WaitExecution: func(ctx context.Context) error { return nil },
+		WaitExecution: func(ctx context.Context) error {
+			return nil
+		},
 	}, nil
 }
 

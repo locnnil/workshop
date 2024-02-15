@@ -91,6 +91,13 @@ func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Ta
 	}
 }
 
+func ensureTaskHealthIsSet(t *state.Task, expected *healthstate.HealthCheck, c *check.C) {
+	var health healthstate.HealthCheck
+	err := t.Get("health", &health)
+	c.Assert(err, check.IsNil)
+	c.Assert(expected, check.DeepEquals, &health)
+}
+
 func (s *healthSuite) launchWorkshop(c *check.C, newsdk string, createHealthCheck bool) {
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04
@@ -163,13 +170,156 @@ func (s *healthSuite) TestExecCheckHealthSetHealthNotCalled(c *check.C) {
 	defer restore()
 
 	s.state.Unlock()
-	for i := 0; i < 11; i = i + 1 {
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[0], check.Matches, `.*SDK "one" health status is unknown`)
+}
+
+func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	now := time.Now().Round(0)
+	result := healthstate.HealthCheck{
+		Timestamp:   now,
+		Sdk:         "one",
+		CheckResult: healthstate.CheckError,
+		Message:     "something went wrong",
+		Code:        "error-error",
+	}
+
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				// emulate workshopctl set-health --code=<code> error <message>
+				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				c.Assert(err, check.IsNil)
+				hookCtx.Lock()
+				hookCtx.Set("health", result)
+				hookCtx.Unlock()
+				return nil
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.launchWorkshop(c, "one", true)
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[0], check.Matches, `.*something went wrong`)
+	ensureTaskHealthIsSet(t1, &result, c)
+}
+
+func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	restore := healthstate.FakeRetryTimeout(0 * time.Second)
+	defer restore()
+
+	now := time.Now().Round(0)
+	resultWait := healthstate.HealthCheck{
+		Timestamp:   now,
+		Sdk:         "one",
+		CheckResult: healthstate.CheckWaiting,
+		Message:     "not ready yet",
+		Code:        "wait-for-me",
+	}
+
+	nowOkay := time.Now().Round(0)
+	resultOkay := healthstate.HealthCheck{
+		Timestamp:   nowOkay,
+		Sdk:         "one",
+		CheckResult: healthstate.CheckOkay,
+	}
+
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				c.Assert(err, check.IsNil)
+				hookCtx.Lock()
+				var counter int
+				hookCtx.Get("retry-counter", &counter)
+				if counter == 0 {
+					// emulate workshopctl set-health --code=<code> error <message>
+					hookCtx.Set("health", resultWait)
+				} else {
+					// emulate workshopctl set-health okay
+					hookCtx.Set("health", resultOkay)
+				}
+				hookCtx.Unlock()
+				return nil
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.launchWorkshop(c, "one", true)
+	s.state.Unlock()
+	for i := 0; i < 2; i = i + 1 {
 		s.se.Ensure()
 		s.se.Wait()
 	}
 	s.state.Lock()
 
-	c.Assert(s.backend.ExecCalls, check.HasLen, 11)
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	c.Assert(t1.Log()[0], check.Matches, `.*not ready yet`)
+	c.Assert(t1.Log(), check.HasLen, 1)
+	ensureTaskHealthIsSet(t1, &resultOkay, c)
+}
+
+func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return context.DeadlineExceeded
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.launchWorkshop(c, "one", true)
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(t1.Log()[0], check.Matches, `.*SDK "one" is not healthy after multiple checks`)
+	c.Assert(t1.Log()[0], check.Matches, `.*SDK "one" health status check timed out`)
 }

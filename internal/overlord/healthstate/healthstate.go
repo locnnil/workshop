@@ -1,6 +1,7 @@
 package healthstate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -101,6 +102,7 @@ func (h *healthHandler) Before() error {
 	// (the health is set already if it is a retry)
 	if errors.Is(err, state.ErrNoState) {
 		h.context.Set("health", HealthCheck{
+			Timestamp:   time.Now(),
 			Sdk:         h.context.Sdk(),
 			CheckResult: CheckUnknown,
 		})
@@ -116,12 +118,12 @@ func (h *healthHandler) Before() error {
 var retryTimeout = 1 * time.Second
 var retriesAllowed = 10
 
-func (h *healthHandler) Done() error {
+func (h *healthHandler) Done() (err error) {
 	var health HealthCheck
 	var retryCounter int
 
 	h.context.Lock()
-	err := h.context.Get("health", &health)
+	err = h.context.Get("health", &health)
 	h.context.Unlock()
 
 	if err != nil {
@@ -138,14 +140,31 @@ func (h *healthHandler) Done() error {
 		return err
 	}
 
-	if retryCounter >= retriesAllowed && (health.CheckResult == CheckWaiting || health.CheckResult == CheckUnknown) {
+	defer func() {
+		if !h.context.IsEphemeral() {
+			task, _ := h.context.Task()
+			h.context.Lock()
+			// update the hook's task to contain the latest health check result
+			// this is used by external parties to read and report the health
+			// check statuses e.g. workshop info command.
+			task.Set("health", health)
+			if retry, ok := err.(*state.Retry); ok {
+				h.context.Set("retry-counter", retryCounter+1)
+				task.Logf("Retrying check-health in %v, reason: %s", retry.After, health.Message)
+			}
+			h.context.Unlock()
+		}
+	}()
+
+	if health.CheckResult == CheckUnknown {
+		return fmt.Errorf("SDK %q health status is unknown", h.context.Sdk())
+	}
+
+	if retryCounter >= retriesAllowed && health.CheckResult == CheckWaiting {
 		return fmt.Errorf("SDK %q is not healthy after multiple checks", h.context.Sdk())
 	}
 
-	if health.CheckResult == CheckWaiting || health.CheckResult == CheckUnknown {
-		h.context.Lock()
-		h.context.Set("retry-counter", retryCounter+1)
-		h.context.Unlock()
+	if health.CheckResult == CheckWaiting {
 		return &state.Retry{After: retryTimeout, Reason: health.Message}
 	}
 
@@ -153,9 +172,14 @@ func (h *healthHandler) Done() error {
 		return errors.New(health.Message)
 	}
 
+	// the health check was reported as 'okay', we consider the check-health hook successful.
 	return nil
 }
 
 func (h *healthHandler) Error(err error) (bool, error) {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return false, fmt.Errorf("SDK %q health status check timed out", h.context.Sdk())
+	}
+
 	return false, nil
 }

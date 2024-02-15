@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
@@ -210,6 +211,46 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Check(t1.Log(), check.HasLen, 1)
 	c.Assert(t1.Log()[0], check.Matches, ".*hook execution error$")
+}
+
+func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.HookWithTimeout(s.state, "ws", "one", hookstate.FakeHook, 100*time.Millisecond)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				child, cancel := context.WithTimeout(ctx, args.Timeout)
+				defer cancel()
+				time.Sleep(200 * time.Millisecond)
+				return child.Err()
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
+		[]string{"bash", "-ue", "-o", "pipefail", "-c", "/var/lib/workshop/sdk/one/current/sdk/hooks/fake-hook"})
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log()[0], check.Matches, ".*context deadline exceeded$")
 }
 
 func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {

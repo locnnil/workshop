@@ -139,6 +139,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 			},
 			Environment: hook.Environment,
 			WorkDir:     sdk.SdkHooksDir(hook.Sdk),
+			Timeout:     hook.Timeout,
 		},
 		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,
@@ -153,7 +154,6 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	if err != nil {
 		return err
 	}
-
 	err = exectx.WaitExecution(ctx)
 
 	st := task.State()
