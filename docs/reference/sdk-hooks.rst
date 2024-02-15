@@ -49,8 +49,9 @@ SDK life cycle hooks
    * - :samp:`setup-base`
 
      - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
-       after unpacking the base image,
-       before starting the workshop.
+       after unpacking the base image
+       and starting the workshop,
+       but before setting its status to *Ready*.
 
      - Configures the base image for the SDK to become operational.
 
