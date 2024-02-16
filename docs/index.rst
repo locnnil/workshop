@@ -65,7 +65,7 @@ Project and community
 
 |project_markup| is an emergent project
 within the Enterprise Engineering department here at Canonical;
-`SDKcraft <https://canonical-sdkcraft.readthedocs-hosted.com/>`_
+`SDKcraft`_
 is a sibling project,
 aimed at publishers who create and distribute SDKs for |project_markup|.
 

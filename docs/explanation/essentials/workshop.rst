@@ -3,7 +3,10 @@
 Workshop
 ========
 
-A *workshop* (lowercase) is a container that is described in a definition file.
+A *workshop*
+(lowercase; not to be confused with |project_markup| itself)
+is a container that is described in a definition file,
+which is tied to a :ref:`project directory <exp_project>`.
 Currently, these containers are hosted by
 `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`__,
 but relying on this implementation detail isn't recommended.

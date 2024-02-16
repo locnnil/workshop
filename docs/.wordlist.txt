@@ -32,6 +32,7 @@ gopkg
 https
 installable
 iteratively
+lxc
 lxd
 onboarding
 pathname
@@ -42,6 +43,7 @@ reStructuredText
 readme
 roadmap
 sdk
+sdkcraft
 snapcraft
 snapd
 subcommand
