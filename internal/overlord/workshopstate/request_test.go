@@ -101,18 +101,17 @@ func (s *S) TestLaunchWorkshopNoSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	file := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
-	ts, err := workshopstate.Launch(s.state, file, s.project)
+	ts := workshopstate.Launch(s.state, file, s.project)
 
 	expected := []string{"create-workshop",
 		"mount-project",
 		"start-workshop"}
 	tasks := ts.Tasks()
 
-	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
 
 	var base string
-	err = tasks[0].Get("base", &base)
+	err := tasks[0].Get("base", &base)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(base, check.Equals, "ubuntu@22.04")
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
@@ -129,7 +128,7 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{sdk, sdk_2}}
 
-	ts, err := workshopstate.Launch(s.state, file, s.project)
+	ts := workshopstate.Launch(s.state, file, s.project)
 
 	expected := []string{
 		"create-workshop",
@@ -144,19 +143,21 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 		"auto-connect",
 		"auto-connect",
 		"run-hook",
+		"run-hook",
+		"run-hook",
 		"run-hook"}
 
 	tasks := ts.Tasks()
 
-	c.Assert(err, check.Equals, nil)
 	verifyExpectedTasks(c, tasks, expected)
+	var err error
 
 	var s1, s2 workshopbackend.SdkRecord
-	err = tasks[3].Get("sdk-record", &s1)
+	err = tasks[0].Get("sdk-record", &s1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(s1, check.Equals, sdk)
 
-	err = tasks[4].Get("sdk-record", &s2)
+	err = tasks[1].Get("sdk-record", &s2)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(s2, check.Equals, sdk_2)
 
@@ -164,22 +165,22 @@ func (s *S) TestLaunchWorkshopWithSdks(c *check.C) {
 	var id1, id2 string
 	err = tasks[5].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(id1, check.Equals, tasks[3].ID())
+	c.Assert(id1, check.Equals, tasks[0].ID())
 
 	// link-sdk task for sdk
 	err = tasks[6].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(id2, check.Equals, tasks[3].ID())
+	c.Assert(id2, check.Equals, tasks[0].ID())
 
 	// install-sdk task for sdk_2
 	err = tasks[8].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(id1, check.Equals, tasks[4].ID())
+	c.Assert(id1, check.Equals, tasks[1].ID())
 
 	// link-sdk task for sdk_2
 	err = tasks[8].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(id2, check.Equals, tasks[4].ID())
+	c.Assert(id2, check.Equals, tasks[1].ID())
 
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", tasks)
 }
