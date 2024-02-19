@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/spf13/afero"
 	"google.golang.org/api/option"
 )
 
@@ -38,11 +38,10 @@ type StoreClient interface {
 }
 
 func NewStoreClient() StoreClient {
-	return &ObjectStoreClient{Fs: afero.NewOsFs()}
+	return &ObjectStoreClient{}
 }
 
 type ObjectStoreClient struct {
-	Fs afero.Fs
 }
 
 func storeConnect(ctx context.Context) (*storage.Client, error) {
@@ -91,14 +90,8 @@ func (c *ObjectStoreClient) RetrieveSdk(ctx context.Context, name, channel, loca
 			s.Name = name
 			s.Channel = channel
 			s.Revision = revision
-
-			exist, err := afero.Exists(c.Fs, s.Filename())
-			if err != nil {
-				return s, err
-			}
-
-			if !exist {
-				file, err := c.Fs.Create(s.Filename())
+			if !osutil.FileExists(s.Filename()) {
+				file, err := os.Create(s.Filename())
 				if err != nil {
 					return s, err
 				}

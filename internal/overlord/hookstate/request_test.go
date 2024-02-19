@@ -2,6 +2,7 @@ package hookstate_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -47,4 +48,19 @@ func (s *S) TestCreateHook(c *check.C) {
 		c.Assert(hookSetup.Environment, check.DeepEquals, envs[num])
 		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 	}
+}
+
+func (s *S) TestCreateHookWithTimeout(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	task := hookstate.HookWithTimeout(s.state, "test", "go", hookstate.CheckHealth, 5*time.Second)
+	var hookSetup hookstate.HookSetup
+	err := task.Get("hook-setup", &hookSetup)
+	c.Assert(err, check.IsNil)
+	c.Assert(hookSetup.Type(), check.Equals, "check-health")
+	c.Assert(hookSetup.Workshop, check.DeepEquals, "test")
+	c.Assert(hookSetup.Sdk, check.DeepEquals, "go")
+	c.Assert(hookSetup.Environment, check.HasLen, 0)
+	c.Assert(hookSetup.Timeout, check.Equals, 5*time.Second)
+	c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 }

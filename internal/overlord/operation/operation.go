@@ -78,7 +78,7 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 
 func StartOperation(st *state.State, name, projectId string, op Operation) error {
 	if cur := OperationInProgress(st, name, projectId); cur != nil {
-		return fmt.Errorf("cannot begin %s: %s operation is in progress", op.Operation, cur.Operation)
+		return fmt.Errorf("cannot %s: %s operation is in progress", op.Operation, cur.Operation)
 	}
 	var refresh Operations = make(Operations)
 	st.Get(OpsInProgressKey, &refresh)

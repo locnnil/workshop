@@ -18,10 +18,16 @@ import (
 )
 
 const (
-	LaneCleanupRefresh                = 1
-	EdgeLastBeforeRefreshIrreversible = state.TaskSetEdge("last-before-irreversible")
-	EdgeCleanupRefresh                = state.TaskSetEdge("refresh-cleanup")
+	// mark the last task in a taskset after which refresh becomes irreversible (i.e. the following tasks
+	// will not be possible to undo, e.g. removing an old workshop copy)
+	EdgeLastTaskBeforeRefreshIrreversible = state.TaskSetEdge("last-before-irreversible")
+
+	// mark the tasks that denote irreversible clean up logic for refresh (e.g.
+	// removing state storage and the old workshop copy)
+	EdgeRefreshCleanup = state.TaskSetEdge("refresh-cleanup")
 )
+
+var checkHealthTimeout = 5 * time.Second
 
 func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshopbackend.Project, error) {
 	username, ok := ctx.Value(workshopbackend.ContextUser).(string)
@@ -54,8 +60,8 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot read %q file: %w", i, err)
 		}
 
-		wrkspace, err := w.Workshop(ctx, i, projectId)
-		if wrkspace != nil {
+		workshop, err := w.Workshop(ctx, i, projectId)
+		if workshop != nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", i)
 		}
 		if !errors.Is(err, workshopbackend.ErrWorkshopNotFound) {
@@ -63,25 +69,10 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		}
 
 		tasks := launch(w.state, file, project)
-		for _, tsk := range tasks.Tasks() {
-			if tsk.Kind() == "create-workshop" {
-				tsk.Set("start-operation", true)
-			}
-
-			if len(file.Sdks) == 0 {
-				if tsk.Kind() == "start-workshop" {
-					tsk.Set("stop-operation", true)
-				}
-			} else {
-				if tsk.Kind() == "auto-connect" && len(tsk.HaltTasks()) == 0 {
-					tsk.Set("stop-operation", true)
-				}
-			}
-		}
 		taskset = append(taskset, tasks)
 	}
 
-	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationLaunch}); err != nil {
+	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationLaunch}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -138,11 +129,11 @@ func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSe
 	return all
 }
 
-func checkHealth(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
+func checkHealthHooks(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
 	var prevCheck *state.Task
 	checkHealth := state.NewTaskSet([]*state.Task{}...)
 	for _, sdk := range file.Sdks {
-		checkHealthTask := hookstate.HookWithTimeout(st, file.Name, sdk.Name, hookstate.CheckHealth, 5*time.Second)
+		checkHealthTask := hookstate.HookWithTimeout(st, file.Name, sdk.Name, hookstate.CheckHealth, checkHealthTimeout)
 		if prevCheck != nil {
 			checkHealthTask.WaitFor(prevCheck)
 		}
@@ -177,18 +168,31 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 	install.WaitAll(create)
 
 	// run a quick check health script (for every SDK, if present)
-	checkHealth := checkHealth(st, file)
+	checkHealth := checkHealthHooks(st, file)
 	checkHealth.WaitAll(install)
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
 	all.AddAll(create)
 	all.AddAll(install)
 	all.AddAll(checkHealth)
-	for _, i := range all.Tasks() {
-		i.Set("workshop", file.Name)
-		i.Set("project", project)
+
+	checkTasksLen := len(checkHealth.Tasks())
+	for _, task := range all.Tasks() {
+		task.Set("workshop", file.Name)
+		task.Set("project", project)
+
+		if task.Kind() == "create-workshop" {
+			task.Set("start-operation", true)
+		}
+		if checkTasksLen == 0 && task.Kind() == "start-workshop" {
+			task.Set("stop-operation", true)
+		}
 	}
 
+	if checkTasksLen > 0 {
+		lastCheck := checkHealth.Tasks()[checkTasksLen-1]
+		lastCheck.Set("stop-operation", true)
+	}
 	return all
 }
 
@@ -205,7 +209,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		projectId,
 		[]healthstate.Status{healthstate.ReadyStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot refresh: %w", err)
+		return nil, fmt.Errorf("cannot refresh: %v", err)
 	}
 
 	_, workshops, err := w.Workshops(ctx, projectId)
@@ -215,10 +219,10 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 
 	files := make([]*workshopbackend.WorkshopFile, 0)
 	content := make([][]sdk.Setup, 0)
-	for _, i := range names {
-		idx := slices.IndexFunc(workshops, func(w *workshopbackend.Workshop) bool { return w.Name == i })
+	for _, workshop := range names {
+		idx := slices.IndexFunc(workshops, func(w *workshopbackend.Workshop) bool { return w.Name == workshop })
 		if idx == -1 {
-			return nil, fmt.Errorf("%q workshop not found", i)
+			return nil, fmt.Errorf("cannot refresh: workshop %q not found", workshop)
 		}
 		file, err := project.WorkshopFile(workshops[idx].Name)
 		if err != nil {
@@ -233,7 +237,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, operation.Operation{
+	if err = w.startOperationMany(names, projectId, operation.Operation{
 		ChangeId:    opChangeId,
 		Operation:   operation.OperationRefresh,
 		WaitOnError: refreshMode == operation.RefreshWaitOnError,
@@ -257,7 +261,7 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][
 	}
 
 	for _, ts := range taskset {
-		cleanup, err := ts.Edge(EdgeCleanupRefresh)
+		cleanup, err := ts.Edge(EdgeRefreshCleanup)
 		if err != nil {
 			return nil, err
 		}
@@ -272,26 +276,11 @@ func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][
 		// other changes before execution.
 		for _, otherts := range taskset {
 			if ts != otherts {
-				last, err := otherts.Edge(EdgeLastBeforeRefreshIrreversible)
+				last, err := otherts.Edge(EdgeLastTaskBeforeRefreshIrreversible)
 				if err != nil {
 					return nil, err
 				}
 				cleanup.WaitFor(last)
-				// if the change was aborted during the cleanup stage execution,
-				// there is a chance that some of the workshop copies that had
-				// been created during the refresh were already deleted. If we
-				// start to Undo those workshops' refresh progress we will
-				// endup deleting the workshops that finished their refresh.
-				// Given that they have no copy already, the undo logic
-				// (stash-workshop) will delete the existing workshop
-				// and fail to restore from the copy. We don't want that. Hence,
-				// all the cleanup tasks are extracted into a separate lane. If
-				// any problem happens, the workshops which had finished their
-				// refresh will not suffer.
-				cleanup.JoinLane(LaneCleanupRefresh)
-				for _, t := range cleanup.HaltTasks() {
-					t.JoinLane(LaneCleanupRefresh)
-				}
 			}
 		}
 	}
@@ -306,18 +295,20 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	// 4. Launch the new workshop
 	// 5. Run restore state
 	// 6. Delete the old workshop
-
 	retrieve := retrieveSdks(st, file)
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	createStateStorage.WaitAll(retrieve)
 
+	// the saveStateHooks can be empty if the old SDKs were all removed in
+	// the new version of the workshop
 	saveStateHooks := saveStateHooks(st, file.Name, content, file.Sdks)
 	saveStateHooks.WaitFor(createStateStorage)
 
 	// disconnect and remove SDKs plugs and slots
 	disconnect := disconnectSdks(content, st)
 	disconnect.WaitAll(saveStateHooks)
+	disconnect.WaitFor(createStateStorage)
 
 	// put the workshop (old) away and disconnect its interfaces
 	putToStash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
@@ -325,58 +316,72 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 	putToStash.WaitAll(saveStateHooks)
 	putToStash.WaitFor(createStateStorage)
 
-	// create a fresh workshop (new)
-	create := constructWorkshop(st, file, p)
-	create.WaitFor(putToStash)
+	// launch a workshop (new)
+	launch := constructWorkshop(st, file, p)
+	launch.WaitFor(putToStash)
 
-	// install SDKs and run restore-state scripts
+	// install SDKs and run restore-state scripts. The restoreStateHooks can be
+	// empty if the old SDKs were all removed in the new version of the workshop
 	install := installSdks(st, file, retrieve)
-	install.WaitAll(create)
-	restoreStateHooks := restoreStateHooks(st, file.Name, content, file.Sdks)
-	restoreStateHooks.WaitAll(install)
+	install.WaitAll(launch)
+	launch.AddAll(install)
+
+	// note: restore-state list may be empty if there are no SDKs or
+	// old SDKs are all gone
+	restoreState := restoreStateHooks(st, file.Name, content, file.Sdks)
+	restoreState.WaitAll(install)
+	launch.AddAll(restoreState)
+
+	checkHealth := checkHealthHooks(st, file)
+	checkHealth.WaitAll(install)
+	checkHealth.WaitAll(restoreState)
+	launch.AddAll(checkHealth)
 
 	// remove the state storage after running restore-state scripts
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+	createLen := len(launch.Tasks())
+	lastLaunchTask := launch.Tasks()[createLen-1]
+	removeStateStorage.WaitFor(lastLaunchTask)
+	launch.MarkEdge(lastLaunchTask, EdgeLastTaskBeforeRefreshIrreversible)
 
 	// remove the workshop from stash after the state storage was detached
 	removeFromStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
 	removeFromStash.WaitFor(removeStateStorage)
 
-	if len(restoreStateHooks.Tasks()) == 0 {
-		// we are dealing with a workshop that does not have
-		// SDKs, i.e. it will not be running any hooks. Thus,
-		// the point of no return is the last launch task (i.e.
-		// before the moment when we delete the copy of the workshop
-		// after the refresh operation).
-		lastLaunchTask := create.Tasks()[len(create.Tasks())-1]
-		removeStateStorage.WaitFor(lastLaunchTask)
-		create.MarkEdge(lastLaunchTask, EdgeLastBeforeRefreshIrreversible)
-	} else {
-		removeStateStorage.WaitAll(restoreStateHooks)
-	}
+	// if the change was aborted during the cleanup stage execution,
+	// there is a chance that some of the workshop copies that had
+	// been created during the refresh were already deleted. If we
+	// start to Undo those workshops' refresh progress we will
+	// endup deleting the workshops that finished their refresh.
+	// Given that they have no copy already, the undo logic
+	// (stash-workshop) will delete the existing workshop
+	// and fail to restore from the copy. We don't want that. Hence,
+	// all the cleanup tasks are extracted into a separate lane. If
+	// any problem happens, the workshops that had finished their
+	// refresh will not be affected.
+	cleanupLane := st.NewLane()
+	removeStateStorage.JoinLane(cleanupLane)
+	removeFromStash.JoinLane(cleanupLane)
 
 	refresh := state.NewTaskSet([]*state.Task{}...)
 	refresh.AddAll(retrieve)
 	refresh.AddTask(createStateStorage)
 	refresh.AddAll(saveStateHooks)
-	refresh.AddAllWithEdges(create)
-	refresh.AddAll(install)
-	refresh.AddAllWithEdges(restoreStateHooks)
-	refresh.AddTask(putToStash)
 	refresh.AddAll(disconnect)
+	refresh.AddTask(putToStash)
+	refresh.AddAllWithEdges(launch)
 	refresh.AddTask(removeStateStorage)
 	refresh.AddTask(removeFromStash)
 
+	refresh.MarkEdge(removeStateStorage, EdgeRefreshCleanup)
+
 	// mark the first task to start the operation so if cancelled or failed the
 	// operation will be removed from the list of the active ones
-	createStateStorage.Set("start-operation", true)
+	refresh.Tasks()[0].Set("start-operation", true)
 
 	// mark the last task to stop the operation
 	// and make the workshop available for other commands
 	removeFromStash.Set("stop-operation", true)
-
-	refresh.MarkEdge(removeStateStorage, EdgeCleanupRefresh)
-
 	for _, i := range refresh.Tasks() {
 		i.Set("workshop", file.Name)
 		i.Set("project", *p)
@@ -406,19 +411,7 @@ func saveStateHooks(st *state.State, workshop string, content []sdk.Setup, newCo
 }
 
 func restoreStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList) *state.TaskSet {
-	stateHooks := createStateHooks(st, workshop, content, newContent, hookstate.RestoreState)
-
-	// if the restore hooks are not present (i.e. workshop has no SDKs after
-	// the refresh), we should mark the last launch task as last before the
-	// irreversible change happens. This will be done in the refreshMany
-	// call.
-	if len(stateHooks.Tasks()) > 0 {
-		last := stateHooks.Tasks()[len(stateHooks.Tasks())-1]
-		// last restore state hook for the refresh call is the last task before the
-		// previous refresh copy removal, ie. before making something irreversible
-		stateHooks.MarkEdge(last, EdgeLastBeforeRefreshIrreversible)
-	}
-	return stateHooks
+	return createStateHooks(st, workshop, content, newContent, hookstate.RestoreState)
 }
 
 func createStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
@@ -430,7 +423,6 @@ func createStateHooks(st *state.State, workshop string, content []sdk.Setup, new
 		if slices.IndexFunc(content, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
 			continue
 		}
-
 		stateHook := hookstate.Hook(st, workshop, newsdk.Name, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
@@ -461,7 +453,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStart}); err != nil {
+	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStart}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -503,7 +495,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		return nil, err
 	}
 
-	if err = w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStop}); err != nil {
+	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStop}); err != nil {
 		return nil, err
 	}
 	return taskset, nil
@@ -602,15 +594,16 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		return nil, err
 	}
 
-	if err := w.startOperation(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationRemove}); err != nil {
+	if err := w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationRemove}); err != nil {
 		return nil, err
 	}
 
 	return taskset, nil
 }
 
-func (w *WorkshopManager) startOperation(names []string, projectId string, op operation.Operation) error {
+func (w *WorkshopManager) startOperationMany(names []string, projectId string, op operation.Operation) error {
 	rev := revert.New()
+	defer rev.Fail()
 	for _, name := range names {
 		err := operation.StartOperation(w.state, name, projectId, op)
 		if err != nil {

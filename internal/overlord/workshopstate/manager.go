@@ -52,7 +52,7 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId s
 	for _, name := range names {
 		workshop, err := w.Workshop(ctx, name, pId)
 		if err != nil {
-			return err
+			return fmt.Errorf("status check for %q failed (%v)", name, err)
 		}
 
 		health := w.WorkshopHealth(workshop)
