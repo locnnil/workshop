@@ -66,14 +66,14 @@ func (s HealthCheckResult) String() string {
 
 type HealthCheck struct {
 	Sdk         string            `json:"sdk"`
-	Timestamp   time.Time         `json:"timestamp"`
+	Timestamp   time.Time         `json:"timestamp,omitzero"`
 	CheckResult HealthCheckResult `json:"check-result"`
 	Message     string            `json:"message,omitempty"`
 	Code        string            `json:"code,omitempty"`
 }
 
 type HealthState struct {
-	Timestamp time.Time              `json:"timestamp"`
+	Timestamp time.Time              `json:"timestamp,omitzero"`
 	Status    Status                 `json:"status"`
 	Message   string                 `json:"message,omitempty"`
 	Code      string                 `json:"code,omitempty"`

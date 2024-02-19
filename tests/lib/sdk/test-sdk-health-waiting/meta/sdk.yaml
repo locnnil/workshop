@@ -1,0 +1,7 @@
+name: test-sdk-health-waiting
+title: test-sdk-health-waiting
+base: ubuntu@22.04
+
+summary: test-sdk-health-waiting SDK
+description: |
+  test-sdk-health-waiting SDK

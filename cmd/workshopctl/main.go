@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/dirs"
@@ -34,6 +35,15 @@ var clientConfig = client.Config{
 }
 
 func main() {
+	// Set the user and group IDs to the workshop user
+	uid := uint32(1000) // Change this to the workshop UID
+
+	// Change the user IDs for this process
+	if err := syscall.Setuid(int(uid)); err != nil {
+		fmt.Println("Error setting UID:", err)
+		return
+	}
+
 	stdout, stderr, err := run(nil)
 	if err != nil {
 		if e, ok := err.(*client.Error); ok {

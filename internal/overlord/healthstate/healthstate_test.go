@@ -189,7 +189,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	now := time.Now().Round(0)
+	now := time.Now().UTC()
 	result := healthstate.HealthCheck{
 		Timestamp:   now,
 		Sdk:         "one",
@@ -239,7 +239,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 	restore := healthstate.FakeRetryTimeout(0 * time.Second)
 	defer restore()
 
-	now := time.Now().Round(0)
+	now := time.Now().UTC()
 	resultWait := healthstate.HealthCheck{
 		Timestamp:   now,
 		Sdk:         "one",
@@ -248,7 +248,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		Code:        "wait-for-me",
 	}
 
-	nowOkay := time.Now().Round(0)
+	nowOkay := time.Now().UTC()
 	resultOkay := healthstate.HealthCheck{
 		Timestamp:   nowOkay,
 		Sdk:         "one",

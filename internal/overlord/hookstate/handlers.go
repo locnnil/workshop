@@ -134,7 +134,6 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 				"-ue",
 				"-o",
 				"pipefail",
-				"-c",
 				hookPath,
 			},
 			Environment: hook.Environment,

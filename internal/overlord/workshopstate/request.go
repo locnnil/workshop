@@ -163,36 +163,28 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 	create := constructWorkshop(st, file, project)
 	create.WaitAll(retrieve)
 
-	// install the downloaded sdks
-	install := installSdks(st, file, retrieve)
-	install.WaitAll(create)
+	// launch the downloaded sdks
+	launch := installSdks(st, file, retrieve)
+	launch.WaitAll(create)
 
 	// run a quick check health script (for every SDK, if present)
 	checkHealth := checkHealthHooks(st, file)
-	checkHealth.WaitAll(install)
+	checkHealth.WaitAll(launch)
+	launch.AddAll(checkHealth)
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
 	all.AddAll(create)
-	all.AddAll(install)
-	all.AddAll(checkHealth)
+	all.AddAll(launch)
 
-	checkTasksLen := len(checkHealth.Tasks())
+	tasksLen := len(all.Tasks())
+	all.Tasks()[0].Set("start-operation", true)
+	all.Tasks()[tasksLen-1].Set("stop-operation", true)
+
 	for _, task := range all.Tasks() {
 		task.Set("workshop", file.Name)
 		task.Set("project", project)
-
-		if task.Kind() == "create-workshop" {
-			task.Set("start-operation", true)
-		}
-		if checkTasksLen == 0 && task.Kind() == "start-workshop" {
-			task.Set("stop-operation", true)
-		}
 	}
 
-	if checkTasksLen > 0 {
-		lastCheck := checkHealth.Tasks()[checkTasksLen-1]
-		lastCheck.Set("stop-operation", true)
-	}
 	return all
 }
 
