@@ -1,0 +1,23 @@
+summary: |
+  Test workshop info output
+  
+prepare: |
+  apt install expect jq -y --no-install-recommends
+  snap install yq
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+  PROJECT=$(pwd)
+  
+  change_id=$(workshop_exec --project "$PROJECT" launch ws --no-wait | tr -d '\n')  
+  
+  while workshop_exec tasks $change_id | grep  -q ".*Do .*check-health"; do
+    sleep 0.1
+  done
+  sleep 2
+  workshop_exec --project "$PROJECT" info ws
+  workshop_exec --project "$PROJECT" info ws | grep -v notes | yq '.content["test-sdk-health-waiting"].message' | MATCH "Cannot finish health check"

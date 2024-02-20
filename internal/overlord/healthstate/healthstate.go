@@ -161,6 +161,15 @@ func (h *healthHandler) Done() (err error) {
 	}
 
 	if retryCounter >= retriesAllowed && health.CheckResult == CheckWaiting {
+		// if reached the maximum possible retries, reset the counter. This is
+		// required for scenarios when a user provided --wait-on-error to
+		// workshop refresh. If provided and check-health failed after multiple
+		// attemps, refresh will wait on this error allowing to repeat the task
+		// with --continue. In this case, we must to re-run the health check
+		// from scratch.
+		h.context.Lock()
+		h.context.Set("retry-counter", 0)
+		h.context.Unlock()
 		return fmt.Errorf("SDK %q is not healthy after multiple checks", h.context.Sdk())
 	}
 
@@ -169,6 +178,10 @@ func (h *healthHandler) Done() (err error) {
 	}
 
 	if health.CheckResult == CheckError {
+		// see the comment about the maximum possible retries above
+		h.context.Lock()
+		h.context.Set("retry-counter", 0)
+		h.context.Unlock()
 		return errors.New(health.Message)
 	}
 

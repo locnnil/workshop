@@ -62,15 +62,27 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
 	fmt.Fprintf(w, "project:\t%s\n", project.Path)
 	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.Status))
-	notes := strings.Join(workshop.Notes, ",")
-	if len(workshop.Notes) == 0 {
-		notes = "-"
+
+	// get the workshop notes
+	notes := workshop.Notes
+
+	// get the SDKs notes (if there is an ongoing health check)
+	for _, sdk := range workshop.Content {
+		if sdk.Health != nil && sdk.Health.Code != "" {
+			notes = append(notes, sdk.Health.Code)
+		}
 	}
-	fmt.Fprintf(w, "notes:\t%s\n", notes)
+
+	// combine notes from workshop and its SDKs
+	notesFormatted := strings.Join(notes, ",")
+	if len(workshop.Notes) == 0 {
+		notesFormatted = "-"
+	}
+
+	fmt.Fprintf(w, "notes:\t%s\n", notesFormatted)
 
 	if len(workshop.Content) > 0 {
 		fmt.Fprintf(w, "content:\n")
-
 		for _, sdk := range workshop.Content {
 			fmt.Fprintf(w, "\t%s:\n", sdk.Name)
 			installTime := sdk.InstallTime.Format("2006-01-02")
@@ -78,6 +90,9 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				installTime = ""
 			}
 			fmt.Fprintf(w, "\t\tchannel:\t%s\t%s\t%s\n", sdk.Channel, installTime, sdk.Revision)
+			if sdk.Health != nil {
+				fmt.Fprintf(w, "\t\tmessage:\t%s\n", sdk.Health.Message)
+			}
 		}
 	}
 

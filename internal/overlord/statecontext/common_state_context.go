@@ -28,6 +28,11 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 		}
 
 		err = handler(task, tomb)
+		switch err.(type) {
+		case *state.Retry:
+			return err
+		}
+
 		st := task.State()
 		st.Lock()
 		defer st.Unlock()

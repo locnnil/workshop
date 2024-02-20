@@ -13,3 +13,11 @@ func FakeRetryTimeout(t time.Duration) (restore func()) {
 		retryTimeout = old
 	}
 }
+
+func FakeRetryAttempts(t int) (restore func()) {
+	old := retriesAllowed
+	retriesAllowed = t
+	return func() {
+		retriesAllowed = old
+	}
+}

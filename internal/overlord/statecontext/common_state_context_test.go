@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
 
 	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -19,6 +20,8 @@ type CommonStateFuncs struct {
 }
 
 var _ = check.Suite(&CommonStateFuncs{})
+
+func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *CommonStateFuncs) setupTask() *state.Task {
 	s.state.Lock()
@@ -147,4 +150,27 @@ func (s *CommonStateFuncs) TestRefreshInProgressError(c *check.C) {
 	c.Assert(op, check.NotNil)
 	c.Assert(op.ChangeId, check.Equals, "1")
 	c.Assert(op.Operation, check.Equals, "refresh")
+}
+
+func (s *CommonStateFuncs) TestExecutionOnDoRetry(c *check.C) {
+	task := s.setupTask()
+
+	s.state.Lock()
+	task.Set("stop-operation", true)
+	err := operation.StartOperation(s.state, "ws", s.project.ProjectId, operation.Operation{ChangeId: "1", Operation: operation.OperationRefresh, WaitOnError: false})
+	c.Assert(err, check.IsNil)
+	s.state.Unlock()
+
+	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
+		return &state.Retry{Reason: "not enough time"}
+	})
+
+	err = handler(task, nil)
+	c.Assert(err, check.ErrorMatches, "task should be retried")
+	c.Assert(err.(*state.Retry).Reason, check.Equals, "not enough time")
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	op := operation.OperationInProgress(s.state, "ws", s.project.ProjectId)
+	c.Assert(op, check.NotNil)
 }

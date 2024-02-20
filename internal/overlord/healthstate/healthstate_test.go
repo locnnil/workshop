@@ -198,15 +198,17 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 		Code:        "error-error",
 	}
 
+	var hookContext *hookstate.Context
 	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
 		return workshopbackend.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				// emulate workshopctl set-health --code=<code> error <message>
-				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				var err error
+				hookContext, err = s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
 				c.Assert(err, check.IsNil)
-				hookCtx.Lock()
-				hookCtx.Set("health", result)
-				hookCtx.Unlock()
+				hookContext.Lock()
+				hookContext.Set("health", result)
+				hookContext.Unlock()
 				return nil
 			},
 		}, nil
@@ -223,6 +225,15 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Assert(t1.Log()[0], check.Matches, `.*something went wrong`)
+	s.state.Unlock()
+	hookContext.Lock()
+	var counter int
+	err := hookContext.Get("retry-counter", &counter)
+	hookContext.Unlock()
+	s.state.Lock()
+	c.Assert(err, check.IsNil)
+	c.Assert(counter, check.Equals, 0)
+
 	ensureTaskHealthIsSet(t1, &result, c)
 }
 
@@ -291,6 +302,72 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 	c.Assert(t1.Log()[0], check.Matches, `.*not ready yet`)
 	c.Assert(t1.Log(), check.HasLen, 1)
 	ensureTaskHealthIsSet(t1, &resultOkay, c)
+}
+
+func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	restore := healthstate.FakeRetryTimeout(0 * time.Second)
+	defer restore()
+
+	restoreAttempts := healthstate.FakeRetryAttempts(2)
+	defer restoreAttempts()
+
+	now := time.Now().UTC()
+	resultWait := healthstate.HealthCheck{
+		Timestamp:   now,
+		Sdk:         "one",
+		CheckResult: healthstate.CheckWaiting,
+		Message:     "not ready yet",
+		Code:        "wait-for-me",
+	}
+
+	var hookContext *hookstate.Context
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
+		return workshopbackend.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				var err error
+				hookContext, err = s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				c.Assert(err, check.IsNil)
+				hookContext.Lock()
+				// emulate workshopctl set-health --code=<code> error <message>
+				hookContext.Set("health", resultWait)
+				hookContext.Unlock()
+				return nil
+			},
+		}, nil
+	}
+	defer func() {
+		s.backend.DoExec = workshopbackend.DoExecDefault
+	}()
+
+	s.launchWorkshop(c, "one", true)
+	s.state.Unlock()
+	for i := 0; i < 3; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(t1.Log()[2], check.Matches, `.*SDK \"one\" is not healthy after multiple checks`)
+	c.Assert(t1.Log(), check.HasLen, 3)
+
+	s.state.Unlock()
+	hookContext.Lock()
+	var counter int
+	err := hookContext.Get("retry-counter", &counter)
+	hookContext.Unlock()
+	s.state.Lock()
+	c.Assert(err, check.IsNil)
+	c.Assert(counter, check.Equals, 0)
 }
 
 func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {

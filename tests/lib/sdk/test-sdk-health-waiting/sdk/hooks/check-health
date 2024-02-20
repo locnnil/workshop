@@ -10,6 +10,7 @@ counter=$((counter + 1))
 if [ "$counter" -gt 3 ]; then
     workshopctl set-health okay
 else 
+    sleep 2
     workshopctl set-health waiting --code try-later "Cannot finish health check"
 fi
 
