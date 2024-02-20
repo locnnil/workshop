@@ -6,7 +6,7 @@ function prepare_environment() {
   snap install go --classic
 
   snap install lxd --classic
-  lxd init --auto
+  lxd init --auto --storage-backend zfs
   
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/
@@ -29,7 +29,7 @@ function start_sdk_store() {
 
   echo "Waiting for the fake SDK store to start on port 8080..."
   while ! nc -z localhost 8080; do
-    sleep 0.1 # wait for 1/10 of the second before check again
+    sleep 0.1
   done
 }
 

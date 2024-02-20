@@ -85,3 +85,4 @@ exclude:
   - .git
   - .workshop.lock
   - docs
+  - __debug_bin*

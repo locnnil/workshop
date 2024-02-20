@@ -4,7 +4,7 @@ set timeout 120
 spawn watch -n 0.5 workshop info ws
 
 expect {
-    -re "message:\[ \]*Cannot finish health check" {
+    -re "message:\[ \]*Cannot finish health check" {        
         exit 0
     }    
     timeout { 
