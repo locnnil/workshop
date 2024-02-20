@@ -1,0 +1,7 @@
+name: test-sdk-health-error
+title: test-sdk-health-error
+base: ubuntu@22.04
+
+summary: test-sdk-health-error SDK
+description: |
+  test-sdk-health-error SDK

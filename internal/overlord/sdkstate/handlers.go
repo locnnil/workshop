@@ -3,6 +3,7 @@ package sdkstate
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -80,6 +81,18 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	st.Unlock()
 
 	return nil
+}
+
+func (m *SdkManager) undoRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	var setup sdk.Setup
+	err := task.Get("sdk-setup", &setup)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+	return os.Remove(setup.Filename())
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {

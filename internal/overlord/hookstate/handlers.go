@@ -7,7 +7,7 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
@@ -16,12 +16,12 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, workshop, err := statecontext.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := statecontext.BackendContext(tomb, user, prj)
 	defer cancel()
 
 	var hook HookSetup
@@ -134,11 +134,11 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 				"-ue",
 				"-o",
 				"pipefail",
-				"-c",
 				hookPath,
 			},
 			Environment: hook.Environment,
 			WorkDir:     sdk.SdkHooksDir(hook.Sdk),
+			Timeout:     hook.Timeout,
 		},
 		ExecControls: workshopbackend.ExecControls{
 			Stdin:  nil,
@@ -153,7 +153,6 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 	if err != nil {
 		return err
 	}
-
 	err = exectx.WaitExecution(ctx)
 
 	st := task.State()

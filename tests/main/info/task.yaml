@@ -1,0 +1,20 @@
+summary: |
+  Test workshop info output
+  
+prepare: |
+  apt install expect jq -y --no-install-recommends
+  snap install yq
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+  PROJECT=$(pwd)
+  
+  change_id=$(workshop_exec --project "$PROJECT" launch ws --no-wait | tr -d '\n')
+  expect -f ./health.exp
+  while workshop_exec changes | grep -q "$change_id  Doing.*Launch \"ws\" workshop$"; do
+    sleep 0.1
+  done

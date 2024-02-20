@@ -1,0 +1,26 @@
+summary: Check check-health hook and set-health reporting
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws
+
+  echo "Check health reported okay"
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec refresh --project "$project" ws  
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$" 
+
+  echo "Check health reported waiting"  
+  workshop_exec --project "$project" launch ws-waiting    
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-waiting\" workshop$"
+  workshop_exec refresh --project "$project" ws-waiting
+  
+  echo "Check health reported error"
+  workshop_exec --project "$project" launch ws-error || true
+  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Error[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-error\" workshop$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws-error[[:space:]]+Off[[:space:]]+-$" 

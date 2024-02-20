@@ -33,7 +33,10 @@ backends:
         sudo sh -c "echo root:ubuntu | sudo chpasswd"
       multipass exec "$instance_name" -- \
         sudo sh -c \
-        "sed -i /etc/ssh/sshd_config -e 's/^PasswordAuthentication.*/PasswordAuthentication yes/' -e 's/^#PermitRootLogin.*/PermitRootLogin yes/'"
+        "sed -i /etc/ssh/sshd_config -e 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' -e 's/^#PermitRootLogin.*/PermitRootLogin yes/' -e 's/^KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/'"
+      multipass exec "$instance_name" -- \
+        sudo sh -c \
+        "sed -i /etc/ssh/sshd_config.d/60-cloudimg-settings.conf -e 's/^PasswordAuthentication.*/PasswordAuthentication yes/'"
       multipass exec "$instance_name" -- \
         sudo systemctl restart ssh
       ADDRESS "$ip:22"
@@ -50,7 +53,7 @@ backends:
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi
-      #multipass delete --purge "$instance_name"
+      multipass delete --purge "$instance_name"
     systems:
       - ubuntu-22.04-64:
           workers: 1
@@ -82,3 +85,4 @@ exclude:
   - .git
   - .workshop.lock
   - docs
+  - __debug_bin*

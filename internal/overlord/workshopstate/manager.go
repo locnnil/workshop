@@ -2,10 +2,17 @@ package workshopstate
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"golang.org/x/exp/slices"
+
+	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
 	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/x-go/strutil"
 )
 
 type WorkshopManager struct {
@@ -19,7 +26,6 @@ func New(st *state.State, runner *state.TaskRunner, server workshopbackend.Works
 		state:   st,
 	}
 
-	/* Workshop management */
 	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), OnUndo(manager.undoCreateWorkshop))
 	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUndo(manager.doStop))
 	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUndo(manager.doStart))
@@ -41,23 +47,24 @@ func (w *WorkshopManager) Ensure() error {
 	return nil
 }
 
-// Checks all of the provided list of workshops are in the required status as
-// per the matchStatus predicate. It returns the first workshop that does NOT
-// meet the predicate's condition.
-func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string,
-	matchStatus func(status workshopbackend.WorkshopStatus) bool) (string, workshopbackend.WorkshopStatus, error) {
+// Checks all of the provided list of workshops are in the required health status.
+func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string, allowedStatuses []healthstate.Status) error {
 	for _, name := range names {
-		wrkspc, err := w.Workshop(ctx, name, pId)
+		workshop, err := w.Workshop(ctx, name, pId)
 		if err != nil {
-			return "", workshopbackend.WorkshopOff, err
+			return fmt.Errorf("status check for %q failed (%v)", name, err)
 		}
 
-		status := w.workshopStatus(wrkspc)
-		if !matchStatus(status) {
-			return name, status, nil
+		health := w.WorkshopHealth(workshop)
+		allowed := []string{}
+		for _, s := range allowedStatuses {
+			allowed = append(allowed, s.String())
+		}
+		if slices.Index(allowedStatuses, health.Status) == -1 {
+			return fmt.Errorf("%q status is %q, must be one of: %s", name, health.Status.String(), strutil.Quoted(allowed))
 		}
 	}
-	return "", workshopbackend.WorkshopOff, nil
+	return nil
 }
 
 // Loads a workshop, the state must be locked as it is used to find out the
@@ -66,13 +73,12 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
 
-	wrkspc, err := w.backend.Workshop(pCtx, name)
+	workshop, err := w.backend.Workshop(pCtx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	wrkspc.SetStatus(w.workshopStatus(wrkspc))
-	return wrkspc, nil
+	return workshop, nil
 }
 
 // Loads all workshops for a project, the state must be locked as it is used to find out the
@@ -86,45 +92,67 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 		return nil, nil, err
 	}
 
-	for _, wrkspc := range workshops {
-		wrkspc.SetStatus(w.workshopStatus(wrkspc))
-	}
-
 	return files, workshops, nil
+}
+
+// Examine the tasks of the change to fetch possible check-health hook results
+// for the workshop's SDKs.
+func sdksHealthCheckSummary(chg *state.Change) map[string]healthstate.HealthCheck {
+	var SdkChecks = map[string]healthstate.HealthCheck{}
+	for _, task := range chg.Tasks() {
+		if task.Kind() == "run-hook" {
+			var healthCheck healthstate.HealthCheck
+			if err := task.Get("health", &healthCheck); err == nil {
+				SdkChecks[healthCheck.Sdk] = healthCheck
+			}
+		}
+	}
+	return SdkChecks
 }
 
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked before the
 // call.
-func (w *WorkshopManager) workshopStatus(ws *workshopbackend.Workshop) workshopbackend.WorkshopStatus {
-	op := OperationInProgress(w.state, ws.Name, ws.ProjectId())
-	if op != nil {
-		if ws.IsRunning() {
-			change := w.state.Change(op.ChangeId)
-			if change == nil {
-				return workshopbackend.WorkshopError
-			}
-			if change.Status() == state.WaitStatus {
-				ws.AddError(workshopbackend.WaitOnError)
-				return workshopbackend.WorkshopPending
-			}
-			if len(ws.Errors()) == 0 {
-				return workshopbackend.WorkshopPending
-			}
-			return workshopbackend.WorkshopError
-		} else {
-			if len(ws.Errors()) > 0 {
-				return workshopbackend.WorkshopError
-			}
-			return workshopbackend.WorkshopPending
-		}
-	} else {
-		if ws.IsRunning() && len(ws.Errors()) == 0 {
-			return workshopbackend.WorkshopReady
-		}
-		if len(ws.Errors()) > 0 {
-			return workshopbackend.WorkshopError
-		}
-		return workshopbackend.WorkshopStopped
+func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthstate.HealthState {
+	var healthState = healthstate.HealthState{
+		Timestamp: time.Now(),
 	}
+
+	// check the project directory exists
+	if !ws.Project().Exists() {
+		healthState.Status = healthstate.ErrorStatus
+		healthState.Code = "missing-project"
+		return healthState
+	}
+
+	// check if the workshop file exists
+	if _, err := ws.File(); err != nil {
+		healthState.Status = healthstate.ErrorStatus
+		healthState.Code = "missing-file"
+		return healthState
+	}
+
+	op := operation.OperationInProgress(w.state, ws.Name, ws.Project().ProjectId)
+	if op != nil {
+		change := w.state.Change(op.ChangeId)
+		// a change could have gone as a result of pruning TODO: when prune
+		// changes, abort all the outstanding operations connected with it
+		if change == nil {
+			healthState.Status = healthstate.ErrorStatus
+			return healthState
+		}
+		if change.Status() == state.WaitStatus {
+			healthState.Code = "wait-on-error"
+		}
+
+		healthState.SdkHealth = sdksHealthCheckSummary(change)
+		healthState.Status = healthstate.PendingStatus
+	} else {
+		if ws.IsRunning() {
+			healthState.Status = healthstate.ReadyStatus
+		} else {
+			healthState.Status = healthstate.StoppedStatus
+		}
+	}
+	return healthState
 }

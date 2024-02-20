@@ -1,0 +1,14 @@
+#!/usr/bin/expect -f
+
+set timeout 120
+spawn watch -n 0.5 workshop info ws
+
+expect {
+    -re "message:\[ \]*Cannot finish health check" {        
+        exit 0
+    }    
+    timeout { 
+        puts "Timed out while waiting for the SDK health message"
+        exit 1
+    }
+}

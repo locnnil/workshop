@@ -29,7 +29,7 @@ function start_sdk_store() {
 
   echo "Waiting for the fake SDK store to start on port 8080..."
   while ! nc -z localhost 8080; do
-    sleep 0.1 # wait for 1/10 of the second before check again
+    sleep 0.1
   done
 }
 

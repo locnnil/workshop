@@ -1,20 +1,24 @@
 package workshopstate_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 
-	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 )
 
-type ManagerSuite struct {
+type managerSuite struct {
 	state   *state.State
 	backend workshopbackend.WorkshopBackend
 	runner  *state.TaskRunner
@@ -23,9 +27,9 @@ type ManagerSuite struct {
 	project *workshopbackend.Project
 }
 
-var _ = check.Suite(&ManagerSuite{})
+var _ = check.Suite(&managerSuite{})
 
-func (s *ManagerSuite) SetUpTest(c *check.C) {
+func (s *managerSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.backend = workshopbackend.NewFakeWorkshopBackend()
 	s.runner = state.NewTaskRunner(s.state)
@@ -35,7 +39,7 @@ func (s *ManagerSuite) SetUpTest(c *check.C) {
 	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
 }
 
-func (s *ManagerSuite) TestAddHandlers(c *check.C) {
+func (s *managerSuite) TestAddHandlers(c *check.C) {
 	workshopstate.New(s.state, s.runner, s.backend)
 
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
@@ -51,183 +55,237 @@ func (s *ManagerSuite) TestAddHandlers(c *check.C) {
 	})
 }
 
-func (s *ManagerSuite) setupWorkshop(running bool) *workshopbackend.Workshop {
-	wrkspc := workshopbackend.NewWorkshop(s.backend, "ws", "42424242")
-	wrkspc.SetRunning(running)
-	return wrkspc
-}
-
-func (s *ManagerSuite) TestWorkshopStateChanges(c *check.C) {
-	type stateSetup struct {
-		status            state.Status
-		running           bool
-		refreshInProgress bool
-		hasErrors         bool
-		expectedState     workshopbackend.WorkshopStatus
-		expectedErrors    []workshopbackend.WorkshopErrorType
-	}
-	cases := []stateSetup{
-		// running, no operation in progress, no errors
-		{state.DefaultStatus, true, false, false, workshopbackend.WorkshopReady, nil},
-		// running, no operation in prorgess, has errors
-		{state.DefaultStatus, true, false, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
-		// not running, no operation in prorgess, no errors
-		{state.DefaultStatus, false, false, false, workshopbackend.WorkshopStopped, nil},
-		// not running, no operation in prorgess, has errors
-		{state.DefaultStatus, false, false, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
-		// running, has operation in prorgess, waits on error
-		{state.WaitStatus, true, true, false, workshopbackend.WorkshopPending, []workshopbackend.WorkshopErrorType{workshopbackend.WaitOnError}},
-		// running, has operation in prorgess, no errors
-		{state.DoingStatus, true, true, false, workshopbackend.WorkshopPending, nil},
-		// running, has operation in prorgess, has errors
-		{state.DoingStatus, true, true, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
-		// not running, has operation in prorgess, no errors
-		{state.DoingStatus, false, true, false, workshopbackend.WorkshopPending, nil},
-		// not running, has operation in prorgess, has errors
-		{state.DoingStatus, false, true, true, workshopbackend.WorkshopError, []workshopbackend.WorkshopErrorType{workshopbackend.MissingFile}},
-	}
-
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	for i, setup := range cases {
-		// setup
-		wrkspc := s.setupWorkshop(setup.running)
-		if setup.hasErrors {
-			// add any error to emulate error state
-			wrkspc.AddError(workshopbackend.MissingFile)
-		}
-		if setup.refreshInProgress {
-			chg := s.state.NewChange("test", "...")
-			chg.SetStatus(setup.status)
-			err := statecontext.StartOperation(s.state, "ws", "42424242", statecontext.Operation{Operation: statecontext.OperationRefresh, ChangeId: chg.ID(), WaitOnError: true})
-			c.Assert(err, check.IsNil)
-		}
-
-		// validate
-		st := workshopstate.WorkshopState(s.manager, wrkspc)
-		c.Assert(st, check.Equals, setup.expectedState, check.Commentf("case num: %v", i))
-		c.Assert(wrkspc.Errors(), testutil.DeepUnsortedMatches, setup.expectedErrors, check.Commentf("case num: %v", i))
-		if setup.refreshInProgress {
-			err := statecontext.StopOperation(s.state, "ws", "42424242", statecontext.OperationRefresh)
-			c.Assert(err, check.IsNil)
-		}
-	}
-}
-
-func (s *ManagerSuite) TestRefreshSdkWasAdded(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-sdks:
-  test-sdk:
-    channel: latest/stable
-`), 0644)
-	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
+func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.Setup) *workshopbackend.Workshop {
+	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
-	// a user added an SDK to the workshop file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-sdks:
-  test-sdk:
-    channel: latest/stable
-  new:
-    channel: latest/stable
-`), 0644)
-	c.Check(err, check.IsNil)
+	var workshopFile = bytes.NewBuffer([]byte{})
+	t.Execute(workshopFile, sdks)
 
-	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
-	c.Check(err, check.IsNil)
+	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
+	c.Assert(err, check.IsNil)
 
-	// Validate
-	s.validateStateHooksTasksSetup(c, ts, []string{"test-sdk"}, []string{"test-sdk"})
+	err = s.backend.LaunchWorkshop(s.ctx, ws, "ubuntu@20.04")
+	c.Assert(err, check.IsNil)
+
+	workshop, err := s.backend.Workshop(s.ctx, ws)
+	c.Assert(err, check.IsNil)
+	return workshop
 }
 
-func (s *ManagerSuite) TestRefreshSdkWasRemoved(c *check.C) {
+func (s *managerSuite) TestWorkshopManagerStartOperationOK(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+
+	err := workshopstate.StartOperation(s.manager, []string{"test-1", "test-2"}, s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
+	c.Assert(err, check.IsNil)
+	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.NotNil)
+	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.NotNil)
+}
+
+func (s *managerSuite) TestWorkshopManagerStartOperationFail(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	c.Assert(err, check.IsNil)
+
+	err = workshopstate.StartOperation(s.manager, []string{"test-1", "test-2"}, s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
+	c.Assert(err, check.ErrorMatches, `cannot refresh: refresh operation is in progress`)
+	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
+}
+
+func (s *managerSuite) TestWorkshopHealthReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-sdks:
-  test-sdk:
-    channel: latest/stable
-`), 0644)
-	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	health := s.manager.WorkshopHealth(workshop)
 
-	// a user removed an SDK in the workshop file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-`), 0644)
-	c.Check(err, check.IsNil)
-
-	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
-	c.Check(err, check.IsNil)
-
-	// Validate
-	s.validateStateHooksTasksSetup(c, ts, []string{}, []string{})
+	c.Assert(health.Status, check.Equals, healthstate.ReadyStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
 }
 
-func (s *ManagerSuite) TestRefreshSdkChannelWasUpdated(c *check.C) {
+func (s *managerSuite) TestWorkshopHealthStopped(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	// Setup
-	os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-sdks:
-  test-sdk:
-    channel: latest/stable
-`), 0644)
-	err := s.backend.LaunchWorkshop(s.ctx, "test", "ubuntu@20.04")
-	c.Assert(err, check.IsNil)
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	c.Assert(s.backend.StopWorkshop(s.ctx, "test", true), check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
 
-	// a user updated an SDK in the workshop file and called refresh
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@20.04
-sdks:
-  test-sdk:
-    channel: latest/edge
-`), 0644)
-	c.Check(err, check.IsNil)
-
-	// Execute
-	ts, err := s.manager.RefreshMany(s.ctx, []string{"test"}, s.project.ProjectId, statecontext.RefreshTransactional, "1")
-	c.Check(err, check.IsNil)
-
-	// Validate
-	s.validateStateHooksTasksSetup(c, ts, []string{"test-sdk"}, []string{"test-sdk"})
+	c.Assert(health.Status, check.Equals, healthstate.StoppedStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
 }
 
-// the save state shall be called only for the previously installed SDK
-// the restore state shall be called for both, the old and the new SDK
-func (*ManagerSuite) validateStateHooksTasksSetup(c *check.C, ts []*state.TaskSet, expectedSave, expectedRestore []string) {
-	obtainedSave := []string{}
-	obtainedRestore := []string{}
-	for _, t := range ts[0].Tasks() {
-		if t.Kind() == "run-hook" {
-			var setup hookstate.HookSetup
-			err := t.Get("hook-setup", &setup)
-			c.Assert(err, check.IsNil)
-			switch setup.HookType {
-			case hookstate.SaveState:
-				obtainedSave = append(obtainedSave, setup.Sdk)
-			case hookstate.RestoreState:
-				obtainedRestore = append(obtainedRestore, setup.Sdk)
-			}
-		}
+func (s *managerSuite) TestWorkshopHealthMissingProject(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	c.Assert(os.RemoveAll(s.project.Path), check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.Equals, "missing-project")
+}
+
+func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	c.Assert(os.RemoveAll(filepath.Join(s.project.Path, ".workshop.test.yaml")), check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.Equals, "missing-file")
+}
+
+func (s *managerSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("launch", "test")
+
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
+		ChangeId:  chg.ID(),
+		Operation: "launch",
+	})
+	c.Assert(err, check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *managerSuite) TestWorkshopHealthOperationInProgressWithNotes(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.WaitStatus)
+
+	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
+		ChangeId:  chg.ID(),
+		Operation: "refresh",
+	})
+	c.Assert(err, check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.Equals, "wait-on-error")
+}
+
+func (s *managerSuite) TestWorkshopHealthSdkHealth(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("launch", "test")
+	task := s.state.NewTask("run-hook", "test task")
+	healthCheck := healthstate.HealthCheck{
+		Sdk:         "test",
+		CheckResult: healthstate.CheckWaiting,
+		Message:     "still waiting",
+		Code:        "how-much-longer",
 	}
+	task.Set("health", healthCheck)
+	chg.AddTask(task)
 
-	// the save state shall be called only for the previously installed SDK
-	c.Assert(obtainedSave, testutil.DeepUnsortedMatches, expectedSave)
-	// the restore state shall be called for the new previously installed SDK
-	c.Assert(obtainedRestore, testutil.DeepUnsortedMatches, expectedRestore)
+	workshop := s.launchWorkshopWithSDKs(c, "test", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
+		ChangeId:  chg.ID(),
+		Operation: "launch",
+	})
+	c.Assert(err, check.IsNil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Assert(health.SdkHealth, check.HasLen, 1)
+	c.Assert(health.SdkHealth["test"], check.DeepEquals, healthCheck)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *managerSuite) TestRefreshManyOK(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	c.Assert(err, check.IsNil)
+
+	op := operation.OperationInProgress(s.state, "test-1", s.project.ProjectId)
+	c.Check(op, check.NotNil)
+	c.Assert(op.Operation, check.Equals, "refresh")
+	c.Assert(op.ChangeId, check.Equals, chg.ID())
+	c.Assert(op.WaitOnError, check.Equals, false)
+
+	op = operation.OperationInProgress(s.state, "test-2", s.project.ProjectId)
+	c.Check(op, check.NotNil)
+	c.Assert(op.Operation, check.Equals, "refresh")
+	c.Assert(op.ChangeId, check.Equals, chg.ID())
+	c.Assert(op.WaitOnError, check.Equals, false)
+}
+
+func (s *managerSuite) TestRefreshManyWorkshopHasOperationPending(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	chg2 := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+
+	operation.StartOperation(s.state, "test-1", s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
+
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg2.ID())
+	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-1" status is "Pending", must be one of: "Ready"`)
+	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
+}
+
+func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
+	c.Assert(err, check.IsNil)
+
+	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-2" status is "Stopped", must be one of: "Ready"`)
+	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
+	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
+}
+
+func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	chg := s.state.NewChange("refresh", "test")
+	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop not found\)`)
+	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
+	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
 }

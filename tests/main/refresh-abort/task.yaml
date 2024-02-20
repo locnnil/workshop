@@ -14,7 +14,7 @@ execute: |
   sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' $project/.workshop.ws.yaml
 
   echo "Check the workshop is in Pending state"
-   workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
+  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Pending[[:space:]]+wait-on-error$"
 
   echo "Check the workshop refresh --abort reverts to the previous state"
   workshop_exec refresh --project "$project" --abort ws | MATCH "\"ws\" refresh aborted"

@@ -29,6 +29,7 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/patch"
@@ -150,6 +151,8 @@ func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.H
 
 	o.hookmgr = hookstate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.hookmgr)
+
+	healthstate.Init(o.hookmgr)
 
 	o.commandmgr = cmdstate.New(o.runner, o.workshopBackend)
 	o.addManager(o.commandmgr)

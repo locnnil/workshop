@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-echo "Set up base ran successfully!"
+echo "setup-base ran successfully!"

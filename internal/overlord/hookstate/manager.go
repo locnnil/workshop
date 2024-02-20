@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
@@ -43,12 +43,13 @@ const (
 	SetupBase WorkshopHookType = iota
 	SaveState
 	RestoreState
+	CheckHealth
 
 	fakeHook // tests only
 )
 
 func (s WorkshopHookType) String() string {
-	return [...]string{"setup-base", "save-state", "restore-state", "fake-hook"}[s]
+	return [...]string{"setup-base", "save-state", "restore-state", "check-health", "fake-hook"}[s]
 }
 
 func (h *HookSetup) Type() string {
@@ -72,7 +73,7 @@ func New(s *state.State, runner *state.TaskRunner, server workshopbackend.Worksh
 		contexts:   make(map[string]*Context),
 	}
 
-	runner.AddHandler("run-hook", OnDo(manager.doRunHook), nil)
+	runner.AddHandler("run-hook", statecontext.OnDo(manager.doRunHook), nil)
 
 	setupHooks(manager)
 

@@ -1,0 +1,7 @@
+name: test-sdk-health-ok
+title: test-sdk-health-ok
+base: ubuntu@22.04
+
+summary: test-sdk-health-ok SDK
+description: |
+  test-sdk-health-ok SDK

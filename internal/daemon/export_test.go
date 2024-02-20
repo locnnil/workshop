@@ -18,7 +18,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 func FakeMuxVars(f func(*http.Request) map[string]string) (restore func()) {
@@ -34,5 +37,13 @@ func FakeStateEnsureBefore(f func(st *state.State, d time.Duration)) (restore fu
 	stateEnsureBefore = f
 	return func() {
 		stateEnsureBefore = old
+	}
+}
+
+func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshopbackend.Workshop) healthstate.HealthState) (restore func()) {
+	old := workshopHealth
+	workshopHealth = f
+	return func() {
+		workshopHealth = old
 	}
 }

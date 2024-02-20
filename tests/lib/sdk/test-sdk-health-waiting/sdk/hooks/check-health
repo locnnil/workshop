@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+counter_file="/root/counter"
+if [ ! -f "$counter_file" ]; then
+    echo "0" > "$counter_file"
+fi
+
+counter=$(<"$counter_file")
+counter=$((counter + 1))
+
+if [ "$counter" -gt 3 ]; then
+    workshopctl set-health okay
+else 
+    sleep 2
+    workshopctl set-health waiting --code try-later "Cannot finish health check"
+fi
+
+echo "$counter" > "$counter_file"

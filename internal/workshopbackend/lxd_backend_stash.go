@@ -96,7 +96,6 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, ctx contex
 	// Stash the workshop
 	// the new name must not be the same, otherwise the LXD's DNS will fail
 	// the new instance creation; hence, the prefix.
-	conn = conn.UseProject(source)
 	if op, err := conn.MigrateInstance(instanceFrom, api.InstancePost{
 		Name:      instanceTo,
 		Project:   target,

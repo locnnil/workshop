@@ -1,10 +1,9 @@
-package statecontext
+package operation
 
 import (
 	"fmt"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 const (
@@ -50,6 +49,10 @@ type Operation struct {
 	WaitOnError bool   `json:"wait-on-error"`
 }
 
+func operationKey(workshop, projectId string) string {
+	return fmt.Sprintf("%s-%s", workshop, projectId)
+}
+
 // The family of functions to maintain the state of current operations across
 // the workshops. The reason we track the current operations as part of the
 // state structure and not as a property of a workshop is that, for example, a
@@ -67,7 +70,7 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 		return nil
 	}
 
-	if op, ok := ops[workshopbackend.InstanceName(name, projectId)]; ok {
+	if op, ok := ops[operationKey(name, projectId)]; ok {
 		return &op
 	}
 	return nil
@@ -75,11 +78,11 @@ func OperationInProgress(st *state.State, name, projectId string) *Operation {
 
 func StartOperation(st *state.State, name, projectId string, op Operation) error {
 	if cur := OperationInProgress(st, name, projectId); cur != nil {
-		return fmt.Errorf("cannot begin %s: %s operation is in progress", op.Operation, cur.Operation)
+		return fmt.Errorf("cannot %s: %s operation is in progress", op.Operation, cur.Operation)
 	}
 	var refresh Operations = make(Operations)
 	st.Get(OpsInProgressKey, &refresh)
-	refresh[workshopbackend.InstanceName(name, projectId)] = op
+	refresh[operationKey(name, projectId)] = op
 	st.Set(OpsInProgressKey, refresh)
 	return nil
 }
@@ -135,7 +138,7 @@ func StopOperation(st *state.State, name, projectId, opname string) error {
 	if err != nil {
 		return err
 	}
-	opkey := workshopbackend.InstanceName(name, projectId)
+	opkey := operationKey(name, projectId)
 	op, ok := ops[opkey]
 	if !ok || opname != op.Operation {
 		return fmt.Errorf("cannot finish: no %s in progress", opname)
