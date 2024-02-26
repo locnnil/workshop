@@ -34,7 +34,7 @@ Notes:
 - To investigate the details of a specific change, use 'workshop tasks' instead
 `,
 
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -61,7 +61,14 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	slices.SortFunc(chngs, func(a, b *client.Change) bool { return a.SpawnTime.Before(b.SpawnTime) })
+	slices.SortFunc(chngs, func(a, b *client.Change) int {
+		if a.SpawnTime.Before(b.SpawnTime) {
+			return -1
+		} else if a.SpawnTime.After(b.SpawnTime) {
+			return 1
+		}
+		return 0
+	})
 
 	if len(chngs) > 0 {
 		w := tabWriter()

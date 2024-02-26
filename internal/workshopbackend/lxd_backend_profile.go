@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/lxc/lxd/shared/api"
 )
 
 type SdkProfile struct {

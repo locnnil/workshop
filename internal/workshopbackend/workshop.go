@@ -1,6 +1,7 @@
 package workshopbackend
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -68,7 +69,7 @@ func (w *Workshop) File() (*WorkshopFile, error) {
 
 func (w *Workshop) Content() []sdk.Setup {
 	content := maps.Values(w.content)
-	slices.SortFunc(content, func(a, b sdk.Setup) bool { return a.Name < b.Name })
+	slices.SortFunc(content, func(a, b sdk.Setup) int { return cmp.Compare(a.Name, b.Name) })
 	return content
 }
 
