@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	lxd "github.com/canonical/lxd/client"
+	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
-	lxd "github.com/lxc/lxd/client"
-	"github.com/lxc/lxd/shared/api"
 )
 
 var StashNamePrefix string = "stash-"

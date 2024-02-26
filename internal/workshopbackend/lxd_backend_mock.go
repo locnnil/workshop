@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/lxc/lxd/shared/api"
+	"github.com/canonical/lxd/shared/api"
 	"golang.org/x/exp/slices"
 )
 

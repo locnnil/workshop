@@ -16,6 +16,7 @@ package daemon
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -215,7 +216,7 @@ func (s *apiSuite) TestStateChangesForWorkshop(c *check.C) {
 
 	res := rsp.Result.([]*changeInfo)
 	// sort the result to ensure the order
-	slices.SortFunc(res, func(a, b *changeInfo) bool { return a.Kind < b.Kind })
+	slices.SortFunc(res, func(a, b *changeInfo) int { return cmp.Compare(a.Kind, b.Kind) })
 	c.Assert(res, check.HasLen, 2)
 	c.Check(res[0].Kind, check.Equals, "launch")
 	c.Check(res[1].Kind, check.Equals, "remove")

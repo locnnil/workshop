@@ -35,7 +35,7 @@ Notes:
 - The command may print additional log details for tasks that store them
 - To investigate recent changes in a project, use 'workshop changes' instead
 `,
-		RunE:  c.Run,
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -67,7 +67,14 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	if change != nil {
 		tasks := change.Tasks
 
-		slices.SortFunc(tasks, func(a, b *client.Task) bool { return a.SpawnTime.Before(b.SpawnTime) })
+		slices.SortFunc(tasks, func(a, b *client.Task) int {
+			if a.SpawnTime.Before(b.SpawnTime) {
+				return -1
+			} else if a.SpawnTime.After(b.SpawnTime) {
+				return 1
+			}
+			return 0
+		})
 
 		if len(tasks) > 0 {
 			w := tabWriter()

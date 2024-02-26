@@ -1,6 +1,7 @@
 package workshopbackend
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,8 +47,8 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-	slices.SortFunc(*p, func(a, b SdkRecord) bool {
-		return a.Name < b.Name
+	slices.SortFunc(*p, func(a, b SdkRecord) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 	return nil
 }

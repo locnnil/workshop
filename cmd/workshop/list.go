@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -73,7 +74,7 @@ func (c *CmdList) runList() error {
 		if err != nil {
 			return err
 		}
-		slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
+		slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
 		/* List all workshops for the current project */
 		if len(workshops) != 0 {
 			printWorkshops(workshops, project)
@@ -86,7 +87,7 @@ func (c *CmdList) runList() error {
 		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 
 		projects, err := c.client.Projects()
-		slices.SortFunc(projects, func(a, b *client.Project) bool { return a.Path < b.Path })
+		slices.SortFunc(projects, func(a, b *client.Project) int { return cmp.Compare(a.Path, b.Path) })
 
 		if err != nil {
 			return err
@@ -94,7 +95,7 @@ func (c *CmdList) runList() error {
 
 		for _, i := range projects {
 			workshops, err := c.client.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
-			slices.SortFunc(workshops, func(a, b *client.Workshop) bool { return a.Name < b.Name })
+			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
 
 			if err != nil {
 				return err

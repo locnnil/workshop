@@ -1,6 +1,7 @@
 package workshopbackend_test
 
 import (
+	"cmp"
 	"os"
 	"path/filepath"
 
@@ -39,8 +40,8 @@ sdks:
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
-	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workshopbackend.SdkRecord) bool {
-		return a.Name < b.Name
+	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workshopbackend.SdkRecord) int {
+		return cmp.Compare(a.Name, b.Name)
 	}), check.Equals, true)
 	c.Assert(file.Sdks[0].Name, check.Equals, "automotive")
 	c.Assert(file.Sdks[0].Channel, check.Equals, "latest/beta")

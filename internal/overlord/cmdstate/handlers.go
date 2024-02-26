@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/canonical/lxd/shared/api"
 	"github.com/gorilla/websocket"
-	"github.com/lxc/lxd/shared/api"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/logger"
