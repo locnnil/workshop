@@ -28,6 +28,8 @@ jobs:
         run: sudo snap install multipass
       - name: Install snapcraft
         run: sudo snap install snapcraft --classic
+      - name: Init LXD
+        run: sudo lxd init --auto 
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
