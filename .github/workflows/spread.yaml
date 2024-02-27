@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04-64]
         suite: [main, documentation, integration]
-    runs-on: [self-hosted, Linux, X64, large]
+    runs-on: [self-hosted, Linux, X64, xlarge]
     steps:
       - name: Cleanup job workspace
         run: |
@@ -31,6 +31,11 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - name: Copy snap to tests
+        run: |
+          mv "${{ steps.snapcraft.outputs.snap }}" "${{ github.workspace }}"/tests/
       - name: Install spread
         run: go install github.com/snapcore/spread/cmd/spread@latest
       - name: Run spread
