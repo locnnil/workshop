@@ -26,10 +26,11 @@ jobs:
           go-version: '1.20'
       - name: Install multipass
         run: sudo snap install multipass
-      - name: Install snapcraft
-        run: sudo snap install snapcraft --classic
-      - name: Init LXD
-        run: sudo lxd init --auto 
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - name: Copy snap to tests
+        run: |
+          mv "{{ steps.snapcraft.outputs.snap }}" tests/
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
