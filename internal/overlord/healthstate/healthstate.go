@@ -148,9 +148,8 @@ func (h *healthHandler) Done() (err error) {
 			// this is used by external parties to read and report the health
 			// check statuses e.g. workshop info command.
 			task.Set("health", health)
-			if retry, ok := err.(*state.Retry); ok {
+			if _, ok := err.(*state.Retry); ok {
 				h.context.Set("retry-counter", retryCounter+1)
-				task.Logf("Retrying check-health in %v, reason: %s", retry.After, health.Message)
 			}
 			h.context.Unlock()
 		}
