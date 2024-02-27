@@ -156,7 +156,6 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 				continue
 			case t.Progress.Total == 1:
 				pb.Spin(t.Summary)
-				maybeShowLog(t)
 			case t.ID == lastID:
 				pb.Set(float64(t.Progress.Done))
 			default:

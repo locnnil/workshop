@@ -299,8 +299,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-	c.Assert(t1.Log()[0], check.Matches, `.*not ready yet`)
-	c.Assert(t1.Log(), check.HasLen, 1)
+	c.Assert(t1.Log(), check.HasLen, 0)
 	ensureTaskHealthIsSet(t1, &resultOkay, c)
 }
 
@@ -357,8 +356,8 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(t1.Log()[2], check.Matches, `.*SDK \"one\" is not healthy after multiple checks`)
-	c.Assert(t1.Log(), check.HasLen, 3)
+	c.Assert(t1.Log()[0], check.Matches, `.*SDK \"one\" is not healthy after multiple checks`)
+	c.Assert(t1.Log(), check.HasLen, 1)
 
 	s.state.Unlock()
 	hookContext.Lock()
