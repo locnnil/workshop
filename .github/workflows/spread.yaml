@@ -26,16 +26,16 @@ jobs:
           go-version: '1.20'
       - name: Install multipass
         run: sudo snap install multipass
-      - uses: snapcore/action-build@v1
-        id: snapcraft
-      - name: Copy snap to tests
-        run: |
-          mv "{{ steps.snapcraft.outputs.snap }}" tests/
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - name: Copy snap to tests
+        run: |
+          mv "${{ steps.snapcraft.outputs.snap }}" "${{ github.workspace }}"/tests/
       - name: Install spread
         run: go install github.com/snapcore/spread/cmd/spread@latest
       - name: Run spread
