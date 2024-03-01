@@ -11,5 +11,4 @@ var (
 	RemoveManyImpl     = removeMany
 	Launch             = launch
 	CheckHealthTimeout = checkHealthTimeout
-	StartOperation     = (*WorkshopManager).startOperationMany
 )

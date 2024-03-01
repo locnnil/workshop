@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/canonical/workshop/internal/overlord/operation"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -98,9 +98,22 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	var change *state.Change
+	newChange := func(kind, summary string) *state.Change {
+		change := st.NewChange(kind, summary)
+		change.Set("user", user)
+		change.Set("project-id", projectId)
+		return change
+	}
+
+	defer func() {
+		if change != nil && len(change.Tasks()) == 0 {
+			change.SetStatus(state.DoneStatus)
+		}
+	}()
+
 	switch reqData.Action {
 	case "launch":
-		change = st.NewChange("launch", summary)
+		change = newChange("launch", summary)
 		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
@@ -110,14 +123,17 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			change.AddAll(tset)
 		}
 	case "refresh":
-		refreshMode := operation.ParseRefreshMode(reqData.Options.Mode)
+		refreshMode, err := conflict.ParseRefreshMode(reqData.Options.Mode)
+		if err != nil {
+			return statusBadRequest("cannot refresh: %v", err)
+		}
 
-		if len(reqData.Names) > 1 && refreshMode != operation.RefreshTransactional {
+		if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
 			return statusBadRequest("wait-on-error is not supported for multiple workshops")
 		}
 
-		if refreshMode == operation.RefreshTransactional || refreshMode == operation.RefreshWaitOnError {
-			change = st.NewChange("refresh", summary)
+		if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
+			change = newChange("refresh", summary)
 			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
 			if err != nil {
 				return statusBadRequest(err.Error())
@@ -127,15 +143,15 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			}
 		}
 
-		if refreshMode == operation.RefreshContinue || refreshMode == operation.RefreshAbort {
+		if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
 			var err error
-			change, err = operation.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
+			change, err = conflict.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
 		}
 	case "start":
-		change = st.NewChange("start", summary)
+		change = newChange("start", summary)
 		taskset, err := wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
@@ -143,7 +159,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 		change.AddAll(taskset)
 	case "stop":
-		change = st.NewChange("stop", summary)
+		change = newChange("stop", summary)
 		taskset, err := wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
@@ -151,7 +167,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 		change.AddAll(taskset)
 	case "remove":
-		change = st.NewChange("remove", summary)
+		change = newChange("remove", summary)
 		taskset, err := wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 		if err != nil {
 			return statusBadRequest(err.Error())
@@ -159,13 +175,6 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		change.AddAll(taskset)
 	default:
 		return statusBadRequest("unknown action")
-	}
-
-	change.Set("user", user)
-	change.Set("project-id", projectId)
-
-	if len(change.Tasks()) == 0 {
-		change.SetStatus(state.DoneStatus)
 	}
 
 	ensureStateSoon(st, 0)
@@ -194,7 +203,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	wrkmgr := c.d.overlord.WorkshopManager()
 	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("cannot load workshop: %v", err)
+		return statusNotFound("%v", err)
 	}
 	health := workshopHealth(wrkmgr, workshop)
 	return SyncResponse(workshopPropsToInfo(workshop, health), http.StatusOK)

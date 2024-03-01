@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
-	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/revert"
+
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"golang.org/x/exp/slices"
@@ -70,10 +70,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 
 		tasks := launch(w.state, file, project)
 		taskset = append(taskset, tasks)
-	}
-
-	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationLaunch}); err != nil {
-		return nil, err
 	}
 	return taskset, nil
 }
@@ -176,10 +172,6 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 	all.AddAll(create)
 	all.AddAll(launch)
 
-	tasksLen := len(all.Tasks())
-	all.Tasks()[0].Set("start-operation", true)
-	all.Tasks()[tasksLen-1].Set("stop-operation", true)
-
 	for _, task := range all.Tasks() {
 		task.Set("workshop", file.Name)
 		task.Set("project", project)
@@ -189,7 +181,7 @@ func launch(st *state.State, file *workshopbackend.WorkshopFile, project *worksh
 }
 
 func (w *WorkshopManager) RefreshMany(ctx context.Context,
-	names []string, projectId string, refreshMode operation.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
+	names []string, projectId string, refreshMode conflict.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -229,14 +221,10 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	if err = w.startOperationMany(names, projectId, operation.Operation{
-		ChangeId:    opChangeId,
-		Operation:   operation.OperationRefresh,
-		WaitOnError: refreshMode == operation.RefreshWaitOnError,
-	}); err != nil {
-		return nil, err
-	}
-
+	change := w.state.Change(opChangeId)
+	var setup conflict.RefreshSetup
+	setup.Mode = refreshMode.String()
+	change.Set("refresh-setup", setup)
 	return taskset, nil
 }
 
@@ -367,16 +355,9 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 
 	refresh.MarkEdge(removeStateStorage, EdgeRefreshCleanup)
 
-	// mark the first task to start the operation so if cancelled or failed the
-	// operation will be removed from the list of the active ones
-	refresh.Tasks()[0].Set("start-operation", true)
-
-	// mark the last task to stop the operation
-	// and make the workshop available for other commands
-	removeFromStash.Set("stop-operation", true)
-	for _, i := range refresh.Tasks() {
-		i.Set("workshop", file.Name)
-		i.Set("project", *p)
+	for _, task := range refresh.Tasks() {
+		task.Set("workshop", file.Name)
+		task.Set("project", *p)
 	}
 
 	return refresh, nil
@@ -444,10 +425,6 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 	if err != nil {
 		return nil, err
 	}
-
-	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStart}); err != nil {
-		return nil, err
-	}
 	return taskset, nil
 }
 
@@ -456,9 +433,6 @@ func startMany(st *state.State, names []string, project *workshopbackend.Project
 
 	for _, name := range names {
 		start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
-		// start is a single task, so it is the beginning and the end of the operation
-		start.Set("start-operation", true)
-		start.Set("stop-operation", true)
 		taskset.AddTask(start)
 
 		start.Set("workshop", name)
@@ -486,10 +460,6 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 	if err != nil {
 		return nil, err
 	}
-
-	if err = w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationStop}); err != nil {
-		return nil, err
-	}
 	return taskset, nil
 }
 
@@ -498,9 +468,6 @@ func stopMany(st *state.State, names []string, project *workshopbackend.Project)
 
 	for _, name := range names {
 		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", name))
-		// start is a single task, so it is the beginning and the end of the operation
-		stop.Set("start-operation", true)
-		stop.Set("stop-operation", true)
 		stop.Set("force", false)
 		taskset.AddTask(stop)
 
@@ -585,29 +552,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 	if err != nil {
 		return nil, err
 	}
-
-	if err := w.startOperationMany(names, projectId, operation.Operation{ChangeId: opChangeId, Operation: operation.OperationRemove}); err != nil {
-		return nil, err
-	}
-
 	return taskset, nil
-}
-
-func (w *WorkshopManager) startOperationMany(names []string, projectId string, op operation.Operation) error {
-	rev := revert.New()
-	defer rev.Fail()
-	for _, name := range names {
-		err := operation.StartOperation(w.state, name, projectId, op)
-		if err != nil {
-			return err
-		}
-		name := name // go loop var capturing issue
-		rev.Add(func() {
-			operation.StopOperation(w.state, name, projectId, op.Operation)
-		})
-	}
-	rev.Success()
-	return nil
 }
 
 func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
@@ -626,12 +571,6 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 	removeSet := state.NewTaskSet()
 	disconnectSet := disconnectSdks(workshop.Content(), st)
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))
-	if len(disconnectSet.Tasks()) > 0 {
-		disconnectSet.Tasks()[0].Set("start-operation", true)
-	} else {
-		remove.Set("start-operation", true)
-	}
-	remove.Set("stop-operation", true)
 	remove.WaitAll(disconnectSet)
 	removeSet.AddAll(disconnectSet)
 	removeSet.AddTask(remove)

@@ -85,9 +85,9 @@ func (s *healthSuite) TearDownTest(c *check.C) {
 }
 
 func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
-	for _, i := range tasks {
-		i.Set("workshop", w)
-		i.Set("project", *p)
+	for _, task := range tasks {
+		task.Set("workshop", w)
+		task.Set("project", *p)
 	}
 }
 

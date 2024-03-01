@@ -474,6 +474,10 @@ func (o *Overlord) HookManager() *hookstate.HookManager {
 	return o.hookmgr
 }
 
+func (o *Overlord) InterfaceManager() *ifacestate.InterfaceManager {
+	return o.ifacemgr
+}
+
 // Fake creates an Overlord without any managers and with a backend
 // not using disk. Managers can be added with AddManager. For testing.
 func Fake() *Overlord {

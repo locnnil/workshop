@@ -698,12 +698,6 @@ func (s *requestSuite) TestStartMany(c *check.C) {
 	c.Assert(ts.Tasks(), check.HasLen, 2)
 	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workshop")
 	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workshop")
-
-	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-
-	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
 }
 
 func (s *requestSuite) TestStopMany(c *check.C) {
@@ -717,13 +711,9 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "stop-workshop")
 
 	var force bool
-	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
 	ts.Tasks()[0].Get("force", &force)
 	c.Assert(force, check.Equals, false)
 
-	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
 	ts.Tasks()[1].Get("force", &force)
 	c.Assert(force, check.Equals, false)
 }
@@ -753,7 +743,5 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
 	}
 	c.Assert(ts.Tasks()[3].Kind(), check.Equals, "remove-workshop")
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[3].Has("stop-operation"), check.Equals, true)
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts.Tasks())
 }
