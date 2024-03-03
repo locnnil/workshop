@@ -1,4 +1,4 @@
-package statecontext_test
+package handlersetup_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -52,7 +52,7 @@ func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 	task.Change().Abort()
 	s.state.Unlock()
 
-	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := handlersetup.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return fmt.Errorf("execution error %w", context.Canceled)
 	})
 	err := handler(task, nil)
@@ -60,7 +60,7 @@ func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
 }
 
 func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {
-	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := handlersetup.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
 
@@ -85,7 +85,7 @@ func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {
 func (s *CommonStateFuncs) TestExecutionOnDoRetry(c *check.C) {
 	task := s.setupTask()
 
-	handler := statecontext.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
+	handler := handlersetup.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return &state.Retry{Reason: "not enough time"}
 	})
 

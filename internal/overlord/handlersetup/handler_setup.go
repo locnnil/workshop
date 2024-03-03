@@ -1,11 +1,11 @@
-package statecontext
+package handlersetup
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	conflict "github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
 

@@ -14,7 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 )
 
 type InterfaceManager struct {

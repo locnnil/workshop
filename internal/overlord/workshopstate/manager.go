@@ -8,9 +8,9 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
 
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/x-go/strutil"
@@ -156,5 +156,3 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 	}
 	return healthState
 }
-
-

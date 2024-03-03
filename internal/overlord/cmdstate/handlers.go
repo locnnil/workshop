@@ -34,7 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/workshop/internal/wsutil"
 
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 )
 
 const (

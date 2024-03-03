@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
 	"github.com/canonical/workshop/internal/overlord/state"

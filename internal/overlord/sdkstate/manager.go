@@ -1,8 +1,8 @@
 package sdkstate
 
 import (
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	backend "github.com/canonical/workshop/internal/workshopbackend"
 )
 

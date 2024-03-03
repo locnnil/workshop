@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
@@ -16,12 +16,12 @@ import (
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := statecontext.UserProjectWorkshop(task)
+	user, prj, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := statecontext.BackendContext(tomb, user, prj)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, prj)
 	defer cancel()
 
 	var hook HookSetup
