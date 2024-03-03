@@ -406,7 +406,7 @@ func createStateHooks(st *state.State, workshop string, content []sdk.Setup, new
 	return stateHooks
 }
 
-func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	// check if all the workshops are stopped
 	err := w.CheckStatus(
 		ctx,
@@ -428,21 +428,21 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 	return taskset, nil
 }
 
-func startMany(st *state.State, names []string, project *workshopbackend.Project) (*state.TaskSet, error) {
-	taskset := state.NewTaskSet([]*state.Task{}...)
+func startMany(st *state.State, names []string, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
 		start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
-		taskset.AddTask(start)
-
 		start.Set("workshop", name)
 		start.Set("project", *project)
+
+		taskset = append(taskset, state.NewTaskSet(start))
 	}
 
 	return taskset, nil
 }
 
-func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	err := w.CheckStatus(
 		ctx,
 		names,
@@ -463,16 +463,16 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 	return taskset, nil
 }
 
-func stopMany(st *state.State, names []string, project *workshopbackend.Project) (*state.TaskSet, error) {
-	taskset := state.NewTaskSet([]*state.Task{}...)
+func stopMany(st *state.State, names []string, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
 		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", name))
 		stop.Set("force", false)
-		taskset.AddTask(stop)
-
 		stop.Set("workshop", name)
 		stop.Set("project", *project)
+
+		taskset = append(taskset, state.NewTaskSet(stop))
 	}
 
 	return taskset, nil
@@ -522,7 +522,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	return exec, nil
 }
 
-func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	err := w.CheckStatus(
 		ctx,
 		names,
@@ -555,14 +555,14 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
-	taskset := state.NewTaskSet([]*state.Task{}...)
+func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+	taskset := []*state.TaskSet{}
 	for _, name := range workshops {
 		remove, err := remove(st, name, project)
 		if err != nil {
 			return nil, err
 		}
-		taskset.AddAll(remove)
+		taskset = append(taskset, remove)
 	}
 	return taskset, nil
 }

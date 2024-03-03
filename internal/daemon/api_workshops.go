@@ -15,6 +15,31 @@ import (
 	"golang.org/x/text/language"
 )
 
+type actionOpts struct {
+	Mode string `json:"refresh-mode"`
+}
+
+type reqData struct {
+	Names   []string   `json:"names"`
+	Action  string     `json:"action"`
+	Options actionOpts `json:"options"`
+}
+
+func newChange(st *state.State, kind string, user, projectId string, reqData *reqData) *state.Change {
+	var summary string
+	switch len(reqData.Names) {
+	case 1:
+		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+	default:
+		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+	}
+
+	change := st.NewChange(kind, summary)
+	change.Set("user", user)
+	change.Set("project-id", projectId)
+	return change
+}
+
 func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	state := c.d.overlord.State()
@@ -63,16 +88,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 	wsmgr := c.d.overlord.WorkshopManager()
 
-	type actionOpts struct {
-		Mode string `json:"refresh-mode"`
-	}
-
-	var reqData struct {
-		Names   []string   `json:"names"`
-		Action  string     `json:"action"`
-		Options actionOpts `json:"options"`
-	}
-
+	var reqData reqData
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
 		return statusBadRequest("cannot %s: failed to decode data from request body: %v", err)
@@ -89,41 +105,17 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
 
-	var summary string
-	switch len(reqData.Names) {
-	case 1:
-		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
-	default:
-		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
-	}
-
 	var change *state.Change
-	newChange := func(kind, summary string) *state.Change {
-		change := st.NewChange(kind, summary)
-		change.Set("user", user)
-		change.Set("project-id", projectId)
-		return change
-	}
-
-	defer func() {
-		if change != nil && len(change.Tasks()) == 0 {
-			change.SetStatus(state.DoneStatus)
-		}
-	}()
+	var taskset = []*state.TaskSet{}
+	var err error
 
 	switch reqData.Action {
 	case "launch":
-		change = newChange("launch", summary)
-		taskset, err := wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-
-		for _, tset := range taskset {
-			change.AddAll(tset)
-		}
+		change = newChange(st, "launch", user, projectId, &reqData)
+		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "refresh":
-		refreshMode, err := conflict.ParseRefreshMode(reqData.Options.Mode)
+		var refreshMode conflict.RefreshMode
+		refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
 		if err != nil {
 			return statusBadRequest("cannot refresh: %v", err)
 		}
@@ -133,48 +125,38 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		}
 
 		if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
-			change = newChange("refresh", summary)
-			taskset, err := wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
-			if err != nil {
-				return statusBadRequest(err.Error())
-			}
-			for _, tset := range taskset {
-				change.AddAll(tset)
-			}
+			change = newChange(st, "refresh", user, projectId, &reqData)
+			taskset, err = wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
 		}
 
 		if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
-			var err error
 			change, err = conflict.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
 			if err != nil {
 				return statusBadRequest(err.Error())
 			}
 		}
 	case "start":
-		change = newChange("start", summary)
-		taskset, err := wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-
-		change.AddAll(taskset)
+		change = newChange(st, "start", user, projectId, &reqData)
+		taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "stop":
-		change = newChange("stop", summary)
-		taskset, err := wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-
-		change.AddAll(taskset)
+		change = newChange(st, "stop", user, projectId, &reqData)
+		taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "remove":
-		change = newChange("remove", summary)
-		taskset, err := wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
-		if err != nil {
-			return statusBadRequest(err.Error())
-		}
-		change.AddAll(taskset)
+		change = newChange(st, "remove", user, projectId, &reqData)
+		taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 	default:
 		return statusBadRequest("unknown action")
+	}
+
+	for _, tset := range taskset {
+		change.AddAll(tset)
+	}
+	if len(change.Tasks()) == 0 {
+		change.SetStatus(state.DoneStatus)
+	}
+
+	if err != nil {
+		return statusBadRequest(err.Error())
 	}
 
 	ensureStateSoon(st, 0)
