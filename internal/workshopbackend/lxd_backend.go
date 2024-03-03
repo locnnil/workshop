@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -105,7 +106,6 @@ func allocateProjectId() (string, error) {
 }
 
 func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context, path string) (*Project, error) {
-
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key %s not found", ContextUser)
@@ -149,37 +149,6 @@ func (s *LxdBackend) loadProject(client lxd.InstanceServer, ctx context.Context,
 		}
 	}
 	return nil, ErrProjectNotFound
-}
-
-func (s *LxdBackend) untrackProject(client lxd.InstanceServer, ctx context.Context, prj *Project) error {
-	user, ok := ctx.Value(ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
-	}
-
-	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
-	if err != nil {
-		return err
-	}
-
-	projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
-	if err != nil {
-		return err
-	}
-
-	idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == prj.ProjectId })
-	if idx == -1 {
-		return fmt.Errorf("project %q at %q not found", prj.ProjectId, prj.Path)
-	}
-
-	projects = slices.Delete(projects, idx, idx+1)
-	projectsJson, err := saveProjects(projects)
-	if err != nil {
-		return err
-	}
-	lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
-
-	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
 
 func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context, prj *Project) error {
@@ -298,10 +267,9 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 
 // Ensures that every project has a valid existing path. If not, tries to
 // recover the path from the actual bind mount of the '/project'. If recovery
-// went unsuccessful, stop project tracking (it is likely that the directory was
-// removed already)
-func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) ([]*Project, error) {
-	for idx, prj := range projects {
+// went unsuccessful, removes the project from the list.
+func (s *LxdBackend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) []*Project {
+	return slices.DeleteFunc(projects, func(prj *Project) bool {
 		if !prj.Exists() {
 			var err error
 			// If got here then there is no project directory for the projectId
@@ -313,9 +281,9 @@ func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx 
 				prj.Path = newPath
 				if err = s.trackProject(client, ctx, prj); err == nil {
 					// update the workshops configuration with the new path
-					s.updateWorkshopsProjectPath(client, ctx, prj)
+					_ = s.updateWorkshopsProjectPath(client, ctx, prj)
 				}
-				continue
+				return false
 			}
 			// Could not recover the directory, reconcile the project from the
 			// list of projects that we track (only if there are no remaining
@@ -324,14 +292,11 @@ func (s *LxdBackend) checkAndRecoverProjectPaths(client lxd.InstanceServer, ctx 
 				return config["user.workshop.project-id"] == prj.ProjectId
 			})
 			if err == nil && len(inst) == 0 {
-				if err = s.untrackProject(client, ctx, prj); err != nil {
-					return nil, err
-				}
-				projects = slices.Delete(projects, idx, idx+1)
+				return true
 			}
 		}
-	}
-	return projects, nil
+		return false
+	})
 }
 
 // projectPath returns a project path for the cwd provided
@@ -478,27 +443,43 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
+func (s *LxdBackend) loadUserProjects(ctx context.Context, user string) ([]*Project, error) {
+	client, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
+	if err != nil {
+		return nil, err
+	}
+
+	projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
+	if err != nil {
+		return nil, err
+	}
+
+	checked := s.maybeRecoverProjectPaths(client, ctx, projects)
+
+	if !reflect.DeepEqual(projects, checked) {
+		projectsJson, err := saveProjects(checked)
+		if err != nil {
+			return nil, err
+		}
+		lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
+		if err = client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag); err != nil {
+			return nil, err
+		}
+	}
+	return checked, nil
+}
+
 func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error) {
 	if user, ok := ctx.Value(ContextUser).(string); ok {
-		client, err := s.LxdClient(ctx)
+		projects, err := s.loadUserProjects(ctx, user)
 		if err != nil {
 			return nil, err
 		}
-		lxdPrj, _, err := client.GetProject(LxdProjectName(user))
-		if err != nil {
-			return nil, err
-		}
-
-		projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
-		if err != nil {
-			return nil, err
-		}
-
-		checked, err := s.checkAndRecoverProjectPaths(client, ctx, projects)
-		if err != nil {
-			return nil, err
-		}
-		return map[string][]*Project{user: checked}, nil
+		return map[string][]*Project{user: projects}, nil
 	} else {
 		// get a default connection without preseting the LXD project as we are
 		// going over all the LXD projects to filter the ones managed by
@@ -514,23 +495,19 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 			return nil, err
 		}
 		allProjects := make(map[string][]*Project)
-		for _, prj := range lxdProjects {
-			username := LxdProjectUser(prj.Name)
+		for _, lxdPrj := range lxdProjects {
+			username := LxdProjectUser(lxdPrj.Name)
 			_, err := LookupUsername(username)
 			// if the project is created by workshop, the key must be present
-			if _, ok := prj.Config["user.workshop.projects"]; ok && err == nil {
+			if _, ok := lxdPrj.Config["user.workshop.projects"]; ok && err == nil {
 				prjctx := context.WithValue(ctx, ContextUser, username)
-				projects, err := readProjects([]byte(prj.Config["user.workshop.projects"]))
+
+				projects, err := s.loadUserProjects(prjctx, username)
 				if err != nil {
 					return nil, err
 				}
 
-				checked, err := s.checkAndRecoverProjectPaths(client, prjctx, projects)
-				if err != nil {
-					return nil, err
-				}
-
-				allProjects[username] = checked
+				allProjects[username] = projects
 			}
 		}
 		return allProjects, nil

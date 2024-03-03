@@ -99,6 +99,32 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"},{"path":"%s","id":"d4352dea"}]`, projectDir, projectDir2))
 }
 
+func (f *wsProject) TestLxdBackendReconcileProjectIfNotRecovered(c *check.C) {
+	// Setup
+	be := workshopbackend.LxdBackend{}
+	numCalls := 0
+	ids := []string{"b8639dea"}
+	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshopbackend.NewProjectId)
+	defer restore()
+	projectDir := c.MkDir()
+
+	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+
+	// Execute
+	_, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
+	c.Assert(err, check.IsNil)
+
+	os.RemoveAll(projectDir)
+
+	// Validate
+	projects, err := be.Projects(f.ctx)
+	c.Assert(err, check.IsNil)
+	c.Assert(projects[f.username], check.HasLen, 0)
+
+	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName("testuser"))
+	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, `[]`)
+}
+
 func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	// Setup
 	be := workshopbackend.LxdBackend{}
