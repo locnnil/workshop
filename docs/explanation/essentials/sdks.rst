@@ -11,7 +11,9 @@ throughout the lifetime of the workshop.
 An *SDK* is designed by a publisher
 and made available via the SDK Store.
 A single workshop can include multiple SDKs from different publishers.
-SDKs are distributed via channels similar to
+SDKs are distributed via
+`channels <https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/reference/sdks/#channels>`_
+similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 
 
@@ -26,23 +28,23 @@ within the workshop.
 The publisher of the SDK implements save and restore actions
 to let |project_markup| handle such data consistently as the *SDK state*.
 
-Before applying any changes to the SDK,
-usually during a :command:`workshop refresh`,
+Before applying any changes to the workshop
+during a :command:`workshop refresh` operation,
 |project_markup| saves the workshop's SDK states
-by invoking their :ref:`life cycle hooks <exp_sdk_hooks>`.
+by invoking their :ref:`hooks <exp_sdk_hooks>`.
 After a successful change,
 the states are respectively restored.
 
 
-.. _exp_sdk_def:
+.. _exp_sdk_definition:
 
 Definition
 ----------
 
-An SDK is defined in a file named :file:`sdk.yaml` that may look like this:
+An SDK is defined in a file named :file:`sdkcraft.yaml` that may look like this:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: go
    title: Go SDK
@@ -68,7 +70,7 @@ that control and extend the workshop's internal behaviour
 to make any framework wrapped as an SDK
 compatible with |project_markup|'s logic.
 
-Each hook packs domain-aware actions into a shell script
+Each hook is a shell script with domain-aware actions
 that |project_markup| runs in the workshop
 at a certain life cycle phase
 to ensure the SDK stays functional.
@@ -107,7 +109,7 @@ think of the slot as the provider of the resource.
 
 On top of that, individual SDKs define *plugs*
 to connect to a slot that belongs to a certain interface.
-In our :ref:`previous example <exp_sdk_def>`,
+In our :ref:`previous example <exp_sdk_definition>`,
 it's the aforementioned *content interface*.
 
 You can think of the plug as the recipient of the resources exposed by the slot;
