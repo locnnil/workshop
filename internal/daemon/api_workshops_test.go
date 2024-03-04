@@ -133,6 +133,8 @@ type expectedResp struct {
 	Type    ResponseType
 	Status  int
 	Message string
+	Kind    string
+	Summary string
 }
 
 func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected []*expectedResp, ens func(st *state.State, d time.Duration)) {
@@ -153,15 +155,25 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 	s.launchWorkshop(s.ctx, "ws", c)
 	s.launchWorkshop(s.ctx, "ws1", c)
 
-	for num, i := range requests {
+	for num, req := range requests {
 		// Execute
-		rsp := v1PostProjectWorkshop(projectsCmd, i, nil).(*resp)
+		rsp := v1PostProjectWorkshop(projectsCmd, req, nil).(*resp)
 
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)
 		c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 		if rsp.Type == ResponseTypeError {
 			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+		}
+
+		if rsp.Type == ResponseTypeAsync {
+			st := s.d.state
+			st.Lock()
+			change := s.d.state.Change(rsp.Change)
+			st.Unlock()
+			c.Assert(change, check.NotNil)
+			c.Assert(change.Kind(), check.Equals, expected[num].Kind)
+			c.Assert(change.Summary(), check.Equals, expected[num].Summary)
 		}
 	}
 }
@@ -183,8 +195,10 @@ base: ubuntu@20.04
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshop" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -259,12 +273,16 @@ func (s *apiSuite) TestProjectsRefreshWorkshopContinue(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "ws" workshop`,
 		},
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "ws" workshop`,
 		},
 	}
 	s.runActionTest(c, requests, expected, func(st *state.State, d time.Duration) {
@@ -305,8 +323,10 @@ func (s *apiSuite) TestProjectsRefreshWorkshopTransactional(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "ws" workshop`,
 		},
 	}
 
@@ -326,12 +346,16 @@ func (s *apiSuite) TestProjectsRefreshWorkshopRefreshAbort(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "ws" workshop`,
 		},
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "ws" workshop`,
 		},
 	}
 
@@ -358,12 +382,16 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopStart(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "stop",
+			Summary: `Stop "ws" workshop`,
 		},
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "start",
+			Summary: `Start "ws" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -403,8 +431,10 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopStop(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "stop",
+			Summary: `Stop "ws" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -429,8 +459,10 @@ func (s *apiSuite) TestProjectsPostProjectWorkshopRemove(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:   ResponseTypeAsync,
-			Status: http.StatusAccepted,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "remove",
+			Summary: `Remove "ws" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
