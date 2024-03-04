@@ -96,9 +96,16 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 }
 
 func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) string {
+	var source string
+	// see if the plug's mount has been remounted to a new location
+	if err := plug.Attr("remount-source", &source); err == nil {
+		return source
+	}
+
 	// <workshop>_<sdk>_plug.sdk
 	dir := strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_") + ".sdk"
-	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
+	source = filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
+
 	return source
 }
 
@@ -118,6 +125,10 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 	source := iface.source(user, plug)
+
+	if err = plug.SetAttr("source", source); err != nil {
+		return err
+	}
 
 	uid, gid, err := osutil.UidGid(user)
 	if err != nil {

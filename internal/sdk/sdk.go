@@ -97,11 +97,11 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string, setup Setup) (*Inf
 		Channel:       setup.Channel,
 	}
 
-	if err := setPlugsFromSnapYaml(&sdkYaml, sdkInfo); err != nil {
+	if err := setPlugsFromSdkYaml(&sdkYaml, sdkInfo); err != nil {
 		return nil, err
 	}
 
-	if err := setSlotsFromSnapYaml(&sdkYaml, sdkInfo); err != nil {
+	if err := setSlotsFromSdkYaml(&sdkYaml, sdkInfo); err != nil {
 		return nil, err
 	}
 
@@ -109,12 +109,13 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string, setup Setup) (*Inf
 	return sdkInfo, nil
 }
 
-func setPlugsFromSnapYaml(y *sdkYaml, sdk *Info) error {
+func setPlugsFromSdkYaml(y *sdkYaml, sdk *Info) error {
 	for name, data := range y.Plugs {
 		iface, label, attrs, err := convertToSlotOrPlugData("plug", name, data)
 		if err != nil {
 			return err
 		}
+
 		sdk.Plugs[name] = &PlugInfo{
 			Sdk:       sdk,
 			Name:      name,
@@ -127,7 +128,7 @@ func setPlugsFromSnapYaml(y *sdkYaml, sdk *Info) error {
 	return nil
 }
 
-func setSlotsFromSnapYaml(y *sdkYaml, sdk *Info) error {
+func setSlotsFromSdkYaml(y *sdkYaml, sdk *Info) error {
 	for name, data := range y.Slots {
 		iface, label, attrs, err := convertToSlotOrPlugData("slot", name, data)
 		if err != nil {
@@ -243,13 +244,13 @@ func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
 	return v, true
 }
 
-func getAttribute(snapName string, ifaceName string, attrs map[string]interface{}, key string, val interface{}) error {
+func getAttribute(sdkName string, ifaceName string, attrs map[string]interface{}, key string, val interface{}) error {
 	v, ok := lookupAttr(attrs, key)
 	if !ok {
-		return AttributeNotFoundError{fmt.Errorf("sdk %q does not have attribute %q for interface %q", snapName, key, ifaceName)}
+		return AttributeNotFoundError{fmt.Errorf("sdk %q does not have attribute %q for interface %q", sdkName, key, ifaceName)}
 	}
 
-	return metautil.SetValueFromAttribute(snapName, ifaceName, key, v, val)
+	return metautil.SetValueFromAttribute(sdkName, ifaceName, key, v, val)
 }
 
 func (slot *SlotInfo) Attr(key string, val interface{}) error {
@@ -299,14 +300,14 @@ func (s *Setup) Filename() string {
 	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
 }
 
-func MockSanitizePlugsSlots(f func(snapInfo *Info)) (restore func()) {
+func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {
 	old := SanitizePlugsSlots
 	SanitizePlugsSlots = f
 	return func() { SanitizePlugsSlots = old }
 }
 
 func MockInfo(c *check.C, yamlText string, projectId, workshop string, setup Setup) *Info {
-	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
+	restoreSanitize := MockSanitizePlugsSlots(func(sdkInfo *Info) {})
 	defer restoreSanitize()
 	info, err := ReadSdkInfo([]byte(yamlText), projectId, workshop, setup)
 	c.Assert(err, check.IsNil)
@@ -317,7 +318,7 @@ func MockInfo(c *check.C, yamlText string, projectId, workshop string, setup Set
 }
 
 func MockInvalidInfo(c *check.C, yamlText string, setup Setup) *Info {
-	restoreSanitize := MockSanitizePlugsSlots(func(snapInfo *Info) {})
+	restoreSanitize := MockSanitizePlugsSlots(func(sdkInfo *Info) {})
 	defer restoreSanitize()
 
 	sdkInfo, err := ReadSdkInfo([]byte(yamlText), "invalid", "ws", setup)

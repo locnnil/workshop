@@ -91,7 +91,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	var reqData reqData
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot %s: failed to decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %v", err)
 	}
 
 	if len(reqData.Names) == 0 {

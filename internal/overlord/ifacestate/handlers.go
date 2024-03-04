@@ -3,15 +3,19 @@ package ifacestate
 import (
 	"context"
 	"fmt"
+	"os"
+	"syscall"
 
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
-	. "github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
@@ -29,12 +33,12 @@ func sdkName(task *state.Task) (string, error) {
 }
 
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
 	defer cancel()
 
 	inst, err := m.backend.Workshop(ctx, workshop)
@@ -129,7 +133,7 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 				if err != nil {
 					if err := m.repo.Disconnect(plug.Sdk.ProjectId, workshop, plug.Sdk.Name, plug.Name, slot.Sdk.ProjectId,
 						slot.Sdk.Workshop, slot.Sdk.Name, slot.Name); err != nil {
-						logger.Noticef("cannot undo failed connection: %v", err)
+						logger.Noticef("cannot disconnect failed connection: %v", err)
 					}
 				}
 			}()
@@ -168,12 +172,12 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 }
 
 func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -224,12 +228,12 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 }
 
 func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -241,12 +245,12 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 }
 
 func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -267,10 +271,41 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 	return m.setupSdkConnections(task, ctx, project.ProjectId, workshop, sdkInfo)
 }
 
-func (m *InterfaceManager) doRemount(plug interfaces.PlugRef, source string) error {
+func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var plug interfaces.PlugRef
+	if err := task.Get("remount-plug", &plug); err != nil {
+		return err
+	}
+
+	var source string
+	if err := task.Get("remount-source", &source); err != nil {
+		return err
+	}
+
+	return m.remount(&plug, source)
+}
+
+func (m *InterfaceManager) remount(plug *interfaces.PlugRef, source string) error {
+	revert := revert.New()
+	defer revert.Fail()
+
+	conns, err := getConns(m.state)
+	if err != nil {
+		return err
+	}
+
 	plugInfo := m.repo.Plug(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
 	if plugInfo == nil {
 		return fmt.Errorf("plug %q does not exist", plug.String())
+	}
+
+	var oldSource string
+	if err := plugInfo.Attr("source", &oldSource); err != nil {
+		return err
 	}
 
 	plugConns, err := m.repo.Connected(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
@@ -287,12 +322,49 @@ func (m *InterfaceManager) doRemount(plug interfaces.PlugRef, source string) err
 		return fmt.Errorf("slot %q does not exist", connection.SlotRef.String())
 	}
 
-	if err = m.repo.Disconnect(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name, connection.SlotRef.ProjectId, connection.SlotRef.Workshop, connection.SlotRef.Sdk, connection.SlotRef.Name); err != nil {
+	conn, err := m.repo.Connect(connection, plugInfo.Attrs, map[string]interface{}{"remount-source": source}, slotInfo.Attrs, nil, nil)
+	if err != nil {
 		return err
 	}
 
-	if _, err := m.repo.Connect(connection, plugInfo.Attrs, map[string]interface{}{"source": source}, slotInfo.Attrs, nil, nil); err != nil {
+	revert.Add(func() {
+		if _, err := m.repo.Connect(connection, plugInfo.Attrs, nil, slotInfo.Attrs, nil, nil); err != nil {
+			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.String())
+		}
+	})
+
+	if err := osutil.Rename(oldSource, source); err != nil {
+		if errno, ok := err.(syscall.Errno); ok {
+			if errno == syscall.EXDEV {
+				return fmt.Errorf("old and new sources of the %q plug's are not on the same mounted filesystem", plug.String())
+			}
+		}
 		return err
 	}
+
+	revert.Add(func() {
+		if err := os.Rename(source, oldSource); err != nil {
+			logger.Debugf("cannot rename %s to %s on a failed remount", source, oldSource)
+		}
+	})
+
+	for _, backend := range m.repo.Backends() {
+		if err := backend.Setup(context.Background(), plugInfo.Sdk, m.repo); err != nil {
+			return err
+		}
+	}
+
+	conns[connection.ID()] = &schema.ConnState{
+		Interface:        conn.Interface(),
+		StaticPlugAttrs:  conn.Plug.StaticAttrs(),
+		DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
+		StaticSlotAttrs:  conn.Slot.StaticAttrs(),
+		DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
+		Auto:             true,
+	}
+
+	setConns(m.state, conns)
+
+	revert.Success()
 	return nil
 }

@@ -1,14 +1,20 @@
 package ifacestate_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -372,4 +378,188 @@ slots:
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
+}
+
+func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Change {
+	s.state.Lock()
+	t1 := s.state.NewTask("auto-connect", "test")
+	t1.Set("sdk", "consumer")
+	t2 := s.state.NewTask("remount", "remount")
+	t2.Set("remount-source", newSource)
+	t2.Set("remount-plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
+	t2.WaitFor(t1)
+	setWorkshopProject("ws-consumer", s.prj, t1, t2)
+
+	// Prevent undoing if the remount fails, so we don't have plugs disconnected
+	// as we want to test remount in isolation, as if it was a single change.
+	connLane := s.state.NewLane()
+	t1.JoinLane(connLane)
+
+	chg := s.state.NewChange("sample", "...")
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	s.state.Unlock()
+	return chg
+}
+
+func (s *interfaceHandlersSuite) launchRemountWorkshop(c *check.C, oldSource string) {
+	// Note: we set the source attribute for the plug in these tests, however,
+	// it is a dynamic attribute that will be defined when we install an SDK
+	// into a workshop as the default path depends on the username
+	var sdkYaml = fmt.Sprintf(`
+name: consumer
+base: ubuntu@22.04
+plugs:
+    plug:
+        interface: content
+        target: /home/workshop
+        source: %s
+`, oldSource)
+	s.launchWorkshopWithSDKs(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
+}
+
+func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := c.MkDir()
+	_, err := os.Create(filepath.Join(oldSource, "tempfile"))
+	c.Check(err, check.IsNil)
+
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.IsNil)
+	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var remountSource string
+	c.Assert(connection.Plug.Attr("remount-source", &remountSource), check.IsNil)
+	c.Assert(remountSource, check.Equals, remountSource)
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	// 2 calls for the autoconnect, one call for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+1)
+	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Name, check.Equals, "consumer")
+	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Workshop, check.Equals, "ws-consumer")
+}
+
+func (s *interfaceHandlersSuite) TestRemountSuccessDestDoesNotExist(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := filepath.Join(c.MkDir(), "new")
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.IsNil)
+	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var remountSource string
+	c.Assert(connection.Plug.Attr("remount-source", &remountSource), check.IsNil)
+	c.Assert(remountSource, check.Equals, remountSource)
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	// 2 calls for the autoconnect, one call for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+1)
+	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Name, check.Equals, "consumer")
+	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Workshop, check.Equals, "ws-consumer")
+}
+
+func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := c.MkDir()
+	_, err := os.Create(filepath.Join(newSource, "tempfile"))
+	c.Check(err, check.IsNil)
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(directory not empty\\)")
+	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	c.Assert(connection.Plug.Attr("remount-source", string("")), testutil.ErrorIs, sdk.AttributeNotFoundError{})
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
+	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	// 2 calls for the autoconnect, no calls for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+}
+
+func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := c.MkDir()
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Emulate the case when remount could not update the LXD profile for
+		// the SDK (the first two calls come from the auto-connect task)
+		if len(s.secBackend.SetupCalls) == 3 {
+			return errors.New("cannot setup LXD profile")
+		}
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(cannot setup LXD profile\\)")
+	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	c.Assert(connection.Plug.Attr("remount-source", string("")), testutil.ErrorIs, sdk.AttributeNotFoundError{})
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
+	c.Assert(osutil.FileExists(newSource), check.Equals, false)
+	// 2 calls for the autoconnect, no calls for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 3)
 }
