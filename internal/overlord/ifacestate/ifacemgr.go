@@ -14,7 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 )
 
 type InterfaceManager struct {
@@ -30,8 +30,8 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 		repo:    interfaces.NewRepository(),
 	}
 
-	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), OnUndo(m.undoAutoConnect))
-	r.AddHandler("disconnect", OnDo(m.doDisconnect), OnUndo(m.undoDisconnect))
+	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
+	r.AddHandler("disconnect", OnDo(m.doDisconnect), m.undoDisconnect)
 
 	return m
 }

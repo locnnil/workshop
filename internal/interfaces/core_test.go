@@ -55,18 +55,18 @@ func (s *CoreSuite) TearDownTest(c *C) {
 
 // PlugRef.String works as expected
 func (s *CoreSuite) TestPlugRefString(c *C) {
-	ref := interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
-	c.Check(ref.String(), Equals, "ws:sdk:plug")
-	refPtr := &interfaces.PlugRef{Workshop: "ws", Sdk: "sdk", Name: "plug"}
-	c.Check(refPtr.String(), Equals, "ws:sdk:plug")
+	ref := interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	c.Check(ref.String(), Equals, s.projectId+"/ws/sdk:plug")
+	refPtr := &interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	c.Check(refPtr.String(), Equals, s.projectId+"/ws/sdk:plug")
 }
 
 // SlotRef.String works as expected
 func (s *CoreSuite) TestSlotRefString(c *C) {
-	ref := interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
-	c.Check(ref.String(), Equals, "ws:sdk:slot")
-	refPtr := &interfaces.SlotRef{Workshop: "ws", Sdk: "sdk", Name: "slot"}
-	c.Check(refPtr.String(), Equals, "ws:sdk:slot")
+	ref := interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	c.Check(ref.String(), Equals, s.projectId+"/ws/sdk:slot")
+	refPtr := &interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	c.Check(refPtr.String(), Equals, s.projectId+"/ws/sdk:slot")
 }
 
 // ConnRef.ID works as expected
@@ -204,7 +204,7 @@ plugs:
 	}, plug), ErrorMatches, "broken")
 	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
 		InterfaceName: "other",
-	}, plug), ErrorMatches, `cannot sanitize plug "ws:sdk:plug" \(interface "iface"\) using interface "other"`)
+	}, plug), ErrorMatches, fmt.Sprintf(`cannot sanitize plug "%s/ws/sdk:plug" \(interface "iface"\) using interface "other"`, s.projectId))
 }
 
 func (s *CoreSuite) TestSanitizeSlot(c *C) {
@@ -225,5 +225,5 @@ slots:
 	}, slot), ErrorMatches, "broken")
 	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
 		InterfaceName: "other",
-	}, slot), ErrorMatches, `cannot sanitize slot "ws:sdk:slot" \(interface "iface"\) using interface "other"`)
+	}, slot), ErrorMatches, fmt.Sprintf(`cannot sanitize slot "%s/ws/sdk:slot" \(interface "iface"\) using interface "other"`, s.projectId))
 }

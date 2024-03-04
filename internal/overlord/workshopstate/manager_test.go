@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
-	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -73,32 +73,6 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.
 	return workshop
 }
 
-func (s *managerSuite) TestWorkshopManagerStartOperationOK(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-
-	err := workshopstate.StartOperation(s.manager, []string{"test-1", "test-2"}, s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
-	c.Assert(err, check.IsNil)
-	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.NotNil)
-	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.NotNil)
-}
-
-func (s *managerSuite) TestWorkshopManagerStartOperationFail(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
-	c.Assert(err, check.IsNil)
-
-	err = workshopstate.StartOperation(s.manager, []string{"test-1", "test-2"}, s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
-	c.Assert(err, check.ErrorMatches, `cannot refresh: refresh operation is in progress`)
-	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
-}
-
 func (s *managerSuite) TestWorkshopHealthReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -159,13 +133,12 @@ func (s *managerSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("launch", "test")
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "test")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
-	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
-		ChangeId:  chg.ID(),
-		Operation: "launch",
-	})
-	c.Assert(err, check.IsNil)
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
@@ -180,13 +153,12 @@ func (s *managerSuite) TestWorkshopHealthOperationInProgressWithNotes(c *check.C
 
 	chg := s.state.NewChange("refresh", "test")
 	chg.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "test")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
-	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
-		ChangeId:  chg.ID(),
-		Operation: "refresh",
-	})
-	c.Assert(err, check.IsNil)
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
@@ -208,14 +180,11 @@ func (s *managerSuite) TestWorkshopHealthSdkHealth(c *check.C) {
 		Code:        "how-much-longer",
 	}
 	task.Set("health", healthCheck)
+	task.Set("workshop", "test")
+	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, "test", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	err := operation.StartOperation(s.state, "test", s.project.ProjectId, operation.Operation{
-		ChangeId:  chg.ID(),
-		Operation: "launch",
-	})
-	c.Assert(err, check.IsNil)
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
@@ -232,35 +201,15 @@ func (s *managerSuite) TestRefreshManyOK(c *check.C) {
 	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
 	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
 	c.Assert(err, check.IsNil)
 
-	op := operation.OperationInProgress(s.state, "test-1", s.project.ProjectId)
-	c.Check(op, check.NotNil)
-	c.Assert(op.Operation, check.Equals, "refresh")
-	c.Assert(op.ChangeId, check.Equals, chg.ID())
-	c.Assert(op.WaitOnError, check.Equals, false)
-
-	op = operation.OperationInProgress(s.state, "test-2", s.project.ProjectId)
-	c.Check(op, check.NotNil)
-	c.Assert(op.Operation, check.Equals, "refresh")
-	c.Assert(op.ChangeId, check.Equals, chg.ID())
-	c.Assert(op.WaitOnError, check.Equals, false)
-}
-
-func (s *managerSuite) TestRefreshManyWorkshopHasOperationPending(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
-	chg2 := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-
-	operation.StartOperation(s.state, "test-1", s.project.ProjectId, operation.Operation{Operation: operation.OperationRefresh, ChangeId: chg.ID()})
-
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg2.ID())
-	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-1" status is "Pending", must be one of: "Ready"`)
-	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
+	var setup conflict.RefreshSetup
+	err = chg.Get("refresh-setup", &setup)
+	c.Assert(err, check.IsNil)
+	md, err := conflict.ParseRefreshMode(setup.Mode)
+	c.Assert(err, check.IsNil)
+	c.Assert(md, check.Equals, conflict.RefreshTransactional)
 }
 
 func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
@@ -272,10 +221,8 @@ func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
 	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-2" status is "Stopped", must be one of: "Ready"`)
-	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
-	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
 }
 
 func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
@@ -284,8 +231,6 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
 	chg := s.state.NewChange("refresh", "test")
 	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, operation.RefreshTransactional, chg.ID())
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
 	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop not found\)`)
-	c.Assert(operation.OperationInProgress(s.state, "test-1", s.project.ProjectId), check.IsNil)
-	c.Assert(operation.OperationInProgress(s.state, "test-2", s.project.ProjectId), check.IsNil)
 }

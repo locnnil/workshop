@@ -2,15 +2,16 @@ package ifacestate
 
 import (
 	"context"
+	"fmt"
 
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
@@ -264,4 +265,34 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 	}
 
 	return m.setupSdkConnections(task, ctx, project.ProjectId, workshop, sdkInfo)
+}
+
+func (m *InterfaceManager) doRemount(plug interfaces.PlugRef, source string) error {
+	plugInfo := m.repo.Plug(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
+	if plugInfo == nil {
+		return fmt.Errorf("plug %q does not exist", plug.String())
+	}
+
+	plugConns, err := m.repo.Connected(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
+	if err != nil {
+		return err
+	}
+	if len(plugConns) != 1 {
+		return fmt.Errorf("plug %q must have exactly one connection to be remounted", plug.String())
+	}
+	connection := plugConns[0]
+
+	slotInfo := m.repo.Slot(connection.SlotRef.ProjectId, connection.SlotRef.Workshop, connection.SlotRef.Sdk, connection.SlotRef.Name)
+	if slotInfo == nil {
+		return fmt.Errorf("slot %q does not exist", connection.SlotRef.String())
+	}
+
+	if err = m.repo.Disconnect(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name, connection.SlotRef.ProjectId, connection.SlotRef.Workshop, connection.SlotRef.Sdk, connection.SlotRef.Name); err != nil {
+		return err
+	}
+
+	if _, err := m.repo.Connect(connection, plugInfo.Attrs, map[string]interface{}{"source": source}, slotInfo.Attrs, nil, nil); err != nil {
+		return err
+	}
+	return nil
 }

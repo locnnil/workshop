@@ -89,11 +89,12 @@ func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 
 func verifyDisconnectDependencies(c *check.C, ts *state.TaskSet) {
 	prev := (*state.Task)(nil)
-	for i, t := range ts.Tasks() {
+	for _, t := range ts.Tasks() {
 		if t.Kind() == "disconnect" {
 			if prev != nil {
-				c.Assert(t.WaitTasks(), testutil.DeepUnsortedMatches, ts.Tasks()[i-1])
+				c.Assert(t.WaitTasks(), testutil.Contains, prev)
 			}
+			prev = t
 		}
 	}
 }
@@ -695,15 +696,9 @@ func (s *requestSuite) TestStartMany(c *check.C) {
 
 	ts, err := workshopstate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(err, check.IsNil)
-	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "start-workshop")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "start-workshop")
-
-	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-
-	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
+	c.Assert(ts, check.HasLen, 2)
+	c.Assert(ts[0].Tasks()[0].Kind(), check.Equals, "start-workshop")
+	c.Assert(ts[1].Tasks()[0].Kind(), check.Equals, "start-workshop")
 }
 
 func (s *requestSuite) TestStopMany(c *check.C) {
@@ -712,19 +707,15 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 
 	ts, err := workshopstate.StopManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(err, check.IsNil)
-	c.Assert(ts.Tasks(), check.HasLen, 2)
-	c.Assert(ts.Tasks()[0].Kind(), check.Equals, "stop-workshop")
-	c.Assert(ts.Tasks()[1].Kind(), check.Equals, "stop-workshop")
+	c.Assert(ts, check.HasLen, 2)
+	c.Assert(ts[0].Tasks()[0].Kind(), check.Equals, "stop-workshop")
+	c.Assert(ts[1].Tasks()[0].Kind(), check.Equals, "stop-workshop")
 
 	var force bool
-	c.Assert(ts.Tasks()[0].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-	ts.Tasks()[0].Get("force", &force)
+	ts[0].Tasks()[0].Get("force", &force)
 	c.Assert(force, check.Equals, false)
 
-	c.Assert(ts.Tasks()[1].Has("stop-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[1].Has("start-operation"), check.Equals, true)
-	ts.Tasks()[1].Get("force", &force)
+	ts[0].Tasks()[0].Get("force", &force)
 	c.Assert(force, check.Equals, false)
 }
 
@@ -741,10 +732,10 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 
 	ts, err := s.mgr.RemoveMany(s.ctx, []string{"ws-1"}, s.project.ProjectId, "1")
 	c.Assert(err, check.IsNil)
-	c.Assert(ts.Tasks(), check.HasLen, 4)
+	c.Assert(ts[0].Tasks(), check.HasLen, 4)
 
-	verifyDisconnectDependencies(c, ts)
-	for i, t := range ts.Tasks()[0:3] {
+	verifyDisconnectDependencies(c, ts[0])
+	for i, t := range ts[0].Tasks()[0:3] {
 		c.Assert(t.Kind(), check.Equals, "disconnect")
 		var sdkName string
 		err = t.Get("sdk", &sdkName)
@@ -752,8 +743,6 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 		c.Assert(sdkName, check.Equals, content[i].Name)
 		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
 	}
-	c.Assert(ts.Tasks()[3].Kind(), check.Equals, "remove-workshop")
-	c.Assert(ts.Tasks()[0].Has("start-operation"), check.Equals, true)
-	c.Assert(ts.Tasks()[3].Has("stop-operation"), check.Equals, true)
-	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts.Tasks())
+	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "remove-workshop")
+	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
 }

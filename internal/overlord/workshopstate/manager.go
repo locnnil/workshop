@@ -7,10 +7,11 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/overlord/conflict"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
-	"github.com/canonical/workshop/internal/overlord/operation"
 	"github.com/canonical/workshop/internal/overlord/state"
-	. "github.com/canonical/workshop/internal/overlord/statecontext"
+
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/x-go/strutil"
 )
@@ -26,14 +27,14 @@ func New(st *state.State, runner *state.TaskRunner, server workshopbackend.Works
 		state:   st,
 	}
 
-	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), OnUndo(manager.undoCreateWorkshop))
-	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUndo(manager.doStop))
-	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUndo(manager.doStart))
+	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), manager.undoCreateWorkshop)
+	runner.AddHandler("start-workshop", OnDo(manager.doStart), manager.doStop)
+	runner.AddHandler("stop-workshop", OnDo(manager.doStop), manager.doStart)
 	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkshop), nil)
-	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
+	runner.AddHandler("mount-project", OnDo(manager.doMountProject), manager.undoMountProject)
 	runner.AddHandler("remove-workshop-stash", OnDo(manager.doRemoveWorkshopStash), nil)
-	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), OnUndo(manager.undoStashWorkshop))
-	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
+	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), manager.undoStashWorkshop)
+	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), manager.doRemoveStateStorage)
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
 	return manager
@@ -111,8 +112,7 @@ func sdksHealthCheckSummary(chg *state.Change) map[string]healthstate.HealthChec
 }
 
 // Infers the state of a workshop based on the container's state and any of the
-// operations in progress for the workshop. The state must be locked before the
-// call.
+// operations in progress for the workshop. The state must be locked.
 func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthstate.HealthState {
 	var healthState = healthstate.HealthState{
 		Timestamp: time.Now(),
@@ -132,15 +132,15 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 		return healthState
 	}
 
-	op := operation.OperationInProgress(w.state, ws.Name, ws.Project().ProjectId)
-	if op != nil {
-		change := w.state.Change(op.ChangeId)
-		// a change could have gone as a result of pruning TODO: when prune
-		// changes, abort all the outstanding operations connected with it
-		if change == nil {
+	err := conflict.CheckChangeConflict(w.state, ws.Project().ProjectId, ws.Name, "")
+	if err != nil {
+		conflict, ok := err.(*conflict.ChangeConflictError)
+		if !ok || conflict.ChangeID == "" {
 			healthState.Status = healthstate.ErrorStatus
 			return healthState
 		}
+
+		change := w.state.Change(conflict.ChangeID)
 		if change.Status() == state.WaitStatus {
 			healthState.Code = "wait-on-error"
 		}

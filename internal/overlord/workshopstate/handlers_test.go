@@ -108,9 +108,9 @@ base: ubuntu@20.04
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t1.Tasks()...)
+	setWorkshopProject("ws", s.project, t1[0].Tasks()...)
 	chg.Set("user", "testuser")
-	chg.AddAll(t1)
+	chg.AddAll(t1[0])
 
 	oldInterval := workshopstate.StopLogInterval
 	workshopstate.StopLogInterval = 100 * time.Millisecond
@@ -128,8 +128,8 @@ base: ubuntu@20.04
 	}
 	s.state.Lock()
 
-	c.Assert(t1.Tasks()[0].Log()[0], check.Matches, ".*Still waiting for \"ws\" to stop; no change in the last 30 seconds...")
-	c.Assert(t1.Tasks()[0].Log(), check.HasLen, 1)
+	c.Assert(t1[0].Tasks()[0].Log()[0], check.Matches, ".*Still waiting for \"ws\" to stop; no change in the last 30 seconds...")
+	c.Assert(t1[0].Tasks()[0].Log(), check.HasLen, 1)
 	c.Check(chg.Err(), check.Equals, nil)
 	workshopstate.StopLogInterval = oldInterval
 }
