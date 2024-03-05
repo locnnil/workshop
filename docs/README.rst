@@ -40,19 +40,25 @@ or refer to the
 <https://canonical-workshop.readthedocs-hosted.com/en/latest/tutorial/>`_
 in our docs for a more detailed introduction to Workshop.
 
+To know more about `SDKcraft <https://github.com/canonical/sdkcraft>`_,
+the user-facing counterpart to Workshop,
+start with the `Tutorial
+<https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/tutorial/>`_.
+
 
 ------------
 Installation
 ------------
 
 Workshop requires
-`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
+`LXD <https://canonical.com/lxd>`_
 for low-level operation:
 
 .. code-block:: console
 
    sudo snap install lxd
    sudo lxd init --auto
+
 
 Build and install the ``workshop`` snap, for example:
 
@@ -62,8 +68,8 @@ Build and install the ``workshop`` snap, for example:
 
    cd workshop
    sudo snap install snapcraft --classic
-   snapcraft
-   sudo snap install --devmode ./workshop_0.1.0_amd64.snap
+   snapcraft clean && snapcraft
+   sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 
 
 Launching workshops
