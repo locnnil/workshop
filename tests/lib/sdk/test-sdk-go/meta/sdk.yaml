@@ -1,0 +1,7 @@
+name: test-sdk-go
+title: test-sdk-go
+base: ubuntu@22.04
+
+summary: test-sdk-go SDK
+description: |
+  test-sdk-go SDK

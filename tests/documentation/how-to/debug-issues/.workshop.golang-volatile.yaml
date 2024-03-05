@@ -1,0 +1,5 @@
+name: golang-volatile
+base: ubuntu@22.04
+sdks:
+  go:
+    channel: latest/edge  # This should cause failure

@@ -1,0 +1,35 @@
+summary: Test 'How to use workshops with Git' to ensure it's operational
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+  PROJECT=$(pwd)
+  
+  git config --global user.email "wsuser@example.com"
+  git config --global user.name "Workshop User"
+  git init original
+  mv main.go .workshop.golang.yaml original/
+  cd original/
+  workshop_exec --project "$PROJECT/original" launch golang
+  git add . && git commit -m "initial commit"
+  chown -R ubuntu:ubuntu $PROJECT/original
+  workshop_exec --project "$PROJECT/original" exec golang -- go build -x main.go
+  workshop_exec --project "$PROJECT/original" remove golang
+  ./main
+  workshop_exec --project "$PROJECT/original" launch golang
+  git config --global --add safe.directory "$PROJECT/original"
+  git worktree add $PROJECT/hotfix
+  cd $PROJECT/hotfix/
+  sed -i "s/22\.04/20.04/g" .workshop.golang.yaml
+  workshop_exec --project "$PROJECT/hotfix" launch golang
+  sleep 1
+  git commit -am "solve problem with hotfix"
+  cd $PROJECT/original/
+  git merge hotfix
+  git worktree move $PROJECT/hotfix/ $PROJECT/resolved/
+  workshop_exec list --global
+  workshop_exec --project "$PROJECT/resolved" remove golang
+  git worktree remove $PROJECT/resolved/

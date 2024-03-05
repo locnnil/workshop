@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+echo "setup-base ran successfully!"
+sudo snap install go --classic

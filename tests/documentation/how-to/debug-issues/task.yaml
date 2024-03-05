@@ -1,0 +1,16 @@
+summary: Test 'How to debug issues in workshops' to ensure it's operational
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+  PROJECT=$(pwd)
+  
+  echo "Expecting launch to fail..."
+  workshop_exec --project "$PROJECT" launch golang-volatile || true
+  echo "Expecting refresh to fail..."
+  workshop_exec --project "$PROJECT" refresh golang-volatile || true
+  workshop_exec --project "$PROJECT" changes
+  workshop_exec --project "$PROJECT" tasks $(workshop changes | awk 'END{print $1}')
