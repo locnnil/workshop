@@ -25,7 +25,7 @@ type reqData struct {
 	Options actionOpts `json:"options"`
 }
 
-func newChange(st *state.State, kind string, user, projectId string, reqData *reqData) *state.Change {
+func newWorkshopChange(st *state.State, kind string, user, projectId string, reqData *reqData) *state.Change {
 	var summary string
 	switch len(reqData.Names) {
 	case 1:
@@ -111,7 +111,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	switch reqData.Action {
 	case "launch":
-		change = newChange(st, "launch", user, projectId, &reqData)
+		change = newWorkshopChange(st, "launch", user, projectId, &reqData)
 		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "refresh":
 		var refreshMode conflict.RefreshMode
@@ -125,7 +125,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		}
 
 		if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
-			change = newChange(st, "refresh", user, projectId, &reqData)
+			change = newWorkshopChange(st, "refresh", user, projectId, &reqData)
 			taskset, err = wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
 		}
 
@@ -136,13 +136,13 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			}
 		}
 	case "start":
-		change = newChange(st, "start", user, projectId, &reqData)
+		change = newWorkshopChange(st, "start", user, projectId, &reqData)
 		taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "stop":
-		change = newChange(st, "stop", user, projectId, &reqData)
+		change = newWorkshopChange(st, "stop", user, projectId, &reqData)
 		taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "remove":
-		change = newChange(st, "remove", user, projectId, &reqData)
+		change = newWorkshopChange(st, "remove", user, projectId, &reqData)
 		taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 	default:
 		return statusBadRequest("unknown action")

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
@@ -575,9 +576,31 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 	removeSet.AddAll(disconnectSet)
 	removeSet.AddTask(remove)
 
-	for _, i := range removeSet.Tasks() {
-		i.Set("workshop", workshop.Name)
-		i.Set("project", project)
+	for _, task := range removeSet.Tasks() {
+		task.Set("workshop", workshop.Name)
+		task.Set("project", project)
 	}
 	return removeSet, nil
+}
+
+func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug interfaces.PlugRef, source string, projectId string) (*state.TaskSet, error) {
+	err := w.CheckStatus(
+		ctx,
+		[]string{plug.Workshop},
+		projectId,
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
+	if err != nil {
+		return nil, fmt.Errorf("cannot remount: %w", err)
+	}
+
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+
+	remount := st.NewTask("remount", fmt.Sprintf("Remount %q:%q to %q", plug.Sdk, plug.Name, source))
+	remount.Set("workshop", plug.Workshop)
+	remount.Set("project", project)
+
+	return state.NewTaskSet(remount), nil
 }
