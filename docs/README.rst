@@ -130,6 +130,7 @@ Commit messages
 ---------------
 
 Workshop uses a style that differs from conventional commits in capitalisation:
+
 .. code-block:: none
 
    Ensure correct permissions and ownership for the content mounts
@@ -152,7 +153,7 @@ these are used for branch naming, for example:
 - ``canonical/chore/update-lxd``
 
 
-However, docs-related commits use the ``Doc:`` type prefix
+However, documentation-related commits use the ``Doc:`` type prefix
 with an optional scope in square brackets:
 
 .. code-block:: none
