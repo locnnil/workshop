@@ -114,7 +114,9 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 		},
 	}
 
-	s.runMountTest(c, requests, expected, func(st *state.State, d time.Duration) {})
+	soon := 0
+	s.runMountTest(c, requests, expected, func(st *state.State, d time.Duration) { soon++ })
+	c.Assert(soon, check.Equals, 1)
 }
 
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {

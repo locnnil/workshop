@@ -3,9 +3,9 @@ package ifacestate_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -14,7 +14,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
@@ -25,6 +24,7 @@ type interfaceHandlersSuite struct {
 	mgr                      *ifacestate.InterfaceManager
 	restoreInterface         func()
 	restoreSecurtityBackends func()
+	setup                    sync.Once
 }
 
 var _ = check.Suite(&interfaceHandlersSuite{})
@@ -385,8 +385,8 @@ func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Chang
 	t1 := s.state.NewTask("auto-connect", "test")
 	t1.Set("sdk", "consumer")
 	t2 := s.state.NewTask("remount", "remount")
-	t2.Set("remount-source", newSource)
-	t2.Set("remount-plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
+	t2.Set("source", newSource)
+	t2.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
 	t2.WaitFor(t1)
 	setWorkshopProject("ws-consumer", s.prj, t1, t2)
 
@@ -403,19 +403,29 @@ func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Chang
 	return chg
 }
 
-func (s *interfaceHandlersSuite) launchRemountWorkshop(c *check.C, oldSource string) {
+func (s *interfaceHandlersSuite) setupPlugConnectionAttribute(c *check.C, repo *interfaces.Repository, oldSource string) {
+	connections, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(err, check.IsNil)
+	c.Assert(connections, check.HasLen, 1)
+
+	connRef := connections[0]
+	connection, err := repo.Connection(connRef)
+	c.Assert(err, check.IsNil)
+	c.Assert(connection.Plug.SetAttr("source", oldSource), check.IsNil)
+}
+
+func (s *interfaceHandlersSuite) launchRemountWorkshop(c *check.C) {
 	// Note: we set the source attribute for the plug in these tests, however,
 	// it is a dynamic attribute that will be defined when we install an SDK
 	// into a workshop as the default path depends on the username
-	var sdkYaml = fmt.Sprintf(`
+	var sdkYaml = `
 name: consumer
 base: ubuntu@22.04
 plugs:
     plug:
         interface: content
         target: /home/workshop
-        source: %s
-`, oldSource)
+`
 	s.launchWorkshopWithSDKs(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
 }
 
@@ -426,8 +436,20 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	_, err := os.Create(filepath.Join(oldSource, "tempfile"))
 	c.Check(err, check.IsNil)
 
-	s.launchRemountWorkshop(c, oldSource)
+	s.launchRemountWorkshop(c)
 	change := s.newRemountChange(newSource)
+
+	var setup sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
 
 	// Execute
 	s.o.Settle(5 * time.Second)
@@ -446,8 +468,8 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("remount-source", &remountSource), check.IsNil)
-	c.Assert(remountSource, check.Equals, remountSource)
+	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
 	// 2 calls for the autoconnect, one call for the remount
@@ -460,8 +482,19 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestDoesNotExist(c *check.C) 
 	// Setup
 	oldSource := c.MkDir()
 	newSource := filepath.Join(c.MkDir(), "new")
-	s.launchRemountWorkshop(c, oldSource)
+	s.launchRemountWorkshop(c)
 	change := s.newRemountChange(newSource)
+
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		s.setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
 
 	// Execute
 	s.o.Settle(5 * time.Second)
@@ -480,8 +513,8 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestDoesNotExist(c *check.C) 
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("remount-source", &remountSource), check.IsNil)
-	c.Assert(remountSource, check.Equals, remountSource)
+	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
 	// 2 calls for the autoconnect, one call for the remount
@@ -496,8 +529,20 @@ func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
 	newSource := c.MkDir()
 	_, err := os.Create(filepath.Join(newSource, "tempfile"))
 	c.Check(err, check.IsNil)
-	s.launchRemountWorkshop(c, oldSource)
+	s.launchRemountWorkshop(c)
 	change := s.newRemountChange(newSource)
+
+	var setup sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
 
 	// Execute
 	s.o.Settle(5 * time.Second)
@@ -513,9 +558,8 @@ func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
 	c.Assert(ref, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
 
-	connection, err := repo.Connection(ref[0])
+	_, err = repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(connection.Plug.Attr("remount-source", string("")), testutil.ErrorIs, sdk.AttributeNotFoundError{})
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)
@@ -527,10 +571,17 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	// Setup
 	oldSource := c.MkDir()
 	newSource := c.MkDir()
-	s.launchRemountWorkshop(c, oldSource)
+	s.launchRemountWorkshop(c)
 	change := s.newRemountChange(newSource)
 
+	var setup sync.Once
 	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
 		// Emulate the case when remount could not update the LXD profile for
 		// the SDK (the first two calls come from the auto-connect task)
 		if len(s.secBackend.SetupCalls) == 3 {
@@ -554,9 +605,8 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(ref, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
 
-	connection, err := repo.Connection(ref[0])
+	_, err = repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(connection.Plug.Attr("remount-source", string("")), testutil.ErrorIs, sdk.AttributeNotFoundError{})
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
 	c.Assert(osutil.FileExists(newSource), check.Equals, false)

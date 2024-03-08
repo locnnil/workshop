@@ -84,5 +84,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 
 	change.AddAll(taskset)
 
+	ensureStateSoon(st, 0)
+
 	return AsyncResponse(nil, change.ID())
 }

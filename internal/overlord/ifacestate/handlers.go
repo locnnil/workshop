@@ -272,39 +272,37 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 }
 
 func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, _, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	defer cancel()
+
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
 	var plug interfaces.PlugRef
-	if err := task.Get("remount-plug", &plug); err != nil {
+	if err := task.Get("plug", &plug); err != nil {
 		return err
 	}
 
 	var source string
-	if err := task.Get("remount-source", &source); err != nil {
+	if err := task.Get("source", &source); err != nil {
 		return err
 	}
 
-	return m.remount(&plug, source)
+	return m.remount(ctx, &plug, source)
 }
 
-func (m *InterfaceManager) remount(plug *interfaces.PlugRef, source string) error {
+func (m *InterfaceManager) remount(ctx context.Context, plug *interfaces.PlugRef, source string) error {
 	revert := revert.New()
 	defer revert.Fail()
 
 	conns, err := getConns(m.state)
 	if err != nil {
-		return err
-	}
-
-	plugInfo := m.repo.Plug(plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
-	if plugInfo == nil {
-		return fmt.Errorf("plug %q does not exist", plug.String())
-	}
-
-	var oldSource string
-	if err := plugInfo.Attr("source", &oldSource); err != nil {
 		return err
 	}
 
@@ -315,20 +313,29 @@ func (m *InterfaceManager) remount(plug *interfaces.PlugRef, source string) erro
 	if len(plugConns) != 1 {
 		return fmt.Errorf("plug %q must have exactly one connection to be remounted", plug.String())
 	}
-	connection := plugConns[0]
-
-	slotInfo := m.repo.Slot(connection.SlotRef.ProjectId, connection.SlotRef.Workshop, connection.SlotRef.Sdk, connection.SlotRef.Name)
-	if slotInfo == nil {
-		return fmt.Errorf("slot %q does not exist", connection.SlotRef.String())
+	connRef := plugConns[0]
+	// get the connected plug-slot pair to get its existing attributes (source)
+	connection, err := m.repo.Connection(connRef)
+	if err != nil {
+		return err
 	}
 
-	conn, err := m.repo.Connect(connection, plugInfo.Attrs, map[string]interface{}{"remount-source": source}, slotInfo.Attrs, nil, nil)
+	var oldSource string
+	if err := connection.Plug.Attr("source", &oldSource); err != nil {
+		return err
+	}
+
+	if err := connection.Plug.SetAttr("source", source); err != nil {
+		return err
+	}
+	newConnection, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil)
 	if err != nil {
 		return err
 	}
 
 	revert.Add(func() {
-		if _, err := m.repo.Connect(connection, plugInfo.Attrs, nil, slotInfo.Attrs, nil, nil); err != nil {
+		_ = connection.Plug.SetAttr("source", oldSource)
+		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
 			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.String())
 		}
 	})
@@ -349,17 +356,17 @@ func (m *InterfaceManager) remount(plug *interfaces.PlugRef, source string) erro
 	})
 
 	for _, backend := range m.repo.Backends() {
-		if err := backend.Setup(context.Background(), plugInfo.Sdk, m.repo); err != nil {
+		if err := backend.Setup(ctx, connection.Plug.Sdk(), m.repo); err != nil {
 			return err
 		}
 	}
 
-	conns[connection.ID()] = &schema.ConnState{
-		Interface:        conn.Interface(),
-		StaticPlugAttrs:  conn.Plug.StaticAttrs(),
-		DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
-		StaticSlotAttrs:  conn.Slot.StaticAttrs(),
-		DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
+	conns[connRef.ID()] = &schema.ConnState{
+		Interface:        newConnection.Interface(),
+		StaticPlugAttrs:  newConnection.Plug.StaticAttrs(),
+		DynamicPlugAttrs: newConnection.Plug.DynamicAttrs(),
+		StaticSlotAttrs:  newConnection.Slot.StaticAttrs(),
+		DynamicSlotAttrs: newConnection.Slot.DynamicAttrs(),
 		Auto:             true,
 	}
 

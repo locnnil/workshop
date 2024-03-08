@@ -1,6 +1,10 @@
 package client
 
-import "time"
+import (
+	"bytes"
+	"encoding/json"
+	"time"
+)
 
 type HealthCheck struct {
 	Timestamp time.Time `json:"timestamp"`
@@ -29,6 +33,19 @@ type ListOptions struct {
 	ProjectId string
 }
 
+type PlugRef struct {
+	ProjectId string `json:"project-id"`
+	Workshop  string `json:"workshop"`
+	Sdk       string `json:"sdk"`
+	Name      string `json:"plug"`
+}
+
+type Remount struct {
+	Action string   `json:"action"`
+	Plug   *PlugRef `json:"plug"`
+	Source string   `json:"source"`
+}
+
 func (client *Client) ListWorkshops(opts *ListOptions) ([]*Workshop, error) {
 	var workshops []*Workshop
 	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &workshops)
@@ -45,4 +62,18 @@ func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 		return nil, err
 	}
 	return &workshop, nil
+}
+
+func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {
+	var body bytes.Buffer
+	var remoutReq = Remount{
+		Action: "remount",
+		Plug:   plug,
+		Source: source,
+	}
+	if err := json.NewEncoder(&body).Encode(remoutReq); err != nil {
+		return "", err
+	}
+
+	return client.doAsync("POST", "/v1/projects/"+plug.ProjectId+"/workshops/"+plug.Workshop+"/mounts", nil, nil, &body)
 }

@@ -598,9 +598,11 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 		return nil, err
 	}
 
-	remount := st.NewTask("remount", fmt.Sprintf("Remount %q:%q to %q", plug.Sdk, plug.Name, source))
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount "%s/%s:%s" to %q`, plug.Workshop, plug.Sdk, plug.Name, source))
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
+	remount.Set("plug", plug)
+	remount.Set("source", source)
 
 	return state.NewTaskSet(remount), nil
 }
