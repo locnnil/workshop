@@ -3,23 +3,7 @@
 set -eux
 whoami
 
-# Check prerequisites (snapcraft doesn't appear here deliberately)
 
-sudo snap install lxd
-sudo lxd init --auto
-
-sudo snap start --enable lxd.daemon
-snap services lxd.daemon
-
-
-# Install
-
-cd ~/workshop
-sudo snap install snapcraft --classic  # needed to build from source only
-snapcraft
-
-sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
-sleep 5 # naively wait for the service to start, FIXME
 # Run
 workshop --help
 
