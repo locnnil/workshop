@@ -28,7 +28,7 @@ html_title = ""
 #   -H 'Accept: application/vnd.github.v3.raw' \
 #   https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
 
-copyright = "%s, %s" % (datetime.date.today().year, author)
+copyright = f"{datetime.date.today().year}, {author}"
 
 ## Open Graph configuration - defines what is displayed in the website preview
 # The URL of the documentation output

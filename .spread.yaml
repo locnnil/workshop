@@ -80,9 +80,6 @@ suites:
       cleanup_environment
   tests/documentation/:
     summary: Documentation tests
-    kill-timeout: 30m
-  tests/documentation/how-to/:
-    summary: How-to tests
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment
@@ -91,6 +88,7 @@ suites:
       . "$TESTSLIB"/utils.sh
       stop_sdk_store
       cleanup_environment
+    kill-timeout: 30m
 exclude:
   - .git
   - .workshop.lock
