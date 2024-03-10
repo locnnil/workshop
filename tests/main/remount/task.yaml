@@ -1,0 +1,23 @@
+summary: Check workshop remount scenarios
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  project=$(pwd)
+  workshop_exec launch --project $project ws  
+  
+  echo "Remount: the new source is empty or does not exist"
+  new_source="/home/ubuntu/content-plug-one"
+  workshop_exec remount --project $project ws/test-sdk-content:content-plug-one "$new_source"
+  test -d "$new_source"
+  
+  echo "Remount: the new source is not empty"  
+  workshop_exec remount --project $project ws/test-sdk-content:content-plug-one /home/ubuntu  | MATCH ".*(directory not empty)"
+  
+  echo "Remount: workshop stopped"
+  new_source="/home/ubuntu/content-plug-two"
+  workshop_exec stop --project $project ws
+  workshop_exec remount --project $project ws/test-sdk-content:content-plug-two "$new_source"
+  test -d "$new_source"

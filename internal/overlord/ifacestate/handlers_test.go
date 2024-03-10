@@ -12,6 +12,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -476,6 +477,19 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+1)
 	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Name, check.Equals, "consumer")
 	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Workshop, check.Equals, "ws-consumer")
+
+	// ensure the global conns state was updated correctly
+	conns, err := ifacestate.GetConns(s.state)
+	c.Assert(err, check.IsNil)
+	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
+		Auto:             true,
+		Interface:        "content",
+		Undesired:        false,
+		StaticPlugAttrs:  map[string]interface{}{"target": "/home/workshop"},
+		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		StaticSlotAttrs:  map[string]interface{}{},
+		DynamicSlotAttrs: map[string]interface{}{}})
+	c.Assert(conns, check.HasLen, 1)
 }
 
 func (s *interfaceHandlersSuite) TestRemountSuccessDestDoesNotExist(c *check.C) {
@@ -521,6 +535,19 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestDoesNotExist(c *check.C) 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2+1)
 	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Name, check.Equals, "consumer")
 	c.Assert(s.secBackend.SetupCalls[2].SdkInfo.Workshop, check.Equals, "ws-consumer")
+
+	// ensure the global conns state was updated correctly
+	conns, err := ifacestate.GetConns(s.state)
+	c.Assert(err, check.IsNil)
+	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
+		Auto:             true,
+		Interface:        "content",
+		Undesired:        false,
+		StaticPlugAttrs:  map[string]interface{}{"target": "/home/workshop"},
+		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		StaticSlotAttrs:  map[string]interface{}{},
+		DynamicSlotAttrs: map[string]interface{}{}})
+	c.Assert(conns, check.HasLen, 1)
 }
 
 func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
@@ -558,8 +585,11 @@ func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
 	c.Assert(ref, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
 
-	_, err = repo.Connection(ref[0])
+	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)
@@ -605,8 +635,12 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(ref, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
 
-	_, err = repo.Connection(ref[0])
+	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
 	c.Assert(osutil.FileExists(newSource), check.Equals, false)

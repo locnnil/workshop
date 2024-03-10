@@ -328,6 +328,9 @@ func (m *InterfaceManager) remount(ctx context.Context, plug *interfaces.PlugRef
 	if err := connection.Plug.SetAttr("source", source); err != nil {
 		return err
 	}
+
+	// the connection exists already; this connect is required to update the
+	// plug's source attribute
 	newConnection, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil)
 	if err != nil {
 		return err
