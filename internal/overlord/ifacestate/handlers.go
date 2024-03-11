@@ -106,15 +106,15 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	}
 
 	// At the moment, only searching for auto-connect-able slots
-	var connected = make(map[sdk.Ref]*sdk.Info, 0)
+	var connected = map[sdk.Ref]*sdk.Info{}
+	var connectRefs = []*interfaces.ConnRef{}
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(plug.Sdk.ProjectId, workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
 
-			key := connRef.ID()
-			if _, ok := conns[key]; ok {
+			if _, ok := conns[connRef.ID()]; ok {
 				// Suggested connection already exist (or has
 				// Undesired flag set) so don't clobber it.
 				// NOTE: we don't log anything here as this is
@@ -138,19 +138,12 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 				}
 			}()
 
-			conns[key] = &schema.ConnState{
-				Interface:        conn.Interface(),
-				StaticPlugAttrs:  conn.Plug.StaticAttrs(),
-				DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
-				StaticSlotAttrs:  conn.Slot.StaticAttrs(),
-				DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
-				Auto:             true,
-			}
+			connectRefs = append(connectRefs, connRef)
 		}
 	}
 
-	setConns(st, conns)
-
+	// Onces the new connections are made, reinstate those in the interface
+	// backend (e.g. regenerate a LXD profile)
 	affectedSet := make(map[sdk.Ref]*sdk.Info, len(connected)+len(disconnected))
 
 	for ref, s := range connected {
@@ -168,6 +161,26 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 			}
 		}
 	}
+
+	// setConns must be called after all the backend calls were made as those
+	// can add/set dynamic attributes
+	for _, ref := range connectRefs {
+		conn, err := m.repo.Connection(ref)
+		if err != nil {
+			return err
+		}
+		conns[ref.ID()] = &schema.ConnState{
+			Interface:        conn.Interface(),
+			StaticPlugAttrs:  conn.Plug.StaticAttrs(),
+			DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
+			StaticSlotAttrs:  conn.Slot.StaticAttrs(),
+			DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
+			Auto:             true,
+		}
+	}
+
+	setConns(st, conns)
+
 	return nil
 }
 

@@ -123,7 +123,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
 	}
 
-	if c.Abort && err == nil {
+	if c.Abort {
 		fmt.Fprintf(Stdout, "%q refresh aborted\n", av[0])
 		return nil
 	}

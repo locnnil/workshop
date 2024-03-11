@@ -70,10 +70,6 @@ func validatePath(path string) error {
 	return nil
 }
 
-func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
-	return nil
-}
-
 func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	target, ok := plug.Attrs["target"].(string)
 	if !ok || len(target) == 0 {

@@ -105,6 +105,16 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	// Launch another workshop with a candidate plug
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
 
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		connections, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug")
+		c.Assert(err, check.IsNil)
+		connection, err := repo.Connection(connections[0])
+		c.Assert(err, check.IsNil)
+		c.Assert(connection.Plug.SetAttr("test-dynamic-attr", "new-dynamic-value"), check.IsNil)
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
 	// Execute
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
@@ -135,9 +145,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, map[string]interface{}{
 		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
-			"interface":   "mock-network",
-			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "one"},
+			"interface":    "mock-network",
+			"auto":         true,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"},
 		},
 	})
 
