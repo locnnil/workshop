@@ -1,7 +1,11 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
+	"os/user"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/canonical/workshop/client"
@@ -33,6 +37,24 @@ Notes:
 	}
 
 	return cmd
+}
+
+// The default paths created by workshop are not human friendly. Thus, the
+// client checks if that path is a lengthy default and substitutes its common
+// prefix with .../. Hence something like:
+//
+//	/home/dmitry/.local/share/workshop/project/17942561/content/albert_go_mod-cache.sdk
+//
+// becomes:
+//
+//	.../17942561/content/albert_go_mod-cache.sdk
+func shortenDefaulPath(source string) string {
+	user, _ := user.Current()
+	defaultPathPrefix := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project")
+	if after, ok := strings.CutPrefix(source, defaultPathPrefix); ok {
+		return "..." + after
+	}
+	return source
 }
 
 func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
@@ -96,9 +118,10 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 			if len(sdk.Mounts) > 0 {
 				fmt.Fprintf(w, "    mounts:\n")
+				slices.SortFunc(sdk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 				for _, mount := range sdk.Mounts {
 					fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-					fmt.Fprintf(w, "        host:\t%s\n", mount.Source)
+					fmt.Fprintf(w, "        host:\t%s\n", shortenDefaulPath(mount.Source))
 					fmt.Fprintf(w, "        workshop:\t%s\n", mount.Target)
 				}
 			}
