@@ -84,14 +84,23 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	if len(workshop.Content) > 0 {
 		fmt.Fprintf(w, "content:\n")
 		for _, sdk := range workshop.Content {
-			fmt.Fprintf(w, "\t%s:\n", sdk.Name)
+			fmt.Fprintf(w, "  %s:\n", sdk.Name)
 			installTime := sdk.InstallTime.Format("2006-01-02")
 			if sdk.InstallTime.IsZero() {
 				installTime = ""
 			}
-			fmt.Fprintf(w, "\t\tchannel:\t%s\t%s\t%s\n", sdk.Channel, installTime, sdk.Revision)
+			fmt.Fprintf(w, "    channel:\t%s\t%s\t%s\n", sdk.Channel, installTime, sdk.Revision)
 			if sdk.Health != nil {
-				fmt.Fprintf(w, "\t\tmessage:\t%s\n", sdk.Health.Message)
+				fmt.Fprintf(w, "    message:\t%s\n", sdk.Health.Message)
+			}
+
+			if len(sdk.Mounts) > 0 {
+				fmt.Fprintf(w, "    mounts:\n")
+				for _, mount := range sdk.Mounts {
+					fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
+					fmt.Fprintf(w, "        host:\t%s\n", mount.Source)
+					fmt.Fprintf(w, "        workshop:\t%s\n", mount.Target)
+				}
 			}
 		}
 	}

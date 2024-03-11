@@ -12,12 +12,19 @@ type HealthCheck struct {
 	Code      string    `json:"code,omitempty"`
 }
 
+type Mount struct {
+	Plug   PlugRef `json:"plug"`
+	Source string  `json:"source"`
+	Target string  `json:"target"`
+}
+
 type Sdk struct {
 	Name        string       `json:"name"`
 	Channel     string       `json:"channel"`
 	Revision    string       `json:"revision"`
 	InstallTime time.Time    `json:"install-time"`
 	Health      *HealthCheck `json:"health-check,omitempty"`
+	Mounts      []*Mount     `json:"mounts,omitempty"`
 }
 
 type Workshop struct {

@@ -10,9 +10,10 @@ import (
 )
 
 func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
-	"notes":["missing-project"],
-	"content":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z", "health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
+	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":["missing-project"],
+	"content":[
+		{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z", 
+		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
 	}]}`
 	prj, err := cs.cli.ListWorkshops(&client.ListOptions{ProjectId: "42ws42ws"})
 	c.Assert(err, check.IsNil)
@@ -34,6 +35,42 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 						Message:   "hello from health-check",
 						Code:      "check-waiting",
 					},
+				},
+			},
+		},
+	})
+	c.Check(cs.req.Method, check.Equals, "GET")
+}
+func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
+	cs.rsp = `{"type": "sync", "result": {"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
+	"content":[
+		{"name":"go",
+		"channel":"latest/stable",
+		"revision":"453",
+		"install-time":"2023-04-25T01:02:03Z", 
+		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"},
+		"mounts":[{"source":"/home/user/src","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}}]
+	}]}}`
+	prj, err := cs.cli.Workshop("42ws42ws", "workshop")
+	c.Assert(err, check.IsNil)
+	c.Assert(prj, check.DeepEquals, &client.Workshop{
+		ProjectId: "42ws42ws",
+		Name:      "workshop",
+		Base:      "ubuntu@20.04",
+		Status:    "Ready",
+		Content: []*client.Sdk{
+			{
+				Name:        "go",
+				Channel:     "latest/stable",
+				Revision:    "453",
+				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				Health: &client.HealthCheck{
+					Timestamp: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+					Message:   "hello from health-check",
+					Code:      "check-waiting",
+				},
+				Mounts: []*client.Mount{
+					{Source: "/home/user/src", Target: "/home/workshop/target", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name"}},
 				},
 			},
 		},

@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -45,5 +46,13 @@ func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshopba
 	workshopHealth = f
 	return func() {
 		workshopHealth = old
+	}
+}
+
+func FakeSdkMounts(f func(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
+	old := sdkMounts
+	sdkMounts = f
+	return func() {
+		sdkMounts = old
 	}
 }
