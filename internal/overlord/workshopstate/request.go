@@ -229,14 +229,14 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
+func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
 	project *workshopbackend.Project) ([]*state.TaskSet, error) {
-	taskset := make([]*state.TaskSet, 0, len(w))
+	taskset := make([]*state.TaskSet, 0, len(files))
 
-	for i, w := range w {
-		tasks, err := refresh(st, w, content[i], project)
+	for i, file := range files {
+		tasks, err := refresh(st, file, content[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", w, err)
+			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", file, err)
 		}
 		taskset = append(taskset, tasks)
 	}

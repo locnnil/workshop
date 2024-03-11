@@ -69,6 +69,10 @@ type Ref struct {
 	Sdk       string
 }
 
+func (r *Ref) ID() string {
+	return fmt.Sprintf("%s/%s:%s", r.ProjectId, r.Workshop, r.Sdk)
+}
+
 var SanitizePlugsSlots = func(snapInfo *Info) {
 	panic("SanitizePlugsSlots function not set")
 }

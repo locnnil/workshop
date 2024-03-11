@@ -1,5 +1,8 @@
 summary: |
   Check workshop info output
+  
+prepare: |
+  apt install expect -y --no-install-recommends
 
 restore: |
   . "$TESTSLIB"/utils.sh

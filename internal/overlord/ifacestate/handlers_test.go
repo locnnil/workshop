@@ -210,7 +210,6 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 	t1 := s.state.NewTask("auto-connect", "...")
 	t1.Set("sdk", "consumer")
 	t2 := s.state.NewTask("error-trigger", "...")
-
 	setWorkshopProject("ws", s.prj, t1)
 	setWorkshopProject("ws", s.prj, t2)
 	chg.Set("user", "testuser")
@@ -372,7 +371,6 @@ slots:
   slot:
     interface: content
 `
-
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: sdkYaml})
 
 	t1 := s.state.NewTask("auto-connect", "test")
@@ -390,6 +388,58 @@ slots:
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
+}
+
+func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a candidate SDK/slot
+	repo := s.mgr.Repository()
+	s.launchWorkshopWithSDKs(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer", psetup)), check.IsNil)
+
+	// Launch another workshop with a candidate plug
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
+
+	// Execute
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t := s.state.NewTask("disconnect", "...")
+	// see doAutoConnect and doDisconnect handlers for details
+	t.Set("plugs-to-remount", map[string]map[string]interface{}{
+		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": {"source": "/old/source"},
+	})
+	t.Set("sdk", "consumer")
+	t.SetStatus(state.DoneStatus)
+	t1 := s.state.NewTask("auto-connect", "...")
+	t1.Set("sdk", "consumer")
+	setWorkshopProject("ws", s.prj, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t)
+	chg.AddTask(t1)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.IsNil)
+
+	// Validate
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	var conns map[string]interface{}
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, map[string]interface{}{
+		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
+			"interface":    "mock-network",
+			"auto":         true,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"source": "/old/source"},
+		},
+	})
+
+	// ensure that backend profiles were set for both SDKs
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
 func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Change {
