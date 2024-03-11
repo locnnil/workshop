@@ -123,7 +123,7 @@ func (m *InterfaceManager) findContentPlugsAttrs(projectId, workshop, sdkname st
 	return candidates
 }
 
-func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Context, sdkInfo *sdk.Info, plugsToRemount map[string]map[string]interface{}) (err error) {
+func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Context, sdkInfo *sdk.Info, plugsToRemount map[string]map[string]interface{}) error {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
@@ -170,6 +170,8 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	// At the moment, only searching for auto-connect-able slots
 	var connected = map[sdk.Ref]*sdk.Info{}
 	var connectRefs = []*interfaces.ConnRef{}
+	var revertConnections revert.Reverter
+	defer revertConnections.Fail()
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 
@@ -204,14 +206,12 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 			}
 			connected[conn.Plug.Sdk().Ref()] = conn.Plug.Sdk()
 			connected[conn.Slot.Sdk().Ref()] = conn.Slot.Sdk()
-			defer func() {
-				if err != nil {
-					if err := m.repo.Disconnect(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, slot.Sdk.ProjectId,
-						slot.Sdk.Workshop, slot.Sdk.Name, slot.Name); err != nil {
-						logger.Noticef("cannot disconnect failed connection: %v", err)
-					}
+			revertConnections.Add(func() {
+				if err := m.repo.Disconnect(conn.Plug.Ref().ProjectId, conn.Plug.Ref().Workshop, conn.Plug.Ref().Sdk, conn.Plug.Name(),
+					conn.Slot.Ref().ProjectId, conn.Slot.Ref().Workshop, conn.Slot.Ref().Sdk, conn.Slot.Name()); err != nil {
+					logger.Noticef("cannot disconnect failed connection: %v", err)
 				}
-			}()
+			})
 
 			connectRefs = append(connectRefs, connRef)
 		}
@@ -229,11 +229,19 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 		affectedSet[s.Ref()] = s
 	}
 
+	var revertBackendSetup revert.Reverter
+	defer revertBackendSetup.Fail()
 	for _, s := range affectedSet {
 		for _, backend := range m.repo.Backends() {
 			if err = backend.Setup(ctx, s, m.repo); err != nil {
 				return err
 			}
+			// fix for the Go loop variable capture (<1.22)
+			be := backend
+			workshop, sdkName := s.Workshop, s.Name
+			revertBackendSetup.Add(func() {
+				_ = be.Remove(ctx, workshop, sdkName)
+			})
 		}
 	}
 
@@ -255,6 +263,8 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	}
 
 	setConns(st, conns)
+	revertConnections.Success()
+	revertBackendSetup.Success()
 
 	return nil
 }
