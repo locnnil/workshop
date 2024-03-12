@@ -24,7 +24,7 @@ execute: |
   workshop_exec --project "$project" info ws | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-one"]' | MATCH "^host:.*$new_source"
   
   echo "Remount: the new source is not empty"  
-  workshop_exec remount --project "$project" ws/test-sdk-content:content-plug-one /home/ubuntu  | MATCH ".*(directory not empty)"
+  workshop_exec remount --project "$project" ws/test-sdk-content:content-plug-one /home/ubuntu  | MATCH ".*(new source is not empty; workshop must be stopped to remount safely)"
   
   echo "Remount: workshop stopped"
   new_source="/home/ubuntu/content-plug-two"
@@ -34,6 +34,18 @@ execute: |
   workshop_exec start --project "$project" ws
   workshop_exec --project "$project" info ws | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-two"]' | MATCH "^host:.*$new_source"
   test -d "$new_source"
+  
+  echo "Remount: new source is on a different filesystem"
+  otherfs_path=/home/ubuntu/other-fs/new
+  otherfs=$(mktemp -d)
+  mkdir -p /home/ubuntu/other-fs
+  mount --bind "$otherfs" /home/ubuntu/other-fs
+  mkdir "$otherfs_path"
+  workshop_exec remount --project "$project" ws/test-sdk-content:content-plug-two "$otherfs_path" | MATCH ".*(current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely)"
+  workshop_exec stop --project "$project" ws
+  workshop_exec remount --project "$project" ws/test-sdk-content:content-plug-two "$otherfs_path"
+  workshop_exec --project "$project" info ws | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-two"]' | MATCH "^host:.*$otherfs_path"
+  
   
   echo "Remount: workshop remove does not delete remounted dirs"
   workshop_exec remove --project "$project" ws
