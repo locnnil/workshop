@@ -70,10 +70,6 @@ func validatePath(path string) error {
 	return nil
 }
 
-func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
-	return nil
-}
-
 func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	target, ok := plug.Attrs["target"].(string)
 	if !ok || len(target) == 0 {
@@ -95,11 +91,22 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 	return ""
 }
 
-func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) string {
+func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) (string, error) {
+	var source string
+	// see if the plug's mount has been remounted to a new location
+	if err := plug.Attr("source", &source); err == nil {
+		return source, nil
+	}
+
 	// <workshop>_<sdk>_plug.sdk
 	dir := strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_") + ".sdk"
-	source := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
-	return source
+	source = filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
+
+	if err := plug.SetAttr("source", source); err != nil {
+		return "", err
+	}
+
+	return source, nil
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -117,7 +124,10 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	if err != nil {
 		return err
 	}
-	source := iface.source(user, plug)
+	source, err := iface.source(user, plug)
+	if err != nil {
+		return err
+	}
 
 	uid, gid, err := osutil.UidGid(user)
 	if err != nil {

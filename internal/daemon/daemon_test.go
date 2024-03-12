@@ -47,14 +47,13 @@ import (
 // Hook up check.v1 into the "go test" runner
 
 type daemonSuite struct {
-	workshopDir     string
-	socketPath      string
-	httpAddress     string
-	statePath       string
-	authorized      bool
-	err             error
-	notified        []string
-	restoreBackends func()
+	workshopDir string
+	socketPath  string
+	httpAddress string
+	statePath   string
+	authorized  bool
+	err         error
+	notified    []string
 }
 
 var _ = check.Suite(&daemonSuite{})

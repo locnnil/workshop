@@ -67,6 +67,7 @@ func main() {
 	rootCmd.AddCommand((&CmdExec{}).Command())
 	rootCmd.AddCommand((&CmdShellAlias{}).Command())
 	rootCmd.AddCommand((&CmdRemove{}).Command())
+	rootCmd.AddCommand((&CmdRemount{}).Command())
 
 	rootCmd.SilenceErrors = true
 

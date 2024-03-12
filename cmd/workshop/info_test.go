@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os/user"
 
 	"gopkg.in/check.v1"
 )
@@ -53,8 +54,8 @@ project:  %s
 status:   error
 notes:    missing-file
 content:
-    go:
-        channel:  latest/edge  2017-03-22  1
+  go:
+    channel:  latest/edge  2017-03-22  1
 `, m.prjDir))
 }
 
@@ -90,8 +91,59 @@ project:  %s
 status:   pending
 notes:    workshop-note,try-later
 content:
-    go:
-        channel:  latest/edge  2017-03-22  1
-        message:  Waiting for all required modules to be installed
+  go:
+    channel:  latest/edge  2017-03-22  1
+    message:  Waiting for all required modules to be installed
+`, m.prjDir))
+}
+
+var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
+"content":[
+	{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z",
+	"mounts":[{"source":"/home/user/src","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
+	{"source":"%s/.local/share/workshop/project/17942561/content/ws_go_mod-cache.sdk","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
+}]}}`
+
+func (m *WorkshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
+	cmd := &CmdInfo{}
+	workshop := "ws"
+	n := 0
+	user, err := user.Current()
+	c.Assert(err, check.IsNil)
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithMounts, user.HomeDir))
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err = cmd.Run(cmd.Command(), []string{workshop})
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
+base:     ubuntu@22.04
+project:  %s
+status:   ready
+notes:    -
+content:
+  go:
+    channel:  latest/edge  2017-03-22  1
+    mounts:
+      plug-default:
+        host:      .../17942561/content/ws_go_mod-cache.sdk
+        workshop:  /home/workshop/target
+      plug-name:
+        host:      /home/user/src
+        workshop:  /home/workshop/target
 `, m.prjDir))
 }

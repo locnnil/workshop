@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
@@ -228,14 +230,14 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, w []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
+func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
 	project *workshopbackend.Project) ([]*state.TaskSet, error) {
-	taskset := make([]*state.TaskSet, 0, len(w))
+	taskset := make([]*state.TaskSet, 0, len(files))
 
-	for i, w := range w {
-		tasks, err := refresh(st, w, content[i], project)
+	for i, file := range files {
+		tasks, err := refresh(st, file, content[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", w, err)
+			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", file, err)
 		}
 		taskset = append(taskset, tasks)
 	}
@@ -575,9 +577,39 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 	removeSet.AddAll(disconnectSet)
 	removeSet.AddTask(remove)
 
-	for _, i := range removeSet.Tasks() {
-		i.Set("workshop", workshop.Name)
-		i.Set("project", project)
+	for _, task := range removeSet.Tasks() {
+		task.Set("workshop", workshop.Name)
+		task.Set("project", project)
 	}
 	return removeSet, nil
+}
+
+func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug interfaces.PlugRef, source string, projectId string) (*state.TaskSet, error) {
+	if !filepath.IsAbs(source) {
+		return nil, fmt.Errorf("cannot remount: the `source` path must be absolute")
+	}
+
+	source = filepath.Clean(source)
+
+	err := w.CheckStatus(
+		ctx,
+		[]string{plug.Workshop},
+		projectId,
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
+	if err != nil {
+		return nil, fmt.Errorf("cannot remount: %w", err)
+	}
+
+	project, err := w.loadProject(ctx, projectId)
+	if err != nil {
+		return nil, err
+	}
+
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount "%s/%s:%s" to %q`, plug.Workshop, plug.Sdk, plug.Name, source))
+	remount.Set("workshop", plug.Workshop)
+	remount.Set("project", project)
+	remount.Set("plug", plug)
+	remount.Set("source", source)
+
+	return state.NewTaskSet(remount), nil
 }

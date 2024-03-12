@@ -38,7 +38,6 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/standby"
@@ -51,7 +50,6 @@ var (
 	ErrRestartSocket = fmt.Errorf("daemon stop requested to wait for socket activation")
 
 	systemdSdNotify = systemd.SdNotify
-	sysGetuid       = sys.Getuid
 	LookupUserId    = user.LookupId
 )
 

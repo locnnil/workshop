@@ -1,9 +1,8 @@
 summary: |
-  Test workshop info output
+  Check workshop info output
   
 prepare: |
-  apt install expect jq -y --no-install-recommends
-  snap install yq
+  apt install expect -y --no-install-recommends
 
 restore: |
   . "$TESTSLIB"/utils.sh

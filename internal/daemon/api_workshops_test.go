@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -82,19 +83,27 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
-	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
+	restoreTime := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
 	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "java", Channel: "latest/stable", Revision: 324})
-	restore()
+	restoreTime()
 
 	// Execute
-	restore = FakeWorkshopHealth(func(mgr *workshopstate.WorkshopManager, w *workshopbackend.Workshop) healthstate.HealthState {
+	restoreHealth := FakeWorkshopHealth(func(mgr *workshopstate.WorkshopManager, w *workshopbackend.Workshop) healthstate.HealthState {
 		return healthstate.HealthState{Status: healthstate.ReadyStatus, SdkHealth: map[string]healthstate.HealthCheck{
 			"go": {Sdk: "go", Message: "test health check message", Code: "check-waiting", CheckResult: healthstate.CheckWaiting},
 		}}
 	})
+	restoreMounts := FakeSdkMounts(func(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
+		return []*Mount{
+			{Source: "/home/user/" + sdk, Target: "/home/workshop/" + sdk, Plug: interfaces.PlugRef{ProjectId: projectId, Workshop: workshop, Sdk: sdk, Name: "content-plug"}},
+		}
+	})
+
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
-	restore()
+
+	restoreHealth()
+	restoreMounts()
 
 	// Verify
 	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
@@ -118,12 +127,16 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 					Message: "test health check message",
 					Code:    "check-waiting",
 				},
+				Mounts: []*Mount{
+					{Source: "/home/user/go", Target: "/home/workshop/go", Plug: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-test", Sdk: "go", Name: "content-plug"}}},
 			},
 			{
 				Name:        "java",
 				Channel:     "latest/stable",
 				Revision:    "324",
 				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				Mounts: []*Mount{
+					{Source: "/home/user/java", Target: "/home/workshop/java", Plug: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-test", Sdk: "java", Name: "content-plug"}}},
 			},
 		},
 	})

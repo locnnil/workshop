@@ -2,17 +2,15 @@ package workshopbackend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/exp/slices"
 
+	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/revert"
 )
 
 type SdkProfile struct {
@@ -37,6 +35,14 @@ func (s SdkProfile) AddDevice(dev Device) error {
 	}
 	s.devices[dev.Name()] = dev
 	return nil
+}
+
+func (p SdkProfile) lxdDevices() map[string]map[string]string {
+	lxdDevs := make(map[string]map[string]string, len(p.devices))
+	for _, d := range p.devices {
+		lxdDevs[d.Name()] = d.properties
+	}
+	return lxdDevs
 }
 
 type DeviceType int
@@ -87,14 +93,6 @@ func (w Device) lxdProperties() map[string]string {
 	return w.properties
 }
 
-func (p SdkProfile) lxdDevices() map[string]map[string]string {
-	lxdDevs := make(map[string]map[string]string, len(p.devices))
-	for _, d := range p.devices {
-		lxdDevs[d.Name()] = d.properties
-	}
-	return lxdDevs
-}
-
 func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -119,14 +117,6 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 				return fmt.Errorf("cannot create a workshop mount with target %q: %v", target, err)
 			} else if !info.IsDir() {
 				return fmt.Errorf("cannot create a workshop mount with target %q: the target is not a directory", target)
-			}
-			// We have to workaround the LXD issue here as it would remove
-			// the target directory on unmount if it was empty. It should
-			// not touch the directories that it has not created.
-			// https://github.com/canonical/lxd/issues/12648
-			_, err := fs.Create(filepath.Join(target, fmt.Sprintf(".workshop.%s.%s", projectId, workshop)))
-			if err != nil && !errors.Is(err, os.ErrExist) {
-				logger.Noticef(`Cannot not prevent "target" in %q workshop from removing: %v`, workshop, err)
 			}
 		}
 	}
@@ -172,6 +162,43 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 	return nil
 }
 
+func (s *LxdBackend) lxdEmptyUnmountWorkaround(conn lxd.InstanceServer, ctx context.Context, projectId, workshop string, profile string) (*revert.Reverter, error) {
+	// We have to workaround the LXD issue here as it would remove
+	// the target directory on unmount if it was empty. It should
+	// not touch the directories that it has not created.
+	// https://github.com/canonical/lxd/issues/12648
+	fs, err := s.WorkshopFs(ctx, workshop)
+	if err != nil {
+		return nil, err
+	}
+
+	lxdProfile, _, err := conn.GetProfile(profileName(projectId, workshop, profile))
+	if err != nil {
+		return nil, err
+	}
+
+	var revertWorkaround revert.Reverter
+	revertWorkaround.Add(func() { fs.Close() })
+	for _, mount := range lxdProfile.Devices {
+		// only for the bind mounts
+		if mount["type"] == "disk" && mount["pool"] == "" {
+			target := mount["path"]
+			info, err := fs.Stat(target)
+			if err != nil {
+				continue
+			}
+			revertWorkaround.Add(func() {
+				// Making a new directory unconditionally can be done, because
+				// the target must have existed for this profile to be created
+				// in the first place.
+				_ = fs.Mkdir(target, info.Mode())
+			})
+		}
+	}
+
+	return &revertWorkaround, nil
+}
+
 func (s *LxdBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -187,6 +214,13 @@ func (s *LxdBackend) RemoveProfile(ctx context.Context, workshop string, profile
 	if err != nil {
 		return err
 	}
+
+	// TEMPORARY: Workaround LXD bug with empty dir unmounts
+	revertWorkaround, err := s.lxdEmptyUnmountWorkaround(conn, ctx, projectId, workshop, profile)
+	if err != nil {
+		return err
+	}
+	defer revertWorkaround.Fail()
 
 	// 1. Untie the profile from the workshop
 	lxdname := profileName(projectId, workshop, profile)

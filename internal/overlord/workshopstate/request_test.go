@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -745,4 +746,58 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 	}
 	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "remove-workshop")
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
+}
+
+func (s *requestSuite) TestRemountSuccess(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
+	content := []sdk.Setup{
+		{Name: "sdk-1", Channel: "latest/stable"},
+	}
+	source := c.MkDir()
+
+	s.launchWorkshopWithSDKs(c, "ws-1", content)
+
+	ts, err := s.mgr.Remount(s.ctx, s.state, plug, source, s.project.ProjectId)
+	c.Assert(err, check.IsNil)
+	c.Assert(ts.Tasks(), check.HasLen, 1)
+
+	var workshop string
+	var project workshopbackend.Project
+	task := ts.Tasks()[0]
+	c.Assert(task.Get("workshop", &workshop), check.IsNil)
+	c.Assert(task.Get("project", &project), check.IsNil)
+	c.Assert(workshop, check.Equals, "ws-1")
+	c.Assert(project, check.DeepEquals, *s.project)
+
+	var plugRef interfaces.PlugRef
+	var src string
+	c.Assert(task.Get("plug", &plugRef), check.IsNil)
+	c.Assert(plugRef, check.DeepEquals, plug)
+	c.Assert(task.Get("source", &src), check.IsNil)
+	c.Assert(src, check.Equals, source)
+}
+
+func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
+	content := []sdk.Setup{
+		{Name: "sdk-1", Channel: "latest/stable"},
+	}
+
+	s.launchWorkshopWithSDKs(c, "ws-1", content)
+
+	// pretend there is another change running that would conflict with this one.
+	change := s.state.NewChange("refresh", "test")
+	task := s.state.NewTask("task", "test")
+	task.Set("workshop", "ws-1")
+	change.AddTask(task)
+	change.Set("project-id", s.project.ProjectId)
+
+	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir(), s.project.ProjectId)
+	c.Assert(err, check.ErrorMatches, `cannot remount: "ws-1" status is "Pending", must be one of: "Ready", "Stopped"`)
 }
