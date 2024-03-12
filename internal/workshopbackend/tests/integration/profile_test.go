@@ -134,7 +134,10 @@ func (f *profileTest) TestSdkProfileBindMountPreventsLxdFromRemovingTarget(c *ch
 	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
 	profile := workshopbackend.NewSdkProfile("sdk")
 	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/opt")
+	deviceNonEmpty := workshopbackend.Mount("sdk-device-2", c.MkDir(), "/home/workshop")
 	err := profile.AddDevice(device)
+	c.Assert(err, check.IsNil)
+	err = profile.AddDevice(deviceNonEmpty)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -148,5 +151,7 @@ func (f *profileTest) TestSdkProfileBindMountPreventsLxdFromRemovingTarget(c *ch
 	c.Assert(err, check.IsNil)
 	defer fs.Close()
 	_, err = fs.Stat("/opt")
+	c.Assert(err, check.IsNil)
+	_, err = fs.Stat("/home/workshop")
 	c.Assert(err, check.IsNil)
 }
