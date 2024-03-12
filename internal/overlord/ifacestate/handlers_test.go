@@ -710,7 +710,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(conns, check.HasLen, 1)
 }
 
-func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
+func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *check.C) {
 	// Setup
 	oldSource := c.MkDir()
 	newSource := c.MkDir()
@@ -737,7 +737,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
 	// Validate
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(directory not empty\\)")
+	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(new source is not empty; workshop must be stopped to remount safely\\)")
 	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
 
 	repo := s.mgr.Repository()
@@ -755,6 +755,58 @@ func (s *interfaceHandlersSuite) TestRemountRenameFails(c *check.C) {
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)
 	// 2 calls for the autoconnect, no calls for the remount
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+}
+
+func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := c.MkDir()
+	_, err := os.Create(filepath.Join(newSource, "tempfile"))
+	c.Check(err, check.IsNil)
+	s.launchRemountWorkshop(c)
+
+	// the remount will be performed if the workshop is not running
+	err = s.wsbackend.StopWorkshop(s.ctx, "ws-consumer", true)
+	c.Check(err, check.IsNil)
+
+	change := s.newRemountChange(newSource)
+
+	var setup sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.IsNil)
+	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(src, check.Equals, newSource)
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
+	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	// 2 calls for the autoconnect, 1 call for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 3)
 }
 
 func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.C) {

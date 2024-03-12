@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -584,6 +585,12 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 }
 
 func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug interfaces.PlugRef, source string, projectId string) (*state.TaskSet, error) {
+	if !filepath.IsAbs(source) {
+		return nil, fmt.Errorf("cannot remount: the `source` path must be absolute")
+	}
+
+	source = filepath.Clean(source)
+
 	err := w.CheckStatus(
 		ctx,
 		[]string{plug.Workshop},

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/canonical/workshop/client"
@@ -54,6 +55,11 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	source, err := filepath.Abs(av[1])
+	if err != nil {
+		return err
+	}
+
 	cli, err := client.New(&ClientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot create client: %v", err)
@@ -68,7 +74,7 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 
 	plugRef.ProjectId = project.Id
 
-	changeId, err := c.client.Remount(plugRef, av[1])
+	changeId, err := c.client.Remount(plugRef, source)
 	if err != nil {
 		return err
 	}
