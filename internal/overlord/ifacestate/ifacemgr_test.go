@@ -108,7 +108,7 @@ func (s *interfaceManagerSuite) TestManagerAddImplicitSlots(c *check.C) {
 		if si.ImplicitOnCore {
 			slots := repo.AllSlots(iface.Name())
 			c.Assert(slots, check.HasLen, 1)
-			c.Assert(slots[0].Sdk.Type, check.Equals, sdk.Core)
+			c.Assert(slots[0].Sdk.Type, check.Equals, sdk.Agent)
 		}
 	}
 }

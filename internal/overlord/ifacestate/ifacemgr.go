@@ -106,7 +106,7 @@ func (m *InterfaceManager) StartUp() error {
 		Workshop:      "core",
 		Name:          "core",
 		Base:          "ubuntu@22.04",
-		Type:          sdk.Core,
+		Type:          sdk.Agent,
 		Plugs:         make(map[string]*sdk.PlugInfo),
 		Slots:         make(map[string]*sdk.SlotInfo),
 		BadInterfaces: make(map[string]string),
@@ -234,7 +234,7 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 }
 
 func (m *InterfaceManager) addImplicitSlots(sdkInfo *sdk.Info) error {
-	if sdkInfo.Type != sdk.Core {
+	if sdkInfo.Type != sdk.Agent {
 		return nil
 	}
 

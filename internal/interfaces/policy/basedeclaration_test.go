@@ -133,12 +133,12 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
 
 func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
 	// test content specially
-	ic := s.installSlotCand(c, "content", sdk.Sdk, ``)
+	ic := s.installSlotCand(c, "content", sdk.Regular, ``)
 	err := ic.Check()
 	c.Assert(err, Not(IsNil))
 	c.Assert(err, ErrorMatches, "installation not allowed by \"content\" slot rule of interface \"content\"")
 
-	ic = s.installSlotCand(c, "content", sdk.Core, ``)
+	ic = s.installSlotCand(c, "content", sdk.Agent, ``)
 	err = ic.Check()
 	c.Assert(err, IsNil)
 }

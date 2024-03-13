@@ -32,8 +32,8 @@ type sdkYaml struct {
 type Type string
 
 const (
-	Sdk  Type = "sdk"
-	Core Type = "core"
+	Regular Type = "regular"
+	Agent   Type = "agent"
 )
 
 func (t Type) String() string {
@@ -83,7 +83,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 	}
 
 	if sdkYaml.Type == "" {
-		sdkYaml.Type = Sdk.String()
+		sdkYaml.Type = Regular.String()
 	}
 
 	sdkInfo := &Info{

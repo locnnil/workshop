@@ -38,7 +38,7 @@ const contentBaseDeclarationSlots = `
   content:
     allow-installation:
       slot-type:
-        - core
+        - agent
     allow-connection: true
     allow-auto-connection: true
 `

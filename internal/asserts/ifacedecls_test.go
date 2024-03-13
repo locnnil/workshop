@@ -21,14 +21,14 @@ type plugSlotRulesSuite struct{}
 func (s *plugSlotRulesSuite) TestCompileSlotRuleInstallationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompileSlotRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"slot-type": []interface{}{"core", "sdk"},
+			"slot-type": []interface{}{"agent", "regular"},
 		},
 	})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rule.AllowInstallation, check.HasLen, 1)
 	cstrs := rule.AllowInstallation[0]
-	c.Check(cstrs.SlotTypes, check.DeepEquals, []string{"core", "sdk"})
+	c.Check(cstrs.SlotTypes, check.DeepEquals, []string{"agent", "regular"})
 }
 
 func checkBoolSlotConnConstraints(c *check.C, subrule string, cstrs []*asserts.SlotConnectionConstraints, always bool) {

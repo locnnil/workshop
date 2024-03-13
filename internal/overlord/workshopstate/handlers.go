@@ -10,6 +10,8 @@ import (
 	"time"
 
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/revert"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -33,6 +35,24 @@ func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) 
 	return m.backend.RemoveWorkshop(ctx, workshop)
 }
 
+func (m *WorkshopManager) installAgentSdk(wfs workshopbackend.WorkshopFs, base string) error {
+	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
+	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
+		return err
+	}
+
+	// /var/lib/workshop/sdk/agent/current/meta
+	file, err := wfs.Create(filepath.Join(agentMetaDir, "sdk.yaml"))
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Write([]byte(sdk.AgentSdkMeta(base))); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -53,9 +73,27 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return fmt.Errorf("cannot get workshop base for task %q: %v", task.ID(), err)
 	}
 
-	/* Launch a workshop with the required base */
-	return m.backend.LaunchWorkshop(ctx, workshop,
-		base)
+	var rev revert.Reverter
+	defer rev.Fail()
+	if err = m.backend.LaunchWorkshop(ctx, workshop, base); err != nil {
+		return err
+	}
+
+	rev.Add(func() {
+		_ = m.backend.RemoveWorkshop(context.Background(), workshop)
+	})
+
+	wfs, err := m.backend.WorkshopFs(ctx, workshop)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	if err = m.installAgentSdk(wfs, base); err != nil {
+		return err
+	}
+	rev.Success()
+	return nil
 }
 
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
