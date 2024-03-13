@@ -1366,7 +1366,7 @@ func makeContentConnectionTestSdks(c *C, projectId, plugContentToken, slotConten
 	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "content", AutoConnectCallback: contentAutoConnect})
 	c.Assert(err, IsNil)
 
-	plugSnap := sdk.MockInfo(c, fmt.Sprintf(`
+	plugSdk := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-plug-sdk
 base: ubuntu@22.04
 plugs:
@@ -1374,7 +1374,7 @@ plugs:
     interface: content
     content: %s
 `, plugContentToken), projectId, "ws-importer")
-	slotSnap := sdk.MockInfo(c, fmt.Sprintf(`
+	slotSdk := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-slot-sdk
 base: ubuntu@22.04
 slots:
@@ -1383,12 +1383,12 @@ slots:
     content: %s
 `, slotContentToken), projectId, "ws-exporter")
 
-	err = repo.AddSdk(plugSnap)
+	err = repo.AddSdk(plugSdk)
 	c.Assert(err, IsNil)
-	err = repo.AddSdk(slotSnap)
+	err = repo.AddSdk(slotSdk)
 	c.Assert(err, IsNil)
 
-	return repo, plugSnap, slotSnap
+	return repo, plugSdk, slotSdk
 }
 
 func (s *RepositorySuite) TestAutoConnectContentInterfaceSimple(c *C) {

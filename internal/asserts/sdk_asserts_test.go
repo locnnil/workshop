@@ -20,13 +20,13 @@ slots:
   interface3:
     deny-installation: true
     allow-auto-connection:
-      plug-type:
+      plug-sdk-type:
         - agent
   interface4:
     allow-connection: true
     deny-connection: false
     allow-installation:
-      slot-type:
+      slot-sdk-type:
         - agent
         - regular
 timestamp: 2016-09-29T19:50:49Z
@@ -106,7 +106,7 @@ revision: 0
 slots:
   network:
     allow-installation:
-      slot-type:
+      slot-sdk-type:
         - agent
 `
 

@@ -87,10 +87,14 @@ func retrieveSdks(st *state.State, file *workshopbackend.WorkshopFile) *state.Ta
 
 func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSet *state.TaskSet) *state.TaskSet {
 	var prevInstall *state.TaskSet
-	var prevSetup, prevAuto *state.Task
+	var prevSetup *state.Task
+
 	install := state.NewTaskSet()
 	setupHook := state.NewTaskSet()
-	autoConnectSet := state.NewTaskSet()
+
+	prevAuto := st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
+	prevAuto.Set("sdk", "agent")
+	autoConnectSet := state.NewTaskSet(prevAuto)
 	for idx, sdk := range file.Sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot

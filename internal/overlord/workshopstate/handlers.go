@@ -42,7 +42,7 @@ func (m *WorkshopManager) installAgentSdk(wfs workshopbackend.WorkshopFs, base s
 	}
 
 	// /var/lib/workshop/sdk/agent/current/meta
-	file, err := wfs.Create(filepath.Join(agentMetaDir, "sdk.yaml"))
+	file, err := wfs.OpenFile(filepath.Join(agentMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
@@ -79,8 +79,11 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
+	// clean up must not be cancelled if the parent was cancelled and the change
+	// is winding down
+	revertCtx := context.WithoutCancel(ctx)
 	rev.Add(func() {
-		_ = m.backend.RemoveWorkshop(context.Background(), workshop)
+		_ = m.backend.RemoveWorkshop(revertCtx, workshop)
 	})
 
 	wfs, err := m.backend.WorkshopFs(ctx, workshop)
