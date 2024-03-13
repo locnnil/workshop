@@ -520,11 +520,11 @@ To define environment variables and visibly separate the command's options:
 Interactive shell
 ~~~~~~~~~~~~~~~~~
 
-You can run an interactive shell as well:
+You can run an interactive shell as well, using :ref:`ref_workshop_shell`:
 
 .. code-block:: console
 
-   $ workshop exec golang -- sudo su workshop -l
+   $ workshop shell golang
    workshop@golang-6b79e889:~$ pwd
 
      /home/workshop

@@ -20,6 +20,7 @@ such as :option:`!--help` or :option:`!-h`:
    workshop-list
    workshop-refresh
    workshop-remove
+   workshop-shell
    workshop-start
    workshop-stop
    workshop-tasks
