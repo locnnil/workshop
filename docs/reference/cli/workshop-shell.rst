@@ -13,10 +13,10 @@ Starts an interactive terminal session for the workshop.
 Synopsis
 --------
 
-The :program:`shell` subcommand runs an interactive terminal session
+The :samp:`shell` subcommand runs an interactive terminal session
 in the specified workshop.
 
-To accept a :program:`shell` command,
+To accept a :samp:`shell` command,
 the workshop must be *Ready* or *Pending*.
 
 

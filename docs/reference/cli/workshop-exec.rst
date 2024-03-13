@@ -13,11 +13,11 @@ Runs a command and waits for it to complete.
 Synopsis
 --------
 
-The :program:`exec` subcommand runs an arbitrary command
+The :samp:`exec` subcommand runs an arbitrary command
 in the specified workshop, waiting for it to complete.
 If a timeout elapses before that, it's terminated.
 
-To accept an :program:`exec` command,
+To accept an :samp:`exec` command,
 the workshop must be *Ready* or *Pending*.
 A command can run in two modes that determine how it handles standard streams:
 
