@@ -19,7 +19,7 @@ Content interface plug
 An essential element here is the content interface plug
 that is declared in the SDK definition.
 
-.. attention::
+.. important::
 
    An SDK definition, usually named :file:`sdkcraft.yaml`,
    is different from a

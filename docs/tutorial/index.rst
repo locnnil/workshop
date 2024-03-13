@@ -26,7 +26,7 @@ Finally, see the
 if you're looking for advanced practical steps.
 
 
-.. attention::
+.. important::
 
    One technical detail before you start:
    currently, |project_markup| supports only :samp:`amd64`.
@@ -568,7 +568,7 @@ including the workshop definition,
 and any other content that was stored outside the workshop,
 e.g. via the :ref:`content interface <exp_content_interface>`.
 
-.. attention::
+.. important::
 
    Don't delete the project directory without removing the workshop first.
 
