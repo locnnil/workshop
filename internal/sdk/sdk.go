@@ -46,8 +46,6 @@ type Info struct {
 	Name      string
 	Base      string
 	Type      Type
-	Channel   string
-	Revision  int64
 
 	Plugs map[string]*PlugInfo
 	Slots map[string]*SlotInfo
@@ -77,7 +75,7 @@ var SanitizePlugsSlots = func(snapInfo *Info) {
 	panic("SanitizePlugsSlots function not set")
 }
 
-func ReadSdkInfo(yamlData []byte, projectId, workshop string, setup Setup) (*Info, error) {
+func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 	var sdkYaml sdkYaml
 	err := yaml.Unmarshal(yamlData, &sdkYaml)
 	if err != nil {
@@ -97,8 +95,6 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string, setup Setup) (*Inf
 		Plugs:         make(map[string]*PlugInfo),
 		Slots:         make(map[string]*SlotInfo),
 		BadInterfaces: make(map[string]string),
-		Revision:      setup.Revision,
-		Channel:       setup.Channel,
 	}
 
 	if err := setPlugsFromSdkYaml(&sdkYaml, sdkInfo); err != nil {
@@ -310,10 +306,10 @@ func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {
 	return func() { SanitizePlugsSlots = old }
 }
 
-func MockInfo(c *check.C, yamlText string, projectId, workshop string, setup Setup) *Info {
+func MockInfo(c *check.C, yamlText string, projectId, workshop string) *Info {
 	restoreSanitize := MockSanitizePlugsSlots(func(sdkInfo *Info) {})
 	defer restoreSanitize()
-	info, err := ReadSdkInfo([]byte(yamlText), projectId, workshop, setup)
+	info, err := ReadSdkInfo([]byte(yamlText), projectId, workshop)
 	c.Assert(err, check.IsNil)
 
 	err = Validate(info)
@@ -321,11 +317,11 @@ func MockInfo(c *check.C, yamlText string, projectId, workshop string, setup Set
 	return info
 }
 
-func MockInvalidInfo(c *check.C, yamlText string, setup Setup) *Info {
+func MockInvalidInfo(c *check.C, yamlText string) *Info {
 	restoreSanitize := MockSanitizePlugsSlots(func(sdkInfo *Info) {})
 	defer restoreSanitize()
 
-	sdkInfo, err := ReadSdkInfo([]byte(yamlText), "invalid", "ws", setup)
+	sdkInfo, err := ReadSdkInfo([]byte(yamlText), "invalid", "ws")
 	c.Assert(err, check.IsNil)
 	err = Validate(sdkInfo)
 	c.Assert(err, check.NotNil)

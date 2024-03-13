@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -35,7 +36,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)
-		if err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.Volume(volume, workshopbackend.WorkshopStateDir, volume)); err != nil {
+		if err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 

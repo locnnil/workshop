@@ -436,7 +436,7 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 	return workshop, nil
 }
 
-func InstalledContent(lxdConfig map[string]string) (map[string]sdk.Setup, error) {
+func installedContent(lxdConfig map[string]string) (map[string]sdk.Setup, error) {
 	content := make(map[string]sdk.Setup)
 	if sdks, ok := lxdConfig["user.workshop.content"]; ok {
 		err := json.Unmarshal([]byte(sdks), &content)
@@ -472,7 +472,7 @@ func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, er
 	}
 
 	// Fetch information about the installed SDKs
-	workshop.content, err = InstalledContent(inst.Config)
+	workshop.content, err = installedContent(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: installed SDK content is not readable: %v", err)
 	}

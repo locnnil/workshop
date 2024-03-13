@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/slices"
 )
 
@@ -247,7 +247,7 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*Works
 		return nil, ErrWorkshopNotFound
 	}
 
-	workshop.content, err = InstalledContent(f.Workshops[projectId][name].Config)
+	workshop.content, err = installedContent(f.Workshops[projectId][name].Config)
 	if err != nil {
 		return nil, err
 	}

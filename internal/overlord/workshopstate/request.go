@@ -77,7 +77,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 }
 
 func retrieveSdks(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
-	retrieve := state.NewTaskSet([]*state.Task{}...)
+	retrieve := state.NewTaskSet()
 	for _, sdk := range file.Sdks {
 		r := sdkstate.Retrieve(st, &sdk)
 		retrieve.AddTask(r)
@@ -88,9 +88,9 @@ func retrieveSdks(st *state.State, file *workshopbackend.WorkshopFile) *state.Ta
 func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSet *state.TaskSet) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	var prevSetup, prevAuto *state.Task
-	install := state.NewTaskSet([]*state.Task{}...)
-	setupHook := state.NewTaskSet([]*state.Task{}...)
-	autoConnectSet := state.NewTaskSet([]*state.Task{}...)
+	install := state.NewTaskSet()
+	setupHook := state.NewTaskSet()
+	autoConnectSet := state.NewTaskSet()
 	for idx, sdk := range file.Sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
@@ -129,7 +129,7 @@ func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSe
 
 func checkHealthHooks(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
 	var prevCheck *state.Task
-	checkHealth := state.NewTaskSet([]*state.Task{}...)
+	checkHealth := state.NewTaskSet()
 	for _, sdk := range file.Sdks {
 		checkHealthTask := hookstate.HookWithTimeout(st, file.Name, sdk.Name, hookstate.CheckHealth, checkHealthTimeout)
 		if prevCheck != nil {

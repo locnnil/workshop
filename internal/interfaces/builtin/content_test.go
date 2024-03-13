@@ -62,7 +62,7 @@ slots:
  content-slot:
   interface: content
 `
-	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
@@ -75,7 +75,7 @@ plugs:
   interface: content
   target: import
 `
-	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 }
@@ -88,7 +88,7 @@ plugs:
   interface: content
   content: mycont
 `
-	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content plug must contain target path")
 }
@@ -102,7 +102,7 @@ plugs:
   content: mycont
   target: ../foo
 `
-	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws", sdk.Setup{})
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content interface path is not clean:.*")
 }
@@ -117,14 +117,14 @@ base: ubuntu@22.04
 plugs:
  content:
   target: /project/training
-`, s.projectId, "ws", sdk.Setup{}, "content")
+`, s.projectId, "ws", "consumer", "content")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
 base: ubuntu@22.04
 slots:
  content:
-`, s.projectId, "ws", sdk.Setup{}, "content")
+`, s.projectId, "ws", "producer", "content")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec := &device.Specification{}
 

@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 func hookSetup(workshop, sdk string, hook WorkshopHookType) HookSetup {
 	setup := HookSetup{HookType: hook, Workshop: workshop, Sdk: sdk, Environment: map[string]string{}}
 	if hook == SaveState || hook == RestoreState {
-		setup.Environment["SDK_STATE_DIR"] = filepath.Join(workshopbackend.WorkshopStateDir, "sdk", sdk)
+		setup.Environment["SDK_STATE_DIR"] = filepath.Join(dirs.WorkshopStateDir, "sdk", sdk)
 	}
 	return setup
 }
