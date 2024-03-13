@@ -187,14 +187,13 @@ See also
 
 Explanation:
 
-- :ref:`project directory <exp_project>`,
-  :ref:`moving projects <exp_moving_projects>`
-- :ref:`workshop base (concept) <exp_workshop_base>`
-- :ref:`workshop definition (file) <exp_workshop_def>`
+- :ref:`exp_base`
+- :ref:`exp_moving_projects`
+- :ref:`exp_project`
+- :ref:`exp_workshop_def`
 
 
 Reference:
 
-
-- :ref:`workshop launch (command) <ref_workshop_launch>`
-- :ref:`workshop remove (command) <ref_workshop_remove>`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_remove`

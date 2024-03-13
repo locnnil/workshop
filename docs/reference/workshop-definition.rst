@@ -114,12 +114,12 @@ See also
 
 Explanation:
 
-- :ref:`SDK (concept) <exp_sdk>`
-- :ref:`workshop base (concept) <exp_workshop_base>`
-- :ref:`workshop definition (concept) <exp_workshop_def>`
+- :ref:`exp_sdk`
+- :ref:`exp_base`
+- :ref:`exp_workshop_def`
 
 Reference:
 
-- :ref:`workshop info (command) <ref_workshop_info>`
-- :ref:`workshop launch (command) <ref_workshop_launch>`
-- :ref:`workshop refresh (command) <ref_workshop_refresh>`
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`

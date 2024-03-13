@@ -62,8 +62,8 @@ An SDK is defined in a file named :file:`sdkcraft.yaml` that may look like this:
 
 .. _exp_sdk_hooks:
 
-Life cycle hooks
-----------------
+SDK hooks
+---------
 
 SDK publishers can define optional *hooks*
 that control and extend the workshop's internal behaviour
@@ -177,8 +177,8 @@ See also
 
 Explanation:
 
-- :ref:`project (concept) <exp_project>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_project`
+- :ref:`exp_workshop`
 
 
 Reference:

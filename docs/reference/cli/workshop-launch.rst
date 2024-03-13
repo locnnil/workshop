@@ -52,13 +52,13 @@ See also
 
 Explanation:
 
-- :ref:`SDK (concept) <exp_sdk>`
-- :ref:`project (concept) <exp_project>`
-- :ref:`workshop base (concept) <exp_workshop_base>`
-- :ref:`workshop definition (concept) <exp_workshop_def>`
+- :ref:`exp_base`
+- :ref:`exp_sdk`
+- :ref:`exp_project`
+- :ref:`exp_workshop_def`
 
 
 Reference:
 
-- :ref:`workshop refresh (command) <ref_workshop_refresh>`
-- :ref:`workshop remove (command) <ref_workshop_remove>`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_remove`

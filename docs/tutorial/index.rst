@@ -313,7 +313,7 @@ When base or SDKs update
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the
-:ref:`base <exp_workshop_base>`
+:ref:`base <exp_base>`
 or
 :ref:`SDKs <exp_sdk>`
 in the

@@ -43,5 +43,5 @@ See also
 
 Explanation:
 
-- :ref:`SDKs (concept) <exp_sdk>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_sdk`
+- :ref:`exp_workshop`

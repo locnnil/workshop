@@ -30,14 +30,20 @@ to the last operational state.
 See also
 --------
 
+Explanation:
+
+- :ref:`exp_sdk_hooks`
+
+
 How-to guides:
 
-- :ref:`Debug issues in workshops <how_debug_issues_workshops>`
+- :ref:`how_debug_issues_workshops`
 
 
 Reference:
 
-- :ref:`workshop changes (command) <ref_workshop_changes>`
+- :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_launch`
 
 
 Tutorial:
