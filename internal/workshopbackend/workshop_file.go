@@ -82,6 +82,9 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 	}
 
 	for _, k := range file.Sdks {
+		if k.Name == sdk.Agent.String() {
+			return nil, fmt.Errorf(`"agent" is a reserved SDK name`)
+		}
 		if matches := sdk.ValidChannel.FindStringSubmatch(k.Channel); matches != nil {
 			continue
 		} else {

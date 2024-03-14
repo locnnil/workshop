@@ -67,8 +67,7 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 
 func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshopbackend.WorkshopFs, name, yaml string) {
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
-	err := afero.WriteFile(fs, sdkPath, []byte(yaml), 0644)
-	c.Assert(err, check.IsNil)
+	c.Assert(afero.WriteFile(fs, sdkPath, []byte(yaml), 0644), check.IsNil)
 }
 
 func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[sdk.Setup]string) {
@@ -90,9 +89,20 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
+	var agentYaml = `name: agent
+base: ubuntu@22.04
+type: agent
+slots:
+  slot:
+    interface: content
+    attr: slot-value
+`
+	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "agent", "current", "meta", "sdk.yaml"), 0655), check.IsNil)
+	s.writeSDKMetaFile(c, wsfs, "agent", agentYaml)
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
+
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {
@@ -104,19 +114,9 @@ plugs:
   interface: content
   attr: plug-value
 `
-	var producerYaml = `
-name: agent
-base: ubuntu@22.04
-type: agent
-slots:
- slot:
-  interface: content
-  attr: slot-value
-`
 
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
-		{Name: "agent", Channel: "latest/stable"}:    producerYaml,
 	})
 
 	s.state.Lock()
