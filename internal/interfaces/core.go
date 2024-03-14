@@ -222,9 +222,6 @@ type StaticInfo struct {
 	Summary string `json:"summary,omitempty"`
 	DocURL  string `json:"doc-url,omitempty"`
 
-	// ImplicitOnCore controls if a slot is automatically added to core (non-classic) systems.
-	ImplicitOnCore bool `json:"implicit-on-core,omitempty"`
-
 	// AffectsPlugOnRefresh tells if refreshing of a sdk with a slot of this interface
 	// is disruptive for the sdk on the plug side (when the interface is connected),
 	// meaning that a refresh of the slot-side affects sdk(s) on the plug side

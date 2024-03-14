@@ -10,7 +10,6 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -96,23 +95,6 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	}
 }
 
-func (s *interfaceManagerSuite) TestManagerAddImplicitSlots(c *check.C) {
-	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
-	err := mgr.StartUp()
-	c.Assert(err, check.IsNil)
-
-	repo := mgr.Repository()
-
-	for _, iface := range builtin.Interfaces() {
-		si := interfaces.StaticInfoOf(iface)
-		if si.ImplicitOnCore {
-			slots := repo.AllSlots(iface.Name())
-			c.Assert(slots, check.HasLen, 1)
-			c.Assert(slots[0].Sdk.Type, check.Equals, sdk.Agent)
-		}
-	}
-}
-
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {
 	var consumerYaml = `
 name: consumer
@@ -123,9 +105,9 @@ plugs:
   attr: plug-value
 `
 	var producerYaml = `
-name: producer
+name: agent
 base: ubuntu@22.04
-type: core
+type: agent
 slots:
  slot:
   interface: content
@@ -134,11 +116,11 @@ slots:
 
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
-		{Name: "producer", Channel: "latest/stable"}: producerYaml,
+		{Name: "agent", Channel: "latest/stable"}:    producerYaml,
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s:ws:consumer:plug %s:ws:producer:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s:ws:consumer:plug %s:ws:agent:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
 			"interface": "content",
@@ -164,7 +146,7 @@ slots:
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	cref := &interfaces.ConnRef{
 		PlugRef: interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"}}
+		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "agent", Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)

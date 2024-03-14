@@ -85,6 +85,14 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
+				agent, err := workshop.SdkInfo(pctx, sdk.Agent.String())
+				if err != nil {
+					continue
+				}
+				if err = m.repo.AddSdk(agent); err != nil {
+					continue
+				}
+
 				infos, err := workshop.ContentInfo(pctx)
 				if err != nil {
 					logger.Noticef("Cannot obtain the list of installed SDKs for %q workshop: %v", workshop.Name, err)
@@ -99,25 +107,6 @@ func (m *InterfaceManager) StartUp() error {
 				}
 			}
 		}
-	}
-
-	coreSdk := &sdk.Info{
-		ProjectId:     "core",
-		Workshop:      "core",
-		Name:          "core",
-		Base:          "ubuntu@22.04",
-		Type:          sdk.Agent,
-		Plugs:         make(map[string]*sdk.PlugInfo),
-		Slots:         make(map[string]*sdk.SlotInfo),
-		BadInterfaces: make(map[string]string),
-	}
-
-	if err := m.addImplicitSlots(coreSdk); err != nil {
-		return err
-	}
-
-	if err := m.repo.AddSdk(coreSdk); err != nil {
-		return err
 	}
 
 	if _, err := m.reloadConnections("", "", ""); err != nil {
@@ -231,33 +220,6 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 		setConns(m.state, conns)
 	}
 	return affected, nil
-}
-
-func (m *InterfaceManager) addImplicitSlots(sdkInfo *sdk.Info) error {
-	if sdkInfo.Type != sdk.Agent {
-		return nil
-	}
-
-	// Ask each interface if it wants to be implicitly added.
-	for _, iface := range builtin.Interfaces() {
-		si := interfaces.StaticInfoOf(iface)
-		if si.ImplicitOnCore {
-			ifaceName := iface.Name()
-			if _, ok := sdkInfo.Slots[ifaceName]; !ok {
-				sdkInfo.Slots[ifaceName] = makeImplicitSlot(sdkInfo, ifaceName)
-			}
-		}
-	}
-
-	return nil
-}
-
-func makeImplicitSlot(sdkInfo *sdk.Info, ifaceName string) *sdk.SlotInfo {
-	return &sdk.SlotInfo{
-		Sdk:       sdkInfo,
-		Name:      ifaceName,
-		Interface: ifaceName,
-	}
 }
 
 var securityBackendsOverride []interfaces.SecurityBackend

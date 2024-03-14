@@ -875,7 +875,7 @@ func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 	repo := s.mgr.Repository()
 	s.launchRemountWorkshop(c)
 
-	connRefKey := "42424242:ws-consumer:consumer:plug core:core:core:content"
+	connRefKey := "42424242:ws-consumer:consumer:plug 42424242:ws-consumer:agent:slot"
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
 		connRefKey: map[string]interface{}{
