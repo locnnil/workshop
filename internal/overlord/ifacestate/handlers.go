@@ -176,10 +176,6 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 
 		for _, slot := range candidates {
-			// if slot.Sdk.ProjectId != plug.Sdk.ProjectId || slot.Sdk.Workshop != plug.Sdk.Workshop {
-			// 	continue
-			// }
-
 			connRef := interfaces.NewConnRef(plug, slot)
 
 			if _, ok := conns[connRef.ID()]; ok {
