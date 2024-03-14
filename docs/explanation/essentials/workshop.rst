@@ -42,7 +42,7 @@ that use different :ref:`interfaces <exp_interfaces>`,
 packages and :ref:`hooks <exp_sdk_hooks>`.
 
 
-.. _exp_workshop_base:
+.. _exp_base:
 
 Base image
 ----------
@@ -57,5 +57,5 @@ See also
 
 Explanation:
 
-- :ref:`project (concept) <exp_project>`
-- :ref:`SDKs (concept) <exp_sdk>`
+- :ref:`exp_project`
+- :ref:`exp_sdk`

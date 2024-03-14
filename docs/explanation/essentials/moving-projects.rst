@@ -130,6 +130,6 @@ See also
 
 Reference:
 
-- :ref:`workshop launch (command) <ref_workshop_launch>`
-- :ref:`workshop list (command) <ref_workshop_list>`
-- :ref:`workshop remove (command) <ref_workshop_remove>`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_list`
+- :ref:`ref_workshop_remove`

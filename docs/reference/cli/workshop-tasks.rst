@@ -49,12 +49,12 @@ See also
 
 Explanation:
 
-- :ref:`changes, tasks (concepts) <exp_changes_tasks>`
-- :ref:`project (concept) <exp_project>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_changes_tasks`
+- :ref:`exp_project`
+- :ref:`exp_workshop`
 
 Reference:
 
-- :ref:`workshop changes (command) <ref_workshop_changes>`
-- :ref:`workshop info (command) <ref_workshop_info>`
-- :ref:`workshop list (command) <ref_workshop_list>`
+- :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_list`

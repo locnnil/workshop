@@ -46,11 +46,11 @@ See also
 
 Explanation:
 
-- :ref:`project (concept) <exp_project>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_project`
+- :ref:`exp_workshop`
 
 
 Reference:
 
-- :ref:`workshop launch (command) <ref_workshop_launch>`
-- :ref:`workshop start (command) <ref_workshop_start>`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_start`

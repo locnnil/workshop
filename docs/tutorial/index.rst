@@ -26,7 +26,7 @@ Finally, see the
 if you're looking for advanced practical steps.
 
 
-.. attention::
+.. important::
 
    One technical detail before you start:
    currently, |project_markup| supports only :samp:`amd64`.
@@ -313,7 +313,7 @@ When base or SDKs update
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the
-:ref:`base <exp_workshop_base>`
+:ref:`base <exp_base>`
 or
 :ref:`SDKs <exp_sdk>`
 in the
@@ -520,11 +520,11 @@ To define environment variables and visibly separate the command's options:
 Interactive shell
 ~~~~~~~~~~~~~~~~~
 
-You can run an interactive shell as well:
+You can run an interactive shell as well, using :ref:`ref_workshop_shell`:
 
 .. code-block:: console
 
-   $ workshop exec golang -- sudo su workshop -l
+   $ workshop shell golang
    workshop@golang-6b79e889:~$ pwd
 
      /home/workshop
@@ -568,7 +568,7 @@ including the workshop definition,
 and any other content that was stored outside the workshop,
 e.g. via the :ref:`content interface <exp_content_interface>`.
 
-.. attention::
+.. important::
 
    Don't delete the project directory without removing the workshop first.
 

@@ -19,7 +19,7 @@ Content interface plug
 An essential element here is the content interface plug
 that is declared in the SDK definition.
 
-.. attention::
+.. important::
 
    An SDK definition, usually named :file:`sdkcraft.yaml`,
    is different from a
@@ -115,14 +115,14 @@ See also
 
 Explanation:
 
-- :ref:`SDK definition (concept) <exp_sdk_definition>`
-- :ref:`SDK interface (concept) <exp_interfaces_plugs_slots>`
-- :ref:`workshop base (concept) <exp_workshop_base>`
-- :ref:`workshop definition (concept) <exp_workshop_def>`
+- :ref:`exp_base`
+- :ref:`exp_sdk_definition`
+- :ref:`exp_interfaces_plugs_slots`
+- :ref:`exp_workshop_def`
 
 
 Reference:
 
-- :ref:`workshop refresh (command) <ref_workshop_refresh>`
-- :ref:`workshop start (command) <ref_workshop_start>`
-- :ref:`workshop stop (command) <ref_workshop_stop>`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_start`
+- :ref:`ref_workshop_stop`

@@ -84,13 +84,13 @@ See also
 
 Explanation:
 
-- :ref:`changes, tasks (concept) <exp_changes_tasks>`
-- :ref:`SDK (concept) <exp_sdk>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_changes_tasks`
+- :ref:`exp_sdk`
+- :ref:`exp_workshop`
 
 
 Reference:
 
-- :ref:`workshop changes (command) <ref_workshop_changes>`
-- :ref:`workshop refresh (command) <ref_workshop_refresh>`
-- :ref:`workshop tasks (command) <ref_workshop_tasks>`
+- :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_tasks`

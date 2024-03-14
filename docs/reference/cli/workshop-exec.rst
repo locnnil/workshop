@@ -7,17 +7,17 @@ Runs a command and waits for it to complete.
 
 .. code-block:: console
 
-   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND>
+   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND> [global options]
 
 
 Synopsis
 --------
 
-The :program:`exec` subcommand runs an arbitrary command
+The :samp:`exec` subcommand runs an arbitrary command
 in the specified workshop, waiting for it to complete.
 If a timeout elapses before that, it's terminated.
 
-To accept an :program:`exec` command,
+To accept an :samp:`exec` command,
 the workshop must be *Ready* or *Pending*.
 A command can run in two modes that determine how it handles standard streams:
 
@@ -100,10 +100,11 @@ See also
 
 Explanation:
 
-- :ref:`project (concept) <exp_project>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_project`
+- :ref:`exp_workshop`
 
 
 Reference:
 
-- :ref:`workshop start (command) <ref_workshop_start>`
+- :ref:`ref_workshop_start`
+- :ref:`ref_workshop_shell`

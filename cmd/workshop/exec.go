@@ -74,6 +74,18 @@ Notes:
 `
 
 var shortShellHelp = "Start an interactive terminal session for the workshop."
+var longShellHelp = `
+The 'shell' subcommand runs an interactive terminal session
+in the specified workshop.
+
+To accept a 'shell' command, the workshop must be *Ready* or *Pending*.
+
+Notes:
+- To start a workshop before running a terminal session, use 'workshop start'
+- The subcommand is a shorthand for 'workshop exec';
+  it launches the login shell for 'workshop',
+  the default non-privileged user in a workshop
+`
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
@@ -101,6 +113,7 @@ func (c *CmdShellAlias) Command() *cobra.Command {
 		Use:   "shell <WORKSHOP>",
 		Args:  cobra.ExactArgs(1),
 		Short: shortShellHelp,
+		Long:  longShellHelp,
 		RunE:  c.Run,
 	}
 

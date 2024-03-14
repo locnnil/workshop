@@ -61,7 +61,7 @@ See also
 
 Explanation:
 
-- :ref:`SDK (concept) <exp_sdk>`
-- :ref:`SDK state (concept) <exp_sdk_state>`
-- :ref:`workshop base (concept) <exp_workshop_base>`
-- :ref:`workshop definition (concept) <exp_workshop_def>`
+- :ref:`exp_sdk`
+- :ref:`exp_sdk_state`
+- :ref:`exp_base`
+- :ref:`exp_workshop_def`

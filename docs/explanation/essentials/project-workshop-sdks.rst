@@ -69,6 +69,6 @@ See also
 
 Explanation:
 
-- :ref:`project (concept) <exp_project>`
-- :ref:`SDKs (concept) <exp_sdk>`
-- :ref:`workshop (concept) <exp_workshop>`
+- :ref:`exp_project`
+- :ref:`exp_sdk`
+- :ref:`exp_workshop`
