@@ -123,6 +123,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	if err != nil {
 		return err
 	}
+
 	source, err := iface.source(user, plug)
 	if err != nil {
 		return err

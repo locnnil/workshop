@@ -30,6 +30,21 @@ func autoConnectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.Connected
 	return true, err
 }
 
+func connectCheck(plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (bool, error) {
+	baseDecl := asserts.BuiltinBaseDeclaration()
+	if baseDecl == nil {
+		return false, fmt.Errorf("internal error: cannot find base declaration")
+	}
+
+	ic := policy.ConnectCandidate{
+		Plug:            plug,
+		Slot:            slot,
+		BaseDeclaration: baseDecl,
+	}
+	_, err := ic.Check()
+	return true, err
+}
+
 // getConns returns information about connections from the state.
 func getConns(st *state.State) (conns map[string]*schema.ConnState, err error) {
 	var raw *json.RawMessage

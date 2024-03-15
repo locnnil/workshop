@@ -63,6 +63,22 @@ plugs:
     attribute: three
 `
 
+var conflictingTarget1 = `name: conflict-1
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: content
+    target: /home/workshop  
+`
+
+var conflictingTarget2 = `name: conflict-2
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: content
+    target: /home/workshop  
+`
+
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable"}
 
 var consumerNoPlugs = `name: consumer
@@ -255,9 +271,38 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoAllBackendSetupsIfEitherFail
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
+func (s *interfaceHandlersSuite) TestAutoconnectFailsIfWorkshopHasConflictingContentTargets(c *check.C) {
+	// Setup
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+		{Name: "conflict-1", Channel: "latest/stable"}: conflictingTarget1,
+		{Name: "conflict-2", Channel: "latest/stable"}: conflictingTarget2,
+	})
+
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("auto-connect", "...")
+	t1.Set("sdk", "conflict-1")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "conflict-2")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	s.state.Unlock()
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target /home/workshop is also mounted by ws/conflict-1:plug.*`)
+}
+
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnections(c *check.C) {
 	// Setup
-
 	repo := s.mgr.Repository()
 	// Launch another workshop with a candidate plug
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
@@ -500,7 +545,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
 
 	// Execute
 	s.state.Lock()
-	chg := s.state.NewChange("sample", "...")
+	chg := s.state.NewChange("refresh", "...")
 	t := s.state.NewTask("disconnect", "...")
 	// see doAutoConnect and doDisconnect handlers for details
 	t.Set("plugs-to-remount", map[string]map[string]interface{}{

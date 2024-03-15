@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"syscall"
 
 	"gopkg.in/tomb.v2"
@@ -30,6 +31,36 @@ func sdkName(task *state.Task) (string, error) {
 		return "", err
 	}
 	return sdkName, nil
+}
+
+func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
+	allPlugs := m.repo.AllPlugs("content")
+
+	for _, plug := range sdkInfo.Plugs {
+		if plug.Interface != "content" {
+			continue
+		}
+		candidateTarget, _ := plug.Lookup("target")
+
+		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
+			// only plugs from the same workshop will be considered
+			if pi.Sdk.ProjectId != plug.Sdk.ProjectId || pi.Sdk.Workshop != plug.Sdk.Workshop {
+				return false
+			}
+			// exclude oneself
+			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
+				return false
+			}
+			target, _ := pi.Lookup("target")
+			return target == candidateTarget
+
+		})
+		if idx != -1 {
+			return fmt.Errorf(`cannot connect "%s/%s:%s": target %s is also mounted by %s/%s:%s`, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name, candidateTarget,
+				allPlugs[idx].Sdk.Workshop, allPlugs[idx].Sdk.Name, allPlugs[idx].Name)
+		}
+	}
+	return nil
 }
 
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
@@ -69,35 +100,40 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// old workshop/SDK is removed (see the 'disconnect' task handler) and see
 	// if any of those are still relevant for the new workshop.
 	st := task.State()
-	var sdkRef = sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: s}
-	var plugsToRemount = map[string]map[string]interface{}{}
+
 	st.Lock()
 	var alltasks = task.Change().Tasks()
+	var kind = task.Change().Kind()
 	st.Unlock()
-	for _, task := range alltasks {
-		// The disconnect tasks of the refresh change store pre-refresh
-		// content interface connections.
-		if task.Kind() == "disconnect" {
-			_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
-			if err != nil {
-				continue
-			}
 
-			taskSdk, err := sdkName(task)
-			if err != nil {
-				continue
-			}
-			taskSdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: taskSdk}
-			if sdkRef.ID() == taskSdkRef.ID() {
-				st.Lock()
-				_ = task.Get("plugs-to-remount", &plugsToRemount)
-				st.Unlock()
-				break
+	if kind == "refresh" {
+		var sdkRef = sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: s}
+		var plugsToRemount = map[string]map[string]interface{}{}
+		for _, task := range alltasks {
+			// The disconnect tasks of the refresh change store pre-refresh
+			// content interface connections.
+			if task.Kind() == "disconnect" {
+				_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+				if err != nil {
+					continue
+				}
+
+				taskSdk, err := sdkName(task)
+				if err != nil {
+					continue
+				}
+				taskSdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: taskSdk}
+				if sdkRef.ID() == taskSdkRef.ID() {
+					st.Lock()
+					_ = task.Get("plugs-to-remount", &plugsToRemount)
+					st.Unlock()
+					break
+				}
 			}
 		}
+		return m.setupSdkConnections(task, ctx, sdkInfo, plugsToRemount)
 	}
-
-	return m.setupSdkConnections(task, ctx, sdkInfo, plugsToRemount)
+	return m.setupSdkConnections(task, ctx, sdkInfo, nil)
 }
 
 // Returns content interface connection IDs of the SDK and their corresponding
@@ -152,6 +188,16 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 		return err
 	}
 
+	// Ensure that if the SDK is connected there will be no conflicting bind
+	// mount targets in the workshop, i.e. the situation when a two or more
+	// sources are bind mount at the same target in the workshop. Do it after
+	// the SDK was added to the repository to also validate that it does not
+	// contain conflicting targets itself (though, this kind of validation must
+	// be caught by the craft tool).
+	if err = m.checkConflictingTargets(sdkInfo); err != nil {
+		return err
+	}
+
 	if len(sdkInfo.BadInterfaces) > 0 {
 		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
 	}
@@ -174,7 +220,6 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	defer revertConnections.Fail()
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
-
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
 
@@ -200,7 +245,7 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 
 			// no policy check passed in here as it has been checked when looked
 			// up the candidates.
-			conn, err := m.repo.Connect(connRef, plug.Attrs, plugDynamicAttrs, slot.Attrs, nil, nil)
+			conn, err := m.repo.Connect(connRef, plug.Attrs, plugDynamicAttrs, slot.Attrs, nil, connectCheck)
 			if err != nil || conn == nil {
 				return err
 			}
