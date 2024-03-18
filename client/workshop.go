@@ -40,13 +40,6 @@ type ListOptions struct {
 	ProjectId string
 }
 
-type PlugRef struct {
-	ProjectId string `json:"project-id"`
-	Workshop  string `json:"workshop"`
-	Sdk       string `json:"sdk"`
-	Name      string `json:"plug"`
-}
-
 type Remount struct {
 	Action string   `json:"action"`
 	Plug   *PlugRef `json:"plug"`
