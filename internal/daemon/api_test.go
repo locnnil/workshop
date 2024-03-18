@@ -87,6 +87,7 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	}
 	d, err := New(&Options{Dir: s.workshopDir}, s.b)
 	c.Assert(err, check.IsNil)
+	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()
 	s.d = d
 	return d

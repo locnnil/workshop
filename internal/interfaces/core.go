@@ -73,6 +73,9 @@ func (ref PlugRef) String() string {
 
 // SortsBefore returns true when plug should be sorted before the other
 func (ref PlugRef) SortsBefore(other PlugRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
 	if ref.Sdk != other.Sdk {
 		return ref.Sdk < other.Sdk
 	}
@@ -107,6 +110,9 @@ func (ref SlotRef) String() string {
 
 // SortsBefore returns true when slot should be sorted before the other
 func (ref SlotRef) SortsBefore(other SlotRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
 	if ref.Sdk != other.Sdk {
 		return ref.Sdk < other.Sdk
 	}

@@ -32,8 +32,10 @@ type SortingSuite struct{}
 
 var _ = Suite(&SortingSuite{})
 
-func newConnRef(plugSdk, plug, slotSdk, slot string) *interfaces.ConnRef {
-	return &interfaces.ConnRef{PlugRef: interfaces.PlugRef{Sdk: plugSdk, Name: plug}, SlotRef: interfaces.SlotRef{Sdk: slotSdk, Name: slot}}
+func newConnRef(plugWs, plugSdk, plug, slotWs, slotSdk, slot string) *interfaces.ConnRef {
+	return &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{Workshop: plugWs, Sdk: plugSdk, Name: plug},
+		SlotRef: interfaces.SlotRef{Workshop: slotWs, Sdk: slotSdk, Name: slot}}
 }
 
 func (s *SortingSuite) TestByInterfaceName(c *C) {
@@ -50,29 +52,29 @@ func (s *SortingSuite) TestByInterfaceName(c *C) {
 
 func (s *SortingSuite) TestByConnRef(c *C) {
 	list := []*interfaces.ConnRef{
-		newConnRef("name-1", "plug-3", "name-2", "slot-1"),
-		newConnRef("name-1", "plug-1", "name-2", "slot-3"),
-		newConnRef("name-1", "plug-2", "name-2", "slot-2"),
-		newConnRef("name-1", "plug-1", "name-2", "slot-4"),
-		newConnRef("name-1", "plug-1", "name-2", "slot-1"),
-		newConnRef("name-1", "plug-1", "name-2_instance", "slot-1"),
-		newConnRef("name-1_instance", "plug-1", "name-2", "slot-1"),
+		newConnRef("abc", "name-1", "plug-3", "abc", "name-2", "slot-1"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-3"),
+		newConnRef("def", "name-1", "plug-2", "abc", "name-2", "slot-2"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-4"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-1"),
+		newConnRef("abc", "name-1", "plug-1", "def", "name-2_instance", "slot-1"),
+		newConnRef("abc", "name-1_instance", "plug-1", "abc", "name-2", "slot-1"),
 	}
 	sort.Sort(interfaces.ByConnRef(list))
 
 	c.Assert(list, DeepEquals, []*interfaces.ConnRef{
-		newConnRef("name-1", "plug-1", "name-2", "slot-1"),
-		newConnRef("name-1", "plug-1", "name-2", "slot-3"),
-		newConnRef("name-1", "plug-1", "name-2", "slot-4"),
-		newConnRef("name-1", "plug-1", "name-2_instance", "slot-1"),
-		newConnRef("name-1", "plug-2", "name-2", "slot-2"),
-		newConnRef("name-1", "plug-3", "name-2", "slot-1"),
-		newConnRef("name-1_instance", "plug-1", "name-2", "slot-1"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-1"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-3"),
+		newConnRef("abc", "name-1", "plug-1", "abc", "name-2", "slot-4"),
+		newConnRef("abc", "name-1", "plug-1", "def", "name-2_instance", "slot-1"),
+		newConnRef("abc", "name-1", "plug-3", "abc", "name-2", "slot-1"),
+		newConnRef("abc", "name-1_instance", "plug-1", "abc", "name-2", "slot-1"),
+		newConnRef("def", "name-1", "plug-2", "abc", "name-2", "slot-2"),
 	})
 }
 
-func newSlotRef(sdk, name string) *interfaces.SlotRef {
-	return &interfaces.SlotRef{Sdk: sdk, Name: name}
+func newSlotRef(workshop, sdk, name string) *interfaces.SlotRef {
+	return &interfaces.SlotRef{Workshop: workshop, Sdk: sdk, Name: name}
 }
 
 type bySlotRef []*interfaces.SlotRef
@@ -85,20 +87,20 @@ func (b bySlotRef) Less(i, j int) bool {
 
 func (s *SortingSuite) TestSortSlotRef(c *C) {
 	list := []*interfaces.SlotRef{
-		newSlotRef("name-2", "slot-3"),
-		newSlotRef("name-2_instance", "slot-1"),
-		newSlotRef("name-2", "slot-2"),
-		newSlotRef("name-2", "slot-4"),
-		newSlotRef("name-2", "slot-1"),
+		newSlotRef("abc", "name-2", "slot-3"),
+		newSlotRef("def", "name-2_instance", "slot-1"),
+		newSlotRef("def", "name-2", "slot-2"),
+		newSlotRef("abc", "name-2", "slot-4"),
+		newSlotRef("def", "name-2", "slot-1"),
 	}
 	sort.Sort(bySlotRef(list))
 
 	c.Assert(list, DeepEquals, []*interfaces.SlotRef{
-		newSlotRef("name-2", "slot-1"),
-		newSlotRef("name-2", "slot-2"),
-		newSlotRef("name-2", "slot-3"),
-		newSlotRef("name-2", "slot-4"),
-		newSlotRef("name-2_instance", "slot-1"),
+		newSlotRef("abc", "name-2", "slot-3"),
+		newSlotRef("abc", "name-2", "slot-4"),
+		newSlotRef("def", "name-2", "slot-1"),
+		newSlotRef("def", "name-2", "slot-2"),
+		newSlotRef("def", "name-2_instance", "slot-1"),
 	})
 }
 
@@ -110,25 +112,25 @@ func (b byPlugRef) Less(i, j int) bool {
 	return b[i].SortsBefore(*b[j])
 }
 
-func newPlugRef(sdk, name string) *interfaces.PlugRef {
-	return &interfaces.PlugRef{Sdk: sdk, Name: name}
+func newPlugRef(workshop, sdk, name string) *interfaces.PlugRef {
+	return &interfaces.PlugRef{Workshop: workshop, Sdk: sdk, Name: name}
 }
 
 func (s *SortingSuite) TestSortPlugRef(c *C) {
 	list := []*interfaces.PlugRef{
-		newPlugRef("name-2", "plug-3"),
-		newPlugRef("name-2_instance", "plug-1"),
-		newPlugRef("name-2", "plug-4"),
-		newPlugRef("name-2", "plug-2"),
-		newPlugRef("name-2", "plug-1"),
+		newPlugRef("abc", "name-2", "plug-3"),
+		newPlugRef("def", "name-2_instance", "plug-1"),
+		newPlugRef("abc", "name-2", "plug-4"),
+		newPlugRef("def", "name-2", "plug-2"),
+		newPlugRef("def", "name-2", "plug-1"),
 	}
 	sort.Sort(byPlugRef(list))
 
 	c.Assert(list, DeepEquals, []*interfaces.PlugRef{
-		newPlugRef("name-2", "plug-1"),
-		newPlugRef("name-2", "plug-2"),
-		newPlugRef("name-2", "plug-3"),
-		newPlugRef("name-2", "plug-4"),
-		newPlugRef("name-2_instance", "plug-1"),
+		newPlugRef("abc", "name-2", "plug-3"),
+		newPlugRef("abc", "name-2", "plug-4"),
+		newPlugRef("def", "name-2", "plug-1"),
+		newPlugRef("def", "name-2", "plug-2"),
+		newPlugRef("def", "name-2_instance", "plug-1"),
 	})
 }

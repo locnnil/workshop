@@ -45,6 +45,62 @@ func (m *InterfaceManager) Repository() *interfaces.Repository {
 	return m.repo
 }
 
+type ConnectionState struct {
+	// Auto indicates whether the connection was established automatically
+	Auto bool
+	// ByGadget indicates whether the connection was trigged by the gadget
+	ByGadget bool
+	// Interface name of the connection
+	Interface string
+	// Undesired indicates whether the connection, otherwise established
+	// automatically, was explicitly disconnected
+	Undesired        bool
+	StaticPlugAttrs  map[string]interface{}
+	DynamicPlugAttrs map[string]interface{}
+	StaticSlotAttrs  map[string]interface{}
+	DynamicSlotAttrs map[string]interface{}
+}
+
+// Active returns true if connection is not undesired and not removed by
+// hotplug.
+func (c ConnectionState) Active() bool {
+	return !c.Undesired
+}
+
+// ConnectionStates return the state of connections stored in the state.
+// Note that this includes inactive connections (i.e. referring to non-
+// existing plug/slots), so this map must be cross-referenced with current
+// snap info if needed.
+// The state must be locked by the caller.
+func ConnectionStates(st *state.State) (connStateByRef map[string]ConnectionState, err error) {
+	states, err := getConns(st)
+	if err != nil {
+		return nil, err
+	}
+
+	connStateByRef = make(map[string]ConnectionState, len(states))
+	for cref, cstate := range states {
+		connStateByRef[cref] = ConnectionState{
+			Auto:             cstate.Auto,
+			Interface:        cstate.Interface,
+			Undesired:        cstate.Undesired,
+			StaticPlugAttrs:  cstate.StaticPlugAttrs,
+			DynamicPlugAttrs: cstate.DynamicPlugAttrs,
+			StaticSlotAttrs:  cstate.StaticSlotAttrs,
+			DynamicSlotAttrs: cstate.DynamicSlotAttrs,
+		}
+	}
+	return connStateByRef, nil
+}
+
+// ConnectionStates return the state of connections tracked by the manager
+func (m *InterfaceManager) ConnectionStates() (connStateByRef map[string]ConnectionState, err error) {
+	m.state.Lock()
+	defer m.state.Unlock()
+
+	return ConnectionStates(m.state)
+}
+
 func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()

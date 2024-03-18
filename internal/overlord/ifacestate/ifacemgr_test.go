@@ -248,3 +248,98 @@ slots:
 
 	c.Assert(mgr.Repository().Interfaces().Connections, check.HasLen, 0)
 }
+
+func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
+	var isAuto, isUndesired bool = true, false
+	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
+		"pid:ws:consumer:plug pid:ws:producer:slot": {
+			Interface: "test",
+			Auto:      true,
+			StaticPlugAttrs: map[string]interface{}{
+				"attr1": "value1",
+			},
+			DynamicPlugAttrs: map[string]interface{}{
+				"dynamic-number": int64(7),
+			},
+			StaticSlotAttrs: map[string]interface{}{
+				"attr2": "value2",
+			},
+			DynamicSlotAttrs: map[string]interface{}{
+				"other-number": int64(9),
+			},
+		}})
+}
+
+func (s *interfaceManagerSuite) TestConnectionStatesUndesired(c *check.C) {
+	var isAuto, isUndesired bool = true, true
+	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
+		"pid:ws:consumer:plug pid:ws:producer:slot": {
+			Interface: "test",
+			Auto:      true,
+			Undesired: true,
+			StaticPlugAttrs: map[string]interface{}{
+				"attr1": "value1",
+			},
+			DynamicPlugAttrs: map[string]interface{}{
+				"dynamic-number": int64(7),
+			},
+			StaticSlotAttrs: map[string]interface{}{
+				"attr2": "value2",
+			},
+			DynamicSlotAttrs: map[string]interface{}{
+				"other-number": int64(9),
+			},
+		}})
+}
+
+func (s *interfaceManagerSuite) testConnectionStates(c *check.C, auto, undesired bool, expected map[string]ifacestate.ConnectionState) {
+	consumer := sdk.MockInfo(c, `
+name: consumer
+base: ubuntu@22.04
+plugs:
+    plug:
+        interface: test
+        attr1: value1
+`, "pid", "ws")
+
+	producer := sdk.MockInfo(c, `
+name: producer
+base: ubuntu@22.04
+slots:
+    slot:
+        interface: test
+        attr2: value2
+`, "pid", "ws")
+	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	err := mgr.StartUp()
+	c.Assert(err, check.IsNil)
+
+	conns, err := mgr.ConnectionStates()
+	c.Assert(err, check.IsNil)
+	c.Check(conns, check.HasLen, 0)
+
+	st := s.state
+	st.Lock()
+	sc, err := ifacestate.GetConns(st)
+	c.Assert(err, check.IsNil)
+
+	slot := producer.Slots["slot"]
+	c.Assert(slot, check.NotNil)
+	plug := consumer.Plugs["plug"]
+	c.Assert(plug, check.NotNil)
+	dynamicPlugAttrs := map[string]interface{}{"dynamic-number": 7}
+	dynamicSlotAttrs := map[string]interface{}{"other-number": 9}
+	// create connection in conns state
+	conn := &interfaces.Connection{
+		Plug: interfaces.NewConnectedPlug(plug, nil, dynamicPlugAttrs),
+		Slot: interfaces.NewConnectedSlot(slot, nil, dynamicSlotAttrs),
+	}
+	ifacestate.UpdateConnectionInConnState(sc, conn, auto, undesired)
+	ifacestate.SetConns(st, sc)
+	st.Unlock()
+
+	conns, err = mgr.ConnectionStates()
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Check(conns, check.DeepEquals, expected)
+}
