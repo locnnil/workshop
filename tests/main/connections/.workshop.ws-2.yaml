@@ -1,0 +1,5 @@
+name: ws-2
+base: ubuntu@22.04
+sdks:
+    test-sdk-content:
+        channel: latest/stable
