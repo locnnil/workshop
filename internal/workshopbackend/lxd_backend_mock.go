@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/slices"
 )
 
@@ -27,6 +27,10 @@ type ExecCall struct {
 	Args *Execution
 }
 
+type WorkshopExecCall struct {
+	Name string
+}
+
 type FakeWorkshopBackend struct {
 	// the key is a project-id - workshop name
 	Workshops map[string]map[string]*FakeWorkshop
@@ -37,6 +41,9 @@ type FakeWorkshopBackend struct {
 
 	DoExec    ExecFunc
 	ExecCalls []*ExecCall
+
+	WorkshopFsCallback func(ctx context.Context, name string) (WorkshopFs, error)
+	WorkshopFsCalls    []*WorkshopExecCall
 }
 
 func NewFakeWorkshopBackend() *FakeWorkshopBackend {
@@ -247,7 +254,7 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*Works
 		return nil, ErrWorkshopNotFound
 	}
 
-	workshop.content, err = InstalledContent(f.Workshops[projectId][name].Config)
+	workshop.content, err = installedContent(f.Workshops[projectId][name].Config)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +288,11 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter W
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
+	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &WorkshopExecCall{Name: name})
+	if s.WorkshopFsCallback != nil {
+		return s.WorkshopFsCallback(ctx, name)
+	}
+
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return nil, err

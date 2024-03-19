@@ -73,6 +73,9 @@ func (ref PlugRef) String() string {
 
 // SortsBefore returns true when plug should be sorted before the other
 func (ref PlugRef) SortsBefore(other PlugRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
 	if ref.Sdk != other.Sdk {
 		return ref.Sdk < other.Sdk
 	}
@@ -107,6 +110,9 @@ func (ref SlotRef) String() string {
 
 // SortsBefore returns true when slot should be sorted before the other
 func (ref SlotRef) SortsBefore(other SlotRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
 	if ref.Sdk != other.Sdk {
 		return ref.Sdk < other.Sdk
 	}
@@ -221,9 +227,6 @@ type SlotSanitizer interface {
 type StaticInfo struct {
 	Summary string `json:"summary,omitempty"`
 	DocURL  string `json:"doc-url,omitempty"`
-
-	// ImplicitOnCore controls if a slot is automatically added to core (non-classic) systems.
-	ImplicitOnCore bool `json:"implicit-on-core,omitempty"`
 
 	// AffectsPlugOnRefresh tells if refreshing of a sdk with a slot of this interface
 	// is disruptive for the sdk on the plug side (when the interface is connected),

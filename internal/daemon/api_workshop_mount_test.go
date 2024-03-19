@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
@@ -97,7 +96,6 @@ func (s *apiSuite) runMountTest(c *check.C, buffers []*bytes.Buffer, expected []
 
 func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	s.daemon(c)
-	mockIface(c, s.d, &ifacetest.TestInterface{InterfaceName: "content"})
 	s.launchWorkshopWithPlug(s.ctx, "ws", c)
 
 	// Setup
@@ -122,7 +120,6 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 	// Setup
 	s.daemon(c)
-	mockIface(c, s.d, &ifacetest.TestInterface{InterfaceName: "content"})
 	s.launchWorkshopWithPlug(s.ctx, "ws", c)
 	_, err := s.d.overlord.InterfaceManager().Repository().DisconnectSdk(s.project.ProjectId, "ws", "test-sdk")
 	c.Check(err, check.IsNil)

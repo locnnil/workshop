@@ -159,7 +159,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Name: "test"}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -263,7 +263,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Info{Workshop: "ws", Name: "test", Channel: "latest/stable", Revision: 2}
+	newSdk := sdk.Info{Workshop: "ws", Name: "test"}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	link := s.state.NewTask("link-sdk", "test")

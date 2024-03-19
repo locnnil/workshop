@@ -151,7 +151,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mock-service-snippets
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	plug := info.Plugs["plug"]
 
 	snips, err := interfaces.PermanentPlugServiceSnippets(iface, plug)
@@ -175,7 +175,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: unclean-service-snippets
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	plug := info.Plugs["plug"]
 
 	iface, err := interfaces.ByName("unclean-service-snippets")
@@ -193,7 +193,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: iface
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	plug := info.Plugs["plug"]
 	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
 		InterfaceName: "iface",
@@ -214,7 +214,7 @@ base: ubuntu@22.04
 slots:
   slot:
     interface: iface
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	slot := info.Slots["slot"]
 	c.Assert(interfaces.BeforePrepareSlot(&ifacetest.TestInterface{
 		InterfaceName: "iface",

@@ -222,6 +222,17 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	// validate that the SDK is of the acceptable type, no non-regular SDKs are
+	// allowed from outside
+	info, err := inst.SdkInfo(ctx, setup.Name)
+	if err != nil {
+		return err
+	}
+
+	if info.Type != sdk.Regular {
+		return fmt.Errorf("unknown SDK type %q", info.Type.String())
+	}
+
 	return nil
 }
 

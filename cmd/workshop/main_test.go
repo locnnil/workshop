@@ -49,6 +49,27 @@ func (s *BaseWorkshopSuite) RedirectClientToTestServer(handler func(http.Respons
 	s.BaseTest.AddCleanup(func() { ClientConfig.BaseURL = "" })
 }
 
+func (s *BaseWorkshopSuite) ResetStdStreams() {
+	s.stdin.Reset()
+	s.stdout.Reset()
+	s.stderr.Reset()
+}
+
+func (s *BaseWorkshopSuite) Stdout() string {
+	return s.stdout.String()
+}
+
+func (s *BaseWorkshopSuite) Stderr() string {
+	return s.stderr.String()
+}
+
+// EncodeResponseBody writes JSON-serialized body to the response writer.
+func EncodeResponseBody(c *check.C, w http.ResponseWriter, body interface{}) {
+	encoder := json.NewEncoder(w)
+	err := encoder.Encode(body)
+	c.Assert(err, check.IsNil)
+}
+
 // DecodedRequestBody returns the JSON-decoded body of the request.
 func DecodedRequestBody(c *check.C, r *http.Request) map[string]interface{} {
 	var body map[string]interface{}

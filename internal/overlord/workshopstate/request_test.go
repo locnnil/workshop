@@ -131,7 +131,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	expected := []string{"create-workshop",
 		"mount-project",
-		"start-workshop"}
+		"start-workshop", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
@@ -166,6 +166,7 @@ func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
 		"install-sdk",
 		"link-sdk",
 		"link-sdk",
+		"auto-connect", // agent SDK
 		"auto-connect",
 		"auto-connect",
 		"run-hook",
@@ -231,6 +232,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
+		"auto-connect", // "agent" SDK
 	}
 
 	tasks := ts.Tasks()
@@ -272,6 +274,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect", // "agent" SDK
 		"auto-connect",
 		"auto-connect",
 		"run-hook", // setup-base sdk-1
@@ -428,6 +431,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
+		"auto-connect", // agent SDK
 		"remove-workshop-stash",
 	}
 
@@ -442,6 +446,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"start-workshop",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect", // agent SDK
 		"auto-connect",
 		"run-hook", // setup-base hook
 		"run-hook", // restore-state hook
@@ -453,7 +458,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 	verifyExpectedTasks(c, ts[0].Tasks(), expected_ws)
 	verifyExpectedTasks(c, ts[1].Tasks(), expected_ws_1)
 
-	c.Assert(ts[0].MaybeEdge(workshopstate.EdgeLastTaskBeforeRefreshIrreversible).Kind(), check.Equals, "start-workshop")
+	c.Assert(ts[0].MaybeEdge(workshopstate.EdgeLastTaskBeforeRefreshIrreversible).Kind(), check.Equals, "auto-connect")
 	waitFor := ts[0].MaybeEdge(workshopstate.EdgeRefreshCleanup).WaitTasks()
 	c.Assert(waitFor, testutil.DeepUnsortedMatches, []*state.Task{
 		ts[0].MaybeEdge(workshopstate.EdgeLastTaskBeforeRefreshIrreversible),
@@ -518,6 +523,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"start-workshop",
 		"install-sdk",
 		"link-sdk",
+		"auto-connect", // agent SDK
 		"auto-connect",
 		"run-hook", // setup-base hook
 		"run-hook", // restore state hook

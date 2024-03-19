@@ -52,18 +52,18 @@ func MustInterface(name string) interfaces.Interface {
 	panic(fmt.Errorf("cannot find interface with name %q", name))
 }
 
-func MockPlug(c *check.C, yaml string, projectId, workshop string, si sdk.Setup, plugName string) *sdk.PlugInfo {
-	info := sdk.MockInfo(c, yaml, projectId, workshop, si)
+func MockPlug(c *check.C, yaml string, projectId, workshop, sdkName string, plugName string) *sdk.PlugInfo {
+	info := sdk.MockInfo(c, yaml, projectId, workshop)
 	if plugInfo, ok := info.Plugs[plugName]; ok {
 		return plugInfo
 	}
-	panic(fmt.Sprintf("cannot find plug %q in sdk %q", plugName, si.Name))
+	panic(fmt.Sprintf("cannot find plug %q in sdk %q", plugName, sdkName))
 }
 
-func MockSlot(c *check.C, yaml string, projectId, workshop string, si sdk.Setup, slotName string) *sdk.SlotInfo {
-	info := sdk.MockInfo(c, yaml, projectId, workshop, si)
+func MockSlot(c *check.C, yaml string, projectId, workshop, sdkName string, slotName string) *sdk.SlotInfo {
+	info := sdk.MockInfo(c, yaml, projectId, workshop)
 	if slotInfo, ok := info.Slots[slotName]; ok {
 		return slotInfo
 	}
-	panic(fmt.Sprintf("cannot find slot %q in sdk %q", slotName, si.Name))
+	panic(fmt.Sprintf("cannot find slot %q in sdk %q", slotName, sdkName))
 }

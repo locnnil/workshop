@@ -20,15 +20,15 @@ slots:
   interface3:
     deny-installation: true
     allow-auto-connection:
-      plug-type:
-        - core
+      plug-sdk-type:
+        - agent
   interface4:
     allow-connection: true
     deny-connection: false
     allow-installation:
-      slot-type:
-        - core
-        - sdk
+      slot-sdk-type:
+        - agent
+        - regular
 timestamp: 2016-09-29T19:50:49Z
 sign-key-sha3-384: Jv8_JiHiIzJVcO9M55pPdqSDWUvuhfDIBJUS-3VW7F_idjix7Ffn5qMxB21ZQuij
 
@@ -48,11 +48,11 @@ AXNpZw==`
 	c.Assert(slotRule3, check.NotNil)
 	c.Assert(slotRule3.DenyInstallation, check.HasLen, 1)
 	c.Assert(slotRule3.AllowAutoConnection, check.HasLen, 1)
-	c.Check(slotRule3.AllowAutoConnection[0].PlugSdkTypes, check.DeepEquals, []string{"core"})
+	c.Check(slotRule3.AllowAutoConnection[0].PlugSdkTypes, check.DeepEquals, []string{"agent"})
 
 	slotRule4 := baseDecl.SlotRule("interface4")
 	c.Assert(slotRule4, check.NotNil)
-	c.Check(slotRule4.AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"core", "sdk"})
+	c.Check(slotRule4.AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"agent", "regular"})
 	c.Assert(slotRule4.DenyInstallation, check.HasLen, 1)
 	c.Assert(slotRule3.AllowConnection, check.HasLen, 1)
 	c.Assert(slotRule3.DenyConnection, check.HasLen, 1)
@@ -106,8 +106,8 @@ revision: 0
 slots:
   network:
     allow-installation:
-      slot-type:
-        - core
+      slot-sdk-type:
+        - agent
 `
 
 	err := asserts.InitBuiltinBaseDeclaration([]byte(headers))
@@ -121,7 +121,7 @@ slots:
 
 	c.Check(baseDecl.AuthorityID(), check.Equals, "canonical")
 	c.Check(baseDecl.Series(), check.Equals, "1")
-	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"core"})
+	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"agent"})
 
 	enc := asserts.Encode(baseDecl)
 	// it's expected that it cannot be decoded

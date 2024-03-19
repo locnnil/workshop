@@ -54,7 +54,7 @@ func (s *baseDeclSuite) TearDownSuite(c *C) {
 	s.restoreSanitize()
 }
 
-func (s *baseDeclSuite) connectCand(c *C, iface, slotYaml, plugYaml string) *policy.ConnectCandidate {
+func (s *baseDeclSuite) connectCand(c *C, iface, slotYaml, plugYaml string, slotprj, plugprj string, slotws, plugws string) *policy.ConnectCandidate {
 	if slotYaml == "" {
 		slotYaml = fmt.Sprintf(`name: slot-sdk
 base: ubuntu@22.04
@@ -69,8 +69,8 @@ plugs:
   %s:
 `, iface)
 	}
-	slotSdk := sdk.MockInfo(c, slotYaml, "mock424242", "ws", sdk.Setup{})
-	plugSdk := sdk.MockInfo(c, plugYaml, "mock424242", "ws", sdk.Setup{})
+	slotSdk := sdk.MockInfo(c, slotYaml, slotprj, slotws)
+	plugSdk := sdk.MockInfo(c, plugYaml, plugprj, plugws)
 	return &policy.ConnectCandidate{
 		Plug:            interfaces.NewConnectedPlug(plugSdk.Plugs[iface], nil, nil),
 		Slot:            interfaces.NewConnectedSlot(slotSdk.Slots[iface], nil, nil),
@@ -87,7 +87,7 @@ slots:
   %s:
 `, sdkType, iface)
 	}
-	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws", sdk.Setup{})
+	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws")
 	return &policy.InstallCandidate{
 		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,
@@ -103,7 +103,7 @@ plugs:
   %s:
 `, sdkType, iface)
 	}
-	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws", sdk.Setup{})
+	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws")
 	return &policy.InstallCandidate{
 		Sdk:             sdk,
 		BaseDeclaration: s.baseDecl,
@@ -117,7 +117,7 @@ slots:
     %s:
 `, "content")
 
-	cand := s.connectCand(c, "content", slotYaml, "")
+	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
 	arity, err := cand.CheckAutoConnect()
 	c.Check(err, check.IsNil)
 	c.Check(arity.SlotsPerPlugAny(), check.Equals, false)
@@ -133,12 +133,12 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
 
 func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
 	// test content specially
-	ic := s.installSlotCand(c, "content", sdk.Sdk, ``)
+	ic := s.installSlotCand(c, "content", sdk.Regular, ``)
 	err := ic.Check()
 	c.Assert(err, Not(IsNil))
 	c.Assert(err, ErrorMatches, "installation not allowed by \"content\" slot rule of interface \"content\"")
 
-	ic = s.installSlotCand(c, "content", sdk.Core, ``)
+	ic = s.installSlotCand(c, "content", sdk.Agent, ``)
 	err = ic.Check()
 	c.Assert(err, IsNil)
 }
@@ -159,4 +159,46 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *C) {
 	// on startup. This test prevents this from happing unnoticed.
 	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
 	c.Assert(err, IsNil)
+}
+
+func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromDifferentWorkshop(c *C) {
+	slotYaml := `name: slot-sdk
+base: ubuntu@22.04
+type: agent
+slots:
+    content:
+`
+	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "slot-ws", "plug-ws")
+	_, err := cand.Check()
+	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
+	_, err = cand.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
+}
+
+func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromSameWorkshop(c *C) {
+	slotYaml := `name: slot-sdk
+base: ubuntu@22.04
+type: agent
+slots:
+    content:
+`
+	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
+	_, err := cand.Check()
+	c.Check(err, check.IsNil)
+	_, err = cand.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+}
+
+func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromSameWorkshopDifferentProject(c *C) {
+	slotYaml := `name: slot-sdk
+base: ubuntu@22.04
+type: agent
+slots:
+    content:
+`
+	cand := s.connectCand(c, "content", slotYaml, "", "slot-project", "mock424242", "ws", "ws")
+	_, err := cand.Check()
+	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
+	_, err = cand.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
 }

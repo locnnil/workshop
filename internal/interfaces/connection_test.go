@@ -51,7 +51,7 @@ plugs:
         attr: value
         complex:
             c: d
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	s.plug = consumer.Plugs["plug"]
 	producer := sdk.MockInfo(c, `
 name: producer
@@ -63,7 +63,7 @@ slots:
         number: 100
         complex:
             a: b
-`, s.projectId, "ws", sdk.Setup{})
+`, s.projectId, "ws")
 	s.slot = producer.Slots["slot"]
 }
 

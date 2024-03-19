@@ -112,7 +112,7 @@ func (s *AllSuite) TestSanitizeErrorsOnInvalidSlotNames(c *C) {
 	})
 	defer restore()
 
-	sdkInfo := sdk.MockInvalidInfo(c, testConsumerInvalidSlotNameYaml, sdk.Setup{})
+	sdkInfo := sdk.MockInvalidInfo(c, testConsumerInvalidSlotNameYaml)
 	sdk.SanitizePlugsSlots(sdkInfo)
 	c.Assert(sdkInfo.BadInterfaces, HasLen, 1)
 	c.Check(sdk.BadInterfacesSummary(sdkInfo), Matches, `sdk "consumer" has bad plugs or slots: ttyS5 \(invalid slot name: "ttyS5"\)`)
@@ -124,7 +124,7 @@ func (s *AllSuite) TestSanitizeErrorsOnInvalidPlugNames(c *C) {
 	})
 	defer restore()
 
-	sdkInfo := sdk.MockInvalidInfo(c, testConsumerInvalidPlugNameYaml, sdk.Setup{})
+	sdkInfo := sdk.MockInvalidInfo(c, testConsumerInvalidPlugNameYaml)
 	sdk.SanitizePlugsSlots(sdkInfo)
 	c.Assert(sdkInfo.BadInterfaces, HasLen, 1)
 	c.Check(sdk.BadInterfacesSummary(sdkInfo), Matches, `sdk "consumer" has bad plugs or slots: ttyS3 \(invalid plug name: "ttyS3"\)`)

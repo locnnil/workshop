@@ -37,8 +37,8 @@ const contentSummary = `allows sharing host code and data with SDKs`
 const contentBaseDeclarationSlots = `
   content:
     allow-installation:
-      slot-type:
-        - core
+      slot-sdk-type:
+        - agent
     allow-connection: true
     allow-auto-connection: true
 `
@@ -54,7 +54,6 @@ func (iface *contentInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              contentSummary,
 		BaseDeclarationSlots: contentBaseDeclarationSlots,
-		ImplicitOnCore:       true,
 		AffectsPlugOnRefresh: true,
 	}
 }
@@ -124,6 +123,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	if err != nil {
 		return err
 	}
+
 	source, err := iface.source(user, plug)
 	if err != nil {
 		return err

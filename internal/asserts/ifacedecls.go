@@ -24,16 +24,16 @@ var (
 
 	ruleSubrules = []string{"allow-installation", "deny-installation", "allow-connection", "deny-connection", "allow-auto-connection", "deny-auto-connection"}
 
-	validWorkshopType = regexp.MustCompile(`^(?:core|sdk)$`)
+	validSdkType = regexp.MustCompile(`^(?:agent|regular)$`)
 
 	validIDConstraints = map[string]*regexp.Regexp{
-		"slot-type": validWorkshopType,
-		"plug-type": validWorkshopType,
+		"slot-sdk-type": validSdkType,
+		"plug-sdk-type": validSdkType,
 	}
 
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}
 
-	slotIDConstraints = []string{"plug-type"}
+	slotIDConstraints = []string{"plug-sdk-type"}
 
 	sideArityConstraints        = []string{"slots-per-plug", "plugs-per-slot"}
 	sideArityConstraintsSetters = map[string]func(sideArityConstraintsHolder, SideArityConstraint){
@@ -51,7 +51,7 @@ type SlotInstallationConstraints struct {
 
 func (c *SlotInstallationConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
-	case "slot-type":
+	case "slot-sdk-type":
 		c.SlotTypes = cstrs
 	default:
 		panic("unknown SlotInstallationConstraints field " + field)
@@ -105,7 +105,7 @@ type SlotConnectionConstraints struct {
 
 func (c *SlotConnectionConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
-	case "plug-type":
+	case "plug-sdk-type":
 		c.PlugSdkTypes = cstrs
 	default:
 		panic("unknown SlotConnectionConstraints field " + field)
@@ -232,7 +232,7 @@ func castSlotInstallationConstraints(cstrs []constraintsHolder) (res []*SlotInst
 
 func compileSlotInstallationConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	slotInstCstrs := &SlotInstallationConstraints{}
-	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-attributes"}, []string{"slot-type"})
+	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-attributes"}, []string{"slot-sdk-type"})
 	if err != nil {
 		return nil, err
 	}

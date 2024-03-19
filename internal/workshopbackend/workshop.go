@@ -21,12 +21,6 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type WorkshopErrorType int
-
-const (
-	WorkshopStateDir = "/var/lib/workshop/state"
-)
-
 var InstallTimeNow = time.Now
 
 func NewWorkshop(backend WorkshopBackend, project *Project, name string) *Workshop {
@@ -189,15 +183,10 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	}
 	defer wsfs.Close()
 
-	sdkSetup, ok := w.content[sdkName]
-	if !ok {
-		return nil, fmt.Errorf("%q SDK not installed in %q workshop", sdkName, w.Name)
-	}
-
-	sdkPath := sdk.SdkCurrentPath(sdkSetup.Name)
+	sdkPath := sdk.SdkCurrentPath(sdkName)
 	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %q SDK metadata (%v)", sdkSetup.Name, err)
+		return nil, fmt.Errorf("cannot read %q SDK metadata (%v)", sdkName, err)
 	}
 	defer sdkYamlFile.Close()
 
@@ -206,7 +195,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name, sdkSetup)
+	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name)
 	if err != nil {
 		return nil, err
 	}
