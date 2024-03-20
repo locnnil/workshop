@@ -26,6 +26,8 @@ Notes
 
 - If any listed workshop is *Off* or *Pending*, none are removed
 - To rebuild a removed workshop from scratch, use :ref:`ref_workshop_launch`
+- For content interface plugs,
+  non-default sources set by :ref:`ref_workshop_remount` aren't removed
 
 
 Global options
@@ -45,6 +47,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_content_interface`
 - :ref:`exp_project`
 - :ref:`exp_workshop`
 - :ref:`exp_workshop_def`
@@ -53,4 +56,5 @@ Reference:
 
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_stop`
