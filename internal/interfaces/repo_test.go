@@ -963,7 +963,7 @@ var testInterface = &ifacetest.TestInterface{
 	},
 }
 
-func (s *RepositorySuite) TestSnapSpecification(c *C) {
+func (s *RepositorySuite) TestSdkSpecification(c *C) {
 	repo := s.emptyRepo
 	backend := &ifacetest.TestSecurityBackend{BackendName: testSecurity}
 	c.Assert(repo.AddBackend(backend), IsNil)
@@ -972,11 +972,11 @@ func (s *RepositorySuite) TestSnapSpecification(c *C) {
 	c.Assert(repo.AddSlot(s.slot), IsNil)
 
 	// Snaps should get static security now
-	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk)
+	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{"static plug snippet"})
 
-	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk)
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{"static slot snippet"})
 
@@ -986,14 +986,14 @@ func (s *RepositorySuite) TestSnapSpecification(c *C) {
 	c.Assert(err, IsNil)
 
 	// Snaps should get static and connection-specific security now
-	spec, err = repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk)
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{
 		"static plug snippet",
 		"connection-specific plug snippet",
 	})
 
-	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk)
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{
 		"static slot snippet",
@@ -1023,11 +1023,11 @@ func (s *RepositorySuite) TestSnapSpecificationFailureWithConnectionSnippets(c *
 	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk)
+	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, ErrorMatches, "cannot compute snippet for consumer")
 	c.Assert(spec, IsNil)
 
-	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk)
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
 	c.Assert(err, ErrorMatches, "cannot compute snippet for provider")
 	c.Assert(spec, IsNil)
 }
@@ -1053,11 +1053,11 @@ func (s *RepositorySuite) TestSnapSpecificationFailureWithPermanentSnippets(c *C
 	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk)
+	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, ErrorMatches, "cannot compute snippet for consumer")
 	c.Assert(spec, IsNil)
 
-	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk)
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
 	c.Assert(err, ErrorMatches, "cannot compute snippet for provider")
 	c.Assert(spec, IsNil)
 }

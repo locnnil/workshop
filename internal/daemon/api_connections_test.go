@@ -20,14 +20,17 @@
 package daemon
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -907,3 +910,73 @@ slots:
 		"type":        "sync",
 	})
 }
+
+// Tests for POST /v1/connections
+
+func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName string) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
+	st := d.Overlord().State()
+	st.Lock()
+	st.Set("conns", map[string]interface{}{
+		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+			"interface": "test",
+		},
+	})
+	st.Unlock()
+
+	d.Overlord().Loop()
+	defer d.Overlord().Stop()
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", "/v1/connections", buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	cmd := apiCmd("/v1/connections")
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 202)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	id := body["change"].(string)
+
+	st.Lock()
+	chg := st.Change(id)
+	st.Unlock()
+	c.Assert(chg, check.NotNil)
+
+	<-chg.Ready()
+
+	st.Lock()
+	err = chg.Err()
+	st.Unlock()
+	c.Assert(err, check.IsNil)
+
+	ifaces := repo.Interfaces()
+	c.Assert(ifaces.Connections, check.HasLen, 0)
+}
+
+// func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
+// 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot")
+// }

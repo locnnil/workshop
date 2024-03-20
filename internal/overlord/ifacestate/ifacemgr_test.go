@@ -102,7 +102,6 @@ slots:
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
-
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {

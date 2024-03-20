@@ -2,6 +2,7 @@ package ifacestate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -112,7 +113,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		for _, task := range alltasks {
 			// The disconnect tasks of the refresh change store pre-refresh
 			// content interface connections.
-			if task.Kind() == "disconnect" {
+			if task.Kind() == "auto-disconnect" {
 				_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 				if err != nil {
 					continue
@@ -278,7 +279,7 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	defer revertBackendSetup.Fail()
 	for _, s := range affectedSet {
 		for _, backend := range m.repo.Backends() {
-			if err = backend.Setup(ctx, s, m.repo); err != nil {
+			if err = backend.Setup(ctx, s.Ref(), m.repo); err != nil {
 				return err
 			}
 			// fix for the Go loop variable capture (<1.22)
@@ -355,7 +356,7 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 	for _, s := range disconnected {
 		if sdkRef != s.Ref() {
 			for _, backend := range m.repo.Backends() {
-				if err = backend.Setup(ctx, s, m.repo); err != nil {
+				if err = backend.Setup(ctx, s.Ref(), m.repo); err != nil {
 					return err
 				}
 			}
@@ -370,7 +371,7 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 	return nil
 }
 
-func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
 	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -396,7 +397,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
 }
 
-func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
 	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -421,6 +422,100 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 	}
 
 	return m.setupSdkConnections(task, ctx, sdkInfo, nil)
+}
+
+func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRef, error) {
+	var plugRef interfaces.PlugRef
+	var slotRef interfaces.SlotRef
+	if err := task.Get("plug", &plugRef); err != nil {
+		return plugRef, slotRef, err
+	}
+	if err := task.Get("slot", &slotRef); err != nil {
+		return plugRef, slotRef, err
+	}
+	return plugRef, slotRef, nil
+}
+
+func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	user, project, _, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	defer cancel()
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	plugRef, slotRef, err := getPlugAndSlotRefs(task)
+	if err != nil {
+		return err
+	}
+
+	cref := interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
+
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+
+	var forget bool
+	if err := task.Get("forget", &forget); err != nil && !errors.Is(err, state.ErrNoState) {
+		return fmt.Errorf("internal error: cannot read 'forget' flag: %s", err)
+	}
+
+	conn, ok := conns[cref.ID()]
+	if !ok {
+		return fmt.Errorf("internal error: connection %q not found in state", cref.ID())
+	}
+
+	// store old connection for undo
+	task.Set("old-conn", conn)
+
+	err = m.repo.Disconnect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name, slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
+	if err != nil {
+		_, notConnected := err.(*interfaces.NotConnectedError)
+		_, noPlugOrSlot := err.(*interfaces.NoPlugOrSlotError)
+		// not connected, just forget it.
+		if forget && (notConnected || noPlugOrSlot) {
+			delete(conns, cref.ID())
+			setConns(st, conns)
+			return nil
+		}
+		return fmt.Errorf("workshop changed, please retry the operation: %v", err)
+	}
+
+	plugSdkRef := sdk.Ref{ProjectId: plugRef.ProjectId, Workshop: plugRef.Workshop, Sdk: plugRef.Sdk}
+	slotSdkRef := sdk.Ref{ProjectId: slotRef.ProjectId, Workshop: slotRef.Workshop, Sdk: slotRef.Sdk}
+
+	affected := []sdk.Ref{plugSdkRef, slotSdkRef}
+
+	for _, ref := range affected {
+		for _, backend := range m.repo.Backends() {
+			if err = backend.Setup(ctx, ref, m.repo); err != nil {
+				return err
+			}
+		}
+	}
+
+	switch {
+	case forget:
+		delete(conns, cref.ID())
+	case conn.Auto:
+		conn.Undesired = true
+		conn.DynamicPlugAttrs = nil
+		conn.DynamicSlotAttrs = nil
+		conn.StaticPlugAttrs = nil
+		conn.StaticSlotAttrs = nil
+		conns[cref.ID()] = conn
+	default:
+		delete(conns, cref.ID())
+	}
+	setConns(st, conns)
+
+	return nil
 }
 
 func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
@@ -535,7 +630,7 @@ func (m *InterfaceManager) remount(ctx context.Context, plug *interfaces.PlugRef
 	}
 
 	for _, backend := range m.repo.Backends() {
-		if err := backend.Setup(ctx, connection.Plug.Sdk(), m.repo); err != nil {
+		if err := backend.Setup(ctx, connection.Plug.Sdk().Ref(), m.repo); err != nil {
 			return err
 		}
 	}

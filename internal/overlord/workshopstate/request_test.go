@@ -91,7 +91,7 @@ func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 func verifyDisconnectDependencies(c *check.C, ts *state.TaskSet) {
 	prev := (*state.Task)(nil)
 	for _, t := range ts.Tasks() {
-		if t.Kind() == "disconnect" {
+		if t.Kind() == "auto-disconnect" {
 			if prev != nil {
 				c.Assert(t.WaitTasks(), testutil.Contains, prev)
 			}
@@ -264,8 +264,8 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-state-storage",
 		"run-hook", // save-state sdk-1
 		"run-hook", // save-state sdk-2
-		"disconnect",
-		"disconnect",
+		"auto-disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -439,7 +439,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"retrieve-sdk",
 		"create-state-storage",
 		"run-hook", // save-state hook
-		"disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -516,7 +516,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"retrieve-sdk",
 		"create-state-storage",
 		"run-hook",
-		"disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -743,7 +743,7 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 
 	verifyDisconnectDependencies(c, ts[0])
 	for i, t := range ts[0].Tasks()[0:3] {
-		c.Assert(t.Kind(), check.Equals, "disconnect")
+		c.Assert(t.Kind(), check.Equals, "auto-disconnect")
 		var sdkName string
 		err = t.Get("sdk", &sdkName)
 		c.Assert(err, check.IsNil)

@@ -66,7 +66,7 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
-// String returns the "workshop:sdk:plug" representation of a plug reference.
+// String returns the "workshop/sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
 }

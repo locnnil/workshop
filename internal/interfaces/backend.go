@@ -41,7 +41,7 @@ type SecurityBackend interface {
 	// Setup creates and loads security artefacts specific to a given sdk.
 	// This method should be called after changing plug, slots, connections
 	// between them.
-	Setup(context context.Context, sdk *sdk.Info, repo *Repository) error
+	Setup(context context.Context, sdk sdk.Ref, repo *Repository) error
 
 	// Remove removes and unloads security artefacts of a given sdk.
 	//

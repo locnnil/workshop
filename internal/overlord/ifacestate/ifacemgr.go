@@ -2,6 +2,7 @@ package ifacestate
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -31,12 +32,13 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 	}
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
-	r.AddHandler("disconnect", OnDo(m.doDisconnect), m.undoDisconnect)
+	r.AddHandler("auto-disconnect", OnDo(m.doAutoDisconnect), m.undoAutoDisconnect)
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it
 	// would revert all the partial progress). Shall remount be used as part of
 	// a larger change the undo logic must be implemented.
 	r.AddHandler("remount", m.doRemount, nil)
+	r.AddHandler("disconnect", m.doDisconnect, nil)
 
 	return m
 }
@@ -170,6 +172,115 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	return nil
+}
+
+// ResolveDisconnect resolves potentially missing plug or slot names and
+// returns a list of fully populated connection references that can be
+// disconnected.
+func (m *InterfaceManager) ResolveDisconnect(
+	plugProject, plugWorkshop, plugSdk, plugName string, slotProject, slotWorkshop, slotSdk, slotName string, forget bool) ([]*interfaces.ConnRef, error) {
+
+	var connected func(plugPrj, plugWs, plugSdk, plug, slotPrj, slotWs, slotSdk, slot string) (bool, error)
+	var connectedPlugOrSlot func(projectId, workshop, sdkName, plugOrSlotName string) ([]*interfaces.ConnRef, error)
+
+	if forget {
+		conns, err := getConns(m.state)
+		if err != nil {
+			return nil, err
+		}
+		connected = func(plugPrj, plugWs, plugSdk, plug, slotPrj, slotWs, slotSdk, slot string) (bool, error) {
+			cref := interfaces.ConnRef{
+				PlugRef: interfaces.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
+				SlotRef: interfaces.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
+			}
+			_, ok := conns[cref.ID()]
+			return ok, nil
+		}
+
+		connectedPlugOrSlot = func(projectId, workshop, sdkName, plugOrSlotName string) ([]*interfaces.ConnRef, error) {
+			var refs []*interfaces.ConnRef
+			for connID := range conns {
+				cref, err := interfaces.ParseConnRef(connID)
+				if err != nil {
+					return nil, err
+				}
+				if cref.PlugRef.ProjectId == projectId && cref.PlugRef.Workshop == workshop && cref.PlugRef.Sdk == sdkName && cref.PlugRef.Name == plugOrSlotName {
+					refs = append(refs, cref)
+				}
+				if cref.SlotRef.ProjectId == projectId && cref.SlotRef.Workshop == workshop && cref.SlotRef.Sdk == sdkName && cref.SlotRef.Name == plugOrSlotName {
+					refs = append(refs, cref)
+				}
+			}
+			return refs, nil
+		}
+	} else {
+		connected = func(plugPrj, plugWs, plugSdk, plug, slotPrj, slotWs, slotSdk, slot string) (bool, error) {
+			_, err := m.repo.Connection(&interfaces.ConnRef{
+				PlugRef: interfaces.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
+				SlotRef: interfaces.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
+			})
+			if _, notConnected := err.(*interfaces.NotConnectedError); notConnected {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		}
+
+		connectedPlugOrSlot = func(projectId, workshop, sdkName, plugOrSlotName string) ([]*interfaces.ConnRef, error) {
+			return m.repo.Connected(projectId, workshop, sdkName, plugOrSlotName)
+		}
+	}
+	// There are two allowed forms (see workshop disconnect --help)
+	switch {
+	// 1: <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot>
+	// Return exactly one plug/slot or an error if it doesn't exist.
+	case plugName != "" && slotName != "":
+		// The SDK name can be omitted to implicitly refer to the agent SDK.
+		if plugSdk == "" {
+			plugSdk = sdk.Agent.String()
+		}
+		// The SDK name can be omitted to implicitly refer to the agent SDK.
+		if slotSdk == "" {
+			slotSdk = sdk.Agent.String()
+		}
+		// Ensure that slot and plug are connected
+		isConnected, err := connected(plugProject, plugWorkshop, plugSdk, plugName, slotProject, slotWorkshop, slotSdk, slotName)
+		if err != nil {
+			return nil, err
+		}
+		if !isConnected {
+			if forget {
+				return nil, fmt.Errorf("cannot forget connection %s/%s:%s from %s/%s:%s, it was not connected",
+					plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
+			}
+			return nil, fmt.Errorf("cannot disconnect  %s/%s:%s from %s/%s:%s, it is not connected",
+				plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
+		}
+		return []*interfaces.ConnRef{
+			{
+				PlugRef: interfaces.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName},
+				SlotRef: interfaces.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName},
+			}}, nil
+	// 2: <workshop>/<sdk>:<plug or slot> (through 1st pair)
+	// Return a list of connections involving specified plug or slot.
+	case plugName != "" && slotName == "" && slotSdk == "":
+		// The snap name can be omitted to implicitly refer to the core snap.
+		if plugSdk == "" {
+			plugSdk = sdk.Agent.String()
+		}
+		return connectedPlugOrSlot(plugProject, plugWorkshop, plugSdk, plugName)
+	// 2: <workshop>/<sdk>:<plug or slot> (through 2nd pair)
+	// Return a list of connections involving specified plug or slot.
+	case plugSdk == "" && plugName == "" && slotName != "":
+		if slotSdk == "" {
+			slotSdk = sdk.Agent.String()
+		}
+		return connectedPlugOrSlot(slotProject, slotWorkshop, slotSdk, slotName)
+	default:
+		return nil, fmt.Errorf("allowed forms are <workshop>/<sdk>:<plug> <snap>:<slot> or <snap>:<plug or slot>")
+	}
 }
 
 // Ensure the mounts required by a workshop to function properly were created:

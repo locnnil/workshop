@@ -373,7 +373,7 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	disconnectSet := []*state.Task{}
 	prev := (*state.Task)(nil)
 	for _, s := range content {
-		disc := st.NewTask("disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
+		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
 		disc.Set("sdk", s.Name)
 		if prev != nil {
 			disc.WaitFor(prev)
