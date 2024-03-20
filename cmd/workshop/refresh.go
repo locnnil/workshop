@@ -43,6 +43,8 @@ Notes:
 - Throughout the refresh, all affected workshops remain *Pending*
 - If the refresh removes an SDK from the workshop, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
+- For content interface plugs, mounts the last source
+  set by 'workshop remount', if any
 `,
 
 		RunE: c.Run,
