@@ -59,7 +59,7 @@ that does the following:
 - Sets its :samp:`interface` type to :samp:`content`,
   which makes it a content interface plug
 
-- Points the :samp:`target` directory
+- Sets the :samp:`target` directory
   to :file:`/home/workshop/go/pkg/mod/`
   *inside the workshop*;
   a directory on the host system
