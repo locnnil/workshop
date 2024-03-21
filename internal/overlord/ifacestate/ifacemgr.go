@@ -39,6 +39,7 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 	// a larger change the undo logic must be implemented.
 	r.AddHandler("remount", m.doRemount, nil)
 	r.AddHandler("disconnect", m.doDisconnect, nil)
+	r.AddHandler("discard", m.doDiscard, nil)
 
 	return m
 }

@@ -739,7 +739,7 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 
 	ts, err := s.mgr.RemoveMany(s.ctx, []string{"ws-1"}, s.project.ProjectId, "1")
 	c.Assert(err, check.IsNil)
-	c.Assert(ts[0].Tasks(), check.HasLen, 4)
+	c.Assert(ts[0].Tasks(), check.HasLen, 5)
 
 	verifyDisconnectDependencies(c, ts[0])
 	for i, t := range ts[0].Tasks()[0:3] {
@@ -750,7 +750,8 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 		c.Assert(sdkName, check.Equals, content[i].Name)
 		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
 	}
-	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "remove-workshop")
+	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "discard")
+	c.Assert(ts[0].Tasks()[4].Kind(), check.Equals, "remove-workshop")
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
 }
 

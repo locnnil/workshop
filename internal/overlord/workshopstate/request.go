@@ -576,9 +576,15 @@ func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project 
 func remove(st *state.State, workshop *workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
 	disconnectSet := disconnectSdks(workshop.Content(), st)
+
+	discard := st.NewTask("discard", fmt.Sprintf("Discard %q undesired connections", workshop.Name))
+	discard.WaitAll(disconnectSet)
+
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))
 	remove.WaitAll(disconnectSet)
+	remove.WaitFor(discard)
 	removeSet.AddAll(disconnectSet)
+	removeSet.AddTask(discard)
 	removeSet.AddTask(remove)
 
 	for _, task := range removeSet.Tasks() {

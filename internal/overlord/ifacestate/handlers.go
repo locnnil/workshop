@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"slices"
 	"syscall"
 
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
@@ -353,16 +355,15 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 		return err
 	}
 
+	for _, backend := range m.repo.Backends() {
+		if err := backend.Remove(ctx, workshop, sdkName); err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
+			return err
+		}
+	}
 	for _, s := range disconnected {
 		if sdkRef != s.Ref() {
 			for _, backend := range m.repo.Backends() {
 				if err = backend.Setup(ctx, s.Ref(), m.repo); err != nil {
-					return err
-				}
-			}
-		} else {
-			for _, backend := range m.repo.Backends() {
-				if err := backend.Remove(ctx, workshop, sdkName); err != nil {
 					return err
 				}
 			}
@@ -512,6 +513,37 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	}
 	setConns(st, conns)
 
+	return nil
+}
+
+func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) (err error) {
+	_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+	removed := make(map[string]*schema.ConnState)
+	for id := range conns {
+		connRef, err := interfaces.ParseConnRef(id)
+		if err != nil {
+			return err
+		}
+		if (connRef.PlugRef.ProjectId == project.ProjectId && connRef.PlugRef.Workshop == workshop) ||
+			(connRef.SlotRef.ProjectId == project.ProjectId && connRef.SlotRef.Workshop == workshop) {
+			removed[id] = conns[id]
+			delete(conns, id)
+		}
+	}
+	task.Set("removed", removed)
+	setConns(st, conns)
 	return nil
 }
 
