@@ -8,6 +8,28 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
+func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
+	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
+	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
+	if err != nil {
+		return nil, err
+	}
+
+	slotProject, slotWorkshop := conn.SlotRef.ProjectId, conn.SlotRef.Workshop
+	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
+	if err != nil {
+		return nil, err
+	}
+
+	disconnectTask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s/%s:%s from %s/%s:%s", plugWorkshop, conn.PlugRef.Sdk, conn.PlugRef.Name,
+		slotWorkshop, conn.SlotRef.Sdk, conn.SlotRef.Name))
+
+	disconnectTask.Set("slot", conn.SlotRef)
+	disconnectTask.Set("plug", conn.PlugRef)
+	disconnectTask.Set("forget", true)
+	return state.NewTaskSet(disconnectTask), nil
+}
+
 // Disconnect returns a set of tasks for disconnecting an interface.
 func Disconnect(st *state.State, conn *interfaces.Connection, forget bool) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := conn.Plug.Ref().ProjectId, conn.Plug.Ref().Workshop

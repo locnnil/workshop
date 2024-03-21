@@ -19,6 +19,11 @@
 
 package client
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Plug represents the potential of a given snap to connect to a slot.
 type Plug struct {
 	ProjectId   string                 `json:"project-id"`
@@ -88,4 +93,36 @@ type InterfaceOptions struct {
 // DisconnectOptions represents extra options for disconnect op
 type DisconnectOptions struct {
 	Forget bool
+}
+
+func ParsePlugRef(plug string) (*PlugRef, error) {
+	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
+	var plugRef PlugRef
+
+	parts := strings.Split(plug, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+	}
+
+	wssdk := strings.Split(parts[0], "/")
+	if len(wssdk) != 2 {
+		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+	}
+
+	plugRef.Workshop = wssdk[0]
+	plugRef.Sdk = wssdk[1]
+	plugRef.Name = parts[1]
+	return &plugRef, nil
+}
+
+// uses the plug parsing function, this should change when/if go will enable
+// individual fields access for generic types which would allow to have one
+// generic function returning plug or slot reference on request.
+func ParseSlotRef(slot string) (*SlotRef, error) {
+	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
+	plugRef, err := ParsePlugRef(slot)
+	if err != nil {
+		return nil, err
+	}
+	return (*SlotRef)(plugRef), nil
 }

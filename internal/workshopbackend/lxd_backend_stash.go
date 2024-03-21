@@ -100,6 +100,7 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, ctx contex
 		Name:      instanceTo,
 		Project:   target,
 		Migration: true,
+		Profiles:  []string{"default"},
 	}); err != nil {
 		return err
 	} else if err = op.Wait(); err != nil {

@@ -31,14 +31,11 @@ func (b *Backend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfac
 	}
 
 	spec := s.(*Specification)
-	if len(spec.devices) > 0 {
-		profile := workshopbackend.NewSdkProfile(sdkInfo.Sdk)
-		for _, dev := range spec.devices {
-			profile.AddDevice(dev)
-		}
-		return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
+	profile := workshopbackend.NewSdkProfile(sdkInfo.Sdk)
+	for _, dev := range spec.devices {
+		profile.AddDevice(dev)
 	}
-	return nil
+	return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
 }
 
 // Remove removes profile of a given sdk.

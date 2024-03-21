@@ -352,14 +352,22 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			var ts *state.TaskSet
 			var conn *interfaces.Connection
 
-			conn, err = repo.Connection(connRef)
-			if err != nil {
-				break
+			if a.Forget {
+				ts, err = ifacestate.Forget(st, connRef, a.Forget)
+				if err != nil {
+					break
+				}
+			} else {
+				conn, err = repo.Connection(connRef)
+				if err != nil {
+					break
+				}
+				ts, err = ifacestate.Disconnect(st, conn, a.Forget)
+				if err != nil {
+					break
+				}
 			}
-			ts, err = ifacestate.Disconnect(st, conn, a.Forget)
-			if err != nil {
-				break
-			}
+
 			ts.JoinLane(st.NewLane())
 			tasksets = append(tasksets, ts)
 		}

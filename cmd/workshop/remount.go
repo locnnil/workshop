@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/canonical/workshop/client"
 	"github.com/spf13/cobra"
@@ -47,29 +46,10 @@ Notes:
 	return cmd
 }
 
-func parsePlugRef(plug string) (*client.PlugRef, error) {
-	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
-	var plugRef client.PlugRef
-	parts := strings.Split(plug, ":")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("cannot remount: unknown plug reference %q", plug)
-	}
-
-	wssdk := strings.Split(parts[0], "/")
-	if len(wssdk) != 2 {
-		return nil, fmt.Errorf("cannot remount: unknown plug reference %q", plug)
-	}
-
-	plugRef.Workshop = wssdk[0]
-	plugRef.Sdk = wssdk[1]
-	plugRef.Name = parts[1]
-	return &plugRef, nil
-}
-
 func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 	var err error
 
-	plugRef, err := parsePlugRef(av[0])
+	plugRef, err := client.ParsePlugRef(av[0])
 	if err != nil {
 		return err
 	}

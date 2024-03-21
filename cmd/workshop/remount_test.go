@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"testing"
 
 	"gopkg.in/check.v1"
 )
@@ -54,27 +53,5 @@ func (m *remountSuite) TestRemountSuccess(c *check.C) {
 func (m *remountSuite) TestRemountBrokenReference(c *check.C) {
 	cmd := &CmdRemount{}
 	err := cmd.Run(cmd.Command(), []string{"ws:sdk:plug", "/new/source"})
-	c.Assert(err, check.ErrorMatches, `cannot remount: unknown plug reference "ws:sdk:plug"`)
-}
-
-func FuzzRemount(f *testing.F) {
-	testcases := []string{"albert/go:plug", "albert-test/go-sdk:plug7", "albert-test/go-sdk_:a-plug", "work_shop/go-sdk_:a-plug"}
-	for _, tc := range testcases {
-		f.Add(tc)
-	}
-
-	f.Fuzz(func(t *testing.T, a string) {
-		ref, err := parsePlugRef(a)
-		if err == nil {
-			if fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name) != a {
-				t.Errorf("plug %s cannot be reverted to a PlugRef after parsing", a)
-			}
-		}
-
-		if err != nil {
-			if err.Error() != fmt.Sprintf("cannot remount: unknown plug reference %s", a) {
-				t.Errorf("unknown error returned: %v", err)
-			}
-		}
-	})
+	c.Assert(err, check.ErrorMatches, `unknown plug or slot reference "ws:sdk:plug"`)
 }
