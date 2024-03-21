@@ -20,6 +20,8 @@
 package client
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/url"
 )
 
@@ -80,4 +82,23 @@ func (client *Client) Connections(opts *ConnectionOptions) (Connections, error) 
 	}
 	_, err := client.doSync("GET", "/v1/connections", query, nil, nil, &conns)
 	return conns, err
+}
+
+// performInterfaceAction performs a single action on the interface system.
+func (client *Client) performInterfaceAction(sa *InterfaceAction) (changeID string, err error) {
+	b, err := json.Marshal(sa)
+	if err != nil {
+		return "", err
+	}
+	return client.doAsync("POST", "/v1/connections", nil, nil, bytes.NewReader(b))
+}
+
+// Disconnect breaks the connection between a plug and a slot.
+func (client *Client) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugName, slotProjectId, slotWorkshop, slotSdkName, slotName string, opts *DisconnectOptions) (changeID string, err error) {
+	return client.performInterfaceAction(&InterfaceAction{
+		Action: "disconnect",
+		Forget: opts != nil && opts.Forget,
+		Plugs:  []Plug{{ProjectId: plugProjectId, Workshop: plugWorkshop, Sdk: plugSdkName, Name: plugName}},
+		Slots:  []Slot{{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName, Name: slotName}},
+	})
 }
