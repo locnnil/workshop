@@ -17,11 +17,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func mockIface(c *check.C, d *Daemon, iface interfaces.Interface) {
-	err := d.Overlord().InterfaceManager().Repository().AddInterface(iface)
-	c.Assert(err, check.IsNil)
-}
-
 func (s *apiSuite) launchWorkshopWithPlug(ctx context.Context, name string, c *check.C) *workshopbackend.Workshop {
 	b := s.d.overlord.WorkshopBackend()
 	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s

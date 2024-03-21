@@ -255,7 +255,7 @@ func (m *InterfaceManager) ResolveDisconnect(
 				return nil, fmt.Errorf("cannot forget connection %s/%s:%s from %s/%s:%s, it was not connected",
 					plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
 			}
-			return nil, fmt.Errorf("cannot disconnect  %s/%s:%s from %s/%s:%s, it is not connected",
+			return nil, fmt.Errorf("cannot disconnect %s/%s:%s from %s/%s:%s, it is not connected",
 				plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
 		}
 		return []*interfaces.ConnRef{
@@ -265,21 +265,20 @@ func (m *InterfaceManager) ResolveDisconnect(
 			}}, nil
 	// 2: <workshop>/<sdk>:<plug or slot> (through 1st pair)
 	// Return a list of connections involving specified plug or slot.
-	case plugName != "" && slotName == "" && slotSdk == "":
-		// The snap name can be omitted to implicitly refer to the core snap.
+	case plugWorkshop != "" && plugName != "" && slotWorkshop == "" && slotName == "":
 		if plugSdk == "" {
 			plugSdk = sdk.Agent.String()
 		}
 		return connectedPlugOrSlot(plugProject, plugWorkshop, plugSdk, plugName)
 	// 2: <workshop>/<sdk>:<plug or slot> (through 2nd pair)
 	// Return a list of connections involving specified plug or slot.
-	case plugSdk == "" && plugName == "" && slotName != "":
+	case plugWorkshop == "" && plugName == "" && slotWorkshop != "" && slotName != "":
 		if slotSdk == "" {
 			slotSdk = sdk.Agent.String()
 		}
 		return connectedPlugOrSlot(slotProject, slotWorkshop, slotSdk, slotName)
 	default:
-		return nil, fmt.Errorf("allowed forms are <workshop>/<sdk>:<plug> <snap>:<slot> or <snap>:<plug or slot>")
+		return nil, fmt.Errorf("allowed forms are <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> or <workshop>/<sdk>:<plug or slot>")
 	}
 }
 

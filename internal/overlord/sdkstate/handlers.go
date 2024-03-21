@@ -65,7 +65,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, _ := BackendContext(tomb, user, project)
+	ctx, _ := BackendContext(tomb, user, project.ProjectId)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -106,7 +106,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
@@ -177,7 +177,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	sdkSetup, err := SdkSetup(task)
@@ -210,7 +210,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	inst, err := m.backend.Workshop(ctx, workshop)
@@ -247,7 +247,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	inst, err := m.backend.Workshop(ctx, workshop)

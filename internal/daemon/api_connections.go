@@ -276,6 +276,9 @@ func newConnectionChange(st *state.State, user string, tasks []*state.TaskSet, r
 	change := st.NewChange(reqData.Action, summary)
 	change.Set("user", user)
 	change.Set("project-id", reqData.Plugs[0].ProjectId)
+	for _, ts := range tasks {
+		change.AddAll(ts)
+	}
 	return change
 }
 
@@ -312,17 +315,23 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 
 	checkInstalled := func(projectId, workshopName string) error {
 		if err := checkWorkshopExists(r.Context(), c.d.overlord.WorkshopManager(), projectId, workshopName); err != nil {
-			return fmt.Errorf("cannot access workshop: %v", err)
+			return err
 		}
 		return nil
 	}
 
 	for i := range a.Plugs {
+		if a.Plugs[i].Workshop == "" && a.Plugs[i].Name == "" {
+			continue
+		}
 		if err := checkInstalled(a.Plugs[i].ProjectId, a.Plugs[i].Workshop); err != nil {
 			return statusNotFound("cannot access workshop %q: %v", a.Plugs[i].Workshop, err)
 		}
 	}
 	for i := range a.Slots {
+		if a.Slots[i].Workshop == "" && a.Slots[i].Name == "" {
+			continue
+		}
 		if err := checkInstalled(a.Slots[i].ProjectId, a.Slots[i].Workshop); err != nil {
 			return statusNotFound("cannot access workshop %q: %v", a.Slots[i].Workshop, err)
 		}
@@ -338,30 +347,22 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 				return statusBadRequest("nothing to do")
 			}
 		}
-		// 	repo := c.d.overlord.InterfaceManager().Repository()
-		// 	for _, connRef := range conns {
-		// 		var ts *state.TaskSet
-		// 		var conn *interfaces.Connection
-		// 		if a.Forget {
-		// 			ts, err = ifacestate.Forget(st, repo, connRef)
-		// 		} else {
-		// 			conn, err = repo.Connection(connRef)
-		// 			if err != nil {
-		// 				break
-		// 			}
-		// 			ts, err = ifacestate.Disconnect(st, conn)
-		// 			if err != nil {
-		// 				break
-		// 			}
-		// 		}
-		// 		if err != nil {
-		// 			break
-		// 		}
-		// 		ts.JoinLane(st.NewLane())
-		// 		tasksets = append(tasksets, ts)
-		// 	}
-		// 	affected = snapNamesFromConns(conns)
-		// }
+		repo := c.d.overlord.InterfaceManager().Repository()
+		for _, connRef := range conns {
+			var ts *state.TaskSet
+			var conn *interfaces.Connection
+
+			conn, err = repo.Connection(connRef)
+			if err != nil {
+				break
+			}
+			ts, err = ifacestate.Disconnect(st, conn, a.Forget)
+			if err != nil {
+				break
+			}
+			ts.JoinLane(st.NewLane())
+			tasksets = append(tasksets, ts)
+		}
 	}
 	if err != nil {
 		return statusBadRequest(err.Error())

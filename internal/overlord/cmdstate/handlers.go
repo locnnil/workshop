@@ -64,7 +64,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	var setup workshopbackend.ExecArgs

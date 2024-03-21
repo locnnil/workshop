@@ -29,7 +29,7 @@ func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) 
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	return m.backend.RemoveWorkshop(ctx, workshop)
@@ -61,7 +61,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 
 	st := task.State()
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	var base string
@@ -107,7 +107,7 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 
 	// Configure workshop core properties: project directory
 	var prjMount = workshopbackend.Mount(workshopbackend.ProjectPathDevice, prj.Path, workshopbackend.WorkshopProjectPath)
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	return m.backend.AddWorkshopDevice(ctx, workshop, prjMount)
@@ -123,7 +123,7 @@ func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	return m.backend.StartWorkshop(ctx, workshop)
@@ -135,7 +135,7 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	if err := m.backend.RemoveWorkshop(ctx, workshop); err != nil {
@@ -158,7 +158,7 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	return m.backend.RemoveWorkshopStash(ctx, workshop)
@@ -170,7 +170,7 @@ func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) err
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	if err = m.backend.StashWorkshop(ctx, workshop); err != nil {
@@ -185,7 +185,7 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	if err = m.backend.UnstashWorkshop(ctx, workshop); err != nil {
@@ -200,7 +200,7 @@ func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	var force bool
@@ -237,7 +237,7 @@ func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	return m.backend.CreateStateStorage(ctx, workshop)
@@ -249,7 +249,7 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj)
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	return m.backend.DeleteStateStorage(ctx, workshop)

@@ -104,9 +104,9 @@ func UserProjectWorkshop(task *state.Task) (string, *workshopbackend.Project, st
 	return user, &prj, name, nil
 }
 
-func BackendContext(tomb *tomb.Tomb, user string, prj *workshopbackend.Project) (context.Context, context.CancelFunc) {
+func BackendContext(tomb *tomb.Tomb, user string, projectId string) (context.Context, context.CancelFunc) {
 	ctx := tomb.Context(context.Background())
-	ctxProject := context.WithValue(ctx, workshopbackend.ContextProjectId, prj.ProjectId)
+	ctxProject := context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
 	ctxUser := context.WithValue(ctxProject, workshopbackend.ContextUser, user)
 	ctxCancel, cancel := context.WithCancel(ctxUser)
 	return ctxCancel, cancel

@@ -70,7 +70,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	inst, err := m.backend.Workshop(ctx, workshop)
@@ -321,7 +321,7 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -377,7 +377,7 @@ func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -403,7 +403,7 @@ func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb)
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	sdkName, err := sdkName(task)
@@ -437,17 +437,12 @@ func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRe
 }
 
 func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, _, err := handlersetup.UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
-	defer cancel()
-
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
+
+	var user string
+	err = task.Change().Get("user", &user)
 
 	plugRef, slotRef, err := getPlugAndSlotRefs(task)
 	if err != nil {
@@ -493,6 +488,8 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	affected := []sdk.Ref{plugSdkRef, slotSdkRef}
 
 	for _, ref := range affected {
+		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+		defer cancel()
 		for _, backend := range m.repo.Backends() {
 			if err = backend.Setup(ctx, ref, m.repo); err != nil {
 				return err
@@ -524,7 +521,7 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	st := task.State()
