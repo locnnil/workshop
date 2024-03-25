@@ -281,7 +281,7 @@ func (s *apiSuite) TestConnectionsByWorkshopName(c *check.C) {
 	})
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -338,16 +338,16 @@ func (s *apiSuite) TestConnectionsMissingPlugSlotFilteredOut(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	for _, missingPlugOrSlot := range []string{"b8639dea:consumer-ws:consumer:plug2 b8639dea:producer-ws:producer:slot", "b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot2"} {
+	for _, missingPlugOrSlot := range []string{"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot", "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot2"} {
 		s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-			"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 				"interface": "test",
 			},
 			missingPlugOrSlot: map[string]interface{}{
 				"interface": "test",
 			},
 		},
-			[]string{"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot"},
+			[]string{"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
 			map[string]interface{}{
 				"result": map[string]interface{}{
 					"plugs": []interface{}{
@@ -488,7 +488,7 @@ plugs:
 
 	// modifies state internally
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&interfaces=test", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -557,7 +557,7 @@ func (s *apiSuite) TestConnectionsDefaultManual(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -615,7 +615,7 @@ func (s *apiSuite) TestConnectionsDefaultAuto(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"plug-static": map[string]interface{}{
@@ -693,7 +693,7 @@ func (s *apiSuite) TestConnectionsAll(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -748,7 +748,7 @@ func (s *apiSuite) TestConnectionsOnlyConnected(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -797,19 +797,19 @@ slots:
 	s.mockInstalledSDK(c, anotherProducerYaml, "another-producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-def:another-consumer-def:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-abc:another-consumer-abc:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-abc/another-consumer-abc:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-def:another-consumer-def:plug b8639dea:another-producer-ws:another-producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/another-producer-ws/another-producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
@@ -933,7 +933,7 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 	st := d.Overlord().State()
 	st.Lock()
 	st.Set("conns", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	})

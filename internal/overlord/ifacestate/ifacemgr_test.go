@@ -119,7 +119,7 @@ plugs:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s:ws:consumer:plug %s:ws:agent:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/agent:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
 			"interface": "content",
@@ -188,7 +188,7 @@ slots:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s:ws:consumer:plug %s:core:producer:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug %s/core/producer:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
 			"interface": "test",
@@ -231,7 +231,7 @@ slots:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s:ws:consumer:plug-1 %s:core:producer:slot-1", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug-1 %s/core/producer:slot-1", s.prj.ProjectId, s.prj.ProjectId)
 
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
@@ -251,7 +251,7 @@ slots:
 func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
 	var isAuto, isUndesired bool = true, false
 	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
-		"pid:ws:consumer:plug pid:ws:producer:slot": {
+		"pid/ws/consumer:plug pid/ws/producer:slot": {
 			Interface: "test",
 			Auto:      true,
 			StaticPlugAttrs: map[string]interface{}{
@@ -272,7 +272,7 @@ func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
 func (s *interfaceManagerSuite) TestConnectionStatesUndesired(c *check.C) {
 	var isAuto, isUndesired bool = true, true
 	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
-		"pid:ws:consumer:plug pid:ws:producer:slot": {
+		"pid/ws/consumer:plug pid/ws/producer:slot": {
 			Interface: "test",
 			Auto:      true,
 			Undesired: true,

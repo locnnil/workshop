@@ -151,7 +151,7 @@ func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 
 // ID returns a string identifying a given connection.
 func (conn *ConnRef) ID() string {
-	return fmt.Sprintf("%s:%s:%s:%s %s:%s:%s:%s",
+	return fmt.Sprintf("%s/%s/%s:%s %s/%s/%s:%s",
 		conn.PlugRef.ProjectId, conn.PlugRef.Workshop, conn.PlugRef.Sdk, conn.PlugRef.Name,
 		conn.SlotRef.ProjectId, conn.SlotRef.Workshop, conn.SlotRef.Sdk, conn.SlotRef.Name)
 }
@@ -173,19 +173,26 @@ func ParseConnRef(id string) (*ConnRef, error) {
 	}
 	plugParts := strings.Split(parts[0], ":")
 	slotParts := strings.Split(parts[1], ":")
-	if len(plugParts) != 4 || len(slotParts) != 4 {
+	if len(plugParts) != 2 || len(slotParts) != 2 {
 		return nil, fmt.Errorf("malformed connection identifier: %q", id)
 	}
 
-	conn.PlugRef.ProjectId = plugParts[0]
-	conn.PlugRef.Workshop = plugParts[1]
-	conn.PlugRef.Sdk = plugParts[2]
-	conn.PlugRef.Name = plugParts[3]
+	// plug's project / workshop / sdk
+	plugPwsParts := strings.Split(plugParts[0], "/")
+	slotPwsParts := strings.Split(slotParts[0], "/")
+	if len(plugPwsParts) != 3 || len(slotPwsParts) != 3 {
+		return nil, fmt.Errorf("malformed connection identifier: %q", id)
+	}
 
-	conn.SlotRef.ProjectId = slotParts[0]
-	conn.SlotRef.Workshop = slotParts[1]
-	conn.SlotRef.Sdk = slotParts[2]
-	conn.SlotRef.Name = slotParts[3]
+	conn.PlugRef.ProjectId = plugPwsParts[0]
+	conn.PlugRef.Workshop = plugPwsParts[1]
+	conn.PlugRef.Sdk = plugPwsParts[2]
+	conn.PlugRef.Name = plugParts[1]
+
+	conn.SlotRef.ProjectId = slotPwsParts[0]
+	conn.SlotRef.Workshop = slotPwsParts[1]
+	conn.SlotRef.Sdk = slotPwsParts[2]
+	conn.SlotRef.Name = slotParts[1]
 	return &conn, nil
 }
 

@@ -175,7 +175,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, map[string]interface{}{
-		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":    "mock-network",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
@@ -487,7 +487,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectReconnectsExistingConnections(c 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, map[string]interface{}{
-		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":   "mock-network",
 			"auto":        true,
 			"plug-static": map[string]interface{}{"attribute": "one"},
@@ -549,7 +549,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
 	t := s.state.NewTask("auto-disconnect", "...")
 	// see doAutoConnect and doDisconnect handlers for details
 	t.Set("plugs-to-remount", map[string]map[string]interface{}{
-		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": {"source": "/old/source"},
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": {"source": "/old/source"},
 	})
 	t.Set("sdk", "consumer")
 	t.SetStatus(state.DoneStatus)
@@ -572,7 +572,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, map[string]interface{}{
-		"42424242:ws:consumer:plug 42424242:ws-producer:producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":    "mock-network",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
@@ -920,7 +920,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	repo := s.mgr.Repository()
 	s.launchRemountWorkshop(c)
 
-	connRefKey := "42424242:ws-consumer:consumer:plug 42424242:ws-consumer:agent:slot"
+	connRefKey := "42424242/ws-consumer/consumer:plug 42424242/ws-consumer/agent:slot"
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
 		connRefKey: map[string]interface{}{
@@ -1035,7 +1035,7 @@ func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
-		"42424242:ws:consumer:plug 42424242:ws:producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
 			"interface":    "mock-network",
 			"auto":         false,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
@@ -1076,7 +1076,7 @@ func (s *interfaceHandlersSuite) TestDisconnectAuto(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	connRefKey := "42424242:ws:consumer:plug 42424242:ws:producer:slot"
+	connRefKey := "42424242/ws/consumer:plug 42424242/ws/producer:slot"
 	s.state.Set("conns", map[string]interface{}{
 		connRefKey: map[string]interface{}{
 			"interface":    "mock-network",
@@ -1124,7 +1124,7 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	connRefKey := "42424242:ws:consumer:plug 42424242:ws:producer:slot"
+	connRefKey := "42424242/ws/consumer:plug 42424242/ws/producer:slot"
 	s.state.Set("conns", map[string]interface{}{
 		connRefKey: map[string]interface{}{
 			"interface":    "mock-network",
