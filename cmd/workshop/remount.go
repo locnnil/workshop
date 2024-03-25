@@ -15,10 +15,29 @@ type CmdRemount struct {
 
 func (c *CmdRemount) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "remount <workshop>[/<sdk>]:<plug> <SOURCE>",
+		Use:   "remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE>",
 		Args:  cobra.ExactArgs(2),
-		Short: "Mount the content interface plug's source directory to the new location.",
-		RunE:  c.Run,
+		Short: "Mount a new source location to the content interface plug's target.",
+		Long: `
+This command mounts a new source location on the host to the target directory
+of the specified content interface plug, qualified by the SDK name.
+Specifically, it does the following:
+
+- Attempts the mount operation atomically;
+  this normally succeeds if the new source is either a non-existing directory
+  or an empty directory on the same file system as the current source
+- Otherwise, performs the mount operation only if the workshop is *Stopped*
+  to prevent data corruption
+
+Notes:
+- To stop the workshop, use 'workshop stop'
+- 'workshop info' explicitly lists any remounted plugs for a workshop
+- 'workshop refresh' mounts the last source set by 'workshop remount', if any
+- During 'workshop remove', non-default sources set by 'workshop remount'
+  aren't removed
+`,
+
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",

@@ -38,6 +38,8 @@ Notes
 - Throughout the refresh, all affected workshops remain *Pending*
 - If the refresh removes an SDK from the workshop, the SDK state isn't saved
 - Updated and newly added SDKs are installed in alphabetical order
+- For content interface plugs, mounts the last source
+  set by :ref:`ref_workshop_remount`, if any
 
 
 Options
@@ -74,6 +76,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_content_interface`
 - :ref:`exp_project`
 - :ref:`exp_workshop`
 - :ref:`exp_workshop_def`
@@ -81,4 +84,5 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_remove`

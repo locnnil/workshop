@@ -59,7 +59,7 @@ that does the following:
 - Sets its :samp:`interface` type to :samp:`content`,
   which makes it a content interface plug
 
-- Points the :samp:`target` directory
+- Sets the :samp:`target` directory
   to :file:`/home/workshop/go/pkg/mod/`
   *inside the workshop*;
   a directory on the host system
@@ -110,6 +110,19 @@ the best part is that it will be preserved between workshop operations such as
 so you can benefit from a pre-populated module cache without doing extra work.
 
 
+Remounting plugs
+----------------
+
+The :command:`workshop remount` command sets a new source directory on the host
+for the plug's :samp:`target` inside the workshop.
+
+First, the mount operation is attempted atomically;
+this normally succeeds if the new source is either a non-existing directory
+or an empty directory on the same file system as the current source.
+Otherwise, the remount occurs only if the workshop was previously stopped,
+which allows to prevent data corruption.
+
+
 See also
 --------
 
@@ -124,5 +137,6 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_start`
 - :ref:`ref_workshop_stop`
