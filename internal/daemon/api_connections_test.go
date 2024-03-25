@@ -965,6 +965,7 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 	chg := st.Change(id)
 	st.Unlock()
 	c.Assert(chg, check.NotNil)
+	c.Assert(chg.Summary(), check.Equals, fmt.Sprintf(`Disconnect %s/%s:%s`, plugWorkshop, plugSdk, plugName))
 
 	<-chg.Ready()
 

@@ -103,7 +103,7 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "remount",
-			Summary: `Remount "ws/test-sdk:test-plug"`,
+			Summary: `Remount ws/test-sdk:test-plug`,
 		},
 	}
 

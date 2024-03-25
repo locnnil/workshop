@@ -776,6 +776,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	task := ts.Tasks()[0]
 	c.Assert(task.Get("workshop", &workshop), check.IsNil)
 	c.Assert(task.Get("project", &project), check.IsNil)
+	c.Assert(task.Summary(), check.Equals, `Remount ws-1/sdk-1:plug`)
 	c.Assert(workshop, check.Equals, "ws-1")
 	c.Assert(project, check.DeepEquals, *s.project)
 

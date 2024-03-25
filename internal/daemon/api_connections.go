@@ -270,7 +270,7 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 }
 
 func newConnectionChange(st *state.State, user string, tasks []*state.TaskSet, reqData *interfaceAction) *state.Change {
-	summary := fmt.Sprintf("%s %q", cases.Title(language.BritishEnglish).String(reqData.Action),
+	summary := fmt.Sprintf("%s %s", cases.Title(language.BritishEnglish).String(reqData.Action),
 		fmt.Sprintf("%s/%s:%s", reqData.Plugs[0].Workshop, reqData.Plugs[0].Sdk, reqData.Plugs[0].Name))
 
 	change := st.NewChange(reqData.Action, summary)
