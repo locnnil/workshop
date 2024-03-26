@@ -23,6 +23,25 @@ func (m *disconnectSuite) SetUpTest(c *check.C) {
 
 func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 	cmd := &CmdDisconnect{}
+	body := map[string]interface{}{
+		"action": "disconnect",
+		"plugs": []interface{}{
+			map[string]interface{}{
+				"project-id": "42424242",
+				"workshop":   "ws",
+				"sdk":        "sdk",
+				"plug":       "plug",
+			},
+		},
+		"slots": []interface{}{
+			map[string]interface{}{
+				"project-id": "42424242",
+				"workshop":   "ws",
+				"sdk":        "agent",
+				"slot":       "content",
+			},
+		},
+	}
 
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +55,7 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/connections")
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, body)
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:
@@ -51,6 +71,26 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	n = 0
+	body = map[string]interface{}{
+		"action": "disconnect",
+		"plugs": []interface{}{
+			map[string]interface{}{
+				"project-id": "42424242",
+				"workshop":   "ws",
+				"sdk":        "sdk",
+				"plug":       "plug2",
+			},
+		},
+		"slots": []interface{}{
+			map[string]interface{}{
+				"project-id": "42424242",
+				"workshop":   "ws",
+				"sdk":        "sdk-2",
+				"slot":       "producer",
+			},
+		},
+	}
+
 	err = cmd.Run(cmd.Command(), []string{"ws/sdk:plug2", "ws/sdk-2:producer"})
 	c.Assert(err, check.IsNil)
 }

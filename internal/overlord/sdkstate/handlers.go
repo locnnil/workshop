@@ -2,6 +2,7 @@ package sdkstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,7 +90,9 @@ func (m *SdkManager) undoRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	var setup sdk.Setup
 	err := task.Get("sdk-setup", &setup)
 	st.Unlock()
-	if err != nil {
+	if err != nil && errors.Is(err, state.ErrNoState) {
+		return nil
+	} else if err != nil {
 		return err
 	}
 	return os.Remove(setup.Filename())

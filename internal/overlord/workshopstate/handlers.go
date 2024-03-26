@@ -126,7 +126,49 @@ func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
+	st := task.State()
+	st.Lock()
+	task.Set("force", true)
+	st.Unlock()
+
 	return m.backend.StartWorkshop(ctx, workshop)
+}
+
+func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, workshop, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	var force bool
+	st := task.State()
+	st.Lock()
+	// false is by default
+	_ = task.Get("force", &force)
+	st.Unlock()
+
+	var stopped = make(chan error)
+	stopctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		// LXD has an internal timeout (30 seconds) for the operation,
+		// if exceeded, the dealine error will be returned
+		stopped <- StopWorkshop(m.backend, stopctx, workshop, force)
+	}()
+
+	for {
+		select {
+		case err = <-stopped:
+			return err
+		case <-time.After(StopLogInterval):
+			st.Lock()
+			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workshop)
+			st.Unlock()
+		}
+	}
 }
 
 func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -192,43 +234,6 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 		return err
 	}
 	return nil
-}
-
-func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	var force bool
-	st := task.State()
-	st.Lock()
-	// false is by default
-	_ = task.Get("force", &force)
-	st.Unlock()
-
-	var stopped = make(chan error)
-	stopctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go func() {
-		// LXD has an internal timeout (30 seconds) for the operation,
-		// if exceeded, the dealine error will be returned
-		stopped <- StopWorkshop(m.backend, stopctx, workshop, force)
-	}()
-
-	for {
-		select {
-		case err = <-stopped:
-			return err
-		case <-time.After(StopLogInterval):
-			st.Lock()
-			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workshop)
-			st.Unlock()
-		}
-	}
 }
 
 func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {

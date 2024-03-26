@@ -98,6 +98,7 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -204,6 +205,7 @@ func (s *LxdBackend) RemoveProfile(ctx context.Context, workshop string, profile
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {

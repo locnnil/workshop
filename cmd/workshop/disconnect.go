@@ -57,7 +57,6 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	if len(av) > 1 {
 		// check if the second arg is a short version of the agent-provided slot reference
 		if strings.HasPrefix(av[1], ":") {
-			slotRef.ProjectId = plugRef.ProjectId
 			slotRef.Workshop = plugRef.Workshop
 			slotRef.Sdk = "agent"
 			slotRef.Name = av[1][1:]
@@ -67,6 +66,7 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 				return err
 			}
 		}
+		slotRef.ProjectId = plugRef.ProjectId
 	}
 
 	var opts = client.DisconnectOptions{Forget: c.forget}
