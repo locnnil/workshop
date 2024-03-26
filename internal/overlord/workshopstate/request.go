@@ -577,7 +577,7 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 	removeSet := state.NewTaskSet()
 	disconnectSet := disconnectSdks(workshop.Content(), st)
 
-	discard := st.NewTask("discard", fmt.Sprintf("Discard %q undesired connections", workshop.Name))
+	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", workshop.Name))
 	discard.WaitAll(disconnectSet)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))

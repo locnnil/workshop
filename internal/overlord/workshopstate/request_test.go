@@ -750,7 +750,7 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 		c.Assert(sdkName, check.Equals, content[i].Name)
 		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
 	}
-	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "discard")
+	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "discard-conns")
 	c.Assert(ts[0].Tasks()[4].Kind(), check.Equals, "remove-workshop")
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
 }

@@ -516,7 +516,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	return nil
 }
 
-func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) (err error) {
+func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) error {
 	_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -544,6 +544,31 @@ func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) (err err
 	}
 	task.Set("removed", removed)
 	setConns(st, conns)
+
+	return nil
+}
+
+func (m *InterfaceManager) undoDiscard(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var removed map[string]*schema.ConnState
+	err := task.Get("removed", &removed)
+	if err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+
+	for id, connState := range removed {
+		conns[id] = connState
+	}
+	setConns(st, conns)
+	task.Set("removed", nil)
 	return nil
 }
 

@@ -1160,3 +1160,137 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 }
+
+func (s *interfaceHandlersSuite) TestDiscardConnsSuccess(c *check.C) {
+	// Setup
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+	s.state.Lock()
+	s.state.Set("conns", map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+		"42424242/ws-1/consumer:plug 42424242/ws-1/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+		"other/ws/consumer:plug other/ws/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+	})
+	s.state.Unlock()
+
+	// Execute
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("discard-conns", "...")
+	t1.Set("sdk", "consumer")
+	setWorkshopProject("ws", s.prj, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.IsNil)
+
+	// Validate
+	c.Assert(chg.Tasks()[0].Status(), check.Equals, state.DoneStatus)
+	var conns map[string]*schema.ConnState
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 2)
+
+	var removed map[string]*schema.ConnState
+	err := t1.Get("removed", &removed)
+	c.Assert(err, check.IsNil)
+	c.Assert(removed, check.DeepEquals, map[string]*schema.ConnState{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": {
+			Auto:      true,
+			Interface: "mock-network",
+			Undesired: true,
+		},
+		"other/ws/consumer:plug 42424242/ws/producer:slot": {
+			Auto:      true,
+			Interface: "mock-network",
+			Undesired: true,
+		},
+	})
+}
+
+func (s *interfaceHandlersSuite) TestUndoDiscardConnsSuccess(c *check.C) {
+	// Setup
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.state.Lock()
+	s.state.Set("conns", map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"auto":      true,
+			"interface": "mock-network",
+			"undesired": true,
+		},
+	})
+	s.state.Unlock()
+
+	// Execute
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("discard-conns", "...")
+	t1.Set("sdk", "consumer")
+	t2 := s.state.NewTask("error-trigger", "...")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate
+	c.Assert(t1.Status(), check.Equals, state.UndoneStatus)
+	var conns map[string]*schema.ConnState
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, map[string]*schema.ConnState{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": {
+			Auto:      true,
+			Interface: "mock-network",
+			Undesired: true,
+		},
+		"other/ws/consumer:plug 42424242/ws/producer:slot": {
+			Auto:      true,
+			Interface: "mock-network",
+			Undesired: true,
+		},
+	})
+}

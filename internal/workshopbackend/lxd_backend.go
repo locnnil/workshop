@@ -699,7 +699,7 @@ func createDefaultDevices() map[string]map[string]string {
 }
 
 func defaultConfig(projectId string, userid, groupid string) map[string]string {
-	cloudInitConfig := fmt.Sprintf(`#cloud-config
+	cloudInitConfig := `#cloud-config
 users:
   - default
   - name: workshop
@@ -707,7 +707,7 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
     shell: /bin/bash
-`)
+`
 	return map[string]string{
 		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":         "true",
