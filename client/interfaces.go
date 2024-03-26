@@ -115,11 +115,12 @@ func ParsePlugRef(plug string) (*PlugRef, error) {
 	return &plugRef, nil
 }
 
-// uses the plug parsing function, this should change when/if go will enable
-// individual fields access for generic types which would allow to have one
-// generic function returning plug or slot reference on request.
+// Uses the plug parsing function as the formats are identical. This should
+// change when/if go will enable individual fields access for generic types
+// which would allow to have one generic function returning plug or slot
+// reference type on request.
 func ParseSlotRef(slot string) (*SlotRef, error) {
-	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
+	// the expected format of the plug ref is <workshop>/<sdk>:<plug>
 	plugRef, err := ParsePlugRef(slot)
 	if err != nil {
 		return nil, err

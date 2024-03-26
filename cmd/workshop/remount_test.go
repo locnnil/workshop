@@ -23,6 +23,16 @@ func (m *remountSuite) SetUpTest(c *check.C) {
 
 func (m *remountSuite) TestRemountSuccess(c *check.C) {
 	cmd := &CmdRemount{}
+	body := map[string]interface{}{
+		"action": "remount",
+		"plug": map[string]interface{}{
+			"project-id": "42424242",
+			"workshop":   "ws",
+			"sdk":        "sdk",
+			"plug":       "plug",
+		},
+		"source": "/new/source",
+	}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -35,6 +45,7 @@ func (m *remountSuite) TestRemountSuccess(c *check.C) {
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/mounts", m.prjId))
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, body)
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:

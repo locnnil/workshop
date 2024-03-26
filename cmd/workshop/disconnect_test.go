@@ -99,6 +99,25 @@ func (m *disconnectSuite) TestDisconnectPlugOrSlotProvided(c *check.C) {
 	cmd := &CmdDisconnect{}
 
 	n := 0
+	body := map[string]interface{}{
+		"action": "disconnect",
+		"plugs": []interface{}{
+			map[string]interface{}{
+				"project-id": "42424242",
+				"workshop":   "ws",
+				"sdk":        "sdk",
+				"plug":       "plug",
+			},
+		},
+		"slots": []interface{}{
+			map[string]interface{}{
+				"project-id": "",
+				"workshop":   "",
+				"sdk":        "",
+				"slot":       "",
+			},
+		},
+	}
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
@@ -110,6 +129,7 @@ func (m *disconnectSuite) TestDisconnectPlugOrSlotProvided(c *check.C) {
 		case 2:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/connections")
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, body)
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:
