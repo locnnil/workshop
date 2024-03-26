@@ -1,11 +1,18 @@
+# IDEs
 .vscode/
-workshop
-!workshop/
-.spread-reuse.yaml
-.workshop.lock
+.code-workspace
 __debug_bin*
+
+# Local artefacts
+workshop
+workshopctl
+!workshop/
+.spread-reuse.*.yaml
+.workshop.lock
 *.snap
 cover.out
+
+# docs
 docs/.sphinx/venv/
 docs/.sphinx/warnings.txt
 docs/.sphinx/.wordlist.dic
