@@ -1,4 +1,4 @@
-summary: Check that "workshop connections" works as expected
+summary: Check that "workshop disconnect" works as expected
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup ./
@@ -28,3 +28,7 @@ execute: |
   workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"
   workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"  
   
+  echo "Check disconnect --forget (reconnects after refresh)"
+  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-one --forget
+  workshop_exec --project "$project" refresh ws-1
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
