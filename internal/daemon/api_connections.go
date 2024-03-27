@@ -338,6 +338,20 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	switch a.Action {
+	case "connect":
+		var connRef *interfaces.ConnRef
+		repo := c.d.overlord.InterfaceManager().Repository()
+		connRef, err = repo.ResolveConnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
+			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name)
+		if err == nil {
+			ts, connErr := ifacestate.Connect(st, connRef)
+			if connErr != nil {
+				if _, ok := connErr.(*ifacestate.ErrAlreadyConnected); !ok {
+					return statusBadRequest(connErr.Error())
+				}
+			}
+			tasksets = append(tasksets, ts)
+		}
 	case "disconnect":
 		var conns []*interfaces.ConnRef
 		conns, err = c.d.overlord.InterfaceManager().ResolveDisconnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,

@@ -246,8 +246,6 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 				}
 			}
 
-			// no policy check passed in here as it has been checked when looked
-			// up the candidates.
 			conn, err := m.repo.Connect(connRef, plug.Attrs, plugDynamicAttrs, slot.Attrs, nil, connectCheck)
 			if err != nil || conn == nil {
 				return err
@@ -435,6 +433,70 @@ func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRe
 		return plugRef, slotRef, err
 	}
 	return plugRef, slotRef, nil
+}
+
+func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var user string
+	err := task.Change().Get("user", &user)
+	if err != nil {
+		return err
+	}
+
+	plugRef, slotRef, err := getPlugAndSlotRefs(task)
+	if err != nil {
+		return err
+	}
+
+	cref := &interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
+
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+
+	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
+	if plug == nil {
+		return fmt.Errorf("SDK %q has no %q plug", plugRef.Sdk, plugRef.Name)
+	}
+
+	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
+	if slot == nil {
+		return fmt.Errorf("snap %q has no %q slot", slotRef.Sdk, slotRef.Name)
+	}
+
+	conn, err := m.repo.Connect(cref, plug.Attrs, nil, slot.Attrs, nil, connectCheck)
+	if err != nil || conn == nil {
+		return err
+	}
+
+	plugSdkRef := sdk.Ref{ProjectId: plugRef.ProjectId, Workshop: plugRef.Workshop, Sdk: plugRef.Sdk}
+	slotSdkRef := sdk.Ref{ProjectId: slotRef.ProjectId, Workshop: slotRef.Workshop, Sdk: slotRef.Sdk}
+
+	for _, ref := range []sdk.Ref{plugSdkRef, slotSdkRef} {
+		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+		defer cancel()
+		for _, backend := range m.repo.Backends() {
+			if err = backend.Setup(ctx, ref, m.repo); err != nil {
+				return err
+			}
+		}
+	}
+
+	conns[cref.ID()] = &schema.ConnState{
+		Interface:        conn.Interface(),
+		StaticPlugAttrs:  conn.Plug.StaticAttrs(),
+		DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
+		StaticSlotAttrs:  conn.Slot.StaticAttrs(),
+		DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
+		Auto:             false,
+	}
+	setConns(st, conns)
+
+	return nil
 }
 
 func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {

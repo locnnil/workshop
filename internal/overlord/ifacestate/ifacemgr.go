@@ -33,13 +33,16 @@ func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
 	r.AddHandler("auto-disconnect", OnDo(m.doAutoDisconnect), m.undoAutoDisconnect)
+
+	r.AddHandler("connect", m.doConnect, nil)
+	r.AddHandler("disconnect", m.doDisconnect, nil)
+	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
+
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it
 	// would revert all the partial progress). Shall remount be used as part of
 	// a larger change the undo logic must be implemented.
 	r.AddHandler("remount", m.doRemount, nil)
-	r.AddHandler("disconnect", m.doDisconnect, nil)
-	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
 
 	return m
 }
