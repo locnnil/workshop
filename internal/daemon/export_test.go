@@ -56,3 +56,17 @@ func FakeSdkMounts(f func(repo *interfaces.Repository, projectId, workshop, sdk 
 		sdkMounts = old
 	}
 }
+
+func MockWarningsAccessors(okay func(*state.State, time.Time) int, all func(*state.State) []*state.Warning, pending func(*state.State) ([]*state.Warning, time.Time)) (restore func()) {
+	oldOK := stateOkayWarnings
+	oldAll := stateAllWarnings
+	oldPending := statePendingWarnings
+	stateOkayWarnings = okay
+	stateAllWarnings = all
+	statePendingWarnings = pending
+	return func() {
+		stateOkayWarnings = oldOK
+		stateAllWarnings = oldAll
+		statePendingWarnings = oldPending
+	}
+}

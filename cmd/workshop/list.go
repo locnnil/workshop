@@ -46,7 +46,7 @@ Notes:
 	return cmd
 }
 
-func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
+func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	// check if both --project and --global were provided
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
 		return fmt.Errorf("cannot list: '--project' incompatible with '--global'")

@@ -71,6 +71,8 @@ func main() {
 	rootCmd.AddCommand((&CmdConnections{}).Command())
 	rootCmd.AddCommand((&CmdConnect{}).Command())
 	rootCmd.AddCommand((&CmdDisconnect{}).Command())
+	rootCmd.AddCommand((&CmdWarnings{}).Command())
+	rootCmd.AddCommand((&CmdOkay{}).Command())
 
 	rootCmd.SilenceErrors = true
 

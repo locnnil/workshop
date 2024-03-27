@@ -19,6 +19,8 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
+	"syscall"
 
 	"github.com/canonical/workshop/internal/osutil/sys"
 )
@@ -123,4 +125,62 @@ func NormalizeUidGid(uid, gid *int, username, group string) (*int, *int, error) 
 		return nil, nil, fmt.Errorf("must specify group, not just UID")
 	}
 	return uid, gid, nil
+}
+
+// UserMaybeSudoUser finds the user behind a sudo invocation when root, if
+// applicable and possible. Otherwise the current user is returned.
+//
+// Don't check SUDO_USER when not root and simply return the current uid
+// to properly support sudo'ing from root to a non-root user
+func UserMaybeSudoUser() (*user.User, error) {
+	cur, err := userCurrent()
+	if err != nil {
+		return nil, err
+	}
+
+	// not root, so no sudo invocation we care about
+	if cur.Uid != "0" {
+		return cur, nil
+	}
+
+	realName := os.Getenv("SUDO_USER")
+	if realName == "" {
+		// not sudo; current is correct
+		return cur, nil
+	}
+
+	real, err := user.Lookup(realName)
+	// This is a best effort, see the comment in findGidNoGetentFallback in
+	// group.go.
+	//
+	// But here the effect is not worrisome, because if we fail to
+	// identify the error as unknown user, we will just fail here and won't
+	// inadvertently raise or lower permissions, as the current user is already
+	// root in this codepath
+	if isUnknownUserOrEnoent(err) {
+		return cur, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return real, nil
+}
+
+// Note: this is best effort, comparing err here with UnknownUserError
+// is inherently flawed and may end up missing some legitimate unknown
+// user errors, see the comment on findGidNoGetentFallback in group.go
+// for more details. It seems the most common return value is ENOENT so
+// check for that too (e.g. when the sssd package is installed).
+func isUnknownUserOrEnoent(err error) bool {
+	if err == nil {
+		return false
+	}
+	if _, ok := err.(user.UnknownUserError); ok {
+		return true
+	}
+	// Check for ENOENT, ideally go itself would handle this, see
+	// https://github.com/golang/go/issues/40334 for the upstream
+	// bug
+	return strings.HasSuffix(err.Error(), syscall.ENOENT.Error())
 }
