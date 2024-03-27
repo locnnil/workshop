@@ -102,3 +102,12 @@ func (client *Client) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugN
 		Slots:  []Slot{{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName, Name: slotName}},
 	})
 }
+
+// Connects a plug and a slot.
+func (client *Client) Connect(plugProjectId, plugWorkshop, plugSdkName, plugName, slotProjectId, slotWorkshop, slotSdkName, slotName string, opts *DisconnectOptions) (changeID string, err error) {
+	return client.performInterfaceAction(&InterfaceAction{
+		Action: "connect",
+		Plugs:  []Plug{{ProjectId: plugProjectId, Workshop: plugWorkshop, Sdk: plugSdkName, Name: plugName}},
+		Slots:  []Slot{{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName, Name: slotName}},
+	})
+}

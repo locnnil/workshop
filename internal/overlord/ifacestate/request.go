@@ -13,11 +13,6 @@ type ErrAlreadyConnected struct {
 	Connection interfaces.ConnRef
 }
 
-const (
-	ConnectTaskEdge       = state.TaskSetEdge("connect-task")
-	AfterConnectHooksEdge = state.TaskSetEdge("after-connect-hooks")
-)
-
 func (e ErrAlreadyConnected) Error() string {
 	return fmt.Sprintf("already connected: %q", e.Connection.ID())
 }
