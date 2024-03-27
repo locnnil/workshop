@@ -19,7 +19,7 @@ type mountRequest struct {
 }
 
 func newMountChange(st *state.State, user string, reqData *mountRequest) *state.Change {
-	summary := fmt.Sprintf("%s %q", cases.Title(language.BritishEnglish).String(reqData.Action), fmt.Sprintf("%s/%s:%s", reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name))
+	summary := fmt.Sprintf("%s %s", cases.Title(language.BritishEnglish).String(reqData.Action), fmt.Sprintf("%s/%s:%s", reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name))
 
 	change := st.NewChange(reqData.Action, summary)
 	change.Set("user", user)

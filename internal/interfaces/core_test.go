@@ -75,12 +75,12 @@ func (s *CoreSuite) TestConnRefID(c *C) {
 		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
 		SlotRef: interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
 	}
-	c.Check(conn.ID(), Equals, fmt.Sprintf("%s:ws:consumer:plug %s:ws:producer:slot", s.projectId, s.projectId))
+	c.Check(conn.ID(), Equals, fmt.Sprintf("%s/ws/consumer:plug %s/ws/producer:slot", s.projectId, s.projectId))
 }
 
 // ParseConnRef works as expected
 func (s *CoreSuite) TestParseConnRef(c *C) {
-	ref, err := interfaces.ParseConnRef("42424242:ws:consumer:plug 42424242:ws:producer:slot")
+	ref, err := interfaces.ParseConnRef("42424242/ws/consumer:plug 42424242/ws/producer:slot")
 	c.Assert(err, IsNil)
 	c.Check(ref, DeepEquals, &interfaces.ConnRef{
 		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},

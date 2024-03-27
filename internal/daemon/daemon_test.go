@@ -552,8 +552,7 @@ func (s *daemonSuite) TestGracefulStop(c *check.C) {
 			w.Write([]byte("OKOK"))
 		} else {
 			w.Write([]byte("Gone"))
-		}
-		return
+		}		
 	})
 
 	generalL, err := net.Listen("tcp", "127.0.0.1:0")

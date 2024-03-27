@@ -770,7 +770,7 @@ func (r *Repository) Interfaces() *Interfaces {
 }
 
 // SdkSpecification returns the specification of a given sdk in a given security system.
-func (r *Repository) SdkSpecification(ctx context.Context, securitySystem SecuritySystem, sdkInfo *sdk.Info) (Specification, error) {
+func (r *Repository) SdkSpecification(ctx context.Context, securitySystem SecuritySystem, sdkInfo sdk.Ref) (Specification, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -797,7 +797,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 
 	spec := backend.NewSpecification(user, projectId)
 
-	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
+	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
 
 	// XXX: If either of the AddConnected{Plug,Slot} methods for a connection
 	// fail resiliently as-in they can never succeed (such as the case where a

@@ -53,6 +53,7 @@ var api = []*Command{{
 	GuestOK: false,
 	UserOK:  true,
 	GET:     v1GetConnections,
+	POST:    v1PostConnections,
 }, {
 	Path:   "/v1/changes",
 	UserOK: true,

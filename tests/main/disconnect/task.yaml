@@ -1,0 +1,34 @@
+summary: Check that "workshop disconnect" works as expected
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  project=$(pwd)
+  workshop_exec --project "$project" launch ws-1
+  
+  echo "Check disconnect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
+  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-one ws-1/agent:content  
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"
+  
+  echo "Check disconnect <workshop>/<sdk>:<plug> :<slot> form (agent SDK)"
+  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-two :content  
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+-.+\-$"
+  
+  echo "Check 'workshop remove' does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
+  workshop_exec --project "$project" remove ws-1
+  workshop_exec --project "$project" launch ws-1
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+\-$"  
+
+  echo "Check disconnect <workshop>/<sdk>:<plug or slot> form (must disconnect all slots auto connections)"
+  workshop_exec --project "$project" disconnect ws-1/agent:content
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"  
+  
+  echo "Check disconnect --forget (reconnects after refresh)"
+  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-one --forget
+  workshop_exec --project "$project" refresh ws-1
+  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"

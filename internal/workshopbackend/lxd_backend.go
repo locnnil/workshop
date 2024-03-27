@@ -86,6 +86,7 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) erro
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -169,7 +170,7 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 		return err
 	}
 
-	/* Do nothing if the instance is already in the desired state */
+	// Do nothing if the instance is already in the desired state
 	if (inst.StatusCode == api.Running && action == "start") ||
 		(inst.StatusCode == api.Stopped && action == "stop") {
 		return nil
@@ -194,6 +195,8 @@ func (s *LxdBackend) StartWorkshop(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
+
 	if err = s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
 		return err
 	}
@@ -226,6 +229,8 @@ func (s *LxdBackend) StopWorkshop(ctx context.Context, name string, force bool) 
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
+
 	return s.updateInstanceState(conn, ctx, name, "stop", force)
 }
 
@@ -234,6 +239,7 @@ func (s *LxdBackend) AddWorkshopConfig(ctx context.Context, name string, item *W
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -258,6 +264,7 @@ func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key 
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -283,6 +290,7 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -307,6 +315,7 @@ func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, devi
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -366,6 +375,8 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 	return ExecContext{
 		Environment: env,
 		WaitExecution: func(ctx context.Context) error {
+			defer conn.Disconnect()
+
 			if err := op.WaitContext(ctx); err != nil {
 				return err
 			}
@@ -397,6 +408,7 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -510,6 +522,7 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 	if err != nil {
 		return nil, nil, err
 	}
+	defer conn.Disconnect()
 
 	var p *Project
 	projects, err := s.Projects(ctx)
@@ -581,22 +594,16 @@ func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) (err error
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	if inst.StatusCode != 0 && inst.StatusCode != api.Stopped {
-		if err = s.updateInstanceState(conn, ctx, name, "stop", true); err != nil {
-			return err
-		}
-	}
+	// ignore possible errors (e.g. container is already stopped)
+	ctxRemove := context.WithoutCancel(ctx)
+	_ = s.updateInstanceState(conn, ctxRemove, name, "stop", true)
 
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))
 	if err != nil {
@@ -614,6 +621,7 @@ func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, e
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -633,6 +641,7 @@ func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error 
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	pid, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -654,6 +663,7 @@ func (s *LxdBackend) DeleteStateStorage(ctx context.Context, name string) error 
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	pid, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -689,7 +699,7 @@ func createDefaultDevices() map[string]map[string]string {
 }
 
 func defaultConfig(projectId string, userid, groupid string) map[string]string {
-	cloudInitConfig := fmt.Sprintf(`#cloud-config
+	cloudInitConfig := `#cloud-config
 users:
   - default
   - name: workshop
@@ -697,7 +707,7 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
     shell: /bin/bash
-`)
+`
 	return map[string]string{
 		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":         "true",

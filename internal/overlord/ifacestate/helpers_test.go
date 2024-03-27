@@ -54,7 +54,7 @@ func (s *helpersSuite) TestGetConns(c *check.C) {
 	s.st.Lock()
 	defer s.st.Unlock()
 	s.st.Set("conns", map[string]interface{}{
-		"42424242:ws:app:content 42424242:ws:core:content": map[string]interface{}{
+		"42424242/ws/app:content 42424242/ws/core:content": map[string]interface{}{
 			"auto":      true,
 			"interface": "content",
 			"slot-static": map[string]interface{}{
@@ -66,7 +66,7 @@ func (s *helpersSuite) TestGetConns(c *check.C) {
 	conns, err := ifacestate.GetConns(s.st)
 	c.Assert(err, check.IsNil)
 	for id, connState := range conns {
-		c.Assert(id, check.Equals, "42424242:ws:app:content 42424242:ws:core:content")
+		c.Assert(id, check.Equals, "42424242/ws/app:content 42424242/ws/core:content")
 		c.Assert(connState.Auto, check.Equals, true)
 		c.Assert(connState.Interface, check.Equals, "content")
 		c.Assert(connState.StaticSlotAttrs["number"], check.Equals, int64(78))
@@ -78,7 +78,7 @@ func (s *helpersSuite) TestSetConns(c *check.C) {
 	defer s.st.Unlock()
 
 	conns := map[string]*schema.ConnState{
-		"42424242:ws:app:content 42424242:ws:core:content": {Auto: true, Interface: "content"},
+		"42424242/ws/app:content 42424242/ws/core:content": {Auto: true, Interface: "content"},
 	}
 
 	ifacestate.SetConns(s.st, conns)
@@ -86,7 +86,7 @@ func (s *helpersSuite) TestSetConns(c *check.C) {
 	err := s.st.Get("conns", &readconns)
 	c.Assert(err, check.IsNil)
 	c.Assert(readconns, check.DeepEquals, map[string]interface{}{
-		"42424242:ws:app:content 42424242:ws:core:content": map[string]interface{}{
+		"42424242/ws/app:content 42424242/ws/core:content": map[string]interface{}{
 			"auto":      true,
 			"interface": "content",
 		}})

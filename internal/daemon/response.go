@@ -201,5 +201,6 @@ var (
 	statusMethodNotAllowed = makeErrorResponder(405)
 	statusConflict         = makeErrorResponder(409)
 	statusInternalError    = makeErrorResponder(500)
+	statusNotImplemented   = makeErrorResponder(501)
 	statusGatewayTimeout   = makeErrorResponder(504)
 )

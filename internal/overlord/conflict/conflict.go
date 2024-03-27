@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
@@ -60,6 +61,28 @@ func (e *ChangeConflictError) Error() string {
 
 func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 	chg := task.Change()
+
+	if task.Kind() == "disconnect" {
+		// disconnect can affect more then one workshop
+		var plugRef interfaces.PlugRef
+		var slotRef interfaces.SlotRef
+		if err := task.Get("plug", &plugRef); err != nil {
+			return false, err
+		}
+		if err := task.Get("slot", &slotRef); err != nil {
+			return false, err
+		}
+
+		if projectId == plugRef.ProjectId && workshop == plugRef.Workshop {
+			return true, nil
+		}
+
+		if projectId == slotRef.ProjectId && workshop == slotRef.Workshop {
+			return true, nil
+		}
+		return false, nil
+	}
+
 	if !chg.Has("project-id") || !task.Has("workshop") {
 		return false, nil
 	}

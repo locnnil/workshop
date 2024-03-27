@@ -22,7 +22,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, prj)
+	ctx, cancel := handlersetup.BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
 	var hook HookSetup

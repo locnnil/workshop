@@ -91,7 +91,7 @@ func verifyExpectedTasks(c *check.C, ts []*state.Task, expected []string) {
 func verifyDisconnectDependencies(c *check.C, ts *state.TaskSet) {
 	prev := (*state.Task)(nil)
 	for _, t := range ts.Tasks() {
-		if t.Kind() == "disconnect" {
+		if t.Kind() == "auto-disconnect" {
 			if prev != nil {
 				c.Assert(t.WaitTasks(), testutil.Contains, prev)
 			}
@@ -264,8 +264,8 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-state-storage",
 		"run-hook", // save-state sdk-1
 		"run-hook", // save-state sdk-2
-		"disconnect",
-		"disconnect",
+		"auto-disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -439,7 +439,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"retrieve-sdk",
 		"create-state-storage",
 		"run-hook", // save-state hook
-		"disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -516,7 +516,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"retrieve-sdk",
 		"create-state-storage",
 		"run-hook",
-		"disconnect",
+		"auto-disconnect",
 		"stash-workshop",
 		"create-workshop",
 		"mount-project",
@@ -739,18 +739,19 @@ func (s *requestSuite) TestRemoveMany(c *check.C) {
 
 	ts, err := s.mgr.RemoveMany(s.ctx, []string{"ws-1"}, s.project.ProjectId, "1")
 	c.Assert(err, check.IsNil)
-	c.Assert(ts[0].Tasks(), check.HasLen, 4)
+	c.Assert(ts[0].Tasks(), check.HasLen, 5)
 
 	verifyDisconnectDependencies(c, ts[0])
 	for i, t := range ts[0].Tasks()[0:3] {
-		c.Assert(t.Kind(), check.Equals, "disconnect")
+		c.Assert(t.Kind(), check.Equals, "auto-disconnect")
 		var sdkName string
 		err = t.Get("sdk", &sdkName)
 		c.Assert(err, check.IsNil)
 		c.Assert(sdkName, check.Equals, content[i].Name)
 		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
 	}
-	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "remove-workshop")
+	c.Assert(ts[0].Tasks()[3].Kind(), check.Equals, "discard-conns")
+	c.Assert(ts[0].Tasks()[4].Kind(), check.Equals, "remove-workshop")
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
 }
 
@@ -775,6 +776,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	task := ts.Tasks()[0]
 	c.Assert(task.Get("workshop", &workshop), check.IsNil)
 	c.Assert(task.Get("project", &project), check.IsNil)
+	c.Assert(task.Summary(), check.Equals, `Remount ws-1/sdk-1:plug`)
 	c.Assert(workshop, check.Equals, "ws-1")
 	c.Assert(project, check.DeepEquals, *s.project)
 

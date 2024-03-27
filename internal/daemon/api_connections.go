@@ -21,12 +21,18 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/workshopbackend"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type collectFilter struct {
@@ -261,4 +267,120 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 	sort.Sort(byCrefConnJSON(connsjson.Undesired))
 
 	return SyncResponse(connsjson, http.StatusOK)
+}
+
+func newConnectionChange(st *state.State, user string, tasks []*state.TaskSet, reqData *interfaceAction) *state.Change {
+	summary := fmt.Sprintf("%s %s", cases.Title(language.BritishEnglish).String(reqData.Action),
+		fmt.Sprintf("%s/%s:%s", reqData.Plugs[0].Workshop, reqData.Plugs[0].Sdk, reqData.Plugs[0].Name))
+
+	change := st.NewChange(reqData.Action, summary)
+	change.Set("user", user)
+	change.Set("project-id", reqData.Plugs[0].ProjectId)
+	for _, ts := range tasks {
+		change.AddAll(ts)
+	}
+	return change
+}
+
+func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
+	var a interfaceAction
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&a); err != nil {
+		return statusBadRequest("cannot decode request body into an interface action: %v", err)
+	}
+	if a.Action == "" {
+		return statusBadRequest("interface action not specified")
+	}
+	if len(a.Plugs) > 1 || len(a.Slots) > 1 {
+		return statusNotImplemented("many-to-many operations are not implemented")
+	}
+	if a.Action != "connect" && a.Action != "disconnect" {
+		return statusBadRequest("unsupported interface action: %q", a.Action)
+	}
+	if len(a.Plugs) == 0 || len(a.Slots) == 0 {
+		return statusBadRequest("at least one plug and slot is required")
+	}
+
+	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
+	if !ok {
+		return statusBadRequest("internal error: no user associated with the request")
+	}
+
+	var err error
+	var tasksets []*state.TaskSet
+
+	st := c.d.overlord.State()
+	st.Lock()
+	defer st.Unlock()
+
+	checkInstalled := func(projectId, workshopName string) error {
+		if err := checkWorkshopExists(r.Context(), c.d.overlord.WorkshopManager(), projectId, workshopName); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for i := range a.Plugs {
+		if a.Plugs[i].Workshop == "" && a.Plugs[i].Name == "" {
+			continue
+		}
+		if err := checkInstalled(a.Plugs[i].ProjectId, a.Plugs[i].Workshop); err != nil {
+			return statusNotFound("cannot access workshop %q: %v", a.Plugs[i].Workshop, err)
+		}
+	}
+	for i := range a.Slots {
+		if a.Slots[i].Workshop == "" && a.Slots[i].Name == "" {
+			continue
+		}
+		if err := checkInstalled(a.Slots[i].ProjectId, a.Slots[i].Workshop); err != nil {
+			return statusNotFound("cannot access workshop %q: %v", a.Slots[i].Workshop, err)
+		}
+	}
+
+	switch a.Action {
+	case "disconnect":
+		var conns []*interfaces.ConnRef
+		conns, err = c.d.overlord.InterfaceManager().ResolveDisconnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
+			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name, a.Forget)
+		if err == nil {
+			if len(conns) == 0 {
+				return statusBadRequest("nothing to do")
+			}
+		}
+		repo := c.d.overlord.InterfaceManager().Repository()
+		for _, connRef := range conns {
+			var ts *state.TaskSet
+			var conn *interfaces.Connection
+
+			if a.Forget {
+				ts, err = ifacestate.Forget(st, connRef, a.Forget)
+				if err != nil {
+					break
+				}
+			} else {
+				conn, err = repo.Connection(connRef)
+				if err != nil {
+					break
+				}
+				ts, err = ifacestate.Disconnect(st, conn, a.Forget)
+				if err != nil {
+					break
+				}
+			}
+
+			ts.JoinLane(st.NewLane())
+			tasksets = append(tasksets, ts)
+		}
+	}
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
+	change := newConnectionChange(st, user, tasksets, &a)
+	if len(change.Tasks()) == 0 {
+		change.SetStatus(state.DoneStatus)
+	}
+	st.EnsureBefore(0)
+
+	return AsyncResponse(nil, change.ID())
 }

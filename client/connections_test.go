@@ -20,6 +20,7 @@
 package client_test
 
 import (
+	"encoding/json"
 	"net/url"
 
 	"gopkg.in/check.v1"
@@ -293,5 +294,80 @@ func (cs *clientSuite) TestClientConnectionsFilter(c *check.C) {
 		"select":     []string{"all"},
 		"interface":  []string{"test"},
 		"workshop":   []string{"foo"},
+	})
+}
+
+func (cs *clientSuite) TestClientDisconnect(c *check.C) {
+	cs.status = 202
+	cs.rsp = `{
+		"type": "async",
+                "status-code": 202,
+		"result": { },
+                "change": "42"
+	}`
+	opts := &client.DisconnectOptions{Forget: false}
+	id, err := cs.cli.Disconnect("b8639dea", "consumer-ws", "consumer", "plug", "b8639dea", "producer-ws", "producer", "slot", opts)
+	c.Assert(err, check.IsNil)
+	c.Check(id, check.Equals, "42")
+	var body map[string]interface{}
+	decoder := json.NewDecoder(cs.req.Body)
+	err = decoder.Decode(&body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"action": "disconnect",
+		"plugs": []interface{}{
+			map[string]interface{}{
+				"project-id": "b8639dea",
+				"workshop":   "consumer-ws",
+				"sdk":        "consumer",
+				"plug":       "plug",
+			},
+		},
+		"slots": []interface{}{
+			map[string]interface{}{
+				"project-id": "b8639dea",
+				"workshop":   "producer-ws",
+				"sdk":        "producer",
+				"slot":       "slot",
+			},
+		},
+	})
+}
+
+func (cs *clientSuite) TestClientDisconnectForget(c *check.C) {
+	cs.status = 202
+	cs.rsp = `{
+		"type": "async",
+                "status-code": 202,
+		"result": { },
+                "change": "42"
+	}`
+	opts := &client.DisconnectOptions{Forget: true}
+	id, err := cs.cli.Disconnect("b8639dea", "consumer-ws", "consumer", "plug", "b8639dea", "producer-ws", "producer", "slot", opts)
+	c.Assert(err, check.IsNil)
+	c.Check(id, check.Equals, "42")
+	var body map[string]interface{}
+	decoder := json.NewDecoder(cs.req.Body)
+	err = decoder.Decode(&body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"action": "disconnect",
+		"forget": true,
+		"plugs": []interface{}{
+			map[string]interface{}{
+				"project-id": "b8639dea",
+				"workshop":   "consumer-ws",
+				"sdk":        "consumer",
+				"plug":       "plug",
+			},
+		},
+		"slots": []interface{}{
+			map[string]interface{}{
+				"project-id": "b8639dea",
+				"workshop":   "producer-ws",
+				"sdk":        "producer",
+				"slot":       "slot",
+			},
+		},
 	})
 }

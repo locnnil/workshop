@@ -210,7 +210,7 @@ func (c *Command) canAccess(r *http.Request, user *userState) accessResult {
 	return accessUnauthorized
 }
 
-func userFromRequest(state interface{}, r *http.Request) (*userState, error) {
+func userFromRequest(_ interface{}, _ *http.Request) (*userState, error) {
 	return nil, nil
 }
 

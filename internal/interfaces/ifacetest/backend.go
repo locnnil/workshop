@@ -35,7 +35,7 @@ type TestSecurityBackend struct {
 	// RemoveCalls stores information about all calls to Remove
 	RemoveCalls []string
 	// SetupCallback is an callback that is optionally called in Setup
-	SetupCallback func(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error
+	SetupCallback func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error
 	// RemoveCallback is a callback that is optionally called in Remove
 	RemoveCallback func(sdkName string) error
 	// SandboxFeaturesCallback is a callback that is optionally called in SandboxFeatures
@@ -45,7 +45,7 @@ type TestSecurityBackend struct {
 // TestSetupCall stores details about calls to TestSecurityBackend.Setup
 type TestSetupCall struct {
 	// SdkInfo is a copy of the sdkInfo argument to a particular call to Setup
-	SdkInfo *sdk.Info
+	SdkInfo sdk.Ref
 }
 
 // Initialize does nothing.
@@ -59,7 +59,7 @@ func (b *TestSecurityBackend) Name() interfaces.SecuritySystem {
 }
 
 // Setup records information about the call and calls the setup callback if one is defined.
-func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
 	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkInfo: sdkInfo})
 	if b.SetupCallback == nil {
 		return nil

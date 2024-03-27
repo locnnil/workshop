@@ -20,14 +20,17 @@
 package daemon
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -278,7 +281,7 @@ func (s *apiSuite) TestConnectionsByWorkshopName(c *check.C) {
 	})
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -335,16 +338,16 @@ func (s *apiSuite) TestConnectionsMissingPlugSlotFilteredOut(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	for _, missingPlugOrSlot := range []string{"b8639dea:consumer-ws:consumer:plug2 b8639dea:producer-ws:producer:slot", "b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot2"} {
+	for _, missingPlugOrSlot := range []string{"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot", "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot2"} {
 		s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-			"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 				"interface": "test",
 			},
 			missingPlugOrSlot: map[string]interface{}{
 				"interface": "test",
 			},
 		},
-			[]string{"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot"},
+			[]string{"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
 			map[string]interface{}{
 				"result": map[string]interface{}{
 					"plugs": []interface{}{
@@ -485,7 +488,7 @@ plugs:
 
 	// modifies state internally
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&interfaces=test", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -554,7 +557,7 @@ func (s *apiSuite) TestConnectionsDefaultManual(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 		},
 	}, nil, map[string]interface{}{
@@ -612,7 +615,7 @@ func (s *apiSuite) TestConnectionsDefaultAuto(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"plug-static": map[string]interface{}{
@@ -690,7 +693,7 @@ func (s *apiSuite) TestConnectionsAll(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -745,7 +748,7 @@ func (s *apiSuite) TestConnectionsOnlyConnected(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -794,19 +797,19 @@ slots:
 	s.mockInstalledSDK(c, anotherProducerYaml, "another-producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea:consumer-ws:consumer:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-def:another-consumer-def:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-abc:another-consumer-abc:plug b8639dea:producer-ws:producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-abc/another-consumer-abc:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea:consumer-ws-def:another-consumer-def:plug b8639dea:another-producer-ws:another-producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/another-producer-ws/another-producer:slot": map[string]interface{}{
 			"interface": "test",
 			"auto":      true,
 		},
@@ -905,5 +908,428 @@ slots:
 		"status":      "OK",
 		"status-code": 200.0,
 		"type":        "sync",
+	})
+}
+
+// Tests for POST /v1/connections
+
+func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName string) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
+	st := d.Overlord().State()
+	st.Lock()
+	st.Set("conns", map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+			"interface": "test",
+		},
+	})
+	st.Unlock()
+
+	d.Overlord().Loop()
+	defer d.Overlord().Stop()
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", "/v1/connections", buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	cmd := apiCmd("/v1/connections")
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 202)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	id := body["change"].(string)
+
+	st.Lock()
+	chg := st.Change(id)
+	st.Unlock()
+	c.Assert(chg, check.NotNil)
+	c.Assert(chg.Summary(), check.Equals, fmt.Sprintf(`Disconnect %s/%s:%s`, plugWorkshop, plugSdk, plugName))
+
+	<-chg.Ready()
+
+	st.Lock()
+	err = chg.Err()
+	st.Unlock()
+	c.Assert(err, check.IsNil)
+
+	ifaces := repo.Interfaces()
+	c.Assert(ifaces.Connections, check.HasLen, 0)
+}
+
+func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot")
+}
+
+func (s *apiSuite) TestDisconnectPlugSuccessWithEmptyPlug(c *check.C) {
+	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot")
+}
+
+func (s *apiSuite) TestDisconnectPlugSuccessWithEmptySlot(c *check.C) {
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "", "", "")
+}
+
+func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "missingplug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": `sdk "consumer" has no plug named "missingplug"`,
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop string) {
+	// validity, either consumer or producer needs to be enabled
+	cmd := apiCmd("/v1/connections")
+
+	consumer := installedWorkshop == "consumer-ws"
+	producer := installedWorkshop == "producer-ws"
+	c.Assert(consumer || producer, check.Equals, true, check.Commentf("launched workshop must be consumer-ws or producer-ws"))
+
+	revert := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer revert()
+	s.daemon(c)
+
+	if consumer {
+		s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	}
+	if producer {
+		s.mockInstalledSDK(c, producerYaml, "producer-ws")
+	}
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 404)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+
+	if producer {
+		c.Check(body, check.DeepEquals, map[string]interface{}{
+			"result": map[string]interface{}{
+				"message": `cannot access workshop "consumer-ws": workshop not found`,
+			},
+			"status":      "Not Found",
+			"status-code": 404.0,
+			"type":        "error",
+		})
+	} else {
+		c.Check(body, check.DeepEquals, map[string]interface{}{
+			"result": map[string]interface{}{
+				"message": `cannot access workshop "producer-ws": workshop not found`,
+			},
+			"status":      "Not Found",
+			"status-code": 404.0,
+			"type":        "error",
+		})
+	}
+}
+
+func (s *apiSuite) TestDisconnectPlugFailureNoPlugWorkshop(c *check.C) {
+	s.testDisconnectFailureNoWorkshop(c, "producer-ws")
+}
+
+func (s *apiSuite) TestDisconnectPlugFailureNoSlotWorkshop(c *check.C) {
+	s.testDisconnectFailureNoWorkshop(c, "consumer-ws")
+}
+
+func (s *apiSuite) TestDisconnectPlugNothingToDo(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	_ = s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "", Sdk: "", Name: ""}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": "nothing to do",
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestDisconnectPlugFailureNotConnected(c *check.C) {
+	revert := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer revert()
+	s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": "cannot disconnect consumer-ws/consumer:plug from producer-ws/producer:slot, it is not connected",
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestDisconnectForgetPlugFailureNotConnected(c *check.C) {
+	revert := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer revert()
+	s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Forget: true,
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": "cannot forget connection consumer-ws/consumer:plug from producer-ws/producer:slot, it was not connected",
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestDisconnectFailureOnConflict(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
+	action := &client.InterfaceAction{
+		Action: "disconnect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+
+	st := s.d.state
+	st.Lock()
+	chg := st.NewChange("conflict", "...")
+	tsk := st.NewTask("stop-workshop", "...")
+	chg.AddTask(tsk)
+	tsk.Set("workshop", "consumer-ws")
+	chg.Set("project-id", "b8639dea")
+	st.Unlock()
+
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": `workshop "consumer-ws" has "conflict" change in progress`,
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestUnsupportedInterfaceRequest(c *check.C) {
+	s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+	buf := bytes.NewBuffer([]byte(`garbage`))
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": "cannot decode request body into an interface action: invalid character 'g' looking for beginning of value",
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestMissingInterfaceAction(c *check.C) {
+	s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+	action := &client.InterfaceAction{}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": "interface action not specified",
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
+	})
+}
+
+func (s *apiSuite) TestUnsupportedInterfaceAction(c *check.C) {
+	s.daemon(c)
+	cmd := apiCmd("/v1/connections")
+	action := &client.InterfaceAction{Action: "foo"}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 400)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	c.Check(body, check.DeepEquals, map[string]interface{}{
+		"result": map[string]interface{}{
+			"message": `unsupported interface action: "foo"`,
+		},
+		"status":      "Bad Request",
+		"status-code": 400.0,
+		"type":        "error",
 	})
 }

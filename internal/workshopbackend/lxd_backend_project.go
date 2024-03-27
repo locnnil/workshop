@@ -323,6 +323,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	if err != nil {
 		return nil, false, err
 	}
+	defer client.Disconnect()
 
 	// see if we have this project already existing
 	if existingProject, err := s.loadProjectFromPath(client, ctx, projectDir); err == nil {
@@ -423,6 +424,8 @@ func (s *LxdBackend) loadUserProjects(ctx context.Context, user string) ([]*Proj
 	if err != nil {
 		return nil, err
 	}
+	defer client.Disconnect()
+
 	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
 	if err != nil {
 		return nil, err

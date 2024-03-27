@@ -1,5 +1,5 @@
 summary: |
-  Check workshop info output
+  Check 'workshop info' SDK health reporting
   
 prepare: |
   apt install expect -y --no-install-recommends

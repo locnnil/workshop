@@ -3,6 +3,7 @@ package conflict_test
 import (
 	"testing"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	conflict "github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
@@ -22,6 +23,16 @@ func (s *conflictSuite) newChange(kind string) *state.Change {
 	change := s.state.NewChange(kind, "test")
 	task := s.state.NewTask("test", "test")
 	task.Set("workshop", "ws")
+	change.AddTask(task)
+	change.Set("project-id", s.project.ProjectId)
+	return change
+}
+
+func (s *conflictSuite) newChangeDisconnect(kind string) *state.Change {
+	change := s.state.NewChange(kind, "test")
+	task := s.state.NewTask("disconnect", "test")
+	task.Set("slot", interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "ws"})
+	task.Set("plug", interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "another-ws"})
 	change.AddTask(task)
 	change.Set("project-id", s.project.ProjectId)
 	return change
@@ -53,6 +64,31 @@ func (s *conflictSuite) TestCheckChangeConflictFound(c *check.C) {
 	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
 	c.Assert(conflictErr.ChangeKind, check.Equals, "launch")
 	c.Assert(conflictErr.Workshop, check.Equals, "ws")
+	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
+}
+
+func (s *conflictSuite) TestCheckChangeDisconnectConflictFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	change := s.newChangeDisconnect("disconnect")
+
+	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", "")
+	c.Assert(err, check.NotNil)
+	conflictErr, ok := err.(*conflict.ChangeConflictError)
+	c.Assert(ok, check.Equals, true)
+	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
+	c.Assert(conflictErr.ChangeKind, check.Equals, "disconnect")
+	c.Assert(conflictErr.Workshop, check.Equals, "ws")
+	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
+
+	err = conflict.CheckChangeConflict(s.state, s.project.ProjectId, "another-ws", "")
+	c.Assert(err, check.NotNil)
+	conflictErr, ok = err.(*conflict.ChangeConflictError)
+	c.Assert(ok, check.Equals, true)
+	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
+	c.Assert(conflictErr.ChangeKind, check.Equals, "disconnect")
+	c.Assert(conflictErr.Workshop, check.Equals, "another-ws")
 	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
 }
 

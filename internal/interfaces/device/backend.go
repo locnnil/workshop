@@ -24,21 +24,18 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 }
 
 // Setup creates mount profile specific to a given sdk.
-func (b *Backend) Setup(context context.Context, sdkInfo *sdk.Info, repo *interfaces.Repository) error {
+func (b *Backend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(context, b.Name(), sdkInfo)
 	if err != nil {
 		return fmt.Errorf("cannot obtain device snippets for workshop %q: %s", sdkInfo.Workshop, err)
 	}
 
 	spec := s.(*Specification)
-	if len(spec.devices) > 0 {
-		profile := workshopbackend.NewSdkProfile(sdkInfo.Name)
-		for _, dev := range spec.devices {
-			profile.AddDevice(dev)
-		}
-		return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
+	profile := workshopbackend.NewSdkProfile(sdkInfo.Sdk)
+	for _, dev := range spec.devices {
+		profile.AddDevice(dev)
 	}
-	return nil
+	return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
 }
 
 // Remove removes profile of a given sdk.

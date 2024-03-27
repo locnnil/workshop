@@ -373,7 +373,7 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	disconnectSet := []*state.Task{}
 	prev := (*state.Task)(nil)
 	for _, s := range content {
-		disc := st.NewTask("disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
+		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
 		disc.Set("sdk", s.Name)
 		if prev != nil {
 			disc.WaitFor(prev)
@@ -576,9 +576,15 @@ func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project 
 func remove(st *state.State, workshop *workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
 	disconnectSet := disconnectSdks(workshop.Content(), st)
+
+	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", workshop.Name))
+	discard.WaitAll(disconnectSet)
+
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))
 	remove.WaitAll(disconnectSet)
+	remove.WaitFor(discard)
 	removeSet.AddAll(disconnectSet)
+	removeSet.AddTask(discard)
 	removeSet.AddTask(remove)
 
 	for _, task := range removeSet.Tasks() {
@@ -609,7 +615,7 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 		return nil, err
 	}
 
-	remount := st.NewTask("remount", fmt.Sprintf(`Remount "%s/%s:%s" to %q`, plug.Workshop, plug.Sdk, plug.Name, source))
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s/%s:%s`, plug.Workshop, plug.Sdk, plug.Name))
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
 	remount.Set("plug", plug)

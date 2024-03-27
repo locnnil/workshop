@@ -33,7 +33,9 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop", false); err != nil {
+	defer conn.Disconnect()
+
+	if err := s.updateInstanceState(conn, ctx, name, "stop", true); err != nil {
 		return err
 	}
 
@@ -44,7 +46,7 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	if err = s.moveInstanceAndProfiles(conn, ctx, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+	if err = s.moveInstanceAndProfiles(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
 		return err
 	}
 
@@ -69,7 +71,9 @@ func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.moveInstanceAndProfiles(conn, ctx, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
+	defer conn.Disconnect()
+
+	if err := s.moveInstanceAndProfiles(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
 		return err
 	}
 
@@ -84,7 +88,7 @@ func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 // instanceTo - the instance's dest name (must be different due to LXD DNS conflicts)
 // source - the LXD project name to move instance from
 // target - the LXD project name to move instance to
-func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, ctx context.Context, instanceFrom, instanceTo, source, target string) error {
+func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom, instanceTo, source, target string) error {
 	conn = conn.UseProject(source)
 	_, _, err := conn.GetInstance(instanceFrom)
 	if err != nil {
@@ -100,6 +104,7 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, ctx contex
 		Name:      instanceTo,
 		Project:   target,
 		Migration: true,
+		Profiles:  []string{"default"},
 	}); err != nil {
 		return err
 	} else if err = op.Wait(); err != nil {
@@ -113,6 +118,7 @@ func (s *LxdBackend) RemoveWorkshopStash(ctx context.Context, name string) error
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
 	user, ok := ctx.Value(ContextUser).(string)
 	if !ok {
