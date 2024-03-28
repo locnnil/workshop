@@ -349,8 +349,9 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 				if _, ok := connErr.(*ifacestate.ErrAlreadyConnected); !ok {
 					return statusBadRequest(connErr.Error())
 				}
+			} else {
+				tasksets = append(tasksets, ts)
 			}
-			tasksets = append(tasksets, ts)
 		}
 	case "disconnect":
 		var conns []*interfaces.ConnRef

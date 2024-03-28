@@ -1110,6 +1110,15 @@ func (s *apiSuite) TestConnectAlreadyConnected(c *check.C) {
 		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
 		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
+	st := d.Overlord().State()
+	st.Lock()
+	st.Set("conns", map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+			"interface": "test",
+		},
+	})
+	st.Unlock()
+
 	d.Overlord().Loop()
 	defer d.Overlord().Stop()
 
@@ -1134,7 +1143,6 @@ func (s *apiSuite) TestConnectAlreadyConnected(c *check.C) {
 	json.Unmarshal(rec.Body.Bytes(), &body)
 	id := body["change"].(string)
 
-	st := d.Overlord().State()
 	st.Lock()
 	chg := st.Change(id)
 	st.Unlock()
