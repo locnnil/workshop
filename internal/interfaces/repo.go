@@ -1033,3 +1033,77 @@ func (r *Repository) AutoConnectCandidatePlugs(projectId, workshop, slotSdkName,
 	}
 	return candidates
 }
+
+// ResolveConnect resolves potentially missing plug or slot names and returns a
+// fully populated connection reference.
+func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, plugName, slotProjectId, slotWorkshop, slotSdkName, slotName string) (*ConnRef, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	if plugProjectId == "" {
+		return nil, fmt.Errorf("cannot resolve connection, plug project-id name is empty")
+	}
+	if plugWorkshop == "" {
+		return nil, fmt.Errorf("cannot resolve connection, plug Workshop name is empty")
+	}
+	if plugSdkName == "" {
+		return nil, fmt.Errorf("cannot resolve connection, plug SDK name is empty")
+	}
+	if plugName == "" {
+		return nil, fmt.Errorf("cannot resolve connection, plug name is empty")
+	}
+
+	plugKey := plugOrSlotKey(plugProjectId, plugWorkshop, plugSdkName)
+
+	// Ensure that such plug exists
+	plug := r.plugs[plugKey][plugName]
+	if plug == nil {
+		return nil, &NoPlugOrSlotError{
+			message: fmt.Sprintf(`SDK "%s/%s" has no plug named %q`,
+				plugWorkshop, plugSdkName, plugName),
+		}
+	}
+
+	if slotSdkName == "" {
+		// Use the agent SDK if the slot-side snap name is empty
+		slotProjectId = plugProjectId
+		slotWorkshop = plugWorkshop
+		slotSdkName = sdk.Agent.String()
+	}
+
+	slotKey := plugOrSlotKey(slotProjectId, slotWorkshop, slotSdkName)
+
+	if slotName == "" {
+		// Find the unambiguous slot that satisfies plug requirements
+		var candidates []string
+		for candidateSlotName, candidateSlot := range r.slots[slotKey] {
+			// TODO: use some smarter matching (e.g. against $attrs)
+			if candidateSlot.Interface == plug.Interface {
+				candidates = append(candidates, candidateSlotName)
+			}
+		}
+		switch len(candidates) {
+		case 0:
+			return nil, fmt.Errorf(`SDK %s/%s has no %q interface slots`, slotWorkshop, slotSdkName, plug.Interface)
+		case 1:
+			slotName = candidates[0]
+		default:
+			sort.Strings(candidates)
+			return nil, fmt.Errorf("SDK %s/%s has multiple %q interface slots: %s", slotWorkshop, slotSdkName, plug.Interface, strings.Join(candidates, ", "))
+		}
+	}
+
+	// Ensure that such slot exists
+	slot := r.slots[slotKey][slotName]
+	if slot == nil {
+		return nil, &NoPlugOrSlotError{
+			message: fmt.Sprintf("SDK %s/%s has no slot named %q", slotWorkshop, slotSdkName, slotName),
+		}
+	}
+	// Ensure that plug and slot are compatible
+	if slot.Interface != plug.Interface {
+		return nil, fmt.Errorf("cannot connect %s/%s:%s (%q interface) to %s/%s:%s (%q interface)",
+			plugWorkshop, plugSdkName, plugName, plug.Interface, slotWorkshop, slotSdkName, slotName, slot.Interface)
+	}
+	return NewConnRef(plug, slot), nil
+}

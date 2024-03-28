@@ -106,22 +106,14 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-sdk"})
 }
 
-func (f *profileTest) TestSdkProfileBindMountFailsIfTargetDoesNotExist(c *check.C) {
+func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 	// Setup
 	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
-	profile := workshopbackend.NewSdkProfile("sdk")
-	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/not-exist")
-	err := profile.AddDevice(device)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.ErrorMatches, `.*cannot create a workshop mount with target "/not-exist": file does not exist`)
 
 	// Setup
-	profile = workshopbackend.NewSdkProfile("sdk")
-	device = workshopbackend.Mount("sdk-device", c.MkDir(), "/root/.profile")
-	err = profile.AddDevice(device)
+	profile := workshopbackend.NewSdkProfile("sdk")
+	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/root/.profile")
+	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
 	// Execute

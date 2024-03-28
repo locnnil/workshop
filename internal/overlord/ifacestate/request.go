@@ -8,6 +8,47 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
+// ErrAlreadyConnected describes the error that occurs when attempting to connect already connected interface.
+type ErrAlreadyConnected struct {
+	Connection interfaces.ConnRef
+}
+
+func (e ErrAlreadyConnected) Error() string {
+	return fmt.Sprintf("already connected: %q", e.Connection.ID())
+}
+
+// Connect returns a set of tasks for connecting an interface.
+func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
+	plugProject, plugWorkshop := connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop
+	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
+	if err != nil {
+		return nil, err
+	}
+
+	slotProject, slotWorkshop := connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop
+	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// check if the connection already exists
+	conns, err := getConns(st)
+	if err != nil {
+		return nil, err
+	}
+	if conn, ok := conns[connRef.ID()]; ok && !conn.Undesired {
+		return nil, &ErrAlreadyConnected{Connection: *connRef}
+	}
+
+	connectInterface := st.NewTask("connect", fmt.Sprintf("Connect %s/%s:%s to %s/%s:%s", plugWorkshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name,
+		slotWorkshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name))
+
+	connectInterface.Set("slot", connRef.SlotRef)
+	connectInterface.Set("plug", connRef.PlugRef)
+
+	return state.NewTaskSet(connectInterface), nil
+}
+
 func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")

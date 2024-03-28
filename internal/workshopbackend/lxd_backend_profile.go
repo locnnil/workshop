@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"golang.org/x/exp/slices"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 )
 
@@ -115,7 +117,14 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 			// confirm the target path exists
 			target := dev.properties["path"]
 			if info, err := fs.Stat(target); err != nil {
-				return fmt.Errorf("cannot create a workshop mount with target %q: %v", target, err)
+				if !osutil.IsDirNotExist(err) {
+					return err
+				}
+				// FIXME: workaround LXD empty directory issue (which, if the
+				// connection was disconnected earlier, was removed by LXD).
+				if err = fs.Mkdir(target, os.ModePerm); err != nil {
+					return err
+				}
 			} else if !info.IsDir() {
 				return fmt.Errorf("cannot create a workshop mount with target %q: the target is not a directory", target)
 			}

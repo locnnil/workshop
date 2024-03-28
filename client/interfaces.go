@@ -127,3 +127,14 @@ func ParseSlotRef(slot string) (*SlotRef, error) {
 	}
 	return (*SlotRef)(plugRef), nil
 }
+
+func ParseSlotSdkRef(slot string) (*SlotRef, error) {
+	var slotRef SlotRef
+	parts := strings.Split(slot, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("unknown plug or slot reference %q", slot)
+	}
+	slotRef.Workshop = parts[0]
+	slotRef.Sdk = parts[1]
+	return &slotRef, nil
+}
