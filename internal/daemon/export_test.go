@@ -49,7 +49,7 @@ func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshopba
 	}
 }
 
-func FakeSdkMounts(f func(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
+func FakeSdkMounts(f func(state *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
 	old := sdkMounts
 	sdkMounts = f
 	return func() {

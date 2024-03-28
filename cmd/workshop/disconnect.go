@@ -41,6 +41,11 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
+	defer func() {
+		if cli != nil {
+			maybePresentWarnings(cli.WarningsSummary())
+		}
+	}()
 
 	project, err := c.client.Project(Project)
 	if err != nil {

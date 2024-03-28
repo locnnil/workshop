@@ -89,7 +89,7 @@ Warnings expire automatically, and once expired they are forgotten.
 
 func (c *CmdOkay) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "warnings [OPTIONS]",
+		Use:   "okay",
 		Args:  cobra.NoArgs,
 		Short: "Acknowledge warnings.",
 		Long: `

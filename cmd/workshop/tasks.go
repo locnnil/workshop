@@ -52,6 +52,11 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
 	c.setClient(cli)
+	defer func() {
+		if cli != nil {
+			maybePresentWarnings(cli.WarningsSummary())
+		}
+	}()
 
 	if cmd.Parent().Flag("project").Changed {
 		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()

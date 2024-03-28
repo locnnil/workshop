@@ -48,6 +48,11 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
+	defer func() {
+		if cli != nil {
+			maybePresentWarnings(cli.WarningsSummary())
+		}
+	}()
 	c.skipAbort = true
 
 	project, err := c.client.Project(Project)

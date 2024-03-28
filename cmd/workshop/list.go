@@ -63,6 +63,11 @@ func (c *CmdList) runList() error {
 	}
 
 	c.setClient(cli)
+	defer func() {
+		if cli != nil {
+			maybePresentWarnings(cli.WarningsSummary())
+		}
+	}()
 
 	if !c.global {
 		project, err := c.client.Project(Project)

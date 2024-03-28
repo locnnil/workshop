@@ -68,9 +68,10 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
-
 	defer func() {
-		maybePresentWarnings(cli.WarningsSummary())
+		if cli != nil {
+			maybePresentWarnings(cli.WarningsSummary())
+		}
 	}()
 
 	project, err := c.client.Project(Project)

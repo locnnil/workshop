@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -115,7 +117,7 @@ func workshopToInfo(workshop *workshopbackend.Workshop, health healthstate.Healt
 	return &info
 }
 
-func sdkConnsToMounts(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
+func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
 	connections, err := repo.Connections(projectId, workshop, sdk)
 	if err != nil {
 		return nil
@@ -133,6 +135,11 @@ func sdkConnsToMounts(repo *interfaces.Repository, projectId, workshop, sdk stri
 			if err != nil {
 				continue
 			}
+			// check if the source exists as otherwise the mount is broken
+			if _, err = os.Stat(source); osutil.IsDirNotExist(err) {
+				st.Warnf("%s/%s:%s mount is broken: %s does not exist", workshop, sdk, connection.Plug.Name(), source)
+			}
+
 			err = connection.Plug.Attr("target", &target)
 			if err != nil {
 				continue
@@ -310,7 +317,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	repo := c.d.overlord.InterfaceManager().Repository()
 	mounts := map[string][]*Mount{}
 	for _, sdk := range workshop.Content() {
-		mounts[sdk.Name] = sdkMounts(repo, projectId, name, sdk.Name)
+		mounts[sdk.Name] = sdkMounts(state, repo, projectId, name, sdk.Name)
 	}
 
 	return SyncResponse(workshopToInfo(workshop, health, mounts), http.StatusOK)

@@ -94,7 +94,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 			"go": {Sdk: "go", Message: "test health check message", Code: "check-waiting", CheckResult: healthstate.CheckWaiting},
 		}}
 	})
-	restoreMounts := FakeSdkMounts(func(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
+	restoreMounts := FakeSdkMounts(func(st *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
 		return []*Mount{
 			{Source: "/home/user/" + sdk, Target: "/home/workshop/" + sdk, Plug: interfaces.PlugRef{ProjectId: projectId, Workshop: workshop, Sdk: sdk, Name: "content-plug"}},
 		}
