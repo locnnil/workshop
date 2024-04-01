@@ -15,10 +15,11 @@ type CmdDisconnect struct {
 
 func (c *CmdDisconnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "disconnect [OPTIONS] <workshop>/<sdk>:<plug> [<workshop>/<sdk>]:<slot>",
-		Args:  cobra.RangeArgs(1, 2),
-		Short: "The disconnect command disconnects a plug from a slot.",
-		RunE:  c.Run,
+		Use:     "disconnect [OPTIONS] <workshop>/<sdk>:<plug> [<workshop>/<sdk>]:<slot>",
+		Args:    cobra.RangeArgs(1, 2),
+		Short:   "The disconnect command disconnects a plug from a slot.",
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
@@ -41,13 +42,8 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
-	defer func() {
-		if cli != nil {
-			maybePresentWarnings(cli.WarningsSummary())
-		}
-	}()
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
@@ -75,7 +71,7 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	var opts = client.DisconnectOptions{Forget: c.forget}
-	changeId, err := c.client.Disconnect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
+	changeId, err := c.cli.Disconnect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
 		slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name, &opts)
 	if err != nil {
 		return err

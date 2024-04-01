@@ -156,7 +156,7 @@ func (c *CmdWarnings) Run(cmd *cobra.Command, av []string) error {
 	}
 	c.setClient(cli)
 
-	warnings, err := c.client.Warnings(client.WarningsOptions{All: c.All})
+	warnings, err := c.cli.Warnings(client.WarningsOptions{All: c.All})
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (cmd *CmdOkay) Run(c *cobra.Command, av []string) error {
 	}
 	cmd.setClient(cli)
 
-	return cmd.client.Okay(last)
+	return cmd.cli.Okay(last)
 }
 
 const warnFileEnvKey = "WORKSHOPD_LAST_WARNING_TIMESTAMP_FILENAME"

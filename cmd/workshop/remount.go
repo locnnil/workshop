@@ -36,7 +36,8 @@ Notes:
   aren't removed
 `,
 
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -65,20 +66,15 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
-	defer func() {
-		if cli != nil {
-			maybePresentWarnings(cli.WarningsSummary())
-		}
-	}()
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
 
 	plugRef.ProjectId = project.Id
 
-	changeId, err := c.client.Remount(plugRef, source)
+	changeId, err := c.cli.Remount(plugRef, source)
 	if err != nil {
 		return err
 	}

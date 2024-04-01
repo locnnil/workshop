@@ -34,7 +34,8 @@ Notes:
 - To investigate the details of a specific change, use 'workshop tasks' instead
 `,
 
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	return cmd
@@ -49,11 +50,6 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
 	c.setClient(cli)
-	defer func() {
-		if cli != nil {
-			maybePresentWarnings(cli.WarningsSummary())
-		}
-	}()
 
 	if cmd.Parent().Flag("project").Changed {
 		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()
@@ -61,7 +57,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 
 	clientOpts.Selector = client.ChangesAll
 
-	chngs, err := c.client.Changes(&clientOpts)
+	chngs, err := c.cli.Changes(&clientOpts)
 	if err != nil {
 		return err
 	}

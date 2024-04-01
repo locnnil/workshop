@@ -31,7 +31,8 @@ Notes:
 - When interrupted, the command attempts to gracefully revert its actions
 - To start a stopped workshop, use 'workshop start'
 `,
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	return cmd
@@ -48,19 +49,14 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	c.setClient(cli)
-	defer func() {
-		if cli != nil {
-			maybePresentWarnings(cli.WarningsSummary())
-		}
-	}()
 	c.skipAbort = true
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
 
-	changeId, err := c.client.Stop(project.Id, av)
+	changeId, err := c.cli.Stop(project.Id, av)
 	if err != nil {
 		return err
 	}

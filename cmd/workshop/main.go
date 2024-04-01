@@ -13,11 +13,15 @@ import (
 )
 
 type clientMixin struct {
-	client *client.Client
+	cli *client.Client
 }
 
 func (ch *clientMixin) setClient(cli *client.Client) {
-	ch.client = cli
+	ch.cli = cli
+}
+
+func (ch *clientMixin) client() *client.Client {
+	return ch.cli
 }
 
 var rootCmd = &cobra.Command{
@@ -39,6 +43,14 @@ var Project string
 var ClientConfig = client.Config{
 	// we need the powerful socket
 	Socket: dirs.SocketPath,
+}
+
+func postRunWarnings(c *clientMixin) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		if c.client() != nil {
+			maybePresentWarnings(c.client().WarningsSummary())
+		}
+	}
 }
 
 func main() {

@@ -231,9 +231,10 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 		// call it from tests and not have to do this (whole
 		// block) by hand
 
-		count, stamp := cmdList.client.WarningsSummary()
+		count, stamp := cmdList.cli.WarningsSummary()
 		c.Check(count, check.Equals, 2)
 		c.Check(stamp, check.Equals, time.Date(2018, 9, 19, 12, 44, 19, 680362867, time.UTC))
+		maybePresentWarnings(count, stamp)
 
 	}
 

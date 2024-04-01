@@ -35,7 +35,8 @@ Notes:
 - The command may print additional log details for tasks that store them
 - To investigate recent changes in a project, use 'workshop changes' instead
 `,
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	return cmd
@@ -52,11 +53,6 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot create client: %v", err)
 	}
 	c.setClient(cli)
-	defer func() {
-		if cli != nil {
-			maybePresentWarnings(cli.WarningsSummary())
-		}
-	}()
 
 	if cmd.Parent().Flag("project").Changed {
 		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()
@@ -64,7 +60,7 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 
 	clientOpts.Selector = client.ChangesAll
 
-	change, err := c.client.Change(av[0])
+	change, err := c.cli.Change(av[0])
 	if err != nil {
 		return err
 	}
