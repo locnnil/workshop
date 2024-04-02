@@ -52,6 +52,7 @@ type DeviceType int
 const (
 	BindMount DeviceType = iota
 	DiskVolume
+	GPU
 )
 
 type Device struct {
@@ -84,6 +85,17 @@ func Volume(name, mountTo, volume string) Device {
 			"pool":   "default",
 			"path":   mountTo,
 			"source": volume},
+	}
+}
+
+func Gpu(name string) Device {
+	return Device{
+		name:       name,
+		deviceType: GPU,
+		// The default workshop user must be able to acces the GPU device this
+		// is an alternative to adding the render devices to the video/render
+		// group.
+		properties: map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"},
 	}
 }
 

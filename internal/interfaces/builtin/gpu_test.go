@@ -1,0 +1,55 @@
+package builtin_test
+
+import (
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshopbackend"
+	"gopkg.in/check.v1"
+)
+
+type gpuSuite struct {
+	iface     interfaces.Interface
+	projectId string
+}
+
+var _ = check.Suite(&gpuSuite{
+	iface: builtin.MustInterface("gpu"),
+})
+
+func (s *gpuSuite) SetUpTest(c *check.C) {
+	s.projectId = "42424242"
+}
+
+func (s *gpuSuite) TestName(c *check.C) {
+	c.Assert(s.iface.Name(), check.Equals, "gpu")
+}
+
+func (s *gpuSuite) TestInterfaces(c *check.C) {
+	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
+}
+
+func (s *gpuSuite) TestGpuInterface(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ gpu:
+  interface: gpu
+`, s.projectId, "ws", "consumer", "gpu")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+ gpu:
+`, s.projectId, "ws", "producer", "gpu")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec := &device.Specification{}
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the mount specification.
+	expectedDevice := workshopbackend.Gpu(plug.Name)
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedDevice})
+}

@@ -705,7 +705,7 @@ users:
   - name: workshop
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video
+    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
 `
 	return map[string]string{
@@ -713,6 +713,10 @@ users:
 		"security.nesting":         "true",
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
+		// nvidia.* properties must be set at launch as otherwise it requires a
+		// container restart to take effect.
+		"nvidia.driver.capabilities": "all",
+		"nvidia.runtime":             "true",
 	}
 }
 
