@@ -38,7 +38,8 @@ however, it doesn't include any that are *Off*.
 Notes:
 - For details of a single workshop, use 'workshop info' instead
 `,
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system")
@@ -46,7 +47,7 @@ Notes:
 	return cmd
 }
 
-func (c *CmdList) Run(cmd *cobra.Command, av []string) error {
+func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	// check if both --project and --global were provided
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
 		return fmt.Errorf("cannot list: '--project' incompatible with '--global'")
@@ -65,12 +66,12 @@ func (c *CmdList) runList() error {
 	c.setClient(cli)
 
 	if !c.global {
-		project, err := c.client.Project(Project)
+		project, err := c.cli.Project(Project)
 		if err != nil {
 			return err
 		}
 
-		workshops, err := c.client.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
+		workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
@@ -86,7 +87,7 @@ func (c *CmdList) runList() error {
 		w := tabWriter()
 		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 
-		projects, err := c.client.Projects()
+		projects, err := c.cli.Projects()
 		slices.SortFunc(projects, func(a, b *client.Project) int { return cmp.Compare(a.Path, b.Path) })
 
 		if err != nil {
@@ -94,7 +95,7 @@ func (c *CmdList) runList() error {
 		}
 
 		for _, i := range projects {
-			workshops, err := c.client.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
+			workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
 			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
 
 			if err != nil {

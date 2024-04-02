@@ -14,10 +14,11 @@ type CmdConnect struct {
 
 func (c *CmdConnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "connect <workshop>/<sdk>:<plug> [<workshop>/<sdk>:<slot>]",
-		Args:  cobra.RangeArgs(1, 2),
-		Short: "The connect command connects a plug and a slot.",
-		RunE:  c.Run,
+		Use:     "connect <workshop>/<sdk>:<plug> [<workshop>/<sdk>:<slot>]",
+		Args:    cobra.RangeArgs(1, 2),
+		Short:   "The connect command connects a plug and a slot.",
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -37,7 +38,7 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot connect plugs and slots across different workshops")
 	}
 
-	changeId, err := c.client.Connect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
+	changeId, err := c.cli.Connect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
 		slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name, nil)
 	if err != nil {
 		return err

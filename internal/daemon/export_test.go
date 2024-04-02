@@ -49,10 +49,24 @@ func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshopba
 	}
 }
 
-func FakeSdkMounts(f func(repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
+func FakeSdkMounts(f func(state *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
 	old := sdkMounts
 	sdkMounts = f
 	return func() {
 		sdkMounts = old
+	}
+}
+
+func MockWarningsAccessors(okay func(*state.State, time.Time) int, all func(*state.State) []*state.Warning, pending func(*state.State) ([]*state.Warning, time.Time)) (restore func()) {
+	oldOK := stateOkayWarnings
+	oldAll := stateAllWarnings
+	oldPending := statePendingWarnings
+	stateOkayWarnings = okay
+	stateAllWarnings = all
+	statePendingWarnings = pending
+	return func() {
+		stateOkayWarnings = oldOK
+		stateAllWarnings = oldAll
+		statePendingWarnings = oldPending
 	}
 }

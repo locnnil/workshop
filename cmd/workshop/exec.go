@@ -89,11 +89,12 @@ Notes:
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec <WORKSHOP>",
-		Args:  cobra.MinimumNArgs(1),
-		Short: shortExecHelp,
-		Long:  longExecHelp,
-		RunE:  c.Run,
+		Use:     "exec <WORKSHOP>",
+		Args:    cobra.MinimumNArgs(1),
+		Short:   shortExecHelp,
+		Long:    longExecHelp,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.Flags().SortFlags = false
@@ -139,7 +140,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 
 	cmd.setClient(cli)
 
-	project, err := cmd.client.Project(Project)
+	project, err := cmd.cli.Project(Project)
 	if err != nil {
 		return err
 	}
@@ -218,7 +219,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	// Start the command.
-	process, err := cmd.client.Exec(opts, av[0], project.Id)
+	process, err := cmd.cli.Exec(opts, av[0], project.Id)
 	if err != nil {
 		return err
 	}

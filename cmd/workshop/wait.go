@@ -62,7 +62,7 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 		fmt.Fprintf(Stdout, "%s\n", id)
 		return nil, errNoWait
 	}
-	cli := wmx.client
+	cli := wmx.cli
 	// Intercept sigint
 	c := make(chan os.Signal, 2)
 
@@ -76,7 +76,7 @@ func (wmx waitMixin) wait(id string, abortExpected bool) (*client.Change, error)
 		if sig == nil || wmx.skipAbort {
 			return
 		}
-		_, err := wmx.client.Abort(id)
+		_, err := wmx.cli.Abort(id)
 		if err != nil {
 			fmt.Fprintf(Stderr, err.Error()+"\n")
 		}

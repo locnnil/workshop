@@ -59,6 +59,11 @@ var api = []*Command{{
 	UserOK: true,
 	GET:    v1GetChanges,
 }, {
+	Path:   "/v1/warnings",
+	UserOK: true,
+	GET:    v1GetWarnings,
+	POST:   v1PostWarnings,
+}, {
 	Path:   "/v1/changes/{id}",
 	UserOK: true,
 	GET:    v1GetChange,

@@ -35,7 +35,8 @@ Notes:
 - Avoid assumptions based on SDK channels: 'latest/stable' may be neither
 `,
 
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	return cmd
@@ -69,12 +70,12 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
 
-	workshop, err := c.client.Workshop(project.Id, av[0])
+	workshop, err := c.cli.Workshop(project.Id, av[0])
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,8 @@ Notes:
 - SDKs are installed in alphabetical order
 `,
 
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -57,12 +58,12 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
 
-	changeId, err := c.client.Launch(project.Id, av)
+	changeId, err := c.cli.Launch(project.Id, av)
 	if err != nil {
 		return err
 	}

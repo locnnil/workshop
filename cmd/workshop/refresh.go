@@ -47,7 +47,8 @@ Notes:
   set by 'workshop remount', if any
 `,
 
-		RunE: c.Run,
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
@@ -91,7 +92,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		mode = "abort"
 	}
 
-	changeId, err := c.client.Refresh(project.Id, av, mode)
+	changeId, err := c.cli.Refresh(project.Id, av, mode)
 	if err != nil {
 		return err
 	}

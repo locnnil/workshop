@@ -17,10 +17,11 @@ type CmdConnections struct {
 
 func (c *CmdConnections) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "connections [<WORKSHOP>] [--all]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List interface connections.",
-		RunE:  c.Run,
+		Use:     "connections [<WORKSHOP>] [--all]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List interface connections.",
+		RunE:    c.Run,
+		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.Flags().BoolVar(&c.all, "all", false, "Lists connected and unconnected plugs and slots.")
@@ -82,7 +83,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 
 	c.setClient(cli)
 
-	project, err := c.client.Project(Project)
+	project, err := c.cli.Project(Project)
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		c.all = true
 	}
 
-	connections, err := c.client.Connections(&client.ConnectionOptions{ProjectId: project.Id, Workshop: workshop, All: c.all})
+	connections, err := c.cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, Workshop: workshop, All: c.all})
 	if err != nil {
 		return err
 	}
