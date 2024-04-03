@@ -56,6 +56,7 @@ type ExecContext struct {
 }
 
 type LxdBackend struct {
+	nvidiaRuntime bool
 }
 
 const (
@@ -72,9 +73,29 @@ var (
 	imageServer         = "https://cloud-images.ubuntu.com/releases/"
 )
 
-func New() WorkshopBackend {
+func New() (WorkshopBackend, error) {
 	server := LxdBackend{}
-	return &server
+
+	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resources, err := srv.GetServerResources()
+	if err != nil {
+		return nil, err
+	}
+
+	// check if nvidia card(s) are present as this requires additional
+	// configuration for the GPU interfaces runtime passthrough
+	for _, card := range resources.GPU.Cards {
+		if card.Nvidia != nil {
+			server.nvidiaRuntime = true
+			break
+		}
+	}
+
+	return &server, nil
 }
 
 func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) error {
@@ -124,7 +145,7 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) erro
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: defaultDevices(),
-			Config:  defaultConfig(projectId, usr.Uid, usr.Gid),
+			Config:  s.defaultConfig(projectId, usr.Uid, usr.Gid),
 		},
 		Name: InstanceName(name, projectId),
 		Type: api.InstanceType("container"),
@@ -698,7 +719,7 @@ func createDefaultDevices() map[string]map[string]string {
 	}
 }
 
-func defaultConfig(projectId string, userid, groupid string) map[string]string {
+func (s *LxdBackend) defaultConfig(projectId string, userid, groupid string) map[string]string {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -708,16 +729,20 @@ users:
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
 `
-	return map[string]string{
+	cfg := map[string]string{
 		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":         "true",
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
+	}
+
+	if s.nvidiaRuntime {
 		// nvidia.* properties must be set at launch as otherwise it requires a
 		// container restart to take effect.
-		"nvidia.driver.capabilities": "all",
-		"nvidia.runtime":             "true",
+		cfg["nvidia.driver.capabilities"] = "all"
+		cfg["nvidia.runtime"] = "true"
 	}
+	return cfg
 }
 
 func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {

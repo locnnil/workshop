@@ -1,0 +1,7 @@
+name: ws-1
+base: ubuntu@22.04
+sdks:
+    test-sdk-content:
+        channel: latest/stable
+    test-sdk-gpu:
+        channel: latest/stable

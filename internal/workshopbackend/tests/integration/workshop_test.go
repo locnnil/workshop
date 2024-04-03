@@ -40,7 +40,9 @@ var _ = check.Suite(&wsOps{})
 
 func (f *wsOps) SetUpTest(c *check.C) {
 	socketPath := c.MkDir() + ".workshop.socket"
-	f.be = workshopbackend.New()
+	var err error
+	f.be, err = workshopbackend.New()
+	c.Assert(err, check.IsNil)
 
 	d, err := daemon.New(&daemon.Options{
 		Dir:        c.MkDir(),

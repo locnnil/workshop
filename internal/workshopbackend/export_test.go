@@ -7,4 +7,9 @@ var (
 	ReadWorkshop           = readWorkshop
 	ReadProjects           = readProjects
 	SaveProjects           = saveProjects
+	DefaultConfig          = (*LxdBackend).defaultConfig
 )
+
+func (s *LxdBackend) SetNvidia(runtime bool) {
+	s.nvidiaRuntime = runtime
+}

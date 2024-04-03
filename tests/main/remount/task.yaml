@@ -1,7 +1,4 @@
 summary: Check workshop remount scenarios
-prepare: |
-  apt install jq -y --no-install-recommends
-  snap install yq
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup ./

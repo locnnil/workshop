@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	cloud.google.com/go/storage v1.36.0
+	github.com/adrg/xdg v0.4.0
 	github.com/canonical/lxd v0.0.0-20240226153229-0ff71ae3cb84
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1
@@ -19,7 +20,6 @@ require (
 )
 
 require (
-	github.com/adrg/xdg v0.4.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -66,7 +66,7 @@ require (
 	golang.org/x/crypto v0.19.0
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
+	golang.org/x/term v0.17.0
 	golang.org/x/text v0.14.0
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240205150955-31a09d347014 // indirect
