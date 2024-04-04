@@ -662,10 +662,10 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.remount(ctx, &plug, source, inst.IsRunning())
+	return m.remount(ctx, task, &plug, source, inst.IsRunning())
 }
 
-func (m *InterfaceManager) remount(ctx context.Context, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
+func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
 	revert := revert.New()
 	defer revert.Fail()
 
@@ -713,36 +713,36 @@ func (m *InterfaceManager) remount(ctx context.Context, plug *interfaces.PlugRef
 
 	_, err = os.Stat(oldSource)
 	if osutil.IsDirNotExist(err) {
-		return fmt.Errorf("plug's current 'source' %q does not exist", oldSource)
+		task.State().Warnf("%s/%s:%s's source at %q did not exist, the mount was re-created", plug.Workshop, plug.Sdk, plug.Name, oldSource)
 	} else if err != nil {
 		return err
-	}
-
-	if err := osutil.Rename(oldSource, source); err != nil {
-		if errno, ok := err.(syscall.Errno); ok {
-			if workshopRunning {
-				if errno == syscall.ENOTEMPTY {
-					return fmt.Errorf("new source is not empty; workshop must be stopped to remount safely")
-				}
-				if errno == syscall.EXDEV {
-					return fmt.Errorf("current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely")
+	} else {
+		if err := osutil.Rename(oldSource, source); err != nil {
+			if errno, ok := err.(syscall.Errno); ok {
+				if workshopRunning {
+					if errno == syscall.ENOTEMPTY {
+						return fmt.Errorf("new source is not empty; workshop must be stopped to remount safely")
+					}
+					if errno == syscall.EXDEV {
+						return fmt.Errorf("current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely")
+					}
+				} else {
+					// if the workshop is stopped, we can perform a remount safely
+					// (other fs or non-empty dir), otherwise, return the error
+					if errno != syscall.ENOTEMPTY && errno != syscall.EXDEV {
+						return err
+					}
 				}
 			} else {
-				// if the workshop is stopped, we can perform a remount safely
-				// (other fs or non-empty dir), otherwise, return the error
-				if errno != syscall.ENOTEMPTY && errno != syscall.EXDEV {
-					return err
-				}
+				return err
 			}
 		} else {
-			return err
+			revert.Add(func() {
+				if err := os.Rename(source, oldSource); err != nil {
+					logger.Debugf("cannot rename %s to %s on a failed remount", source, oldSource)
+				}
+			})
 		}
-	} else {
-		revert.Add(func() {
-			if err := os.Rename(source, oldSource); err != nil {
-				logger.Debugf("cannot rename %s to %s on a failed remount", source, oldSource)
-			}
-		})
 	}
 
 	for _, backend := range m.repo.Backends() {

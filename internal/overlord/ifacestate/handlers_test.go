@@ -914,6 +914,49 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 3)
 }
 
+func (s *interfaceHandlersSuite) TestRemountRenameOldSourceDoesNotExist(c *check.C) {
+	// Setup
+	oldSource := "/does/not/exist"
+	newSource := c.MkDir()
+	s.launchRemountWorkshop(c)
+	change := s.newRemountChange(newSource)
+
+	var setup sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		// Set the plug's source attribute to emulate an existing connection as
+		// the remount handler expects that a plug IS connected and HAS a
+		// "source" attribute
+		setup.Do(func() {
+			s.setupPlugConnectionAttribute(c, repo, oldSource)
+		})
+		return nil
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
+	// Execute
+	s.o.Settle(5 * time.Second)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(src, check.Equals, newSource)
+
+	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	// 2 calls for the autoconnect, 1 call for the remount
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 3)
+}
+
 func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a connected content plug
