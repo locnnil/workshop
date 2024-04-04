@@ -68,13 +68,23 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 		}
 	}()
 
-	conn, err := o.InterfaceManager().Repository().Connected(reqData.Plug.ProjectId, reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name)
+	repo := o.InterfaceManager().Repository()
+	connRef, err := repo.Connected(reqData.Plug.ProjectId, reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
 
-	if len(conn) == 0 {
+	if len(connRef) == 0 {
 		return statusBadRequest(`"%s/%s:%s" must be connected for remount`, reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name)
+	}
+
+	conn, err := repo.Connection(connRef[0])
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
+	if conn.Plug.Interface() != "content" {
+		return statusBadRequest("remount requires a content interface plug (provided plug is of %q interface)", conn.Plug.Interface())
 	}
 
 	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.Source, projectId)

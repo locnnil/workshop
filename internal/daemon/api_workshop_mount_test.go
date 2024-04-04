@@ -17,7 +17,7 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *apiSuite) launchWorkshopWithPlug(ctx context.Context, name string, c *check.C) *workshopbackend.Workshop {
+func (s *apiSuite) launchWorkshopWithPlug(c *check.C, ctx context.Context, name string) *workshopbackend.Workshop {
 	b := s.d.overlord.WorkshopBackend()
 	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
 base: ubuntu@20.04
@@ -91,7 +91,7 @@ func (s *apiSuite) runMountTest(c *check.C, buffers []*bytes.Buffer, expected []
 
 func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	s.daemon(c)
-	s.launchWorkshopWithPlug(s.ctx, "ws", c)
+	s.launchWorkshopWithPlug(c, s.ctx, "ws")
 
 	// Setup
 	requests := []*bytes.Buffer{
@@ -115,7 +115,7 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 	// Setup
 	s.daemon(c)
-	s.launchWorkshopWithPlug(s.ctx, "ws", c)
+	s.launchWorkshopWithPlug(c, s.ctx, "ws")
 	_, err := s.d.overlord.InterfaceManager().Repository().DisconnectSdk(s.project.ProjectId, "ws", "test-sdk")
 	c.Check(err, check.IsNil)
 
@@ -158,4 +158,44 @@ func (s *apiSuite) TestWorkshopRemountInvalidSetup(c *check.C) {
 	}
 
 	s.runMountTest(c, requests, expected, func(st *state.State, d time.Duration) {})
+}
+
+func (s *apiSuite) TestWorkshopRemountInvalidInterface(c *check.C) {
+	s.daemon(c)
+	s.launchWorkshop(s.ctx, "ws", c)
+
+	sdkInfo := &sdk.Info{ProjectId: s.project.ProjectId, Workshop: "ws", Name: "test-sdk"}
+	plug := &sdk.PlugInfo{
+		Sdk:       sdkInfo,
+		Name:      "test-plug",
+		Interface: "gpu",
+	}
+	slot := &sdk.SlotInfo{
+		Sdk:       sdkInfo,
+		Name:      "test-slot",
+		Interface: "gpu",
+	}
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.AddPlug(plug), check.IsNil)
+	c.Assert(repo.AddSlot(slot), check.IsNil)
+	_, err := repo.Connect(interfaces.NewConnRef(plug, slot), nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
+	// Setup
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"test-plug"},"source":"/srv/data"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `remount requires a content interface plug (provided plug is of "gpu" interface)`,
+		},
+	}
+
+	soon := 0
+	s.runMountTest(c, requests, expected, func(st *state.State, d time.Duration) { soon++ })
+	c.Assert(soon, check.Equals, 0)
 }
