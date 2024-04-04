@@ -52,6 +52,7 @@ type DeviceType int
 const (
 	BindMount DeviceType = iota
 	DiskVolume
+	GPU
 )
 
 type Device struct {
@@ -84,6 +85,28 @@ func Volume(name, mountTo, volume string) Device {
 			"pool":   "default",
 			"path":   mountTo,
 			"source": volume},
+	}
+}
+
+func Gpu(name string) Device {
+	return Device{
+		name:       name,
+		deviceType: GPU,
+
+		// The default workshop user must be able to acces the GPU device.
+		// Workshop assigns the GPU devices to workshop.workshop. A more
+		// traditional way here would be to add dri devices to the video/render
+		// groups, but it requires an additional workshop exec to find out the
+		// groups' ids at the LXD profile generation time. Given that we are
+		// solving the problem of access in a confined environment and workshop
+		// is a passwordless sudo user anyway, it was decided that it is OK if
+		// the workshop user owns GPU devices.
+
+		// On another note, the render and video groups are not assigned to the
+		// card*/render* dri devices by LXD properly. Both will be assigned to
+		// the group provided in "gid"; there is no way to assign video to card*
+		// and render to render* devices.
+		properties: map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"},
 	}
 }
 

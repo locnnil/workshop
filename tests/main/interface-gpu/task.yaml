@@ -1,0 +1,33 @@
+summary: Check GPU interface scenarios
+restore: |
+  . "$TESTSLIB"/utils.sh
+  cleanup ./
+execute: |
+  . "$TESTSLIB"/utils.sh
+  
+  echo "Check the GPU interface plug can be auto-connected"
+  project=$(pwd)
+  workshop_exec launch --project "$project" ws
+  workshop_exec --project "$project" connections ws | MATCH "^gpu.+ws/test-sdk-gpu:gpu.+:gpu.+\-$"
+  
+  echo "Check the GPU interface plug can be connected and disconnected manually"
+  workshop_exec --project "$project" disconnect ws/test-sdk-gpu:gpu  
+  workshop_exec --project "$project" connect ws/test-sdk-gpu:gpu
+  workshop_exec --project "$project" connections ws | MATCH "^gpu.+ws/test-sdk-gpu:gpu.+:gpu.+manual$"
+  
+  echo "Ensure a GPU device is created when connected"
+  
+  # Ideally, check that a GPU device exists in the workshop (as a side effect of
+  # the interface being connected). However, given the VM env without a card0,
+  # ensure that the LXD profile contains a gpu device with a proper
+  # configuration.  
+  project_id=$(cat "$project"/.workshop.lock)
+  lxc profile show --project workshop.ubuntu ws-"$project_id"-test-sdk-gpu | yq '.devices.gpu' > output.log
+  MATCH "type: gpu" < output.log
+  MATCH "gputype: physical" < output.log
+  MATCH 'uid: "1000"' < output.log
+  MATCH 'gid: "1000"' < output.log
+
+
+  
+  

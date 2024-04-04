@@ -26,9 +26,6 @@ func (s *LxdBeTests) SetUpTest(c *check.C) {
 	s.project = &workshopbackend.Project{ProjectId: "42ws42ws", Path: dir}
 }
 
-func (s *LxdBeTests) TearDownTest(c *check.C) {
-}
-
 func (f *LxdBeTests) TestLoadWorkshopSuccess(c *check.C) {
 	// Setup
 	os.WriteFile(filepath.Join(f.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
@@ -212,4 +209,31 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, check.NotNil)
 	c.Assert(projects, check.HasLen, 0)
+}
+
+func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
+	// Setup
+	b := &workshopbackend.LxdBackend{}
+	b.SetNvidia(true)
+
+	// Execute
+	cfg := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001")
+
+	// Validate
+	c.Assert(cfg["raw.idmap"], check.Equals, "uid 1001 1000\ngid 1001 1000")
+	c.Assert(cfg["security.nesting"], check.Equals, "true")
+	c.Assert(cfg["user.workshop.project-id"], check.Equals, f.project.ProjectId)
+
+	c.Assert(cfg["nvidia.runtime"], check.Equals, "true")
+	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "all")
+
+	// Setup
+	b.SetNvidia(false)
+
+	// Execute
+	cfg = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001")
+
+	// Validate
+	c.Assert(cfg["nvidia.runtime"], check.Equals, "")
+	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "")
 }

@@ -34,7 +34,7 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type ContentSuite struct {
+type contentSuite struct {
 	iface     interfaces.Interface
 	projectId string
 }
@@ -43,19 +43,19 @@ func Test(t *testing.T) {
 	check.TestingT(t)
 }
 
-var _ = check.Suite(&ContentSuite{
+var _ = check.Suite(&contentSuite{
 	iface: builtin.MustInterface("content"),
 })
 
-func (s *ContentSuite) SetUpTest(c *check.C) {
+func (s *contentSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
 }
 
-func (s *ContentSuite) TestName(c *check.C) {
+func (s *contentSuite) TestName(c *check.C) {
 	c.Assert(s.iface.Name(), check.Equals, "content")
 }
 
-func (s *ContentSuite) TestSanitizeSlotSimple(c *check.C) {
+func (s *contentSuite) TestSanitizeSlotSimple(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
 base: ubuntu@22.04
 slots:
@@ -67,7 +67,7 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
 
-func (s *ContentSuite) TestSanitizePlugSimple(c *check.C) {
+func (s *contentSuite) TestSanitizePlugSimple(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
 base: ubuntu@22.04
 plugs:
@@ -80,7 +80,7 @@ plugs:
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 }
 
-func (s *ContentSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
+func (s *contentSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
 base: ubuntu@22.04
 plugs:
@@ -93,7 +93,7 @@ plugs:
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content plug must contain target path")
 }
 
-func (s *ContentSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
+func (s *contentSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
 	const mockSdkYaml = `name: content-slot-sdk
 base: ubuntu@22.04
 plugs:
@@ -107,11 +107,11 @@ plugs:
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content interface path is not clean:.*")
 }
 
-func (s *ContentSuite) TestInterfaces(c *check.C) {
+func (s *contentSuite) TestInterfaces(c *check.C) {
 	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
 }
 
-func (s *ContentSuite) TestContentInterface(c *check.C) {
+func (s *contentSuite) TestContentInterface(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:

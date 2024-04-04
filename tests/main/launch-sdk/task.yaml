@@ -1,7 +1,6 @@
 summary: Ensure that 'workshop launch' creates a core LXD config correctly
 prepare: |
   apt install jq -y --no-install-recommends
-  snap install yq
 restore: |
   . "$TESTSLIB"/utils.sh
   cleanup ./

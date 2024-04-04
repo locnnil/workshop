@@ -58,10 +58,9 @@ func (s *Specification) DeviceEntries() []workshopbackend.Device {
 	return maps.Values(s.devices)
 }
 
-func (s *Specification) AddDeviceEntry(dev workshopbackend.Device) error {
+func (s *Specification) AddDeviceEntry(dev workshopbackend.Device) {
 	if s.devices == nil {
 		s.devices = make(map[string]workshopbackend.Device)
 	}
 	s.devices[dev.Name()] = dev
-	return nil
 }

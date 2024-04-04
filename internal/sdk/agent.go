@@ -8,6 +8,8 @@ type: agent
 slots:
   content:
     interface: content
+  gpu:
+    interface: gpu
 `
 
 func AgentSdkMeta(base string) string {

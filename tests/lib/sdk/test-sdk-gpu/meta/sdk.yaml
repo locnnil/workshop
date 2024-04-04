@@ -1,0 +1,10 @@
+name: test-sdk-gpu
+title: test-sdk-gpu
+base: ubuntu@20.04
+
+summary: test-sdk-gpu SDK
+description: |
+  test-sdk-gpu SDK
+plugs:
+  gpu:
+    interface: gpu

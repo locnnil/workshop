@@ -135,9 +135,11 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 	}
 
 	if err = osutil.MkdirAllChown(source, 0744, uid, gid); err != nil {
-		return nil
+		return err
 	}
-	return spec.AddDeviceEntry(workshopbackend.Mount(plug.Name(), source, iface.target(plug)))
+
+	spec.AddDeviceEntry(workshopbackend.Mount(plug.Name(), source, iface.target(plug)))
+	return nil
 }
 
 func init() {

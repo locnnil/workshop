@@ -142,7 +142,12 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 
 	dopts.HTTPAddress = rcmd.HTTP
 
-	d, err := daemon.New(&dopts, workshopbackend.New())
+	wbe, err := workshopbackend.New()
+	if err != nil {
+		return err
+	}
+
+	d, err := daemon.New(&dopts, wbe)
 	if err != nil {
 		return err
 	}

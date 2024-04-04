@@ -8,6 +8,9 @@ function prepare_environment() {
   snap install lxd --classic
   lxd init --auto --storage-backend zfs
   
+  snap install yq
+  apt install jq -y --no-install-recommends
+  
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/
   snap restart workshop

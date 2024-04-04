@@ -43,7 +43,9 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
 
 	socketPath := c.MkDir() + ".workshop.socket"
-	f.be = workshopbackend.New()
+	var err error
+	f.be, err = workshopbackend.New()
+	c.Assert(err, check.IsNil)
 
 	d, err := daemon.New(&daemon.Options{
 		Dir:        c.MkDir(),
