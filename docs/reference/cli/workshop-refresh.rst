@@ -7,7 +7,7 @@ Updates workshops according to their definitions.
 
 .. code-block:: console
 
-   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [global options]
+   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [OPTIONS]
 
 
 Synopsis

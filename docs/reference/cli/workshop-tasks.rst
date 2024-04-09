@@ -7,7 +7,7 @@ Lists tasks for a specific change.
 
 .. code-block:: console
 
-   $ workshop tasks <CHANGE ID> [global options]
+   $ workshop tasks <CHANGE ID> [OPTIONS]
 
 
 Synopsis

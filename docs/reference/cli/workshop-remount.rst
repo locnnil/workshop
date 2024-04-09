@@ -7,7 +7,7 @@ Mount a new source location to the content interface plug's target.
 
 .. code-block:: console
 
-   $ workshop remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE> [global options]
+   $ workshop remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE> [OPTIONS]
 
 
 Synopsis
@@ -33,6 +33,14 @@ Notes
   set by :command:`workshop remount`, if any
 - During :ref:`ref_workshop_remove`,
   non-default sources set by :command:`workshop remount` aren't removed
+
+
+Options
+-------
+
+--no-wait
+
+  Return the change ID, don't wait for the operation to finish.
 
 
 Global options

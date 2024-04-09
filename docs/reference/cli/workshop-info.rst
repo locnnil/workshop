@@ -7,7 +7,7 @@ Prints the current status and details of a workshop as YAML.
 
 .. code-block:: console
 
-   $ workshop info <WORKSHOP> [global options]
+   $ workshop info <WORKSHOP> [OPTIONS]
 
 
 Synopsis
