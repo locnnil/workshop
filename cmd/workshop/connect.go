@@ -14,16 +14,39 @@ type CmdConnect struct {
 
 func (c *CmdConnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "connect <workshop>/<sdk>:<plug> [<workshop>/<sdk>:<slot>]",
-		Args:    cobra.RangeArgs(1, 2),
-		Short:   "The connect command connects a plug and a slot.",
+		Use:   "connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>]",
+		Args:  cobra.RangeArgs(1, 2),
+		Short: "Connect a plug to a slot.",
+		Long: `
+This command connects a plug to a target slot
+that is specified as the second argument or deduced from the context.
+
+- If the second argument is omitted entirely, the target is assumed to be
+  <WORKSHOP>/agent:<PLUG>; <WORKSHOP> and <PLUG> come from the first argument
+
+- If the second argument only names the slot itself, the target is
+  <WORKSHOP>/agent:<SLOT>; <WORKSHOP> comes from the first argument
+
+- If the second argument only names the workshop and SDK, the target is
+  <WORKSHOP>/<SDK>:<INTERFACE>; <INTERFACE> comes from the plug definition.
+  However, if there are several candidate slots that use this interface,
+  the command fails
+
+- If the target slot is compatible with the plug, the command attempts
+  to connect them and returns the result
+
+Notes:
+- To be compatible, the plug and the slot must use the same interface
+- Multiple plugs can be connected to the same slot, but not vice versa
+- The 'workshop connections' output will list the connection as 'manual'
+`,
 		RunE:    c.Run,
 		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Do not wait for the operation to finish but just print the change id")
+		"Return the change ID, don't wait for the operation to finish")
 
 	return cmd
 }

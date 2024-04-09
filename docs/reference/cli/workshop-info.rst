@@ -54,6 +54,7 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_list`
 - :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_tasks`

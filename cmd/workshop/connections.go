@@ -17,14 +17,25 @@ type CmdConnections struct {
 
 func (c *CmdConnections) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "connections [<WORKSHOP>] [--all]",
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "List interface connections.",
+		Use:   "connections [<WORKSHOP>]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "List interface connections.",
+		Long: `
+This command lists connections between interface plugs and slots
+for the entire project or for a single workshop in it;
+each line represents a connection between a plug and a slot via an interface,
+with extra notes provided if needed.
+
+Notes:
+- The output lists connections created with 'workshop connect' as 'manual'
+- The '--all' option needn't be used with an argument;
+  if a workshop is supplied, disconnected plugs are also listed
+`,
 		RunE:    c.Run,
 		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
-	cmd.Flags().BoolVar(&c.all, "all", false, "Lists connected and unconnected plugs and slots.")
+	cmd.Flags().BoolVar(&c.all, "all", false, "Include disconnected plugs in the output.")
 
 	return cmd
 }

@@ -66,6 +66,8 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_workshop_connect`
+- :ref:`ref_workshop_disconnect`
 - :ref:`ref_workshop_info`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_remove`

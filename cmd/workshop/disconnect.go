@@ -15,20 +15,37 @@ type CmdDisconnect struct {
 
 func (c *CmdDisconnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "disconnect [OPTIONS] <workshop>/<sdk>:<plug> [<workshop>/<sdk>]:<slot>",
-		Args:    cobra.RangeArgs(1, 2),
-		Short:   "The disconnect command disconnects a plug from a slot.",
+		Use:   "disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>]",
+		Args:  cobra.RangeArgs(1, 2),
+		Short: "Disconnect a plug or a slot.",
+		Long: `
+This command disconnects a plug from its slot, or a slot from all its plugs.
+
+- A single argument can be a fully qualified plug or slot reference;
+  with two arguments, the first one is the plug, and the second one is the slot
+
+- If the second argument only names the slot itself, the target is
+  <WORKSHOP>/agent:<SLOT>; <WORKSHOP> comes from the first argument
+
+- If the second argument only names the workshop and SDK, the target is
+  <WORKSHOP>/<SDK>:<INTERFACE>; <INTERFACE> comes from the plug definition
+
+Notes:
+- After an auto-connected plug is thus disconnected,
+  it is reconnected during 'workshop refresh'
+  only if the '--forget' option was used with 'workshop disconnect'
+`,
 		RunE:    c.Run,
 		PostRun: postRunWarnings(&c.clientMixin),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
 		false,
-		"Forget remembered state about the given connection.")
+		"Reconnect the plugs at 'workshop refresh' if auto-connected initially")
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Do not wait for the operation to finish but just print the change id")
+		"Return the change ID, don't wait for the operation to finish")
 
 	return cmd
 }
