@@ -107,6 +107,10 @@ func parseRawEnvironment(raw []string) (Environment, error) {
 	return env, nil
 }
 
+func ParseEnvironment(raw []string) (Environment, error) {
+	return parseRawEnvironment(raw)
+}
+
 // OSEnvironment returns the environment of the calling process.
 func OSEnvironment() (Environment, error) {
 	return parseRawEnvironment(os.Environ())

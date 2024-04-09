@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -53,6 +54,7 @@ const (
 	BindMount DeviceType = iota
 	DiskVolume
 	GPU
+	Proxy
 )
 
 type Device struct {
@@ -110,6 +112,18 @@ func Gpu(name string) Device {
 	}
 }
 
+// A network protocol proxy device, opens a port on the host or in a workhop.
+// from, to are the source and destination addresses (paths in the case of unix sockets),
+// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
+// bind denotes where the port is open (can be: instance, host)
+func NetworkProxy(name string, from, to string, bind string) Device {
+	return Device{
+		name:       name,
+		deviceType: Proxy,
+		properties: map[string]string{"type": "proxy", "connect": from, "listen": to, "uid": "1000", "gid": "1000", "bind": bind},
+	}
+}
+
 func profileName(pid, workshop, sdk string) string {
 	return strings.Join([]string{InstanceName(workshop, pid), sdk}, "-")
 }
@@ -151,6 +165,20 @@ func (s *LxdBackend) AssignProfile(ctx context.Context, workshop string, profile
 			} else if !info.IsDir() {
 				return fmt.Errorf("cannot create a workshop mount with target %q: the target is not a directory", target)
 			}
+		}
+
+		if dev.Type() == Proxy {
+			// add SSH_AUTH_SOCK setup
+			env, err := fs.Create(filepath.Join("/etc/profile.d", dev.name+".sh"))
+			if err != nil {
+				return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
+			}
+
+			_, err = env.Write([]byte("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.properties["listen"], "unix:")))
+			if err != nil {
+				return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
+			}
+			_ = env.Close()
 		}
 	}
 
