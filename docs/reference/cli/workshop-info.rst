@@ -7,7 +7,7 @@ Prints the current status and details of a workshop as YAML.
 
 .. code-block:: console
 
-   $ workshop info <WORKSHOP> [global options]
+   $ workshop info <WORKSHOP> [OPTIONS]
 
 
 Synopsis
@@ -54,6 +54,7 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_list`
 - :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_tasks`

@@ -7,7 +7,7 @@ Starts an interactive terminal session for the workshop.
 
 .. code-block:: console
 
-   $ workshop shell <WORKSHOP> [global options]
+   $ workshop shell <WORKSHOP> [OPTIONS]
 
 
 Synopsis

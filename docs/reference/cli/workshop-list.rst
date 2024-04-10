@@ -7,7 +7,7 @@ Lists project workshops.
 
 .. code-block:: console
 
-   $ workshop list [--global] [global options]
+   $ workshop list [--global] [OPTIONS]
 
 
 Synopsis

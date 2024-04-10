@@ -7,7 +7,7 @@ Starts one or many workshops.
 
 .. code-block:: console
 
-   $ workshop start <WORKSHOP>... [global options]
+   $ workshop start <WORKSHOP>... [OPTIONS]
 
 
 Synopsis

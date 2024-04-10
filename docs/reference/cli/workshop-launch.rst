@@ -7,7 +7,7 @@ Constructs one or many workshops using their definitions.
 
 .. code-block:: console
 
-   $ workshop launch <WORKSHOP>... [global options]
+   $ workshop launch <WORKSHOP>... [OPTIONS]
 
 
 Synopsis
@@ -33,6 +33,13 @@ Notes
 - To update an existing workshop, use :ref:`ref_workshop_refresh` instead
 - SDKs are installed in alphabetical order
 
+
+Options
+-------
+
+--no-wait
+
+  Return the change ID, don't wait for the operation to finish.
 
 
 Global options

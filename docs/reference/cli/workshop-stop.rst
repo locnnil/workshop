@@ -7,7 +7,7 @@ Stops one or many workshops.
 
 .. code-block:: console
 
-   $ workshop stop <WORKSHOP>... [global options]
+   $ workshop stop <WORKSHOP>... [OPTIONS]
 
 
 Synopsis
