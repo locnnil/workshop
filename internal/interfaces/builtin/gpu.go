@@ -35,7 +35,7 @@ const gpuBaseDeclarationSlots = `
         - agent
       allow-connection: true
       allow-auto-connection: true
- `
+`
 
 type gpuInterface struct{}
 

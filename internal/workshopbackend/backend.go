@@ -2,7 +2,9 @@ package workshopbackend
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type ContextKeyProjectId string
@@ -20,6 +22,11 @@ func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
 		return config[key] == value
 	}
 }
+
+var (
+	ErrWorkshopNotFound   = errors.New("workshop not found")
+	ErrSdkProfileNotFound = errors.New("sdk profile not found")
+)
 
 type ErrExec struct {
 	Status int
@@ -60,6 +67,57 @@ type StateStorage interface {
 	// Delete a temporary state storage volume for the workshop. It does
 	// not unmount the volume from the workshop if mounted.
 	DeleteStateStorage(ctx context.Context, name string) error
+}
+
+type DeviceType int
+
+const (
+	BindMount DeviceType = iota
+	DiskVolume
+	GPU
+	SshAgentProxy
+)
+
+type Device struct {
+	name       string
+	properties map[string]string
+	deviceType DeviceType
+}
+
+func (d Device) Name() string {
+	return d.name
+}
+
+func (d Device) Type() DeviceType {
+	return d.deviceType
+}
+
+type SdkProfile struct {
+	sdk     string
+	devices map[string]Device
+}
+
+func NewSdkProfile(sdkName string) SdkProfile {
+	return SdkProfile{
+		sdk:     sdkName,
+		devices: make(map[string]Device),
+	}
+}
+
+func (s SdkProfile) Name() string {
+	return s.sdk
+}
+
+func (s SdkProfile) AddDevice(dev Device) error {
+	if _, ok := s.devices[dev.Name()]; ok {
+		return fmt.Errorf("device %s already exists in the %s SDK profile", dev.Name(), s.Name())
+	}
+	s.devices[dev.Name()] = dev
+	return nil
+}
+
+func profileName(pid, workshop, sdk string) string {
+	return strings.Join([]string{InstanceName(workshop, pid), sdk}, "-")
 }
 
 type Profile interface {

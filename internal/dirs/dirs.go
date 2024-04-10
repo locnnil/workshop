@@ -36,6 +36,8 @@ var (
 	SdkDir string
 	// Path to the daemon's unix socket
 	SocketPath string
+	// Base for the XDG runtime directory of a host user
+	XdgRuntimeDirBase string
 )
 
 func getEnvPaths() (workshopdDir string, socketPath string) {
@@ -59,6 +61,7 @@ func init() {
 	}
 
 	ExecDir = filepath.Dir(execPath)
+	XdgRuntimeDirBase = "/run/user"
 	BaseDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
 

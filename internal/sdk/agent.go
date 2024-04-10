@@ -10,6 +10,8 @@ slots:
     interface: content
   gpu:
     interface: gpu
+  ssh-agent:
+    interface: ssh-agent
 `
 
 func AgentSdkMeta(base string) string {

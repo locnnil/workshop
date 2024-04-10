@@ -49,7 +49,7 @@ type SecurityBackend interface {
 	Remove(context context.Context, workshop, sdkName string) error
 
 	// NewSpecification returns a new specification associated with this backend.
-	NewSpecification(user, pid string) Specification
+	NewSpecification(user, project_id string) Specification
 }
 
 // SecurityBackendSetupMany interface may be implemented by backends that can optimize their operations

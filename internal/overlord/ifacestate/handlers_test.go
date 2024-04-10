@@ -1047,6 +1047,44 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectDisconnected(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
+func (s *interfaceHandlersSuite) TestAutoDisconnectNoSdkProfile(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a content plug
+	repo := s.mgr.Repository()
+	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.secBackend.RemoveCallback = func(sdkName string) error { return workshopbackend.ErrSdkProfileNotFound }
+
+	// Execute
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("auto-disconnect", "...")
+	t1.Set("sdk", "consumer")
+	setWorkshopProject("ws", s.prj, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	s.state.Unlock()
+
+	s.o.Settle(5 * time.Second)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.IsNil)
+
+	// Validate
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
+	c.Assert(repo.Slots(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
+
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
+}
+
 func (s *interfaceHandlersSuite) disconnectChange(c *check.C, workshop string, forget bool) *state.Change {
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")

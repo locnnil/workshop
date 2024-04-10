@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"slices"
 	"syscall"
 
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
@@ -354,7 +352,9 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 	}
 
 	for _, backend := range m.repo.Backends() {
-		if err := backend.Remove(ctx, workshop, sdkName); err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
+		// if there are not plugs or slots declared by the SDK the profile does
+		// not neccessarily exist for the SDK.
+		if err := backend.Remove(ctx, workshop, sdkName); err != nil && !errors.Is(err, workshopbackend.ErrSdkProfileNotFound) {
 			return err
 		}
 	}
