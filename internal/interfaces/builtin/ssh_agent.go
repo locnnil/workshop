@@ -59,16 +59,8 @@ func (iface *sshAgentInterface) StaticInfo() interfaces.StaticInfo {
 	}
 }
 
-func (iface *sshAgentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
-	return nil
-}
-
 func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
-	return false
-}
-
-func (iface *sshAgentInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	return nil
+	return true
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
@@ -105,10 +97,12 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *device.Specification, p
 		return fmt.Errorf("user %q does not have SSH_AUTH_SOCK set. ssh-agent is not running?", user.Username)
 	}
 
-	fromSocket := "unix:" + sock
-	toSocket := "unix:" + filepath.Join(dirs.WorkshopBaseDir, plug.Name()+".ssh")
+	name := plug.Sdk().Name + "-" + plug.Name()
 
-	spec.AddDeviceEntry(workshopbackend.NetworkProxy(plug.Name(), fromSocket, toSocket, "instance"))
+	fromSocket := sock
+	toSocket := filepath.Join(dirs.WorkshopBaseDir, name+".ssh")
+
+	spec.AddDeviceEntry(workshopbackend.SshAgent(name, fromSocket, toSocket))
 
 	return nil
 }

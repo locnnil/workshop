@@ -3,7 +3,6 @@ package workshopbackend
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -69,8 +68,7 @@ var (
 	NewProjectId         = allocateProjectId
 	defaultDevices       = createDefaultDevices
 
-	ErrWorkshopNotFound = errors.New("workshop not found")
-	imageServer         = "https://cloud-images.ubuntu.com/releases/"
+	imageServer = "https://cloud-images.ubuntu.com/releases/"
 )
 
 func New() (WorkshopBackend, error) {

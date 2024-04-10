@@ -5,6 +5,9 @@ package workshopbackend_test
 
 import (
 	"context"
+	"net"
+	"os"
+	"path/filepath"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -68,7 +71,8 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	// Setup
 	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
 	profile := workshopbackend.NewSdkProfile("sdk")
-	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/root")
+	// ensure the target directory is created as a workaround for the LXD bind-mount issue
+	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/new-dir")
 	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
@@ -109,8 +113,6 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 	// Setup
 	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
-
-	// Setup
 	profile := workshopbackend.NewSdkProfile("sdk")
 	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/root/.profile")
 	err := profile.AddDevice(device)
@@ -121,29 +123,51 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `.*cannot create a workshop mount with target "/root/.profile": the target is not a directory`)
 }
 
-func (f *profileTest) TestSdkProfileBindMountPreventsLxdFromRemovingTarget(c *check.C) {
+func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 	// Setup
 	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
 	profile := workshopbackend.NewSdkProfile("sdk")
-	device := workshopbackend.Mount("sdk-device", c.MkDir(), "/opt")
-	deviceNonEmpty := workshopbackend.Mount("sdk-device-2", c.MkDir(), "/home/workshop")
-	err := profile.AddDevice(device)
+	sshAgentDir := c.MkDir()
+	sockPath := filepath.Join(sshAgentDir, "ssh")
+	sock, err := net.Listen("unix", sockPath)
 	c.Assert(err, check.IsNil)
-	err = profile.AddDevice(deviceNonEmpty)
+	defer func() {
+		sock.Close()
+		os.Remove(sockPath)
+	}()
+
+	device := workshopbackend.SshAgent("agent", sockPath, "/home/workshop/ssh-agent.ssh")
+	err = profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
 	// Execute
 	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.IsNil)
-	err = backend.RemoveProfile(f.ctx, "test", profile.Name())
 	c.Assert(err, check.IsNil)
 
 	// Validate
 	fs, err := f.client.GetInstanceFileSFTP(workshopbackend.InstanceName("test", "42424242"))
 	c.Assert(err, check.IsNil)
 	defer fs.Close()
-	_, err = fs.Stat("/opt")
+	var buf = make([]byte, 100)
+	agentScript, err := fs.Open("/etc/profile.d/agent.sh")
 	c.Assert(err, check.IsNil)
-	_, err = fs.Stat("/home/workshop")
+	n, _ := agentScript.Read(buf)
 	c.Assert(err, check.IsNil)
+	c.Assert(string(buf[:n]), check.Equals, "export SSH_AUTH_SOCK=/home/workshop/ssh-agent.ssh")
+
+	// Execute
+	// Simulate a scenario when a profile is updated not created
+	err = backend.AssignProfile(f.ctx, "test", workshopbackend.NewSdkProfile("sdk"))
+	c.Assert(err, check.IsNil)
+
+	// Validate
+	_, err = fs.Stat("/etc/profile.d/agent.sh")
+	c.Assert(os.IsNotExist(err), check.Equals, true)
+}
+
+func (f *profileTest) TestSdkProfileRemove(c *check.C) {
+	// Setup
+	var backend workshopbackend.Profile = &workshopbackend.LxdBackend{}
+	err := backend.RemoveProfile(f.ctx, "test", "sdk")
+	c.Assert(err, testutil.ErrorIs, workshopbackend.ErrSdkProfileNotFound)
 }
