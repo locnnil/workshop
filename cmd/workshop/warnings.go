@@ -57,32 +57,36 @@ func (c *CmdWarnings) Command() *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "List warnings.",
 		Long: `
-The warnings command lists the warnings that have been reported to the system.
+This command lists the warnings that were reported to the system.
 
-Once warnings have been listed with 'workshop warnings', 'workshop okay' may be used to
-silence them. A warning that's been silenced in this way will not be listed
-again unless it happens again, _and_ a cooldown time has passed.
+All warnings listed by 'workshop warnings'
+can be acknowledged with the 'workshop okay' command.
+Acknowledged warnings aren't listed by 'workshop warnings'
+unless they occur again after their cooldown period has elapsed
+or the '--all' option is used.
 
-Warnings expire automatically, and once expired they are forgotten.
+Also, warnings expire automatically; expired warnings are not listed.
 `,
 		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.All, "all",
 		false,
-		"Show all warnings.")
+		"Show all warnings, including the acknowledged ones.")
 
 	cmd.PersistentFlags().BoolVar(&c.All, "verbose",
 		false,
-		"Show more information.")
+		"Show more information per each warning.")
 
 	cmd.PersistentFlags().BoolVar(&c.AbsTime, "abs-time",
 		false,
-		"Display absolute times (in RFC 3339 format). Otherwise, display relative times up to 60 days, then YYYY-MM-DD.")
+		`Use absolute times in RFC 3339 format.
+By default, relative times are used up to 60 days, then YYYY-MM-DD.`)
 
 	cmd.PersistentFlags().StringVar(&c.Unicode, "unicode",
 		"auto",
-		"Use a little bit of Unicode to improve legibility (auto|never|always). (default: auto)")
+		`Use Unicode characters to improve legibility (auto|never|always).
+By default, Unicode is used only if the output supports it.`)
 
 	return cmd
 }
@@ -91,12 +95,10 @@ func (c *CmdOkay) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "okay",
 		Args:  cobra.NoArgs,
-		Short: "Acknowledge warnings.",
+		Short: "Acknowledge listed warnings.",
 		Long: `
-The okay command acknowledges the warnings listed with 'workshop warnings'.
-
-Once acknowledged a warning won't appear again unless it re-occurrs and
-sufficient time has passed.
+This command acknowledges all warnings
+listed previously by the 'workshop warnings' command.
 `,
 		RunE: c.Run,
 	}

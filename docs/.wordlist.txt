@@ -17,8 +17,10 @@ SDKcraft
 SDKs
 UI
 YAML
+YYYY
 backend
 basename
+cooldown
 customisable
 cwd
 dev
@@ -49,6 +51,7 @@ snapd
 subcommand
 transactional
 uid
+unicode
 unmounts
 webhook
 workshopd
