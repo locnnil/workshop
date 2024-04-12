@@ -21,6 +21,7 @@ such as :option:`!--help` or :option:`!-h`:
    workshop-info
    workshop-launch
    workshop-list
+   workshop-okay
    workshop-refresh
    workshop-remove
    workshop-remount
@@ -28,3 +29,4 @@ such as :option:`!--help` or :option:`!-h`:
    workshop-start
    workshop-stop
    workshop-tasks
+   workshop-warnings
