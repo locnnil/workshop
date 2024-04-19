@@ -24,16 +24,22 @@ def slugify(pagename):
     return slug
 
 
-def update_page_context(app, pagename, templatename, context, doctree):
-    slug = slugify(pagename) + "-docs-page"
-    topic_id = get_topic_id(context["discourse"], slug)
-    if topic_id:
-        context["discourse_url"] = f"{context['discourse']}t/{topic_id}"
-    else:
-        context["discourse_url"] = f"{context['discourse']}new-topic?title={slug}&tags=docs"
-        if "category" in context:
-            context["discourse_url"] += f"&category={context['category']}"
+def setup_func(app, pagename, templatename, context, doctree):
+
+    def discourse_topic(slug):
+        topic_id = get_topic_id(context["discourse"], slug)
+
+        if topic_id:
+            url = f"{context['discourse']}t/{topic_id}"
+        else:
+            url = f"{context['discourse']}new-topic?title={slug}&tags=docs"
+            if "category" in context:
+                url += f"&category={context['category']}"
+
+        return url
+
+    context["discourse_topic"] = discourse_topic
 
 
 def setup(app):
-    app.connect("html-page-context", update_page_context)
+    app.connect("html-page-context", setup_func)

@@ -1,3 +1,4 @@
+:slug: official-documentation-site
 :relatedlinks: [SDKcraft](https://canonical-sdkcraft.readthedocs-hosted.com/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
 
 .. _home:
