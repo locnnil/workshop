@@ -1,4 +1,6 @@
 import datetime
+import os
+import sys
 
 # Custom configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -52,7 +54,8 @@ html_context = {
     # Change to the discourse instance you want to be able to link to
     # using the :discourse: metadata at the top of a file
     # (use an empty value if you don't want to link)
-    "discourse": "https://discourse.ubuntu.com",
+    "discourse": "https://discourse.canonical.com/",
+    "category": "engineering/workshops",
     # Change to the GitHub info for your project
     # Change to the Mattermost channel you want to link to
     # (use an empty value if you don't want to link)
@@ -122,6 +125,8 @@ custom_linkcheck_anchors_ignore_for_url = []
 ## The following settings are appended to the default configuration.
 ## Use them to extend the default functionality.
 
+sys.path.append(os.path.abspath('.sphinx/exts'))
+
 # Add custom Sphinx extensions as needed.
 # This array contains recommended extensions that should be used.
 # NOTE: The following extensions are handled automatically and do
@@ -133,6 +138,7 @@ custom_extensions = [
     "canonical.related-links",
     "canonical.custom-rst-roles",
     "canonical.terminal-output",
+    "discoursetopic"
 ]
 
 # Add custom required Python modules that must be added to the
@@ -141,7 +147,7 @@ custom_extensions = [
 # added here: canonical-sphinx-extensions, furo, linkify-it-py, myst-parser,
 # pyspelling, sphinx, sphinx-autobuild, sphinx-copybutton, sphinx-design,
 # sphinx-reredirects, sphinx-tabs, sphinxcontrib-jquery, sphinxext-opengraph
-custom_required_modules = []
+custom_required_modules = ["watchfiles"]
 
 # Add files or directories that should be excluded from processing.
 custom_excludes = ["README.rst"]
