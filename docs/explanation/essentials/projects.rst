@@ -2,8 +2,8 @@
 
 .. _exp_project:
 
-Project
-=======
+Projects
+========
 
 Technically, a project is a directory
 that contains one or many workshop definitions.

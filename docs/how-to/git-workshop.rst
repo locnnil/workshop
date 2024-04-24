@@ -188,9 +188,13 @@ See also
 Explanation:
 
 - :ref:`exp_base`
-- :ref:`exp_moving_projects`
 - :ref:`exp_project`
 - :ref:`exp_workshop_def`
+
+
+How-to guides:
+
+- :ref:`how_moving_projects`
 
 
 Reference:

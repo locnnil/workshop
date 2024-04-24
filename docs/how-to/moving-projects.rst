@@ -1,4 +1,4 @@
-.. _exp_moving_projects:
+.. _how_moving_projects:
 
 Moving projects around
 ======================
@@ -12,7 +12,7 @@ Before launch
 -------------
 
 A workshop that you didn't :command:`launch`
-is just that: a :ref:`definition file <exp_workshop_def>`
+is just that: a definition file
 which behaves like any good file should.
 Things start changing *after* you run :command:`workshop launch`:
 
@@ -127,6 +127,12 @@ before deleting the project directory:
 
 See also
 --------
+
+Explanation:
+
+- :ref:`exp_project`
+- :ref:`exp_workshop_def`
+
 
 Reference:
 
