@@ -3,9 +3,6 @@
 Content interface
 =================
 
-Introduction
-------------
-
 The content interface
 exposes host file system locations
 to individual SDKs
@@ -89,9 +86,8 @@ which multiple content interface plugs can then access.
 
 
 When the SDK is installed
-during :command:`workshop launch` and :command:`workshop refresh`
-at run-time,
-for each plug that targets the slot, |project_markup| checks the following:
+during :command:`workshop launch` and :command:`workshop refresh`,
+|project_markup| checks the following for each plug that targets the slot:
 
 - The plug can be installed.
 

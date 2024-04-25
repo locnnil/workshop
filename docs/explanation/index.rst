@@ -10,23 +10,25 @@ and explain how they fit together.
 Essentials
 ----------
 
-These articles explain the core set of |project_markup|-related concepts.
-
 .. toctree::
-   :glob:
-   :maxdepth: 1
+   :hidden:
 
    essentials/index
+
+
+These :doc:`articles <essentials/index>`
+explain the core set of |project_markup|-related concepts.
 
 
 Advanced topics
 ---------------
 
-These articles explain complex concepts
-that are important for understanding |project_markup|'s internals.
-
 .. toctree::
-   :glob:
-   :maxdepth: 1
+   :hidden:
 
    advanced/index
+
+
+These :doc:`articles <advanced/index>`
+explain complex concepts
+that are important for understanding |project_markup|'s internals.
