@@ -4,9 +4,10 @@ How to debug issues in workshops
 ================================
 
 To trace the condition of a misbehaving workshop,
-you can explore its underlying changes and tasks.
+you can explore its underlying changes and tasks,
+list system-wide warnings and acknowledge false positives.
 This may help identify the root cause
-if a :command:`refresh` fails.
+if a :command:`refresh` or any other action fails.
 
 
 List workshop changes
@@ -79,6 +80,32 @@ list its *tasks* to see the cause:
 The SDK-specific reason can be addressed individually.
 
 
+List and suppress warnings
+--------------------------
+
+Occasionally, |project_markup| encounters non-blocking or transient issues,
+such as broken mount points.
+As such, they are registered as *warnings* in a system-wide log
+that can be accessed with :command:`workshop warnings`:
+
+.. code-block:: console
+
+   $ workshop warnings
+
+       last-occurrence:  4 days ago, at 17:52 GMT
+       warning: |
+         golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
+
+
+Multiple warnings reporting one issue aren't stacked;
+only their first and last occurrences are recorded.
+You can suppress listed warnings with :command:`workshop okay` to ignore them:
+
+.. code-block:: console
+
+   $ workshop okay
+
+
 See also
 --------
 
@@ -92,5 +119,7 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_okay`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_tasks`
+- :ref:`ref_workshop_warnings`

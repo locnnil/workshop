@@ -19,7 +19,7 @@ All warnings listed by :command:`workshop warnings`
 can be acknowledged with the :ref:`ref_workshop_okay` command.
 Acknowledged warnings aren't listed by :command:`workshop warnings`
 unless they occur again after their cooldown period has elapsed
-or the :option:`!--all`` option is used.
+or the :option:`!--all` option is used.
 
 Also, warnings expire automatically; expired warnings are not listed.
 
