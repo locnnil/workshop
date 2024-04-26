@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/canonical/workshop/client"
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdLaunch struct {

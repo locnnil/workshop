@@ -24,8 +24,9 @@ import (
 	"time"
 
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/workshop/internal/wsutil"
 	"golang.org/x/sys/unix"
+
+	"github.com/canonical/workshop/internal/wsutil"
 )
 
 type ExecOptions struct {

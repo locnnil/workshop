@@ -3,11 +3,12 @@ package conflict_test
 import (
 	"testing"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	conflict "github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 type conflictSuite struct {

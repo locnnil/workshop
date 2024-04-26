@@ -7,15 +7,13 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/sdk"
-
 	backend "github.com/canonical/workshop/internal/interfaces/backends"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
-
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type InterfaceManager struct {

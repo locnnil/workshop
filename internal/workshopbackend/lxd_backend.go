@@ -11,16 +11,15 @@ import (
 	"strings"
 	"time"
 
+	lxd "github.com/canonical/lxd/client"
+	"github.com/canonical/lxd/shared/api"
+	"github.com/gorilla/websocket"
+	"golang.org/x/exp/slices"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/gorilla/websocket"
-	"golang.org/x/exp/slices"
-
-	lxd "github.com/canonical/lxd/client"
-
-	"github.com/canonical/lxd/shared/api"
 )
 
 type ExecArgs struct {

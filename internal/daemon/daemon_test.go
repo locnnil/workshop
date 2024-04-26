@@ -28,9 +28,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-
 	"gopkg.in/check.v1"
-
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 
@@ -552,7 +550,7 @@ func (s *daemonSuite) TestGracefulStop(c *check.C) {
 			w.Write([]byte("OKOK"))
 		} else {
 			w.Write([]byte("Gone"))
-		}		
+		}
 	})
 
 	generalL, err := net.Listen("tcp", "127.0.0.1:0")

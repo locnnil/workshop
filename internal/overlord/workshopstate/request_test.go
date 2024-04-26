@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -16,8 +18,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"gopkg.in/check.v1"
 )
 
 type requestSuite struct {

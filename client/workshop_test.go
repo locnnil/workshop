@@ -5,8 +5,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/canonical/workshop/client"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {

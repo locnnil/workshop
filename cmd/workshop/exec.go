@@ -22,12 +22,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/ptyutil"
-	"github.com/spf13/cobra"
 )
 
 type CmdExec struct {

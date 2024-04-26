@@ -32,9 +32,8 @@ import (
 	"syscall"
 	"time"
 
-	"gopkg.in/tomb.v2"
-
 	"github.com/gorilla/mux"
+	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"

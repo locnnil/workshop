@@ -1,10 +1,11 @@
 package device
 
 import (
+	"golang.org/x/exp/maps"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"golang.org/x/exp/maps"
 )
 
 type Specification struct {

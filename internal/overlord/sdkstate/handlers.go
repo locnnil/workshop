@@ -9,18 +9,16 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/spf13/afero"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/logger"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	. "github.com/canonical/workshop/internal/overlord/handlersetup"
-
-	"github.com/spf13/afero"
-
-	"gopkg.in/tomb.v2"
 )
 
 var InstallTimeNow = time.Now

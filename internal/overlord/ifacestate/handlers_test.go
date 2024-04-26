@@ -8,6 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/check.v1"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/osutil"
@@ -16,8 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
-	"gopkg.in/tomb.v2"
 )
 
 type interfaceHandlersSuite struct {

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 type S struct {

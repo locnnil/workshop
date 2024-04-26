@@ -1,7 +1,6 @@
 package workshopbackend
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,16 +8,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-
-	"golang.org/x/exp/slices"
-
 	"strconv"
 	"strings"
 	"time"
 
+	"cmp"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
-	"golang.org/x/exp/maps"
 )
 
 var InstallTimeNow = time.Now

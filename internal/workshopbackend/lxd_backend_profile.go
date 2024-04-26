@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/canonical/lxd/shared/api"
 	"golang.org/x/exp/slices"
 
-	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/osutil"
 )
 

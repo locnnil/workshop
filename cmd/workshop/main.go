@@ -5,11 +5,11 @@ import (
 	"io"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
-
-	"github.com/spf13/cobra"
 )
 
 type clientMixin struct {

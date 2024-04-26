@@ -16,7 +16,6 @@ package daemon
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,10 +23,11 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/canonical/workshop/internal/overlord/state"
+	"cmp"
 	"golang.org/x/exp/slices"
-
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 func setupChanges(st *state.State) []string {

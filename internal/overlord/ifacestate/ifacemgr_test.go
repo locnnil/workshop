@@ -8,6 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/afero"
+	"golang.org/x/exp/maps"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -17,9 +21,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"github.com/spf13/afero"
-	"golang.org/x/exp/maps"
-	"gopkg.in/check.v1"
 )
 
 type interfaceManagerSuite struct {

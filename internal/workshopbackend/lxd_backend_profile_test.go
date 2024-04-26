@@ -1,8 +1,9 @@
 package workshopbackend_test
 
 import (
-	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type ProfileSuite struct {

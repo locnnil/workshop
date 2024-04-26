@@ -7,9 +7,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/canonical/x-go/strutil"
+
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/x-go/strutil"
 )
 
 type Status int

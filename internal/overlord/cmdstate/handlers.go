@@ -30,11 +30,10 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/logger"
+	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/canonical/workshop/internal/wsutil"
-
-	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 )
 
 const (

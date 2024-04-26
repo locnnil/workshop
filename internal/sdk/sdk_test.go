@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 type SdkSuite struct {

@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/afero"
+	"gopkg.in/check.v1"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
@@ -16,10 +20,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"github.com/spf13/afero"
-	"gopkg.in/check.v1"
-	"gopkg.in/tomb.v2"
 )
 
 type H struct {

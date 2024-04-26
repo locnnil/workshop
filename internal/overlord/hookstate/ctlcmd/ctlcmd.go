@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/canonical/x-go/strutil"
 	"github.com/jessevdk/go-flags"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
-	"github.com/canonical/x-go/strutil"
 )
 
 type MissingContextError struct {

@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"github.com/canonical/x-go/strutil"
 )
 
 type WorkshopManager struct {

@@ -29,16 +29,15 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/adrg/xdg"
+	"github.com/canonical/x-go/i18n"
+	"github.com/canonical/x-go/strutil"
+	"github.com/canonical/x-go/strutil/quantity"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/x-go/i18n"
-	"github.com/canonical/x-go/strutil"
-	"github.com/canonical/x-go/strutil/quantity"
-
-	"github.com/adrg/xdg"
 )
 
 type CmdWarnings struct {

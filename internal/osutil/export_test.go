@@ -24,8 +24,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/x-go/strutil"
+
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var ParseRawEnvironment = parseRawEnvironment

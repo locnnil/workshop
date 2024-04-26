@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"os"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 type BaseWorkshopSuite struct {

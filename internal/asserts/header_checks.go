@@ -69,7 +69,6 @@ func checkPrimaryKey(headers map[string]interface{}, primKey string) (string, er
 	return value, nil
 }
 
-
 // use 'defl' default if missing
 func checkIntWithDefault(headers map[string]interface{}, name string, defl int) (int, error) {
 	value, ok := headers[name]

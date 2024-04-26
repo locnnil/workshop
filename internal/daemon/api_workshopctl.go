@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/canonical/workshop/internal/overlord/hookstate/ctlcmd"
 	"github.com/jessevdk/go-flags"
+
+	"github.com/canonical/workshop/internal/overlord/hookstate/ctlcmd"
 )
 
 // workshopCtlOptions holds the various options with which workshopctl is invoked.

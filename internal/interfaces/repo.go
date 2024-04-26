@@ -26,9 +26,10 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"golang.org/x/exp/maps"
 )
 
 // Repository stores all known plugs and slots and ifaces.

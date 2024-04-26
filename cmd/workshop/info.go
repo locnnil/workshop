@@ -1,15 +1,16 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"os/user"
 	"path/filepath"
-	"slices"
 	"strings"
 
-	"github.com/canonical/workshop/client"
+	"cmp"
 	"github.com/spf13/cobra"
+	"slices"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdInfo struct {

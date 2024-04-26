@@ -3,8 +3,9 @@ package asserts_test
 import (
 	"strings"
 
-	"github.com/canonical/workshop/internal/asserts"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/asserts"
 )
 
 var (

@@ -22,15 +22,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/version"
-
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"github.com/spf13/cobra"
 )
 
 var shortRunHelp = "Run the workshop daemon"

@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/metautil"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v2"
+
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/metautil"
 )
 
 type Setup struct {

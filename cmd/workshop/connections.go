@@ -5,9 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/canonical/workshop/client"
 	"github.com/canonical/x-go/i18n"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdConnections struct {

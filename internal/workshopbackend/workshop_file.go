@@ -1,11 +1,11 @@
 package workshopbackend
 
 import (
-	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"cmp"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
