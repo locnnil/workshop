@@ -5,10 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/canonical/workshop/internal/workshopbackend"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type F struct {

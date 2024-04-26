@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/canonical/workshop/internal/logger"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/internal/logger"
 )
 
 // exitStatus can be used in panic(&exitStatus{code}) to cause Workshops's main

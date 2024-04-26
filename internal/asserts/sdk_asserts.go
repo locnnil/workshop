@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	// expected for digests
-
 	_ "golang.org/x/crypto/sha3"
 )
 

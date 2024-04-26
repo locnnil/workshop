@@ -21,7 +21,7 @@ package osutil_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	. "gopkg.in/check.v1"
@@ -180,7 +180,7 @@ func (s *kcmdlineTestSuite) TestGetKernelCommandLineKeyValue(c *C) {
 		},
 	} {
 		cmdlineFile := filepath.Join(c.MkDir(), "cmdline")
-		err := ioutil.WriteFile(cmdlineFile, []byte(t.cmdline), 0644)
+		err := os.WriteFile(cmdlineFile, []byte(t.cmdline), 0644)
 		c.Assert(err, IsNil)
 		r := osutil.MockProcCmdline(cmdlineFile)
 		defer r()
@@ -208,7 +208,7 @@ func (s *kcmdlineTestSuite) TestKernelCommandLine(c *C) {
 	c.Assert(err, ErrorMatches, `.*/cmdline: no such file or directory`)
 	c.Check(cmd, Equals, "")
 
-	err = ioutil.WriteFile(newProcCmdline, []byte("foo bar baz panic=-1\n"), 0644)
+	err = os.WriteFile(newProcCmdline, []byte("foo bar baz panic=-1\n"), 0644)
 	c.Assert(err, IsNil)
 	cmd, err = osutil.KernelCommandLine()
 	c.Assert(err, IsNil)

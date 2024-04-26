@@ -9,15 +9,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/spf13/afero"
+	"gopkg.in/check.v1"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"github.com/spf13/afero"
-	"gopkg.in/check.v1"
-	"gopkg.in/tomb.v2"
 )
 
 type workshopHandlers struct {

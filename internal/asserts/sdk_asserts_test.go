@@ -4,8 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workshop/internal/asserts"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/asserts"
 )
 
 var _ = check.Suite(&baseDeclSuite{})

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"gopkg.in/tomb.v2"
 )
 
 // The Do handler decoractor that helps to decide whether:

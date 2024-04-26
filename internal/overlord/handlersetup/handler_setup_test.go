@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/canonical/workshop/internal/overlord/conflict"
-	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/handlersetup"
-	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
+
+	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type CommonStateFuncs struct {

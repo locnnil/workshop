@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
+
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"google.golang.org/api/option"
 )
 
 var (

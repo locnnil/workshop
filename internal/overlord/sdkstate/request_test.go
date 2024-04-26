@@ -1,10 +1,11 @@
 package sdkstate_test
 
 import (
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 type SdkStateTasks struct {

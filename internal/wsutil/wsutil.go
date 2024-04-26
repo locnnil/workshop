@@ -17,10 +17,10 @@ package wsutil
 import (
 	"io"
 
+	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/gorilla/websocket"
 )
 
 // MessageReader is an interface that wraps websocket message reading.

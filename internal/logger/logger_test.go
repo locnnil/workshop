@@ -22,7 +22,6 @@ package logger_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -110,7 +109,7 @@ func (s *LogSuite) TestBootSetup(c *C) {
 	c.Check(logger.GetLogger(), IsNil)
 
 	cmdlineFile := filepath.Join(c.MkDir(), "cmdline")
-	err := ioutil.WriteFile(cmdlineFile, []byte("mocked panic=-1"), 0644)
+	err := os.WriteFile(cmdlineFile, []byte("mocked panic=-1"), 0644)
 	c.Assert(err, IsNil)
 	restore := osutil.MockProcCmdline(cmdlineFile)
 	defer restore()
@@ -122,7 +121,7 @@ func (s *LogSuite) TestBootSetup(c *C) {
 	c.Check(logger.GetQuiet(), Equals, false)
 
 	cmdlineFile = filepath.Join(c.MkDir(), "cmdline")
-	err = ioutil.WriteFile(cmdlineFile, []byte("mocked panic=-1 quiet"), 0644)
+	err = os.WriteFile(cmdlineFile, []byte("mocked panic=-1 quiet"), 0644)
 	c.Assert(err, IsNil)
 	restore = osutil.MockProcCmdline(cmdlineFile)
 	defer restore()

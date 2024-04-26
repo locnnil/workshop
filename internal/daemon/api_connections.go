@@ -26,13 +26,14 @@ import (
 	"net/http"
 	"sort"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type collectFilter struct {

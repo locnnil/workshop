@@ -1,9 +1,10 @@
 package sdk_test
 
 import (
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 type ValidateSuite struct {

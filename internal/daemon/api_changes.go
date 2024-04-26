@@ -20,8 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workshop/internal/overlord/state"
 	"golang.org/x/exp/slices"
+
+	"github.com/canonical/workshop/internal/overlord/state"
 )
 
 type changeInfo struct {

@@ -26,10 +26,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/canonical/x-go/randutil"
+
 	"github.com/canonical/workshop/internal/jsonutil"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/x-go/randutil"
 )
 
 // Context represents the context under which the workshop is calling back into workshopd.

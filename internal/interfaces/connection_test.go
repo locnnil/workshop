@@ -22,11 +22,12 @@ package interfaces_test
 import (
 	"errors"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/utils"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 type connSuite struct {

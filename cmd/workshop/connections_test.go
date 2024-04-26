@@ -21,7 +21,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -61,7 +61,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnected(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -112,7 +112,7 @@ func (s *connectionsSuite) TestConnectionsNotInstalled(c *C) {
 			c.Check(r.Method, Equals, "GET")
 			c.Check(r.URL.Path, Equals, "/v1/connections")
 			c.Check(r.URL.Query(), DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, IsNil)
 			c.Check(body, DeepEquals, []byte{})
 			fmt.Fprintln(w, `{"type": "error", "result": {"message": "not found"}, "status-code": 404}`)
@@ -154,7 +154,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -208,7 +208,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -356,7 +356,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -491,7 +491,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -560,7 +560,7 @@ func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -600,7 +600,7 @@ func (s *connectionsSuite) TestConnectionsFiltering(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{
@@ -838,7 +838,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
 			EncodeResponseBody(c, w, map[string]interface{}{

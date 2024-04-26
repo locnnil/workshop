@@ -6,9 +6,10 @@ import (
 	"io"
 	"net/http"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*http.Request, error) {

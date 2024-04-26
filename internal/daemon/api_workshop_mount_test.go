@@ -9,12 +9,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 func (s *apiSuite) launchWorkshopWithPlug(c *check.C, ctx context.Context, name string) *workshopbackend.Workshop {

@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/check.v1"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
@@ -16,8 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
-	"gopkg.in/tomb.v2"
 )
 
 type hookSuite struct {

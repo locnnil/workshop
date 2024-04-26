@@ -22,9 +22,10 @@ package policy
 import (
 	"fmt"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/sdk"
-	"golang.org/x/exp/slices"
 )
 
 // check helpers

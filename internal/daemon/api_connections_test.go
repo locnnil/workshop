@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/canonical/x-go/strutil"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
@@ -35,7 +36,6 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/x-go/strutil"
 )
 
 // Tests for GET /v1/connections

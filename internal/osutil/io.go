@@ -193,7 +193,7 @@ func (aw *AtomicFile) Commit() error {
 	return nil
 }
 
-// The AtomicWrite* family of functions work like ioutil.WriteFile(), but the
+// The AtomicWrite* family of functions work like os.WriteFile(), but the
 // file created is an AtomicWriter, which is Committed before returning.
 //
 // AtomicWriteChown and AtomicWriteFileChown take an uid and a gid that can be
@@ -202,7 +202,7 @@ func (aw *AtomicFile) Commit() error {
 // request no change to that attribute.
 //
 // AtomicWriteFile and AtomicWriteFileChown take the content to be written as a
-// []byte, and so work exactly like io.WriteFile(); AtomicWrite and
+// []byte, and so work exactly like os.WriteFile(); AtomicWrite and
 // AtomicWriteChown take an io.Reader which is copied into the file instead,
 // and so are more amenable to streaming.
 func AtomicWrite(filename string, reader io.Reader, perm os.FileMode, flags AtomicWriteFlags) (err error) {

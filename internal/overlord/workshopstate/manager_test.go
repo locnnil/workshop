@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -15,7 +17,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 type managerSuite struct {

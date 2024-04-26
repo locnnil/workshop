@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	"github.com/canonical/lxd/shared/api"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 type LxdBeTests struct {

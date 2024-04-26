@@ -17,15 +17,15 @@ package osutil
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
 	"syscall"
 	"time"
 
-	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/x-go/strutil"
+
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var ParseRawEnvironment = parseRawEnvironment
@@ -76,11 +76,11 @@ func FakeChown(f func(*os.File, sys.UserID, sys.GroupID) error) (restore func())
 // FakeMountInfo fakes content of /proc/self/mountinfo.
 func FakeMountInfo(text string) (restore func()) {
 	old := procSelfMountInfo
-	f, err := ioutil.TempFile("", "mountinfo")
+	f, err := os.CreateTemp("", "mountinfo")
 	if err != nil {
 		panic(fmt.Errorf("cannot open temporary file: %s", err))
 	}
-	if err := ioutil.WriteFile(f.Name(), []byte(text), 0644); err != nil {
+	if err := os.WriteFile(f.Name(), []byte(text), 0644); err != nil {
 		panic(fmt.Errorf("cannot write mock mountinfo file: %s", err))
 	}
 	procSelfMountInfo = f.Name()

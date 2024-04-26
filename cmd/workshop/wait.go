@@ -28,9 +28,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/canonical/x-go/i18n"
+
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/progress"
-	"github.com/canonical/x-go/i18n"
 )
 
 var (

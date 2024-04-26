@@ -7,16 +7,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"golang.org/x/exp/slices"
 )
 
 const (

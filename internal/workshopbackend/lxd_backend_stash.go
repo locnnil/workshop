@@ -7,6 +7,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
 )

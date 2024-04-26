@@ -3,8 +3,9 @@ package client_test
 import (
 	"io"
 
-	"github.com/canonical/workshop/client"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 func (cs *clientSuite) TestClientProjects(c *check.C) {

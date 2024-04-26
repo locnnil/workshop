@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 func (s *apiSuite) setupExec(c *check.C) *Command {

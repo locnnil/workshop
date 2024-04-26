@@ -22,11 +22,11 @@ package ifacestate_test
 import (
 	"testing"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
-
-	"gopkg.in/check.v1"
 )
 
 type helpersSuite struct {

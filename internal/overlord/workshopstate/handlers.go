@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/tomb.v2"
+
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"github.com/canonical/workshop/internal/overlord/state"
-
-	"gopkg.in/tomb.v2"
 )
 
 var StopLogInterval = 30 * time.Second

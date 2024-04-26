@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/spf13/afero"
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
-
-	"github.com/spf13/afero"
-	"gopkg.in/tomb.v2"
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {

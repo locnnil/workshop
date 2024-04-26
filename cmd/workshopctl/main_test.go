@@ -26,8 +26,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/canonical/workshop/client"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 func TestT(t *testing.T) { check.TestingT(t) }

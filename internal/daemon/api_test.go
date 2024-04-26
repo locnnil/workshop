@@ -20,9 +20,10 @@ import (
 	"os/user"
 	"testing"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
-	"gopkg.in/check.v1"
 )
 
 var _ = check.Suite(&apiSuite{})

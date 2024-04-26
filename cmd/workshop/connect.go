@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canonical/workshop/client"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdConnect struct {

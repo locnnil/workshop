@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"syscall"
@@ -148,7 +147,7 @@ func (s *execSuite) TestOtherOptions(c *C) {
 		Terminal:    true,
 		Width:       12,
 		Height:      34,
-		Stderr:      ioutil.Discard,
+		Stderr:      io.Discard,
 	}
 	process, reqBody := s.exec(c, opts, 0)
 	c.Assert(reqBody, DeepEquals, map[string]interface{}{

@@ -7,8 +7,9 @@ import (
 	"net/http"
 
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/slices"
+
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 /* Fake backend implementation for tests */
