@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 )
 
 // WorkshopCtlOptions holds the various options with which workshopctl is invoked.
@@ -59,7 +58,7 @@ func (client *Client) RunWorkshopctl(options *WorkshopCtlOptions, stdin io.Reade
 	var stdinData []byte
 	if stdin != nil {
 		limitedStdin := &io.LimitedReader{R: stdin, N: stdinReadLimit + 1}
-		stdinData, err = ioutil.ReadAll(limitedStdin)
+		stdinData, err = io.ReadAll(limitedStdin)
 		if err != nil {
 			return nil, nil, fmt.Errorf("cannot read stdin: %v", err)
 		}

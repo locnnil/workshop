@@ -1,13 +1,13 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
-	"cmp"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 

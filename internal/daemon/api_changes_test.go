@@ -16,6 +16,7 @@ package daemon
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,7 +24,6 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"cmp"
 	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
 

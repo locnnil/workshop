@@ -1,6 +1,7 @@
 package workshopbackend
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"cmp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 

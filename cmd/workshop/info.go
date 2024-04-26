@@ -1,14 +1,14 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strings"
 
-	"cmp"
 	"github.com/spf13/cobra"
-	"slices"
 
 	"github.com/canonical/workshop/client"
 )

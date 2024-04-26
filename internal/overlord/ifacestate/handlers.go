@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"syscall"
 
 	"gopkg.in/tomb.v2"
-	"slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/policy"
