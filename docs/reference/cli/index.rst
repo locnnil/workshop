@@ -11,22 +11,15 @@ and also has a number of global options
 such as :option:`!--help` or :option:`!-h`:
 
 .. toctree::
+   :glob:
    :maxdepth: 1
 
-   workshop-changes
-   workshop-connect
-   workshop-connections
-   workshop-disconnect
-   workshop-exec
-   workshop-info
-   workshop-launch
-   workshop-list
-   workshop-okay
-   workshop-refresh
-   workshop-remove
-   workshop-remount
-   workshop-shell
-   workshop-start
-   workshop-stop
-   workshop-tasks
-   workshop-warnings
+   workshop-*
+
+
+See also
+--------
+
+Explanation:
+
+- :ref:`exp_workshop_cli`

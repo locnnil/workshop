@@ -6,6 +6,17 @@
 |project_markup|
 ================
 
+
+.. toctree::
+   :hidden:
+
+   Home <self>
+   tutorial/index
+   how-to/index
+   explanation/index
+   reference/index
+
+
 **A tool for defining and managing complex development environments**.
 
 **Define your prerequisites and dependencies in simple YAML**.
@@ -96,13 +107,3 @@ we'll help you get it out there.
 - `Contribution and participation <https://github.com/canonical/workshop/pulls>`__
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
-
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-
-   Home <self>
-   tutorial/index
-   how-to/index
-   explanation/index
-   reference/index

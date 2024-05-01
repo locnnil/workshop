@@ -6,24 +6,29 @@ Explanation
 These detailed articles elaborate on various |project_markup| concepts
 and explain how they fit together.
 
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-
-   essentials/index
-   advanced/index
-
 
 Essentials
 ----------
 
-- :doc:`essentials/project-workshop-sdks`
-- :doc:`essentials/moving-projects`
-- :doc:`essentials/changes-tasks`
-- :doc:`essentials/workshop-cli`
+.. toctree::
+   :hidden:
+
+   essentials/index
+
+
+These :doc:`articles <essentials/index>`
+explain the core set of |project_markup|-related concepts.
 
 
 Advanced topics
 ---------------
 
-- :doc:`advanced/content-interface`
+.. toctree::
+   :hidden:
+
+   advanced/index
+
+
+These :doc:`articles <advanced/index>`
+explain complex concepts
+that are important for understanding |project_markup|'s internals.
