@@ -77,9 +77,9 @@ Coding standards
 
 - **Eliminate dead code and redundant comments:**
   Remove unused or obsolete code and comments.
-  This promotes a cleaner codebase and reduces confusion.
+  This promotes a cleaner code base and reduces confusion.
 
-- **Normalize symmetries:**
+- **Normalise symmetries:**
   Handle identical operations consistently, using a uniform approach.
   This also improves consistency and readability.
 
@@ -111,9 +111,9 @@ Code structure
   Verify that coupled code elements, files, and directories are adjacent.
   For instance, store test data close to the corresponding test code.
 
-- **Group variable declaration and initialization:**
-  Declare and initialize variables together
-  to improve code organization and readability.
+- **Group variable declaration and initialisation:**
+  Declare and initialise variables together
+  to improve code organisation and readability.
 
 - **Divide large expressions:**
   Break down large expressions
