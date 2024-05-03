@@ -151,7 +151,7 @@ custom_extensions = [
 custom_required_modules = ["watchfiles"]
 
 # Add files or directories that should be excluded from processing.
-custom_excludes = ["README.rst"]
+custom_excludes = ["readme.rst"]
 
 # Add CSS files (located in .sphinx/_static/)
 custom_html_css_files = []
