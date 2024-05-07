@@ -11,5 +11,5 @@ that arise when you use |project_markup|.
    :maxdepth: 1
 
    Debug issues in workshops <debug-workshop-issues>
-   moving-projects
+   Move projects around <moving-projects>
    Use workshops with Git <git-workshop>
