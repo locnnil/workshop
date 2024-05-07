@@ -68,7 +68,9 @@ SDK hooks
 SDK publishers can define optional *hooks*
 that control and extend the workshop's internal behaviour
 to make any framework wrapped as an SDK
-compatible with |project_markup|'s logic.
+compatible with |project_markup|'s logic;
+in particular, the hooks manage the SDK state
+and report its health.
 
 Each hook is a shell script with domain-aware actions
 that |project_markup| runs in the workshop
