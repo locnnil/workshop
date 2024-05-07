@@ -15,6 +15,7 @@
    how-to/index
    explanation/index
    reference/index
+   Contribution <contributing>
 
 
 **A tool for defining and managing complex development environments**.

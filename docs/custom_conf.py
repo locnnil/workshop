@@ -65,10 +65,11 @@ html_context = {
     "github_version": "main",
     # Change to the folder that contains the documentation
     # (usually "/" or "/docs/")
-    "github_folder": "/",
-    # Change to an empty value if your GitHub repo doesn't have issues enabled.
-    # This will disable the feedback button and the issue link in the footer.
-    "github_issues": "enabled",
+    "github_folder": "/docs/",
+    # Change to an empty value to suppress the 'Give feedback' button on top.
+    "github_issues": "",
+    # This toggles the 'Open a GitHub issue for this page' link in the footer.
+    "github_issues_footer": "enabled",
     # Controls the existence of Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
     "sequential_nav": "none",
@@ -150,7 +151,7 @@ custom_extensions = [
 custom_required_modules = ["watchfiles"]
 
 # Add files or directories that should be excluded from processing.
-custom_excludes = ["README.rst"]
+custom_excludes = ["readme.rst"]
 
 # Add CSS files (located in .sphinx/_static/)
 custom_html_css_files = []
