@@ -90,7 +90,7 @@
 
     {% if github_issues_footer %}
     <div class="issue-github">
-      <a class="muted-link" href="{{ github_url }}/issues/new?title=docs/{{ github_folder }}{{ pagename }}{{ page_source_suffix }}&template=.github/doc_issue_template.md">Open a GitHub issue for this page</a>
+      <a class="muted-link" href="{{ github_url }}/issues/new?title={{ github_folder }}{{ pagename }}{{ page_source_suffix }}&template=doc_issue_template.md">Open a GitHub issue for this page</a>
     </div>
     {% endif %}
 

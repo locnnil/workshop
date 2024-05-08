@@ -21,8 +21,8 @@ SDK hooks
        At :ref:`ref_workshop_refresh`:
        after running :samp:`restore-state` hooks for *all* SDKs.
 
-     - Reports the state of the SDK
-       (*OK*, *waiting* or *error*)
+     - Reports the health of the SDK
+       (*okay*, *waiting* or *error*)
        for |project_markup|
        to determine the overall state of the workshop.
 
@@ -33,7 +33,9 @@ SDK hooks
        after launching the new workshop
        and running the :samp:`setup-base` hook for the SDK.
 
-     - Restores SDK-specific data from a |project_markup|-defined location.
+     - Restores SDK-specific data,
+       collectively referred to as *state*,
+       from a |project_markup|-defined location.
        The hook itself comes from the *new* SDK version.
 
 
@@ -42,7 +44,9 @@ SDK hooks
      - At :ref:`ref_workshop_refresh`:
        before destroying the old workshop.
 
-     - Preserves SDK-specific data at a |project_markup|-defined location.
+     - Preserves SDK-specific data,
+       collectively referred to as *state*,
+       at a |project_markup|-defined location.
        The hook itself comes from the *old* SDK version.
 
 

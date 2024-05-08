@@ -1,7 +1,7 @@
 .. _how_moving_projects:
 
-Moving projects around
-======================
+How to move projects around
+===========================
 
 It may be unclear how workshops respond to daily operations
 such as moving or copying a project directory.
