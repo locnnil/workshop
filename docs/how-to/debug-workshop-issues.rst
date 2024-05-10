@@ -27,7 +27,7 @@ from the :samp:`latest/edge` channel:
        channel: latest/edge
 
 
-Suppose something goes during a :command:`refresh`:
+Suppose something goes wrong during a :command:`refresh`:
 
 .. code-block:: console
 
@@ -78,6 +78,48 @@ list its *tasks* to see the cause:
        ModuleNotFoundError: No module named 'tensorrt.tensorrt'
 
 The SDK-specific reason can be addressed individually.
+
+
+Wait on error
+-------------
+
+The :option:`!--wait-on-error` option can be used with :command:`refresh`
+to pause the process when an error occurs;
+instead of reverting the workshop to its previous state,
+|project_markup| will leave it as is for you to investigate:
+
+.. code-block:: console
+
+   $ workshop refresh --wait-on-error golang-volatile
+
+         Error: cannot perform the following tasks:
+         - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
+         Refresh aborted
+
+
+Next, you can open a shell into the workshop to debug and potentially fix it:
+
+.. code-block:: console
+
+   $ workshop shell golang-volatile
+
+
+If the issue is resolved, you can resume the refresh process:
+
+.. code-block:: console
+
+   $ workshop refresh --continue golang-volatile
+
+
+Otherwise, revert the changes with the :option:`!--abort` option:
+
+.. code-block:: console
+
+   $ workshop refresh --abort golang-volatile
+
+
+The effect will be the same as if you hadn't used :option:`!--wait-on-error`:
+the workshop will be reverted to its previous state.
 
 
 List and suppress warnings
