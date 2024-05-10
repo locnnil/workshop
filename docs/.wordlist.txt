@@ -1,6 +1,8 @@
 APIs
+AUTH
 CLI
 EdTech
+GPUs
 IDEs
 IoT
 JSON

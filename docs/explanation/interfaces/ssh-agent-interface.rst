@@ -61,10 +61,44 @@ which multiple SSH agent interface plugs can then access.
 When an SDK is installed
 during :command:`workshop launch` and :command:`workshop refresh`,
 |project_markup| checks that the plug that targets the slot can be installed;
-if yes, it can be manually connected with :command:`workshop connect`.
+if yes, it can be manually connected with :command:`workshop connect`:
+
+.. code-block:: console
+
+   $ workshop connect ws/ssh-sdk:ssh-agent
+
+
+If the plug passes the checks, it's successfully connected to the slot:
+
+.. code-block:: console
+
+   $ workshop connections --all
+
+       Interface  Plug                   Slot        Notes
+       ...
+       ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
+
+
 Then, a proxy Unix domain socket is created inside the workshop
 and a corresponding :envvar:`SSH_AUTH_SOCK` value
-is set for the workshop's users.
+is set for the workshop's users:
+
+.. code-block:: console
+
+   $ workshop shell ws
+   workshop@ws-8584e571$ echo $SSH_AUTH_SOCK
+
+     /var/lib/workshop/ws-ssh-agent.ssh
+
+
+This means your SSH identities and configurations
+are transparently available inside the workshop:
+
+.. code-block:: console
+
+   workshop@ws-8584e571$ ssh-add -l
+
+     4096 SHA256:cb19/bE/6irqhII1KbQqRmo1royWi58qcUD9MEn/9fE user@example.com (RSA)
 
 
 See also

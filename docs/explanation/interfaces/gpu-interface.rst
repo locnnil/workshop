@@ -4,7 +4,7 @@ GPU interface
 =============
 
 The GPU interface
-enables GPU passthrough
+enables GPU pass-through
 (direct access to the host system's GPUs)
 inside the workshop
 to improve the performance of GPU-intensive applications.
