@@ -11,5 +11,9 @@ execute: |
   workshop_exec launch golang-volatile || true
   echo "Expecting refresh to fail..."
   workshop_exec refresh golang-volatile || true
+  workshop_exec refresh --wait-on-error golang-volatile || true
+  echo "Skipping interactive exercises with --wait-on-error..."
+  workshop_exec refresh --continue golang-volatile || true
+  workshop_exec refresh --abort golang-volatile || true
   workshop_exec changes
   workshop_exec tasks $(workshop changes | awk 'END{print $1}')
