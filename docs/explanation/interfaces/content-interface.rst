@@ -26,7 +26,8 @@ that is declared in the SDK definition.
    and isn't normally needed with |project_markup|,
    whereas the latter is a crucial element of daily |project_markup| activities.
 
-   The following example is provided only to detail how content interface works.
+   The following example is provided only
+   to detail how the content interface works.
 
 
 A basic structure includes the name of the plug itself,
@@ -85,7 +86,7 @@ which multiple content interface plugs can then access.
    but can't be shared between two workshops directly.
 
 
-When the SDK is installed
+When SDKs are installed
 during :command:`workshop launch` and :command:`workshop refresh`,
 |project_markup| checks the following for each plug that targets the slot:
 
@@ -132,6 +133,7 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_remount`
 - :ref:`ref_workshop_start`
