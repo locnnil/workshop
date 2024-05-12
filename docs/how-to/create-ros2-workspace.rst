@@ -39,7 +39,7 @@ you can reuse the following definition:
        channel: latest/edge
 
 
-Note that the :samp:`base` needs to be the same as the SDK's base,
+Note that the :samp:`base` needs to be the same as the SDK base,
 and the channel should set to :samp:`latest/edge`.
 
 Now, you can create the workshop by running:
