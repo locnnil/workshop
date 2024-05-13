@@ -67,7 +67,7 @@ See also
 Explanation:
 
 - :ref:`exp_interfaces`
-- :ref:`exp_interfaces_plugs_slots`
+- :ref:`exp_plugs_slots`
 - :ref:`exp_sdk`
 
 

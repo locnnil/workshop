@@ -273,7 +273,7 @@ Mind that the workshop stays operational with no extra steps.
    which was referenced in the :ref:`definition <tut_define>`,
    is retrieved, installed and set up inside the workshop;
    finally, the SDK is connected to the host system
-   via an :ref:`interface <exp_interfaces_plugs_slots>`.
+   via an :ref:`interface <exp_plugs_slots>`.
 
    For details, see :ref:`exp_changes_tasks`.
 
@@ -474,7 +474,7 @@ To abort the operation and recover the last operational state:
 
    This largely resembles the events at :ref:`launch <tut_launch>`;
    however, :ref:`SDK states <exp_sdk_state>` are *stashed*
-   and :ref:`interfaces <exp_interfaces_plugs_slots>` are disconnected
+   and :ref:`interfaces <exp_plugs_slots>` are disconnected
    before the refresh actually starts.
    After updating the workshop on success
    or rolling back to the stashed version on failure,

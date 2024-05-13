@@ -19,8 +19,8 @@ similar to
 
 .. _exp_sdk_state:
 
-State
------
+SDK state
+---------
 
 An SDK may store any data specific to it,
 such as a model training configuration,
@@ -38,8 +38,8 @@ the states are respectively restored.
 
 .. _exp_sdk_definition:
 
-Definition
-----------
+SDK definition
+--------------
 
 An SDK is defined in a file named :file:`sdkcraft.yaml` that may look like this:
 
@@ -106,7 +106,7 @@ Currently, |project_markup| supports the following interfaces:
 - :ref:`SSH agent interface <exp_ssh_agent_interface>` (manually connected)
 
 
-.. _exp_interfaces_plugs_slots:
+.. _exp_plugs_slots:
 
 Plugs and slots
 ~~~~~~~~~~~~~~~
@@ -127,7 +127,7 @@ note that a slot can handle connections with multiple plugs.
 
 Eventually, this mechanism starts whirring when the workshop itself is started;
 the plugs defined by its SDKs are automatically connected to the slots,
-provided the definition contains everything |project_markup| needs to make a match.
+provided the definition has everything |project_markup| needs to make a match.
 
 
 .. _exp_interfaces_validation:
@@ -135,7 +135,7 @@ provided the definition contains everything |project_markup| needs to make a mat
 Validation and policies
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Now, to make sure plugs can be installed and auto-connected,
+Now, to make sure plugs can be installed and connected,
 |project_markup| uses a set of rules called policies,
 with each interface having its own.
 For example, the content interface plug can be installed and auto-connected

@@ -1,7 +1,7 @@
 Interfaces
 ==========
 
-These articles explain complex concepts
+These articles explain concepts
 that are important for understanding |project_markup|'s interface mechanics.
 
 .. toctree::
