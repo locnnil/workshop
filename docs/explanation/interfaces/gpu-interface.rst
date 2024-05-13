@@ -80,6 +80,16 @@ If the plug passes the checks, it's successfully connected to the slot:
        gpu        ws/gpu-sdk:gpu         :gpu      -
 
 
+So the host's GPUs
+become available inside the workshop:
+
+.. code-block:: console
+
+   $ ls -h /dev/dri/
+
+     card0  renderD128
+
+
 See also
 --------
 

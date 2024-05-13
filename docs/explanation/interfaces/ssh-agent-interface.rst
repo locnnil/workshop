@@ -6,7 +6,7 @@ SSH agent interface
 The SSH agent interface
 enables access to the host system's SSH agent
 from inside the workshop
-to let it use the SSH keys and configuration on the host securely.
+to let it use the host's SSH keys and configuration securely.
 
 
 SSH interface plug
@@ -91,8 +91,8 @@ is set for the workshop's users:
      /var/lib/workshop/ws-ssh-agent.ssh
 
 
-This means your SSH identities and configurations
-are transparently available inside the workshop:
+So the host's SSH identities and configurations
+become available inside the workshop:
 
 .. code-block:: console
 
