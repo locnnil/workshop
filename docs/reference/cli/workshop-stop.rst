@@ -46,7 +46,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_project`
+- :ref:`exp_projects`
 - :ref:`exp_workshop`
 
 

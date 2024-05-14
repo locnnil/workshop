@@ -61,7 +61,7 @@ Explanation:
 
 - :ref:`exp_base`
 - :ref:`exp_sdk`
-- :ref:`exp_project`
+- :ref:`exp_projects`
 - :ref:`exp_workshop_def`
 
 

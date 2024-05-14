@@ -167,7 +167,7 @@ Define
 ~~~~~~
 
 #. Create a
-   :ref:`project directory <exp_project>`
+   :ref:`project directory <exp_projects>`
    named :file:`hello-workshop`:
 
    .. code-block:: console

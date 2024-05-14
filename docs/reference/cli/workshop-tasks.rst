@@ -50,7 +50,7 @@ See also
 Explanation:
 
 - :ref:`exp_changes_tasks`
-- :ref:`exp_project`
+- :ref:`exp_projects`
 - :ref:`exp_workshop`
 
 Reference:
