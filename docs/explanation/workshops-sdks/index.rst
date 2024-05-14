@@ -1,4 +1,4 @@
-Workshops, SDKS
+Workshops, SDKs
 ===============
 
 These articles explain the core set of |project_markup|-related concepts.
