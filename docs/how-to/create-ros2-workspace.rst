@@ -34,7 +34,7 @@ the repo there:
 
 .. code-block:: console
 
-   $ git clone https://github.com/ros2/examples src/examples -b humble
+   $ git clone https://github.com/ros2/examples -b humble
 
 
 Note that we're using the :samp:`humble` branch to match the SDK we're using;
@@ -90,10 +90,10 @@ so open a shell and go there:
    workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ ls
 
-     src
+     examples
 
 
-Here, you can see the :file:`src/` directory with the examples you've cloned.
+Here, you can see the :file:`examples/` directory that you've cloned.
 Now
 `build
 <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#build-the-workspace>`_
@@ -104,7 +104,8 @@ the ROS 2 workspace:
    workshop@ros2-humble-8584e57d$ colcon build
 
 
-The build will end up in the :file:`~/colcon/` directory:
+Instead of the project directory,
+the results of the build end up in the :file:`~/colcon/` directory:
 
 .. code-block:: console
 
