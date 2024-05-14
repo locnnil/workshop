@@ -7,28 +7,28 @@ These detailed articles elaborate on various |project_markup| concepts
 and explain how they fit together.
 
 
-Essentials
+Interfaces
 ----------
 
 .. toctree::
    :hidden:
 
-   essentials/index
+   interfaces/index
 
 
-These :doc:`articles <essentials/index>`
-explain the core set of |project_markup|-related concepts.
+These :doc:`articles <interfaces/index>`
+explain topics
+that are important for understanding |project_markup|'s interfaces.
 
-
-Advanced topics
+   
+Workshops, SDKs
 ---------------
 
 .. toctree::
    :hidden:
 
-   advanced/index
+   workshops-sdks/index
 
 
-These :doc:`articles <advanced/index>`
-explain complex concepts
-that are important for understanding |project_markup|'s internals.
+These :doc:`articles <workshops-sdks/index>`
+explain the core set of |project_markup|-related concepts.
