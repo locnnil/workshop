@@ -74,11 +74,15 @@ func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 }
 
 func (s *ValidateSuite) TestIllegalSdkBase(c *check.C) {
-	info, err := sdk.ReadSdkInfo([]byte(`name: foo.something
-base: ubuntu@20.04
+	info, err := sdk.ReadSdkInfo([]byte(`name: foo
+base: ubuntu@21.04
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
 
 	err = sdk.Validate(info)
-	c.Check(err, check.ErrorMatches, `invalid sdk name: "foo.something"`)
+	c.Check(err, check.ErrorMatches, `invalid sdk base: "ubuntu@21.04"; supported bases: ubuntu@20.04, ubuntu@22.04, ubuntu@24.04`)
+}
+
+func (s *ValidateSuite) TestAcceptableSdkBases(c *check.C) {
+	c.Assert(sdk.ValidBases, check.DeepEquals, []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"})
 }

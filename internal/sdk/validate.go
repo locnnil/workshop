@@ -3,12 +3,13 @@ package sdk
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"golang.org/x/exp/slices"
 )
 
 var (
-	ValidBases   = []string{"ubuntu@20.04", "ubuntu@22.04"}
+	ValidBases   = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 	ValidName    = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 	ValidChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 	// Regular expression describing correct plug, slot and interface names.
@@ -22,7 +23,7 @@ func Validate(sdk *Info) error {
 	}
 
 	if !slices.Contains(ValidBases, sdk.Base) {
-		return fmt.Errorf("invalid sdk base: %q", sdk.Base)
+		return fmt.Errorf("invalid sdk base: %q; supported bases: %s", sdk.Base, strings.Join(ValidBases, ", "))
 	}
 
 	for plugName, plug := range sdk.Plugs {
