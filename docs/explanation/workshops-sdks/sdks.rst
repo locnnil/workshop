@@ -19,8 +19,8 @@ similar to
 
 .. _exp_sdk_state:
 
-State
------
+SDK state
+---------
 
 An SDK may store any data specific to it,
 such as a model training configuration,
@@ -38,8 +38,8 @@ the states are respectively restored.
 
 .. _exp_sdk_definition:
 
-Definition
-----------
+SDK definition
+--------------
 
 An SDK is defined in a file named :file:`sdkcraft.yaml` that may look like this:
 
@@ -97,8 +97,16 @@ controlling whether an individual SDK can use resources beyond its confinement.
 You can think of specific interfaces as resource *types*:
 file system, hardware, computational and so on.
 
+The interfaces are defined in the SDKs themselves,
+so the user doesn't have direct control over them in the workshop definition.
+Currently, |project_markup| supports the following interfaces:
 
-.. _exp_interfaces_plugs_slots:
+- :ref:`content interface <exp_content_interface>` (auto-connected)
+- :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
+- :ref:`SSH agent interface <exp_ssh_agent_interface>` (manually connected)
+
+
+.. _exp_plugs_slots:
 
 Plugs and slots
 ~~~~~~~~~~~~~~~
@@ -119,7 +127,7 @@ note that a slot can handle connections with multiple plugs.
 
 Eventually, this mechanism starts whirring when the workshop itself is started;
 the plugs defined by its SDKs are automatically connected to the slots,
-provided the definition contains everything |project_markup| needs to make a match.
+provided the definition has everything |project_markup| needs to make a match.
 
 
 .. _exp_interfaces_validation:
@@ -127,7 +135,7 @@ provided the definition contains everything |project_markup| needs to make a mat
 Validation and policies
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Now, to make sure plugs can be installed and auto-connected,
+Now, to make sure plugs can be installed and connected,
 |project_markup| uses a set of rules called policies,
 with each interface having its own.
 For example, the content interface plug can be installed and auto-connected
@@ -148,7 +156,7 @@ A number of basic workshop operations
 affect plugs and slots in different ways.
 
 When you :command:`launch` a workshop,
-an auto-connect task handles the content interface plug,
+an auto-connect task handles each interface plug,
 finding a candidate slot,
 verifying the plug's eligibility for the slot based on their declarations
 and connecting the two.
@@ -158,21 +166,24 @@ existing connections are preserved in the refreshed workshop
 if their plugs were connected before the operation.
 A newer version of an SDK may drop a plug that was previously connected;
 such connections are removed,
-but the content remains.
+but the host-based content remains.
 
 On :command:`remove`,
 both the interface connections and the host directories
-(if any were created, for example, to accommodate content slots)
+(if any were created, for example, to accommodate content interface slots)
 are removed.
 
 .. note::
 
-   We remove the content from the default locations
+   We remove content stored in our default locations
    because it's not a good idea to keep user data forever.
-   Thus, at least some workshop operations will delete this data
-   to prevent it from piling up in hidden locations,
+   Thus, at least some commands will delete this data
+   to prevent it from piling up in hidden places
    where it's unlikely to be used again.
 
+
+Also, the user can enable or disable connections manually
+with :command:`connect` and :command:`disconnect` commands.
 
 See also
 --------

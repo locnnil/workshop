@@ -1,20 +1,28 @@
+Interfaces
+==========
+
+These articles explain concepts
+that are important for understanding |project_markup|'s interface mechanics.
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+
+   *
+
 .. _exp_interface_connections:
 
-Interface connections
-=====================
+Summary
+-------
 
 For a workshop to be operational,
 the plugs defined by the SDKs listed in the workshop definition
-connect to respective :ref:`interface slots <exp_interfaces>`
-at some point.
+connect to respective interface slots at some point.
 
-Such *connections* are established uniformly via a special SDK
+Such *connections* are established uniformly via a
+:ref:`special SDK <exp_agent_sdk>`
 that is quietly present in any workshop
 but not immediately exposed to its users.
-
-
-Basics
-------
 
 Interface connections provide a communication and resource sharing mechanism.
 It is integral to workshop confinement,
@@ -42,8 +50,10 @@ For example, content interface plugs are auto-connected,
 whereas an SSH interface plug requires manual connection.
 
 
+.. _exp_agent_sdk:
+
 Agent SDK
----------
+~~~~~~~~~
 
 Every workshop contains an *agent SDK*
 that exposes system resources through interface slots.
@@ -65,7 +75,7 @@ See also
 Explanation:
 
 - :ref:`exp_sdk_definition`
-- :ref:`exp_interfaces_plugs_slots`
+- :ref:`exp_plugs_slots`
 - :ref:`exp_workshop_def`
 
 

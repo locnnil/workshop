@@ -1,5 +1,5 @@
-Essentials
-==========
+Workshops, SDKs
+===============
 
 These articles explain the core set of |project_markup|-related concepts.
 
@@ -13,7 +13,7 @@ These articles explain the core set of |project_markup|-related concepts.
 Summary
 -------
 
-Projects, workshops and their SDKs
+Projects, workshops and SDKs
 are the key building blocks of |project_markup|.
 To start using |project_markup|,
 it is important to understand how these concepts fit together.

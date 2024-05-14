@@ -1,0 +1,77 @@
+.. _exp_gpu_interface:
+
+GPU interface
+=============
+
+The GPU interface
+enables GPU pass-through
+(direct access to the host system's GPUs)
+inside the workshop
+to improve the performance of GPU-intensive applications.
+
+
+GPU interface plug
+------------------
+
+An essential element here is the GPU interface plug
+that is declared in the SDK definition.
+By adding it,
+the SDK publisher lets the workshop directly access the host's GPU devices,
+which may be required for various GPU-intensive workloads.
+
+
+GPU interface slot
+------------------
+
+To enable this mechanism,
+|project_markup| creates a GPU interface slot
+that multiple GPU interface plugs
+can :ref:`connect <exp_interface_connections>` to.
+
+When an SDK is installed
+during :command:`launch` and :command:`refresh`,
+|project_markup| checks that the plug that targets the slot
+passes :ref:`validation <exp_interfaces_validation>`.
+If the plug passes these checks,
+it is automatically connected.
+
+To make sure the plug has connected to the slot:
+
+.. code-block:: console
+
+   $ workshop connections --all
+
+       Interface  Plug                   Slot      Notes
+       ...
+       gpu        ws/gpu-sdk:gpu         :gpu      -
+
+
+This means the host's GPUs are directly available inside the workshop:
+
+.. code-block:: console
+
+   $ workshop shell ws
+   workshop@ws-8584e571$ ls -h /dev/dri/
+
+     card0  renderD128
+
+   workshop@ws-8584e571$ nvidia-smi
+
+
+See also
+--------
+
+Explanation:
+
+- :ref:`exp_interfaces`
+- :ref:`exp_plugs_slots`
+- :ref:`exp_sdk_definition`
+- :ref:`exp_workshop_def`
+
+
+Reference:
+
+- :ref:`ref_workshop_connections`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_shell`
