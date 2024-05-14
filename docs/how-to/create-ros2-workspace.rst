@@ -22,14 +22,34 @@ under the :samp:`latest/edge` channel.
    adapt the steps for other distributions accordingly.
 
 
+Get the sources ready
+---------------------
+
+Let's use the ROS 2 examples to build a workspace.
+Choose a project directory
+and
+`clone
+<https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#add-some-sources>`_
+the repo there:
+
+.. code-block:: console
+
+   $ git clone https://github.com/ros2/examples src/examples -b humble
+
+
+Note that we're using the :samp:`humble` branch to match the SDK we're using;
+adjust that part if necessary.
+
+
 Create the workshop
 -------------------
 
-To create a ROS 2 workshop,
-start with this definition:
+To define a workshop enabled for ROS 2,
+save this file in the directory
+where you've cloned the sources:
 
 .. code-block:: yaml
-   :caption: .workshop.ros2.yaml
+   :caption: .workshop.ros2-humble.yaml
 
    name: ros2-humble
    base: ubuntu@22.04
@@ -41,7 +61,7 @@ start with this definition:
 Note that :samp:`base` must be the same as the SDK base,
 and :samp:`channel` should be set to :samp:`latest/edge`.
 
-Next, create the workshop:
+Next, launch the workshop:
 
 .. code-block:: console
 
@@ -50,32 +70,19 @@ Next, create the workshop:
 
 .. note::
 
-   The ROS 2 environment is
+   The ROS 2 environment is prepared and
    `sourced <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html#source-ros-2-environment>`_
-   when the workshop is launched.
+   by the SDK when the workshop is launched;
+   the SDK traverses the sources in the project directory
+   for extra dependencies and installs them as needed.
 
 
 Build the workspace
 -------------------
 
-Let's use the ROS 2 examples to build the workspace.
-First,
-`clone
-<https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#add-some-sources>`_
-the repo in your project directory,
-where you created the :file:`.workshop.ros2.yaml` file earlier:
-
-.. code-block:: console
-
-   $ git clone https://github.com/ros2/examples src/examples -b humble
-
-
-Note that we're cloning the :samp:`humble` branch to match the SDK we're using;
-adjust that part if necessary.
-
-|project_markup| will automatically mount the project directory
+|project_markup| mounts the project directory
 inside the workshop as :file:`/project/`,
-so open a shell into the workshop and go there:
+so open a shell and go there:
 
 .. code-block:: console
 
@@ -122,9 +129,10 @@ Try this for yourself:
 
 
 This time, the build should finish much faster,
-even though the :command:`refresh` command rebuilt the workshop from scratch.
+even though :command:`refresh` rebuilds the workshop from scratch.
 
-The host-mapped contents of the workshop can be seen in the default content directory
+The host-mapped contents of the workshop can actually be seen
+in |project_markup|'s default content directory on the host
 (note the project ID from the shell prompt above, :samp:`8584e57d`):
 
 .. code-block:: console
@@ -147,7 +155,7 @@ The ROS 2 workspace is now ready,
 so you can proceed with the
 `tests
 <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#run-tests>`_
-and source the workspace as usual:
+and source the workspace:
 
 .. code-block:: console
 
@@ -157,8 +165,10 @@ and source the workspace as usual:
    workshop@ros2-humble-8584e57d$ source install/setup.bash
 
 
-And so on; the SDK already contains the additional :program:`ros2` commands
-such as :command:`run` and :command:`launch`.
+And so on; the workshop already contains the additional :program:`ros2` commands
+such as :command:`run` and :command:`launch`,
+as well as the dependencies specific to your source code
+that the SDK identified at launch time.
 
 
 Benefits
@@ -192,6 +202,7 @@ Explanation:
 - :ref:`exp_interfaces_plugs_slots`
 - :ref:`exp_projects`
 - :ref:`exp_sdk`
+- :ref:`exp_workshop_def`
 
 
 Reference:
