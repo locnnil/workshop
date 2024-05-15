@@ -172,8 +172,8 @@ Define
 
    .. code-block:: console
 
-      $ mkdir hello-workshop
-      $ cd hello-workshop
+      $ mkdir ~/hello-workshop
+      $ cd ~/hello-workshop
 
 
 #. In the project directory,
@@ -236,7 +236,7 @@ After launch, you can see run-time :ref:`info <ref_workshop_info>`:
 
      name:     golang
      base:     ubuntu@22.04
-     project:  /home/user/<PROJECT DIRECTORY>
+     project:  /home/user/hello-workshop
      status:   ready
      notes:    -
      content:
@@ -253,17 +253,18 @@ but includes extra details
 such as the :ref:`content interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
-Try moving it, then run :command:`list` again:
+Try temporarily moving it, then run :command:`list` again:
 
 .. code-block:: console
 
    $ cd ..
    $ mv hello-workshop hi-workshop
-   $ cd hi-workshop
-   $ workshop list
+   $ workshop list --global
 
      Project                Workshop   Status  Notes
      ~/hi-workshop          golang     Ready   -
+
+   $ mv hi-workshop hello-workshop
 
 
 This means that the workshop stays operational without extra steps.
@@ -489,17 +490,17 @@ and :ref:`connect <ref_workshop_connect>` interfaces at will:
 
 
 You can :ref:`remount <ref_workshop_remount>` a content interface plug
-to a new (empty or non-existing) location on the host:
+to a new location on the host:
 
 .. code-block:: console
    :emphasize-lines: 14
 
-   $ workshop remount golang/go:mod-cache ./new-location/
+   $ workshop remount golang/go:mod-cache ~/new-location/
    $ workshop info golang
 
      name:     golang
-     base:     ubuntu@22.04
-     project:  /home/user/<PROJECT DIRECTORY>
+     base:     ubuntu@20.04
+     project:  /home/user/hello-workshop
      status:   ready
      notes:    -
      content:
@@ -507,8 +508,9 @@ to a new (empty or non-existing) location on the host:
          channel:  latest/stable
          mounts:
            mod-cache:
-             host:      /home/user/<PROJECT DIRECTORY>/new-location
+             host:      /home/user/new-location
              workshop:  /home/workshop/go/pkg/mod
+
 
 .. _tut_remove:
 
