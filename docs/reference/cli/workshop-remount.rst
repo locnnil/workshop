@@ -28,7 +28,8 @@ Notes
 -----
 
 - To stop the workshop, use :ref:`ref_workshop_stop`
-- :ref:`ref_workshop_info` explicitly lists any remounted plugs for a workshop
+- :ref:`ref_workshop_info` lists any mounted content interface plugs
+  for the workshop
 - :ref:`ref_workshop_refresh` mounts the last source
   set by :command:`workshop remount`, if any
 - During :ref:`ref_workshop_remove`,

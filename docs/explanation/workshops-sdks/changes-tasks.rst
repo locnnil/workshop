@@ -45,7 +45,3 @@ Reference:
 - :ref:`ref_workshop_changes`
 - :ref:`ref_workshop_launch`
 
-
-Tutorial:
-
-- :ref:`tut_refresh_wait_on_error`

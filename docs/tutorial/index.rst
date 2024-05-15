@@ -11,7 +11,8 @@ Here, you will put into practice all major steps
 in the life cycle of a *workshop*,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
 and :ref:`refreshing <tut_refresh>` it
-to :ref:`executing commands <tut_exec>` in the workshop environment
+to :ref:`executing commands <tut_exec>`,
+:ref:`opening a shell <tut_shell>` into the workshop
 and finally :ref:`deleting <tut_remove>` it.
 The actions you're about to take
 comprise the majority of your daily needs with |project_markup|.
@@ -37,7 +38,7 @@ Install |project_markup|
 
 Check the prerequisites,
 build and install |project_markup|,
-then make sure it runs.
+then ensure it runs.
 
 
 Check prerequisites
@@ -144,8 +145,8 @@ The snap installs two major components:
   :ref:`CLI tool <exp_workshop_cli>`
   that uses this API to command |project_markup|
 
-The daemon starts automatically after installation;
-the CLI tool is run manually:
+The daemon starts automatically after installation,
+and the CLI tool is run manually:
 
 .. code-block:: console
 
@@ -171,8 +172,8 @@ Define
 
    .. code-block:: console
 
-      $ mkdir hello-workshop
-      $ cd hello-workshop
+      $ mkdir ~/hello-workshop
+      $ cd ~/hello-workshop
 
 
 #. In the project directory,
@@ -190,19 +191,20 @@ Define
           channel: latest/stable
 
 
-#. Make sure |project_markup| can find the definition
-   by *listing* the workshops
+#. To ensure |project_markup| sees the definition,
+   :ref:`list <ref_workshop_list>` the workshops
    in the project directory:
 
    .. code-block:: console
 
       $ workshop list
 
-          Project                Workshop   Status  Notes
-          ~/hello-workshop       golang     Off     -
+        Project                Workshop   Status  Notes
+        ~/hello-workshop       golang     Off     -
 
 
-   Note that a newly created workshop is *Off*.
+   A newly defined workshop is *Off*,
+   so it needs to be initialised, or *launched*.
 
 
 .. _tut_launch:
@@ -221,75 +223,107 @@ you :ref:`launch <ref_workshop_launch>` it:
 Now, the workshop is *Ready*
 to build, debug and run code.
 
-To make sure |project_markup| watches the changes in the project directory,
-move it, then run :command:`workshop list`:
+.. note::
+
+   If anything goes wrong at this point, see the
+   :ref:`debugging guide <how_debug_issues_workshops>`.
+
+After launch, you can see run-time :ref:`info <ref_workshop_info>`:
+
+.. code-block:: console
+
+   $ workshop info golang
+
+     name:     golang
+     base:     ubuntu@22.04
+     project:  /home/user/hello-workshop
+     status:   ready
+     notes:    -
+     content:
+       go:
+         channel:  latest/stable
+         mounts:
+           mod-cache:
+             host:      .../a4361706/content/golang_go_mod-cache.sdk
+             workshop:  /home/workshop/go/pkg/mod
+
+
+The output mostly resembles the :ref:`definition <tut_define>`
+but includes extra details
+such as the :ref:`content interface <tut_interfaces>` mounts.
+
+Note that |project_markup| tracks the project directory after launch.
+Try temporarily moving it, then run :command:`list` again:
 
 .. code-block:: console
 
    $ cd ..
    $ mv hello-workshop hi-workshop
-   $ cd hi-workshop
-   $ workshop list
+   $ workshop list --global
 
-       Project                Workshop   Status  Notes
-       ~/hi-workshop          golang     Ready   -
+     Project                Workshop   Status  Notes
+     ~/hi-workshop          golang     Ready   -
 
-Mind that the workshop stays operational with no extra steps.
+   $ mv hi-workshop hello-workshop
 
-.. note::
 
-   Check the recent :ref:`changes <ref_workshop_changes>`
-   to see what goes into launching a workshop:
+This means that the workshop stays operational without extra steps.
 
-   .. code-block:: console
+Check recent :ref:`changes <ref_workshop_changes>`
+to see how |project_markup| tracks its operations:
 
-      $ workshop changes
+.. code-block:: console
 
-         ID  Status  Spawn               Ready               Summary
-         34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
+   $ workshop changes
 
-   To investigate this change in detail,
-   supply its ID to the
-   :ref:`tasks <ref_workshop_tasks>`
-   command:
+     ID  Status  Spawn               Ready               Summary
+     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
 
-   .. code-block:: console
+To learn what goes into launching a workshop,
+supply the ID of the change to the
+:ref:`tasks <ref_workshop_tasks>`
+command:
 
-      $ workshop tasks 34
+.. code-block:: console
 
-         ID   Status  Spawn               Ready               Summary
-         133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "golang" workshop
-         134  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "hello-workshop"
-         135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "golang" workshop
-         136  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
-         137  Done    today at 11:32 GMT  today at 11:32 GMT  Install "go" SDK
-         138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
-         139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
-         140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
+   $ workshop tasks 34
 
-   Here, the project directory is mounted to the workshop as :file:`/project/`;
-   the workshop is *started*, in other words, brought online;
-   then the :samp:`go` SDK,
-   which was referenced in the :ref:`definition <tut_define>`,
-   is retrieved, installed and set up inside the workshop;
-   finally, the SDK is connected to the host system
-   via an :ref:`interface <exp_plugs_slots>`.
+     ID   Status  Spawn               Ready               Summary
+     133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "golang" workshop
+     134  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "hello-workshop"
+     135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "golang" workshop
+     136  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
+     137  Done    today at 11:32 GMT  today at 11:32 GMT  Install "go" SDK
+     138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
+     139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+     140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
 
-   For details, see :ref:`exp_changes_tasks`.
+
+Here, the project directory is mounted to the workshop as :file:`/project/`;
+the workshop is *started*, in other words, brought online;
+then the :samp:`go` SDK,
+which was referenced in the :ref:`definition <tut_define>`,
+is retrieved, installed and set up inside the workshop;
+finally, the SDK is connected to the host system
+via :ref:`interfaces <exp_interfaces>`.
+
+Finally, mind that you only need to launch a workshop once
+after defining it.
 
 
 Start and stop
 ~~~~~~~~~~~~~~
 
 If you're done with the workshop for now,
-*stop* it to conserve resources:
+:ref:`stop <ref_workshop_stop>` it to conserve resources:
 
 .. code-block:: console
 
    $ workshop stop golang
 
+This changes the status of the workshop to *Stopped*.
 
-To resume, start the workshop again:
+To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 .. code-block:: console
 
@@ -297,7 +331,11 @@ To resume, start the workshop again:
 
 
 Both commands operate gracefully,
-waiting for the workshop to comply.
+waiting for the workshop to comply;
+:command:`stop` doesn't destroy a workshop
+(unlike :ref:`remove <tut_remove>`),
+and :command:`start` doesn't build it from scratch
+(unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`).
 
 
 .. _tut_refresh:
@@ -305,59 +343,31 @@ waiting for the workshop to comply.
 Refresh a workshop
 ------------------
 
-When an aspect of the workshop changes,
-refresh it to pick up the update.
-
-
-When base or SDKs update
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-If the
+Sometimes the
 :ref:`base <exp_base>`
-or
+or the
 :ref:`SDKs <exp_sdk>`
-in the
-:ref:`definition <exp_workshop_def>`
-are updated by their publishers,
-:ref:`refresh <ref_workshop_refresh>` the workshop to update it:
+in your workshop
+are updated by their publishers.
+Alternatively,
+you may have changed the :ref:`definition <exp_workshop_def>`
+to switch bases, add and remove SDKs or toggle their channels.
+In either case,
+you need to :ref:`refresh <ref_workshop_refresh>` the workshop
+so the updates are applied.
 
-.. code-block:: console
-
-   $ workshop refresh golang
-
-
-The workshop is rebuilt from the base image,
-then the SDKs are retrieved from respective channels.
-
-To refresh multiple workshops at once, list them all:
-
-.. code-block:: console
-
-   $ workshop refresh golang ...
-
-.. note::
-
-   The operation is transactional: If an error occurs,
-   **all** changes in **all** listed workshops are reverted.
-
-
-When definition changes
-~~~~~~~~~~~~~~~~~~~~~~~
-
-To switch bases,
-realign SDK layout or toggle channels,
-update the definition
+Change the base in your :ref:`definition <tut_define>`
 and refresh the workshop:
 
 .. code-block:: yaml
    :caption: .workshop.golang.yaml
-   :emphasize-lines: 2, 5
+   :emphasize-lines: 2
 
    name: golang
    base: ubuntu@20.04
    sdks:
      go:
-       channel: latest/edge
+       channel: latest/stable
 
 
 .. code-block:: console
@@ -365,121 +375,11 @@ and refresh the workshop:
    $ workshop refresh golang
 
 
-.. _tut_refresh_wait_on_error:
-
-Wait on error
-~~~~~~~~~~~~~
-
-If a refresh fails, any changes are reverted by default;
-to pause instead,
-add the :option:`!--wait-on-error` option:
-
-.. code-block:: console
-
-   $ workshop refresh --wait-on-error golang
-
-       ERROR command failed with an error code (1): The edge version is not stable
-
-       cannot refresh; fix the errors reported by "workshop info",
-       then run "workshop refresh --continue golang".
-       To abort and revert, run "workshop refresh --abort golang".
-
-All progress is saved, up to the specific *task* that caused the error.
-Then, you can explore the paused workshop
-and choose to abort or continue the refresh operation.
-
-To investigate the issue, check the recent
-:ref:`changes <ref_workshop_changes>`:
-
-.. code-block:: console
-
-   $ workshop changes
-
-       ID  Status  Spawn                Ready                Summary
-       ...
-       81  Error   ...                  ...                  ...
-
-
-Having found the problematic change, explore its
-:ref:`tasks <ref_workshop_tasks>`:
-
-.. code-block:: console
-
-   $ workshop tasks 81
-
-       ...
-       1391  Undone  today at 12:17       today at 12:18       Link "go" SDK
-       1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
-       ...
-
-
-.. note::
-
-   For details, see :ref:`exp_changes_tasks`.
-
-
-To continue the refresh operation:
-
-.. code-block:: console
-
-   $ workshop refresh --continue golang
-
-
-To abort the operation and recover the last operational state:
-
-.. code-block:: console
-
-   $ workshop refresh --abort golang
-
-
-.. note::
-
-   Even with no errors,
-   check the recent changes
-   to see what goes into refreshing a workshop:
-
-   .. code-block:: console
-
-      $ workshop changes
-
-         ID  Status  Spawn               Ready               Summary
-         35  Done    today at 12:15 GMT  today at 12:16 GMT  Launch "golang" workshop
-
-   To investigate this change in detail,
-   supply its ID to the
-   :ref:`tasks <ref_workshop_tasks>`
-   command:
-
-   .. code-block:: console
-
-      $ workshop tasks 35
-
-          ID   Status  Spawn               Ready               Summary
-          141  Done    today at 12:15 GMT  today at 12:15 GMT  Create SDK state storage
-          142  Done    today at 12:15 GMT  today at 12:15 GMT  Run hook "save-state" for "go" SDK
-          143  Done    today at 12:15 GMT  today at 12:15 GMT  Disconnect interfaces of "go" SDK
-          144  Done    today at 12:15 GMT  today at 12:15 GMT  Stash previous "golang" workshop
-          145  Done    today at 12:15 GMT  today at 12:16 GMT  Create new "golang" workshop
-          146  Done    today at 12:15 GMT  today at 12:16 GMT  Mount project directory "hi-workshop"
-          147  Done    today at 12:15 GMT  today at 12:16 GMT  Start "golang" workshop
-          148  Done    today at 12:15 GMT  today at 12:15 GMT  Retrieve "go" SDK from channel "latest/stable"
-          149  Done    today at 12:15 GMT  today at 12:16 GMT  Install "go" SDK
-          150  Done    today at 12:15 GMT  today at 12:16 GMT  Link "go" SDK
-          151  Done    today at 12:15 GMT  today at 12:16 GMT  Run hook "setup-base" for "go" SDK
-          152  Done    today at 12:15 GMT  today at 12:16 GMT  Auto-connect interfaces of "go" SDK
-          153  Done    today at 12:15 GMT  today at 12:16 GMT  Run hook "restore-state" for "go" SDK
-          154  Done    today at 12:15 GMT  today at 12:16 GMT  Remove SDK state storage
-          155  Done    today at 12:15 GMT  today at 12:16 GMT  Remove "golang" workshop from stash
-
-
-   This largely resembles the events at :ref:`launch <tut_launch>`;
-   however, :ref:`SDK states <exp_sdk_state>` are *stashed*
-   and :ref:`interfaces <exp_plugs_slots>` are disconnected
-   before the refresh actually starts.
-   After updating the workshop on success
-   or rolling back to the stashed version on failure,
-   |project_markup| recovers SDK states
-   and reconnects the interfaces.
+Generally, :command:`refresh` is similar to a :ref:`launch <tut_launch>`.
+However, its default priority is to keep the workshop operational;
+if any issues arise, rollback occurs.
+For extra details, see the
+:ref:`debugging guide <how_debug_issues_workshops>`.
 
 
 .. _tut_exec:
@@ -487,8 +387,10 @@ To abort the operation and recover the last operational state:
 Execute commands
 ----------------
 
-When the workshop is *Ready*,
-execute arbitrary commands in it using :ref:`ref_workshop_exec`:
+When the workshop is *Ready* after the refresh,
+you can :ref:`exec <ref_workshop_exec>` arbitrary commands in it.
+
+Save this Go code in the project directory to build it inside the workshop:
 
 .. code-block:: go
    :caption: main.go
@@ -507,20 +409,21 @@ execute arbitrary commands in it using :ref:`ref_workshop_exec`:
    $ workshop exec golang go build main.go
 
 
-Variable injection
-~~~~~~~~~~~~~~~~~~
-
-To define environment variables and visibly separate the command's options:
+There's a way to define environment variables for the command
+and separate it from :command:`exec` options:
 
 .. code-block:: console
 
    $ workshop exec golang --env GO111MODULE=off -- go build -x
 
 
+.. _tut_shell:
+
 Interactive shell
 ~~~~~~~~~~~~~~~~~
 
-You can run an interactive shell as well, using :ref:`ref_workshop_shell`:
+Instead of running individual commands,
+you can open an interactive :ref:`shell <ref_workshop_shell>`:
 
 .. code-block:: console
 
@@ -531,15 +434,17 @@ You can run an interactive shell as well, using :ref:`ref_workshop_shell`:
 
    workshop@golang-6b79e889:~$ uname -a
 
-The command above launches the login shell for :samp:`workshop`,
-the default non-privileged user in a workshop.
+
+|project_markup| runs the login shell
+for the default non-privileged user,
+also named :samp:`workshop`.
 
 
-Changes in project
-~~~~~~~~~~~~~~~~~~
+Project directory updates
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Any changes you introduce under :file:`/project/` inside the workshop
-are persisted in the project directory, and vice versa:
+Any changes made in :file:`/project/` inside the workshop
+are visible in the project directory, and vice versa:
 
 .. code-block:: console
 
@@ -549,13 +454,70 @@ are persisted in the project directory, and vice versa:
    $ ls -l
 
 
+.. _tut_interfaces:
+
+Work with interfaces
+--------------------
+
+For security and control,
+|project_markup| exposes various host system capabilities to the workshop
+by connecting it to respective :ref:`interfaces <exp_interfaces>`.
+
+To list the connected interfaces,
+use :ref:`connections <ref_workshop_connections>`:
+
+.. code-block:: console
+
+   $ workshop connections
+
+     Interface  Plug                 Slot      Notes
+     content    golang/go:mod-cache  :content  -
+
+
+This is the :ref:`content interface <exp_content_interface>`
+you saw :ref:`earlier <tut_launch>`
+in the output from :command:`workshop info`.
+
+Some interfaces are auto-connected, while some are not;
+this usually depends on their purpose.
+In either case, you can :ref:`disconnect <ref_workshop_disconnect>`
+and :ref:`connect <ref_workshop_connect>` interfaces at will:
+
+.. code-block:: console
+
+   $ workshop disconnect golang/go:mod-cache
+   $ workshop connect golang/go:mod-cache :content
+
+
+You can :ref:`remount <ref_workshop_remount>` a content interface plug
+to a new location on the host:
+
+.. code-block:: console
+   :emphasize-lines: 14
+
+   $ workshop remount golang/go:mod-cache ~/new-location/
+   $ workshop info golang
+
+     name:     golang
+     base:     ubuntu@20.04
+     project:  /home/user/hello-workshop
+     status:   ready
+     notes:    -
+     content:
+       go:
+         channel:  latest/stable
+         mounts:
+           mod-cache:
+             host:      /home/user/new-location
+             workshop:  /home/workshop/go/pkg/mod
+
 
 .. _tut_remove:
 
 Remove a workshop
 -----------------
 
-If you don't need a workshop anymore,
+If you don't need your workshop anymore,
 :ref:`remove <ref_workshop_remove>` it:
 
 .. code-block:: console
