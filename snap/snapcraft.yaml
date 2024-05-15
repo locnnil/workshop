@@ -39,9 +39,13 @@ parts:
     plugin: go
     source: .
     source-type: local
+    override-build: |
+      go install ./cmd/workshop
+      go install ./cmd/workshopd
+      CGO_ENABLED=0 go install ./cmd/workshopctl
     build-snaps:
       - go/latest/stable
-
+      
   wrappers:
     plugin: dump
     source: snap/local/
