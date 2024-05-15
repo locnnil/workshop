@@ -31,7 +31,7 @@ Specifically, it does the following:
 
 Notes:
 - To stop the workshop, use 'workshop stop'
-- 'workshop info' explicitly lists any remounted plugs for a workshop
+- 'workshop info' lists any mounted content interface plugs for the workshop
 - 'workshop refresh' mounts the last source set by 'workshop remount', if any
 - During 'workshop remove', non-default sources set by 'workshop remount'
   aren't removed
