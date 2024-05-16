@@ -19,6 +19,7 @@ SDK
 SDKcraft
 SDKs
 UI
+WSL
 YAML
 YYYY
 backend

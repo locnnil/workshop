@@ -61,6 +61,12 @@ to handle individual *workshops*.
       $ lxc list --all-projects
 
 
+   Just as well,
+   this means you can use |project_markup| anywhere LXD runs, including
+   `Ubuntu WSL environments
+   <https://canonical-ubuntu-wsl.readthedocs-hosted.com/en/latest/>`_.
+
+
 First, install and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
