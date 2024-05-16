@@ -1,11 +1,11 @@
-.. _how_create_ros2_workspace:
+.. _how_create_ros2_workshop:
 
-How to create a ROS 2 workspace
-===============================
+How to create a ROS 2 workshop
+==============================
 
 For a practical example,
-let's create a
-`ROS 2 workspace
+let's create a workshop for
+`ROS 2
 <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html>`_
 using the :samp:`ros2` SDK,
 which we have published in our SDK Store
@@ -13,19 +13,20 @@ under the :samp:`latest/edge` channel.
 
 .. note::
 
-   This example assumes that you already have |project_markup|
-   :ref:`installed <tutorial>`.
-   Also, our ROS 2 SDK is based on the :samp:`humble` distribution,
-   so we'll use the
-   `appropriate steps
+   This guide assumes that you already have |project_markup|
+   :ref:`installed <tutorial>` and know your way around it.
+   Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
+   so we'll use its
+   `tutorials
    <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html>`_;
-   adapt the steps for other distributions accordingly.
+   adapt these steps for other distributions as needed.
 
 
 Get the sources ready
 ---------------------
 
-Let's use the ROS 2 examples to build a workspace.
+For demonstration,
+let's use the ROS 2 examples.
 Choose a project directory
 and
 `clone
@@ -45,8 +46,8 @@ Create the workshop
 -------------------
 
 To define a workshop enabled for ROS 2,
-save this file in the directory
-where you've cloned the sources:
+save this file in the project directory
+beside the sources:
 
 .. code-block:: yaml
    :caption: .workshop.ros2-humble.yaml
@@ -58,10 +59,19 @@ where you've cloned the sources:
        channel: latest/edge
 
 
-Note that :samp:`base` must be the same as the SDK base,
+Here, :samp:`base` must be the same as the SDK base,
 and :samp:`channel` should be set to :samp:`latest/edge`.
 
-Next, launch the workshop:
+You project directory should look like this now:
+
+.. code-block:: console
+
+   $ ls -a
+
+     .  ..  examples  .workshop.ros2-humble.yaml
+
+
+All set, so launch the workshop:
 
 .. code-block:: console
 
@@ -77,8 +87,8 @@ Next, launch the workshop:
    for extra dependencies and installs them as needed.
 
 
-Build the workspace
--------------------
+Build the project
+-----------------
 
 |project_markup| mounts the project directory
 inside the workshop as :file:`/project/`,
@@ -93,19 +103,21 @@ so open a shell and go there:
      examples
 
 
-Here, you can see the :file:`examples/` directory that you've cloned.
-Now
+Here's the :file:`examples/` directory that you've cloned.
+
+The SDK already took care of installing and setting up the ROS environment,
+*including* your project's dependencies,
+so you can immediately proceed with the
 `build
-<https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#build-the-workspace>`_
-the ROS 2 workspace:
+<https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#build-the-workspace>`_:
 
 .. code-block:: console
 
    workshop@ros2-humble-8584e57d$ colcon build
 
 
-Instead of the project directory,
-the results of the build end up in the :file:`~/colcon/` directory:
+Upon completion,
+the build artefacts can be found in the :file:`~/colcon/` directory:
 
 .. code-block:: console
 
@@ -115,8 +127,10 @@ the results of the build end up in the :file:`~/colcon/` directory:
 
 
 The SDK maps this directory to the host using the content interface,
-so the build cache can be reused
-after the workshop is stopped and started again, or even refreshed.
+so the build cache can be persisted and reused
+after the workshop is stopped and started again, or even refreshed;
+however, mapping the project directory in this manner is undesirable,
+so the build goes in :file:`~/concon/` instead.
 
 Try this for yourself:
 
@@ -130,11 +144,12 @@ Try this for yourself:
 
 
 This time, the build should finish much faster,
-even though :command:`refresh` rebuilds the workshop from scratch.
+even though :command:`refresh` rebuilds the workshop from scratch,
+pulling any potential SDK updates.
 
 The host-mapped contents of the workshop can actually be seen
 in |project_markup|'s default content directory on the host
-(note the project ID from the shell prompt above, :samp:`8584e57d`):
+(use your project ID from the shell prompt; here, it's :samp:`8584e57d`):
 
 .. code-block:: console
 
@@ -152,24 +167,18 @@ However,
 removing the workshop will eventually destroy this content
 unless you have previously remounted it to a non-default location.
 
-The ROS 2 workspace is now ready,
-so you can proceed with the
+Our ROS 2 project is now ready,
+so you can run the
 `tests
-<https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#run-tests>`_
-and source the workspace:
+<https://docs.ros.org/en/humble/Tutorials/Intermediate/Testing/CLI.html#examine-test-results>`_
+from the project directory:
 
 .. code-block:: console
 
    $ workshop shell ros2-humble
-   workshop@ros2-humble-8584e57d$ cd ~/colcon/
+   workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ colcon test
-   workshop@ros2-humble-8584e57d$ source install/setup.bash
-
-
-And so on; the workshop already contains the additional :program:`ros2` commands
-such as :command:`run` and :command:`launch`,
-as well as the dependencies specific to your source code
-that the SDK identified at launch time.
+   workshop@ros2-humble-8584e57d$ colcon test-result --all
 
 
 Benefits
@@ -182,15 +191,13 @@ Let's review the advantages of using |project_markup| with the ROS 2 SDK:
   and reduces the inherent complexity of a ROS 2 installation.
 
 - **Saved time and resources**:
-  The ROS 2 workspace is built in a host-mapped directory,
+  The project is built in a host-mapped directory,
   so the build cache is preserved across workshop restarts and refreshes;
-  the SDK also handles this part.
+  the SDK also handles the mapping.
 
 - **Less clutter**:
-  The ROS 2 workspace is contained within the workshop,
-  so you can run multiple ROS 2 distributions
-  (when the respective SDKs become available),
-  each in a separate workshop,
+  Everything specific to your ROS 2 project is contained,
+  so multiple projects can run in separate workshops
   without interfering with each other or the host system.
 
 
@@ -200,7 +207,7 @@ See also
 Explanation:
 
 - :ref:`exp_content_interface`
-- :ref:`exp_interfaces_plugs_slots`
+- :ref:`exp_plugs_slots`
 - :ref:`exp_projects`
 - :ref:`exp_sdk`
 - :ref:`exp_workshop_def`

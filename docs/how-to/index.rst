@@ -10,7 +10,7 @@ that arise when you use |project_markup|.
 .. toctree::
    :maxdepth: 1
 
-   Create ROS2 workspaces <create-ros2-workspace>
+   Create a ROS 2 workshop <create-ros2-workshop>
    Debug issues in workshops <debug-workshop-issues>
    Move projects around <moving-projects>
    Use workshops with Git <git-workshop>
