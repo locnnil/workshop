@@ -1,3 +1,4 @@
+:slug: tutorial
 .. _tutorial:
 
 Tutorial
