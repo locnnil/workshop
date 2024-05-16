@@ -44,12 +44,12 @@ then ensure it runs.
 Check prerequisites
 ~~~~~~~~~~~~~~~~~~~
 
-|project_markup| requires
-`LXD <https://canonical.com/lxd>`_
+|project_markup| relies on
+`LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation,
 using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
-to configure individual *workshops*.
+to handle individual *workshops*.
 
 .. note::
 
