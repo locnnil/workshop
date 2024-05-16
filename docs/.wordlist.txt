@@ -11,6 +11,7 @@ JupyterLab
 LXD
 Makefile
 Mattermost
+Multipass
 MyST
 Permalink
 ReadMe

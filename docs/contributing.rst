@@ -144,6 +144,12 @@ To run end-to-end tests and integration tests with
    $ go install github.com/snapcore/spread/cmd/spread@latest
    $ spread
 
+.. note::
+
+   Our tests require
+   `Multipass <https://multipass.run/docs>`_
+   to run.
+
 
 Documentation
 -------------
