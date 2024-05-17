@@ -128,9 +128,7 @@ the build artefacts can be found in the :file:`~/colcon/` directory:
 
 The SDK maps this directory to the host using the content interface,
 so the build cache can be persisted and reused
-after the workshop is stopped and started again, or even refreshed;
-however, mapping the project directory in this manner is undesirable,
-so the build goes in :file:`~/concon/` instead.
+after the workshop is stopped and started again, or even refreshed.
 
 Try this for yourself:
 
