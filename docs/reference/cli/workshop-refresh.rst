@@ -77,7 +77,7 @@ See also
 Explanation:
 
 - :ref:`exp_content_interface`
-- :ref:`exp_project`
+- :ref:`exp_projects`
 - :ref:`exp_workshop`
 - :ref:`exp_workshop_def`
 

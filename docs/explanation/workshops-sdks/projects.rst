@@ -1,6 +1,6 @@
 :hide-toc:
 
-.. _exp_project:
+.. _exp_projects:
 
 Projects
 ========
