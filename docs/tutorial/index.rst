@@ -1,3 +1,4 @@
+:slug: tutorial
 .. _tutorial:
 
 Tutorial
@@ -44,12 +45,12 @@ then ensure it runs.
 Check prerequisites
 ~~~~~~~~~~~~~~~~~~~
 
-|project_markup| requires
-`LXD <https://canonical.com/lxd>`_
+|project_markup| relies on
+`LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation,
 using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
-to configure individual *workshops*.
+to handle individual *workshops*.
 
 .. note::
 
@@ -59,6 +60,12 @@ to configure individual *workshops*.
    .. code-block:: console
 
       $ lxc list --all-projects
+
+
+   Just as well,
+   this means you can use |project_markup| anywhere LXD runs, including
+   `Ubuntu WSL environments
+   <https://canonical-ubuntu-wsl.readthedocs-hosted.com/en/latest/>`_.
 
 
 First, install and

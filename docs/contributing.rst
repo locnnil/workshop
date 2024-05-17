@@ -5,27 +5,23 @@ We believe everyone has something valuable to contribute,
 whether you're a coder, a writer or a tester.
 Here's how and why of your potential involvement:
 
-- **Why join us?** Collaborate with fellow-minded colleagues, grow your skills,
-  connect with diverse professionals, and make a tangible difference.
+- **Why join us?** Work with fellow-minded people, grow your skills,
+  connect with diverse professionals, and make a difference.
 
-- **What you get**: Personal growth, recognition for your contributions, early
-  access to new features and the satisfaction of seeing your work used and
-  appreciated.
+- **What do you get?** Personal growth, recognition for your contributions,
+  early access to new features and the joy of seeing your work appreciated.
 
-- **Start early, start simple**: Dive into code contributions, help improve
-  documentation, or be among the first to test new features. Your participation
-  matters, regardless of your experience level or the scope of your
-  contribution.
+- **Start early, start simple**: Dive into code contributions,
+  improve documentation, or be among the first testers.
+  Your presence matters regardless of experience or the scale of your input.
 
-Please follow the guidelines below for effective and meaningful contributions.
+The guidelines below will keep your contributions effective and meaningful.
+
 
 Coding
 ------
 
-Commit messages
-~~~~~~~~~~~~~~~
-
-Workshop uses a style that differs from conventional commits in capitalisation:
+Workshop's commit messages differ from conventional commits in capitalisation:
 
 .. code-block:: none
 
@@ -147,6 +143,12 @@ To run end-to-end tests and integration tests with
 
    $ go install github.com/snapcore/spread/cmd/spread@latest
    $ spread
+
+.. note::
+
+   Our tests require
+   `Multipass <https://multipass.run/docs>`_
+   to run.
 
 
 Documentation

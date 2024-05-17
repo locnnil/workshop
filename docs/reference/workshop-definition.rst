@@ -50,7 +50,7 @@ and include the following three keys:
    * - :samp:`sdks`
      - object
      - List of individual SDKs
-       from the store to include in the workshop.
+       from the SDK Store to include in the workshop.
 
        Each entry here points to an existing SDK
        and specifies its retrieval channel.
