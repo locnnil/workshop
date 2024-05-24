@@ -26,6 +26,9 @@ const (
 	ProjectIdConfig     = "user.workshop.project-id"
 )
 
+// *.yaml is the only supported extension for workshop files as the only
+// recommended "official" extension: https://yaml.org/faq.html. Also, having a
+// single way of naming workshop files avoids unneccesary inconsistencies.
 var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 func LockPath(path string) string {
@@ -43,7 +46,7 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) WorkshopFile(workshop string) (*WorkshopFile, error) {
-	file, err := readWorkshop(filepath.Join(w.Path, WorkshopFileName(workshop)))
+	file, err := readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +66,7 @@ func (w *Project) EnumWorkshopFiles() ([]*WorkshopFile, error) {
 			continue
 		}
 
-		/* The first element in names will contain the workshop name if matched */
+		// The first element in names will contain the workshop name if matched
 		if names := validWorkshopFilename.FindStringSubmatch(info.Name()); names != nil {
 			file, err := readWorkshop(filepath.Join(w.Path, info.Name()))
 			if err != nil {

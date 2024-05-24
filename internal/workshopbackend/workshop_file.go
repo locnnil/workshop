@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
@@ -55,30 +54,24 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 
 func readWorkshop(pathname string) (*WorkshopFile, error) {
 	var err error
-
-	var file = &WorkshopFile{}
+	var file WorkshopFile
 
 	buf, err := os.ReadFile(pathname)
-
 	if err != nil {
 		return nil, err
 	}
 
-	if err = yaml.Unmarshal(buf, file); err != nil {
+	if err = yaml.Unmarshal(buf, &file); err != nil {
 		return nil, err
 	}
 
-	/* Validate workshop properties */
+	// Validate workshop properties
 	if !sdk.ValidName.MatchString(file.Name) {
 		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
 
 	if !slices.Contains(sdk.ValidBases, file.Base) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
-	}
-
-	if WorkshopFileName(file.Name) != filepath.Base(pathname) {
-		return nil, fmt.Errorf("%s's file must be named as .workshop.%s.yaml (now: %s)", file.Name, file.Name, filepath.Base(pathname))
 	}
 
 	for _, k := range file.Sdks {
@@ -92,5 +85,5 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 		}
 	}
 
-	return file, nil
+	return &file, nil
 }
