@@ -2,6 +2,7 @@ package workshopbackend_test
 
 import (
 	"cmp"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -22,6 +23,10 @@ func (f *F) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
 }
 
+func workshopFilePath(dir, name string) string {
+	return filepath.Join(dir, fmt.Sprintf(".workshop.%s.yaml", name))
+}
+
 func (f *F) TestWorkshopFileParse(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
@@ -36,8 +41,8 @@ sdks:
     channel: latest/beta
 `)
 	dir := c.MkDir()
-	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
-	file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(dir, "xbert-gpu"))
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
@@ -64,8 +69,8 @@ sdks:
     channel: latest/edge
 `)
 	dir := c.MkDir()
-	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
-	file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(dir, "xbert-gpu"))
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(file, check.IsNil)
 	c.Assert(err, check.NotNil)
 }
@@ -78,8 +83,8 @@ sdks:
     channel: latest/stable
 `)
 	dir := c.MkDir()
-	os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644)
-	file, err := workshopbackend.ReadWorkshop(workshopbackend.WorkshopFilePath(dir, "xbert-gpu"))
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
 	c.Assert(file, check.IsNil)
 }

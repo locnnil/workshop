@@ -138,14 +138,6 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	return fs.Remove(sdk.SdkCurrentPath(name))
 }
 
-func WorkshopFilePath(dir, name string) string {
-	return filepath.Join(dir, WorkshopFileName(name))
-}
-
-func WorkshopFileName(name string) string {
-	return fmt.Sprintf(".workshop.%s.yaml", name)
-}
-
 func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
 }
