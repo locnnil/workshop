@@ -7,29 +7,6 @@ Workshop
 
 **A tool for defining and managing complex development environments**.
 
-**Define your prerequisites and dependencies in simple YAML**.
-Workshop consumes the definition to create a contained workshop,
-installs the components as a set of SDKs
-and attaches custom actions for run-time control.
-IDEs such as Visual Studio Code or JupyterLab can discover workshops
-and use them in day-to-day operations,
-tidying up your system and streamlining your work.
-
-**Focus on your project, not your setup**.
-An environment that could take hours to configure
-can now be launched with a single command.
-Workshop improves cross-platform issue reproduction,
-preserves context in discussions or reviews
-and confines bold experiments to transparent sandboxes.
-
-**For those who build and maintain complex, error-prone workspaces**.
-AI/ML, robotics, IoT, EdTech and similar domains
-typically use less-than-trivial project layouts
-that depend on multiple Linux distributions or images,
-a plethora of SDKs from many vendors
-and a grocery list of libraries and languages.
-That’s where Workshop thrives.
-
 
 Getting Started
 ---------------
@@ -40,9 +17,11 @@ or refer to the
 <https://canonical-workshop.readthedocs-hosted.com/en/latest/tutorial/>`_
 in our docs for a more detailed introduction to Workshop.
 
+To join the development effort, see `How to contribute <contributing.rst>`_.
+
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft>`_,
 the user-facing counterpart to Workshop,
-start with the `Tutorial
+start with its own `Tutorial
 <https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/tutorial/>`_.
 
 
