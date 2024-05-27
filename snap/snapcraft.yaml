@@ -38,14 +38,20 @@ parts:
   workshop:
     plugin: go
     source: .
-    source-type: local
-    override-build: |
-      go install ./cmd/workshop
-      go install ./cmd/workshopd
-      CGO_ENABLED=0 go install ./cmd/workshopctl
+    source-type: local    
     build-snaps:
-      - go/latest/stable
-      
+      - go/1.21/stable
+    build-environment:
+      - CGO_LDFLAGS: "-Wl,-rpath=/snap/core22/current/lib/x86_64-linux-gnu -Wl,--disable-new-dtags -Wl,-dynamic-linker=/snap/core22/current/lib64/ld-linux-x86-64.so.2"
+      - CGO_LDFLAGS_ALLOW: ".*"
+    override-build: |
+      go build -trimpath -o "${CRAFT_PART_INSTALL}/bin/workshop" ./cmd/workshop
+      go build -trimpath -o "${CRAFT_PART_INSTALL}/bin/workshopd" ./cmd/workshopd
+      CGO_ENABLED=0 go build -trimpath -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
+    prime:
+      - bin/workshop
+      - bin/workshopd
+      - bin/workshopctl
   wrappers:
     plugin: dump
     source: snap/local/
