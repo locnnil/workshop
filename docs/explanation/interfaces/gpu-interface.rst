@@ -41,9 +41,9 @@ To make sure the plug has connected to the slot:
 
    $ workshop connections --all
 
-       Interface  Plug                   Slot      Notes
-       ...
-       gpu        ws/gpu-sdk:gpu         :gpu      -
+     Interface  Plug                   Slot      Notes
+     ...
+     gpu        ws/gpu-sdk:gpu         :gpu      -
 
 
 This means the host's GPUs are directly available inside the workshop:

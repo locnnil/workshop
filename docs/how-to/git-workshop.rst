@@ -67,7 +67,7 @@ However, the resulting artefacts are exposed in the project directory:
 
    $ ./main
 
-       hello, Workshop
+     hello, Workshop
 
 
 They stay there even if you remove the workshop:
@@ -77,7 +77,7 @@ They stay there even if you remove the workshop:
    $ workshop remove golang
    $ ./main
 
-       hello, Workshop
+     hello, Workshop
 
 
 .. tip::
@@ -160,9 +160,9 @@ Just like with regular directories,
    $ git worktree move ../hotfix/ ../resolved/
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/original     golang    Ready   -
-       /home/user/resolved     golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/original     golang    Ready   -
+     /home/user/resolved     golang    Ready   -
 
 
 Accordingly,

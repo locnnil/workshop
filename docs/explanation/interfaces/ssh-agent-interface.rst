@@ -47,9 +47,9 @@ To make sure the plug has connected to the slot:
 
    $ workshop connections --all
 
-       Interface  Plug                   Slot        Notes
-       ...
-       ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
+     Interface  Plug                   Slot        Notes
+     ...
+     ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
 
 
 This means a proxy Unix domain socket is created inside the workshop

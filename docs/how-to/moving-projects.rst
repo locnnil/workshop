@@ -41,8 +41,8 @@ Start in the same project directory where you launched the workshop:
 
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/old          golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/old          golang    Ready   -
 
 
 Move the project directory and check the workshop:
@@ -52,8 +52,8 @@ Move the project directory and check the workshop:
    $ mv /home/user/old/ /home/user/new/
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/new          golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/new          golang    Ready   -
 
 
 |project_markup| handles the project's move seamlessly
@@ -76,8 +76,8 @@ Again, start with the directory where the workshop resides:
 
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/old          golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/old          golang    Ready   -
 
 
 Copy the project directory and check the workshops:
@@ -88,8 +88,8 @@ Copy the project directory and check the workshops:
 
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/old          golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/old          golang    Ready   -
 
 
 |project_markup| doesn't launch the workshop in the new directory,
@@ -101,9 +101,9 @@ but what happens if you do it yourself?
    $ workshop launch golang --project /home/user/new/
    $ workshop list --global
 
-       Project                 Workshop  Status  Notes
-       /home/user/old          golang    Ready   -
-       /home/user/new          golang    Ready   -
+     Project                 Workshop  Status  Notes
+     /home/user/old          golang    Ready   -
+     /home/user/new          golang    Ready   -
 
 
 Now, these are two independent workshops that happen to have the same name,

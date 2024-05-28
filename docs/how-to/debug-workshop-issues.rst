@@ -33,9 +33,9 @@ Suppose something goes wrong during a :command:`refresh`:
 
    $ workshop refresh golang-volatile
 
-        Error: cannot perform the following tasks:
-        - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
-        Refresh aborted
+     Error: cannot perform the following tasks:
+     - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
+     Refresh aborted
 
 
 To investigate the failure,
@@ -45,9 +45,9 @@ list the *changes* in the workshop to find the one that failed:
 
    $ workshop changes
 
-       ID  Status  Spawn                Ready                Summary
-       ...
-       81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
+     ID  Status  Spawn                Ready                Summary
+     ...
+     81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
 
 
 List tasks in a change
@@ -60,22 +60,22 @@ list its *tasks* to see the cause:
 
    $ workshop tasks 81
 
-       ID    Status  Spawn                Ready                Summary
-       ...
-       1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
+     ID    Status  Spawn                Ready                Summary
+     ...
+     1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
 
-       ......................................................................
-       Run hook "save-state" for "go" SDK
+     ......................................................................
+     Run hook "save-state" for "go" SDK
 
-       2023-07-24T12:17:37+12:00 INFO latest/beta save-state: preserving ~/.config/pretrained-config.conf
-       ......................................................................
-       Run hook "setup-base" for "go" SDK
-       ...
-       Traceback (most recent call last):
-           File "<string>", line 1, in <module>
-           File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
-               from .tensorrt import *
-       ModuleNotFoundError: No module named 'tensorrt.tensorrt'
+     2023-07-24T12:17:37+12:00 INFO latest/beta save-state: preserving ~/.config/pretrained-config.conf
+     ......................................................................
+     Run hook "setup-base" for "go" SDK
+     ...
+     Traceback (most recent call last):
+         File "<string>", line 1, in <module>
+         File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
+             from .tensorrt import *
+     ModuleNotFoundError: No module named 'tensorrt.tensorrt'
 
 The SDK-specific reason can be addressed individually.
 
@@ -92,9 +92,9 @@ instead of reverting the workshop to its previous state,
 
    $ workshop refresh --wait-on-error golang-volatile
 
-         Error: cannot perform the following tasks:
-         - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
-         Refresh aborted
+     Error: cannot perform the following tasks:
+     - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
+     Refresh aborted
 
 
 Next, you can open a shell into the workshop to debug and potentially fix it:
@@ -134,9 +134,9 @@ that can be accessed with :command:`workshop warnings`:
 
    $ workshop warnings
 
-       last-occurrence:  4 days ago, at 17:52 GMT
-       warning: |
-         golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
+     last-occurrence:  4 days ago, at 17:52 GMT
+     warning: |
+       golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
 
 
 Multiple warnings reporting one issue aren't stacked;

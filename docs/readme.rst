@@ -43,7 +43,6 @@ Build and install the ``workshop`` snap, for example:
 .. code-block:: console
 
    $ git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
-
    $ cd workshop
    $ sudo snap install snapcraft --classic
    $ snapcraft clean && snapcraft
