@@ -148,9 +148,11 @@ Run
 The snap installs two major components:
 
 - The :program:`workshopd` daemon that exposes a REST API
+
 - The :program:`workshop`
   :ref:`CLI tool <exp_workshop_cli>`
   that uses this API to command |project_markup|
+
 
 The daemon starts automatically after installation,
 and the CLI tool is run manually:

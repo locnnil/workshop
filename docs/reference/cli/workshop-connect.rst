@@ -38,7 +38,9 @@ Notes
 -----
 
 - To be compatible, the plug and the slot must use the same interface
+
 - Multiple plugs can be connected to the same slot, but not vice versa
+
 - The :ref:`ref_workshop_connections` output
   will list the connection as :samp:`manual`
 
