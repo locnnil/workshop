@@ -4,19 +4,20 @@ SSH agent interface
 ===================
 
 The SSH agent interface
-enables access to the host system's SSH agent
-from inside the workshop
-to let it use the host's SSH keys and configuration securely.
+provides access to the host system's SSH agent
+from inside the workshop,
+allowing it to securely use the host's SSH keys and configuration.
 
 
 SSH interface plug
 ------------------
 
-An essential element here is the SSH interface plug
-that is declared in the SDK definition.
+An essential element here is the content interface plug,
+which is declared in the :ref:`SDK definition <exp_sdk_definition>`
+and is thus beyond the reach of |project_markup|.
 By adding it,
-the SDK publisher lets the workshop connect to the host's SSH agent,
-which may come in handy in various SDK-specific tasks
+the SDK publisher allows the workshop to connect to the host's SSH agent,
+which can be useful in various SDK-specific tasks
 such as cloning private repositories, accessing remote machines and so on.
 
 
@@ -25,13 +26,12 @@ SSH interface slot
 
 To enable this mechanism,
 |project_markup| provides an SSH interface slot
-that multiple SSH interface plugs
-can :ref:`connect <exp_interface_connections>` to.
-
+to which multiple SSH interface plugs can
+:ref:`connect <exp_interface_connections>`.
 
 When an SDK is installed
 during :command:`launch` and :command:`refresh`,
-|project_markup| checks that the plug that targets the slot
+|project_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interfaces_validation>`;
 if it does,
 it can be manually connected with the :command:`connect` command:
@@ -52,9 +52,9 @@ To make sure the plug has connected to the slot:
      ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
 
 
-This means a proxy Unix domain socket is created inside the workshop
+This means a proxy Unix domain socket has been created inside the workshop
 and a corresponding :envvar:`SSH_AUTH_SOCK` value
-is set for the workshop's users:
+has been set for the workshop's users:
 
 .. code-block:: console
 
@@ -64,8 +64,8 @@ is set for the workshop's users:
      /var/lib/workshop/ws-ssh-agent.ssh
 
 
-So the host's SSH identities and configurations
-become available inside the workshop:
+So the host's SSH identities and configuration
+are available inside the workshop:
 
 .. code-block:: console
 

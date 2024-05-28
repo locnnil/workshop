@@ -8,24 +8,25 @@ This is a practical introduction
 that takes you on a tour
 of the essential |project_markup| activities.
 
-Here, you will put into practice all major steps
+You will practice all the major steps
 in the life cycle of a *workshop*,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
 and :ref:`refreshing <tut_refresh>` it
 to :ref:`executing commands <tut_exec>`,
-:ref:`opening a shell <tut_shell>` into the workshop
+:ref:`shelling <tut_shell>` into the workshop
 and finally :ref:`deleting <tut_remove>` it.
-The actions you're about to take
-comprise the majority of your daily needs with |project_markup|.
+The actions you're about to perform
+cover most of your daily needs with |project_markup|.
 
-Refer to the
-:ref:`explanation <exp_index>`
-if you need a more descriptive overview.
+If you need a more descriptive overview,
+refer to the
+:ref:`explanation <exp_index>`.
 For comprehensive details, explore the
 :ref:`reference <ref_index>`.
-Finally, see the
-:ref:`how-to guides <howto_index>`
-if you're looking for advanced practical steps.
+Finally,
+if you're looking for advanced practical steps,
+see the
+:ref:`how-to guides <howto_index>`.
 
 
 .. important::
@@ -47,25 +48,26 @@ Check prerequisites
 
 |project_markup| relies on
 `LXD 5.21+ <https://canonical.com/lxd>`_
-for low-level operation,
-using its
-`REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
+for low-level operation
+and uses its
+`API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
 .. note::
 
    This means you can use regular :command:`lxc` commands
-   to monitor |project_markup| activities, for example:
+   to monitor |project_markup| activity, for example:
 
    .. code-block:: console
 
       $ lxc list --all-projects
 
 
-   Just as well,
-   this means you can use |project_markup| anywhere LXD runs, including
-   `Ubuntu WSL environments
+   Also, this means you can use |project_markup| anywhere LXD runs, including
+   `Ubuntu WSL
    <https://canonical-ubuntu-wsl.readthedocs-hosted.com/en/latest/>`_.
+
+   However, it's not recommended to rely on this implementation detail.
 
 
 First, install and
@@ -145,17 +147,17 @@ for example:
 Run
 ~~~
 
-The snap installs two major components:
+The snap installs two main components:
 
-- The :program:`workshopd` daemon that exposes a REST API
+- The :program:`workshopd` daemon, which exposes a REST API
 
 - The :program:`workshop`
-  :ref:`CLI tool <exp_workshop_cli>`
-  that uses this API to command |project_markup|
+  :ref:`CLI tool <exp_workshop_cli>`,
+  which uses this API to command |project_markup|
 
 
 The daemon starts automatically after installation,
-and the CLI tool is run manually:
+but you run the CLI tool manually:
 
 .. code-block:: console
 
@@ -165,7 +167,7 @@ and the CLI tool is run manually:
 Launch a workshop
 -----------------
 
-Having installed |project_markup|,
+Once you have installed |project_markup|,
 use it to define, launch, start and stop your first
 :ref:`workshop <exp_workshop>`.
 
@@ -234,10 +236,10 @@ to build, debug and run code.
 
 .. note::
 
-   If anything goes wrong at this point, see the
+   If something goes wrong at this point, see the
    :ref:`debugging guide <how_debug_issues_workshops>`.
 
-After launch, you can see run-time :ref:`info <ref_workshop_info>`:
+After launching, you can see the run-time :ref:`info <ref_workshop_info>`:
 
 .. code-block:: console
 
@@ -257,12 +259,12 @@ After launch, you can see run-time :ref:`info <ref_workshop_info>`:
              workshop:  /home/workshop/go/pkg/mod
 
 
-The output mostly resembles the :ref:`definition <tut_define>`
+The output is similar to the :ref:`definition <tut_define>`
 but includes extra details
 such as the :ref:`content interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
-Try temporarily moving it, then run :command:`list` again:
+Try moving it temporarily and re-run :command:`list`:
 
 .. code-block:: console
 
@@ -276,10 +278,10 @@ Try temporarily moving it, then run :command:`list` again:
    $ mv hi-workshop hello-workshop
 
 
-This means that the workshop stays operational without extra steps.
+This means that the workshop stays operational without extra steps on your part.
 
-Check recent :ref:`changes <ref_workshop_changes>`
-to see how |project_markup| tracks its operations:
+Check out the recent :ref:`changes <ref_workshop_changes>`
+to see how |project_markup| keeps track of its environment:
 
 .. code-block:: console
 
@@ -288,8 +290,8 @@ to see how |project_markup| tracks its operations:
      ID  Status  Spawn               Ready               Summary
      34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
 
-To learn what goes into launching a workshop,
-supply the ID of the change to the
+To find out what goes into launching a workshop,
+pass the ID of the change to the
 :ref:`tasks <ref_workshop_tasks>`
 command:
 
@@ -309,11 +311,11 @@ command:
 
 
 Here, the project directory is mounted to the workshop as :file:`/project/`;
-the workshop is *started*, in other words, brought online;
+the workshop is *started*, or brought online;
 then the :samp:`go` SDK,
 which was referenced in the :ref:`definition <tut_define>`,
 is retrieved, installed and set up inside the workshop;
-finally, the SDK is connected to the host system
+then the SDK is connected to the host system
 via :ref:`interfaces <exp_interfaces>`.
 
 Finally, mind that you only need to launch a workshop once
@@ -323,8 +325,8 @@ after defining it.
 Start and stop
 ~~~~~~~~~~~~~~
 
-If you're done with the workshop for now,
-:ref:`stop <ref_workshop_stop>` it to conserve resources:
+If you're finished with the workshop for now,
+:ref:`stop <ref_workshop_stop>` it to save resources:
 
 .. code-block:: console
 
@@ -339,7 +341,7 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
    $ workshop start golang
 
 
-Both commands operate gracefully,
+Both commands work gracefully,
 waiting for the workshop to comply;
 :command:`stop` doesn't destroy a workshop
 (unlike :ref:`remove <tut_remove>`),
@@ -362,8 +364,8 @@ Alternatively,
 you may have changed the :ref:`definition <exp_workshop_def>`
 to switch bases, add and remove SDKs or toggle their channels.
 In either case,
-you need to :ref:`refresh <ref_workshop_refresh>` the workshop
-so the updates are applied.
+:ref:`refresh <ref_workshop_refresh>` the workshop
+to apply the updates.
 
 Change the base in your :ref:`definition <tut_define>`
 and refresh the workshop:
@@ -384,10 +386,10 @@ and refresh the workshop:
    $ workshop refresh golang
 
 
-Generally, :command:`refresh` is similar to a :ref:`launch <tut_launch>`.
+In general, :command:`refresh` is similar to a :ref:`launch <tut_launch>`.
 However, its default priority is to keep the workshop operational;
-if any issues arise, rollback occurs.
-For extra details, see the
+if problems arise, it rolls back.
+For more details, see the
 :ref:`debugging guide <how_debug_issues_workshops>`.
 
 
@@ -418,8 +420,8 @@ Save this Go code in the project directory to build it inside the workshop:
    $ workshop exec golang go build main.go
 
 
-There's a way to define environment variables for the command
-and separate it from :command:`exec` options:
+You can define environment variables for the command,
+or separate the command from :command:`exec` options:
 
 .. code-block:: console
 
@@ -470,8 +472,7 @@ Work with interfaces
 
 For security and control,
 |project_markup| exposes various host system capabilities to the workshop
-by connecting it to respective :ref:`interfaces <exp_interfaces>`.
-
+by connecting it to the appropriate :ref:`interfaces <exp_interfaces>`.
 To list the connected interfaces,
 use :ref:`connections <ref_workshop_connections>`:
 
@@ -484,13 +485,13 @@ use :ref:`connections <ref_workshop_connections>`:
 
 
 This is the :ref:`content interface <exp_content_interface>`
-you saw :ref:`earlier <tut_launch>`
+you've seen :ref:`earlier <tut_launch>`
 in the output from :command:`workshop info`.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
-In either case, you can :ref:`disconnect <ref_workshop_disconnect>`
-and :ref:`connect <ref_workshop_connect>` interfaces at will:
+In any case, you can :ref:`connect <ref_workshop_connect>`
+and :ref:`disconnect <ref_workshop_disconnect>` interfaces at will:
 
 .. code-block:: console
 
@@ -526,7 +527,7 @@ to a new location on the host:
 Remove a workshop
 -----------------
 
-If you don't need your workshop anymore,
+If you're no longer using your workshop,
 :ref:`remove <ref_workshop_remove>` it:
 
 .. code-block:: console
@@ -536,14 +537,14 @@ If you don't need your workshop anymore,
 
 This doesn't affect the files in the project directory,
 including the workshop definition,
-and any other content that was stored outside the workshop,
+or any other content that was stored outside the workshop,
 e.g. via the :ref:`content interface <exp_content_interface>`.
 
 .. important::
 
-   Don't delete the project directory without removing the workshop first.
+   Don't delete the project directory without first removing the workshop.
 
 
-That was the last step of the tutorial;
-you are now familiar with the essential operations |project_markup| provides
-and have had your first taste of what it can accomplish for you.
+This was the last step in the tutorial;
+you are now familiar with the essential operations provided by |project_markup|
+and have had your first taste of what it can do for you.

@@ -29,7 +29,7 @@ Installation
 ~~~~~~~~~~~~
 
 Workshop requires
-`LXD <https://canonical.com/lxd>`_
+`LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation:
 
 .. code-block:: console

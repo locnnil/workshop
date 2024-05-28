@@ -3,18 +3,18 @@
 How to move projects around
 ===========================
 
-It may be unclear how workshops respond to daily operations
+It may be unclear how workshops react to everyday operations
 such as moving or copying a project directory.
-Let's spend some time talking about different aspects here.
+Let's spend some time talking about different aspects of this.
 
 
 Before launch
 -------------
 
 A workshop that you didn't :command:`launch`
-is just that: a definition file
-which behaves like any good file should.
-Things start changing *after* you run :command:`workshop launch`:
+is just a definition file
+that behaves like any good file should.
+Things change *after* you run :command:`workshop launch`:
 
 .. code-block:: yaml
    :caption: /home/user/old/.workshop.golang.yaml
@@ -34,7 +34,7 @@ Things start changing *after* you run :command:`workshop launch`:
 Moving a project
 ----------------
 
-This is the most basic scenario.
+This is the simplest scenario.
 Start in the same project directory where you launched the workshop:
 
 .. code-block:: console
@@ -57,20 +57,21 @@ Move the project directory and check the workshop:
 
 
 |project_markup| handles the project's move seamlessly
-so the workshop here stays operational like you would expect it to;
-there are no loose ends to pick,
+so the workshop here remains as you would expect;
+there are no loose ends to pick up,
 no paths to update in your definition file.
 
-However, mind that |project_markup| ensures only the workshop's safe transition,
-so it's up to you to update the path in your project's metadata
-that are not specific to |project_markup|.
+However,
+this only ensures the safe transition of the workshop itself,
+so it's up to you to update any paths external to |project_markup|
+that point to the project's previous location.
 
 
 Copying a project
 -----------------
 
 Now let's copy the project directory.
-Again, start with the directory where the workshop resides:
+Again, start with the workshop's location:
 
 .. code-block:: console
 
@@ -92,8 +93,8 @@ Copy the project directory and check the workshops:
      /home/user/old          golang    Ready   -
 
 
-|project_markup| doesn't launch the workshop in the new directory,
-which is probably the reasonable default here,
+|project_markup| won't launch the workshop in the new directory,
+which is probably the sensible default here,
 but what happens if you do it yourself?
 
 .. code-block:: console
@@ -109,14 +110,15 @@ but what happens if you do it yourself?
 Now, these are two independent workshops that happen to have the same name,
 not a single workshop that is somehow shared by multiple project directories.
 
-Again, it's up to you to update the new project's metadata.
+Again, it's up to you to update any paths external to |project_markup|
+that should point to your new project.
 
 
 Removing a project
 ------------------
 
-|project_markup| doesn't handle deletion automatically;
-make sure to remove all workshops
+|project_markup| doesn't handle file deletion automatically;
+make sure you remove all workshops
 before deleting the project directory:
 
 .. code-block:: console

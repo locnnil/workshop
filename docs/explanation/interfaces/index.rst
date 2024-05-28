@@ -17,35 +17,35 @@ Summary
 
 For a workshop to be operational,
 the plugs defined by the SDKs listed in the workshop definition
-connect to respective interface slots at some point.
+must at some point *connect* to the appropriate interface slots.
 
-Such *connections* are established uniformly via a
+Such connections are uniformly established via a
 :ref:`special SDK <exp_agent_sdk>`
-that is quietly present in any workshop
-but not immediately exposed to its users.
+that is quietly present in every workshop,
+but not immediately visible to its users.
 
-Interface connections provide a communication and resource sharing mechanism.
-It is integral to workshop confinement,
-ensuring that each workshop operates within its own isolated environment
+Interface connections are a mechanism for communication and resource sharing.
+It is an integral part of workshop confinement,
+ensuring that each workshop operates in its own isolated environment,
 while still allowing controlled interactions with system resources.
 
-Here's how it works on the outside:
+Here's how it works from the outside:
 
 - The :command:`workshop connect` command establishes a connection
   between a workshop and a system interface,
-  allowing the workshop to access system resources securely.
+  allowing the workshop to securely access system resources.
 
 - Conversely, the :command:`workshop disconnect` command
   terminates existing connections between a workshop and a system interface,
-  revoking access to system resources granted by the connection.
+  revoking the access to system resources granted by the connection.
 
 - Finally, the :command:`workshop connections` command
-  lists any existing connections and their states,
+  lists all existing connections and their states,
   providing an overview of how workshops are communicating with the system.
 
 Some plugs can be auto-connected to their slots at launch or refresh.
 This behaviour varies by interface,
-but the overall goal is to provide a reasonably seamless, logical experience.
+but the overall aim is to provide a reasonably seamless, logical experience.
 For example, content interface plugs are auto-connected,
 whereas an SSH interface plug requires manual connection.
 
@@ -57,15 +57,15 @@ Agent SDK
 
 Every workshop contains an *agent SDK*
 that exposes system resources through interface slots.
-Essentially, it is a special SDK type,
-which is not available in the SDK Store but is auto-added to each workshop.
-It is installed first at :command:`workshop launch`
+It's essentially a special SDK type,
+which is not available from the SDK Store but is auto-added to each workshop.
+It's installed first at :command:`workshop launch`
 and removed last at :command:`workshop remove`,
 ensuring internal consistency.
 
-The goal of the agent SDK isn't to offer hooks or provide additional content;
-it exists solely to expose system resources to other SDKs in a uniform fashion.
-As such, it cannot be removed by the user
+The purpose of the agent SDK isn't to add hooks or additional content;
+it's only there to expose system resources to other SDKs in a consistent way.
+As such, it can't be removed by the user
 and isn't listed in the :command:`workshop info` output.
 
 

@@ -3,18 +3,17 @@
 How to debug issues in workshops
 ================================
 
-To trace the condition of a misbehaving workshop,
-you can explore its underlying changes and tasks,
+To trace the root cause
+of a workshop misbehaving at :command:`refresh` or any other action,
+you can explore its underlying changes and tasks, stop on error,
 list system-wide warnings and acknowledge false positives.
-This may help identify the root cause
-if a :command:`refresh` or any other action fails.
 
 
 List workshop changes
 ---------------------
 
-Consider a workshop named :samp:`golang-volatile`
-that uses an unstable SDK
+Consider a workshop named :samp:`golang-volatile`,
+which uses an unstable SDK
 from the :samp:`latest/edge` channel:
 
 .. code-block:: yaml
@@ -53,7 +52,7 @@ list the *changes* in the workshop to find the one that failed:
 List tasks in a change
 ----------------------
 
-When the problematic change is found,
+When you have found the problematic change,
 list its *tasks* to see the cause:
 
 .. code-block:: console
@@ -97,21 +96,21 @@ instead of reverting the workshop to its previous state,
      Refresh aborted
 
 
-Next, you can open a shell into the workshop to debug and potentially fix it:
+Next, you can shell into the workshop to debug and possibly fix it:
 
 .. code-block:: console
 
    $ workshop shell golang-volatile
 
 
-If the issue is resolved, you can resume the refresh process:
+On success, you can resume the refresh process:
 
 .. code-block:: console
 
    $ workshop refresh --continue golang-volatile
 
 
-Otherwise, revert the changes with the :option:`!--abort` option:
+Otherwise, undo the changes with the :option:`!--abort` option:
 
 .. code-block:: console
 
@@ -119,16 +118,16 @@ Otherwise, revert the changes with the :option:`!--abort` option:
 
 
 The effect will be the same as if you hadn't used :option:`!--wait-on-error`:
-the workshop will be reverted to its previous state.
+the workshop will revert to its previous state.
 
 
 List and suppress warnings
 --------------------------
 
-Occasionally, |project_markup| encounters non-blocking or transient issues,
+|project_markup| occasionally encounters non-blocking or transient problems,
 such as broken mount points.
-As such, they are registered as *warnings* in a system-wide log
-that can be accessed with :command:`workshop warnings`:
+These are registered as *warnings* in a system-wide log,
+which can be accessed with :command:`workshop warnings`:
 
 .. code-block:: console
 
@@ -139,8 +138,8 @@ that can be accessed with :command:`workshop warnings`:
        golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
 
 
-Multiple warnings reporting one issue aren't stacked;
-only their first and last occurrences are recorded.
+Multiple warnings about the same problem aren't stacked;
+only their first and last occurrences are logged.
 You can suppress listed warnings with :command:`workshop okay` to ignore them:
 
 .. code-block:: console

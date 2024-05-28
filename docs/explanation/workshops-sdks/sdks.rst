@@ -11,9 +11,7 @@ throughout the lifetime of the workshop.
 An *SDK* is designed by a publisher
 and made available via the SDK Store.
 A single workshop can include multiple SDKs from different publishers.
-SDKs are distributed via
-`channels <https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/reference/sdks/#channels>`_
-similar to
+SDKs are distributed through channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 
 
@@ -22,18 +20,20 @@ similar to
 SDK state
 ---------
 
-An SDK may store any data specific to it,
+An SDK can store any data specific to it,
 such as a model training configuration,
 within the workshop.
-The publisher of the SDK implements save and restore actions
-to let |project_markup| handle such data consistently as the *SDK state*.
+To enable this,
+the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
+that |project_markup| runs at the appropriate moments
+to consistently handle such data, collectively known as *SDK state*.
 
-Before applying any changes to the workshop
-during a :command:`workshop refresh` operation,
-|project_markup| saves the workshop's SDK states
-by invoking their :ref:`hooks <exp_sdk_hooks>`.
-After a successful change,
-the states are respectively restored.
+For example, before changes are applied to the workshop
+during a :command:`refresh`,
+the states of the SDKs are saved
+by invoking their :samp:`save-state` hooks.
+On success,
+they are restored using the :samp:`restore-state` hooks.
 
 
 .. _exp_sdk_definition:
@@ -41,7 +41,8 @@ the states are respectively restored.
 SDK definition
 --------------
 
-An SDK is defined in a file named :file:`sdkcraft.yaml` that may look like this:
+An SDK is defined by the SDK publisher;
+the definition may look like this:
 
 .. code-block:: yaml
    :caption: sdkcraft.yaml
@@ -74,14 +75,14 @@ and report its health.
 
 Each hook is a shell script with domain-aware actions
 that |project_markup| runs in the workshop
-at a certain life cycle phase
-to ensure the SDK stays functional.
+at a particular life cycle stage
+to ensure that the SDK stays functional.
 Specific examples include :samp:`setup-base`,
 :samp:`save-state` and :samp:`restore-state`.
 
-You may see individual hooks mentioned
-when running :program:`workshop changes` and :program:`workshop tasks` commands;
-understanding the events that trigger them may help you with troubleshooting.
+You may see individual hooks mentioned in the output of
+:command:`changes` and :command:`tasks` commands;
+understanding the events that trigger them can help you with troubleshooting.
 
 
 .. _exp_interfaces:
@@ -93,12 +94,12 @@ To make SDKs customisable and extensible,
 |project_markup| implements a counterpart to
 :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__,
-controlling whether an individual SDK can use resources beyond its confinement.
+which controls whether an SDK can use resources beyond its confines.
 You can think of specific interfaces as resource *types*:
-file system, hardware, computational and so on.
-
-The interfaces are defined in the SDKs themselves,
+file system, hardware, computing and so on.
+The interfaces are referenced by the SDKs,
 so the user doesn't have direct control over them in the workshop definition.
+
 Currently, |project_markup| supports the following interfaces:
 
 - :ref:`content interface <exp_content_interface>` (auto-connected)
@@ -111,23 +112,24 @@ Currently, |project_markup| supports the following interfaces:
 Plugs and slots
 ~~~~~~~~~~~~~~~
 
-In order to provide access to these resource types,
-|project_markup| exposes so-called *interface slots*.
-For instance, a :ref:`content interface slot <exp_content_interface>`
-creates a designated host directory to be mounted inside the workshop;
+To provide access to these resource types,
+|project_markup| exposes *interface slots*.
+For example, a :ref:`content interface slot <exp_content_interface>`
+creates an internal host directory to be mounted inside the workshop;
 think of the slot as the provider of the resource.
 
-On top of that, individual SDKs define *plugs*
-to connect to a slot that belongs to a certain interface.
+Further, individual SDKs define *plugs*
+to connect to a slot of a certain interface type.
 In our :ref:`previous example <exp_sdk_definition>`,
-it's the aforementioned *content interface*.
+it's the *content interface* mentioned above.
 
 You can think of the plug as the recipient of the resources exposed by the slot;
 note that a slot can handle connections with multiple plugs.
 
-Eventually, this mechanism starts whirring when the workshop itself is started;
+This mechanism comes into play when you
+:command:`launch` or :command:`start` the workshop;
 the plugs defined by its SDKs are automatically connected to the slots,
-provided the definition has everything |project_markup| needs to make a match.
+provided that the definition has all |project_markup| needs to make a match.
 
 
 .. _exp_interfaces_validation:
@@ -135,16 +137,16 @@ provided the definition has everything |project_markup| needs to make a match.
 Validation and policies
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Now, to make sure plugs can be installed and connected,
+To ensure plugs can be installed and connected,
 |project_markup| uses a set of rules called policies,
 with each interface having its own.
 For example, the content interface plug can be installed and auto-connected
 based on its policy alone.
 However, other interfaces may have different rules,
-such as enabling installation but not auto-connection for :samp:`ssh-agent`.
+such as allowing installation but not auto-connection for :samp:`ssh-agent`.
 
-Finally, when all checks are done,
-the SDKs are able to use the external resources.
+Finally, once all the checks are done,
+the SDKs are ready to use the external resources.
 
 
 .. _exp_interfaces_cli_operations:
@@ -161,7 +163,7 @@ finding a candidate slot,
 verifying the plug's eligibility for the slot based on their declarations
 and connecting the two.
 
-Upon :command:`refresh`,
+On :command:`refresh`,
 existing connections are preserved in the refreshed workshop
 if their plugs were connected before the operation.
 A newer version of an SDK may drop a plug that was previously connected;
@@ -169,8 +171,8 @@ such connections are removed,
 but the host-based content remains.
 
 On :command:`remove`,
-both the interface connections and the host directories
-(if any were created, for example, to accommodate content interface slots)
+both the interface connections and the default host directories
+(if any have been created, for example, to accommodate content interface slots)
 are removed.
 
 .. note::
@@ -182,8 +184,11 @@ are removed.
    where it's unlikely to be used again.
 
 
-Also, the user can enable or disable connections manually
-with :command:`connect` and :command:`disconnect` commands.
+Also, you can manually enable or disable connections
+with :command:`connect` and :command:`disconnect` commands,
+whereas :command:`connections` can list all connections
+that have been established by any |project_markup| projects.
+
 
 See also
 --------
@@ -196,5 +201,14 @@ Explanation:
 
 Reference:
 
-- :ref:`ref_workshop_cli`
+Reference:
+
+- :ref:`ref_workshop_connect`
+- :ref:`ref_workshop_connections`
+- :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_disconnect`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_start`
+- :ref:`ref_workshop_tasks`
 - :ref:`ref_sdk_hooks`

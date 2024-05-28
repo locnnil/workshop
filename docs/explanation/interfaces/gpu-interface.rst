@@ -13,10 +13,11 @@ to improve the performance of GPU-intensive applications.
 GPU interface plug
 ------------------
 
-An essential element here is the GPU interface plug
-that is declared in the SDK definition.
-By adding it,
-the SDK publisher lets the workshop directly access the host's GPU devices,
+An essential element here is the content interface plug,
+which is declared in the :ref:`SDK definition <exp_sdk_definition>`
+and is thus beyond the reach of |project_markup|.
+By adding it, the SDK publisher enables the workshop
+to directly access the host's GPU devices,
 which may be required for various GPU-intensive workloads.
 
 
@@ -24,18 +25,18 @@ GPU interface slot
 ------------------
 
 To enable this mechanism,
-|project_markup| creates a GPU interface slot
-that multiple GPU interface plugs
-can :ref:`connect <exp_interface_connections>` to.
+|project_markup| provides a GPU interface slot
+to which multiple GPU interface plugs can
+:ref:`connect <exp_interface_connections>`.
 
 When an SDK is installed
 during :command:`launch` and :command:`refresh`,
-|project_markup| checks that the plug that targets the slot
+|project_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interfaces_validation>`.
 If the plug passes these checks,
 it is automatically connected.
 
-To make sure the plug has connected to the slot:
+To ensure the plug has connected to the slot:
 
 .. code-block:: console
 

@@ -3,9 +3,9 @@
 How to use workshops with Git
 =============================
 
-Workshops are intended for use in common development ecosystems,
-which makes running into Git almost inevitable.
-Let's see how you can integrate workshops into your repo.
+Workshops are designed to be used in common development ecosystems,
+which makes their encounter with Git almost inevitable.
+Let's look at how you can integrate workshops into your repo.
 
 
 Initialisation
@@ -51,8 +51,8 @@ and start working on your code:
    }
 
 
-Mind that any activities
-that rely on the workshop's contents
+Mind that any activity
+that relies on the workshop's contents
 should now occur inside the workshop:
 
 .. code-block:: console
@@ -82,41 +82,40 @@ They stay there even if you remove the workshop:
 
 .. tip::
 
-   If you actually remove the workshop at this step of the guide,
+   If you do remove the workshop at this step of the guide,
    relaunch it before proceeding further:
 
    .. code-block:: console
 
       $ workshop launch golang
 
-
-From here, do with your repo as you please
+From here, you can do whatever you like with your repo,
 because |project_markup| handles
-moving files around quite well.
+:ref:`moving files around <how_moving_projects>` quite well.
 
-With your dependencies factored out like this,
-recovering your build system after cloning the repo elsewhere
-comes down to re-launching the workshop from a new
+With your dependencies accounted for,
+restoring your build system after cloning the repo elsewhere
+is as simple as re-launching the workshop from a new
 *project directory*.
 
-But what if you have to maintain several branches
+But what if you need to maintain multiple branches
 that require different versions of the same workshop?
 A common solution is to clone the repo several times
-and synchronise it manually when needed,
+to manually synchronise the copies when needed,
 but this approach is prone to errors and overhead.
-Let's build something better by...
+Let's build something better and...
 
 
-Using worktrees
----------------
+Use worktrees
+-------------
 
-Let's now use a feature of Git that overlaps nicely with workshops,
+Let's add a Git feature that works well with workshops,
 namely :literalref:`git worktree<https://git-scm.com/docs/git-worktree>`.
 
 One of |project_markup|'s goals is
 to simplify toggling external dependencies
-such as frameworks or system versions.
-Suppose you want to investigate an issue that appears on an older OS version,
+such as frameworks or OS versions.
+Say you want to investigate a problem that occurs on an older OS version,
 so you create a new worktree just for that:
 
 .. code-block:: console
@@ -125,8 +124,8 @@ so you create a new worktree just for that:
    $ cd ../hotfix/
 
 
-Instead of troubling yourself with virtual machines,
-amend the definition
+Instead of bothering with virtual machines,
+update the definition
 to change the base image:
 
 .. code-block:: yaml
@@ -140,7 +139,7 @@ to change the base image:
        channel: latest/stable
 
 
-Next, you launch the redefined workshop to work on the problem:
+Next, launch the redefined workshop to work on the problem:
 
 .. code-block:: console
 
@@ -151,8 +150,8 @@ Next, you launch the redefined workshop to work on the problem:
    $ git merge hotfix
 
 
-Just like with regular directories,
-|project_markup| cooperates nicely with
+As with regular directories,
+|project_markup| works well with
 :literalref:`git worktree move<https://git-scm.com/docs/git-worktree#_commands>`:
 
 .. code-block:: console
@@ -165,7 +164,7 @@ Just like with regular directories,
      /home/user/resolved     golang    Ready   -
 
 
-Accordingly,
+Similarly,
 when it comes to clean-up,
 remove all workshops
 before running :samp:`git worktree remove`:
@@ -176,10 +175,10 @@ before running :samp:`git worktree remove`:
    $ git worktree remove ../resolved/
 
 
-Thus, using :command:`git worktree` reduces the effort to sync, stash and pull,
-while |project_markup| enables you to hot-swap an entire OS
-or other complex dependencies
-by changing from one directory to another.
+So using :command:`git worktree` reduces the effort on sync, stash and pull,
+while |project_markup| allows you to hot-swap an entire OS
+or another complex dependency
+by going from one directory to another.
 
 
 See also

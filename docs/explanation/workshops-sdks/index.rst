@@ -14,52 +14,50 @@ Summary
 -------
 
 Projects, workshops and SDKs
-are the key building blocks of |project_markup|.
+are the main building blocks of |project_markup|.
 To start using |project_markup|,
 it is important to understand how these concepts fit together.
 
-You can view a *project* as your working directory,
-doing all the things you would usually do there:
+You can think of a *project* as your working directory,
+and do everything you would usually do there:
 create and populate repositories, write and build code, run models, and so on.
-However, the difference starts with the software dependencies
-you would previously install as system-wide packages, container images,
+The difference starts with the software dependencies
+that you used to install as system-wide packages, container images,
 or in myriad other ways.
 
-Instead, they are packed and published as |project_markup|-ready, isolated *SDKs*
-that you list while defining a *workshop*.
-In turn, it is a container that is launched according to the workshop definition,
-which resides in a :file:`.yaml` file in the project directory.
+Instead, they are packed and published as |project_markup|-ready,
+isolated *SDKs* that you list while you define a *workshop*.
+The workshop definition sits in a :file:`.yaml` file in the project directory,
+and the workshop itself is the container built according to this definition.
 
-To address a few points of confusion straight away:
+To clear up a few points of confusion straight away:
 
-- A lowercase *workshop* is a container tied to a definition and a project;
-  it can be plural and shouldn't be confused with |project_markup| itself.
+- A *workshop* is a container tied to a definition and a project;
+  not to be confused with |project_markup| itself.
 
-- Two identical workshop definitions in two separate projects
-  result in two different workshops.
+- Launching an identical definition from two different projects
+  creates two separate workshops.
 
-- Two workshops in the same project share the project directory,
-  mapped inside both workshops as :file:`/project/`.
+- Two workshops in a project share the same project directory,
+  mapped inside both as :file:`/project/`.
 
 A single workshop always points to a project,
-and a project may have multiple workshops referencing it,
-with each workshop containing a number of SDKs.
+and a project can have multiple workshops pointing to it,
+with each workshop containing multiple SDKs.
+What do *you* get out of this multiplicity, though?
 
-What do you get out of this multitude?
-
-First, |project_markup| is transactional in nature;
-you won't have to trace residual files and libraries all across your system
-after you uninstall a package that turned out too unstable to your taste.
-Even if an SDK dumps something unexpected onto the disk,
+Firstly, |project_markup| is transactional in nature;
+you don't have to track down leftover files and libraries all over your system
+after you've uninstalled a package that turned out to be too unstable.
+Even if an SDK drops something unexpected on your drive,
 it's contained within the workshop.
-|project_markup| aims to encapsulate each part of functionality you may need,
+|project_markup| aims to encapsulate every piece of functionality you need,
 keeping things clean and tidy.
 
 Next, it's portable;
-imagine sending a *compact* snapshot of your project environment to a coworker
-who then recreates it with exactly the same dependency versions that you used.
-What's better, this is achieved without manually customised,
-high-maintenance image definitions or configurations;
-all the work of keeping the SDKs in your workshop operational
-is done by the people who are actually responsible for it
-(namely, the publishers).
+imagine sending a compact definition of your project environment to a colleague,
+who can rebuild it with exactly the same dependency versions you used.
+Better still, it's done without any manual, high-maintenance image definitions
+or configurations;
+all the work of keeping the SDKs in your workshop operational is done
+by the people who are actually responsible for them: the publishers.
