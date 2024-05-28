@@ -132,8 +132,8 @@ Workshop uses a ``go test``-compatible
 
 .. code-block:: console
 
-   $ go test ./...
-   $ go test -check.f <TestName|SuiteName>
+   go test ./...
+   go test -check.f <TestName|SuiteName>
 
 
 To run end-to-end tests and integration tests with
@@ -141,8 +141,8 @@ To run end-to-end tests and integration tests with
 
 .. code-block:: console
 
-   $ go install github.com/snapcore/spread/cmd/spread@latest
-   $ spread
+   go install github.com/snapcore/spread/cmd/spread@latest
+   spread
 
 .. note::
 
@@ -159,7 +159,7 @@ To build and run it at ``127.0.0.1:8000``:
 
 .. code-block:: console
 
-   $ make run
+   make run
 
 
 To suggest changes online, use the GitHub link in the footer of the page

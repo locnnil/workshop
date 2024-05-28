@@ -34,19 +34,19 @@ for low-level operation:
 
 .. code-block:: console
 
-   $ sudo snap install lxd
-   $ sudo lxd init --auto
+   sudo snap install lxd
+   sudo lxd init --auto
 
 
 Build and install the ``workshop`` snap, for example:
 
 .. code-block:: console
 
-   $ git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
-   $ cd workshop
-   $ sudo snap install snapcraft --classic
-   $ snapcraft clean && snapcraft
-   $ sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
+   git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
+   cd workshop
+   sudo snap install snapcraft --classic
+   snapcraft clean && snapcraft
+   sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 
 
 Launching workshops
@@ -60,7 +60,7 @@ then run ``workshop launch <NAME>``:
 
 .. code-block:: console
 
-   $ cat > .workshop.golang.yaml <<EOF -
+   cat > .workshop.golang.yaml <<EOF -
    name: golang
    base: ubuntu@22.04
    sdks:
@@ -68,7 +68,7 @@ then run ``workshop launch <NAME>``:
        channel: latest/stable
    EOF
 
-   $ workshop launch golang
+   workshop launch golang
 
 
 Workshop downloads and installs the SDKs your definition lists;
