@@ -6,10 +6,10 @@ Workshops
 A *workshop*
 (lowercase; not to be confused with |project_markup| itself)
 is a container that is described in a definition file,
-which is tied to a :ref:`project directory <exp_projects>`.
+which is associated with a :ref:`project directory <exp_projects>`.
 Currently, these containers are hosted by
 `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`__,
-but relying on this implementation detail isn't recommended.
+but it's not recommended to rely on this implementation detail.
 
 
 .. _exp_workshop_def:
@@ -20,12 +20,12 @@ Workshop definition
 This is a file named :file:`.workshop.<NAME>.yaml`
 that lists the base image of the workshop
 and the specific components installed on top of it.
-The definition serves as a single source of truth about the workshop.
+The definition acts as a single source of truth about the workshop.
 It usually takes a few tries
-to arrive at a configuration that suits your project,
-so you can edit and update the workshop definition iteratively.
+to produce a definition that works for your project,
+so you can edit and update the file iteratively.
 
-A simple definition may look like this:
+A simple definition might look like this:
 
 .. code-block:: yaml
    :caption: .workshop.golang.yaml
@@ -36,8 +36,9 @@ A simple definition may look like this:
      go:
        channel: latest/stable
 
-This specifies a *base* and an *SDK*.
-A more complete definition would usually list multiple SDKs
+
+It specifies a *base* and an *SDK*.
+A more complete definition would usually list several SDKs
 that use different :ref:`interfaces <exp_interfaces>`,
 packages and :ref:`hooks <exp_sdk_hooks>`.
 
@@ -48,7 +49,7 @@ Base image
 ----------
 
 The base is a supported OS image
-that is used as the foundation of the workshop.
+that is used as the basis for the workshop.
 Currently, it can be either
 :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04` or :samp:`ubuntu@24.04`.
 

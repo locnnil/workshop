@@ -25,7 +25,7 @@ details for a workshop, formatting them as YAML.  Specifically, it prints:
 Notes
 -----
 
-- Avoid assumptions based on SDK channels: ``latest/stable`` may be neither
+- Avoid assumptions based on SDK channels: :samp:`latest/stable` may be neither
 
 
 Global options

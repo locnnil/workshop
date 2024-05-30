@@ -85,6 +85,10 @@ button.sphinx-tabs-tab:hover {
     background-color: var(--color-sidebar-item-background--hover);
 }
 
+.highlight .hll {
+    background-color: var(--color-highlighted-background);
+}
+
 /** Custom classes to fix scrolling in tables by decreasing the
     font size or breaking certain columns.
     Specify the classes in the Markdown file with, for example:

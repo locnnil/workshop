@@ -3,18 +3,17 @@
 How to debug issues in workshops
 ================================
 
-To trace the condition of a misbehaving workshop,
-you can explore its underlying changes and tasks,
+To trace the root cause
+of a workshop misbehaving at :command:`refresh` or any other action,
+you can explore its underlying changes and tasks, stop on error,
 list system-wide warnings and acknowledge false positives.
-This may help identify the root cause
-if a :command:`refresh` or any other action fails.
 
 
 List workshop changes
 ---------------------
 
-Consider a workshop named :samp:`golang-volatile`
-that uses an unstable SDK
+Consider a workshop named :samp:`golang-volatile`,
+which uses an unstable SDK
 from the :samp:`latest/edge` channel:
 
 .. code-block:: yaml
@@ -33,9 +32,9 @@ Suppose something goes wrong during a :command:`refresh`:
 
    $ workshop refresh golang-volatile
 
-        Error: cannot perform the following tasks:
-        - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
-        Refresh aborted
+     Error: cannot perform the following tasks:
+     - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
+     Refresh aborted
 
 
 To investigate the failure,
@@ -45,37 +44,37 @@ list the *changes* in the workshop to find the one that failed:
 
    $ workshop changes
 
-       ID  Status  Spawn                Ready                Summary
-       ...
-       81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
+     ID  Status  Spawn                Ready                Summary
+     ...
+     81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
 
 
 List tasks in a change
 ----------------------
 
-When the problematic change is found,
+When you have found the problematic change,
 list its *tasks* to see the cause:
 
 .. code-block:: console
 
    $ workshop tasks 81
 
-       ID    Status  Spawn                Ready                Summary
-       ...
-       1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
+     ID    Status  Spawn                Ready                Summary
+     ...
+     1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
 
-       ......................................................................
-       Run hook "save-state" for "go" SDK
+     ......................................................................
+     Run hook "save-state" for "go" SDK
 
-       2023-07-24T12:17:37+12:00 INFO latest/beta save-state: preserving ~/.config/pretrained-config.conf
-       ......................................................................
-       Run hook "setup-base" for "go" SDK
-       ...
-       Traceback (most recent call last):
-           File "<string>", line 1, in <module>
-           File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
-               from .tensorrt import *
-       ModuleNotFoundError: No module named 'tensorrt.tensorrt'
+     2023-07-24T12:17:37+12:00 INFO latest/beta save-state: preserving ~/.config/pretrained-config.conf
+     ......................................................................
+     Run hook "setup-base" for "go" SDK
+     ...
+     Traceback (most recent call last):
+         File "<string>", line 1, in <module>
+         File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
+             from .tensorrt import *
+     ModuleNotFoundError: No module named 'tensorrt.tensorrt'
 
 The SDK-specific reason can be addressed individually.
 
@@ -92,26 +91,26 @@ instead of reverting the workshop to its previous state,
 
    $ workshop refresh --wait-on-error golang-volatile
 
-         Error: cannot perform the following tasks:
-         - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
-         Refresh aborted
+     Error: cannot perform the following tasks:
+     - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
+     Refresh aborted
 
 
-Next, you can open a shell into the workshop to debug and potentially fix it:
+Next, you can shell into the workshop to debug and possibly fix it:
 
 .. code-block:: console
 
    $ workshop shell golang-volatile
 
 
-If the issue is resolved, you can resume the refresh process:
+On success, you can resume the refresh process:
 
 .. code-block:: console
 
    $ workshop refresh --continue golang-volatile
 
 
-Otherwise, revert the changes with the :option:`!--abort` option:
+Otherwise, undo the changes with the :option:`!--abort` option:
 
 .. code-block:: console
 
@@ -119,28 +118,28 @@ Otherwise, revert the changes with the :option:`!--abort` option:
 
 
 The effect will be the same as if you hadn't used :option:`!--wait-on-error`:
-the workshop will be reverted to its previous state.
+the workshop will revert to its previous state.
 
 
 List and suppress warnings
 --------------------------
 
-Occasionally, |project_markup| encounters non-blocking or transient issues,
+|project_markup| occasionally encounters non-blocking or transient problems,
 such as broken mount points.
-As such, they are registered as *warnings* in a system-wide log
-that can be accessed with :command:`workshop warnings`:
+These are registered as *warnings* in a system-wide log,
+which can be accessed with :command:`workshop warnings`:
 
 .. code-block:: console
 
    $ workshop warnings
 
-       last-occurrence:  4 days ago, at 17:52 GMT
-       warning: |
-         golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
+     last-occurrence:  4 days ago, at 17:52 GMT
+     warning: |
+       golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
 
 
-Multiple warnings reporting one issue aren't stacked;
-only their first and last occurrences are recorded.
+Multiple warnings about the same problem aren't stacked;
+only their first and last occurrences are logged.
 You can suppress listed warnings with :command:`workshop okay` to ignore them:
 
 .. code-block:: console

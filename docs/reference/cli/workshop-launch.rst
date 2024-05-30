@@ -30,7 +30,9 @@ Notes
 
 - Names listed as arguments must match
   respective :code:`name:` values in definitions
+
 - To update an existing workshop, use :ref:`ref_workshop_refresh` instead
+
 - SDKs are installed in alphabetical order
 
 

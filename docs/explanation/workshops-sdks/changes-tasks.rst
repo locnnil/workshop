@@ -5,26 +5,26 @@
 Changes, tasks
 ==============
 
-A *change* is the core concept of the workshop state management system.
+A *change* is a core concept of the workshop state management system.
 Any long-running or invasive operation
 (e.g. :ref:`launch <ref_workshop_launch>`)
 that changes the state of a workshop
 is planned and applied as a change,
-which comprises specific tasks
+which consists of specific tasks
 that run in a predefined order.
 
 A *task* is a small, independent piece of logic;
-it can be mounting a project directory,
+it could be mounting a project directory,
 running a :ref:`hook <exp_sdk_hooks>`
 or starting a workshop container.
 Most tasks are reversible.
 
-Overall, this scheme enables granular control
+Overall, this scheme provides granular control
 over the state of a workshop;
 the state management system uses it
-to ensure the integrity of the workshop on errors.
-By default, a failed change reverts the workshop
-to the last operational state.
+to ensure the integrity of the workshop in the event of failure.
+By default, a failed change restores the workshop
+to its last operational state.
 
 
 See also
@@ -44,4 +44,5 @@ Reference:
 
 - :ref:`ref_workshop_changes`
 - :ref:`ref_workshop_launch`
-
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_tasks`

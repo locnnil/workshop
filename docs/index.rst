@@ -88,12 +88,12 @@ to handle the low-level details that make the magic happen;
 it also follows the tooling paradigm exemplified by
 `Snap <https://snapcraft.io/docs/>`_.
 
-Come and talk to us if you have a project in AI/ML, robotics or any other area
+Talk to us if you have a project in AI/ML, robotics or any other field
 where setting up an environment is a daily or weekly activity
 that can easily shave hours off your schedule.
-Share with us the frustrating parts of your experience,
-and we'll see what |project_markup| can do.
-Let us know if you have an SDK or a framework you’d like to try with |project_markup|:
+Tell us about the frustrating parts of your experience,
+and we'll see what |project_markup| can do for you.
+Let us know if you have an SDK or framework to try with |project_markup|:
 we'll help you get it out there.
 
 

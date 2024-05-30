@@ -14,9 +14,9 @@ under the :samp:`latest/edge` channel.
 .. note::
 
    This guide assumes that you already have |project_markup|
-   :ref:`installed <tutorial>` and know your way around it.
+   :ref:`installed <tutorial>` and know how to use it.
    Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
-   so we'll use its
+   so we'll use their
    `tutorials
    <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html>`_;
    adapt these steps for other distributions as needed.
@@ -25,8 +25,8 @@ under the :samp:`latest/edge` channel.
 Get the sources ready
 ---------------------
 
-For demonstration,
-let's use the ROS 2 examples.
+Let's use the ROS 2 examples
+for the demonstration.
 Choose a project directory
 and
 `clone
@@ -38,7 +38,7 @@ the repo there:
    $ git clone https://github.com/ros2/examples -b humble
 
 
-Note that we're using the :samp:`humble` branch to match the SDK we're using;
+Note that we're using the :samp:`humble` branch to match the chosen SDK;
 adjust that part if necessary.
 
 
@@ -46,8 +46,8 @@ Create the workshop
 -------------------
 
 To define a workshop enabled for ROS 2,
-save this file in the project directory
-beside the sources:
+put this file in the project directory
+next to the sources:
 
 .. code-block:: yaml
    :caption: .workshop.ros2-humble.yaml
@@ -62,7 +62,7 @@ beside the sources:
 Here, :samp:`base` must be the same as the SDK base,
 and :samp:`channel` should be set to :samp:`latest/edge`.
 
-You project directory should look like this now:
+Your project directory should now look like this:
 
 .. code-block:: console
 
@@ -83,7 +83,7 @@ All set, so launch the workshop:
    The ROS 2 environment is prepared and
    `sourced <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html#source-ros-2-environment>`_
    by the SDK when the workshop is launched;
-   the SDK traverses the sources in the project directory
+   the SDK scans the sources in the project directory
    for extra dependencies and installs them as needed.
 
 
@@ -103,12 +103,12 @@ so open a shell and go there:
      examples
 
 
-Here's the :file:`examples/` directory that you've cloned.
+Here's the :file:`examples/` directory you cloned.
 
-The SDK already took care of installing and setting up the ROS environment,
-*including* your project's dependencies,
-so you can immediately proceed with the
-`build
+The SDK has already taken care of installing and setting up the ROS environment,
+*including* your project dependencies,
+so you can start
+`building
 <https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#build-the-workspace>`_:
 
 .. code-block:: console
@@ -128,7 +128,7 @@ the build artefacts can be found in the :file:`~/colcon/` directory:
 
 The SDK maps this directory to the host using the content interface,
 so the build cache can be persisted and reused
-after the workshop is stopped and started again, or even refreshed.
+after the workshop is stopped and restarted, or even refreshed.
 
 Try this for yourself:
 
@@ -141,9 +141,9 @@ Try this for yourself:
    workshop@ros2-humble-8584e57d$ colcon build
 
 
-This time, the build should finish much faster,
-even though :command:`refresh` rebuilds the workshop from scratch,
-pulling any potential SDK updates.
+This time, the build should be much quicker,
+although :command:`refresh` rebuilds the workshop from scratch,
+including any SDK updates.
 
 The host-mapped contents of the workshop can actually be seen
 in |project_markup|'s default content directory on the host
@@ -188,7 +188,7 @@ Let's review the advantages of using |project_markup| with the ROS 2 SDK:
   The SDK automates the installation of all prerequisites
   and reduces the inherent complexity of a ROS 2 installation.
 
-- **Saved time and resources**:
+- **Save time and resources**:
   The project is built in a host-mapped directory,
   so the build cache is preserved across workshop restarts and refreshes;
   the SDK also handles the mapping.

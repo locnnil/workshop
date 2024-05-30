@@ -28,6 +28,7 @@ Notes
 -----
 
 - Only successful changes display values in the *Ready* column
+
 - To investigate the details of a specific change,
   use :ref:`ref_workshop_tasks` instead
 

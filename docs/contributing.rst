@@ -68,14 +68,14 @@ This helps to understand the reasoning and collaborate better.
 Coding standards
 ~~~~~~~~~~~~~~~~
 
-- **Avoid nested conditions:**
+- **Avoid nested conditions**:
   Refrain from nesting conditions to enhance readability and maintainability.
 
-- **Eliminate dead code and redundant comments:**
+- **Eliminate dead code and redundant comments**:
   Remove unused or obsolete code and comments.
   This promotes a cleaner code base and reduces confusion.
 
-- **Normalise symmetries:**
+- **Normalise symmetries**:
   Handle identical operations consistently, using a uniform approach.
   This also improves consistency and readability.
 
@@ -103,22 +103,22 @@ follow a consistent pattern:
 Code structure
 ~~~~~~~~~~~~~~
 
-- **Check coupled code elements:**
+- **Check coupled code elements**:
   Verify that coupled code elements, files, and directories are adjacent.
   For instance, store test data close to the corresponding test code.
 
-- **Group variable declaration and initialisation:**
+- **Group variable declaration and initialisation**:
   Declare and initialise variables together
   to improve code organisation and readability.
 
-- **Divide large expressions:**
+- **Divide large expressions**:
   Break down large expressions
   into smaller self-explanatory parts.
   Use multiple variables if necessary
   to make the code more understandable
   and choose names to reflect their purpose.
 
-- **Use blank lines for logical separation:**
+- **Use blank lines for logical separation**:
   Insert a blank line between two logically distinct sections of code.
   This improves its structure and makes it easier to comprehend.
 
@@ -132,8 +132,8 @@ Workshop uses a ``go test``-compatible
 
 .. code-block:: console
 
-   $ go test ./...
-   $ go test -check.f <TestName|SuiteName>
+   go test ./...
+   go test -check.f <TestName|SuiteName>
 
 
 To run end-to-end tests and integration tests with
@@ -141,8 +141,8 @@ To run end-to-end tests and integration tests with
 
 .. code-block:: console
 
-   $ go install github.com/snapcore/spread/cmd/spread@latest
-   $ spread
+   go install github.com/snapcore/spread/cmd/spread@latest
+   spread
 
 .. note::
 
@@ -159,7 +159,7 @@ To build and run it at ``127.0.0.1:8000``:
 
 .. code-block:: console
 
-   $ make run
+   make run
 
 
 To suggest changes online, use the GitHub link in the footer of the page

@@ -44,6 +44,7 @@ Notes
 
 - To start a workshop before running commands in it,
   use :ref:`ref_workshop_start`
+
 - You can set the working directory, environment variables, user and group ID
   for running the command in the workshop; reasonable defaults are provided
 

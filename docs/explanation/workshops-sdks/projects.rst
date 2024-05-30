@@ -6,7 +6,7 @@ Projects
 ========
 
 Technically, a project is a directory
-that contains one or many workshop definitions.
+containing one workshop definition or more.
 
 To initialise a directory as a project,
 create a
@@ -14,12 +14,12 @@ create a
 in it
 and run :command:`workshop launch`.
 Launching a workshop from a project
-establishes the relationship between these two,
-which is required to actually start a workshop.
+establishes the relationship between the two
+that's required to actually start a workshop.
 
 When the workshop is then started with :command:`workshop start`,
-the project is mounted to it as :file:`/project/`,
-and the :command:`workshop stop` command unmounts it.
+the project directory is mounted to it as :file:`/project/`;
+conversely, the :command:`workshop stop` command unmounts it.
 
 .. note::
 
@@ -28,14 +28,15 @@ and the :command:`workshop stop` command unmounts it.
    that accepts a pathname to use as the project directory.
 
 External changes to the project are tracked by the |project_markup| daemon.
-Thus, if the project moved or copied,
-all workshops referencing it are updated
-so you can continue working uninterrupted.
+Thus, if the project is moved or copied,
+all workshops that reference it are updated,
+so you can continue working without interruption.
 
-If the project is deleted by external means,
-workshops still referencing it
+If the project is deleted by external means
+without first removing its workshops,
+any workshops that reference it
 enter the *Error* state;
-the only applicable command will be :command:`workshop remove`.
+the only command applicable to them is :command:`workshop remove`.
 
 
 See also
@@ -43,5 +44,18 @@ See also
 
 Explanation:
 
-- :ref:`exp_sdk`
 - :ref:`exp_workshop`
+- :ref:`exp_workshop_def`
+
+
+How-to guides:
+
+- :ref:`how_moving_projects`
+
+
+Reference:
+
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_remove`
+- :ref:`ref_workshop_start`
+- :ref:`ref_workshop_stop`

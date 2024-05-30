@@ -25,6 +25,7 @@ Notes
 
 - To start a workshop before running a terminal session,
   use :ref:`ref_workshop_start`
+
 - The subcommand is a shorthand for :ref:`ref_workshop_exec`;
   it launches the login shell for :samp:`workshop`,
   the default non-privileged user in a workshop

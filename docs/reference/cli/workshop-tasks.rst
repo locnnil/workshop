@@ -28,6 +28,7 @@ Notes
 -----
 
 - The command may print additional log details for tasks that store them
+
 - To investigate recent changes in a project,
   use :ref:`ref_workshop_changes` instead
 

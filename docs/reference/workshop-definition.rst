@@ -118,8 +118,7 @@ Explanation:
 - :ref:`exp_base`
 - :ref:`exp_workshop_def`
 
+
 Reference:
 
 - :ref:`ref_workshop_info`
-- :ref:`ref_workshop_launch`
-- :ref:`ref_workshop_refresh`

@@ -3,8 +3,8 @@
 Explanation
 ===========
 
-These detailed articles elaborate on various |project_markup| concepts
-and explain how they fit together.
+These in-depth articles explain various |project_markup| concepts
+and how they fit together.
 
 
 Interfaces
