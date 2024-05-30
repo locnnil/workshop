@@ -104,7 +104,7 @@ Currently, |project_markup| supports the following interfaces:
 
 - :ref:`content interface <exp_content_interface>` (auto-connected)
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
-- :ref:`SSH agent interface <exp_ssh_agent_interface>` (manually connected)
+- :ref:`SSH interface <exp_ssh_interface>` (manually connected)
 
 
 .. _exp_plugs_slots:
