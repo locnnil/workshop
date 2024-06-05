@@ -60,6 +60,11 @@ html_context = {
     # Change to the Mattermost channel you want to link to
     # (use an empty value if you don't want to link)
     "mattermost": "https://chat.canonical.com/canonical/channels/SDK",
+    # Change to the Matrix channel you want to link to
+    # (use an empty value if you don't want to link)
+    "matrix": "https://matrix.to/#/#documentation:ubuntu.com",
+    # Change to the GitHub URL for your project
+    # This is used, for example, to link to the source files and allow creating GitHub issues directly from the documentation.
     "github_url": "https://github.com/canonical/workshop",
     # Change to the branch for this version of the documentation
     "github_version": "main",
@@ -73,6 +78,10 @@ html_context = {
     # Controls the existence of Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
     "sequential_nav": "none",
+    # Controls if to display the contributors of a file or not
+    "display_contributors": True,
+    # Controls time frame for showing the contributors
+    "display_contributors_since": "",
 }
 
 # Dropping the variant selector snippet:
@@ -126,7 +135,7 @@ custom_linkcheck_anchors_ignore_for_url = []
 ## The following settings are appended to the default configuration.
 ## Use them to extend the default functionality.
 
-sys.path.append(os.path.abspath('.sphinx/exts'))
+sys.path.append(os.path.abspath(".sphinx/exts"))
 
 # Add custom Sphinx extensions as needed.
 # This array contains recommended extensions that should be used.
@@ -139,7 +148,7 @@ custom_extensions = [
     "canonical.related-links",
     "canonical.custom-rst-roles",
     "canonical.terminal-output",
-    "discoursetopic"
+    "discoursetopic",
 ]
 
 # Add custom required Python modules that must be added to the
@@ -170,6 +179,10 @@ custom_tags = []
 # file into each reST file).
 # custom_rst_epilog = ''
 
+# By default, the documentation includes a feedback button at the top.
+# You can disable it by setting the following configuration to True.
+disable_feedback_button = True
+
 # Link Python config variables to reST replacements via rst_prolog
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
 # (not so easy with reuse/substitutions.txt in default custom_rst_epilog)
@@ -180,9 +193,11 @@ rst_prolog = f"""
 .. |project| replace:: {project}
 """
 
-# By default, the documentation includes a feedback button at the top.
-# You can disable it by setting the following configuration to True.
-disable_feedback_button = False
+custom_rst_epilog = """
+.. include:: /reuse/links.txt
+.. include:: /reuse/substitutions.txt
+"""
+
 
 ############################################################
 ### Additional configuration
