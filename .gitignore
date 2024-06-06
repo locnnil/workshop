@@ -23,4 +23,3 @@ docs/.sphinx/styles/
 docs/__pycache__/
 package*.json
 docs/_build
-docs/.sphinx/exts/__pycache__/
