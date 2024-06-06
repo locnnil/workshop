@@ -1,9 +1,9 @@
-.. _exp_ssh_agent_interface:
+.. _exp_ssh_interface:
 
-SSH agent interface
-===================
+SSH interface
+=============
 
-The SSH agent interface
+The SSH interface
 provides access to the host system's SSH agent
 from inside the workshop,
 allowing it to securely use the host's SSH keys and configuration.
