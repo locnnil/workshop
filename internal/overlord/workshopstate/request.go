@@ -56,35 +56,61 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	}
 
 	taskset := make([]*state.TaskSet, 0, len(names))
+
 	for _, name := range names {
-		workshop, err := w.Workshop(ctx, name, projectId)
-		if workshop != nil {
+		file, err := project.WorkshopFile(name)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read %q file: %w", name, err)
+		}
+
+		_, err = w.Workshop(ctx, name, projectId)
+		if err == nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", name)
 		}
 		if !errors.Is(err, workshopbackend.ErrWorkshopNotFound) {
 			return nil, err
 		}
 
-		file, err := project.WorkshopFile(name)
+		res, err := w.launchStoreInfo(ctx, projectId, *file)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read %q file: %w", name, err)
+			return nil, err
 		}
-		tasks := launch(w.state, file, project)
+
+		sets := []sdk.Setup{}
+		for _, s := range res {
+			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+		}
+
+		tasks := launch(w.state, file, sets, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
 }
 
-func retrieveSdks(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
+func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshopbackend.WorkshopFile) ([]sdk.SdkResult, error) {
+	sto := sdk.StoreService(w.state)
+	acts := []sdk.SdkAction{}
+	for _, sd := range file.Sdks {
+		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
+		acts = append(acts, act)
+	}
+	res, err := sto.SdkAction(ctx, nil, acts)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	retrieve := state.NewTaskSet()
-	for _, sdk := range file.Sdks {
-		r := sdkstate.Retrieve(st, &sdk)
+	for _, s := range sdks {
+		r := sdkstate.Retrieve(st, s)
 		retrieve.AddTask(r)
 	}
 	return retrieve
 }
 
-func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSet *state.TaskSet) *state.TaskSet {
+func installSdks(st *state.State, workshop string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	var prevSetup *state.Task
 
@@ -94,7 +120,7 @@ func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSe
 	prevAuto := st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
 	prevAuto.Set("sdk", "agent")
 	autoConnectSet := state.NewTaskSet(prevAuto)
-	for idx, sdk := range file.Sdks {
+	for idx, sdk := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
 		// guarantee safety of concurrent installations
@@ -106,7 +132,7 @@ func installSdks(st *state.State, file *workshopbackend.WorkshopFile, retrieveSe
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.Hook(st, file.Name, sdk.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, workshop, sdk.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -156,16 +182,16 @@ func constructWorkshop(st *state.State, file *workshopbackend.WorkshopFile, proj
 	return state.NewTaskSet(create, mountProject, start)
 }
 
-func launch(st *state.State, file *workshopbackend.WorkshopFile, project *workshopbackend.Project) *state.TaskSet {
+func launch(st *state.State, file *workshopbackend.WorkshopFile, sdks []sdk.Setup, project *workshopbackend.Project) *state.TaskSet {
 	// check and download all the required SDKs
-	retrieve := retrieveSdks(st, file)
+	retrieve := retrieveSdks(st, sdks)
 
 	// create a basic workshop
 	create := constructWorkshop(st, file, project)
 	create.WaitAll(retrieve)
 
 	// launch the downloaded sdks
-	launch := installSdks(st, file, retrieve)
+	launch := installSdks(st, file.Name, sdks, retrieve)
 	launch.WaitAll(create)
 
 	// run a quick check health script (for every SDK, if present)
@@ -207,7 +233,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	}
 
 	files := make([]*workshopbackend.WorkshopFile, 0)
-	content := make([][]sdk.Setup, 0)
+	installedContent, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
 	for _, workshop := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshopbackend.Workshop) bool { return w.Name == workshop })
 		if idx == -1 {
@@ -218,10 +244,21 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 			return nil, err
 		}
 		files = append(files, file)
-		content = append(content, workshops[idx].Content())
+
+		res, err := w.launchStoreInfo(ctx, projectId, *file)
+		if err != nil {
+			return nil, err
+		}
+		newContent := []sdk.Setup{}
+		for _, s := range res {
+			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+		}
+
+		toInstall = append(toInstall, newContent)
+		installedContent = append(installedContent, workshops[idx].Content())
 	}
 
-	taskset, err := refreshMany(w.state, files, content, project)
+	taskset, err := refreshMany(w.state, files, installedContent, toInstall, project)
 	if err != nil {
 		return nil, err
 	}
@@ -233,12 +270,12 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, content [][]sdk.Setup,
-	project *workshopbackend.Project) ([]*state.TaskSet, error) {
+func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, installed [][]sdk.Setup,
+	toInstall [][]sdk.Setup, project *workshopbackend.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(files))
 
 	for i, file := range files {
-		tasks, err := refresh(st, file, content[i], project)
+		tasks, err := refresh(st, file, installed[i], toInstall[i], project)
 		if err != nil {
 			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", file, err)
 		}
@@ -273,25 +310,25 @@ func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, content
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.Setup, p *workshopbackend.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshopbackend.WorkshopFile, installed []sdk.Setup, newContent []sdk.Setup, p *workshopbackend.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
 	// 4. Launch the new workshop
 	// 5. Run restore state
 	// 6. Delete the old workshop
-	retrieve := retrieveSdks(st, file)
+	retrieve := retrieveSdks(st, newContent)
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	createStateStorage.WaitAll(retrieve)
 
 	// the saveStateHooks can be empty if the old SDKs were all removed in
 	// the new version of the workshop
-	saveStateHooks := saveStateHooks(st, file.Name, content, file.Sdks)
+	saveStateHooks := saveStateHooks(st, file.Name, installed, file.Sdks)
 	saveStateHooks.WaitFor(createStateStorage)
 
 	// disconnect and remove SDKs plugs and slots
-	disconnect := disconnectSdks(content, st)
+	disconnect := disconnectSdks(installed, st)
 	disconnect.WaitAll(saveStateHooks)
 	disconnect.WaitFor(createStateStorage)
 
@@ -307,13 +344,13 @@ func refresh(st *state.State, file *workshopbackend.WorkshopFile, content []sdk.
 
 	// install SDKs and run restore-state scripts. The restoreStateHooks can be
 	// empty if the old SDKs were all removed in the new version of the workshop
-	install := installSdks(st, file, retrieve)
+	install := installSdks(st, file.Name, newContent, retrieve)
 	install.WaitAll(launch)
 	launch.AddAll(install)
 
 	// note: restore-state list may be empty if there are no SDKs or
 	// old SDKs are all gone
-	restoreState := restoreStateHooks(st, file.Name, content, file.Sdks)
+	restoreState := restoreStateHooks(st, file.Name, installed, file.Sdks)
 	restoreState.WaitAll(install)
 	launch.AddAll(restoreState)
 

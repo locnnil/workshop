@@ -47,6 +47,8 @@ type Info struct {
 	Name      string
 	Base      string
 	Type      Type
+	Revision  int64
+	Channel   string
 
 	Plugs map[string]*PlugInfo
 	Slots map[string]*SlotInfo

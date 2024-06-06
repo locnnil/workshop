@@ -147,6 +147,11 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
+	setup, ok := w.content[sdkName]
+	if sdkName != sdk.Agent.String() && !ok {
+		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
+	}
+
 	wsfs, err := w.backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
@@ -169,6 +174,9 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	if err != nil {
 		return nil, err
 	}
+
+	info.Revision = setup.Revision
+	info.Channel = setup.Channel
 
 	return info, nil
 }

@@ -55,10 +55,10 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	st := task.State()
-	var sdk workshopbackend.SdkRecord
+	var rec sdk.Setup
 
 	st.Lock()
-	err = task.Get("sdk-record", &sdk)
+	err = task.Get("sdk-setup", &rec)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -68,18 +68,9 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	client := store.NewStoreClient()
+	client := store.New()
 
-	blob, err := client.RetrieveSdk(ctx, sdk.Name, sdk.Channel, dirs.SdkDir)
-	if err != nil {
-		return err
-	}
-
-	st.Lock()
-	task.Set("sdk-setup", blob)
-	st.Unlock()
-
-	return nil
+	return client.DownloadSdk(ctx, rec.Name, rec.Channel, rec.Filename())
 }
 
 func (m *SdkManager) undoRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {

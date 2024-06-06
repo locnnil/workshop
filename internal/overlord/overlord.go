@@ -27,6 +27,7 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
+	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -37,6 +38,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
@@ -162,6 +164,9 @@ func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.H
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
+
+	sto := store.New()
+	sdk.ReplaceStore(s, sto)
 
 	return o, nil
 }

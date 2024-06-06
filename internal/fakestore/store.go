@@ -19,92 +19,148 @@ var (
 	ErrNoRefreshAvailable = errors.New("SDK has no update available")
 )
 
-type StoreAction int
+var storeSdkInfo = storeSdkInfoImpl
 
-const (
-	Refresh StoreAction = iota
-)
-
-func (s StoreAction) String() string {
-	return [...]string{"refresh"}[s]
+func New() *GcsStore {
+	return &GcsStore{}
 }
 
-type StoreResult struct {
-	Sdks         []*sdk.Info
-	ActionErrors map[string]error
+type GcsStore struct {
 }
 
-type StoreClient interface {
-	RetrieveSdk(ctx context.Context, name, channel, localSdkDir string) (sdk.Setup, error)
+type storeSdk struct {
+	Name     string `json:"name"`
+	Channel  string `json:"channel"`
+	Revision int64  `json:"revision"`
+	SdkYAML  string `json:"sdk-yaml"`
 }
 
-func NewStoreClient() StoreClient {
-	return &ObjectStoreClient{}
+type SdkActionError struct {
+	// maps an SDK name to an error
+	errors map[string]error
 }
 
-type ObjectStoreClient struct {
+func (e SdkActionError) Error() string {
+	errorMsg := []string{}
+
+	for _, e := range e.errors {
+		errorMsg = append(errorMsg, e.Error())
+	}
+	return strings.Join(errorMsg, "\n")
 }
 
 func storeConnect(ctx context.Context) (*storage.Client, error) {
+	opt := option.WithoutAuthentication()
 	if url := os.Getenv("SDK_STORE_URL"); url != "" { // Set STORAGE_EMULATOR_HOST environment variable for GSC.
 		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:8080")
 		if err != nil {
 			return nil, err
 		}
-		client, err := storage.NewClient(ctx,
-			option.WithEndpoint(url))
-		return client, err
+		opt = option.WithEndpoint(url)
 	}
-	client, err := storage.NewClient(ctx, option.WithoutAuthentication())
-	return client, err
+	return storage.NewClient(ctx, opt)
 }
 
-func (c *ObjectStoreClient) RetrieveSdk(ctx context.Context, name, channel, localSdkDir string) (sdk.Setup, error) {
-	var track, risk string
-	var s sdk.Setup
-	var revision int64
-
-	if sa := strings.Split(channel, "/"); len(sa) != 2 {
-		return s, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
-	} else {
-		track, risk = sa[0], sa[1]
+func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+	results := []sdk.SdkResult{}
+	actError := &SdkActionError{
+		errors: make(map[string]error),
 	}
-
-	if client, err := storeConnect(ctx); err != nil {
-		return s, err
-	} else {
-		bkt := client.Bucket("sdk-store")
-		defer client.Close()
-		var obj *storage.ObjectHandle = bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
-		if atr, err := obj.Attrs(ctx); err != nil {
-			return s, err
-		} else {
-			// A simple modulo to keep revision numbers in a readble form for testing
-			revision = atr.Generation % 1000
-		}
-
-		if r, err := obj.NewReader(ctx); err != nil {
-			return s, err
-		} else {
-			defer r.Close()
-
-			s.Name = name
-			s.Channel = channel
-			s.Revision = revision
-			if !osutil.FileExists(s.Filename()) {
-				file, err := os.Create(s.Filename())
-				if err != nil {
-					return s, err
-				}
-				defer file.Close()
-
-				if _, err = io.Copy(file, r); err != nil {
-					return s, err
-				}
+	for _, act := range actions {
+		switch act.Action {
+		case sdk.Install:
+			s, err := storeSdkInfo(ctx, act.Name, act.Channel)
+			if err != nil {
+				actError.errors[act.Name] = err
+				continue
 			}
 
+			info := &sdk.Info{}
+			info, err = sdk.ReadSdkInfo([]byte(s.SdkYAML), act.ProjectId, act.Workshop)
+			if err != nil {
+				actError.errors[act.Name] = err
+				continue
+			}
+			info.Name = s.Name
+			info.Revision = s.Revision
+			info.Channel = s.Channel
+
+			results = append(results, sdk.SdkResult{info})
+		default:
+			return nil, fmt.Errorf("unknown SDK store action")
 		}
 	}
 
-	return s, nil
+	if len(actError.errors) > 0 {
+		return results, actError
+	}
+
+	return results, nil
+}
+
+func (c *GcsStore) DownloadSdk(ctx context.Context, name, channel string, target string) error {
+	client, err := storeConnect(ctx)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	var sa = strings.Split(channel, "/")
+	if len(sa) != 2 {
+		return fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
+	}
+	track, risk := sa[0], sa[1]
+
+	bkt := client.Bucket("sdk-store")
+	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
+	r, err := obj.NewReader(ctx)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	if !osutil.FileExists(target) {
+		file, err := os.Create(target)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		if _, err = io.Copy(file, r); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, error) {
+	var sSdk storeSdk
+	client, err := storeConnect(ctx)
+	if err != nil {
+		return sSdk, err
+	}
+	defer client.Close()
+	bkt := client.Bucket("sdk-store")
+
+	var sa = strings.Split(channel, "/")
+	if len(sa) != 2 {
+		return sSdk, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
+	}
+	track, risk := sa[0], sa[1]
+	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
+	atr, err := obj.Attrs(ctx)
+	if err != nil {
+		return sSdk, err
+	}
+	sSdk.Name = name
+	sSdk.Channel = channel
+	// A simple modulo to keep revision numbers in a readable form for testing
+	sSdk.Revision = atr.Generation % 1000
+	if _, ok := atr.Metadata["sdk-yaml"]; !ok {
+		return sSdk, fmt.Errorf("SDK %q does not have metadata", name)
+	}
+	sSdk.SdkYAML = atr.Metadata["sdk-yaml"]
+
+	return sSdk, nil
 }

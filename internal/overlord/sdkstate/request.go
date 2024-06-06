@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
-func Retrieve(st *state.State, sdk *workshopbackend.SdkRecord) *state.Task {
-	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve %q SDK from channel %q", sdk.Name, sdk.Channel))
-	download.Set("sdk-record", sdk)
+func Retrieve(st *state.State, s sdk.Setup) *state.Task {
+	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve %q SDK from channel %q", s.Name, s.Channel))
+	download.Set("sdk-setup", s)
 	return download
 }
 
