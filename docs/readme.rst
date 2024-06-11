@@ -5,7 +5,7 @@ Workshop
    :target: https://canonical-workshop.readthedocs-hosted.com/en/latest/?badge=latest
    :alt: Documentation Status
 
-**A tool for defining and managing complex development environments**.
+**A tool for defining and managing ephemeral development environments**.
 
 
 Getting Started
