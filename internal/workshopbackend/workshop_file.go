@@ -12,16 +12,16 @@ import (
 )
 
 type SdkRecord struct {
-	Name    string `json:"name"`
-	Channel string `json:"channel"`
+	Name    string `yaml:"name"`
+	Channel string `yaml:"channel"`
 }
 
 type SdkList []SdkRecord
 
 type WorkshopFile struct {
-	Name string `yaml:"name" json:"name"`
-	Base string `yaml:"base" json:"base"`
-	Sdks SdkList
+	Name string  `yaml:"name"`
+	Base string  `yaml:"base"`
+	Sdks SdkList `yaml:"sdks,omitempty"`
 }
 
 func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
@@ -46,9 +46,6 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-	slices.SortFunc(*p, func(a, b SdkRecord) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
 	return nil
 }
 
@@ -64,6 +61,10 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 	if err = yaml.Unmarshal(buf, &file); err != nil {
 		return nil, err
 	}
+
+	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
 
 	// Validate workshop properties
 	if !sdk.ValidName.MatchString(file.Name) {

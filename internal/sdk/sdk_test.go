@@ -22,12 +22,12 @@ func TestSdkSuite(t *testing.T) { check.TestingT(t) }
 
 func (s *SdkSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
-
+	t := time.Now()
 	s.setup = sdk.Setup{
 		Name:        "sdk",
 		Channel:     "latest/stable",
 		Revision:    1,
-		InstallTime: time.Now(),
+		InstallTime: &t,
 	}
 
 	s.projectId = "prj42prj42"

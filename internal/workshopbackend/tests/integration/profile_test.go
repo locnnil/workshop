@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	lxd "github.com/canonical/lxd/client"
-	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
@@ -38,14 +37,10 @@ func (f *profileTest) SetUpSuite(c *check.C) {
 
 	f.be = &workshopbackend.LxdBackend{}
 	f.client, _ = f.be.(*workshopbackend.LxdBackend).LxdClient(f.ctx)
-	err := f.client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
-	c.Assert(err, check.IsNil)
 }
 
 func (f *profileTest) TearDownSuite(c *check.C) {
 	f.client, _ = f.be.(*workshopbackend.LxdBackend).LxdClient(f.ctx)
-	err := f.client.DeleteStoragePool("testZfsProfile")
-	c.Check(err, check.IsNil)
 }
 
 func (f *profileTest) SetUpTest(c *check.C) {

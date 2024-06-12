@@ -11,7 +11,6 @@ import (
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
-	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
@@ -96,9 +95,6 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 
 	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
 
-	err = f.lxdClient.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
-	c.Assert(err, check.IsNil)
-
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshopbackend.NewProjectId)
@@ -110,8 +106,6 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	err := f.be.RemoveWorkshop(f.ctx, "test")
 	c.Check(err, check.IsNil)
 	err = f.daemon.Stop(nil)
-	c.Check(err, check.IsNil)
-	err = f.lxdClient.DeleteStoragePool("testZfsProfile")
 	c.Check(err, check.IsNil)
 	f.lookupUserRestore()
 	f.lookupUserIdRestore()

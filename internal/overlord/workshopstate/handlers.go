@@ -63,9 +63,9 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	var base string
+	var wf workshopbackend.WorkshopFile
 	st.Lock()
-	err = task.Get("base", &base)
+	err = task.Get("workshop-file", &wf)
 	st.Unlock()
 
 	if err != nil {
@@ -74,7 +74,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 
 	var rev revert.Reverter
 	defer rev.Fail()
-	if err = m.backend.LaunchWorkshop(ctx, workshop, base); err != nil {
+	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	}
 	defer wfs.Close()
 
-	if err = m.installAgentSdk(wfs, base); err != nil {
+	if err = m.installAgentSdk(wfs, wf.Base); err != nil {
 		return err
 	}
 	rev.Success()

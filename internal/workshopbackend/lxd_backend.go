@@ -15,6 +15,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slices"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
@@ -95,7 +96,7 @@ func New() (WorkshopBackend, error) {
 	return &server, nil
 }
 
-func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) error {
+func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
@@ -117,18 +118,18 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) erro
 	}
 
 	/* Skip if the instance exists already */
-	if _, _, err := conn.GetInstance(InstanceName(name, projectId)); err == nil {
-		return fmt.Errorf("workshop \"%s\" already exists", name)
+	if _, _, err := conn.GetInstance(InstanceName(file.Name, projectId)); err == nil {
+		return fmt.Errorf("workshop \"%s\" already exists", file.Name)
 	}
 
 	/* Check if we have the base image stored locally */
-	if alias, _, err := conn.GetImageAlias(base); err == nil {
+	if alias, _, err := conn.GetImageAlias(file.Base); err == nil {
 		if image, _, err = conn.GetImage(alias.Target); err != nil {
 			return err
 		}
 		imageSrv = conn
 	} else {
-		imageSrv, image, err = s.fetchRemoteImage(base)
+		imageSrv, image, err = s.fetchRemoteImage(file.Base)
 		if err != nil {
 			return err
 		}
@@ -139,12 +140,16 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) erro
 		return err
 	}
 
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file)
+	if err != nil {
+		return err
+	}
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices: defaultDevices(),
-			Config:  s.defaultConfig(projectId, usr.Uid, usr.Gid),
+			Config:  config,
 		},
-		Name: InstanceName(name, projectId),
+		Name: InstanceName(file.Name, projectId),
 		Type: api.InstanceType("container"),
 		Source: api.InstanceSource{
 			Type:        "image",
@@ -161,12 +166,12 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, name, base string) erro
 		return err
 	}
 
-	_, _, err = conn.GetImageAlias(base)
+	_, _, err = conn.GetImageAlias(file.Base)
 	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
 		return err
 	} else if api.StatusErrorCheck(err, http.StatusNotFound) {
 		if err = conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
-			Name: base,
+			Name: file.Base,
 			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
 				Target: image.Fingerprint,
 			},
@@ -478,35 +483,23 @@ func installedContent(lxdConfig map[string]string) (map[string]sdk.Setup, error)
 }
 
 func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
-	var err error
-	var running bool
-
-	name := WorkshopName(inst.Name)
-
-	if inst.StatusCode == api.Running || inst.StatusCode == api.Ready {
-		running = true
-	}
-
 	base := inst.Config["image.os"] + "@" + inst.Config["image.version"]
-	if base == "" {
-		base = "unknown"
-	}
-
-	var workshop = &Workshop{
-		backend: s,
-		project: p,
-		Name:    name,
-		running: running,
-		base:    base,
-		devices: inst.Devices,
-	}
 
 	// Fetch information about the installed SDKs
-	workshop.content, err = installedContent(inst.Config)
+	content, err := installedContent(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: installed SDK content is not readable: %v", err)
 	}
-	return workshop, nil
+
+	return &Workshop{
+		Name:    WorkshopName(inst.Name),
+		backend: s,
+		project: p,
+		running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		base:    base,
+		devices: inst.Devices,
+		content: content,
+	}, nil
 }
 
 func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkshopConfigFilter) ([]api.Instance, error) {
@@ -716,7 +709,7 @@ func createDefaultDevices() map[string]map[string]string {
 	}
 }
 
-func (s *LxdBackend) defaultConfig(projectId string, userid, groupid string) map[string]string {
+func (s *LxdBackend) workshopConfig(projectId string, userid, groupid string, file *WorkshopFile) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -726,11 +719,18 @@ users:
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
 `
+
+	workshopFile, err := yaml.Marshal(file)
+	if err != nil {
+		return map[string]string{}, nil
+	}
+
 	cfg := map[string]string{
 		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
 		"security.nesting":         "true",
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
+		"user.workshop.file":       string(workshopFile),
 	}
 
 	if s.nvidiaRuntime {
@@ -739,7 +739,7 @@ users:
 		cfg["nvidia.driver.capabilities"] = "all"
 		cfg["nvidia.runtime"] = "true"
 	}
-	return cfg
+	return cfg, nil
 }
 
 func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {

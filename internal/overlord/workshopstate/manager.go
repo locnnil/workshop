@@ -125,7 +125,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 	}
 
 	// check if the workshop file exists
-	if _, err := ws.File(); err != nil {
+	if _, err := ws.Project().WorkshopFile(ws.Name); err != nil {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-file"
 		return healthState

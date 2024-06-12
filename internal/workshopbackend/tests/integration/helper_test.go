@@ -20,7 +20,7 @@ var minimalImageServer = "https://cloud-images.ubuntu.com/minimal/releases/"
 
 func defaultTestDevices() map[string]map[string]string {
 	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "testZfsProfile", "path": "/"},
+		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 	}
 }
@@ -94,13 +94,13 @@ func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.Work
 
 	var err error
 
-	os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@22.04
-`), 0644)
+	wf := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
+base: ubuntu@22.04`), 0644), check.IsNil)
 
 	_, _, err = be.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
-	err = be.LaunchWorkshop(ctx, "test", "ubuntu@22.04")
+	err = be.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	err = be.StartWorkshop(ctx, "test")
 	c.Assert(err, check.IsNil)

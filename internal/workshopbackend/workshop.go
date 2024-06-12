@@ -13,28 +13,20 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
-
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 var InstallTimeNow = time.Now
 
-func NewWorkshop(backend WorkshopBackend, project *Project, name string) *Workshop {
-	return &Workshop{
-		Name:    name,
-		project: project,
-		backend: backend,
-	}
-}
-
 type Workshop struct {
+	Name string
+
 	backend WorkshopBackend
 	project *Project
 	base    string
-	Name    string
 	devices map[string]map[string]string
 	content map[string]sdk.Setup
 	running bool
@@ -56,21 +48,12 @@ func (w *Workshop) Project() *Project {
 	return w.project
 }
 
-func (w *Workshop) File() (*WorkshopFile, error) {
-	return w.project.WorkshopFile(w.Name)
-}
-
-func (w *Workshop) Content() []sdk.Setup {
-	content := maps.Values(w.content)
-	slices.SortFunc(content, func(a, b sdk.Setup) int { return cmp.Compare(a.Name, b.Name) })
-	return content
-}
-
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
 // the SDK to the workshop content. This method is idempotent, so if an SDK
 // existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	s.InstallTime = InstallTimeNow()
+	now := InstallTimeNow()
+	s.InstallTime = &now
 	w.content[s.Name] = s
 
 	sequenceValue, err := json.Marshal(w.content)
@@ -156,12 +139,7 @@ func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
 }
 
-// Reads information about the installed SDK from its meta file
-
-// NOTE: we have to accept the filesystem as an argument to ensure it is the
-// callers responsibility to get and close the filesystem due to the LXD's bug:
-// if the filesystem of the container is not closed, it maintains the underlying
-// SFTP connection which stops the container from stoppping.
+// Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
 	projectId, ok := ctx.Value(ContextProjectId).(string)
 	if !ok {
@@ -194,6 +172,15 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	return info, nil
 }
 
+// Returns a list of installed SDKs.
+func (w *Workshop) Content() []sdk.Setup {
+	content := maps.Values(w.content)
+	slices.SortFunc(content, func(a, b sdk.Setup) int { return cmp.Compare(a.Name, b.Name) })
+	return content
+}
+
+// Returns a list of SDK info for installed SDKs. The info includes SDK details
+// parsed from its sdk.yaml, such as base, plugs, slots, etc.
 func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	var infos = make([]*sdk.Info, 0, len(w.content))
 	for _, sdk := range w.content {

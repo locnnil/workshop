@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 
 	"github.com/canonical/x-go/strutil"
 	"gopkg.in/check.v1"
@@ -36,6 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 // Tests for GET /v1/connections
@@ -64,14 +63,8 @@ slots:
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, workshop string) {
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, workshop)
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
-	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, workshop)), []byte(fmt.Sprintf(`name: %s
-base: ubuntu@20.04
-sdks:
-  %s:
-    channel: latest/stable
-`, workshop, info.Name)), 0644)
-	c.Assert(err, check.IsNil)
-	c.Assert(s.b.LaunchWorkshop(s.ctx, workshop, "ubuntu@20.04"), check.IsNil)
+	wf := &workshopbackend.WorkshopFile{Name: workshop, Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
+	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
 }
 
 func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string, connsState map[string]interface{}, repoConnected []string, expected map[string]interface{}) {

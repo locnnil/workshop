@@ -149,9 +149,8 @@ type WorkshopBackend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
 
-	// Launch a barebone workshop instance using the base provided. The
-	// supported bases are ubuntu@20.04 and ubuntu@22.04.
-	LaunchWorkshop(ctx context.Context, name, base string) error
+	// Launch a barebone workshop instance using the base provided.
+	LaunchWorkshop(ctx context.Context, file *WorkshopFile) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

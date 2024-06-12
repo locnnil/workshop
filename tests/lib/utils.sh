@@ -3,10 +3,15 @@
 # Install and uninstall workshopd
 
 function prepare_environment() {
+  systemctl unmask snapd.service
+  systemctl start snapd.service
+  
   snap install go --classic
-
+  
   snap install lxd --classic
-  lxd init --auto --storage-backend zfs
+  snap refresh lxd --channel=latest/stable
+  
+  lxd init --auto
   
   snap install yq
   apt install jq -y --no-install-recommends
@@ -32,7 +37,7 @@ function start_sdk_store() {
 
   echo "Waiting for the fake SDK store to start on port 8080..."
   while ! nc -z localhost 8080; do
-    sleep 0.1
+    sleep 2
   done
 }
 

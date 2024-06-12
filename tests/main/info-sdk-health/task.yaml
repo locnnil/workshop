@@ -2,6 +2,7 @@ summary: |
   Check 'workshop info' SDK health reporting
   
 prepare: |
+  sudo apt-add-repository universe
   apt install expect -y --no-install-recommends
 
 restore: |

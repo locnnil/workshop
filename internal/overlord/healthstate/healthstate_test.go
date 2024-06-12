@@ -19,8 +19,6 @@ package healthstate_test
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -99,14 +97,8 @@ func ensureTaskHealthIsSet(t *state.Task, expected *healthstate.HealthCheck, c *
 }
 
 func (s *healthSuite) launchWorkshop(c *check.C, newsdk string, createHealthCheck bool) {
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04
-sdks:
-  one:
-    channel: latest/stable
-`), 0644)
-	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)

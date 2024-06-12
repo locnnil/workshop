@@ -9,7 +9,6 @@ import (
 	"os/user"
 
 	lxd "github.com/canonical/lxd/client"
-	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
@@ -111,17 +110,9 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	f.username = "testuser"
 	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
 	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
-	ctx := createTestContext(f.username, "42424242")
-	be := &workshopbackend.LxdBackend{}
-	client, err := be.LxdClient(ctx)
-	c.Assert(err, check.IsNil)
-	err = client.CreateStoragePool(api.StoragePoolsPost{StoragePoolPut: api.StoragePoolPut{Config: map[string]string{"volume.size": "1GiB"}}, Name: "testZfsProfile", Driver: "zfs"})
-	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TearDownSuite(c *check.C) {
-	err := f.lxdClient.DeleteStoragePool("testZfsProfile")
-	c.Check(err, check.IsNil)
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
 	f.restoreDevices()
@@ -203,7 +194,8 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
+	wf := &workshopbackend.WorkshopFile{Name: "test-1", Base: "ubuntu@20.04"}
+	err := f.be.LaunchWorkshop(f.ctx, wf)
 	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 
@@ -225,7 +217,8 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 
 func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 	// Setup
-	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
+	wf := &workshopbackend.WorkshopFile{Name: "test-1", Base: "ubuntu@20.04"}
+	err := f.be.LaunchWorkshop(f.ctx, wf)
 	c.Assert(err, check.IsNil)
 	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 
@@ -270,7 +263,8 @@ func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
-	err := f.be.LaunchWorkshop(f.ctx, "test-1", "ubuntu@22.04")
+	wf := &workshopbackend.WorkshopFile{Name: "test-1", Base: "ubuntu@22.04"}
+	err := f.be.LaunchWorkshop(f.ctx, wf)
 	c.Assert(err, check.IsNil)
 	err = f.be.StartWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
