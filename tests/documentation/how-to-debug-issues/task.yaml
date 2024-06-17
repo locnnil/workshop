@@ -1,9 +1,4 @@
 summary: Test 'How to debug issues in workshops' to ensure it's operational
-
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-
 execute: |
   . "$TESTSLIB"/utils.sh
   

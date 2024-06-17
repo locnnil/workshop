@@ -1,62 +1,56 @@
 summary: Check content interface scenarios
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
 execute: |
   . "$TESTSLIB"/utils.sh
     
-  function validate_plugs() {
+  function validate_plug_mounts() {
     test -d "$source_one"
     test -d "$source_two"
-    workshop_exec exec --project $project ws -- bash -c "test -d /home/workshop"
-    workshop_exec exec --project $project ws -- bash -c "test -d /opt"
-    workshop_exec exec --project $project ws -- bash -c "touch /home/workshop/output"
+    workshop_exec exec ws -- bash -c "test -d /home/workshop"
+    workshop_exec exec ws -- bash -c "test -d /opt"
+    workshop_exec exec ws -- bash -c "touch /home/workshop/output"
     test -f "$source_one"/output
   }
   
   echo "Check the content interface plug can be installed and auto-connected"
-  project=$(pwd)
-  workshop_exec launch --project $project ws
+  workshop_exec launch ws
   
-  project_id=$(cat "$project"/.workshop.lock)
-  workshop_exec --project $project changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  project_id=$(cat .workshop.lock)
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
   
   source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-one.sdk"
   source_two="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws_test-sdk-content_content-plug-two.sdk"
-  validate_plugs
+  validate_plug_mounts
 
   echo "Check the content interface plugs auto-reconnected after refresh"
-  workshop_exec refresh --project $project ws
-  validate_plugs
+  workshop_exec refresh ws
+  validate_plug_mounts
   
   echo "Check the content interface plugs auto-reconnected if refresh fails"
-  sed -i 's/test-sdk-content/test-sdk-fail/g' $project/.workshop.ws.yaml
-  workshop_exec refresh --project $project ws || true
-  sed -i 's/test-sdk-fail/test-sdk-content/g' $project/.workshop.ws.yaml
-  validate_plugs
+  sed -i 's/test-sdk-content/test-sdk-fail/g' .workshop.ws.yaml
+  workshop_exec refresh ws || true
+  sed -i 's/test-sdk-fail/test-sdk-content/g' .workshop.ws.yaml
+  validate_plug_mounts
   
   echo "Check the content interface slots cannot be installed by a workshop"
-  sed -i 's/test-sdk-content/test-sdk-content-broken/g' $project/.workshop.ws.yaml
-  workshop_exec refresh --project $project ws 2>&1 | MATCH ".*installation not allowed by \"one\" slot rule of interface \"content\".*"
-  sed -i 's/test-sdk-content-broken/test-sdk-content/g' $project/.workshop.ws.yaml
-  validate_plugs
+  sed -i 's/test-sdk-content/test-sdk-content-broken/g' .workshop.ws.yaml
+  workshop_exec refresh ws 2>&1 | MATCH ".*installation not allowed by \"one\" slot rule of interface \"content\".*"
+  sed -i 's/test-sdk-content-broken/test-sdk-content/g' .workshop.ws.yaml
+  validate_plug_mounts
   
   echo "Check the content interface plugs removed after refresh if they don't exist anymore"
-  sed -i 's/test-sdk-content/test-sdk-basic/g' $project/.workshop.ws.yaml
-  workshop_exec refresh --project $project ws
-  sed -i 's/test-sdk-basic/test-sdk-content/g' $project/.workshop.ws.yaml
+  sed -i 's/test-sdk-content/test-sdk-basic/g' .workshop.ws.yaml
+  workshop_exec refresh ws
+  sed -i 's/test-sdk-basic/test-sdk-content/g' .workshop.ws.yaml
   # no bind mounts in the workshop after refresh
-  workshop_exec exec --project $project ws -- bash -c "test ! -d /home/workshop/one"
-  workshop_exec exec --project $project ws -- bash -c "test ! -d /two"
+  workshop_exec exec ws -- bash -c "test ! -d /home/workshop/one"
+  workshop_exec exec ws -- bash -c "test ! -d /two"
   # the source directory shall still exist after refresh
   test -d "$source_one"
   test -d "$source_two"
   
   echo "Check remove will also clean up the default content interface host locations"
-  workshop_exec remove --project $project ws
+  workshop_exec remove ws
   test ! -d "$source_one"
   test ! -d "$source_two"
-  
-
   
   

@@ -212,7 +212,7 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	cli := f.lxdClient.UseProject(workshopbackend.LxdSystemProjectName(f.username))
 	_, _, err = cli.GetInstance(workshopbackend.InstanceName("test-1", f.project.ProjectId))
-	c.Assert(err, check.ErrorMatches, "Instance not found")
+	c.Assert(err, check.ErrorMatches, ".*Instance not found")
 }
 
 func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {

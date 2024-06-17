@@ -1,21 +1,20 @@
 summary: Check workshop start
+prepare: |  
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
-
+  workshop_exec remove ws
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a workshop"
-  project=$(pwd)
-  workshop_exec --project "$project" launch ws
-  workshop_exec --project "$project" stop ws
+  workshop_exec stop ws
 
   echo "Check the workshop is in Stopped state"
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Start the workshop"
-  workshop_exec --project "$project" start ws
+  workshop_exec start ws
 
   echo "Check the workshop is in Ready state"
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"

@@ -10,10 +10,64 @@ repack: |
     test -f tests/*.snap || snapcraft -o tests/
     cat <&3 >&4
 backends:
-  lxd:
+  # Only for local usage, GitHub self-hosted runners
+  # fail on IP allocation for a VM (it is allocated but much later 
+  # than expected by spread).
+  # lxd:
+  #   systems:
+  #     - ubuntu-22.04:
+  #         workers: 3
+  #     - ubuntu-24.04:
+  #         workers: 3
+  multipass:
+    type: adhoc
+    allocate: |
+      if [ "$SPREAD_SYSTEM" = "ubuntu-24.04-64" ]; then
+          image="daily:devel"
+          instance_name=spread-devel
+      else
+          # SPREAD_SYSTEM has the following format here 'ubuntu-XX.YY-64' and gets
+          # translated to an image XX.YY.
+          image=$(echo $SPREAD_SYSTEM | sed -e 's/ubuntu-\(.*\)-64/\1/')
+          instance_name="spread-${image/./}"
+      fi
+      if [ -z "${image}" ]; then
+        FATAL "$SPREAD_SYSTEM is not supported!"
+      fi
+      multipass launch --disk 20G --memory 4G --cpus 8 --name "$instance_name" "$image"
+      # Get the IP from the instance
+      ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d\, -f3)
+      # Enable PasswordAuthertication for root over SSH.
+      multipass exec "$instance_name" -- \
+        sudo sh -c "echo root:ubuntu | sudo chpasswd"
+      multipass exec "$instance_name" -- \
+        sudo sh -c \
+        "sed -i /etc/ssh/sshd_config -e 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' -e 's/^#PermitRootLogin.*/PermitRootLogin yes/' -e 's/^KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/'"
+      multipass exec "$instance_name" -- \
+        sudo sh -c \
+        "sed -i /etc/ssh/sshd_config.d/60-cloudimg-settings.conf -e 's/^PasswordAuthentication.*/PasswordAuthentication yes/'"
+      multipass exec "$instance_name" -- \
+        sudo systemctl restart ssh
+      ADDRESS "$ip:22"
+    discard: |
+      if [ "$SPREAD_SYSTEM" = "ubuntu-24.04-64" ]; then
+          image="daily:devel"
+          instance_name=spread-devel
+      else
+          # SPREAD_SYSTEM has the following format here 'ubuntu-XX.YY-64' and gets
+          # translated to an image XX.YY.
+          image=$(echo $SPREAD_SYSTEM | sed -e 's/ubuntu-\(.*\)-64/\1/')
+          instance_name="spread-${image/./}"
+      fi
+      if [ -z "${image}" ]; then
+        FATAL "$SPREAD_SYSTEM is not supported!"
+      fi
+      multipass delete --purge "$instance_name"
     systems:
-      - ubuntu-22.04:
+      - ubuntu-22.04-64:
           workers: 1
+          username: root
+          password: ubuntu
 suites:
   tests/main/:
     summary: Core workshop scenarios
@@ -25,15 +79,16 @@ suites:
       . "$TESTSLIB"/utils.sh
       stop_sdk_store
       cleanup_environment
+    debug: |
+      lxc list --project workshop.ubuntu
+      sudo -u ubuntu 2>&1 -- workshop list --global
     kill-timeout: 30m
   tests/integration/:
     summary: LXD integration tests
     prepare: |
       . "$TESTSLIB"/utils.sh
-      prepare_environment
-    restore: |
-      . "$TESTSLIB"/utils.sh
-      cleanup_environment
+      init_lxd
+      snap install go --classic --channel=1.21/stable
     kill-timeout: 30m
   tests/documentation/:
     summary: Documentation tests

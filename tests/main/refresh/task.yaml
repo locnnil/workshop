@@ -1,35 +1,28 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
+prepare: |  
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws ws-sdk
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
-
+  workshop_exec remove ws ws-sdk
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Test refresh with an empty workshop"
-  project=$(pwd)
-  workshop_exec --project "$project" launch ws
-
   echo "Check launch change is Done"
-  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
 
-  workshop_exec refresh --project "$project" ws
+  workshop_exec refresh ws
 
   echo "Check refresh change is Done"
-  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
 
-  echo "Test refresh with a basic SDK in the workshop"
-  workshop_exec --project "$project" launch ws-sdk
-  echo "Check launch change is Done"
-  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-sdk\" workshop$"
-
-  workshop_exec refresh --project "$project" ws-sdk
+  workshop_exec refresh ws-sdk
 
   echo "Check refresh change is Done"
-  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws-sdk\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws-sdk\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws-sdk[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-sdk[[:space:]]+Ready[[:space:]]+-$"

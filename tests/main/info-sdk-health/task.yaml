@@ -1,16 +1,13 @@
 summary: |
   Check 'workshop info' SDK health reporting
-  
 prepare: |
-  sudo apt-add-repository universe
+  apt-add-repository -y universe
   apt install expect -y --no-install-recommends
-
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
-
+  apt remove -y expect
 execute: |
   . "$TESTSLIB"/utils.sh
-  PROJECT=$(pwd)  
-  workshop_exec --project "$PROJECT" launch ws --no-wait
+  workshop_exec launch ws --no-wait
   sudo -u ubuntu 2>&1 -- expect -f ./health.exp
+  workshop_exec remove ws

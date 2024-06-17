@@ -34,14 +34,12 @@ jobs:
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
-        with:
-          detached: true
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
+      - name: Install multipass
+        run: sudo snap install multipass
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:

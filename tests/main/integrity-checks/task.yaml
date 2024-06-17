@@ -1,7 +1,6 @@
 summary: Error states tracking and recovery for the .workshop.lock
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
   rm -rf ./new-project
 execute: |
   . "$TESTSLIB"/utils.sh

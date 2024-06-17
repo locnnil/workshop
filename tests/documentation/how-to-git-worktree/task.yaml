@@ -1,9 +1,4 @@
 summary: Test 'How to use workshops with Git' to ensure it's operational
-
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-
 execute: |
   . "$TESTSLIB"/utils.sh
   PROJECT=$(pwd)

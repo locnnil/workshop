@@ -2,17 +2,23 @@
 
 # Install and uninstall workshopd
 
+function init_lxd() {
+  snap install lxd --classic
+  snap refresh lxd --channel=latest/stable
+  
+  # can already be initialised if reused
+  # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
+  if [ $(lxc storage list -f compact | grep -c default) -eq 0  ]; then   
+      lxd init --auto --storage-backend=zfs
+  fi
+}
+
 function prepare_environment() {
   systemctl unmask snapd.service
   systemctl start snapd.service
   
-  snap install go --classic
-  
-  snap install lxd --classic
-  snap refresh lxd --channel=latest/stable
-  
-  lxd init --auto
-  
+  init_lxd  
+  snap install go --classic --channel=1.21/stable
   snap install yq
   apt install jq -y --no-install-recommends
   
@@ -23,7 +29,9 @@ function prepare_environment() {
 
 function cleanup_environment() {
   snap remove workshop --purge
-  snap remove lxd
+  lxc delete $(lxc list -c n -f csv --project workshop.ubuntu) --force --project workshop.ubuntu
+  lxc project set workshop.ubuntu user.workshop.projects ""
+  find /workshop -name .workshop.lock -delete
 }
 
 function start_sdk_store() {
@@ -59,15 +67,6 @@ function publish_test_sdk_content() {
       mkdir -p "$STORE_PATH"
       mv "$SDK_FILE" "$STORE_PATH"
     done
-}
-
-# General functions
-function cleanup() {
-  lxc delete $(lxc list -c n -f csv --project workshop.ubuntu) --force --project workshop.ubuntu
-  lxc project set workshop.ubuntu user.workshop.projects ""
-  for i in "$1"/*/; do
-    rm -f "$i"/.workshop.lock
-  done
 }
 
 # Workshop sub-command wrappers
