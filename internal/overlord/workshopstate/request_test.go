@@ -401,7 +401,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
 	}
 
-	toInstl := []sdk.Setup{
+	toninst := []sdk.Setup{
 		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/edge"},
 	}
 
@@ -413,7 +413,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, w.Content(), toInstl, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, w.Content(), toninst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -448,9 +448,9 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		},
 	}
 
-	toInst := content
+	toninst := content
 
-	ts, err := workshopstate.RefreshManyImpl(s.state, files, content, toInst, s.project)
+	ts, err := workshopstate.RefreshManyImpl(s.state, files, content, toninst, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected_ws := []string{

@@ -10,24 +10,24 @@ execute: |
   
   projects=$(pwd)
   
-  workshop_exec --project "$projects"/project-1 launch ws
-  workshop_exec --project "$projects"/project-2 launch ws
+  workshop_exec --project "$projects"/project-1 launch ws-global
+  workshop_exec --project "$projects"/project-2 launch ws-global
   
   echo "(1) make sure every required workshop present in the global list output"
-  workshop_exec list --global | MATCH "^$projects/project-1[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-  workshop_exec list --global | MATCH "^$projects/project-2[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | MATCH "^$projects/project-1[[:space:]]+ws-global[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | MATCH "^$projects/project-2[[:space:]]+ws-global[[:space:]]+Ready[[:space:]]+-$"
 
   echo "(2) move a directory and validate it has an updated path in the output"
   mv project-1 project-new
-  workshop_exec list --global | MATCH "^$projects/project-new[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-  workshop_exec list --global | NOMATCH "^$projects/project-1[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | MATCH "^$projects/project-new[[:space:]]+ws-global[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --global | NOMATCH "^$projects/project-1[[:space:]]+ws-global[[:space:]]+Ready[[:space:]]+-$"
   mv project-new project-1
   
   echo "(3) delete a directory and validate it has a correct state in the output"
   cp -R project-2 project-2-copy
-  workshop_exec --project $projects/project-2-copy launch ws
+  workshop_exec --project $projects/project-2-copy launch ws-global
   rm -rf project-2-copy
-  workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
+  workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws-global[[:space:]]+Error[[:space:]]+missing-project$"
 
-  workshop_exec --project "$projects"/project-1 remove ws
-  workshop_exec --project "$projects"/project-2 remove ws
+  workshop_exec --project "$projects"/project-1 remove ws-global
+  workshop_exec --project "$projects"/project-2 remove ws-global

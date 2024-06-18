@@ -1,4 +1,4 @@
-name: ws-1
+name: ws-disconn
 base: ubuntu@22.04
 sdks:
     test-sdk-content:

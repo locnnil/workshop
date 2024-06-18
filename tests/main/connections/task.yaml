@@ -1,19 +1,19 @@
 summary: Check that "workshop connections" works as expected
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-1 ws-2  
+  workshop_exec launch ws-conns-1 ws-conns-2  
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-1 ws-2
+  workshop_exec remove ws-conns-1 ws-conns-2
 execute: |
   . "$TESTSLIB"/utils.sh
   
   echo "Check connections for a workshop name provided"
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+\-$"  
+  workshop_exec connections ws-conns-1 | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec connections ws-conns-1 | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-two.+:content.+\-$"  
   
   echo "Check connections for all workshops of the project"
-  workshop_exec connections | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+\-$"  
-  workshop_exec connections | MATCH "^content.+ws-2/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections | MATCH "^content.+ws-2/test-sdk-content:content-plug-two.+:content.+\-$"  
+  workshop_exec connections | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec connections | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-two.+:content.+\-$"  
+  workshop_exec connections | MATCH "^content.+ws-conns-2/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec connections | MATCH "^content.+ws-conns-2/test-sdk-content:content-plug-two.+:content.+\-$"  

@@ -28,7 +28,6 @@ type Workshop struct {
 	backend WorkshopBackend
 	project *Project
 	base    string
-	devices map[string]map[string]string
 	content map[string]sdk.Setup
 	running bool
 }
@@ -142,11 +141,6 @@ func WorkshopStateVolumeName(ws, pid string) string {
 
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
-	projectId, ok := ctx.Value(ContextProjectId).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
-	}
-
 	setup, ok := w.content[sdkName]
 	if sdkName != sdk.Agent.String() && !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
@@ -170,7 +164,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, projectId, w.Name)
+	info, err := sdk.ReadSdkInfo(yamlData, w.project.ProjectId, w.Name)
 	if err != nil {
 		return nil, err
 	}

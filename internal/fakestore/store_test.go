@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	"gopkg.in/check.v1"
+
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/sdk"
-	"gopkg.in/check.v1"
 )
 
 type storeSuite struct {

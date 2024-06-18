@@ -49,16 +49,27 @@ func (e SdkActionError) Error() string {
 	return strings.Join(errorMsg, "\n")
 }
 
-func storeConnect(ctx context.Context) (*storage.Client, error) {
+type clientWrapper struct {
+	*storage.Client
+	isTesting bool
+}
+
+func storeConnect(ctx context.Context) (*clientWrapper, error) {
 	opt := option.WithoutAuthentication()
+	testing := false
 	if url := os.Getenv("SDK_STORE_URL"); url != "" { // Set STORAGE_EMULATOR_HOST environment variable for GSC.
 		err := os.Setenv("STORAGE_EMULATOR_HOST", "localhost:8080")
 		if err != nil {
 			return nil, err
 		}
 		opt = option.WithEndpoint(url)
+		testing = true
 	}
-	return storage.NewClient(ctx, opt)
+	client, err := storage.NewClient(ctx, opt)
+	if err != nil {
+		return nil, err
+	}
+	return &clientWrapper{client, testing}, nil
 }
 
 func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
@@ -75,13 +86,11 @@ func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.In
 				continue
 			}
 
-			info := &sdk.Info{}
-			info, err = sdk.ReadSdkInfo([]byte(s.SdkYAML), act.ProjectId, act.Workshop)
+			info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), act.ProjectId, act.Workshop)
 			if err != nil {
 				actError.errors[act.Name] = err
 				continue
 			}
-			info.Name = s.Name
 			info.Revision = s.Revision
 			info.Channel = s.Channel
 
@@ -157,10 +166,17 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
 	sSdk.Revision = atr.Generation % 1000
-	if _, ok := atr.Metadata["sdk-yaml"]; !ok {
-		return sSdk, fmt.Errorf("SDK %q does not have metadata", name)
+	// The test server for the SDK store cannot store metadata.
+	if !client.isTesting {
+		if _, ok := atr.Metadata["sdk-yaml"]; !ok {
+			return sSdk, fmt.Errorf("SDK %q does not have metadata", name)
+		}
+		sSdk.SdkYAML = atr.Metadata["sdk-yaml"]
+	} else {
+		// Emulate meta data for the test SDKs. We need the name/base pair for
+		// the e2e scenarios to work.
+		sSdk.SdkYAML = fmt.Sprintf(`name: %s
+base: ubuntu@22.04`, name)
 	}
-	sSdk.SdkYAML = atr.Metadata["sdk-yaml"]
-
 	return sSdk, nil
 }

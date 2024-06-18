@@ -1,21 +1,21 @@
 summary: Check workshop stop
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws
+  workshop_exec launch ws-stop
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws
+  workshop_exec remove ws-stop
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Stop the workshop"
-  workshop_exec stop ws
+  workshop_exec stop ws-stop
 
   echo "Check the workshop is in Stopped state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-stop[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Check stopping the Stopped workshop does not result in error"
-  workshop_exec stop ws
+  workshop_exec stop ws-stop
 
   echo "Check the workshop is in Stopped state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-stop[[:space:]]+Stopped[[:space:]]+-$"

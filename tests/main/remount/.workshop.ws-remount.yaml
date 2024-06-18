@@ -1,5 +1,5 @@
-name: ws
+name: ws-remount
 base: ubuntu@22.04
 sdks:
-    test-sdk-gpu:
+    test-sdk-content:
         channel: latest/stable

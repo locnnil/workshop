@@ -19,6 +19,7 @@ type ExecFunc func(ctx context.Context, name string, args *Execution) (ExecConte
 type FakeWorkshop struct {
 	*Workshop
 	Config             map[string]string
+	Devices            map[string]map[string]string
 	WorkshopFilesystem WorkshopFs
 	Profiles           []SdkProfile
 }
@@ -116,11 +117,11 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *Workshop
 
 	ws := &FakeWorkshop{}
 	ws.Config = make(map[string]string)
+	ws.Devices = defaultDevices()
 	ws.WorkshopFilesystem = NewFakeWorkshopFs()
 
 	ws.Workshop = &Workshop{backend: f,
 		Name:    file.Name,
-		devices: defaultDevices(),
 		running: true,
 		project: prj,
 		content: make(map[string]sdk.Setup),
@@ -181,7 +182,7 @@ func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
-	f.Workshops[projectId][name].devices[props.Name()] = props.properties
+	f.Workshops[projectId][name].Devices[props.Name()] = props.properties
 	return nil
 }
 
@@ -190,7 +191,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 	if err != nil {
 		return err
 	}
-	delete(f.Workshops[projectId][name].devices, device)
+	delete(f.Workshops[projectId][name].Devices, device)
 	return nil
 }
 

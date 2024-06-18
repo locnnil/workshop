@@ -3,11 +3,11 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check workshop can be launched with a basic SDK"
-  workshop_exec launch ws
-  workshop_exec list | MATCH "$(pwd)[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
+  workshop_exec launch ws-basic
+  workshop_exec list | MATCH "$(pwd)[[:space:]]*ws-basic[[:space:]]*Ready[[:space:]]*-"
   
   # Ensure there is one installed SDK that was provided in the workshop definition
-  workshop_exec info ws | grep -v notes | yq ".content | length == 1"
-  workshop_exec info ws | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"
+  workshop_exec info ws-basic | grep -v notes | yq ".content | length == 1"
+  workshop_exec info ws-basic | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"
 
-  workshop_exec remove ws
+  workshop_exec remove ws-basic

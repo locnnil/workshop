@@ -1,4 +1,4 @@
-name: ws
+name: ws-refresh-abort
 base: ubuntu@22.04
 sdks:
     test-sdk-basic:

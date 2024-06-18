@@ -497,7 +497,6 @@ func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, er
 		project: p,
 		running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
 		base:    base,
-		devices: inst.Devices,
 		content: content,
 	}, nil
 }
