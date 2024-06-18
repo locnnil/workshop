@@ -69,7 +69,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	st.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("cannot get workshop base for task %q: %v", task.ID(), err)
+		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", workshop, task.ID())
 	}
 
 	var rev revert.Reverter

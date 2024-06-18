@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 var InstallTimeNow = time.Now

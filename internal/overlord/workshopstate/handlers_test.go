@@ -225,6 +225,27 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 
 }
 
+func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("create-workshop", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration is not found.*`)
+}
+
 func (s *workshopHandlers) TestCreateWorkshopWithAgentSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -256,7 +277,7 @@ base: ubuntu@22.04
 	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
 }
 
-func (s *workshopHandlers) TestCreateWorkshopAgentSdkFails(c *check.C) {
+func (s *workshopHandlers) TestCreateWorkshopAgentSdkFailedGetsUndone(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
