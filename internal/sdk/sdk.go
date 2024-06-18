@@ -16,10 +16,10 @@ import (
 )
 
 type Setup struct {
-	Name        string    `json:"name"`
-	Channel     string    `json:"channel"`
-	Revision    int64     `json:"revision"`
-	InstallTime time.Time `json:"install-time,omitzero"`
+	Name        string     `json:"name"`
+	Channel     string     `json:"channel"`
+	Revision    int64      `json:"revision"`
+	InstallTime *time.Time `json:"install-time"`
 }
 
 type sdkYaml struct {

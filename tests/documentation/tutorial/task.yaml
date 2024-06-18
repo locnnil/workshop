@@ -1,9 +1,4 @@
 summary: Run tutorial commands to ensure it's operational
-
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-
 execute: |
   . "$TESTSLIB"/utils.sh
 

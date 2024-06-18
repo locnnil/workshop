@@ -51,7 +51,7 @@ sdks:
   {{ end }} 
 `
 
-func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.Setup) {
+func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks workshopbackend.SdkList) *workshopbackend.Workshop {
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
@@ -61,8 +61,14 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.
 	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.backend.LaunchWorkshop(s.ctx, ws, "ubuntu@20.04")
+	wf := workshopbackend.WorkshopFile{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}
+	err = s.backend.LaunchWorkshop(s.ctx, &wf)
 	c.Assert(err, check.IsNil)
+
+	w, err := s.backend.Workshop(s.ctx, ws)
+	c.Assert(err, check.IsNil)
+
+	return w
 }
 
 func (s *requestSuite) ensureTaskHasWorkshopAndProjectKeys(c *check.C, w string, ts []*state.Task) {
@@ -136,10 +142,10 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	verifyExpectedTasks(c, tasks, expected)
 
-	var base string
-	err := tasks[0].Get("base", &base)
+	var wf workshopbackend.WorkshopFile
+	err := tasks[0].Get("workshop-file", &wf)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(base, check.Equals, "ubuntu@22.04")
+	c.Assert(&wf, check.DeepEquals, file)
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
 }
 
@@ -182,11 +188,11 @@ func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
 	var s1, s2 workshopbackend.SdkRecord
 	err = tasks[0].Get("sdk-record", &s1)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(s1, check.Equals, sdk)
+	c.Assert(s1, check.DeepEquals, sdk)
 
 	err = tasks[1].Get("sdk-record", &s2)
 	c.Assert(err, check.Equals, nil)
-	c.Assert(s2, check.Equals, sdk_2)
+	c.Assert(s2, check.DeepEquals, sdk_2)
 
 	// install-sdk task for sdk
 	var id1, id2 string
@@ -304,15 +310,17 @@ func (s *requestSuite) TestRefreshSdkRemoved(c *check.C) {
 		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
 	}
 
-	file := &workshopbackend.WorkshopFile{
+	newFile := &workshopbackend.WorkshopFile{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{{Name: "sdk-1", Channel: "latest/stable"}}}
 
-	s.launchWorkshopWithSDKs(c, "ws", existingSdks)
+	s.launchWorkshopWithSDKs(c, "ws", []workshopbackend.SdkRecord{
+		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
+	})
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, existingSdks, s.project)
+	ts, err := workshopstate.Refresh(s.state, newFile, existingSdks, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -325,18 +333,19 @@ func (s *requestSuite) TestRefreshSdkRemovedMakingWorkshopEmpty(c *check.C) {
 	// Setup
 	s.state.Lock()
 	defer s.state.Unlock()
-	existingSdks := []sdk.Setup{
-		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
+	existingSdks := workshopbackend.SdkList{
+		{Name: "sdk-1", Channel: "latest/stable"},
+		{Name: "sdk-2", Channel: "latest/stable"},
 	}
 
 	file := &workshopbackend.WorkshopFile{
 		Name: "ws",
 		Base: "ubuntu@22.04"}
 
-	s.launchWorkshopWithSDKs(c, "ws", existingSdks)
+	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, existingSdks, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, w.Content(), s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -349,8 +358,9 @@ func (s *requestSuite) TestRefreshSdkReplaced(c *check.C) {
 	// Setup
 	s.state.Lock()
 	defer s.state.Unlock()
-	existingSdks := []sdk.Setup{
-		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
+	existingSdks := workshopbackend.SdkList{
+		{Name: "sdk-1", Channel: "latest/stable"},
+		{Name: "sdk-2", Channel: "latest/stable"},
 	}
 
 	file := &workshopbackend.WorkshopFile{
@@ -358,10 +368,10 @@ func (s *requestSuite) TestRefreshSdkReplaced(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{{Name: "test-1", Channel: "latest/stable"}, {Name: "test-2", Channel: "latest/stable"}}}
 
-	s.launchWorkshopWithSDKs(c, "ws", existingSdks)
+	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, existingSdks, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, w.Content(), s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -374,7 +384,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 	// Setup
 	s.state.Lock()
 	defer s.state.Unlock()
-	existingSdks := []sdk.Setup{
+	existingSdks := workshopbackend.SdkList{
 		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"},
 	}
 
@@ -383,10 +393,10 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: workshopbackend.SdkList{{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/edge"}}}
 
-	s.launchWorkshopWithSDKs(c, "ws", existingSdks)
+	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, existingSdks, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, w.Content(), s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -729,7 +739,7 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 func (s *requestSuite) TestRemoveMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	content := []sdk.Setup{
+	content := workshopbackend.SdkList{
 		{Name: "sdk-1", Channel: "latest/stable"},
 		{Name: "sdk-2", Channel: "latest/stable"},
 		{Name: "sdk-3", Channel: "latest/stable"},
@@ -760,7 +770,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	defer s.state.Unlock()
 
 	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
-	content := []sdk.Setup{
+	content := workshopbackend.SdkList{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
 	source := c.MkDir()
@@ -793,7 +803,7 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	defer s.state.Unlock()
 
 	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
-	content := []sdk.Setup{
+	content := workshopbackend.SdkList{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
 

@@ -99,7 +99,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base string) error {
+func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 	if f.Workshops[projectId] == nil {
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
-	if _, ok := f.Workshops[projectId][name]; ok {
+	if _, ok := f.Workshops[projectId][file.Name]; ok {
 		return api.StatusErrorf(http.StatusNotFound, "workshop exists already")
 	}
 
@@ -119,20 +119,15 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, name, base str
 	ws.WorkshopFilesystem = NewFakeWorkshopFs()
 
 	ws.Workshop = &Workshop{backend: f,
-		Name:    name,
+		Name:    file.Name,
 		devices: defaultDevices(),
 		running: true,
 		project: prj,
 		content: make(map[string]sdk.Setup),
-		base:    base,
+		base:    file.Base,
 	}
 
-	f.Workshops[projectId][name] = ws
-
-	file, err := prj.WorkshopFile(name)
-	if err != nil {
-		return err
-	}
+	f.Workshops[projectId][file.Name] = ws
 	for _, s := range file.Sdks {
 		ws.LinkSdk(ctx, sdk.Setup{
 			Name:    s.Name,

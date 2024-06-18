@@ -1,28 +1,26 @@
 summary: Check major workshop exec scenarios
+prepare: |  
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
-
+  workshop_exec remove ws
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch a workshop"
-  project=$(pwd)
-  workshop_exec --project ""$project"" launch ws
-
   echo "Check an environment variable can be set"
-  workshop_exec exec --project "$project" --env 'Foo=bar'  ws -- bash -c 'echo -n $Foo' | MATCH bar
+  workshop_exec exec --env 'Foo=bar'  ws -- bash -c 'echo -n $Foo' | MATCH bar
 
   echo "Check default user and group"
-  workshop_exec exec --project "$project" ws -- bash -c 'id -u -n' | MATCH workshop
-  workshop_exec exec --project "$project" ws -- bash -c 'id -g -n' | MATCH workshop
+  workshop_exec exec ws -- bash -c 'id -u -n' | MATCH workshop
+  workshop_exec exec ws -- bash -c 'id -g -n' | MATCH workshop
 
   echo "Check working directory setup"
-  workshop_exec exec --project "$project" ws -- pwd | MATCH '/project'
-  workshop_exec exec --project "$project" -w /home/workshop ws -- pwd | MATCH '/home/workshop'
+  workshop_exec exec ws -- pwd | MATCH '/project'
+  workshop_exec exec -w /home/workshop ws -- pwd | MATCH '/home/workshop'
 
   echo "Check enforce non-interactive mode"
-  workshop_exec exec --project "$project" -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
+  workshop_exec exec -I ws -- bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
 
   #FIXME: this works in a terminal but not under spread This is due to the
   #websocket client implementation that closes the connection when a reader from
@@ -32,14 +30,14 @@ execute: |
   #by the time already (note: it is only relevant for the interactive sessions
   #where one websocket used for in/out)
   #echo "Check enforce interactive mode"
-  #workshop_exec exec --project "$project" --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
+  #workshop_exec exec --interactive ws -- bash -c 'echo -n terminal' | MATCH terminal
 
   echo "Check timeout"
-  workshop_exec exec --project "$project" --timeout 1s ws -- bash -c 'sleep 5' | MATCH ".*timed out after 1s.*"
+  workshop_exec exec --timeout 1s ws -- bash -c 'sleep 5' | MATCH ".*timed out after 1s.*"
 
   echo "Check stderr (workshop exec redirects stderr to stdout for MATCH to work)"
-  workshop_exec exec --project "$project" -I ws -- bash -c '>&2 echo -n stderr' | MATCH stderr
+  workshop_exec exec -I ws -- bash -c '>&2 echo -n stderr' | MATCH stderr
 
   echo "Check stopped workshop"
-  workshop_exec stop --project "$project" ws
-  workshop_exec exec --project "$project" ws pwd | MATCH '.*"ws" status is "Stopped", must be one of: "Ready", "Pending"$'
+  workshop_exec stop ws
+  workshop_exec exec ws pwd | MATCH '.*"ws" status is "Stopped", must be one of: "Ready", "Pending"$'

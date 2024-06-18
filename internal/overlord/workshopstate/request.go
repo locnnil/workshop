@@ -57,11 +57,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 
 	taskset := make([]*state.TaskSet, 0, len(names))
 	for _, name := range names {
-		file, err := project.WorkshopFile(name)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read %q file: %w", name, err)
-		}
-
 		workshop, err := w.Workshop(ctx, name, projectId)
 		if workshop != nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", name)
@@ -70,6 +65,10 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, err
 		}
 
+		file, err := project.WorkshopFile(name)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read %q file: %w", name, err)
+		}
 		tasks := launch(w.state, file, project)
 		taskset = append(taskset, tasks)
 	}
@@ -147,7 +146,7 @@ func checkHealthHooks(st *state.State, file *workshopbackend.WorkshopFile) *stat
 
 func constructWorkshop(st *state.State, file *workshopbackend.WorkshopFile, project *workshopbackend.Project) *state.TaskSet {
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
-	create.Set("base", file.Base)
+	create.Set("workshop-file", file)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)

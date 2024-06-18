@@ -26,7 +26,8 @@ func (s *apiSuite) launchWorkshop(ctx context.Context, name string, c *check.C) 
 base: ubuntu@20.04
 `, name)), 0644)
 	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkshop(ctx, name, "ubuntu@20.04")
+	wf := &workshopbackend.WorkshopFile{Name: name, Base: "ubuntu@20.04"}
+	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)
 	c.Assert(err, check.IsNil)
@@ -56,6 +57,7 @@ func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
+	t := time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	c.Check(rsp.Result, check.DeepEquals, []*WorkshopInfo{
 		{
 			Name:      "ws-test",
@@ -67,7 +69,7 @@ func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 					Name:        "go",
 					Channel:     "latest/stable",
 					Revision:    "234",
-					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+					InstallTime: &t,
 				},
 			},
 			Notes: nil,
@@ -112,6 +114,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
+	t := time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
 		Name:      "ws-test",
 		Base:      "ubuntu@20.04",
@@ -123,7 +126,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 				Name:        "go",
 				Channel:     "latest/stable",
 				Revision:    "234",
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstallTime: &t,
 				Health: &HealthCheckInfo{
 					Message: "test health check message",
 					Code:    "check-waiting",
@@ -135,7 +138,7 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 				Name:        "java",
 				Channel:     "latest/stable",
 				Revision:    "324",
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstallTime: &t,
 				Mounts: []*Mount{
 					{Source: "/home/user/java", Target: "/home/workshop/java", Plug: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-test", Sdk: "java", Name: "content-plug"}}},
 			},

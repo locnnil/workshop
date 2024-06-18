@@ -3,8 +3,6 @@ package hookstate_test
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -92,11 +90,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	chg.AddTask(t1)
 
 	// Launch a workshop provinding no hooks
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04
-`), 0644)
-	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	err := s.backend.LaunchWorkshop(s.ctx, &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"})
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -472,14 +466,8 @@ func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 }
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04
-sdks:
-  one:
-    channel: latest/stable
-`), 0644)
-	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)

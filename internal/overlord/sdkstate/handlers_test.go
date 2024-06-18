@@ -88,14 +88,8 @@ func (s *H) SetUpTest(c *check.C) {
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshopbackend.InstallTimeNow)
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04
-sdks:
-  test:
-    channel: latest/stable
-`), 0644)
-	c.Assert(err, check.IsNil)
-	err = s.backend.LaunchWorkshop(s.ctx, "ws", "ubuntu@20.04")
+	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}}}
+	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
 	var sdkYaml = `
@@ -125,7 +119,7 @@ func (s *H) TearDownTest(c *check.C) {
 func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -188,7 +182,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
@@ -228,7 +222,7 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: s.installTime}
+	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)

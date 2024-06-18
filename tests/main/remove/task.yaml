@@ -1,31 +1,26 @@
 summary: Check workshop remove
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  project=$(pwd)
   echo "Launch a workshop"
-  workshop_exec --project "$project" launch  ws
+  workshop_exec launch  ws
 
   echo "Check the workshop can be removed if in Ready"
-  workshop_exec --project "$project" remove ws
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec remove ws
+  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Stopped"
-  workshop_exec --project "$project" launch ws
-  workshop_exec --project "$project" stop  ws
-  workshop_exec --project "$project" remove ws
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec launch ws
+  workshop_exec stop  ws
+  workshop_exec remove ws
+  workshop_exec list | MATCH "^.+[[:space:]]+ws[[:space:]]+Off[[:space:]]+-$"
   
   echo "Check the workshop can be removed and SDKs disconnected"
-  workshop_exec --project "$project" launch  ws-content
-  workshop_exec --project "$project" remove ws-content
-  workshop_exec --project "$project" list | MATCH "^.+[[:space:]]+ws-content[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec launch  ws-content
+  workshop_exec remove ws-content
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-content[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Error"
-  workshop_exec --project "$project" launch ws
-  rm -f "$project"/.workshop.ws.yaml
-  workshop_exec --project "$project" remove ws
+  workshop_exec launch ws
+  rm -f .workshop.ws.yaml
+  workshop_exec remove ws

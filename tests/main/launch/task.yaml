@@ -1,7 +1,4 @@
-summary: Test 'workshop launch' for the supported workshop bases
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
+summary: Test launch for the supported workshop bases
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -12,6 +9,7 @@ execute: |
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
     # ensure the workshop has a socket for workshopctl
     workshop_exec exec "$1" -- test -S /var/lib/workshop/.workshop.socket.untrusted
+    workshop_exec remove "$1"
   }
   
   launch_and_validate ws-20

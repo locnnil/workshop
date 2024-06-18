@@ -1,18 +1,13 @@
-summary: Ensure that 'workshop launch' creates a core LXD config correctly
-prepare: |
-  apt install jq -y --no-install-recommends
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-  snap remove ya --purge
+summary: Ensure that launch creates a core LXD config correctly
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check workshop can be launched with a basic SDK"
-  path=$(pwd)
-  workshop_exec --project "$path" launch ws
-  workshop_exec --project "$path" list | MATCH "$path[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
+  workshop_exec launch ws
+  workshop_exec list | MATCH "$(pwd)[[:space:]]*ws[[:space:]]*Ready[[:space:]]*-"
   
   # Ensure there is one installed SDK that was provided in the workshop definition
-  workshop_exec --project "$path" info ws | grep -v notes | yq ".content | length == 1"
-  workshop_exec --project "$path" info ws | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"
+  workshop_exec info ws | grep -v notes | yq ".content | length == 1"
+  workshop_exec info ws | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"
+
+  workshop_exec remove ws

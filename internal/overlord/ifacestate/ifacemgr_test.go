@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -80,10 +80,11 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, maps.Keys(sdkYamls))
 
-	err = os.WriteFile(filepath.Join(s.prj.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
+	var wf workshopbackend.WorkshopFile
+	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchWorkshop(ctx, ws, "ubuntu@22.04")
+	err = s.wsbackend.LaunchWorkshop(ctx, &wf)
 	c.Assert(err, check.IsNil)
 
 	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)

@@ -13,13 +13,13 @@ import (
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
-type F struct {
+type workshopFile struct {
 	fs afero.Fs
 }
 
-var _ = check.Suite(&F{})
+var _ = check.Suite(&workshopFile{})
 
-func (f *F) SetUpTest(c *check.C) {
+func (f *workshopFile) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
 }
 
@@ -27,7 +27,7 @@ func workshopFilePath(dir, name string) string {
 	return filepath.Join(dir, fmt.Sprintf(".workshop.%s.yaml", name))
 }
 
-func (f *F) TestWorkshopFileParse(c *check.C) {
+func (f *workshopFile) TestWorkshopFileParse(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
@@ -59,7 +59,7 @@ sdks:
 	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/candidate")
 }
 
-func (f *F) TestWorkshopFileDuplicateSdks(c *check.C) {
+func (f *workshopFile) TestWorkshopFileDuplicateSdks(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
@@ -75,7 +75,7 @@ sdks:
 	c.Assert(err, check.NotNil)
 }
 
-func (f *F) TestWorkshopFileReservedNames(c *check.C) {
+func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:

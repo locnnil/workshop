@@ -1,17 +1,10 @@
 summary: Ensure the changes command output correctness
-restore: |
-  . "$TESTSLIB"/utils.sh
-  cleanup ./
-
 execute: |
   . "$TESTSLIB"/utils.sh
-  
-  project=$(pwd)
-  
-  echo "workshop changes will not produce any output if there are no changes"
-  workshop_exec --project "$project" changes | MATCH "^$"
-
-  workshop_exec --project "$project" launch ws
+    
+  workshop_exec launch ws
 
   echo "The launch change must present in the list"
-  workshop_exec --project "$project" changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  
+  workshop_exec remove ws

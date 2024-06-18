@@ -14,7 +14,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
@@ -56,7 +55,7 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 	})
 }
 
-func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.Setup) *workshopbackend.Workshop {
+func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshopbackend.SdkRecord) *workshopbackend.Workshop {
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
@@ -66,7 +65,8 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []sdk.
 	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	err = s.backend.LaunchWorkshop(s.ctx, ws, "ubuntu@20.04")
+	wf := workshopbackend.WorkshopFile{Name: ws, Base: "ubuntu@22.04"}
+	err = s.backend.LaunchWorkshop(s.ctx, &wf)
 	c.Assert(err, check.IsNil)
 
 	workshop, err := s.backend.Workshop(s.ctx, ws)
@@ -185,7 +185,7 @@ func (s *managerSuite) TestWorkshopHealthSdkHealth(c *check.C) {
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
-	workshop := s.launchWorkshopWithSDKs(c, "test", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	workshop := s.launchWorkshopWithSDKs(c, "test", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
@@ -199,8 +199,8 @@ func (s *managerSuite) TestRefreshManyOK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	chg := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-1", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-2", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
 	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
 	c.Assert(err, check.IsNil)
@@ -217,8 +217,8 @@ func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	chg := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
-	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-1", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
@@ -230,7 +230,7 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	chg := s.state.NewChange("refresh", "test")
-	s.launchWorkshopWithSDKs(c, "test-1", []sdk.Setup{{Name: "test", Channel: "latest/stable"}})
+	s.launchWorkshopWithSDKs(c, "test-1", []workshopbackend.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
 	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
 	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop not found\)`)

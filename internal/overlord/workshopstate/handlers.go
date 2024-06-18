@@ -63,18 +63,18 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	var base string
+	var wf workshopbackend.WorkshopFile
 	st.Lock()
-	err = task.Get("base", &base)
+	err = task.Get("workshop-file", &wf)
 	st.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("cannot get workshop base for task %q: %v", task.ID(), err)
+		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", workshop, task.ID())
 	}
 
 	var rev revert.Reverter
 	defer rev.Fail()
-	if err = m.backend.LaunchWorkshop(ctx, workshop, base); err != nil {
+	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	}
 	defer wfs.Close()
 
-	if err = m.installAgentSdk(wfs, base); err != nil {
+	if err = m.installAgentSdk(wfs, wf.Base); err != nil {
 		return err
 	}
 	rev.Success()

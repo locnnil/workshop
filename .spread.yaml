@@ -10,6 +10,15 @@ repack: |
     test -f tests/*.snap || snapcraft -o tests/
     cat <&3 >&4
 backends:
+  # Only for local usage, GitHub self-hosted runners
+  # fail on IP allocation for a VM (it is allocated but much later 
+  # than expected by spread).
+  # lxd:
+  #   systems:
+  #     - ubuntu-22.04:
+  #         workers: 3
+  #     - ubuntu-24.04:
+  #         workers: 3
   multipass:
     type: adhoc
     allocate: |
@@ -70,14 +79,17 @@ suites:
       . "$TESTSLIB"/utils.sh
       stop_sdk_store
       cleanup_environment
+    debug: |
+      lxc list --project workshop.ubuntu
+      sudo -u ubuntu 2>&1 -- workshop list --global
+    kill-timeout: 30m
   tests/integration/:
     summary: LXD integration tests
     prepare: |
       . "$TESTSLIB"/utils.sh
-      prepare_environment
-    restore: |
-      . "$TESTSLIB"/utils.sh
-      cleanup_environment
+      init_lxd
+      snap install go --classic --channel=1.21/stable
+    kill-timeout: 30m
   tests/documentation/:
     summary: Documentation tests
     prepare: |

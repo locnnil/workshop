@@ -1,7 +1,6 @@
 summary: Test workshop list with a --global flag on
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
   for path in ./{*-copy,*-new}; do
     rm -rf "$path"
   done
@@ -29,4 +28,6 @@ execute: |
   workshop_exec --project $projects/project-2-copy launch ws
   rm -rf project-2-copy
   workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-project$"
-  
+
+  workshop_exec --project "$projects"/project-1 remove ws
+  workshop_exec --project "$projects"/project-2 remove ws

@@ -26,8 +26,8 @@ sdks:
   test-sdk:
     channel: latest/stable
 `, name)), 0644)
-	c.Assert(err, check.IsNil)
-	err = b.LaunchWorkshop(ctx, name, "ubuntu@20.04")
+	wf := &workshopbackend.WorkshopFile{Name: name, Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "test-sdk", Channel: "latest/stable"}}}
+	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)
 	c.Assert(err, check.IsNil)

@@ -7,7 +7,7 @@ var (
 	ReadWorkshop           = readWorkshop
 	ReadProjects           = readProjects
 	SaveProjects           = saveProjects
-	DefaultConfig          = (*LxdBackend).defaultConfig
+	DefaultConfig          = (*LxdBackend).workshopConfig
 )
 
 func (s *LxdBackend) SetNvidia(runtime bool) {

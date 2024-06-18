@@ -1,32 +1,31 @@
 summary: Check that "workshop connect" works as expected
+prepare: |  
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-1
 restore: |
   . "$TESTSLIB"/utils.sh
-  cleanup ./
-
+  workshop_exec remove ws-1
 execute: |
   . "$TESTSLIB"/utils.sh
-
-  project=$(pwd)
-  workshop_exec --project "$project" launch ws-1
   
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
-  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-one ws-1/agent:content  
-  workshop_exec --project "$project" connect ws-1/test-sdk-content:content-plug-one ws-1/agent:content
-  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+manual$"
+  workshop_exec disconnect ws-1/test-sdk-content:content-plug-one ws-1/agent:content  
+  workshop_exec connect ws-1/test-sdk-content:content-plug-one ws-1/agent:content
+  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+manual$"
   
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk> form"
-  workshop_exec --project "$project" disconnect ws-1/test-sdk-content:content-plug-two :content
-  workshop_exec --project "$project" connect ws-1/test-sdk-content:content-plug-two ws-1/agent
-  workshop_exec --project "$project" connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+manual$"
+  workshop_exec disconnect ws-1/test-sdk-content:content-plug-two :content
+  workshop_exec connect ws-1/test-sdk-content:content-plug-two ws-1/agent
+  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+manual$"
   
   echo "Check connect <workshop>/<sdk>:<plug> form"
-  workshop_exec --project "$project" disconnect ws-1/test-sdk-gpu:gpu
-  workshop_exec --project "$project" connect ws-1/test-sdk-gpu:gpu
-  workshop_exec --project "$project" connections ws-1 | MATCH "^gpu.+ws-1/test-sdk-gpu:gpu.+:gpu.+manual$"
+  workshop_exec disconnect ws-1/test-sdk-gpu:gpu
+  workshop_exec connect ws-1/test-sdk-gpu:gpu
+  workshop_exec connections ws-1 | MATCH "^gpu.+ws-1/test-sdk-gpu:gpu.+:gpu.+manual$"
   
   echo "Check workshop refresh reconnects manually connected connections"
-  workshop_exec --project "$project" refresh ws-1
-  workshop_exec --project "$project" connections ws-1 > output.log
+  workshop_exec refresh ws-1
+  workshop_exec connections ws-1 > output.log
   MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+manual$" < output.log
   MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+manual$" < output.log
   MATCH "^gpu.+ws-1/test-sdk-gpu:gpu.+:gpu.+manual$" < output.log

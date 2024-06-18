@@ -42,7 +42,7 @@ type SdkInfo struct {
 	Name        string           `json:"name"`
 	Channel     string           `json:"channel"`
 	Revision    string           `json:"revision"`
-	InstallTime time.Time        `json:"install-time"`
+	InstallTime *time.Time       `json:"install-time,omitempty"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
 }

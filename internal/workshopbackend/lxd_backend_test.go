@@ -215,10 +215,11 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	// Setup
 	b := &workshopbackend.LxdBackend{}
+	file := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
 	b.SetNvidia(true)
 
 	// Execute
-	cfg := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001")
+	cfg, _ := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
 	c.Assert(cfg["raw.idmap"], check.Equals, "uid 1001 1000\ngid 1001 1000")
@@ -227,12 +228,15 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "true")
 	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "all")
+	c.Assert(cfg["user.workshop.file"], check.Equals, `name: test
+base: ubuntu@22.04
+`)
 
 	// Setup
 	b.SetNvidia(false)
 
 	// Execute
-	cfg = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001")
+	cfg, _ = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "")
