@@ -28,16 +28,18 @@ var (
 
 // Variables for workshopd (host paths)
 var (
-	// Work directory
-	ExecDir string
 	// Base directory for workshopd
 	BaseDir string
+	// Work directory
+	ExecDir string
 	// The directory to store downloaded SDKs
 	SdkDir string
 	// Path to the daemon's unix socket
 	SocketPath string
 	// Base for the XDG runtime directory of a host user
 	XdgRuntimeDirBase string
+	// Run directory
+	WorkshopdRunDir string
 )
 
 func getEnvPaths() (workshopdDir string, socketPath string) {
@@ -77,8 +79,9 @@ func SetRootDir(rootdir string) {
 	if !filepath.IsAbs(rootdir) {
 		panic(fmt.Sprintf("cannot set root dir: path %q is not absolute", rootdir))
 	}
-
-	SdkDir = filepath.Join(rootdir, "sdk")
+	BaseDir = rootdir
+	SdkDir = filepath.Join(BaseDir, "sdk")
+	WorkshopdRunDir = filepath.Join(BaseDir, "/run/workshopd")
 }
 
 func CreateDirs() error {
@@ -87,6 +90,9 @@ func CreateDirs() error {
 	}
 
 	if err := os.MkdirAll(SdkDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(WorkshopdRunDir, 0755); err != nil {
 		return err
 	}
 	return nil

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -70,21 +70,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	client := store.New()
 
-	return client.DownloadSdk(ctx, rec.Name, rec.Channel, rec.Filename())
-}
-
-func (m *SdkManager) undoRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
-	st := task.State()
-	st.Lock()
-	var setup sdk.Setup
-	err := task.Get("sdk-setup", &setup)
-	st.Unlock()
-	if err != nil && errors.Is(err, state.ErrNoState) {
-		return nil
-	} else if err != nil {
-		return err
-	}
-	return os.Remove(setup.Filename())
+	return client.DownloadSdk(ctx, rec)
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
@@ -100,6 +86,19 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
+
+	// The install tasks should hold the lock until the SDK is unpacked in the
+	// workshop. There are could be multiple of them reading the file
+	// concurrently and, hence, TryLock, so a writer (e.g. DownloadSdk) would
+	// not corrupt the file before it is installed.
+	fl, err := sdk.OpenLock(sdkSetup.Name)
+	if err != nil {
+		return err
+	}
+	if err = fl.TryLock(); err != nil && !errors.Is(err, osutil.ErrAlreadyLocked) {
+		return err
+	}
+	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
 	sdkMount := workshopbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)

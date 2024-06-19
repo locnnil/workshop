@@ -104,8 +104,6 @@ func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.H
 		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
 
-	/* We use file locking hereutil.StateDir as multiple clients can try access the state file now,
-	this will be removed once moved to a client-server arch */
 	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(dir, ".lock"))
 	if err != nil {
 		return nil, err

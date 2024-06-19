@@ -22,6 +22,10 @@ type Setup struct {
 	InstallTime *time.Time `json:"install-time"`
 }
 
+func (s *Setup) Filename() string {
+	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
+}
+
 type sdkYaml struct {
 	Name  string                 `json:"name"`
 	Base  string                 `json:"base"`
@@ -297,10 +301,6 @@ func SdkHooksDir(sdkName string) string {
 
 func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
-}
-
-func (s *Setup) Filename() string {
-	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
 }
 
 func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {

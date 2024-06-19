@@ -58,7 +58,7 @@ func StoreService(st *state.State) Store {
 
 type Store interface {
 	SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
-	DownloadSdk(ctx context.Context, name, channel string, target string) error
+	DownloadSdk(ctx context.Context, setup Setup) error
 }
 
 func NewFakeStore() Store {
@@ -73,16 +73,14 @@ type TestActionCall struct {
 }
 
 type TestDownloadCall struct {
-	Name    string
-	Channel string
-	Target  string
+	Setup Setup
 }
 
 type FakeStore struct {
 	ActionCalls      []TestActionCall
 	DownloadCalls    []TestDownloadCall
 	ActionCallback   func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
-	DownloadCallback func(ctx context.Context, name, channel string, target string) error
+	DownloadCallback func(ctx context.Context, setup Setup) error
 }
 
 func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error) {
@@ -96,14 +94,12 @@ func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info,
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, name, channel string, target string) error {
+func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup) error {
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
-		Name:    name,
-		Channel: channel,
-		Target:  target,
+		Setup: setup,
 	})
 	if f.DownloadCallback != nil {
-		return f.DownloadCallback(ctx, name, channel, target)
+		return f.DownloadCallback(ctx, setup)
 	}
 	return nil
 }
