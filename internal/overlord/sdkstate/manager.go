@@ -13,7 +13,7 @@ type SdkManager struct {
 func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
-	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), manager.undoRetrieveSdk)
+	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
 	runner.AddHandler("install-sdk", OnDo(manager.doInstallSDK), manager.undoInstallSdk)
 	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), manager.undoLinkSdk)
 

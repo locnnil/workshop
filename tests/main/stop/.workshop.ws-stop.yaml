@@ -1,5 +1,5 @@
-name: ws
+name: ws-stop
 base: ubuntu@22.04
 sdks:
-    test-sdk-content:
+    test-sdk-basic:
         channel: latest/stable

@@ -55,6 +55,9 @@ func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Ta
 var ErrTrigger = errors.New("error out")
 
 func (s *H) SetUpTest(c *check.C) {
+	dirs.SetRootDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
@@ -130,6 +133,46 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t)
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals, []string{
+		"tar",
+		"--extract",
+		"--file",
+		"/root/test-2_2.sdk",
+		"--one-top-level=/var/lib/workshop/sdk/test-2/2",
+		"--no-same-owner",
+	})
+
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+}
+
+func (s *H) TestDoInstallSdkSuccessWhenLocked(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	// Lock the sdk pretending there is another concurrent doInstall that has
+	// already captured the lock.
+	l, err := sdk.OpenLock(newSdk.Name)
+	c.Assert(err, check.IsNil)
+	c.Assert(l.Lock(), check.IsNil)
+	defer l.Close()
 
 	s.state.Unlock()
 	s.se.Ensure()

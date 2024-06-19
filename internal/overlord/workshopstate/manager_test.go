@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
@@ -37,6 +38,7 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshopbackend.ContextUser, "testuser")
 	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {

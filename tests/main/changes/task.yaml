@@ -2,9 +2,9 @@ summary: Ensure the changes command output correctness
 execute: |
   . "$TESTSLIB"/utils.sh
     
-  workshop_exec launch ws
+  workshop_exec launch ws-changes
 
   echo "The launch change must present in the list"
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-changes\" workshop$"
   
-  workshop_exec remove ws
+  workshop_exec remove ws-changes

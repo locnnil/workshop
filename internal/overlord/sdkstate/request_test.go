@@ -5,6 +5,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
@@ -41,13 +42,13 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	rec := sdk.Setup{Name: "sdk", Channel: "latest/stable"}
 
-	task := sdkstate.Retrieve(i.state, &sdk)
+	task := sdkstate.Retrieve(i.state, rec)
 
-	var s workshopbackend.SdkRecord
-	task.Get("sdk-record", &s)
-	c.Check(s, check.DeepEquals, sdk)
+	var s sdk.Setup
+	task.Get("sdk-setup", &s)
+	c.Check(s, check.DeepEquals, rec)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
 	c.Check(task.Summary(), check.Equals, "Retrieve \"sdk\" SDK from channel \"latest/stable\"")
 }

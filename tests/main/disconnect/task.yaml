@@ -1,33 +1,33 @@
 summary: Check that "workshop disconnect" works as expected
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-1  
+  workshop_exec launch ws-disconn  
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-1
+  workshop_exec remove ws-disconn
 execute: |
   . "$TESTSLIB"/utils.sh
   
   echo "Check disconnect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
-  workshop_exec disconnect ws-1/test-sdk-content:content-plug-one ws-1/agent:content  
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"
+  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one ws-disconn/agent:content  
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
   
   echo "Check disconnect <workshop>/<sdk>:<plug> :<slot> form (agent SDK)"
-  workshop_exec disconnect ws-1/test-sdk-content:content-plug-two :content  
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+-.+\-$"
+  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-two :content  
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-two.+-.+\-$"
   
   echo "Check 'workshop remove' does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
-  workshop_exec remove ws-1
-  workshop_exec launch ws-1
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-two.+:content.+\-$"  
+  workshop_exec remove ws-disconn
+  workshop_exec launch ws-disconn
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-two.+:content.+\-$"  
 
   echo "Check disconnect <workshop>/<sdk>:<plug or slot> form (must disconnect all slots auto connections)"
-  workshop_exec disconnect ws-1/agent:content
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+-.+\-$"  
+  workshop_exec disconnect ws-disconn/agent:content
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"  
   
   echo "Check disconnect --forget (reconnects after refresh)"
-  workshop_exec disconnect ws-1/test-sdk-content:content-plug-one --forget
-  workshop_exec refresh ws-1
-  workshop_exec connections ws-1 | MATCH "^content.+ws-1/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one --forget
+  workshop_exec refresh ws-disconn
+  workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+:content.+\-$"

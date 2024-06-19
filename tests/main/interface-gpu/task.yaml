@@ -1,20 +1,20 @@
 summary: Check GPU interface scenarios
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws
+  workshop_exec launch ws-gpu
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws
+  workshop_exec remove ws-gpu
 execute: |
   . "$TESTSLIB"/utils.sh
   
   echo "Check the GPU interface plug can be auto-connected"
-  workshop_exec connections ws | MATCH "^gpu.+ws/test-sdk-gpu:gpu.+:gpu.+\-$"
+  workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+\-$"
   
   echo "Check the GPU interface plug can be connected and disconnected manually"
-  workshop_exec disconnect ws/test-sdk-gpu:gpu  
-  workshop_exec connect ws/test-sdk-gpu:gpu
-  workshop_exec connections ws | MATCH "^gpu.+ws/test-sdk-gpu:gpu.+:gpu.+manual$"
+  workshop_exec disconnect ws-gpu/test-sdk-gpu:gpu  
+  workshop_exec connect ws-gpu/test-sdk-gpu:gpu
+  workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+manual$"
   
   echo "Ensure a GPU device is created when connected"
   
@@ -23,12 +23,8 @@ execute: |
   # ensure that the LXD profile contains a gpu device with a proper
   # configuration.  
   project_id=$(cat .workshop.lock)
-  lxc profile show --project workshop.ubuntu ws-"$project_id"-test-sdk-gpu | yq '.devices.gpu' > output.log
+  lxc profile show --project workshop.ubuntu ws-gpu-"$project_id"-test-sdk-gpu | yq '.devices.gpu' > output.log
   MATCH "type: gpu" < output.log
   MATCH "gputype: physical" < output.log
   MATCH 'uid: "1000"' < output.log
   MATCH 'gid: "1000"' < output.log
-
-
-  
-  
