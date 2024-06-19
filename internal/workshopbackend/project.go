@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 )
 
@@ -70,9 +71,9 @@ func (w *Project) EnumWorkshopFiles() ([]*WorkshopFile, error) {
 		if names := validWorkshopFilename.FindStringSubmatch(info.Name()); names != nil {
 			file, err := readWorkshop(filepath.Join(w.Path, info.Name()))
 			if err != nil {
-				return nil, err
+				logger.Noticef("Cannot parse %q file: %v", info.Name(), err)
+				continue
 			}
-
 			workshops = append(workshops, file)
 		}
 	}
