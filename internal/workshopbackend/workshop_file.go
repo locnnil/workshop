@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"strings"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
@@ -11,9 +12,14 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
+type Plug struct {
+	Bind string `yaml:"bind"`
+}
+
 type SdkRecord struct {
-	Name    string `yaml:"name"`
-	Channel string `yaml:"channel"`
+	Name    string          `yaml:"name"`
+	Channel string          `yaml:"channel"`
+	Plugs   map[string]Plug `yaml:"plugs,omitempty"`
 }
 
 type SdkList []SdkRecord
@@ -22,6 +28,22 @@ type WorkshopFile struct {
 	Name string  `yaml:"name"`
 	Base string  `yaml:"base"`
 	Sdks SdkList `yaml:"sdks,omitempty"`
+}
+
+func (p SdkList) MarshalYAML() (interface{}, error) {
+	type sdkDef struct {
+		Channel string          `yaml:"channel"`
+		Plugs   map[string]Plug `yaml:"plugs,omitempty"`
+	}
+	b := map[string]sdkDef{}
+
+	for _, v := range p {
+		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs}
+	}
+
+	node := &yaml.Node{}
+	err := node.Encode(b)
+	return node, err
 }
 
 func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
@@ -73,6 +95,24 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 
 	if !slices.Contains(sdk.ValidBases, file.Base) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
+	}
+
+	// All bindings must refer to the existing SDKs and meet the name validity
+	// checks (at this stage). Later, when SDK metadata retrieved, the plugs
+	// must be checked again (e.g. ensure all those plugs actually exist).
+	for _, p := range file.Sdks {
+		for _, b := range p.Plugs {
+			comps := strings.Split(b.Bind, ":")
+			if len(comps) != 2 {
+				return nil, fmt.Errorf("incorrect bind plug reference: %q (use <sdk>:<plug>)", b.Bind)
+			}
+			if !sdk.ValidName.MatchString(comps[0]) {
+				return nil, fmt.Errorf("%q isn't a valid SDK name", comps[0])
+			}
+			if ixd := slices.IndexFunc(file.Sdks, func(sr SdkRecord) bool { return comps[0] == sr.Name }); ixd == -1 {
+				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", b.Bind)
+			}
+		}
 	}
 
 	for _, k := range file.Sdks {
