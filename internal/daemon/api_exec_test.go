@@ -11,7 +11,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func (s *apiSuite) setupExec(c *check.C) *Command {
@@ -21,7 +21,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
 	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
 base: ubuntu@20.04`), 0644)
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"}
+	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"}
 
 	err := s.b.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)

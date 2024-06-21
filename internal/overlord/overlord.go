@@ -39,7 +39,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	workshop1 "github.com/canonical/workshop/internal/workshop"
 )
 
 var (
@@ -60,7 +60,7 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 type Overlord struct {
 	stateDir        string
 	stateEng        *StateEngine
-	workshopBackend workshopbackend.WorkshopBackend
+	workshopBackend workshop1.WorkshopBackend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -88,7 +88,7 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b workshopbackend.WorkshopBackend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b workshop1.WorkshopBackend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -461,7 +461,7 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkshopBackend() workshopbackend.WorkshopBackend {
+func (o *Overlord) WorkshopBackend() workshop1.WorkshopBackend {
 	return o.workshopBackend
 }
 

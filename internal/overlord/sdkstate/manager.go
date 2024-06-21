@@ -3,7 +3,7 @@ package sdkstate
 import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	backend "github.com/canonical/workshop/internal/workshopbackend"
+	backend "github.com/canonical/workshop/internal/workshop"
 )
 
 type SdkManager struct {

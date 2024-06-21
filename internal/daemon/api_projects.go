@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
@@ -18,7 +18,7 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	result := make([]*workshopbackend.Project, 0)
+	result := make([]*workshop.Project, 0)
 	for _, val := range projects {
 		result = append(result, val...)
 	}
@@ -43,9 +43,9 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	wBackend := c.d.overlord.WorkshopBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
-	if err != nil && !errors.Is(err, workshopbackend.ErrNotAProject) {
+	if err != nil && !errors.Is(err, workshop.ErrNotAProject) {
 		return statusInternalError("cannot create or load project at %q: %v", reqData.Path, err)
-	} else if errors.Is(err, workshopbackend.ErrNotAProject) {
+	} else if errors.Is(err, workshop.ErrNotAProject) {
 		return statusBadRequest("%v", err)
 	}
 

@@ -42,7 +42,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/standby"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/systemd"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 var (
@@ -266,7 +266,7 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userCtx := context.WithValue(r.Context(), workshopbackend.ContextUser, username.Username)
+	userCtx := context.WithValue(r.Context(), workshop.ContextUser, username.Username)
 
 	if rspf != nil {
 		rsp = rspf(c, r.WithContext(userCtx), user)
@@ -758,7 +758,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 	return errExpectedReboot
 }
 
-func New(opts *Options, be workshopbackend.WorkshopBackend) (*Daemon, error) {
+func New(opts *Options, be workshop.WorkshopBackend) (*Daemon, error) {
 	d := &Daemon{
 		workshopDir:         opts.Dir,
 		normalSocketPath:    opts.SocketPath,

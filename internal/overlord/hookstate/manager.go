@@ -8,7 +8,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // Handler is the interface a client must satify to handle hooks.
@@ -59,13 +59,13 @@ func (h *HookSetup) Type() string {
 type HookManager struct {
 	state      *state.State
 	repository *repository
-	backend    workshopbackend.WorkshopBackend
+	backend    workshop.WorkshopBackend
 
 	contextsMutex sync.RWMutex
 	contexts      map[string]*Context
 }
 
-func New(s *state.State, runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *HookManager {
+func New(s *state.State, runner *state.TaskRunner, server workshop.WorkshopBackend) *HookManager {
 	manager := &HookManager{
 		state:      s,
 		backend:    server,

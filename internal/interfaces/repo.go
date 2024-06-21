@@ -29,7 +29,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // Repository stores all known plugs and slots and ifaces.
@@ -786,12 +786,12 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 		return nil, fmt.Errorf("cannot handle interfaces of %q workshop, security system %q is not known", sdkInfo.Workshop, securitySystem)
 	}
 
-	user, ok := ctx.Value(workshopbackend.ContextUser).(string)
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("internal error: context key %s not found", workshopbackend.ContextUser)
+		return nil, fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
 	}
 
-	projectId, ok := ctx.Value(workshopbackend.ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
 	}

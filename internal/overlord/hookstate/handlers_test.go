@@ -16,17 +16,17 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type hookSuite struct {
-	backend     *workshopbackend.FakeWorkshopBackend
+	backend     *workshop.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
 	hookmgr     *hookstate.HookManager
 	ctx         context.Context
-	project     *workshopbackend.Project
+	project     *workshop.Project
 	mockHandler *hooktest.MockHandler
 }
 
@@ -38,7 +38,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -46,13 +46,13 @@ func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Ta
 }
 
 func (s *hookSuite) SetUpTest(c *check.C) {
-	s.backend = workshopbackend.NewFakeWorkshopBackend()
+	s.backend = workshop.NewFakeWorkshopBackend()
 
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -90,7 +90,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	chg.AddTask(t1)
 
 	// Launch a workshop provinding no hooks
-	err := s.backend.LaunchWorkshop(s.ctx, &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"})
+	err := s.backend.LaunchWorkshop(s.ctx, &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"})
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -183,15 +183,15 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
 			},
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -220,8 +220,8 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				child, cancel := context.WithTimeout(ctx, args.Timeout)
 				defer cancel()
@@ -231,7 +231,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -282,15 +282,15 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
 			},
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one")
@@ -322,15 +322,15 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
 			},
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -359,15 +359,15 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
 			},
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -466,7 +466,7 @@ func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 }
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")

@@ -30,7 +30,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
 
@@ -141,15 +141,15 @@ slots:
 			HomeDir:  homeDir,
 		}
 		return u, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 	defer restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
-	expectedMnt := workshopbackend.Mount(plug.Name, sourceDir, "/project/training")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedMnt})
+	expectedMnt := workshop.Mount(plug.Name, sourceDir, "/project/training")
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
 
 	// Vaildate plug attribute
 	var src string

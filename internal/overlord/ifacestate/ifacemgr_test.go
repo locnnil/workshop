@@ -20,7 +20,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type interfaceManagerSuite struct {
@@ -30,8 +30,8 @@ type interfaceManagerSuite struct {
 	se         *overlord.StateEngine
 	runner     *state.TaskRunner
 	ctx        context.Context
-	wsbackend  workshopbackend.WorkshopBackend
-	prj        *workshopbackend.Project
+	wsbackend  workshop.WorkshopBackend
+	prj        *workshop.Project
 	secBackend *ifacetest.TestSecurityBackend
 
 	restoreProjectId func()
@@ -50,13 +50,13 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 	s.secBackend = &ifacetest.TestSecurityBackend{}
 
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshopbackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	s.wsbackend = workshopbackend.NewFakeWorkshopBackend()
-	s.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
+	s.wsbackend = workshop.NewFakeWorkshopBackend()
+	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
+	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
 }
@@ -66,13 +66,13 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshopbackend.WorkshopFs, name, yaml string) {
+func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
 	c.Assert(afero.WriteFile(fs, sdkPath, []byte(yaml), 0644), check.IsNil)
 }
 
 func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[sdk.Setup]string) {
-	ctx := context.WithValue(s.ctx, workshopbackend.ContextProjectId, s.prj.ProjectId)
+	ctx := context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
@@ -80,7 +80,7 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, maps.Keys(sdkYamls))
 
-	var wf workshopbackend.WorkshopFile
+	var wf workshop.WorkshopFile
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 

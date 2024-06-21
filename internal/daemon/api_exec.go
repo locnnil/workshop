@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type execPayload struct {
@@ -70,7 +70,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if reqData.WorkingDir == "" {
-		reqData.WorkingDir = workshopbackend.WorkshopProjectPath
+		reqData.WorkingDir = workshop.WorkshopProjectPath
 	}
 
 	var environment = make(map[string]string)
@@ -110,12 +110,12 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 		environment["LANG"] = "C.UTF-8"
 	}
 
-	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot exec: user is not in context")
 	}
 
-	var execArgs = &workshopbackend.ExecArgs{
+	var execArgs = &workshop.ExecArgs{
 		Command:     reqData.Command,
 		Environment: environment,
 		WorkDir:     reqData.WorkingDir,

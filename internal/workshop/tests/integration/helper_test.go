@@ -12,7 +12,7 @@ import (
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
 
@@ -75,12 +75,12 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 }
 
 func createTestContext(username, projectId string) context.Context {
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
+	ctx := context.WithValue(context.Background(), workshop.ContextUser, username)
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
 	return ctx
 }
 
-func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.WorkshopBackend, dir, username string) {
+func launchTestWorkshop(c *check.C, ctx context.Context, be workshop.WorkshopBackend, dir, username string) {
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
 			Name:     username,
@@ -89,12 +89,12 @@ func launchTestWorkshop(c *check.C, ctx context.Context, be workshopbackend.Work
 			Gid:      "1000",
 		}
 		return u, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 	defer restore()
 
 	var err error
 
-	wf := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
+	wf := &workshop.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@22.04`), 0644), check.IsNil)
 

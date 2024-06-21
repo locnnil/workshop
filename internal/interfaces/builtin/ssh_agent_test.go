@@ -7,7 +7,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
 
@@ -35,7 +35,7 @@ func (s *sshAgentSuite) SetUpTest(c *check.C) {
 			HomeDir:  homeDir,
 		}
 		return u, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 }
 
 func (s *sshAgentSuite) TearDown(c *check.C) {
@@ -73,8 +73,8 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := workshopbackend.SshAgent("consumer-"+plug.Name, "/tmp/dir/ssh", "/var/lib/workshop/consumer-ssh-agent.ssh")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedProxy})
+	expectedProxy := workshop.SshAgent("consumer-"+plug.Name, "/tmp/dir/ssh", "/var/lib/workshop/consumer-ssh-agent.ssh")
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedProxy})
 }
 
 func (s *sshAgentSuite) TestSshAgentInterfaceSystemctlFails(c *check.C) {

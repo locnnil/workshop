@@ -6,14 +6,14 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type Backend struct {
-	profile workshopbackend.Profile
+	profile workshop.Profile
 }
 
-func (b *Backend) Initialize(profile workshopbackend.Profile) error {
+func (b *Backend) Initialize(profile workshop.Profile) error {
 	b.profile = profile
 	return nil
 }
@@ -31,7 +31,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfac
 	}
 
 	spec := s.(*Specification)
-	profile := workshopbackend.NewSdkProfile(sdkInfo.Sdk)
+	profile := workshop.NewSdkProfile(sdkInfo.Sdk)
 	for _, dev := range spec.devices {
 		profile.AddDevice(dev)
 	}
@@ -48,7 +48,7 @@ func (b *Backend) Remove(context context.Context, workshop, sdkName string) erro
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid string) interfaces.Specification {
 	return &Specification{
-		devices: make(map[string]workshopbackend.Device),
+		devices: make(map[string]workshop.Device),
 		user:    user,
 		pid:     pid,
 	}

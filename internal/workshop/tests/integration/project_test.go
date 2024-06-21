@@ -16,7 +16,7 @@ import (
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type wsProject struct {
@@ -33,23 +33,23 @@ var _ = check.Suite(&wsProject{})
 
 func (f *wsProject) SetUpTest(c *check.C) {
 	f.username = "testuser"
-	f.ctx = context.WithValue(context.Background(), workshopbackend.ContextUser, f.username)
-	be := workshopbackend.LxdBackend{}
+	f.ctx = context.WithValue(context.Background(), workshop.ContextUser, f.username)
+	be := workshop.LxdBackend{}
 	f.client, _ = be.LxdClient(f.ctx)
-	err := workshopbackend.InitProject(f.client, f.username)
+	err := workshop.InitProject(f.client, f.username)
 	c.Assert(err, check.IsNil)
 }
 
 func (f *wsProject) TearDownTest(c *check.C) {
-	cleanUpLxdProject(c, f.client, workshopbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.client, workshopbackend.LxdSystemProjectName(f.username))
+	cleanUpLxdProject(c, f.client, workshop.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.client, workshop.LxdSystemProjectName(f.username))
 }
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
 
 func (f *wsProject) TestLxdBackendCreateProjectNoWorkshopFiles(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 
 	projectDir := c.MkDir()
 
@@ -58,18 +58,18 @@ func (f *wsProject) TestLxdBackendCreateProjectNoWorkshopFiles(c *check.C) {
 
 	// Validate
 	c.Assert(prj, check.IsNil)
-	c.Assert(err, check.Equals, workshopbackend.ErrNotAProject)
-	c.Assert(workshopbackend.LockPath(projectDir), testutil.FileAbsent)
+	c.Assert(err, check.Equals, workshop.ErrNotAProject)
+	c.Assert(workshop.LockPath(projectDir), testutil.FileAbsent)
 	projects, _ := be.Projects(f.ctx)
 	c.Assert(projects[f.username], check.HasLen, 0)
 }
 
 func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 	numCalls := 0
 	ids := []string{"b8639dea", "d4352dea"}
-	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshopbackend.NewProjectId)
+	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshop.NewProjectId)
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
@@ -84,8 +84,8 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	c.Assert(prj.Path, check.Equals, projectDir)
 	c.Assert(err, check.IsNil)
 
-	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName("testuser"))
-	c.Assert(workshopbackend.LockPath(projectDir), testutil.FilePresent)
+	lxdProject, _, _ := f.client.GetProject(workshop.LxdProjectName("testuser"))
+	c.Assert(workshop.LockPath(projectDir), testutil.FilePresent)
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
 
 	// Execute
@@ -94,17 +94,17 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Validate
-	lxdProject, _, _ = f.client.GetProject(workshopbackend.LxdProjectName("testuser"))
-	c.Assert(workshopbackend.LockPath(projectDir2), testutil.FilePresent)
+	lxdProject, _, _ = f.client.GetProject(workshop.LxdProjectName("testuser"))
+	c.Assert(workshop.LockPath(projectDir2), testutil.FilePresent)
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"},{"path":"%s","id":"d4352dea"}]`, projectDir, projectDir2))
 }
 
 func (f *wsProject) TestLxdBackendReconcileProjectIfNotRecovered(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 	numCalls := 0
 	ids := []string{"b8639dea"}
-	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshopbackend.NewProjectId)
+	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshop.NewProjectId)
 	defer restore()
 	projectDir := c.MkDir()
 
@@ -121,14 +121,14 @@ func (f *wsProject) TestLxdBackendReconcileProjectIfNotRecovered(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(projects[f.username], check.HasLen, 0)
 
-	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName("testuser"))
+	lxdProject, _, _ := f.client.GetProject(workshop.LxdProjectName("testuser"))
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, `[]`)
 }
 
 func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
-	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshopbackend.NewProjectId)
+	be := workshop.LxdBackend{}
+	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	projectDir := c.MkDir()
 
 	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
@@ -148,7 +148,7 @@ func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	c.Assert(prj.Path, check.Equals, projectDir)
 	c.Assert(err, check.IsNil)
 	c.Assert(created, check.Equals, false)
-	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName("testuser"))
+	lxdProject, _, _ := f.client.GetProject(workshop.LxdProjectName("testuser"))
 
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir))
 }
@@ -158,10 +158,10 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 	// We pre-create a project to emulate the scenario when
 	// the directory was moved, but the project's settings were not
 	// yet updated.
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 	projectDir := c.MkDir()
 	newDir := projectDir + "_moved"
-	f.client.UpdateProject(workshopbackend.LxdProjectName(f.username),
+	f.client.UpdateProject(workshop.LxdProjectName(f.username),
 		api.ProjectPut{
 			Config: map[string]string{
 				"user.workshop.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
@@ -178,7 +178,7 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 	c.Assert(prj.Path, check.Equals, newDir)
 	c.Assert(err, check.IsNil)
 	c.Assert(created, check.Equals, false)
-	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName(f.username))
+	lxdProject, _, _ := f.client.GetProject(workshop.LxdProjectName(f.username))
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.DeepEquals, fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, newDir))
 }
 
@@ -187,12 +187,12 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
 	// We pre-create a project to emulate the scenario when
 	// the directory was copied, but the project's settings were not
 	// yet updated.
-	be := workshopbackend.LxdBackend{}
-	restore := testutil.FakeFunc(func() (string, error) { return "abcdefgi", nil }, &workshopbackend.NewProjectId)
+	be := workshop.LxdBackend{}
+	restore := testutil.FakeFunc(func() (string, error) { return "abcdefgi", nil }, &workshop.NewProjectId)
 	defer restore()
 	projectDir := c.MkDir()
 	newDir := c.MkDir()
-	f.client.UpdateProject(workshopbackend.LxdProjectName(f.username),
+	f.client.UpdateProject(workshop.LxdProjectName(f.username),
 		api.ProjectPut{
 			Config: map[string]string{
 				"user.workshop.projects": fmt.Sprintf(`[{"path":"%s","id":"b8639dea"}]`, projectDir),
@@ -210,16 +210,16 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
 	c.Assert(prj.Path, check.Equals, newDir)
 	c.Assert(created, check.Equals, true)
 	c.Assert(filepath.Join(newDir, ".workshop.lock"), testutil.FileEquals, "abcdefgi")
-	lxdProject, _, _ := f.client.GetProject(workshopbackend.LxdProjectName(f.username))
+	lxdProject, _, _ := f.client.GetProject(workshop.LxdProjectName(f.username))
 	c.Assert(lxdProject.Config["user.workshop.projects"], check.Matches, fmt.Sprintf(`.*{"path":"%s","id":"abcdefgi"}.*`, newDir))
 }
 
 func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 	numCalls := 0
 	ids := []string{"b8639dea", "d4352dea"}
-	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshopbackend.NewProjectId)
+	restore := testutil.FakeFunc(func() (string, error) { numCalls = numCalls + 1; return ids[numCalls-1], nil }, &workshop.NewProjectId)
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
@@ -238,21 +238,21 @@ func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, check.DeepEquals, map[string][]*workshopbackend.Project{
+	c.Assert(projects, check.DeepEquals, map[string][]*workshop.Project{
 		f.username: {
 			{ProjectId: "b8639dea", Path: projectDir},
 			{ProjectId: "d4352dea", Path: projectDir2},
 		},
 	})
-	c.Assert(workshopbackend.LockPath(projectDir), testutil.FilePresent)
-	c.Assert(workshopbackend.LockPath(projectDir2), testutil.FilePresent)
+	c.Assert(workshop.LockPath(projectDir), testutil.FilePresent)
+	c.Assert(workshop.LockPath(projectDir2), testutil.FilePresent)
 }
 
 func (f *wsProject) TestLxdBackendLoadProjectDirectoryRemoved(c *check.C) {
 	// Setup
 	// We pre-create a project to emulate the scenario when
 	// the directory was removed
-	be := workshopbackend.LxdBackend{}
+	be := workshop.LxdBackend{}
 	projectDir := c.MkDir()
 
 	err := os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
@@ -273,8 +273,8 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryRemoved(c *check.C) {
 
 func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
-	restoreId := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshopbackend.NewProjectId)
+	be := workshop.LxdBackend{}
+	restoreId := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	defer restoreId()
 
 	restoreLookup := testutil.FakeFunc(func(username string) (*user.User, error) {
@@ -282,7 +282,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 			return &user.User{Name: username}, nil
 		}
 		return nil, user.UnknownUserError("not found")
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 	defer restoreLookup()
 
 	projectDir := c.MkDir()
@@ -297,15 +297,15 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, testutil.DeepUnsortedMatches, map[string][]*workshopbackend.Project{
+	c.Assert(projects, testutil.DeepUnsortedMatches, map[string][]*workshop.Project{
 		f.username: {{ProjectId: "b8639dea", Path: projectDir}},
 	})
 }
 
 func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	// Setup
-	be := workshopbackend.LxdBackend{}
-	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshopbackend.NewProjectId)
+	be := workshop.LxdBackend{}
+	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	projectDir := c.MkDir()
 
 	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
@@ -318,7 +318,7 @@ func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	restore()
 
 	// Execute (this time the project must be loaded)
-	ctx := context.WithValue(f.ctx, workshopbackend.ContextUser, "anotheruser")
+	ctx := context.WithValue(f.ctx, workshop.ContextUser, "anotheruser")
 	prj, created, err := be.CreateOrLoadProject(ctx, projectDir)
 
 	// Validate

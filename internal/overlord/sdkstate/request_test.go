@@ -6,7 +6,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type SdkStateTasks struct {
@@ -23,7 +23,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workshopbackend.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	sdk := workshop.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 

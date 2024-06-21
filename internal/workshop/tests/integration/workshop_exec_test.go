@@ -14,21 +14,21 @@ import (
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
 
 type wsExec struct {
 	// per suite
 	lxdClient lxd.InstanceServer
-	be        workshopbackend.WorkshopBackend
+	be        workshop.WorkshopBackend
 
 	// per test
 	ctx                 context.Context
 	username            string
 	client              *client.Client
 	daemon              *daemon.Daemon
-	project             *workshopbackend.Project
+	project             *workshop.Project
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
 	newProjectidRestore func()
@@ -39,11 +39,11 @@ type wsExec struct {
 var _ = check.Suite(&wsExec{})
 
 func (f *wsExec) SetUpSuite(c *check.C) {
-	f.restoreImageServer = workshopbackend.FakeImageServer(minimalImageServer)
+	f.restoreImageServer = workshop.FakeImageServer(minimalImageServer)
 
 	socketPath := c.MkDir() + ".workshop.socket"
 	var err error
-	f.be, err = workshopbackend.New()
+	f.be, err = workshop.New()
 	c.Assert(err, check.IsNil)
 
 	d, err := daemon.New(&daemon.Options{
@@ -62,15 +62,15 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	})
 	c.Assert(err, check.IsNil)
 
-	f.project = &workshopbackend.Project{
+	f.project = &workshop.Project{
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}
 	f.username = "testuser"
 	f.ctx = createTestContext(f.username, f.project.ProjectId)
 
-	f.lxdClient, _ = f.be.(*workshopbackend.LxdBackend).LxdClient(f.ctx)
-	err = workshopbackend.InitProject(f.lxdClient, f.username)
+	f.lxdClient, _ = f.be.(*workshop.LxdBackend).LxdClient(f.ctx)
+	err = workshop.InitProject(f.lxdClient, f.username)
 	c.Check(err, check.IsNil)
 
 	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
@@ -81,7 +81,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 			Gid:      "1000",
 		}
 		return u, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 
 	f.lookupUserIdRestore = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		u := &user.User{
@@ -93,11 +93,11 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return u, nil
 	}, &daemon.LookupUserId)
 
-	f.restoreDevices = workshopbackend.FakeDefaultDevices(defaultTestDevices)
+	f.restoreDevices = workshop.FakeDefaultDevices(defaultTestDevices)
 
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
-	}, &workshopbackend.NewProjectId)
+	}, &workshop.NewProjectId)
 
 	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
 }
@@ -112,8 +112,8 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.newProjectidRestore()
 	f.restoreImageServer()
 	f.restoreDevices()
-	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.lxdClient, workshopbackend.LxdSystemProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, workshop.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, workshop.LxdSystemProjectName(f.username))
 }
 
 func (f *wsExec) exec(c *check.C, stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {

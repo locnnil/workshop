@@ -9,7 +9,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // The Do handler decoractor that helps to decide whether:
@@ -69,9 +69,9 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	}
 }
 
-func UserProjectWorkshop(task *state.Task) (string, *workshopbackend.Project, string, error) {
+func UserProjectWorkshop(task *state.Task) (string, *workshop.Project, string, error) {
 	st := task.State()
-	var prj workshopbackend.Project
+	var prj workshop.Project
 	var name string
 	var user string
 
@@ -106,8 +106,8 @@ func UserProjectWorkshop(task *state.Task) (string, *workshopbackend.Project, st
 
 func BackendContext(tomb *tomb.Tomb, user string, projectId string) (context.Context, context.CancelFunc) {
 	ctx := tomb.Context(context.Background())
-	ctxProject := context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
-	ctxUser := context.WithValue(ctxProject, workshopbackend.ContextUser, user)
+	ctxProject := context.WithValue(ctx, workshop.ContextProjectId, projectId)
+	ctxUser := context.WithValue(ctxProject, workshop.ContextUser, user)
 	ctxCancel, cancel := context.WithCancel(ctxUser)
 	return ctxCancel, cancel
 }

@@ -31,7 +31,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func TestHealthState(t *testing.T) { check.TestingT(t) }
@@ -41,9 +41,9 @@ type healthSuite struct {
 	se      *overlord.StateEngine
 	state   *state.State
 	runner  *state.TaskRunner
-	backend *workshopbackend.FakeWorkshopBackend
+	backend *workshop.FakeWorkshopBackend
 	hookMgr *hookstate.HookManager
-	project *workshopbackend.Project
+	project *workshop.Project
 	ctx     context.Context
 }
 
@@ -56,12 +56,12 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	s.backend = workshopbackend.NewFakeWorkshopBackend()
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
+	s.backend = workshop.NewFakeWorkshopBackend()
+	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
 	s.hookMgr = hookstate.New(s.state, s.runner, s.backend)
 
@@ -82,7 +82,7 @@ func (s *healthSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 	for _, task := range tasks {
 		task.Set("workshop", w)
 		task.Set("project", *p)
@@ -97,7 +97,7 @@ func ensureTaskHealthIsSet(t *state.Task, expected *healthstate.HealthCheck, c *
 }
 
 func (s *healthSuite) launchWorkshop(c *check.C, newsdk string, createHealthCheck bool) {
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
@@ -191,8 +191,8 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 	}
 
 	var hookContext *hookstate.Context
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				// emulate workshopctl set-health --code=<code> error <message>
 				var err error
@@ -206,7 +206,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -258,8 +258,8 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		CheckResult: healthstate.CheckOkay,
 	}
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
 				c.Assert(err, check.IsNil)
@@ -279,7 +279,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -321,8 +321,8 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 	}
 
 	var hookContext *hookstate.Context
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				var err error
 				hookContext, err = s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
@@ -336,7 +336,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -371,15 +371,15 @@ func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshopbackend.Execution) (workshopbackend.ExecContext, error) {
-		return workshopbackend.ExecContext{
+	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return context.DeadlineExceeded
 			},
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshopbackend.DoExecDefault
+		s.backend.DoExec = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)

@@ -1,4 +1,4 @@
-package workshopbackend_test
+package workshop_test
 
 import (
 	"cmp"
@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type workshopFile struct {
@@ -44,11 +44,11 @@ sdks:
 `)
 	dir := c.MkDir()
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
+	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
-	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workshopbackend.SdkRecord) int {
+	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workshop.SdkRecord) int {
 		return cmp.Compare(a.Name, b.Name)
 	}), check.Equals, true)
 	c.Assert(file.Sdks[0].Name, check.Equals, "automotive")
@@ -62,12 +62,12 @@ sdks:
 }
 
 func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
-	fl := &workshopbackend.WorkshopFile{
+	fl := &workshop.WorkshopFile{
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
-		Sdks: []workshopbackend.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{"plug": {Bind: "two:plug"}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{"plug": {Bind: "one:plug"}}},
+		Sdks: []workshop.SdkRecord{
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "two:plug"}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "one:plug"}}},
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -99,7 +99,7 @@ sdks:
 `)
 	dir := c.MkDir()
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
+	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(file, check.IsNil)
 	c.Assert(err, check.ErrorMatches, `"cuda" SDK must only be included once`)
 }
@@ -113,7 +113,7 @@ sdks:
 `)
 	dir := c.MkDir()
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
+	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
 	c.Assert(file, check.IsNil)
 }
@@ -134,13 +134,13 @@ sdks:
         bind: data-sdk:cache
 `)
 	dir := c.MkDir()
-	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshopbackend.SdkList{
-		workshopbackend.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{"cache": {Bind: "etl-sdk:cache"}}},
-		workshopbackend.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{"data": {Bind: "data-sdk:cache"}}},
+	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: "etl-sdk:cache"}}},
+		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: "data-sdk:cache"}}},
 	})
 }
 
@@ -160,7 +160,7 @@ sdks:
         bind: data-sdk:cache
 `)
 	dir := c.MkDir()
-	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `"no-sdk:cache" tries to bind to a plug from a non-existing SDK`)
@@ -182,7 +182,7 @@ sdks:
         bind: data-sdk:cache
 `)
 	dir := c.MkDir()
-	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `"workshop/no-sdk" isn't a valid SDK name`)
@@ -199,7 +199,7 @@ sdks:
         bind: cache
 `)
 	dir := c.MkDir()
-	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `incorrect bind plug reference: "cache" \(use <sdk>:<plug>\)`)

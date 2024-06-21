@@ -1,4 +1,4 @@
-package workshopbackend
+package workshop
 
 
 func Mount(name, source, target string) Device {

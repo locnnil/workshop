@@ -1,4 +1,4 @@
-package workshopbackend_test
+package workshop_test
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type projectSuite struct {
@@ -25,7 +25,7 @@ func createWorkshop(dir, name string) error {
 
 func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	d := c.MkDir()
-	p := &workshopbackend.Project{Path: d, ProjectId: "42424242"}
+	p := &workshop.Project{Path: d, ProjectId: "42424242"}
 	c.Assert(createWorkshop(d, "w1"), check.IsNil)
 	c.Assert(createWorkshop(d, "w2"), check.IsNil)
 	c.Assert(createWorkshop(d, "-"), check.IsNil)

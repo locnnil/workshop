@@ -29,7 +29,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 const contentSummary = `allows sharing host code and data with SDKs`
@@ -119,7 +119,7 @@ func (iface *contentInterface) MountConnectedSlot(spec *device.Specification, pl
 
 // Interactions with the mount backend.
 func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workshopbackend.LookupUsername(spec.User())
+	user, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	spec.AddDeviceEntry(workshopbackend.Mount(plug.Name(), source, iface.target(plug)))
+	spec.AddDeviceEntry(workshop.Mount(plug.Name(), source, iface.target(plug)))
 	return nil
 }
 

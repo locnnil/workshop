@@ -23,7 +23,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 const gpuSummary = `allows sharing host GPUs with SDKs`
@@ -69,7 +69,7 @@ func (iface *gpuInterface) MountConnectedPlug(spec *device.Specification, plug *
 	// runtime will be passed through by the initial workshop configuration (see
 	// defaultConfig). This is required as adding nvidia.* entries does not take
 	// effect unless the workshop is restarted.
-	spec.AddDeviceEntry(workshopbackend.Gpu(plug.Name()))
+	spec.AddDeviceEntry(workshop.Gpu(plug.Name()))
 	return nil
 }
 

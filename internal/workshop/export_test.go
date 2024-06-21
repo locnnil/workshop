@@ -1,4 +1,4 @@
-package workshopbackend
+package workshop
 
 var (
 	MergeInstancesAndFiles = mergeInstancesAndFiles

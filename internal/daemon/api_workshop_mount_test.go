@@ -15,10 +15,10 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-func (s *apiSuite) launchWorkshopWithPlug(c *check.C, ctx context.Context, name string) *workshopbackend.Workshop {
+func (s *apiSuite) launchWorkshopWithPlug(c *check.C, ctx context.Context, name string) *workshop.Workshop {
 	b := s.d.overlord.WorkshopBackend()
 	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
 base: ubuntu@20.04
@@ -26,7 +26,7 @@ sdks:
   test-sdk:
     channel: latest/stable
 `, name)), 0644)
-	wf := &workshopbackend.WorkshopFile{Name: name, Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: "test-sdk", Channel: "latest/stable"}}}
+	wf := &workshop.WorkshopFile{Name: name, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test-sdk", Channel: "latest/stable"}}}
 	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)
