@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 )
 
@@ -19,17 +19,10 @@ var (
 )
 
 const (
-	ProjectLock       = ".workshop.lock"
-	ProjectPathDevice = "workshop.project"
+	ProjectLock = ".workshop.lock"
 	// path used in workshop to mount the project directory
 	WorkshopProjectPath = "/project"
-	ProjectIdConfig     = "user.workshop.project-id"
 )
-
-// *.yaml is the only supported extension for workshop files as the only
-// recommended "official" extension: https://yaml.org/faq.html. Also, having a
-// single way of naming workshop files avoids unneccesary inconsistencies.
-var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 func LockPath(path string) string {
 	return filepath.Join(path, ProjectLock)
@@ -45,15 +38,11 @@ func (p *Project) Exists() bool {
 	return exists && dir
 }
 
-func (w *Project) WorkshopFile(workshop string) (*WorkshopFile, error) {
-	file, err := readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
-	if err != nil {
-		return nil, err
-	}
-	return file, nil
+func (w *Project) Workshop(workshop string) (*WorkshopFile, error) {
+	return readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
 }
 
-func (w *Project) EnumWorkshopFiles() ([]*WorkshopFile, error) {
+func (w *Project) ReadWorkshops() ([]*WorkshopFile, error) {
 	files, err := os.ReadDir(w.Path)
 	if err != nil {
 		return nil, err
@@ -68,12 +57,12 @@ func (w *Project) EnumWorkshopFiles() ([]*WorkshopFile, error) {
 
 		// The first element in names will contain the workshop name if matched
 		if names := validWorkshopFilename.FindStringSubmatch(info.Name()); names != nil {
-			file, err := readWorkshop(filepath.Join(w.Path, info.Name()))
+			f, err := readWorkshop(filepath.Join(w.Path, info.Name()))
 			if err != nil {
-				return nil, err
+				logger.Noticef("Cannot parse %s: %v", info.Name(), err)
+				continue
 			}
-
-			workshops = append(workshops, file)
+			workshops = append(workshops, f)
 		}
 	}
 	return workshops, nil

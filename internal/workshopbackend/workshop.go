@@ -27,6 +27,7 @@ type Workshop struct {
 
 	backend WorkshopBackend
 	project *Project
+	file    *WorkshopFile
 	base    string
 	content map[string]sdk.Setup
 	running bool
@@ -63,7 +64,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 
 	err = w.backend.AddWorkshopConfig(ctx, w.Name,
 		&WorkshopConfigValue{
-			Name:  "user.workshop.content",
+			Name:  LxdConfigWorkshopContent,
 			Value: string(sequenceValue),
 		})
 
@@ -104,7 +105,7 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	/* Update the workshop config */
 	err = w.backend.AddWorkshopConfig(ctx, w.Name,
 		&WorkshopConfigValue{
-			Name:  "user.workshop.content",
+			Name:  LxdConfigWorkshopContent,
 			Value: string(newSequence),
 		})
 	if err != nil {
