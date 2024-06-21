@@ -19,7 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func sdkName(task *state.Task) (string, error) {
@@ -65,7 +65,7 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 }
 
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	inst, err := m.backend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	st.Unlock()
 
 	if kind == "refresh" {
-		var sdkRef = sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: s}
+		var sdkRef = sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: s}
 		var plugsToRemount = map[string]map[string]interface{}{}
 		for _, task := range alltasks {
 			// The disconnect tasks of the refresh change store pre-refresh
@@ -139,11 +139,11 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 
 // Returns content interface connection IDs of the SDK and their corresponding
 // plug's dynamic attributes.
-func (m *InterfaceManager) findContentPlugsAttrs(projectId, workshop, sdkname string) map[string]map[string]interface{} {
+func (m *InterfaceManager) findContentPlugsAttrs(projectId, w, sdkname string) map[string]map[string]interface{} {
 	// [ref.ID]source
 	var candidates = map[string]map[string]interface{}{}
 
-	connRefs, err := m.repo.Connections(projectId, workshop, sdkname)
+	connRefs, err := m.repo.Connections(projectId, w, sdkname)
 	if err != nil {
 		return nil
 	}
@@ -282,9 +282,9 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 			}
 			// fix for the Go loop variable capture (<1.22)
 			be := backend
-			workshop, sdkName := s.Workshop, s.Name
+			w, sdkName := s.Workshop, s.Name
 			revertBackendSetup.Add(func() {
-				_ = be.Remove(ctx, workshop, sdkName)
+				_ = be.Remove(ctx, w, sdkName)
 			})
 		}
 	}
@@ -314,7 +314,7 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 }
 
 func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -328,33 +328,33 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 	}
 
 	// rebuild SDK profiles for the affected SDKs
-	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
+	return m.disconnectSdk(ctx, task, project, w, sdkName)
 }
 
-func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, project *workshopbackend.Project, workshop string, sdkName string) error {
+func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, project *workshop.Project, w string, sdkName string) error {
 	st := task.State()
-	sdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: sdkName}
+	sdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: sdkName}
 
-	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, workshop, sdkName)
+	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, w, sdkName)
 	if err != nil {
 		return err
 	}
 
-	if err := m.repo.RemoveSdk(project.ProjectId, workshop, sdkName); err != nil {
+	if err := m.repo.RemoveSdk(project.ProjectId, w, sdkName); err != nil {
 		return err
 	}
 
 	st.Lock()
 	defer st.Unlock()
 
-	if _, err := m.reloadConnections(project.ProjectId, workshop, sdkName); err != nil {
+	if _, err := m.reloadConnections(project.ProjectId, w, sdkName); err != nil {
 		return err
 	}
 
 	for _, backend := range m.repo.Backends() {
 		// if there are not plugs or slots declared by the SDK the profile does
 		// not neccessarily exist for the SDK.
-		if err := backend.Remove(ctx, workshop, sdkName); err != nil && !errors.Is(err, workshopbackend.ErrSdkProfileNotFound) {
+		if err := backend.Remove(ctx, w, sdkName); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
 	}
@@ -371,7 +371,7 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 }
 
 func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -388,16 +388,16 @@ func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (
 	// refresh can recover 'source' attributes for the plugs that were remount
 	// in the previous workshop instance.
 	st := task.State()
-	preRefreshPlugs := m.findContentPlugsAttrs(project.ProjectId, workshop, sdkName)
+	preRefreshPlugs := m.findContentPlugsAttrs(project.ProjectId, w, sdkName)
 	st.Lock()
 	task.Set("plugs-to-remount", preRefreshPlugs)
 	st.Unlock()
 
-	return m.disconnectSdk(ctx, task, project, workshop, sdkName)
+	return m.disconnectSdk(ctx, task, project, w, sdkName)
 }
 
 func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb)
 		return err
 	}
 
-	inst, err := m.backend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -579,7 +579,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 }
 
 func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) error {
-	_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	_, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -598,8 +598,8 @@ func (m *InterfaceManager) doDiscard(task *state.Task, tomb *tomb.Tomb) error {
 		if err != nil {
 			return err
 		}
-		if (connRef.PlugRef.ProjectId == project.ProjectId && connRef.PlugRef.Workshop == workshop) ||
-			(connRef.SlotRef.ProjectId == project.ProjectId && connRef.SlotRef.Workshop == workshop) {
+		if (connRef.PlugRef.ProjectId == project.ProjectId && connRef.PlugRef.Workshop == w) ||
+			(connRef.SlotRef.ProjectId == project.ProjectId && connRef.SlotRef.Workshop == w) {
 			removed[id] = conns[id]
 			delete(conns, id)
 		}
@@ -635,7 +635,7 @@ func (m *InterfaceManager) undoDiscard(task *state.Task, tomb *tomb.Tomb) error 
 }
 
 func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -657,12 +657,12 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	inst, err := m.backend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
 
-	return m.remount(ctx, task, &plug, source, inst.IsRunning())
+	return m.remount(ctx, task, &plug, source, inst.Running)
 }
 
 func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {

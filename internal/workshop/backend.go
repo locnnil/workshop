@@ -1,10 +1,14 @@
-package workshopbackend
+package workshop
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"os/user"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type ContextKeyProjectId string
@@ -17,16 +21,18 @@ const (
 	ContextUser      = ContextKeyUser("user")
 )
 
+var (
+	ErrWorkshopNotFound   = errors.New("workshop not found")
+	ErrSdkProfileNotFound = errors.New("sdk profile not found")
+
+	LookupUsername = user.Lookup
+)
+
 func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
 	return func(config map[string]string) bool {
 		return config[key] == value
 	}
 }
-
-var (
-	ErrWorkshopNotFound   = errors.New("workshop not found")
-	ErrSdkProfileNotFound = errors.New("sdk profile not found")
-)
 
 type ErrExec struct {
 	Status int
@@ -40,6 +46,8 @@ type WorkshopConfigValue struct {
 	Name  string
 	Value string
 }
+
+var StashNamePrefix string = "stash-"
 
 type Stash interface {
 	// Make a stash of the workshop. The workshop will be stopped and will not
@@ -69,63 +77,38 @@ type StateStorage interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
-type DeviceType int
-
-const (
-	BindMount DeviceType = iota
-	DiskVolume
-	GPU
-	SshAgentProxy
-)
-
-type Device struct {
-	name       string
-	properties map[string]string
-	deviceType DeviceType
+type ExecArgs struct {
+	Command     []string
+	UserId      int
+	GroupId     int
+	WorkDir     string
+	Timeout     time.Duration
+	Environment map[string]string
+	Interactive bool
+	Terminal    bool
+	SplitStderr bool
+	Width       int
+	Height      int
 }
 
-func (d Device) Name() string {
-	return d.name
+type ExecControls struct {
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+	Stderr  io.WriteCloser
+	Control func(conn *websocket.Conn)
 }
 
-func (d Device) Type() DeviceType {
-	return d.deviceType
+type Execution struct {
+	ExecArgs
+	ExecControls
 }
 
-type SdkProfile struct {
-	sdk     string
-	devices map[string]Device
+type ExecContext struct {
+	Environment   map[string]string
+	WaitExecution func(ctx context.Context) error
 }
 
-func NewSdkProfile(sdkName string) SdkProfile {
-	return SdkProfile{
-		sdk:     sdkName,
-		devices: make(map[string]Device),
-	}
-}
-
-func (s SdkProfile) Name() string {
-	return s.sdk
-}
-
-func (s SdkProfile) AddDevice(dev Device) error {
-	if _, ok := s.devices[dev.Name()]; ok {
-		return fmt.Errorf("device %s already exists in the %s SDK profile", dev.Name(), s.Name())
-	}
-	s.devices[dev.Name()] = dev
-	return nil
-}
-
-func profileName(pid, workshop, sdk string) string {
-	return strings.Join([]string{InstanceName(workshop, pid), sdk}, "-")
-}
-
-type Profile interface {
-	AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error
-	RemoveProfile(ctx context.Context, workshop, profile string) error
-}
-
-type WorkshopBackend interface {
+type Backend interface {
 	Stash
 	StateStorage
 	Profile
@@ -147,10 +130,10 @@ type WorkshopBackend interface {
 	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
 
 	// Returns a list of workshops for the project in context.
-	ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error)
+	ProjectWorkshops(ctx context.Context) ([]*File, []*Workshop, error)
 
 	// Launch a barebone workshop instance using the base provided.
-	LaunchWorkshop(ctx context.Context, file *WorkshopFile) error
+	LaunchWorkshop(ctx context.Context, file *File) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

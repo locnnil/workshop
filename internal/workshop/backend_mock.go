@@ -1,7 +1,8 @@
-package workshopbackend
+package workshop
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -100,7 +101,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) error {
+func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -116,25 +117,34 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *Workshop
 	}
 
 	ws := &FakeWorkshop{}
-	ws.Config = make(map[string]string)
-	ws.Devices = defaultDevices()
-	ws.WorkshopFilesystem = NewFakeWorkshopFs()
-
-	ws.Workshop = &Workshop{backend: f,
+	ws.Workshop = &Workshop{Backend: f,
 		Name:    file.Name,
-		running: true,
-		project: prj,
-		content: make(map[string]sdk.Setup),
-		base:    file.Base,
+		Running: true,
+		Project: prj,
+		Base:    file.Base,
 	}
+	ws.Config = make(map[string]string)
+	ws.Devices = make(map[string]map[string]string)
+	ws.WorkshopFilesystem = NewFakeWorkshopFs()
+	ws.Content = make(map[string]sdk.Setup)
 
+	content := make(map[string]sdk.Setup)
 	f.Workshops[projectId][file.Name] = ws
 	for _, s := range file.Sdks {
-		ws.LinkSdk(ctx, sdk.Setup{
+		setup := sdk.Setup{
 			Name:    s.Name,
 			Channel: s.Channel,
-		})
+		}
+		ws.LinkSdk(ctx, setup)
+		content[setup.Name] = setup
 	}
+
+	buf, err := json.Marshal(content)
+	if err != nil {
+		return err
+	}
+
+	ws.Config[ConfigWorkshopContent] = string(buf)
 
 	ws.Profiles = make([]SdkProfile, 0)
 	return nil
@@ -161,10 +171,10 @@ func (s *FakeWorkshopBackend) StartWorkshop(ctx context.Context, name string) er
 	if err != nil {
 		return err
 	}
-	if w.running {
+	if w.Running {
 		return api.StatusErrorf(http.StatusConflict, "workshop already running")
 	}
-	w.running = true
+	w.Running = true
 	return nil
 }
 
@@ -173,7 +183,7 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 	if err != nil {
 		return err
 	}
-	w.running = false
+	w.Running = false
 	return nil
 }
 
@@ -182,7 +192,7 @@ func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
-	f.Workshops[projectId][name].Devices[props.Name()] = props.properties
+	f.Workshops[projectId][name].Devices[props.Name] = props.Properties
 	return nil
 }
 
@@ -251,14 +261,15 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*Works
 		return nil, ErrWorkshopNotFound
 	}
 
-	workshop.content, err = installedContent(f.Workshops[projectId][name].Config)
-	if err != nil {
+	var c map[string]sdk.Setup
+	if err := json.Unmarshal([]byte(f.Workshops[projectId][name].Config[ConfigWorkshopContent]), &c); err != nil {
 		return nil, err
 	}
+	workshop.Content = c
 	return workshop.Workshop, nil
 }
 
-func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
+func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*File, []*Workshop, error) {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -369,16 +380,4 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 		return "", "", fmt.Errorf("context key user not found")
 	}
 	return userName, projectId, nil
-}
-
-func FakeDefaultDevices(f func() map[string]map[string]string) func() {
-	oldDefault := defaultDevices
-	defaultDevices = f
-	return func() { defaultDevices = oldDefault }
-}
-
-func FakeImageServer(server string) func() {
-	oldImageServer := imageServer
-	imageServer = server
-	return func() { imageServer = oldImageServer }
 }

@@ -23,18 +23,18 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d *Daemon
-	b workshopbackend.WorkshopBackend
+	b workshop.Backend
 
 	workshopDir string
 	username    string
-	project     *workshopbackend.Project
+	project     *workshop.Project
 	ctx         context.Context
 
 	vars map[string]string
@@ -50,21 +50,21 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 	s.username = "testuser"
-	s.project = &workshopbackend.Project{
+	s.project = &workshop.Project{
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
-	s.b = workshopbackend.NewFakeWorkshopBackend()
+	s.b = workshop.NewFakeWorkshopBackend()
 
 	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
 		return &user.User{Username: s.username}, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 
 	// will be called when project is created
-	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshopbackend.NewProjectId)
+	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
 
-	ctx := context.WithValue(context.TODO(), workshopbackend.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workshopbackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
 	_, _, err := s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)

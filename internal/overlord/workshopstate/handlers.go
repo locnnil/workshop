@@ -15,12 +15,13 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var StopLogInterval = 30 * time.Second
 
-var StopWorkshop = (workshopbackend.WorkshopBackend).StopWorkshop
+var StopWorkshop = (workshop.Backend).StopWorkshop
 
 func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workshop, err := UserProjectWorkshop(task)
@@ -34,7 +35,7 @@ func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) 
 	return m.backend.RemoveWorkshop(ctx, workshop)
 }
 
-func (m *WorkshopManager) installAgentSdk(wfs workshopbackend.WorkshopFs, base string) error {
+func (m *WorkshopManager) installAgentSdk(wfs workshop.WorkshopFs, base string) error {
 	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
 	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
 		return err
@@ -53,7 +54,7 @@ func (m *WorkshopManager) installAgentSdk(wfs workshopbackend.WorkshopFs, base s
 }
 
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -63,13 +64,13 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	var wf workshopbackend.WorkshopFile
+	var wf workshop.File
 	st.Lock()
 	err = task.Get("workshop-file", &wf)
 	st.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", workshop, task.ID())
+		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
 	}
 
 	var rev revert.Reverter
@@ -82,10 +83,10 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	// is winding down
 	revertCtx := context.WithoutCancel(ctx)
 	rev.Add(func() {
-		_ = m.backend.RemoveWorkshop(revertCtx, workshop)
+		_ = m.backend.RemoveWorkshop(revertCtx, w)
 	})
 
-	wfs, err := m.backend.WorkshopFs(ctx, workshop)
+	wfs, err := m.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -99,17 +100,17 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 }
 
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
 	// Configure workshop core properties: project directory
-	var prjMount = workshopbackend.Mount(workshopbackend.LxdConfigProjectPathDevice, prj.Path, workshopbackend.WorkshopProjectPath)
+	var prjMount = lxdbackend.Mount(workshop.ConfigProjectPathDevice, prj.Path, workshop.WorkshopProjectPath)
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.AddWorkshopDevice(ctx, workshop, prjMount)
+	return m.backend.AddWorkshopDevice(ctx, w, prjMount)
 }
 
 func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
@@ -117,7 +118,7 @@ func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) er
 }
 
 func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -130,11 +131,11 @@ func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	task.Set("force", true)
 	st.Unlock()
 
-	return m.backend.StartWorkshop(ctx, workshop)
+	return m.backend.StartWorkshop(ctx, w)
 }
 
 func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -155,7 +156,7 @@ func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	go func() {
 		// LXD has an internal timeout (30 seconds) for the operation,
 		// if exceeded, the dealine error will be returned
-		stopped <- StopWorkshop(m.backend, stopctx, workshop, force)
+		stopped <- StopWorkshop(m.backend, stopctx, w, force)
 	}()
 
 	for {
@@ -164,14 +165,14 @@ func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 			return err
 		case <-time.After(StopLogInterval):
 			st.Lock()
-			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", workshop)
+			task.Logf("Still waiting for %q to stop; no change in the last 30 seconds...", w)
 			st.Unlock()
 		}
 	}
 }
 
 func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -179,11 +180,11 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	if err := m.backend.RemoveWorkshop(ctx, workshop); err != nil {
+	if err := m.backend.RemoveWorkshop(ctx, w); err != nil {
 		return err
 	}
 
-	if err = m.cleanUpWorkshopAfterRemoval(user, prj.ProjectId, workshop); err != nil {
+	if err = m.cleanUpWorkshopAfterRemoval(user, prj.ProjectId, w); err != nil {
 		st := task.State()
 		st.Lock()
 		defer st.Unlock()
@@ -194,7 +195,7 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 }
 
 func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -202,11 +203,11 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.RemoveWorkshopStash(ctx, workshop)
+	return m.backend.RemoveWorkshopStash(ctx, w)
 }
 
 func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -214,14 +215,14 @@ func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) err
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	if err = m.backend.StashWorkshop(ctx, workshop); err != nil {
+	if err = m.backend.StashWorkshop(ctx, w); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -229,14 +230,14 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	if err = m.backend.UnstashWorkshop(ctx, workshop); err != nil {
+	if err = m.backend.UnstashWorkshop(ctx, w); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -244,11 +245,11 @@ func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.CreateStateStorage(ctx, workshop)
+	return m.backend.CreateStateStorage(ctx, w)
 }
 
 func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
+	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.DeleteStateStorage(ctx, workshop)
+	return m.backend.DeleteStateStorage(ctx, w)
 }
 
 type cleanupError struct {
@@ -267,8 +268,8 @@ func (e *cleanupError) Error() string {
 	return fmt.Sprintf("workshop cleanup errors: %v", e.errs)
 }
 
-func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop string) error {
-	usr, err := workshopbackend.LookupUsername(user)
+func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string) error {
+	usr, err := workshop.LookupUsername(user)
 	if err != nil {
 		return err
 	}
@@ -277,7 +278,7 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop 
 	projectContent := filepath.Join(usr.HomeDir, ".local", "share", "workshop", "project", projectId, "content")
 	var contentDirs []fs.DirEntry
 	if contentDirs, err = os.ReadDir(projectContent); err != nil {
-		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", workshop, err))
+		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", w, err))
 	}
 
 	// Remove all the possible workshop default content interface 'source'
@@ -291,7 +292,7 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, workshop 
 	for _, dir := range contentDirs {
 		// Remove all default content dirs that belong the workshop. These will be
 		// named as <workshop>_<sdk>_<plug>.sdk
-		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), workshop+"_") {
+		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), w+"_") {
 			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
 				errors = append(errors, err)
 			}

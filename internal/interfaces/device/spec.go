@@ -5,11 +5,11 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type Specification struct {
-	devices map[string]workshopbackend.Device
+	devices map[string]workshop.Device
 	user    string
 	pid     string
 }
@@ -55,13 +55,13 @@ func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *inter
 	return nil
 }
 
-func (s *Specification) DeviceEntries() []workshopbackend.Device {
+func (s *Specification) DeviceEntries() []workshop.Device {
 	return maps.Values(s.devices)
 }
 
-func (s *Specification) AddDeviceEntry(dev workshopbackend.Device) {
+func (s *Specification) AddDeviceEntry(dev workshop.Device) {
 	if s.devices == nil {
-		s.devices = make(map[string]workshopbackend.Device)
+		s.devices = make(map[string]workshop.Device)
 	}
-	s.devices[dev.Name()] = dev
+	s.devices[dev.Name] = dev
 }

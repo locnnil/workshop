@@ -13,11 +13,12 @@ import (
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := handlersetup.UserProjectWorkshop(task)
+	user, prj, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -35,13 +36,13 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		volume := workshopbackend.WorkshopStateVolumeName(workshop, prj.ProjectId)
-		if err := h.backend.AddWorkshopDevice(ctx, workshop, workshopbackend.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
+		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
+		if err := h.backend.AddWorkshopDevice(ctx, w, lxdbackend.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
 		defer func() {
-			if err := h.backend.RemoveWorkshopDevice(ctx, workshop, volume); err != nil {
+			if err := h.backend.RemoveWorkshopDevice(ctx, w, volume); err != nil {
 				logger.Noticef("Cannot remove SDK state storage volume %s", volume)
 			}
 		}()
@@ -50,7 +51,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	switch hook.HookType {
 	case SaveState:
 		{
-			fs, err := h.backend.WorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, w)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 			}
@@ -60,10 +61,10 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 			}
 		}
-		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	case RestoreState:
 		{
-			fs, err := h.backend.WorkshopFs(ctx, workshop)
+			fs, err := h.backend.WorkshopFs(ctx, w)
 			if err != nil {
 				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
 			}
@@ -77,16 +78,16 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk)
 			}
 		}
-		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	default:
-		return h.executeHook(ctx, task, workshop, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	}
 }
 
-func (h *HookManager) executeHook(ctx context.Context, task *state.Task, workshop, projectId string, hook *HookSetup) error {
+func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, projectId string, hook *HookSetup) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
 
-	wsFs, err := h.backend.WorkshopFs(ctx, workshop)
+	wsFs, err := h.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -120,14 +121,14 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workshopbackend.InstanceName(workshop, projectId))
+	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, projectId))
 	if err != nil {
 		return err
 	}
 
 	hook.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
-	args := workshopbackend.Execution{
-		ExecArgs: workshopbackend.ExecArgs{
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -141,14 +142,14 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, worksho
 			WorkDir:     sdk.SdkHooksDir(hook.Sdk),
 			Timeout:     hook.Timeout,
 		},
-		ExecControls: workshopbackend.ExecControls{
+		ExecControls: workshop.ExecControls{
 			Stdin:  nil,
 			Stdout: out,
 			Stderr: out,
 		},
 	}
 
-	exectx, err := h.backend.Exec(ctx, workshop, &args)
+	exectx, err := h.backend.Exec(ctx, w, &args)
 	// Handle errors that are unrelated to the command, for example, LXD-related
 	// issues. An error here means the execution has not started at all.
 	if err != nil {

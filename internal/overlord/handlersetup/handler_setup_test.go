@@ -12,12 +12,12 @@ import (
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type CommonStateFuncs struct {
 	state   *state.State
-	project *workshopbackend.Project
+	project *workshop.Project
 }
 
 var _ = check.Suite(&CommonStateFuncs{})
@@ -40,7 +40,7 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 
 func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = &workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {

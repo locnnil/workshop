@@ -10,7 +10,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type mountRequest struct {
@@ -30,17 +30,17 @@ func newMountChange(st *state.State, user string, reqData *mountRequest) *state.
 
 func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
-	workshop := muxVars(r)["name"]
+	w := muxVars(r)["name"]
 
 	if projectId == "" {
 		return statusBadRequest("project-id must be provided")
 	}
 
-	if workshop == "" {
+	if w == "" {
 		return statusBadRequest("workshop name must be provided")
 	}
 
-	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("internal error: no user associated with the request")
 	}
@@ -59,7 +59,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	if reqData.Action != "remount" {
 		return statusBadRequest("unknown action %q", reqData.Action)
 	}
-	reqData.Plug.Workshop = workshop
+	reqData.Plug.Workshop = w
 	reqData.Plug.ProjectId = projectId
 
 	change := newMountChange(st, user, &reqData)

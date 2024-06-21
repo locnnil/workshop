@@ -1,4 +1,4 @@
-package workshopbackend
+package lxdbackend
 
 import (
 	"context"
@@ -10,26 +10,25 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-var StashNamePrefix string = "stash-"
-
-func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
+func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	rev := revert.New()
 	defer rev.Fail()
 
-	user, ok := ctx.Value(ContextUser).(string)
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
+		return fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
 	instance := InstanceName(name, projectId)
-	stashedInsance := StashNamePrefix + instance
+	stashedInsance := workshop.StashNamePrefix + instance
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -55,19 +54,19 @@ func (s *LxdBackend) StashWorkshop(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
-	user, ok := ctx.Value(ContextUser).(string)
+func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
+		return fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
 	instance := InstanceName(name, projectId)
-	stashedInsance := StashNamePrefix + instance
+	stashedInsance := workshop.StashNamePrefix + instance
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -89,12 +88,12 @@ func (s *LxdBackend) UnstashWorkshop(ctx context.Context, name string) error {
 // instanceTo - the instance's dest name (must be different due to LXD DNS conflicts)
 // source - the LXD project name to move instance from
 // target - the LXD project name to move instance to
-func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom, instanceTo, source, target string) error {
+func (s *Backend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom, instanceTo, source, target string) error {
 	conn = conn.UseProject(source)
 	_, _, err := conn.GetInstance(instanceFrom)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return ErrWorkshopNotFound
+			return workshop.ErrWorkshopNotFound
 		}
 		return err
 	}
@@ -114,25 +113,25 @@ func (s *LxdBackend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFr
 	return nil
 }
 
-func (s *LxdBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
+func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	user, ok := ctx.Value(ContextUser).(string)
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
+		return fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
 	conn = conn.UseProject(LxdSystemProjectName(user))
-	iname := StashNamePrefix + InstanceName(name, projectId)
+	iname := workshop.StashNamePrefix + InstanceName(name, projectId)
 
 	// 1. Remove the workshop instance
 	op, err := conn.DeleteInstance(iname)

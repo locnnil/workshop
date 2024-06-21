@@ -12,15 +12,15 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type WorkshopManager struct {
-	backend workshopbackend.WorkshopBackend
+	backend workshop.Backend
 	state   *state.State
 }
 
-func New(st *state.State, runner *state.TaskRunner, server workshopbackend.WorkshopBackend) *WorkshopManager {
+func New(st *state.State, runner *state.TaskRunner, server workshop.Backend) *WorkshopManager {
 	manager := &WorkshopManager{
 		backend: server,
 		state:   st,
@@ -69,9 +69,9 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId s
 
 // Loads a workshop, the state must be locked as it is used to find out the
 // workshop state
-func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*workshopbackend.Workshop, error) {
+func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*workshop.Workshop, error) {
 	// project-id must be in the context for this query
-	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
+	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 
 	workshop, err := w.backend.Workshop(pCtx, name)
 	if err != nil {
@@ -83,9 +83,9 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 
 // Loads all workshops for a project, the state must be locked as it is used to find out the
 // workshop state
-func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshopbackend.WorkshopFile, []*workshopbackend.Workshop, error) {
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.File, []*workshop.Workshop, error) {
 	// project-id must be in the context for this query
-	pCtx := context.WithValue(ctx, workshopbackend.ContextProjectId, pId)
+	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 
 	files, workshops, err := w.backend.ProjectWorkshops(pCtx)
 	if err != nil {
@@ -112,26 +112,26 @@ func sdksHealthCheckSummary(chg *state.Change) map[string]healthstate.HealthChec
 
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked.
-func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthstate.HealthState {
+func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.HealthState {
 	var healthState = healthstate.HealthState{
 		Timestamp: time.Now(),
 	}
 
 	// check the project directory exists
-	if !ws.Project().Exists() {
+	if !ws.Project.Exists() {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-project"
 		return healthState
 	}
 
 	// check if the workshop file exists
-	if _, err := ws.Project().Workshop(ws.Name); err != nil {
+	if _, err := ws.Project.Workshop(ws.Name); err != nil {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-file"
 		return healthState
 	}
 
-	err := conflict.CheckChangeConflict(w.state, ws.Project().ProjectId, ws.Name, "")
+	err := conflict.CheckChangeConflict(w.state, ws.Project.ProjectId, ws.Name, "")
 	if err != nil {
 		conflict, ok := err.(*conflict.ChangeConflictError)
 		if !ok || conflict.ChangeID == "" {
@@ -147,7 +147,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshopbackend.Workshop) healthsta
 		healthState.SdkHealth = sdksHealthCheckSummary(change)
 		healthState.Status = healthstate.PendingStatus
 	} else {
-		if ws.IsRunning() {
+		if ws.Running {
 			healthState.Status = healthstate.ReadyStatus
 		} else {
 			healthState.Status = healthstate.StoppedStatus

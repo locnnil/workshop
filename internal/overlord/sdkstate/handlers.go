@@ -18,7 +18,8 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var InstallTimeNow = time.Now
@@ -74,7 +75,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -101,15 +102,15 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := workshopbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
-	if err = m.backend.AddWorkshopDevice(ctx, workshop, sdkMount); err != nil {
+	sdkMount := lxdbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
+	if err = m.backend.AddWorkshopDevice(ctx, w, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopDevice(ctx, workshop, sdkMount.Name()); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name(), workshop, err)
+		if err := m.backend.RemoveWorkshopDevice(ctx, w, sdkMount.Name); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}
 
@@ -121,15 +122,15 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workshopbackend.InstanceName(workshop, project.ProjectId))
+	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
-	args := workshopbackend.Execution{
-		ExecArgs: workshopbackend.ExecArgs{
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -142,14 +143,14 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 			},
 			WorkDir: "/",
 		},
-		ExecControls: workshopbackend.ExecControls{
+		ExecControls: workshop.ExecControls{
 			Stdin:  nil,
 			Stdout: nil,
 			Stderr: out,
 		},
 	}
 
-	exectx, err := m.backend.Exec(ctx, workshop, &args)
+	exectx, err := m.backend.Exec(ctx, w, &args)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	fs, err := m.backend.WorkshopFs(ctx, workshop)
+	fs, err := m.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	inst, err := m.backend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -228,7 +229,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, workshop, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
@@ -241,7 +242,7 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	inst, err := m.backend.Workshop(ctx, workshop)
+	inst, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}

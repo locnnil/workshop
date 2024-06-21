@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -16,7 +17,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 const (
@@ -31,8 +32,8 @@ const (
 
 var checkHealthTimeout = 5 * time.Second
 
-func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshopbackend.Project, error) {
-	username, ok := ctx.Value(workshopbackend.ContextUser).(string)
+func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop.Project, error) {
+	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key user not found")
 	}
@@ -42,7 +43,7 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 		return nil, err
 	}
 
-	idx := slices.IndexFunc(projects[username], func(p *workshopbackend.Project) bool { return p.ProjectId == id })
+	idx := slices.IndexFunc(projects[username], func(p *workshop.Project) bool { return p.ProjectId == id })
 	if idx == -1 {
 		return nil, fmt.Errorf("no project found with \"id\" %v", id)
 	}
@@ -67,7 +68,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", name)
 		}
-		if !errors.Is(err, workshopbackend.ErrWorkshopNotFound) {
+		if !errors.Is(err, workshop.ErrWorkshopNotFound) {
 			return nil, err
 		}
 
@@ -87,7 +88,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshopbackend.WorkshopFile) ([]sdk.SdkResult, error) {
+func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshop.File) ([]sdk.SdkResult, error) {
 	sto := sdk.StoreService(w.state)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
@@ -110,7 +111,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return retrieve
 }
 
-func installSdks(st *state.State, workshop string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
+func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	var prevSetup *state.Task
 
@@ -132,7 +133,7 @@ func installSdks(st *state.State, workshop string, sdks []sdk.Setup, retrieveSet
 		install.AddAll(installTaskSet)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.Hook(st, workshop, sdk.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, w, sdk.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -156,7 +157,7 @@ func installSdks(st *state.State, workshop string, sdks []sdk.Setup, retrieveSet
 	return all
 }
 
-func checkHealthHooks(st *state.State, file *workshopbackend.WorkshopFile) *state.TaskSet {
+func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
 	var prevCheck *state.Task
 	checkHealth := state.NewTaskSet()
 	for _, sdk := range file.Sdks {
@@ -170,7 +171,7 @@ func checkHealthHooks(st *state.State, file *workshopbackend.WorkshopFile) *stat
 	return checkHealth
 }
 
-func constructWorkshop(st *state.State, file *workshopbackend.WorkshopFile, project *workshopbackend.Project) *state.TaskSet {
+func constructWorkshop(st *state.State, file *workshop.File, project *workshop.Project) *state.TaskSet {
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("workshop-file", file)
 
@@ -182,7 +183,7 @@ func constructWorkshop(st *state.State, file *workshopbackend.WorkshopFile, proj
 	return state.NewTaskSet(create, mountProject, start)
 }
 
-func launch(st *state.State, file *workshopbackend.WorkshopFile, sdks []sdk.Setup, project *workshopbackend.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
 	// check and download all the required SDKs
 	retrieve := retrieveSdks(st, sdks)
 
@@ -232,12 +233,12 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	files := make([]*workshopbackend.WorkshopFile, 0)
+	files := make([]*workshop.File, 0)
 	installedContent, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
-	for _, workshop := range names {
-		idx := slices.IndexFunc(workshops, func(w *workshopbackend.Workshop) bool { return w.Name == workshop })
+	for _, ws := range names {
+		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
 		if idx == -1 {
-			return nil, fmt.Errorf("cannot refresh: workshop %q not found", workshop)
+			return nil, fmt.Errorf("cannot refresh: workshop %q not found", ws)
 		}
 		file, err := project.Workshop(workshops[idx].Name)
 		if err != nil {
@@ -255,7 +256,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		}
 
 		toInstall = append(toInstall, newContent)
-		installedContent = append(installedContent, workshops[idx].Content())
+		installedContent = append(installedContent, maps.Values(workshops[idx].Content))
 	}
 
 	taskset, err := refreshMany(w.state, files, installedContent, toInstall, project)
@@ -270,8 +271,8 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, installed [][]sdk.Setup,
-	toInstall [][]sdk.Setup, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,
+	toInstall [][]sdk.Setup, project *workshop.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(files))
 
 	for i, file := range files {
@@ -310,7 +311,7 @@ func refreshMany(st *state.State, files []*workshopbackend.WorkshopFile, install
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshopbackend.WorkshopFile, installed []sdk.Setup, newContent []sdk.Setup, p *workshopbackend.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newContent []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
@@ -420,16 +421,16 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	return state.NewTaskSet(disconnectSet...)
 }
 
-func saveStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList,
+func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList,
 ) *state.TaskSet {
-	return createStateHooks(st, workshop, content, newContent, hookstate.SaveState)
+	return createStateHooks(st, w, content, newContent, hookstate.SaveState)
 }
 
-func restoreStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList) *state.TaskSet {
-	return createStateHooks(st, workshop, content, newContent, hookstate.RestoreState)
+func restoreStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList) *state.TaskSet {
+	return createStateHooks(st, w, content, newContent, hookstate.RestoreState)
 }
 
-func createStateHooks(st *state.State, workshop string, content []sdk.Setup, newContent workshopbackend.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func createStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {
@@ -438,7 +439,7 @@ func createStateHooks(st *state.State, workshop string, content []sdk.Setup, new
 		if slices.IndexFunc(content, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
 			continue
 		}
-		stateHook := hookstate.Hook(st, workshop, newsdk.Name, hooktype)
+		stateHook := hookstate.Hook(st, w, newsdk.Name, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prevRestore != nil {
 			stateHook.WaitFor(prevRestore)
@@ -470,7 +471,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 	return taskset, nil
 }
 
-func startMany(st *state.State, names []string, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+func startMany(st *state.State, names []string, project *workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
@@ -505,7 +506,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 	return taskset, nil
 }
 
-func stopMany(st *state.State, names []string, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+func stopMany(st *state.State, names []string, project *workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
@@ -525,7 +526,7 @@ type ExecMeta struct {
 	WorkingDir  string
 }
 
-func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshopbackend.ExecArgs) (*state.Task, error) {
+func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs) (*state.Task, error) {
 	err := w.CheckStatus(
 		ctx,
 		[]string{name},
@@ -540,7 +541,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		return nil, err
 	}
 
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
 	wrkspc, err := w.backend.WorkshopFs(ctx, name)
 	if err != nil {
 		return nil, err
@@ -579,14 +580,14 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		return nil, err
 	}
 
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
 
-	var workshops = make([]*workshopbackend.Workshop, 0, len(names))
+	var workshops = make([]*workshop.Workshop, 0, len(names))
 	for _, name := range names {
-		if workshop, err := w.backend.Workshop(ctx, name); err != nil {
+		if w, err := w.backend.Workshop(ctx, name); err != nil {
 			return nil, err
 		} else {
-			workshops = append(workshops, workshop)
+			workshops = append(workshops, w)
 		}
 	}
 
@@ -597,7 +598,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project *workshopbackend.Project) ([]*state.TaskSet, error) {
+func removeMany(st *state.State, workshops []*workshop.Workshop, project *workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 	for _, name := range workshops {
 		remove, err := remove(st, name, project)
@@ -609,14 +610,14 @@ func removeMany(st *state.State, workshops []*workshopbackend.Workshop, project 
 	return taskset, nil
 }
 
-func remove(st *state.State, workshop *workshopbackend.Workshop, project *workshopbackend.Project) (*state.TaskSet, error) {
+func remove(st *state.State, w *workshop.Workshop, project *workshop.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
-	disconnectSet := disconnectSdks(workshop.Content(), st)
+	disconnectSet := disconnectSdks(maps.Values(w.Content), st)
 
-	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", workshop.Name))
+	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	discard.WaitAll(disconnectSet)
 
-	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", workshop.Name))
+	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	remove.WaitAll(disconnectSet)
 	remove.WaitFor(discard)
 	removeSet.AddAll(disconnectSet)
@@ -624,7 +625,7 @@ func remove(st *state.State, workshop *workshopbackend.Workshop, project *worksh
 	removeSet.AddTask(remove)
 
 	for _, task := range removeSet.Tasks() {
-		task.Set("workshop", workshop.Name)
+		task.Set("workshop", w.Name)
 		task.Set("project", project)
 	}
 	return removeSet, nil

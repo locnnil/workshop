@@ -18,7 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type interfaceHandlersSuite struct {
@@ -113,7 +113,7 @@ func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {
 	s.restoreSecurtityBackends()
 }
 
-func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -1059,7 +1059,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectNoSdkProfile(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 
-	s.secBackend.RemoveCallback = func(sdkName string) error { return workshopbackend.ErrSdkProfileNotFound }
+	s.secBackend.RemoveCallback = func(sdkName string) error { return workshop.ErrSdkProfileNotFound }
 
 	// Execute
 	s.state.Lock()

@@ -1,0 +1,13 @@
+package lxdbackend
+
+var (
+	MergeInstancesAndFiles = mergeInstancesAndFiles
+	LoadWorkshop           = (*Backend).loadWorkshop
+	DefaultConfig          = (*Backend).workshopConfig
+	ReadProjects           = readProjects
+	SaveProjects           = saveProjects
+)
+
+func (s *Backend) SetNvidia(runtime bool) {
+	s.nvidiaRuntime = runtime
+}

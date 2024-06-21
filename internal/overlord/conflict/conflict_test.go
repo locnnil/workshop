@@ -8,12 +8,12 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	conflict "github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type conflictSuite struct {
 	state   *state.State
-	project *workshopbackend.Project
+	project *workshop.Project
 }
 
 var _ = check.Suite(&conflictSuite{})
@@ -41,7 +41,7 @@ func (s *conflictSuite) newChangeDisconnect(kind string) *state.Change {
 
 func (s *conflictSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshopbackend.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = &workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *conflictSuite) TestCheckChangeConflictNotFound(c *check.C) {

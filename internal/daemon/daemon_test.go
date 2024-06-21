@@ -39,7 +39,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // Hook up check.v1 into the "go test" runner
@@ -77,7 +77,7 @@ func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
 		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,
 		HTTPAddress: s.httpAddress,
-	}, workshopbackend.NewFakeWorkshopBackend())
+	}, workshop.NewFakeWorkshopBackend())
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	return d

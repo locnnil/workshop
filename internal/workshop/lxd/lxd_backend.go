@@ -1,19 +1,15 @@
-package workshopbackend
+package lxdbackend
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os/user"
 	"path/filepath"
 	"strings"
-	"time"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
@@ -21,40 +17,10 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-type ExecArgs struct {
-	Command     []string
-	UserId      int
-	GroupId     int
-	WorkDir     string
-	Timeout     time.Duration
-	Environment map[string]string
-	Interactive bool
-	Terminal    bool
-	SplitStderr bool
-	Width       int
-	Height      int
-}
-
-type ExecControls struct {
-	Stdin   io.ReadCloser
-	Stdout  io.WriteCloser
-	Stderr  io.WriteCloser
-	Control func(conn *websocket.Conn)
-}
-
-type Execution struct {
-	ExecArgs
-	ExecControls
-}
-
-type ExecContext struct {
-	Environment   map[string]string
-	WaitExecution func(ctx context.Context) error
-}
-
-type LxdBackend struct {
+type Backend struct {
 	nvidiaRuntime bool
 }
 
@@ -64,20 +30,16 @@ const (
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
-	LookupUsername       = user.Lookup
-	NewProjectId         = allocateProjectId
-
-	defaultDevices = createDefaultDevices
-	imageServer    = "https://cloud-images.ubuntu.com/releases/"
-
-	LxdConfigProjectId         = "user.workshop.project-id"
-	LxdConfigWorkshopFile      = "user.workshop.file"
-	LxdConfigWorkshopContent   = "user.workshop.content"
-	LxdConfigProjectPathDevice = "workshop.project"
+	defaultDevices       = createDefaultDevices
+	imageServer          = "https://cloud-images.ubuntu.com/releases/"
 )
 
-func New() (WorkshopBackend, error) {
-	server := LxdBackend{}
+func InstanceName(name string, project_id string) string {
+	return fmt.Sprintf("%s-%s", name, project_id)
+}
+
+func New() (workshop.Backend, error) {
+	server := Backend{}
 
 	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
@@ -101,7 +63,7 @@ func New() (WorkshopBackend, error) {
 	return &server, nil
 }
 
-func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) error {
+func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
 	var err error
 	var imageSrv lxd.ImageServer
 	var image *api.Image
@@ -112,12 +74,12 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	userName, ok := ctx.Value(ContextUser).(string)
+	userName, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key user not found")
 	}
@@ -140,7 +102,7 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) err
 		}
 	}
 
-	usr, err := LookupUsername(userName)
+	usr, err := workshop.LookupUsername(userName)
 	if err != nil {
 		return err
 	}
@@ -187,8 +149,8 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) err
 	return nil
 }
 
-func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -218,7 +180,7 @@ func (s *LxdBackend) updateInstanceState(conn lxd.InstanceServer, ctx context.Co
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) StartWorkshop(ctx context.Context, name string) error {
+func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -231,8 +193,8 @@ func (s *LxdBackend) StartWorkshop(ctx context.Context, name string) error {
 
 	// Wait until system is up an running before returning
 	// see: https://blog.simos.info/how-to-know-when-a-lxd-container-has-finished-starting-up/
-	args := Execution{
-		ExecArgs: ExecArgs{
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
@@ -252,7 +214,7 @@ func (s *LxdBackend) StartWorkshop(ctx context.Context, name string) error {
 	return exectx.WaitExecution(ctx)
 }
 
-func (s *LxdBackend) StopWorkshop(ctx context.Context, name string, force bool) error {
+func (s *Backend) StopWorkshop(ctx context.Context, name string, force bool) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -262,14 +224,14 @@ func (s *LxdBackend) StopWorkshop(ctx context.Context, name string, force bool) 
 	return s.updateInstanceState(conn, ctx, name, "stop", force)
 }
 
-func (s *LxdBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {
+func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -287,14 +249,14 @@ func (s *LxdBackend) AddWorkshopConfig(ctx context.Context, name string, item *W
 	return op.WaitContext(ctx)
 }
 
-func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
+func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -313,14 +275,14 @@ func (s *LxdBackend) RemoveWorkshopConfig(ctx context.Context, name string, key 
 	return op.Wait()
 }
 
-func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device Device) error {
+func (s *Backend) AddWorkshopDevice(ctx context.Context, name string, device workshop.Device) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -329,7 +291,7 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	if err != nil {
 		return err
 	}
-	inst.Devices[device.Name()] = device.properties
+	inst.Devices[device.Name] = device.Properties
 	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
 	if err != nil {
 		return err
@@ -338,14 +300,14 @@ func (s *LxdBackend) AddWorkshopDevice(ctx context.Context, name string, device 
 	return op.Wait()
 }
 
-func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
+func (s *Backend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -361,10 +323,10 @@ func (s *LxdBackend) RemoveWorkshopDevice(ctx context.Context, name string, devi
 	return op.Wait()
 }
 
-func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *Execution) (ExecContext, error) {
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
-		return ExecContext{}, fmt.Errorf("context key project-id not found")
+		return workshop.ExecContext{}, fmt.Errorf("context key project-id not found")
 	}
 
 	req := api.InstanceExecPost{
@@ -389,7 +351,7 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 		DataDone: done,
 	})
 	if err != nil {
-		return ExecContext{}, err
+		return workshop.ExecContext{}, err
 	}
 
 	opmeta := op.Get()
@@ -400,7 +362,7 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 		}
 	}
 
-	return ExecContext{
+	return workshop.ExecContext{
 		Environment: env,
 		WaitExecution: func(ctx context.Context) error {
 			defer conn.Disconnect()
@@ -415,46 +377,46 @@ func (s *LxdBackend) execCommand(conn lxd.InstanceServer, ctx context.Context, n
 			<-done
 			var status = int(op.Get().Metadata["return"].(float64))
 			if status != 0 {
-				return &ErrExec{Status: status}
+				return &workshop.ErrExec{Status: status}
 			}
 			return nil
 		},
 	}, nil
 }
 
-func (s *LxdBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
+func (s *Backend) Exec(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return ExecContext{}, err
+		return workshop.ExecContext{}, err
 	}
 
 	return s.execCommand(conn, ctx, name, args)
 }
 
-func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, error) {
+func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	var p *Project
+	var p *workshop.Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	user, ok := ctx.Value(ContextUser).(string)
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key %s not found", ContextUser)
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	idx := slices.IndexFunc(projects[user], func(p *Project) bool { return p.ProjectId == projectId })
+	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
 		return nil, fmt.Errorf("project %q is not found", projectId)
 	}
@@ -463,7 +425,7 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil, ErrWorkshopNotFound
+			return nil, workshop.ErrWorkshopNotFound
 		}
 		return nil, err
 	}
@@ -476,19 +438,9 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 	return workshop, nil
 }
 
-func installedContent(lxdConfig map[string]string) (map[string]sdk.Setup, error) {
-	c := make(map[string]sdk.Setup)
-	if sdks, ok := lxdConfig[LxdConfigWorkshopContent]; ok {
-		if err := json.Unmarshal([]byte(sdks), &c); err != nil {
-			return nil, err
-		}
-	}
-	return c, nil
-}
-
-func workshopFile(lxdConfig map[string]string) (*WorkshopFile, error) {
-	var f WorkshopFile
-	if yml, ok := lxdConfig[LxdConfigWorkshopFile]; ok {
+func workshopFile(lxdConfig map[string]string) (*workshop.File, error) {
+	var f workshop.File
+	if yml, ok := lxdConfig[workshop.ConfigWorkshopFile]; ok {
 		if err := yaml.Unmarshal([]byte(yml), &f); err != nil {
 			return nil, err
 		}
@@ -496,7 +448,7 @@ func workshopFile(lxdConfig map[string]string) (*WorkshopFile, error) {
 	return &f, nil
 }
 
-func (b *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
+func (b *Backend) loadWorkshop(inst *api.Instance, p *workshop.Project) (*workshop.Workshop, error) {
 	base := inst.Config["image.os"] + "@" + inst.Config["image.version"]
 
 	f, err := workshopFile(inst.Config)
@@ -504,23 +456,25 @@ func (b *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, er
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
 	}
 
-	content, err := installedContent(inst.Config)
-	if err != nil {
-		return nil, fmt.Errorf("cannot load workshop: %v", err)
+	c := map[string]sdk.Setup{}
+	if buf, exist := inst.Config[workshop.ConfigWorkshopContent]; exist {
+		if err := json.Unmarshal([]byte(buf), &c); err != nil {
+			return nil, err
+		}
 	}
 
-	return &Workshop{
-		Name:    WorkshopName(inst.Name),
-		backend: b,
-		project: p,
-		file:    f,
-		running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
-		base:    base,
-		content: content,
+	return &workshop.Workshop{
+		Backend: b,
+		Project: p,
+		Name:    workshop.WorkshopName(inst.Name),
+		Base:    base,
+		Running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Content: c,
+		File:    f,
 	}, nil
 }
 
-func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter WorkshopConfigFilter) ([]api.Instance, error) {
+func (s *Backend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter workshop.WorkshopConfigFilter) ([]api.Instance, error) {
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, err
@@ -536,15 +490,15 @@ func (s *LxdBackend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter 
 	return toReturn, nil
 }
 
-func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*Workshop, error) {
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.File, []*workshop.Workshop, error) {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
 	}
 
-	user, ok := ctx.Value(ContextUser).(string)
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, nil, fmt.Errorf("context key %s not found", ContextUser)
+		return nil, nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
 	conn, err := s.LxdClient(ctx)
@@ -553,13 +507,13 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 	}
 	defer conn.Disconnect()
 
-	var p *Project
+	var p *workshop.Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	idx := slices.IndexFunc(projects[user], func(p *Project) bool { return p.ProjectId == projectId })
+	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
 		return nil, nil, fmt.Errorf("project %q is not found", projectId)
 	}
@@ -580,9 +534,9 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 		return nil, nil, err
 	}
 
-	var projectWorkshops []*Workshop
+	var projectWorkshops []*workshop.Workshop
 	for _, i := range instances {
-		if i.Config[LxdConfigProjectId] == p.ProjectId {
+		if i.Config[workshop.ConfigProjectId] == p.ProjectId {
 			ws, err := s.loadWorkshop(&i, p)
 			if err != nil {
 				logger.Debugf("error loading workshop: %v", err)
@@ -600,12 +554,12 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 // lists. The first has *only* the workshop files that do not have any launched
 // workshops yet, the second contains workshops that are launched with or
 // without an associated file.
-func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*WorkshopFile, []*Workshop) {
-	files := make([]*WorkshopFile, len(f))
+func mergeInstancesAndFiles(f []*workshop.File, instances []*workshop.Workshop) ([]*workshop.File, []*workshop.Workshop) {
+	files := make([]*workshop.File, len(f))
 	copy(files, f)
 	// Walk both lists from to build a list of workshops with their states
 	for _, ws := range instances {
-		finder := func(p *WorkshopFile) bool { return p.Name == ws.Name }
+		finder := func(p *workshop.File) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
 		if idx != -1 {
 			/* Both a file and instance exist */
@@ -618,14 +572,14 @@ func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*Worksh
 	return files, instances
 }
 
-func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) (err error) {
+func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
@@ -645,14 +599,14 @@ func (s *LxdBackend) RemoveWorkshop(ctx context.Context, name string) (err error
 	return nil
 }
 
-func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
+func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(ContextProjectId).(string)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
 	}
@@ -662,24 +616,24 @@ func (s *LxdBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, e
 		return nil, err
 	}
 
-	return NewWorkshopFs(sftp), nil
+	return workshop.NewWorkshopFs(sftp), nil
 }
 
-func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error {
+func (s *Backend) CreateStateStorage(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	pid, ok := ctx.Value(ContextProjectId).(string)
+	pid, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextProjectId)
+		return fmt.Errorf("context key %s not found", workshop.ContextProjectId)
 	}
 
 	// Create the storage volume entry
 	vol := api.StorageVolumesPost{}
-	vol.Name = WorkshopStateVolumeName(name, pid)
+	vol.Name = workshop.WorkshopStateVolumeName(name, pid)
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
@@ -687,25 +641,25 @@ func (s *LxdBackend) CreateStateStorage(ctx context.Context, name string) error 
 	return conn.CreateStoragePoolVolume("default", vol)
 }
 
-func (s *LxdBackend) DeleteStateStorage(ctx context.Context, name string) error {
+func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	pid, ok := ctx.Value(ContextProjectId).(string)
+	pid, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextProjectId)
+		return fmt.Errorf("context key %s not found", workshop.ContextProjectId)
 	}
 
-	return conn.DeleteStoragePoolVolume("default", "custom", WorkshopStateVolumeName(name, pid))
+	return conn.DeleteStoragePoolVolume("default", "custom", workshop.WorkshopStateVolumeName(name, pid))
 }
 
-func (s *LxdBackend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
-	user, ok := ctx.Value(ContextUser).(string)
+func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key %s not found", ContextUser)
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
@@ -727,7 +681,7 @@ func createDefaultDevices() map[string]map[string]string {
 	}
 }
 
-func (s *LxdBackend) workshopConfig(projectId string, userid, groupid string, file *WorkshopFile) (map[string]string, error) {
+func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -760,7 +714,7 @@ users:
 	return cfg, nil
 }
 
-func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
+func (s *Backend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
 	var image *api.Image
 
 	imageServer, err := ConnectSimpleStreams(imageServer, nil)
@@ -784,4 +738,16 @@ func (s *LxdBackend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image,
 	}
 
 	return imageServer, image, nil
+}
+
+func FakeImageServer(server string) func() {
+	oldImageServer := imageServer
+	imageServer = server
+	return func() { imageServer = oldImageServer }
+}
+
+func FakeDefaultDevices(f func() map[string]map[string]string) func() {
+	oldDefault := defaultDevices
+	defaultDevices = f
+	return func() { defaultDevices = oldDefault }
 }

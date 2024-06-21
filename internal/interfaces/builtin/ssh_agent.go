@@ -31,7 +31,8 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 const sshAgentSummary = `allows sharing host's ssh-agent socket with SDKs`
@@ -64,7 +65,7 @@ func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotIn
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workshopbackend.LookupUsername(spec.User())
+	user, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *device.Specification, p
 	fromSocket := sock
 	toSocket := filepath.Join(dirs.WorkshopBaseDir, name+".ssh")
 
-	spec.AddDeviceEntry(workshopbackend.SshAgent(name, fromSocket, toSocket))
+	spec.AddDeviceEntry(lxdbackend.SshAgent(name, fromSocket, toSocket))
 
 	return nil
 }

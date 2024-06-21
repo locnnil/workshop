@@ -5,12 +5,12 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func CreateTestContext(username, projectId string) context.Context {
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, username)
-	ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, projectId)
+	ctx := context.WithValue(context.Background(), workshop.ContextUser, username)
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
 	return ctx
 }
 

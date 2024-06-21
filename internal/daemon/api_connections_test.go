@@ -34,7 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // Tests for GET /v1/connections
@@ -60,10 +60,10 @@ slots:
 `
 )
 
-func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, workshop string) {
-	info := sdk.MockInfo(c, yaml, s.project.ProjectId, workshop)
+func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) {
+	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
-	wf := &workshopbackend.WorkshopFile{Name: workshop, Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: w, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
 	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
 }
 

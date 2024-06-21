@@ -17,16 +17,16 @@ import (
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-func (s *apiSuite) launchWorkshop(ctx context.Context, name string, c *check.C) *workshopbackend.Workshop {
+func (s *apiSuite) launchWorkshop(ctx context.Context, name string, c *check.C) *workshop.Workshop {
 	b := s.d.overlord.WorkshopBackend()
 	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
 base: ubuntu@20.04
 `, name)), 0644)
 	c.Assert(err, check.IsNil)
-	wf := &workshopbackend.WorkshopFile{Name: name, Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: name, Base: "ubuntu@20.04"}
 	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)
@@ -42,11 +42,11 @@ func (s *apiSuite) TestProjectsGetWorkshops(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops", nil)
 	c.Assert(err, check.IsNil)
 
-	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
+	restore := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshop.InstallTimeNow)
 	defer restore()
 
-	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
-	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
+	w := s.launchWorkshop(s.ctx, "ws-test", c)
+	w.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
 
 	// Execute
 	rsp := v1GetProjectWorkshops(projectsCmd, req, nil).(*resp)
@@ -85,14 +85,14 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/ws-test", nil)
 	c.Assert(err, check.IsNil)
 
-	workshop := s.launchWorkshop(s.ctx, "ws-test", c)
-	restoreTime := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshopbackend.InstallTimeNow)
-	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
-	workshop.LinkSdk(s.ctx, sdk.Setup{Name: "java", Channel: "latest/stable", Revision: 324})
+	w := s.launchWorkshop(s.ctx, "ws-test", c)
+	restoreTime := testutil.FakeFunc(func() time.Time { return time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC) }, &workshop.InstallTimeNow)
+	w.LinkSdk(s.ctx, sdk.Setup{Name: "go", Channel: "latest/stable", Revision: 234})
+	w.LinkSdk(s.ctx, sdk.Setup{Name: "java", Channel: "latest/stable", Revision: 324})
 	restoreTime()
 
 	// Execute
-	restoreHealth := FakeWorkshopHealth(func(mgr *workshopstate.WorkshopManager, w *workshopbackend.Workshop) healthstate.HealthState {
+	restoreHealth := FakeWorkshopHealth(func(mgr *workshopstate.WorkshopManager, w *workshop.Workshop) healthstate.HealthState {
 		return healthstate.HealthState{Status: healthstate.ReadyStatus, SdkHealth: map[string]healthstate.HealthCheck{
 			"go": {Sdk: "go", Message: "test health check message", Code: "check-waiting", CheckResult: healthstate.CheckWaiting},
 		}}

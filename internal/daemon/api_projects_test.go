@@ -9,7 +9,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func (s *apiSuite) createProjectsRequest(method, url string, body io.Reader) (*http.Request, error) {
@@ -35,7 +35,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workshopbackend.Project{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workshop.Project{
 		{Path: s.project.Path, ProjectId: s.project.ProjectId},
 	})
 }

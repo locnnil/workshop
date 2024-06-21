@@ -13,16 +13,17 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type InterfaceManager struct {
 	state   *state.State
-	backend workshopbackend.WorkshopBackend
+	backend workshop.Backend
 	repo    *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workshopbackend.WorkshopBackend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceManager {
 	m := &InterfaceManager{
 		state:   s,
 		backend: be,
@@ -109,7 +110,7 @@ func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()
 	for _, backend := range allSecurityBackends() {
-		if err := backend.Initialize(m.backend.(workshopbackend.Profile)); err != nil {
+		if err := backend.Initialize(m.backend.(workshop.Profile)); err != nil {
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
@@ -129,9 +130,9 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	for user, projects := range allprojects {
-		ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, user)
+		ctx := context.WithValue(context.Background(), workshop.ContextUser, user)
 		for _, project := range projects {
-			pctx := context.WithValue(ctx, workshopbackend.ContextProjectId, project.ProjectId)
+			pctx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
 			_, workshops, err := m.backend.ProjectWorkshops(pctx)
 			if err != nil {
 				logger.Noticef("Cannot load workshops from %s: %v", project.Path, err)
@@ -288,25 +289,25 @@ func (m *InterfaceManager) ResolveDisconnect(
 // workshopctl, socket. These mounts are created at the time of launch but can
 // become invalid on the daemon restart / update. Thus, recreating them upon
 // every daemon restart makes sure they still point to the correct files.
-func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, workshop string) error {
-	socket := workshopbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
+func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string) error {
+	socket := lxdbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
 		filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted"))
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, workshop, socket.Name())
+	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
 
-	if err := m.backend.AddWorkshopDevice(pctx, workshop, socket); err != nil {
+	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
 		return err
 	}
 
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := workshopbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
+	workshopctl := lxdbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
 		"/usr/bin/workshopctl")
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, workshop, workshopctl.Name())
+	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name)
 
-	if err := m.backend.AddWorkshopDevice(pctx, workshop, workshopctl); err != nil {
+	if err := m.backend.AddWorkshopDevice(pctx, w, workshopctl); err != nil {
 		return err
 	}
 

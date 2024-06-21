@@ -1,10 +1,12 @@
 package daemon
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +21,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type actionOpts struct {
@@ -65,7 +67,7 @@ type WorkshopInfo struct {
 var ensureStateSoon = stateEnsureBefore
 var sdkMounts = sdkConnsToMounts
 
-func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *WorkshopInfo {
+func workshopFileToInfo(file *workshop.File, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
@@ -80,13 +82,13 @@ func workshopFileToInfo(file *workshopbackend.WorkshopFile, pid string) *Worksho
 	return &ws
 }
 
-func workshopToInfo(workshop *workshopbackend.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
+func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
-	info.Name = workshop.Name
-	info.ProjectId = workshop.Project().ProjectId
-	info.Base = workshop.Base()
+	info.Name = w.Name
+	info.ProjectId = w.Project.ProjectId
+	info.Base = w.Base
 
-	for _, sdk := range workshop.Content() {
+	for _, sdk := range w.Content {
 		var healthInfo *HealthCheckInfo
 		if sdkHealth, ok := health.SdkHealth[sdk.Name]; ok {
 			healthInfo = &HealthCheckInfo{
@@ -115,11 +117,13 @@ func workshopToInfo(workshop *workshopbackend.Workshop, health healthstate.Healt
 		info.Notes = append(info.Notes, health.Code)
 	}
 	info.Status = health.Status.String()
+
+	slices.SortFunc(info.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
 	return &info
 }
 
-func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
-	connections, err := repo.Connections(projectId, workshop, sdk)
+func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, w, sdk string) []*Mount {
+	connections, err := repo.Connections(projectId, w, sdk)
 	if err != nil {
 		return nil
 	}
@@ -138,7 +142,7 @@ func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, w
 			}
 			// check if the source exists as otherwise the mount is broken
 			if _, err = os.Stat(source); osutil.IsDirNotExist(err) {
-				st.Warnf("%s/%s:%s mount is broken: %s does not exist", workshop, sdk, connection.Plug.Name(), source)
+				st.Warnf("%s/%s:%s mount is broken: %s does not exist", w, sdk, connection.Plug.Name(), source)
 			}
 
 			err = connection.Plug.Attr("target", &target)
@@ -226,7 +230,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
-	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
@@ -309,17 +313,17 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer state.Unlock()
 
 	wrkmgr := c.d.overlord.WorkshopManager()
-	workshop, err := wrkmgr.Workshop(r.Context(), name, projectId)
+	w, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
 		return statusNotFound("%v", err)
 	}
-	health := workshopHealth(wrkmgr, workshop)
+	health := workshopHealth(wrkmgr, w)
 
 	repo := c.d.overlord.InterfaceManager().Repository()
 	mounts := map[string][]*Mount{}
-	for _, sdk := range workshop.Content() {
+	for _, sdk := range w.Content {
 		mounts[sdk.Name] = sdkMounts(state, repo, projectId, name, sdk.Name)
 	}
 
-	return SyncResponse(workshopToInfo(workshop, health, mounts), http.StatusOK)
+	return SyncResponse(workshopToInfo(w, health, mounts), http.StatusOK)
 }

@@ -1,4 +1,4 @@
-package workshopbackend_test
+package lxdbackend_test
 
 import (
 	"fmt"
@@ -11,11 +11,12 @@ import (
 
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type LxdBeTests struct {
-	project *workshopbackend.Project
+	project *workshop.Project
 }
 
 var _ = check.Suite(&LxdBeTests{})
@@ -24,7 +25,7 @@ func TestLxdBackendSuite(t *testing.T) { check.TestingT(t) }
 
 func (s *LxdBeTests) SetUpTest(c *check.C) {
 	dir := c.MkDir()
-	s.project = &workshopbackend.Project{ProjectId: "42ws42ws", Path: dir}
+	s.project = &workshop.Project{ProjectId: "42ws42ws", Path: dir}
 }
 
 func (f *LxdBeTests) TestLoadWorkshopSuccess(c *check.C) {
@@ -35,13 +36,13 @@ sdks:
   go:
     channel: latest/stable
 `), 0644)
-	project := workshopbackend.Project{ProjectId: f.project.ProjectId, Path: f.project.Path}
+	project := workshop.Project{ProjectId: f.project.ProjectId, Path: f.project.Path}
 
-	b := &workshopbackend.LxdBackend{}
+	b := &lxdbackend.Backend{}
 
 	// Execute
-	ws, err := workshopbackend.LoadWorkshop(b, &api.Instance{
-		Name: workshopbackend.InstanceName("ws", f.project.ProjectId),
+	ws, err := lxdbackend.LoadWorkshop(b, &api.Instance{
+		Name: lxdbackend.InstanceName("ws", f.project.ProjectId),
 		InstancePut: api.InstancePut{Config: map[string]string{
 			"user.workshop.project-id": f.project.ProjectId,
 			"user.workshop.content":    `{"go":{"name":"go","channel":"latest/stable","revision":277}}`,
@@ -52,9 +53,9 @@ sdks:
 	// Validate
 	c.Assert(err, check.IsNil)
 	c.Assert(ws.Name, check.Equals, "ws")
-	c.Assert(ws.IsRunning(), check.Equals, true)
-	c.Assert(ws.Project().ProjectId, check.Equals, f.project.ProjectId)
-	c.Assert(ws.Content(), testutil.DeepUnsortedMatches, []sdk.Setup{{
+	c.Assert(ws.Running, check.Equals, true)
+	c.Assert(ws.Project.ProjectId, check.Equals, f.project.ProjectId)
+	c.Assert(ws.Content, testutil.DeepUnsortedMatches, map[string]sdk.Setup{"go": {
 		Name:     "go",
 		Channel:  "latest/stable",
 		Revision: 277,
@@ -71,7 +72,7 @@ base: ubuntu@20.04`), 0644)
 	files, err := f.project.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workshopbackend.Workshop{
+	instances := []*workshop.Workshop{
 		{
 			Name: "t1",
 		},
@@ -80,16 +81,16 @@ base: ubuntu@20.04`), 0644)
 		},
 	}
 
-	instances[0].SetRunning(true)
-	instances[1].SetRunning(true)
+	instances[0].Running = true
+	instances[1].Running = true
 
 	// Execute
-	_, merged := workshopbackend.MergeInstancesAndFiles(files, instances)
+	_, merged := lxdbackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
 	c.Assert(merged, check.HasLen, 2)
-	c.Assert(merged[0].IsRunning(), check.Equals, true)
-	c.Assert(merged[1].IsRunning(), check.Equals, true)
+	c.Assert(merged[0].Running, check.Equals, true)
+	c.Assert(merged[1].Running, check.Equals, true)
 }
 
 func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesWorkshopOff(c *check.C) {
@@ -103,22 +104,22 @@ base: ubuntu@20.04`), 0644)
 	files, err := f.project.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 
-	instances := []*workshopbackend.Workshop{
+	instances := []*workshop.Workshop{
 		{
 			Name: "t1",
 		},
 	}
 
-	instances[0].SetRunning(true)
+	instances[0].Running = true
 
 	// Execute
-	wsFiles, merged := workshopbackend.MergeInstancesAndFiles(files, instances)
+	wsFiles, merged := lxdbackend.MergeInstancesAndFiles(files, instances)
 
 	// Validate
 	c.Assert(merged, check.HasLen, 1)
 	c.Assert(wsFiles, check.HasLen, 1)
 
-	c.Assert(merged[0].IsRunning(), check.Equals, true)
+	c.Assert(merged[0].Running, check.Equals, true)
 }
 
 func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
@@ -139,7 +140,6 @@ func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 
 		// same level
 		{"/home/user/same", true, "/home/user/same", false, "/home/user/same", nil},
-
 		// same level, symlink
 		{"/home/user/same", true, "/home/user/samelink", true, "/home/user/same", nil},
 
@@ -165,7 +165,7 @@ func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 	for _, i := range cases {
 		os.MkdirAll(filepath.Join(root, i.project), 0755)
 		if i.lockFile == true {
-			os.Create(workshopbackend.LockPath(filepath.Join(root, i.project)))
+			os.Create(workshop.LockPath(filepath.Join(root, i.project)))
 		}
 		if i.isSymlink == true {
 			err := os.Symlink(filepath.Join(root, i.project), filepath.Join(root, i.cwd))
@@ -176,7 +176,7 @@ func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 		// note: no filepath.join here as it calls Clean on exist for the path
 		// the data must come unclean for the ProjectPath input and the test
 		// must ensure it returns a clean one on every condition
-		path, err := workshopbackend.ProjectPath(fmt.Sprintf("%s%s", root, i.cwd))
+		path, err := lxdbackend.ProjectPath(fmt.Sprintf("%s%s", root, i.cwd))
 
 		c.Assert(path, check.Equals, fmt.Sprintf("%s%s", root, i.expected))
 		c.Assert(err, check.Equals, i.err)
@@ -188,9 +188,9 @@ func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 	configData := `[{"path":"/home/dmitry/Work/ros-tutorials","id":"01ac7c0e"},{"path":"/home/dmitry/Work/ros2-tutorials","id":"47b66ebc"}]`
 
-	projects, err := workshopbackend.ReadProjects([]byte(configData))
+	projects, err := lxdbackend.ReadProjects([]byte(configData))
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, testutil.DeepUnsortedMatches, []*workshopbackend.Project{
+	c.Assert(projects, testutil.DeepUnsortedMatches, []*workshop.Project{
 		{
 			Path:      "/home/dmitry/Work/ros-tutorials",
 			ProjectId: "01ac7c0e",
@@ -201,12 +201,12 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 		},
 	})
 
-	projects, err = workshopbackend.ReadProjects([]byte("[]"))
+	projects, err = lxdbackend.ReadProjects([]byte("[]"))
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, check.NotNil)
 	c.Assert(projects, check.HasLen, 0)
 
-	projects, err = workshopbackend.ReadProjects(nil)
+	projects, err = lxdbackend.ReadProjects(nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, check.NotNil)
 	c.Assert(projects, check.HasLen, 0)
@@ -228,12 +228,12 @@ sdks:
 
 func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	// Setup
-	b := &workshopbackend.LxdBackend{}
-	file := &workshopbackend.WorkshopFile{
+	b := &lxdbackend.Backend{}
+	file := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@22.04",
-		Sdks: workshopbackend.SdkList{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{
+		Sdks: workshop.SdkList{
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{
 				"one-plug":     {Bind: "two:two-plug"},
 				"one-plug-two": {Bind: "two:two-plug"},
 			}},
@@ -243,7 +243,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	b.SetNvidia(true)
 
 	// Execute
-	cfg, err := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -259,7 +259,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	b.SetNvidia(false)
 
 	// Execute
-	cfg, err = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err = lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
 	c.Assert(err, check.IsNil)

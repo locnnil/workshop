@@ -5,7 +5,8 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -50,6 +51,6 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	expectedDevice := workshopbackend.Gpu(plug.Name)
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshopbackend.Device{expectedDevice})
+	expectedDevice := lxdbackend.Gpu(plug.Name)
+	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedDevice})
 }

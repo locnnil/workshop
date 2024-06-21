@@ -3,14 +3,14 @@ package sdkstate
 import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	backend "github.com/canonical/workshop/internal/workshopbackend"
+	backend "github.com/canonical/workshop/internal/workshop"
 )
 
 type SdkManager struct {
-	backend backend.WorkshopBackend
+	backend backend.Backend
 }
 
-func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
+func New(runner *state.TaskRunner, server backend.Backend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)

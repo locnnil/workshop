@@ -33,7 +33,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type collectFilter struct {
@@ -302,7 +302,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("at least one plug and slot is required")
 	}
 
-	user, ok := r.Context().Value(workshopbackend.ContextUser).(string)
+	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("internal error: no user associated with the request")
 	}

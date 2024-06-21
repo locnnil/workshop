@@ -19,18 +19,18 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshopbackend"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type workshopHandlers struct {
 	fs                afero.Fs
-	backend           *workshopbackend.FakeWorkshopBackend
+	backend           *workshop.FakeWorkshopBackend
 	state             *state.State
 	runner            *state.TaskRunner
 	se                *overlord.StateEngine
 	wrkmgr            *workshopstate.WorkshopManager
 	ctx               context.Context
-	project           *workshopbackend.Project
+	project           *workshop.Project
 	homeDir           string
 	lookupUserRestore func()
 }
@@ -41,7 +41,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkshopProject(w string, p *workshopbackend.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", *p)
@@ -52,14 +52,14 @@ var ErrTrigger = errors.New("error out")
 
 func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
-	ctx := context.WithValue(context.Background(), workshopbackend.ContextUser, "testuser")
+	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend = workshopbackend.NewFakeWorkshopBackend()
+	s.backend = workshop.NewFakeWorkshopBackend()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
-	s.ctx = context.WithValue(ctx, workshopbackend.ContextProjectId, s.project.ProjectId)
+	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	s.homeDir = c.MkDir()
 	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
@@ -70,7 +70,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 			HomeDir:  s.homeDir,
 		}
 		return u, nil
-	}, &workshopbackend.LookupUsername)
+	}, &workshop.LookupUsername)
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -99,7 +99,7 @@ func (s *workshopHandlers) TearDownTest(c *check.C) {
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
 	wfbuf, err := yaml.Marshal(wf)
 	c.Check(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), wfbuf, 0644)
@@ -118,7 +118,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	oldInterval := workshopstate.StopLogInterval
 	workshopstate.StopLogInterval = 100 * time.Millisecond
 
-	restore := testutil.FakeFunc(func(_ workshopbackend.WorkshopBackend, ctx context.Context, name string, force bool) error {
+	restore := testutil.FakeFunc(func(_ workshop.Backend, ctx context.Context, name string, force bool) error {
 		time.Sleep(150 * time.Millisecond)
 		return nil
 	}, &workshopstate.StopWorkshop)
@@ -141,7 +141,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test2", Channel: "latest/stable"},
 	}}
@@ -174,7 +174,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshopbackend.SdkRecord{
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test2", Channel: "latest/stable"},
 	}}
@@ -209,7 +209,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(ws, check.IsNil)
-	c.Assert(err, testutil.ErrorIs, workshopbackend.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 
 	exist, _, _ := osutil.ExistsIsDir(filepath.Join(projectContent, plugs[0]))
 	c.Assert(exist, check.Equals, false)
@@ -253,7 +253,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithAgentSdk(c *check.C) {
 base: ubuntu@22.04
 `), 0644)
 	c.Check(err, check.IsNil)
-	wf := &workshopbackend.WorkshopFile{Name: "ws", Base: "ubuntu@22.04"}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
@@ -284,7 +284,7 @@ func (s *workshopHandlers) TestCreateWorkshopAgentSdkFailedGetsUndone(c *check.C
 base: ubuntu@22.04
 `), 0644)
 	c.Check(err, check.IsNil)
-	s.backend.WorkshopFsCallback = func(ctx context.Context, name string) (workshopbackend.WorkshopFs, error) {
+	s.backend.WorkshopFsCallback = func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
 		return nil, errors.New("cannot get WorkshopFs")
 	}
 
@@ -306,5 +306,5 @@ base: ubuntu@22.04
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(ws, check.IsNil)
-	c.Assert(err, testutil.ErrorIs, workshopbackend.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 }
