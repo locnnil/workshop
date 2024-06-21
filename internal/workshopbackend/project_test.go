@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/canonical/workshop/internal/workshopbackend"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/workshopbackend"
 )
 
 type projectSuite struct {
@@ -28,7 +29,7 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	c.Assert(createWorkshop(d, "w1"), check.IsNil)
 	c.Assert(createWorkshop(d, "w2"), check.IsNil)
 	c.Assert(createWorkshop(d, "-"), check.IsNil)
-	fls, err := p.EnumWorkshopFiles()
+	fls, err := p.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 	c.Assert(fls, check.HasLen, 2)
 }

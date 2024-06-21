@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -29,6 +30,11 @@ type WorkshopFile struct {
 	Base string  `yaml:"base"`
 	Sdks SdkList `yaml:"sdks,omitempty"`
 }
+
+// *.yaml is the only supported extension for workshop files as the only
+// recommended "official" extension: https://yaml.org/faq.html. Also, having a
+// single way of naming workshop files avoids unneccesary inconsistencies.
+var validWorkshopFilename = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
 
 func (p SdkList) MarshalYAML() (interface{}, error) {
 	type sdkDef struct {
@@ -59,7 +65,7 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		} else {
 			if _, ok := seen[name]; ok {
-				return fmt.Errorf("cannot parse workshop file: %q SDK is not unique", name)
+				return fmt.Errorf("%q SDK must only be included once", name)
 			}
 			seen[name] = true
 			res.Name = name
@@ -88,7 +94,6 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 		return cmp.Compare(a.Name, b.Name)
 	})
 
-	// Validate workshop properties
 	if !sdk.ValidName.MatchString(file.Name) {
 		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
@@ -98,31 +103,31 @@ func readWorkshop(pathname string) (*WorkshopFile, error) {
 	}
 
 	// All bindings must refer to the existing SDKs and meet the name validity
-	// checks (at this stage). Later, when SDK metadata retrieved, the plugs
-	// must be checked again (e.g. ensure all those plugs actually exist).
-	for _, p := range file.Sdks {
-		for _, b := range p.Plugs {
-			comps := strings.Split(b.Bind, ":")
+	// checks (at this stage). Later, when SDK metadata will be received, the
+	// plugs must be checked again (e.g. ensure all those plugs actually exist).
+	for _, s := range file.Sdks {
+		for _, p := range s.Plugs {
+			comps := strings.Split(p.Bind, ":")
 			if len(comps) != 2 {
-				return nil, fmt.Errorf("incorrect bind plug reference: %q (use <sdk>:<plug>)", b.Bind)
+				return nil, fmt.Errorf("incorrect bind plug reference: %q (use <sdk>:<plug>)", p.Bind)
 			}
 			if !sdk.ValidName.MatchString(comps[0]) {
 				return nil, fmt.Errorf("%q isn't a valid SDK name", comps[0])
 			}
 			if ixd := slices.IndexFunc(file.Sdks, func(sr SdkRecord) bool { return comps[0] == sr.Name }); ixd == -1 {
-				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", b.Bind)
+				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", p.Bind)
 			}
 		}
 	}
 
-	for _, k := range file.Sdks {
-		if k.Name == sdk.Agent.String() {
+	for _, s := range file.Sdks {
+		if s.Name == sdk.Agent.String() {
 			return nil, fmt.Errorf(`"agent" is a reserved SDK name`)
 		}
-		if matches := sdk.ValidChannel.FindStringSubmatch(k.Channel); matches != nil {
+		if matches := sdk.ValidChannel.FindStringSubmatch(s.Channel); matches != nil {
 			continue
 		} else {
-			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", k.Channel, k.Name)
+			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", s.Channel, s.Name)
 		}
 	}
 

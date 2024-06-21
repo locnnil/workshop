@@ -68,7 +68,7 @@ func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
 base: ubuntu@20.04`), 0644)
 	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
 base: ubuntu@20.04`), 0644)
-	files, err := f.project.EnumWorkshopFiles()
+	files, err := f.project.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 
 	instances := []*workshopbackend.Workshop{
@@ -100,7 +100,7 @@ base: ubuntu@20.04`), 0644)
 	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
 base: ubuntu@20.04`), 0644)
 
-	files, err := f.project.EnumWorkshopFiles()
+	files, err := f.project.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 
 	instances := []*workshopbackend.Workshop{
@@ -212,33 +212,57 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 	c.Assert(projects, check.HasLen, 0)
 }
 
+var marshalledWorkshop = `name: test
+base: ubuntu@22.04
+sdks:
+    one:
+        channel: latest/stable
+        plugs:
+            one-plug:
+                bind: two:two-plug
+            one-plug-two:
+                bind: two:two-plug
+    two:
+        channel: latest/edge
+`
+
 func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	// Setup
 	b := &workshopbackend.LxdBackend{}
-	file := &workshopbackend.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
+	file := &workshopbackend.WorkshopFile{
+		Name: "test",
+		Base: "ubuntu@22.04",
+		Sdks: workshopbackend.SdkList{
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{
+				"one-plug":     {Bind: "two:two-plug"},
+				"one-plug-two": {Bind: "two:two-plug"},
+			}},
+			{Name: "two", Channel: "latest/edge"},
+		},
+	}
 	b.SetNvidia(true)
 
 	// Execute
-	cfg, _ := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err := workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
+	c.Assert(err, check.IsNil)
 	c.Assert(cfg["raw.idmap"], check.Equals, "uid 1001 1000\ngid 1001 1000")
 	c.Assert(cfg["security.nesting"], check.Equals, "true")
 	c.Assert(cfg["user.workshop.project-id"], check.Equals, f.project.ProjectId)
 
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "true")
 	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "all")
-	c.Assert(cfg["user.workshop.file"], check.Equals, `name: test
-base: ubuntu@22.04
-`)
+	c.Assert(cfg["user.workshop.file"], check.Equals, marshalledWorkshop)
 
 	// Setup
 	b.SetNvidia(false)
 
 	// Execute
-	cfg, _ = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err = workshopbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
 
 	// Validate
+	c.Assert(err, check.IsNil)
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "")
 	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "")
 }

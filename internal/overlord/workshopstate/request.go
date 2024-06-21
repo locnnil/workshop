@@ -58,9 +58,9 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	taskset := make([]*state.TaskSet, 0, len(names))
 
 	for _, name := range names {
-		file, err := project.WorkshopFile(name)
+		file, err := project.Workshop(name)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read %q file: %w", name, err)
+			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
 
 		_, err = w.Workshop(ctx, name, projectId)
@@ -239,7 +239,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		if idx == -1 {
 			return nil, fmt.Errorf("cannot refresh: workshop %q not found", workshop)
 		}
-		file, err := project.WorkshopFile(workshops[idx].Name)
+		file, err := project.Workshop(workshops[idx].Name)
 		if err != nil {
 			return nil, err
 		}

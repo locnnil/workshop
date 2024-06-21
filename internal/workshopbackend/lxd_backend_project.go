@@ -160,13 +160,13 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 }
 
 func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, existingProject.ProjectId))
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(LxdConfigProjectId, existingProject.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	for _, i := range workshops {
-		project := Mount(ProjectPathDevice, existingProject.Path, WorkshopProjectPath)
+		project := Mount(LxdConfigProjectPathDevice, existingProject.Path, WorkshopProjectPath)
 		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
@@ -176,7 +176,7 @@ func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx con
 }
 
 func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(ProjectIdConfig, p.ProjectId))
+	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(LxdConfigProjectId, p.ProjectId))
 	if err != nil {
 		return "", err
 	}
@@ -384,7 +384,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 
 	// no project found, try to create one, note there is no ID yet at this stage
 	var project = Project{Path: projectDir}
-	workshops, err := project.EnumWorkshopFiles()
+	workshops, err := project.ReadWorkshops()
 	if err != nil {
 		return nil, false, err
 	}

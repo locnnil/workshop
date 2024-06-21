@@ -66,9 +66,14 @@ var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	LookupUsername       = user.Lookup
 	NewProjectId         = allocateProjectId
-	defaultDevices       = createDefaultDevices
 
-	imageServer = "https://cloud-images.ubuntu.com/releases/"
+	defaultDevices = createDefaultDevices
+	imageServer    = "https://cloud-images.ubuntu.com/releases/"
+
+	LxdConfigProjectId         = "user.workshop.project-id"
+	LxdConfigWorkshopFile      = "user.workshop.file"
+	LxdConfigWorkshopContent   = "user.workshop.content"
+	LxdConfigProjectPathDevice = "workshop.project"
 )
 
 func New() (WorkshopBackend, error) {
@@ -117,12 +122,12 @@ func (s *LxdBackend) LaunchWorkshop(ctx context.Context, file *WorkshopFile) err
 		return fmt.Errorf("context key user not found")
 	}
 
-	/* Skip if the instance exists already */
+	// Skip if the instance exists already.
 	if _, _, err := conn.GetInstance(InstanceName(file.Name, projectId)); err == nil {
 		return fmt.Errorf("workshop \"%s\" already exists", file.Name)
 	}
 
-	/* Check if we have the base image stored locally */
+	// Check if we have the base image stored locally
 	if alias, _, err := conn.GetImageAlias(file.Base); err == nil {
 		if image, _, err = conn.GetImage(alias.Target); err != nil {
 			return err
@@ -472,29 +477,43 @@ func (s *LxdBackend) Workshop(ctx context.Context, name string) (*Workshop, erro
 }
 
 func installedContent(lxdConfig map[string]string) (map[string]sdk.Setup, error) {
-	content := make(map[string]sdk.Setup)
-	if sdks, ok := lxdConfig["user.workshop.content"]; ok {
-		err := json.Unmarshal([]byte(sdks), &content)
-		if err != nil {
+	c := make(map[string]sdk.Setup)
+	if sdks, ok := lxdConfig[LxdConfigWorkshopContent]; ok {
+		if err := json.Unmarshal([]byte(sdks), &c); err != nil {
 			return nil, err
 		}
 	}
-	return content, nil
+	return c, nil
 }
 
-func (s *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
+func workshopFile(lxdConfig map[string]string) (*WorkshopFile, error) {
+	var f WorkshopFile
+	if yml, ok := lxdConfig[LxdConfigWorkshopFile]; ok {
+		if err := yaml.Unmarshal([]byte(yml), &f); err != nil {
+			return nil, err
+		}
+	}
+	return &f, nil
+}
+
+func (b *LxdBackend) loadWorkshop(inst *api.Instance, p *Project) (*Workshop, error) {
 	base := inst.Config["image.os"] + "@" + inst.Config["image.version"]
 
-	// Fetch information about the installed SDKs
+	f, err := workshopFile(inst.Config)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load workshop: %v", err)
+	}
+
 	content, err := installedContent(inst.Config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot load workshop: installed SDK content is not readable: %v", err)
+		return nil, fmt.Errorf("cannot load workshop: %v", err)
 	}
 
 	return &Workshop{
 		Name:    WorkshopName(inst.Name),
-		backend: s,
+		backend: b,
 		project: p,
+		file:    f,
 		running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
 		base:    base,
 		content: content,
@@ -547,7 +566,7 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 
 	p = projects[user][idx]
 
-	files, err := p.EnumWorkshopFiles()
+	files, err := p.ReadWorkshops()
 	// if the dir does not exist it does not mean there are no workshops. It
 	// could be because the dir was removed with some workshops still operating
 	// resulting in a missing-project error
@@ -563,7 +582,7 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 
 	var projectWorkshops []*Workshop
 	for _, i := range instances {
-		if i.Config[ProjectIdConfig] == p.ProjectId {
+		if i.Config[LxdConfigProjectId] == p.ProjectId {
 			ws, err := s.loadWorkshop(&i, p)
 			if err != nil {
 				logger.Debugf("error loading workshop: %v", err)
@@ -584,7 +603,7 @@ func (s *LxdBackend) ProjectWorkshops(ctx context.Context) ([]*WorkshopFile, []*
 func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*WorkshopFile, []*Workshop) {
 	files := make([]*WorkshopFile, len(f))
 	copy(files, f)
-	/* Walk both lists from to build a list of workshops with their states */
+	// Walk both lists from to build a list of workshops with their states
 	for _, ws := range instances {
 		finder := func(p *WorkshopFile) bool { return p.Name == ws.Name }
 		idx := slices.IndexFunc(files, finder)
@@ -594,8 +613,8 @@ func mergeInstancesAndFiles(f []*WorkshopFile, instances []*Workshop) ([]*Worksh
 		}
 	}
 
-	/* At this point, files contain only inactive workshops and instances
-	contain the workshops that have workshop files available */
+	// At this point, files contain only inactive workshops and instances
+	// contain the workshops that have workshop files available.
 	return files, instances
 }
 
@@ -719,7 +738,7 @@ users:
     shell: /bin/bash
 `
 
-	workshopFile, err := yaml.Marshal(file)
+	f, err := yaml.Marshal(file)
 	if err != nil {
 		return map[string]string{}, nil
 	}
@@ -729,7 +748,7 @@ users:
 		"security.nesting":         "true",
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
-		"user.workshop.file":       string(workshopFile),
+		"user.workshop.file":       string(f),
 	}
 
 	if s.nvidiaRuntime {

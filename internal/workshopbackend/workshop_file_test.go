@@ -101,7 +101,7 @@ sdks:
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	file, err := workshopbackend.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `"cuda" SDK must only be included once`)
 }
 
 func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
@@ -136,7 +136,7 @@ sdks:
 	dir := c.MkDir()
 	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	file, err := p.WorkshopFile("xbert-gpu")
+	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshopbackend.SdkList{
 		workshopbackend.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshopbackend.Plug{"cache": {Bind: "etl-sdk:cache"}}},
@@ -162,7 +162,7 @@ sdks:
 	dir := c.MkDir()
 	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	_, err := p.WorkshopFile("xbert-gpu")
+	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `"no-sdk:cache" tries to bind to a plug from a non-existing SDK`)
 }
 
@@ -184,7 +184,7 @@ sdks:
 	dir := c.MkDir()
 	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	_, err := p.WorkshopFile("xbert-gpu")
+	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `"workshop/no-sdk" isn't a valid SDK name`)
 }
 
@@ -201,6 +201,6 @@ sdks:
 	dir := c.MkDir()
 	p := workshopbackend.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
-	_, err := p.WorkshopFile("xbert-gpu")
+	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `incorrect bind plug reference: "cache" \(use <sdk>:<plug>\)`)
 }
