@@ -31,6 +31,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -148,7 +149,7 @@ slots:
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
-	expectedMnt := workshop.Mount(plug.Name, sourceDir, "/project/training")
+	expectedMnt := lxdbackend.Mount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
 
 	// Vaildate plug attribute

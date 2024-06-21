@@ -662,7 +662,7 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.remount(ctx, task, &plug, source, inst.IsRunning())
+	return m.remount(ctx, task, &plug, source, inst.Running)
 }
 
 func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {

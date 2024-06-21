@@ -62,7 +62,7 @@ sdks:
 }
 
 func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
-	fl := &workshop.WorkshopFile{
+	fl := &workshop.File{
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{

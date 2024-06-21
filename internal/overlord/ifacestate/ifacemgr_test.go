@@ -30,7 +30,7 @@ type interfaceManagerSuite struct {
 	se         *overlord.StateEngine
 	runner     *state.TaskRunner
 	ctx        context.Context
-	wsbackend  workshop.WorkshopBackend
+	wsbackend  workshop.Backend
 	prj        *workshop.Project
 	secBackend *ifacetest.TestSecurityBackend
 
@@ -80,7 +80,7 @@ func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sd
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, maps.Keys(sdkYamls))
 
-	var wf workshop.WorkshopFile
+	var wf workshop.File
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 

@@ -29,7 +29,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/version"
-	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var shortRunHelp = "Run the workshop daemon"
@@ -141,7 +141,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 
 	dopts.HTTPAddress = rcmd.HTTP
 
-	wbe, err := workshop.New()
+	wbe, err := lxdbackend.New()
 	if err != nil {
 		return err
 	}

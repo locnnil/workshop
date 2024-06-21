@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 const contentSummary = `allows sharing host code and data with SDKs`
@@ -138,7 +139,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	spec.AddDeviceEntry(workshop.Mount(plug.Name(), source, iface.target(plug)))
+	spec.AddDeviceEntry(lxdbackend.Mount(plug.Name(), source, iface.target(plug)))
 	return nil
 }
 

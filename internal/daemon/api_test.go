@@ -30,7 +30,7 @@ var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d *Daemon
-	b workshop.WorkshopBackend
+	b workshop.Backend
 
 	workshopDir string
 	username    string

@@ -14,15 +14,16 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type InterfaceManager struct {
 	state   *state.State
-	backend workshop.WorkshopBackend
+	backend workshop.Backend
 	repo    *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workshop.WorkshopBackend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceManager {
 	m := &InterfaceManager{
 		state:   s,
 		backend: be,
@@ -289,10 +290,10 @@ func (m *InterfaceManager) ResolveDisconnect(
 // become invalid on the daemon restart / update. Thus, recreating them upon
 // every daemon restart makes sure they still point to the correct files.
 func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string) error {
-	socket := workshop.Mount("workshop.socket", dirs.SocketPath+".untrusted",
+	socket := lxdbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
 		filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted"))
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name())
+	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
 
 	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
 		return err
@@ -301,10 +302,10 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := workshop.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
+	workshopctl := lxdbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
 		"/usr/bin/workshopctl")
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name())
+	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name)
 
 	if err := m.backend.AddWorkshopDevice(pctx, w, workshopctl); err != nil {
 		return err

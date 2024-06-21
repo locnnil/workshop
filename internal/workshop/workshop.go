@@ -1,7 +1,6 @@
 package workshop
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,11 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
-
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
+)
+
+var (
+	ConfigProjectId         = "user.workshop.project-id"
+	ConfigWorkshopFile      = "user.workshop.file"
+	ConfigWorkshopContent   = "user.workshop.content"
+	ConfigProjectPathDevice = "workshop.project"
 )
 
 var InstallTimeNow = time.Now
@@ -25,28 +28,12 @@ var InstallTimeNow = time.Now
 type Workshop struct {
 	Name string
 
-	backend WorkshopBackend
-	project *Project
-	file    *WorkshopFile
-	base    string
-	content map[string]sdk.Setup
-	running bool
-}
-
-func (w *Workshop) Base() string {
-	return w.base
-}
-
-func (w *Workshop) IsRunning() bool {
-	return w.running
-}
-
-func (w *Workshop) SetRunning(run bool) {
-	w.running = run
-}
-
-func (w *Workshop) Project() *Project {
-	return w.project
+	Backend Backend
+	Project *Project
+	File    *File
+	Base    string
+	Content map[string]sdk.Setup
+	Running bool
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
@@ -55,16 +42,16 @@ func (w *Workshop) Project() *Project {
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	now := InstallTimeNow()
 	s.InstallTime = &now
-	w.content[s.Name] = s
+	w.Content[s.Name] = s
 
-	sequenceValue, err := json.Marshal(w.content)
+	sequenceValue, err := json.Marshal(w.Content)
 	if err != nil {
 		return err
 	}
 
-	err = w.backend.AddWorkshopConfig(ctx, w.Name,
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
 		&WorkshopConfigValue{
-			Name:  LxdConfigWorkshopContent,
+			Name:  ConfigWorkshopContent,
 			Value: string(sequenceValue),
 		})
 
@@ -75,7 +62,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	// Update the current link to point out to the newly installed SDK
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, s.Name)
 
-	fs, err := w.backend.WorkshopFs(ctx, w.Name)
+	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
@@ -96,16 +83,16 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK to the workshop content. This method is idempotent, so if an
 // SDK did not exist, the result will be a no-op
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	delete(w.content, name)
-	newSequence, err := json.Marshal(w.content)
+	delete(w.Content, name)
+	newSequence, err := json.Marshal(w.Content)
 	if err != nil {
 		return err
 	}
 
 	/* Update the workshop config */
-	err = w.backend.AddWorkshopConfig(ctx, w.Name,
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
 		&WorkshopConfigValue{
-			Name:  LxdConfigWorkshopContent,
+			Name:  ConfigWorkshopContent,
 			Value: string(newSequence),
 		})
 	if err != nil {
@@ -113,17 +100,13 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	}
 
 	// Remove the 'current' link
-	fs, err := w.backend.WorkshopFs(ctx, w.Name)
+	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
 	return fs.Remove(sdk.SdkCurrentPath(name))
-}
-
-func InstanceName(name string, project_id string) string {
-	return fmt.Sprintf("%s-%s", name, project_id)
 }
 
 func WorkshopName(instance string) string {
@@ -137,17 +120,17 @@ func WorkshopName(instance string) string {
 }
 
 func WorkshopStateVolumeName(ws, pid string) string {
-	return fmt.Sprintf("%s-state-volume", InstanceName(ws, pid))
+	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }
 
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
-	setup, ok := w.content[sdkName]
+	setup, ok := w.Content[sdkName]
 	if sdkName != sdk.Agent.String() && !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
 	}
 
-	wsfs, err := w.backend.WorkshopFs(ctx, w.Name)
+	wsfs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +148,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, w.project.ProjectId, w.Name)
+	info, err := sdk.ReadSdkInfo(yamlData, w.Project.ProjectId, w.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -176,18 +159,11 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	return info, nil
 }
 
-// Returns a list of installed SDKs.
-func (w *Workshop) Content() []sdk.Setup {
-	content := maps.Values(w.content)
-	slices.SortFunc(content, func(a, b sdk.Setup) int { return cmp.Compare(a.Name, b.Name) })
-	return content
-}
-
 // Returns a list of SDK info for installed SDKs. The info includes SDK details
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
 func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
-	var infos = make([]*sdk.Info, 0, len(w.content))
-	for _, sdk := range w.content {
+	var infos = make([]*sdk.Info, 0, len(w.Content))
+	for _, sdk := range w.Content {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err

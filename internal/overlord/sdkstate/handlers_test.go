@@ -91,7 +91,7 @@ func (s *H) SetUpTest(c *check.C) {
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
 
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
@@ -286,11 +286,11 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.Equals, nil)
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Content()
+	info := props.Content
 	c.Check(info, check.HasLen, 1)
-	c.Check(info[0], check.DeepEquals, testSdk)
+	c.Check(info["test"], check.DeepEquals, testSdk)
 
-	sdkInfo, err := props.SdkInfo(s.ctx, info[0].Name)
+	sdkInfo, err := props.SdkInfo(s.ctx, info["test"].Name)
 	c.Assert(err, check.IsNil)
 	c.Assert(sdkInfo.Plugs, check.HasLen, 1)
 	c.Assert(sdkInfo.Slots, check.HasLen, 0)
@@ -326,7 +326,7 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Content()
+	info := props.Content
 	c.Check(info, check.HasLen, 0)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)
 }

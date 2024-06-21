@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -23,7 +24,7 @@ import (
 type requestSuite struct {
 	state   *state.State
 	project *workshop.Project
-	backend workshop.WorkshopBackend
+	backend workshop.Backend
 	mgr     *workshopstate.WorkshopManager
 	ctx     context.Context
 }
@@ -61,7 +62,7 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks worksh
 	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	wf := workshop.WorkshopFile{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}
+	wf := workshop.File{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}
 	err = s.backend.LaunchWorkshop(s.ctx, &wf)
 	c.Assert(err, check.IsNil)
 
@@ -132,7 +133,7 @@ func validateStateHooksTasksSetup(c *check.C, ts []*state.TaskSet, expectedSave,
 func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	file := &workshop.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
+	file := &workshop.File{Name: "test", Base: "ubuntu@22.04"}
 	ts := workshopstate.Launch(s.state, file, nil, s.project)
 
 	expected := []string{"create-workshop",
@@ -142,7 +143,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	verifyExpectedTasks(c, tasks, expected)
 
-	var wf workshop.WorkshopFile
+	var wf workshop.File
 	err := tasks[0].Get("workshop-file", &wf)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(&wf, check.DeepEquals, file)
@@ -155,7 +156,7 @@ func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
 	sdk_1 := sdk.Setup{Name: "sdk", Channel: "latest/stable"}
 	sdk_2 := sdk.Setup{Name: "sdk_2", Channel: "latest/stable"}
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{
@@ -226,7 +227,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{}}
@@ -257,7 +258,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/stable"}}}
@@ -319,7 +320,7 @@ func (s *requestSuite) TestRefreshSdkRemoved(c *check.C) {
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{{Name: "sdk-1", Channel: "latest/stable"}}}
@@ -348,14 +349,14 @@ func (s *requestSuite) TestRefreshSdkRemovedMakingWorkshopEmpty(c *check.C) {
 	}
 	toinst := []sdk.Setup{}
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04"}
 
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, w.Content(), toinst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), toinst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -376,7 +377,7 @@ func (s *requestSuite) TestRefreshSdkReplaced(c *check.C) {
 		{Name: "test-1", Channel: "latest/stable"}, {Name: "test-2", Channel: "latest/stable"},
 	}
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{{Name: "test-1", Channel: "latest/stable"}, {Name: "test-2", Channel: "latest/stable"}}}
@@ -384,7 +385,7 @@ func (s *requestSuite) TestRefreshSdkReplaced(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, w.Content(), inst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), inst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -405,7 +406,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 		{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/edge"},
 	}
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{{Name: "sdk-1", Channel: "latest/stable"}, {Name: "sdk-2", Channel: "latest/edge"}}}
@@ -413,7 +414,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, w.Content(), toninst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), toninst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -428,7 +429,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 
 	test_sdk := workshop.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshop.WorkshopFile{
+	files := []*workshop.File{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -512,7 +513,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 
 	testSdk := workshop.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshop.WorkshopFile{
+	files := []*workshop.File{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -575,7 +576,7 @@ func (s *requestSuite) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c 
 
 	testSdk := workshop.SdkRecord{Name: "sdk", Channel: "latest/stable"}
 
-	files := []*workshop.WorkshopFile{
+	files := []*workshop.File{
 		{
 			Name: "ws",
 			Base: "ubuntu@22.04",
@@ -676,7 +677,7 @@ func (s *requestSuite) TestCheckHealthHooks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	file := &workshop.WorkshopFile{
+	file := &workshop.File{
 		Name: "ws",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{{Name: "one", Channel: "latest/stable"}, {Name: "two", Channel: "latest/stable"}},

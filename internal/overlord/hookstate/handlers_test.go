@@ -90,7 +90,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	chg.AddTask(t1)
 
 	// Launch a workshop provinding no hooks
-	err := s.backend.LaunchWorkshop(s.ctx, &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"})
+	err := s.backend.LaunchWorkshop(s.ctx, &workshop.File{Name: "ws", Base: "ubuntu@20.04"})
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -466,7 +466,7 @@ func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 }
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")

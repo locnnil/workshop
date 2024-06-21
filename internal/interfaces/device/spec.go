@@ -63,5 +63,5 @@ func (s *Specification) AddDeviceEntry(dev workshop.Device) {
 	if s.devices == nil {
 		s.devices = make(map[string]workshop.Device)
 	}
-	s.devices[dev.Name()] = dev
+	s.devices[dev.Name] = dev
 }

@@ -26,7 +26,7 @@ func (s *apiSuite) launchWorkshop(ctx context.Context, name string, c *check.C) 
 base: ubuntu@20.04
 `, name)), 0644)
 	c.Assert(err, check.IsNil)
-	wf := &workshop.WorkshopFile{Name: name, Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: name, Base: "ubuntu@20.04"}
 	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)

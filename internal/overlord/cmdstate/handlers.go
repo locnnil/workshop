@@ -167,7 +167,7 @@ func (e *execution) waitIOConnected(ctx context.Context, execID string) error {
 }
 
 // do actually runs the command.
-func (e *execution) do(ctx context.Context, task *state.Task, backend workshop.WorkshopBackend) error {
+func (e *execution) do(ctx context.Context, task *state.Task, backend workshop.Backend) error {
 	// Wait till client has connected to "stdio" websocket (and "stderr" if
 	// separating stderr), to avoid race conditions forwarding I/O.
 	err := e.waitIOConnected(ctx, task.ID())

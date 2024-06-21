@@ -63,7 +63,7 @@ slots:
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) {
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
-	wf := &workshop.WorkshopFile{Name: w, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: w, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
 	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
 }
 

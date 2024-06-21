@@ -80,7 +80,7 @@ func createTestContext(username, projectId string) context.Context {
 	return ctx
 }
 
-func launchTestWorkshop(c *check.C, ctx context.Context, be workshop.WorkshopBackend, dir, username string) {
+func launchTestWorkshop(c *check.C, ctx context.Context, be workshop.Backend, dir, username string) {
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
 			Name:     username,
@@ -94,7 +94,7 @@ func launchTestWorkshop(c *check.C, ctx context.Context, be workshop.WorkshopBac
 
 	var err error
 
-	wf := &workshop.WorkshopFile{Name: "test", Base: "ubuntu@22.04"}
+	wf := &workshop.File{Name: "test", Base: "ubuntu@22.04"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@22.04`), 0644), check.IsNil)
 

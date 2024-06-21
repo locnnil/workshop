@@ -26,7 +26,7 @@ sdks:
   test-sdk:
     channel: latest/stable
 `, name)), 0644)
-	wf := &workshop.WorkshopFile{Name: name, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test-sdk", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: name, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test-sdk", Channel: "latest/stable"}}}
 	err = b.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 	ws, err := b.Workshop(ctx, name)

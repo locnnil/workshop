@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var InstallTimeNow = time.Now
@@ -101,15 +102,15 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := workshop.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
+	sdkMount := lxdbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
 	if err = m.backend.AddWorkshopDevice(ctx, w, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopDevice(ctx, w, sdkMount.Name()); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name(), w, err)
+		if err := m.backend.RemoveWorkshopDevice(ctx, w, sdkMount.Name); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}
 
@@ -121,7 +122,7 @@ func (m *SdkManager) doInstallSDK(task *state.Task, tomb *tomb.Tomb) error {
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workshop.InstanceName(w, project.ProjectId))
+	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, project.ProjectId))
 	if err != nil {
 		return err
 	}

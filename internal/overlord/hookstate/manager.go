@@ -59,13 +59,13 @@ func (h *HookSetup) Type() string {
 type HookManager struct {
 	state      *state.State
 	repository *repository
-	backend    workshop.WorkshopBackend
+	backend    workshop.Backend
 
 	contextsMutex sync.RWMutex
 	contexts      map[string]*Context
 }
 
-func New(s *state.State, runner *state.TaskRunner, server workshop.WorkshopBackend) *HookManager {
+func New(s *state.State, runner *state.TaskRunner, server workshop.Backend) *HookManager {
 	manager := &HookManager{
 		state:      s,
 		backend:    server,

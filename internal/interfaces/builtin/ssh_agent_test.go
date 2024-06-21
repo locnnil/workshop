@@ -8,6 +8,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -73,7 +74,7 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := workshop.SshAgent("consumer-"+plug.Name, "/tmp/dir/ssh", "/var/lib/workshop/consumer-ssh-agent.ssh")
+	expectedProxy := lxdbackend.SshAgent("consumer-"+plug.Name, "/tmp/dir/ssh", "/var/lib/workshop/consumer-ssh-agent.ssh")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedProxy})
 }
 

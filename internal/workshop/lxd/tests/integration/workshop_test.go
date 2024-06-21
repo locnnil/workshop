@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 )
@@ -20,7 +21,7 @@ import (
 type wsOps struct {
 	// per suite
 	lxdClient lxd.InstanceServer
-	be        workshop.WorkshopBackend
+	be        workshop.Backend
 
 	// per test
 	ctx                 context.Context
@@ -40,7 +41,7 @@ var _ = check.Suite(&wsOps{})
 func (f *wsOps) SetUpTest(c *check.C) {
 	socketPath := c.MkDir() + ".workshop.socket"
 	var err error
-	f.be, err = workshop.New()
+	f.be, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
 
 	d, err := daemon.New(&daemon.Options{
@@ -65,8 +66,8 @@ func (f *wsOps) SetUpTest(c *check.C) {
 	}
 	f.ctx = createTestContext(f.username, f.project.ProjectId)
 
-	f.lxdClient, _ = f.be.(*workshop.LxdBackend).LxdClient(f.ctx)
-	err = workshop.InitProject(f.lxdClient, f.username)
+	f.lxdClient, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
+	err = lxdbackend.InitProject(f.lxdClient, f.username)
 	c.Check(err, check.IsNil)
 
 	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
@@ -108,13 +109,13 @@ func (f *wsOps) TearDownTest(c *check.C) {
 
 func (f *wsOps) SetUpSuite(c *check.C) {
 	f.username = "testuser"
-	f.restoreDevices = workshop.FakeDefaultDevices(defaultTestDevices)
-	f.restoreImageServer = workshop.FakeImageServer(minimalImageServer)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
+	f.restoreImageServer = lxdbackend.FakeImageServer(minimalImageServer)
 }
 
 func (f *wsOps) TearDownSuite(c *check.C) {
-	cleanUpLxdProject(c, f.lxdClient, workshop.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.lxdClient, workshop.LxdSystemProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.username))
+	cleanUpLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.username))
 	f.restoreDevices()
 	f.restoreImageServer()
 }
@@ -152,7 +153,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRestartIfFailed(c *check.C) {
 	c.Assert(err, check.NotNil)
 
 	// Validate
-	inst, _, err := f.lxdClient.GetInstance(workshop.InstanceName("test", f.project.ProjectId))
+	inst, _, err := f.lxdClient.GetInstance(lxdbackend.InstanceName("test", f.project.ProjectId))
 	c.Assert(err, check.IsNil)
 	c.Assert(inst.Status, check.Equals, "Running")
 }
@@ -194,7 +195,7 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Setup
-	wf := &workshop.WorkshopFile{Name: "test-1", Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: "test-1", Base: "ubuntu@20.04"}
 	err := f.be.LaunchWorkshop(f.ctx, wf)
 	defer f.be.RemoveWorkshop(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -210,14 +211,14 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Execute
 	err = f.be.RemoveWorkshopStash(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
-	cli := f.lxdClient.UseProject(workshop.LxdSystemProjectName(f.username))
-	_, _, err = cli.GetInstance(workshop.InstanceName("test-1", f.project.ProjectId))
+	cli := f.lxdClient.UseProject(lxdbackend.LxdSystemProjectName(f.username))
+	_, _, err = cli.GetInstance(lxdbackend.InstanceName("test-1", f.project.ProjectId))
 	c.Assert(err, check.ErrorMatches, ".*Instance not found")
 }
 
 func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 	// Setup
-	wf := &workshop.WorkshopFile{Name: "test-1", Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: "test-1", Base: "ubuntu@20.04"}
 	err := f.be.LaunchWorkshop(f.ctx, wf)
 	c.Assert(err, check.IsNil)
 	defer f.be.RemoveWorkshop(f.ctx, "test-1")
@@ -263,7 +264,7 @@ func (f *wsOps) TestLxdBackendStartWorkshop(c *check.C) {
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
-	wf := &workshop.WorkshopFile{Name: "test-1", Base: "ubuntu@22.04"}
+	wf := &workshop.File{Name: "test-1", Base: "ubuntu@22.04"}
 	err := f.be.LaunchWorkshop(f.ctx, wf)
 	c.Assert(err, check.IsNil)
 	err = f.be.StartWorkshop(f.ctx, "test-1")

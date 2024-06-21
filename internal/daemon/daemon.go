@@ -758,7 +758,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 	return errExpectedReboot
 }
 
-func New(opts *Options, be workshop.WorkshopBackend) (*Daemon, error) {
+func New(opts *Options, be workshop.Backend) (*Daemon, error) {
 	d := &Daemon{
 		workshopDir:         opts.Dir,
 		normalSocketPath:    opts.SocketPath,

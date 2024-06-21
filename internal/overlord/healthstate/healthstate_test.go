@@ -97,7 +97,7 @@ func ensureTaskHealthIsSet(t *state.Task, expected *healthstate.HealthCheck, c *
 }
 
 func (s *healthSuite) launchWorkshop(c *check.C, newsdk string, createHealthCheck bool) {
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")

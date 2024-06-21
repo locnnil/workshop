@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
@@ -36,7 +37,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
-		if err := h.backend.AddWorkshopDevice(ctx, w, workshop.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
+		if err := h.backend.AddWorkshopDevice(ctx, w, lxdbackend.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
@@ -120,7 +121,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 
 	// create a memory out/err to log the hook output into the task's log
 	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(workshop.InstanceName(w, projectId))
+	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, projectId))
 	if err != nil {
 		return err
 	}

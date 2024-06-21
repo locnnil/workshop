@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -87,7 +88,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshop.WorkshopFile) ([]sdk.SdkResult, error) {
+func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshop.File) ([]sdk.SdkResult, error) {
 	sto := sdk.StoreService(w.state)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
@@ -156,7 +157,7 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	return all
 }
 
-func checkHealthHooks(st *state.State, file *workshop.WorkshopFile) *state.TaskSet {
+func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
 	var prevCheck *state.Task
 	checkHealth := state.NewTaskSet()
 	for _, sdk := range file.Sdks {
@@ -170,7 +171,7 @@ func checkHealthHooks(st *state.State, file *workshop.WorkshopFile) *state.TaskS
 	return checkHealth
 }
 
-func constructWorkshop(st *state.State, file *workshop.WorkshopFile, project *workshop.Project) *state.TaskSet {
+func constructWorkshop(st *state.State, file *workshop.File, project *workshop.Project) *state.TaskSet {
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("workshop-file", file)
 
@@ -182,7 +183,7 @@ func constructWorkshop(st *state.State, file *workshop.WorkshopFile, project *wo
 	return state.NewTaskSet(create, mountProject, start)
 }
 
-func launch(st *state.State, file *workshop.WorkshopFile, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
 	// check and download all the required SDKs
 	retrieve := retrieveSdks(st, sdks)
 
@@ -232,7 +233,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	files := make([]*workshop.WorkshopFile, 0)
+	files := make([]*workshop.File, 0)
 	installedContent, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
 	for _, ws := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
@@ -255,7 +256,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		}
 
 		toInstall = append(toInstall, newContent)
-		installedContent = append(installedContent, workshops[idx].Content())
+		installedContent = append(installedContent, maps.Values(workshops[idx].Content))
 	}
 
 	taskset, err := refreshMany(w.state, files, installedContent, toInstall, project)
@@ -270,7 +271,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	return taskset, nil
 }
 
-func refreshMany(st *state.State, files []*workshop.WorkshopFile, installed [][]sdk.Setup,
+func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,
 	toInstall [][]sdk.Setup, project *workshop.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(files))
 
@@ -310,7 +311,7 @@ func refreshMany(st *state.State, files []*workshop.WorkshopFile, installed [][]
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshop.WorkshopFile, installed []sdk.Setup, newContent []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newContent []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
@@ -611,7 +612,7 @@ func removeMany(st *state.State, workshops []*workshop.Workshop, project *worksh
 
 func remove(st *state.State, w *workshop.Workshop, project *workshop.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
-	disconnectSet := disconnectSdks(w.Content(), st)
+	disconnectSet := disconnectSdks(maps.Values(w.Content), st)
 
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	discard.WaitAll(disconnectSet)

@@ -99,7 +99,7 @@ func (s *workshopHandlers) TearDownTest(c *check.C) {
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
 	wfbuf, err := yaml.Marshal(wf)
 	c.Check(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), wfbuf, 0644)
@@ -118,7 +118,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	oldInterval := workshopstate.StopLogInterval
 	workshopstate.StopLogInterval = 100 * time.Millisecond
 
-	restore := testutil.FakeFunc(func(_ workshop.WorkshopBackend, ctx context.Context, name string, force bool) error {
+	restore := testutil.FakeFunc(func(_ workshop.Backend, ctx context.Context, name string, force bool) error {
 		time.Sleep(150 * time.Millisecond)
 		return nil
 	}, &workshopstate.StopWorkshop)
@@ -141,7 +141,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test2", Channel: "latest/stable"},
 	}}
@@ -174,7 +174,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test2", Channel: "latest/stable"},
 	}}
@@ -253,7 +253,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithAgentSdk(c *check.C) {
 base: ubuntu@22.04
 `), 0644)
 	c.Check(err, check.IsNil)
-	wf := &workshop.WorkshopFile{Name: "ws", Base: "ubuntu@22.04"}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")

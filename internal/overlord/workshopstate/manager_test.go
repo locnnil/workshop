@@ -21,7 +21,7 @@ import (
 
 type managerSuite struct {
 	state   *state.State
-	backend workshop.WorkshopBackend
+	backend workshop.Backend
 	runner  *state.TaskRunner
 	manager *workshopstate.WorkshopManager
 	ctx     context.Context
@@ -67,7 +67,7 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
-	wf := workshop.WorkshopFile{Name: ws, Base: "ubuntu@22.04"}
+	wf := workshop.File{Name: ws, Base: "ubuntu@22.04"}
 	err = s.backend.LaunchWorkshop(s.ctx, &wf)
 	c.Assert(err, check.IsNil)
 

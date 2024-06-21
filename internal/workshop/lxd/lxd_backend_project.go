@@ -1,9 +1,8 @@
-package workshop
+package lxdbackend
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 func LxdProjectName(user string) string {
@@ -72,22 +72,13 @@ func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
 	return nil
 }
 
-func allocateProjectId() (string, error) {
-	bytes := make([]byte, 4)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
-func (s *LxdBackend) loadProjectFromPath(client lxd.InstanceServer, ctx context.Context, path string) (*Project, error) {
-	user, ok := ctx.Value(ContextUser).(string)
+func (s *Backend) loadProjectFromPath(client lxd.InstanceServer, ctx context.Context, path string) (*workshop.Project, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key %s not found", ContextUser)
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	pId, err := projectId(path)
+	pId, err := workshop.ProjectId(path)
 	lockNotFound := false
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -112,25 +103,25 @@ func (s *LxdBackend) loadProjectFromPath(client lxd.InstanceServer, ctx context.
 		for _, i := range projects {
 			if i.Path == path {
 				// save the lock file in the project's location
-				if err = i.createProjectLock(); err != nil {
+				if err = i.CreateProjectLock(); err != nil {
 					return nil, err
 				}
 				return i, nil
 			}
 		}
 	} else {
-		idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == pId })
+		idx := slices.IndexFunc(projects, func(p *workshop.Project) bool { return p.ProjectId == pId })
 		if idx != -1 {
 			return projects[idx], nil
 		}
 	}
-	return nil, ErrProjectNotFound
+	return nil, workshop.ErrProjectNotFound
 }
 
-func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context, prj *Project) error {
-	user, ok := ctx.Value(ContextUser).(string)
+func (s *Backend) trackProject(client lxd.InstanceServer, ctx context.Context, prj *workshop.Project) error {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return fmt.Errorf("context key %s not found", ContextUser)
+		return fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
 	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
@@ -143,7 +134,7 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 		return err
 	}
 
-	idx := slices.IndexFunc(projects, func(p *Project) bool { return p.ProjectId == prj.ProjectId })
+	idx := slices.IndexFunc(projects, func(p *workshop.Project) bool { return p.ProjectId == prj.ProjectId })
 	if idx == -1 {
 		projects = append(projects, prj)
 	} else {
@@ -159,15 +150,15 @@ func (s *LxdBackend) trackProject(client lxd.InstanceServer, ctx context.Context
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
 }
 
-func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *Project) error {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(LxdConfigProjectId, existingProject.ProjectId))
+func (s *Backend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *workshop.Project) error {
+	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, existingProject.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	for _, i := range workshops {
-		project := Mount(LxdConfigProjectPathDevice, existingProject.Path, WorkshopProjectPath)
-		err = s.AddWorkshopDevice(ctx, WorkshopName(i.Name), project)
+		project := Mount(workshop.ConfigProjectPathDevice, existingProject.Path, workshop.WorkshopProjectPath)
+		err = s.AddWorkshopDevice(ctx, workshop.WorkshopName(i.Name), project)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
 		}
@@ -175,8 +166,8 @@ func (s *LxdBackend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx con
 	return nil
 }
 
-func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *Project) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, NewWorkshopConfigFilter(LxdConfigProjectId, p.ProjectId))
+func (s *Backend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *workshop.Project) (path string, err error) {
+	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, p.ProjectId))
 	if err != nil {
 		return "", err
 	}
@@ -199,23 +190,23 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 
 		/* Get the mount point device/directory from findmnt and extract the path without a device
 		using awk */
-		args := Execution{
-			ExecArgs: ExecArgs{
+		args := workshop.Execution{
+			ExecArgs: workshop.ExecArgs{
 				UserId:  0,
 				GroupId: 0,
 				Command: []string{"bash", "-c",
 					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
 				WorkDir: "/",
 			},
-			ExecControls: ExecControls{
+			ExecControls: workshop.ExecControls{
 				Stdin:  nil,
 				Stdout: out,
 				Stderr: out,
 			},
 		}
 
-		execCtx := context.WithValue(ctx, ContextProjectId, p.ProjectId)
-		meta, err := s.execCommand(conn, execCtx, WorkshopName(i.Name), &args)
+		execCtx := context.WithValue(ctx, workshop.ContextProjectId, p.ProjectId)
+		meta, err := s.execCommand(conn, execCtx, workshop.WorkshopName(i.Name), &args)
 		if err == nil {
 			err = meta.WaitExecution(ctx)
 			if err != nil {
@@ -244,8 +235,8 @@ func (s *LxdBackend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx 
 // Ensures that every project has a valid existing path. If not, tries to
 // recover the path from the actual bind mount of the '/project'. If recovery
 // went unsuccessful, removes the project from the list.
-func (s *LxdBackend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*Project) []*Project {
-	return slices.DeleteFunc(projects, func(prj *Project) bool {
+func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*workshop.Project) []*workshop.Project {
+	return slices.DeleteFunc(projects, func(prj *workshop.Project) bool {
 		if !prj.Exists() {
 			var err error
 			// If got here then there is no project directory for the projectId
@@ -288,7 +279,7 @@ func ProjectPath(cwd string) (string, error) {
 		var err error
 		var ok, isDir bool
 		if ok, isDir, err = osutil.ExistsIsDir(path); err == nil && ok && isDir {
-			if _, err := projectId(path); err == nil {
+			if _, err := workshop.ProjectId(path); err == nil {
 				return filepath.Clean(path), nil
 			}
 		}
@@ -308,11 +299,11 @@ func ProjectPath(cwd string) (string, error) {
 	return cwd, nil
 }
 
-func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Project, bool, error) {
+func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*workshop.Project, bool, error) {
 	var err error
 
 	if !filepath.IsAbs(path) {
-		return nil, false, ErrNoRelativePathsAllowed
+		return nil, false, workshop.ErrNoRelativePathsAllowed
 	}
 
 	projectDir, err := ProjectPath(path)
@@ -352,20 +343,20 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 					return nil, false, err
 				}
 				// also, update configuration of all the project's workshops
-				projectCtx := context.WithValue(ctx, ContextProjectId, existingProject.ProjectId)
+				projectCtx := context.WithValue(ctx, workshop.ContextProjectId, existingProject.ProjectId)
 				return existingProject, false, s.updateWorkshopsProjectPath(client, projectCtx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
 				// 2. Start tracking the actual path as a new project
-				id, err := NewProjectId()
+				id, err := workshop.NewProjectId()
 				if err != nil {
 					return nil, false, err
 				}
-				var newPrj = Project{Path: projectDir, ProjectId: id}
+				var newPrj = workshop.Project{Path: projectDir, ProjectId: id}
 
 				// rewrite the existing lock file with the new project id.
-				if err = newPrj.updateProjectLock(); err != nil {
+				if err = newPrj.UpdateProjectLock(); err != nil {
 					return nil, false, err
 				}
 				if err := s.trackProject(client, ctx, &newPrj); err != nil {
@@ -375,7 +366,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 			}
 		}
 		return existingProject, false, nil
-	} else if !errors.Is(err, ErrProjectNotFound) {
+	} else if !errors.Is(err, workshop.ErrProjectNotFound) {
 		// if there is some error that is unrelated to the
 		// project loadOrCreate logic (e.g. failed to connect to LXD)
 		// then return the error immediately
@@ -383,7 +374,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	}
 
 	// no project found, try to create one, note there is no ID yet at this stage
-	var project = Project{Path: projectDir}
+	var project = workshop.Project{Path: projectDir}
 	workshops, err := project.ReadWorkshops()
 	if err != nil {
 		return nil, false, err
@@ -392,17 +383,17 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	// no workshops found in the directory provided
 	// it means we won't be creating a project
 	if len(workshops) == 0 {
-		return nil, false, ErrNotAProject
+		return nil, false, workshop.ErrNotAProject
 	}
 
 	// If there is at least one workshop, we consider the path
 	// as a project and create a new project id
-	if project.ProjectId, err = NewProjectId(); err != nil {
+	if project.ProjectId, err = workshop.NewProjectId(); err != nil {
 		return nil, false, err
 	} else {
 		// if we allocated a new project ID successfully,
 		// we store it in the lock file immediately
-		if err = project.createProjectLock(); err != nil {
+		if err = project.CreateProjectLock(); err != nil {
 			// a possible reason to fail here is to try to create
 			// a project in a directory where a different user has
 			// a project already. That project will not be visible to
@@ -420,7 +411,7 @@ func (s *LxdBackend) CreateOrLoadProject(ctx context.Context, path string) (*Pro
 	return &project, true, nil
 }
 
-func (s *LxdBackend) loadUserProjects(ctx context.Context, user string) ([]*Project, error) {
+func (s *Backend) loadUserProjects(ctx context.Context, user string) ([]*workshop.Project, error) {
 	client, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -452,13 +443,13 @@ func (s *LxdBackend) loadUserProjects(ctx context.Context, user string) ([]*Proj
 	return checked, nil
 }
 
-func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error) {
-	if user, ok := ctx.Value(ContextUser).(string); ok {
+func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project, error) {
+	if user, ok := ctx.Value(workshop.ContextUser).(string); ok {
 		projects, err := s.loadUserProjects(ctx, user)
 		if err != nil {
 			return nil, err
 		}
-		return map[string][]*Project{user: projects}, nil
+		return map[string][]*workshop.Project{user: projects}, nil
 	} else {
 		// get a default connection without preseting the LXD project as we are
 		// going over all the LXD projects to filter the ones managed by
@@ -473,15 +464,15 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 		if err != nil {
 			return nil, err
 		}
-		allProjects := make(map[string][]*Project)
+		allProjects := make(map[string][]*workshop.Project)
 		for _, lxdProject := range lxdProjects {
 			username := LxdProjectUser(lxdProject.Name)
-			if _, err = LookupUsername(username); err != nil {
+			if _, err = workshop.LookupUsername(username); err != nil {
 				continue
 			}
 			// if the project is created by workshop, the key must be present
 			if _, ok := lxdProject.Config["user.workshop.projects"]; ok {
-				prjctx := context.WithValue(ctx, ContextUser, username)
+				prjctx := context.WithValue(ctx, workshop.ContextUser, username)
 
 				projects, err := s.loadUserProjects(prjctx, username)
 				if err != nil {
@@ -493,4 +484,23 @@ func (s *LxdBackend) Projects(ctx context.Context) (map[string][]*Project, error
 		}
 		return allProjects, nil
 	}
+}
+
+func readProjects(jsonData []byte) ([]*workshop.Project, error) {
+	var projects = make([]*workshop.Project, 0)
+	if len(jsonData) == 0 {
+		return projects, nil
+	}
+	if err := json.Unmarshal([]byte(jsonData), &projects); err != nil {
+		return nil, fmt.Errorf("invalid projects record: %w", err)
+	}
+	return projects, nil
+}
+
+func saveProjects(projects []*workshop.Project) (string, error) {
+	buf, err := json.Marshal(projects)
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
 }

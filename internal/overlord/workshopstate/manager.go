@@ -16,11 +16,11 @@ import (
 )
 
 type WorkshopManager struct {
-	backend workshop.WorkshopBackend
+	backend workshop.Backend
 	state   *state.State
 }
 
-func New(st *state.State, runner *state.TaskRunner, server workshop.WorkshopBackend) *WorkshopManager {
+func New(st *state.State, runner *state.TaskRunner, server workshop.Backend) *WorkshopManager {
 	manager := &WorkshopManager{
 		backend: server,
 		state:   st,
@@ -83,7 +83,7 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 
 // Loads all workshops for a project, the state must be locked as it is used to find out the
 // workshop state
-func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.WorkshopFile, []*workshop.Workshop, error) {
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.File, []*workshop.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 
@@ -118,20 +118,20 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 	}
 
 	// check the project directory exists
-	if !ws.Project().Exists() {
+	if !ws.Project.Exists() {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-project"
 		return healthState
 	}
 
 	// check if the workshop file exists
-	if _, err := ws.Project().Workshop(ws.Name); err != nil {
+	if _, err := ws.Project.Workshop(ws.Name); err != nil {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-file"
 		return healthState
 	}
 
-	err := conflict.CheckChangeConflict(w.state, ws.Project().ProjectId, ws.Name, "")
+	err := conflict.CheckChangeConflict(w.state, ws.Project.ProjectId, ws.Name, "")
 	if err != nil {
 		conflict, ok := err.(*conflict.ChangeConflictError)
 		if !ok || conflict.ChangeID == "" {
@@ -147,7 +147,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 		healthState.SdkHealth = sdksHealthCheckSummary(change)
 		healthState.Status = healthstate.PendingStatus
 	} else {
-		if ws.IsRunning() {
+		if ws.Running {
 			healthState.Status = healthstate.ReadyStatus
 		} else {
 			healthState.Status = healthstate.StoppedStatus

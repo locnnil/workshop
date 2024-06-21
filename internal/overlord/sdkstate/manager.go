@@ -7,10 +7,10 @@ import (
 )
 
 type SdkManager struct {
-	backend backend.WorkshopBackend
+	backend backend.Backend
 }
 
-func New(runner *state.TaskRunner, server backend.WorkshopBackend) *SdkManager {
+func New(runner *state.TaskRunner, server backend.Backend) *SdkManager {
 	manager := &SdkManager{backend: server}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)

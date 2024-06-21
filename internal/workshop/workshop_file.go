@@ -25,7 +25,7 @@ type SdkRecord struct {
 
 type SdkList []SdkRecord
 
-type WorkshopFile struct {
+type File struct {
 	Name string  `yaml:"name"`
 	Base string  `yaml:"base"`
 	Sdks SdkList `yaml:"sdks,omitempty"`
@@ -77,9 +77,9 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readWorkshop(pathname string) (*WorkshopFile, error) {
+func readWorkshop(pathname string) (*File, error) {
 	var err error
-	var file WorkshopFile
+	var file File
 
 	buf, err := os.ReadFile(pathname)
 	if err != nil {

@@ -1,10 +1,12 @@
 package daemon
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +67,7 @@ type WorkshopInfo struct {
 var ensureStateSoon = stateEnsureBefore
 var sdkMounts = sdkConnsToMounts
 
-func workshopFileToInfo(file *workshop.WorkshopFile, pid string) *WorkshopInfo {
+func workshopFileToInfo(file *workshop.File, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
 	ws.Name = file.Name
 	ws.Base = file.Base
@@ -83,10 +85,10 @@ func workshopFileToInfo(file *workshop.WorkshopFile, pid string) *WorkshopInfo {
 func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
-	info.ProjectId = w.Project().ProjectId
-	info.Base = w.Base()
+	info.ProjectId = w.Project.ProjectId
+	info.Base = w.Base
 
-	for _, sdk := range w.Content() {
+	for _, sdk := range w.Content {
 		var healthInfo *HealthCheckInfo
 		if sdkHealth, ok := health.SdkHealth[sdk.Name]; ok {
 			healthInfo = &HealthCheckInfo{
@@ -115,6 +117,8 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 		info.Notes = append(info.Notes, health.Code)
 	}
 	info.Status = health.Status.String()
+
+	slices.SortFunc(info.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
 	return &info
 }
 
@@ -317,7 +321,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	repo := c.d.overlord.InterfaceManager().Repository()
 	mounts := map[string][]*Mount{}
-	for _, sdk := range w.Content() {
+	for _, sdk := range w.Content {
 		mounts[sdk.Name] = sdkMounts(state, repo, projectId, name, sdk.Name)
 	}
 

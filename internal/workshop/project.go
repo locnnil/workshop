@@ -1,7 +1,8 @@
 package workshop
 
 import (
-	"encoding/json"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,8 @@ var (
 	ErrProjectNotFound        = errors.New("project not found")
 	ErrNotAProject            = errors.New("not a project (no workshop files found)")
 	ErrNoRelativePathsAllowed = errors.New("absolute project path must be used")
+
+	NewProjectId = allocateProjectId
 )
 
 const (
@@ -38,17 +41,17 @@ func (p *Project) Exists() bool {
 	return exists && dir
 }
 
-func (w *Project) Workshop(workshop string) (*WorkshopFile, error) {
+func (w *Project) Workshop(workshop string) (*File, error) {
 	return readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
 }
 
-func (w *Project) ReadWorkshops() ([]*WorkshopFile, error) {
+func (w *Project) ReadWorkshops() ([]*File, error) {
 	files, err := os.ReadDir(w.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	var workshops = make([]*WorkshopFile, 0, len(files))
+	var workshops = make([]*File, 0, len(files))
 
 	for _, info := range files {
 		if info.IsDir() || !info.Type().IsRegular() {
@@ -68,7 +71,7 @@ func (w *Project) ReadWorkshops() ([]*WorkshopFile, error) {
 	return workshops, nil
 }
 
-func (w *Project) updateProjectLock() error {
+func (w *Project) UpdateProjectLock() error {
 	lock, err := osutil.NewFileLockWithMode(LockPath(w.Path), 0644)
 	if err != nil {
 		return err
@@ -86,7 +89,7 @@ func (w *Project) updateProjectLock() error {
 	return lock.File().Sync()
 }
 
-func (w *Project) createProjectLock() error {
+func (w *Project) CreateProjectLock() error {
 	lock, err := osutil.NewFileLockWithMode(LockPath(w.Path), 0644)
 	if err != nil {
 		return err
@@ -113,27 +116,8 @@ func (w *Project) createProjectLock() error {
 	return lock.File().Sync()
 }
 
-func readProjects(jsonData []byte) ([]*Project, error) {
-	var projects = make([]*Project, 0)
-	if len(jsonData) == 0 {
-		return projects, nil
-	}
-	if err := json.Unmarshal([]byte(jsonData), &projects); err != nil {
-		return nil, fmt.Errorf("invalid projects record: %w", err)
-	}
-	return projects, nil
-}
-
-func saveProjects(projects []*Project) (string, error) {
-	buf, err := json.Marshal(projects)
-	if err != nil {
-		return "", err
-	}
-	return string(buf), nil
-}
-
 // Read a project id from projectDir (.workshop.lock)
-func projectId(projectDir string) (string, error) {
+func ProjectId(projectDir string) (string, error) {
 	lock, err := osutil.OpenExistingLockForReading(LockPath(projectDir))
 	if err != nil {
 		return "", err
@@ -149,4 +133,13 @@ func projectId(projectDir string) (string, error) {
 		return "", err
 	}
 	return string(buf), nil
+}
+
+func allocateProjectId() (string, error) {
+	bytes := make([]byte, 4)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
