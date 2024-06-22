@@ -9,45 +9,33 @@ to individual SDKs
 by mounting them inside the workshop
 that references those SDKs.
 
-
-Content interface plug
-----------------------
-
-An essential element here is the content interface plug,
-which is declared in the :ref:`SDK definition <exp_sdk_definition>`
-and is thus beyond the reach of |project_markup|.
-The plug defines a target directory inside the workshop,
-to which the source directory from the slot is mounted at run-time.
-
+By using the content interface,
+the SDK publisher allows to persist data outside the workshop.
+The interface defines a target directory inside the workshop,
+to which a source directory from the host file system is mounted at run-time.
 Typically, this is a directory that stores SDK-specific data,
-accumulated over time or created at :command:`launch` or :command:`refresh`;
-by adding a plug,
-the SDK publisher allows the target data to persist outside the workshop.
+accumulated over time or created
+when the :command:`workshop launch` or :command:`workshop refresh` commands run.
 
 
-Content interface slot
-----------------------
+Connection
+----------
 
-To enable this mechanism,
-|project_markup| provides a content interface slot
-to which multiple content interface plugs can
-:ref:`connect <exp_interface_connections>`.
+The interface is connected automatically at launch and refresh;
+also,
+the :command:`workshop connect` and :command:`workshop disconnect` commands
+can be invoked manually.
 
-.. note::
+Establishing a connection means
+a directory created by |project_markup| on the host file system
+is mounted to the target directory inside the workshop;
+the best part is that it's preserved
+between |project_markup| operations such as
+:command:`workshop refresh`, :command:`workshop start`
+and :command:`workshop stop`,
+so you benefit from a pre-populated directory without doing extra work.
 
-   Currently, content can only be exposed by |project_markup| itself
-   and can't be shared directly between two workshops.
-
-
-When an SDK is installed
-during :command:`launch` and :command:`refresh`,
-|project_markup| checks that the plug targeting the slot
-passes :ref:`validation <exp_interfaces_validation>`
-and that the :samp:`target` directory already exists in the workshop.
-If the plug passes these checks,
-it is automatically connected.
-
-To ensure the plug is connected to the slot:
+To check if the interface is connected:
 
 .. code-block:: console
 
@@ -58,25 +46,43 @@ To ensure the plug is connected to the slot:
      ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
 
 
-This means a |project_markup|-created directory in the host file system
-is mounted to the :samp:`target` directory inside the workshop.
-This source directory is retained between workshop operations such as
-:command:`refresh`, :command:`start` and :command:`stop`,
-so you can benefit from a pre-populated target without having to redo the work.
+So the target directory is available on the host:
+
+.. code-block:: console
+
+   $ workshop info ws
+
+     name:     ws
+     base:     ubuntu@22.04
+     project:  /home/user/workshops/ws
+     status:   ready
+     notes:    -
+     content:
+       content-sdk:
+         channel:  latest/edge
+         mounts:
+           content-cache:
+             host:      .../8584e571/content/ws_content-sdk_content-cache.sdk
+             workshop:  /home/workshop/target
 
 
-Remounting plugs
-----------------
+By default, the source directory on the host
+is created by |project_markup| in a designated internal location;
+this is done for security reasons.
 
-The :command:`remount` command sets a new source directory on the host
-for the plug's :samp:`target` inside the workshop:
+
+Remount
+-------
+
+The :command:`workshop remount` command sets a new source directory on the host
+for the target directory inside the workshop:
 
 .. code-block:: console
 
    $ workshop remount ws/content-sdk:content-share ~/.local/share/
 
 
-First, the mount operation is attempted atomically;
+First, the remount operation is attempted atomically;
 this usually succeeds if the new source is either a non-existent directory
 or an empty directory on the same file system as the current source.
 Otherwise, the remount only occurs if the workshop has been stopped earlier,
@@ -96,7 +102,9 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_connections`
+- :ref:`ref_workshop_disconnect`
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_remount`
