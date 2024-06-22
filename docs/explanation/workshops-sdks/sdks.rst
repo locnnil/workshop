@@ -134,14 +134,14 @@ provided that the definition has all |project_markup| needs to make a match.
 
 .. _exp_interfaces_validation:
 
-Validation and policies
-~~~~~~~~~~~~~~~~~~~~~~~
+Validation
+~~~~~~~~~~
 
 To ensure plugs can be installed and connected,
-|project_markup| uses a set of rules called policies,
+|project_markup| uses a set of rules,
 with each interface having its own.
 For example, the content interface plug can be installed and auto-connected
-based on its policy alone.
+based on its rules alone.
 However, other interfaces may have different rules,
 such as allowing installation but not auto-connection for :samp:`ssh-agent`.
 
