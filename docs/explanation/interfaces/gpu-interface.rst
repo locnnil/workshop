@@ -9,34 +9,24 @@ enables GPU pass-through
 inside the workshop
 to improve the performance of GPU-intensive applications.
 
-
-GPU interface plug
-------------------
-
-An essential element here is the content interface plug,
-which is declared in the :ref:`SDK definition <exp_sdk_definition>`
-and is thus beyond the reach of |project_markup|.
-By adding it, the SDK publisher enables the workshop
-to directly access the host's GPU devices,
+By using the GPU interface,
+the SDK publisher allows the workshop to directly access the host's GPU devices,
 which may be required for various GPU-intensive workloads.
 
 
-GPU interface slot
-------------------
+Connection
+----------
 
-To enable this mechanism,
-|project_markup| provides a GPU interface slot
-to which multiple GPU interface plugs can
-:ref:`connect <exp_interface_connections>`.
+The interface is connected automatically at launch and refresh;
+also,
+the :command:`workshop connect` and :command:`workshop disconnect` commands
+can be invoked manually.
 
-When an SDK is installed
-during :command:`launch` and :command:`refresh`,
-|project_markup| checks that the plug targeting the slot
-passes :ref:`validation <exp_interfaces_validation>`.
-If the plug passes these checks,
-it is automatically connected.
+Establishing a connection means
+the host's GPUs are directly available inside the workshop
+via the GPU pass-through mechanism.
 
-To ensure the plug has connected to the slot:
+To check if the interface is connected:
 
 .. code-block:: console
 
@@ -72,7 +62,9 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_connections`
+- :ref:`ref_workshop_disconnect`
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_shell`

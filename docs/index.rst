@@ -18,7 +18,7 @@
    Contribution <contributing>
 
 
-**A tool for defining and managing complex development environments**.
+**A tool for defining and managing ephemeral development environments**.
 
 **Define your prerequisites and dependencies in simple YAML**.
 |project_markup| consumes the definition to create a contained workshop,
@@ -41,7 +41,7 @@ typically use less-than-trivial project layouts
 that depend on multiple Linux distributions or images,
 a plethora of SDKs from many vendors
 and a grocery list of libraries and languages.
-That’s where |project_markup| thrives.
+That's where |project_markup| thrives.
 
 ---------
 
