@@ -54,7 +54,6 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 			}
 			target, _ := pi.Lookup("target")
 			return target == candidateTarget
-
 		})
 		if idx != -1 {
 			return fmt.Errorf(`cannot connect "%s/%s:%s": target %s is also mounted by %s/%s:%s`, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name, candidateTarget,
@@ -165,47 +164,34 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 	st.Lock()
 	defer st.Unlock()
 
-	// this can be a refresh for an existing SDK, hence, reconnect the SDK's
-	// connections from scratch. Consider the following scenarios for an
-	// SDK:
-	// 1. workshop launch (no previous connection for any of the plugs/slots). The task must:
-	// - find slot candidates and connect them
-	// - build and assign an SDK profile to the workshop
-	// 2. workshop refresh (can add/remove/update the SDK's plugs and slots)
-	// - disconnect the SDK; that affects other SDKs in the system
-	// - remove the SDK from the repository (e.g. remove all its plugs and slots)
-	// - find and connect candidates for the SDK plug and slot
-	// - rebuild SDK profiles for the affected SDKs and assign them to the corresponding workshops
-	disconnected, err := m.repo.DisconnectSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
-	if err != nil {
-		return err
-	}
-
-	if err := m.repo.RemoveSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name); err != nil {
-		return err
-	}
-
-	if err := m.repo.AddSdk(sdkInfo); err != nil {
-		return err
-	}
-
 	// Ensure that if the SDK is connected there will be no conflicting bind
 	// mount targets in the workshop, i.e. the situation when a two or more
-	// sources are bind mount at the same target in the workshop. Do it after
-	// the SDK was added to the repository to also validate that it does not
-	// contain conflicting targets itself (though, this kind of validation must
-	// be caught by the craft tool).
-	if err = m.checkConflictingTargets(sdkInfo); err != nil {
+	// sources are bind mount at the same target in the workshop.
+	if err := m.checkConflictingTargets(sdkInfo); err != nil {
 		return err
 	}
-
 	if len(sdkInfo.BadInterfaces) > 0 {
 		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
 	}
 
-	// reload the existing connections to make sure that those that are getting
-	// removed with this auto-connect task are also removed from the state
+	// Disconnect and remove a previous version of the SDK if any (a common case
+	// if the task is part of a refresh change).
+	disconnected, err := m.repo.DisconnectSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
+	if err != nil {
+		return err
+	}
+	if err := m.repo.RemoveSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name); err != nil {
+		return err
+	}
+
+	// Reload connections to make sure that those that are getting removed with
+	// the removal of a previous version of this SDK (if any) are also removed
+	// from the state.
 	if _, err := m.reloadConnections("", "", ""); err != nil {
+		return err
+	}
+
+	if err := m.repo.AddSdk(sdkInfo); err != nil {
 		return err
 	}
 
@@ -214,11 +200,11 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 		return err
 	}
 
-	// At the moment, only searching for auto-connect-able slots
 	var connected = map[sdk.Ref]*sdk.Info{}
 	var connectRefs = []*interfaces.ConnRef{}
 	var revertConnections revert.Reverter
 	defer revertConnections.Fail()
+
 	for _, plug := range sdkInfo.Plugs {
 		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
 		for _, slot := range candidates {
