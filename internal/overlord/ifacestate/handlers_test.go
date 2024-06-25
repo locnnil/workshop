@@ -26,7 +26,8 @@ type interfaceHandlersSuite struct {
 	mgr                      *ifacestate.InterfaceManager
 	restoreInterface         func()
 	restoreSecurtityBackends func()
-	setup                    sync.Once
+	// pointer as to avoid test fails with -count
+	setup *sync.Once
 }
 
 var _ = check.Suite(&interfaceHandlersSuite{})
@@ -87,6 +88,7 @@ base: ubuntu@22.04
 `
 
 func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
+	s.setup = new(sync.Once)
 	s.interfaceManagerSuite.SetUpTest(c)
 	s.restoreInterface = builtin.MockInterface(simpleIface{name: "mock-network"})
 
@@ -482,8 +484,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectReconnectsExistingConnections(c 
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-	c.Assert(t2.Status(), check.Equals, state.DoneStatus)
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus, check.Commentf("%v", chg.Err()))
+	c.Assert(t2.Status(), check.Equals, state.DoneStatus, check.Commentf("%v", chg.Err()))
 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
@@ -540,6 +542,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
 	repo := s.mgr.Repository()
 	s.launchWorkshopWithSDKs(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
+	cref := interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws-producer", Sdk: "producer", Name: "slot"},
+	}
 
 	// Launch another workshop with a candidate plug
 	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{csetup: consumer})
@@ -549,8 +555,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugs(c *check.C) {
 	chg := s.state.NewChange("refresh", "...")
 	t := s.state.NewTask("auto-disconnect", "...")
 	// see doAutoConnect and doDisconnect handlers for details
-	t.Set("plugs-to-remount", map[string]map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": {"source": "/old/source"},
+	chg.Set("remounts", map[string]map[string]interface{}{
+		cref.ID(): {"source": "/old/source"},
 	})
 	t.Set("sdk", "consumer")
 	t.SetStatus(state.DoneStatus)
@@ -964,10 +970,14 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	repo := s.mgr.Repository()
 	s.launchRemountWorkshop(c)
 
-	connRefKey := "42424242/ws-consumer/consumer:plug 42424242/ws-consumer/agent:slot"
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "agent", Name: "slot"},
+	}
+
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
-		connRefKey: map[string]interface{}{
+		connRef.ID(): map[string]interface{}{
 			"interface":    "content",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
@@ -1004,9 +1014,9 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	c.Assert(stateConns, check.HasLen, 0)
 
 	var attrs map[string]interface{}
-	c.Assert(t1.Get("plugs-to-remount", &attrs), check.IsNil)
+	c.Assert(chg.Get("remounts", &attrs), check.IsNil)
 	c.Assert(attrs, check.HasLen, 1)
-	c.Assert(attrs[connRefKey], check.DeepEquals, map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"})
+	c.Assert(attrs[connRef.ID()], check.DeepEquals, map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"})
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)

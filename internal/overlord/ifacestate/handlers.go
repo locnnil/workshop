@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"syscall"
@@ -21,18 +22,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
-
-func sdkName(task *state.Task) (string, error) {
-	var sdkName string
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
-	if err := task.Get("sdk", &sdkName); err != nil {
-		return "", err
-	}
-	return sdkName, nil
-}
 
 func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 	allPlugs := m.repo.AllPlugs("content")
@@ -64,6 +53,7 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 }
 
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	st := task.State()
 	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -77,7 +67,9 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
-	s, err := sdkName(task)
+	st.Lock()
+	s, err := handlersetup.Sdk(task)
+	st.Unlock()
 	if err != nil {
 		return err
 	}
@@ -97,72 +89,44 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// set to how it was in the previous workshop instance as some of those
 	// plugs may have been remounted with `workshop remount`. To preserve that,
 	// we store the content interface connection's 'source' directories when the
-	// old workshop/SDK is removed (see the 'disconnect' task handler) and see
+	// old workshop/SDK is removed (see the 'disconnect' task handler) and check
 	// if any of those are still relevant for the new workshop.
-	st := task.State()
-
 	st.Lock()
-	var alltasks = task.Change().Tasks()
-	var kind = task.Change().Kind()
-	st.Unlock()
+	defer st.Unlock()
 
-	if kind == "refresh" {
-		var sdkRef = sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: s}
-		var plugsToRemount = map[string]map[string]interface{}{}
-		for _, task := range alltasks {
-			// The disconnect tasks of the refresh change store pre-refresh
-			// content interface connections.
-			if task.Kind() == "auto-disconnect" {
-				_, project, workshop, err := handlersetup.UserProjectWorkshop(task)
-				if err != nil {
-					continue
-				}
-
-				taskSdk, err := sdkName(task)
-				if err != nil {
-					continue
-				}
-				taskSdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: workshop, Sdk: taskSdk}
-				if sdkRef.ID() == taskSdkRef.ID() {
-					st.Lock()
-					_ = task.Get("plugs-to-remount", &plugsToRemount)
-					st.Unlock()
-					break
-				}
-			}
-		}
-		return m.setupSdkConnections(task, ctx, sdkInfo, plugsToRemount)
+	chg := task.Change()
+	var remounts map[string]map[string]interface{}
+	if err := chg.Get("remounts", &remounts); err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
 	}
-	return m.setupSdkConnections(task, ctx, sdkInfo, nil)
+
+	return m.setupSdkConnections(task, ctx, sdkInfo, remounts)
 }
 
 // Returns content interface connection IDs of the SDK and their corresponding
 // plug's dynamic attributes.
-func (m *InterfaceManager) findContentPlugsAttrs(projectId, w, sdkname string) map[string]map[string]interface{} {
+func (m *InterfaceManager) contentSources(projectId, w, s string) map[string]map[string]interface{} {
 	// [ref.ID]source
 	var candidates = map[string]map[string]interface{}{}
-
-	connRefs, err := m.repo.Connections(projectId, w, sdkname)
+	refs, err := m.repo.Connections(projectId, w, s)
 	if err != nil {
 		return nil
 	}
 
-	for _, conRef := range connRefs {
-		connection, err := m.repo.Connection(conRef)
+	for _, cref := range refs {
+		conn, err := m.repo.Connection(cref)
 		if err != nil {
 			continue
 		}
-		if connection.Interface() == "content" {
-			candidates[conRef.ID()] = connection.Plug.DynamicAttrs()
+		if conn.Interface() == "content" {
+			candidates[cref.ID()] = conn.Plug.DynamicAttrs()
 		}
 	}
 	return candidates
 }
 
-func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Context, sdkInfo *sdk.Info, plugsToRemount map[string]map[string]interface{}) error {
+func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Context, sdkInfo *sdk.Info, remounts map[string]map[string]interface{}) error {
 	st := task.State()
-	st.Lock()
-	defer st.Unlock()
 
 	// Ensure that if the SDK is connected there will be no conflicting bind
 	// mount targets in the workshop, i.e. the situation when a two or more
@@ -218,14 +182,14 @@ func (m *InterfaceManager) setupSdkConnections(task *state.Task, ctx context.Con
 				continue
 			}
 
-			// plugsToRemount can be passed in when a previously existing
-			// content interface connection (e.g. pre-refresh) needs to be
-			// recreated without changes to its 'source' attribute in the new
-			// workshop (given the new workshop also has an SDK with exactly the
-			// same plug; the target directory may change in the new workshop).
+			// remounts may be not nil when a previously existing content
+			// interface connection (e.g. pre-refresh) needs to be recreated
+			// without changes to its 'source' attribute in the new workshop
+			// (given the new workshop also has an SDK with exactly the same
+			// plug; the target directory may change in the new workshop).
 			var plugDynamicAttrs map[string]interface{}
-			if plugsToRemount != nil {
-				if attrs, ok := plugsToRemount[connRef.ID()]; ok {
+			if remounts != nil {
+				if attrs, ok := remounts[connRef.ID()]; ok {
 					plugDynamicAttrs = attrs
 				}
 			}
@@ -308,44 +272,46 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	sdkName, err := sdkName(task)
+	st := task.State()
+	st.Lock()
+	s, err := handlersetup.Sdk(task)
+	st.Unlock()
 	if err != nil {
 		return err
 	}
 
 	// rebuild SDK profiles for the affected SDKs
-	return m.disconnectSdk(ctx, task, project, w, sdkName)
+	return m.disconnectSdk(st, ctx, project, w, s)
 }
 
-func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, project *workshop.Project, w string, sdkName string) error {
-	st := task.State()
-	sdkRef := sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: sdkName}
-
-	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, w, sdkName)
+func (m *InterfaceManager) disconnectSdk(st *state.State, ctx context.Context, project *workshop.Project, w string, s string) error {
+	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, w, s)
 	if err != nil {
 		return err
 	}
 
-	if err := m.repo.RemoveSdk(project.ProjectId, w, sdkName); err != nil {
+	if err := m.repo.RemoveSdk(project.ProjectId, w, s); err != nil {
 		return err
 	}
 
 	st.Lock()
-	defer st.Unlock()
-
-	if _, err := m.reloadConnections(project.ProjectId, w, sdkName); err != nil {
+	_, err = m.reloadConnections(project.ProjectId, w, s)
+	st.Unlock()
+	if err != nil {
 		return err
 	}
 
 	for _, backend := range m.repo.Backends() {
-		// if there are not plugs or slots declared by the SDK the profile does
+		// If there are not plugs or slots declared by the SDK the profile does
 		// not neccessarily exist for the SDK.
-		if err := backend.Remove(ctx, w, sdkName); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
 	}
+
+	ref := sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: s}
 	for _, s := range disconnected {
-		if sdkRef != s.Ref() {
+		if ref != s.Ref() {
 			for _, backend := range m.repo.Backends() {
 				if err = backend.Setup(ctx, s.Ref(), m.repo); err != nil {
 					return err
@@ -357,6 +323,7 @@ func (m *InterfaceManager) disconnectSdk(ctx context.Context, task *state.Task, 
 }
 
 func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	st := task.State()
 	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -365,24 +332,38 @@ func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (
 	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	sdkName, err := sdkName(task)
+	st.Lock()
+	s, err := handlersetup.Sdk(task)
+	st.Unlock()
 	if err != nil {
 		return err
 	}
 
-	// Store plugs attributes for the existing content interface connections, so
-	// refresh can recover 'source' attributes for the plugs that were remount
-	// in the previous workshop instance.
-	st := task.State()
-	preRefreshPlugs := m.findContentPlugsAttrs(project.ProjectId, w, sdkName)
-	st.Lock()
-	task.Set("plugs-to-remount", preRefreshPlugs)
-	st.Unlock()
+	// Save 'source' attributes for the content interface connections as some of
+	// them may have been remounted to a non-default locations, so these can be
+	// set after refresh for this SDK.
+	cattrs := m.contentSources(project.ProjectId, w, s)
 
-	return m.disconnectSdk(ctx, task, project, w, sdkName)
+	if len(cattrs) > 0 {
+		st.Lock()
+		chg := task.Change()
+		var remounts map[string]map[string]interface{}
+		if err = chg.Get("remounts", &remounts); errors.Is(err, state.ErrNoState) {
+			remounts = make(map[string]map[string]interface{})
+		} else if err != nil {
+			st.Unlock()
+			return err
+		}
+		maps.Copy(remounts, cattrs)
+		chg.Set("remounts", remounts)
+		st.Unlock()
+	}
+
+	return m.disconnectSdk(st, ctx, project, w, s)
 }
 
 func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	st := task.State()
 	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -391,7 +372,9 @@ func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb)
 	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	sdkName, err := sdkName(task)
+	st.Lock()
+	sdkName, err := handlersetup.Sdk(task)
+	st.Unlock()
 	if err != nil {
 		return err
 	}
@@ -406,6 +389,8 @@ func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb)
 		return err
 	}
 
+	st.Lock()
+	defer st.Unlock()
 	return m.setupSdkConnections(task, ctx, sdkInfo, nil)
 }
 

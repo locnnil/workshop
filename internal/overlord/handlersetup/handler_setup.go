@@ -71,6 +71,18 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	}
 }
 
+func Workshop(task *state.Task) (string, error) {
+	var w string
+	err := task.Get("workshop", &w)
+	return w, err
+}
+
+func Sdk(task *state.Task) (string, error) {
+	var s string
+	err := task.Get("sdk", &s)
+	return s, err
+}
+
 func UserProjectWorkshop(task *state.Task) (string, *workshop.Project, string, error) {
 	st := task.State()
 	var prj workshop.Project
