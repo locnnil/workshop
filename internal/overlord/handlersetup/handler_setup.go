@@ -71,6 +71,12 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 	}
 }
 
+func User(change *state.Change) (string, error) {
+	var user string
+	err := change.Get("user", &user)
+	return user, err
+}
+
 func Workshop(task *state.Task) (string, error) {
 	var w string
 	err := task.Get("workshop", &w)

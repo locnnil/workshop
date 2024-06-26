@@ -33,9 +33,12 @@ func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceMan
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
 	r.AddHandler("auto-disconnect", OnDo(m.doAutoDisconnect), m.undoAutoDisconnect)
 
-	r.AddHandler("connect", m.doConnect, nil)
+	r.AddHandler("connect", m.doConnect, m.doDisconnect)
 	r.AddHandler("disconnect", m.doDisconnect, nil)
+
 	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
+
+	r.AddHandler("setup-profiles", m.doSetupProfiles, m.undoSetupProfiles)
 
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it
@@ -381,8 +384,9 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[sdk.Ref{ProjectId: connRef.PlugRef.ProjectId, Workshop: connRef.PlugRef.Workshop, Sdk: connRef.PlugRef.Sdk}] = true
-			affected[sdk.Ref{ProjectId: connRef.SlotRef.ProjectId, Workshop: connRef.SlotRef.Workshop, Sdk: connRef.SlotRef.Sdk}] = true
+
+			affected[plugInfo.Sdk.Ref()] = true
+			affected[slotInfo.Sdk.Ref()] = true
 		}
 	}
 	if connStateChanged {
