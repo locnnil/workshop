@@ -407,18 +407,17 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 }
 
 func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
-	disconnectSet := []*state.Task{}
-	prev := (*state.Task)(nil)
+	prev := st.NewTask("auto-disconnect", `Disconnect interfaces of "agent" SDK`)
+	prev.Set("sdk", "agent")
+	disconnectSet := state.NewTaskSet(prev)
 	for _, s := range content {
 		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
 		disc.Set("sdk", s.Name)
-		if prev != nil {
-			disc.WaitFor(prev)
-		}
-		disconnectSet = append(disconnectSet, disc)
+		disc.WaitFor(prev)
+		disconnectSet.AddTask(disc)
 		prev = disc
 	}
-	return state.NewTaskSet(disconnectSet...)
+	return disconnectSet
 }
 
 func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList,

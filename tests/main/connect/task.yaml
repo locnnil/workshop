@@ -8,10 +8,10 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
   
-  echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
+  echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"  
   workshop_exec disconnect ws-conn/test-sdk-content:content-plug-one ws-conn/agent:content  
   workshop_exec connect ws-conn/test-sdk-content:content-plug-one ws-conn/agent:content
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"
+  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"  
   
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk> form"
   workshop_exec disconnect ws-conn/test-sdk-content:content-plug-two :content

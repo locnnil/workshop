@@ -82,9 +82,16 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	if err = policy.CheckInterfaces(sdkInfo); err != nil {
 		return err
 	}
+	if len(sdkInfo.BadInterfaces) > 0 {
+		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
+	}
 
 	st.Lock()
 	defer st.Unlock()
+
+	if err := m.repo.AddSdk(sdkInfo); err != nil {
+		return err
+	}
 
 	chg := task.Change()
 	// If auto-connect is executed during refresh, chances are, that there are
@@ -100,42 +107,14 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
-	conns, err := getConns(m.state)
-	if err != nil {
+	// Ensure that if the SDK is connected there will be no conflicting bind
+	// mount targets in the workshop, i.e. the situation when a two or more
+	// sources are bind mount at the same target in the workshop.
+	if err := m.checkConflictingTargets(sdkInfo); err != nil {
 		return err
 	}
 
-	var connectRefs = []*interfaces.ConnRef{}
-
-	for _, plug := range sdkInfo.Plugs {
-		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
-		for _, slot := range candidates {
-			connRef := interfaces.NewConnRef(plug, slot)
-
-			if _, ok := conns[connRef.ID()]; ok {
-				// Suggested connection already exist (or has
-				// Undesired flag set) so don't clobber it.
-				// NOTE: we don't log anything here as this is
-				// a normal and common condition.
-				continue
-			}
-
-			connectRefs = append(connectRefs, connRef)
-		}
-	}
-
-	// remounts may be not nil when a previously existing content
-	// interface connection (e.g. pre-refresh) needs to be recreated
-	// without changes to its 'source' attribute in the new workshop
-	// (given the new workshop also has an SDK with exactly the same
-	// plug; the target directory may change in the new workshop).
-	connectTs := m.batchAutoConnectTasks(project, sdkInfo, connectRefs, remounts, nil)
-
-	handlersetup.InjectTasks(task, connectTs)
-	m.state.EnsureBefore(0)
-	task.SetStatus(state.DoneStatus)
-
-	return nil
+	return m.setupAutoConnections(task, project, sdkInfo, remounts)
 }
 
 func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
@@ -170,7 +149,7 @@ func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) er
 
 // Returns content interface connection IDs of the SDK and their corresponding
 // plug's dynamic attributes.
-func (m *InterfaceManager) contentSources(projectId, w, s string) map[string]map[string]interface{} {
+func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]map[string]interface{} {
 	// [ref.ID]source
 	var candidates = map[string]map[string]interface{}{}
 	refs, err := m.repo.Connections(projectId, w, s)
@@ -196,11 +175,12 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, info *sdk.
 	connectTs := state.NewTaskSet()
 	var affected = map[sdk.Ref]bool{}
 	for _, ref := range refs {
-		connect := m.state.NewTask("connect", fmt.Sprintf("Connect %s to %s", ref.PlugRef.String(), ref.SlotRef.String()))
+		connect := m.state.NewTask("connect", fmt.Sprintf("Connect %s to %s", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 
 		connect.Set("plug", ref.PlugRef)
 		connect.Set("slot", ref.SlotRef)
 		connect.Set("auto", true)
+		connect.Set("delayed-setup-profile", true)
 		// Remove connection instead of making it undesired in undo logic if an
 		// error happens.
 		connect.Set("forget", true)
@@ -238,37 +218,6 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, info *sdk.
 }
 
 func (m *InterfaceManager) setupAutoConnections(task *state.Task, p *workshop.Project, sdkInfo *sdk.Info, remounts map[string]map[string]interface{}) error {
-	// Ensure that if the SDK is connected there will be no conflicting bind
-	// mount targets in the workshop, i.e. the situation when a two or more
-	// sources are bind mount at the same target in the workshop.
-	if err := m.checkConflictingTargets(sdkInfo); err != nil {
-		return err
-	}
-	if len(sdkInfo.BadInterfaces) > 0 {
-		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
-	}
-
-	// Disconnect and remove a previous version of the SDK if any (a common case
-	// if the task is part of a refresh change).
-	_, err := m.repo.DisconnectSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name)
-	if err != nil {
-		return err
-	}
-	if err := m.repo.RemoveSdk(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name); err != nil {
-		return err
-	}
-
-	// Reload connections to make sure that those that are getting removed with
-	// the removal of a previous version of this SDK (if any) are also removed
-	// from the state.
-	if _, err := m.reloadConnections("", "", ""); err != nil {
-		return err
-	}
-
-	if err := m.repo.AddSdk(sdkInfo); err != nil {
-		return err
-	}
-
 	conns, err := getConns(m.state)
 	if err != nil {
 		return err
@@ -277,7 +226,8 @@ func (m *InterfaceManager) setupAutoConnections(task *state.Task, p *workshop.Pr
 	var connectRefs = []*interfaces.ConnRef{}
 
 	for _, plug := range sdkInfo.Plugs {
-		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Name, plug.Name, autoConnectCheck)
+		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop,
+			sdkInfo.Name, plug.Name, autoConnectCheck)
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
 
@@ -286,6 +236,20 @@ func (m *InterfaceManager) setupAutoConnections(task *state.Task, p *workshop.Pr
 				// Undesired flag set) so don't clobber it.
 				// NOTE: we don't log anything here as this is
 				// a normal and common condition.
+				continue
+			}
+
+			connectRefs = append(connectRefs, connRef)
+		}
+	}
+
+	for _, slot := range sdkInfo.Slots {
+		candidates := m.repo.AutoConnectCandidatePlugs(sdkInfo.ProjectId, sdkInfo.Workshop,
+			sdkInfo.Name, slot.Name, autoConnectCheck)
+		for _, plug := range candidates {
+			connRef := interfaces.NewConnRef(plug, slot)
+
+			if _, ok := conns[connRef.ID()]; ok {
 				continue
 			}
 
@@ -307,19 +271,54 @@ func (m *InterfaceManager) setupAutoConnections(task *state.Task, p *workshop.Pr
 	return nil
 }
 
-func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+func (m *InterfaceManager) batchDisconnectTasks(p *workshop.Project, workshop, sdkName string,
+	conns map[string]*schema.ConnState, refs []*interfaces.ConnRef) *state.TaskSet {
+	ts := state.NewTaskSet()
+
+	var prev *state.Task
+	for _, ref := range refs {
+		task := m.state.NewTask("disconnect",
+			fmt.Sprintf("Disconnnect %s from %s", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
+		task.Set("plug", ref.PlugRef)
+		task.Set("slot", ref.SlotRef)
+		if conn := conns[ref.ID()]; conn != nil && conn.Undesired {
+			continue
+		}
+		task.Set("forget", true)
+
+		if prev != nil {
+			task.WaitFor(prev)
+		}
+		prev = task
+		ts.AddTask(task)
+	}
+
+	setup := m.state.NewTask("remove-profiles", fmt.Sprintf("Remove %q SDK profile", sdkName))
+	setup.WaitAll(ts)
+
+	ts.AddTask(setup)
+
+	for _, tsk := range ts.Tasks() {
+		tsk.Set("workshop", workshop)
+		tsk.Set("sdk", sdkName)
+		tsk.Set("project", p)
+	}
+	return ts
+}
+
+// Disconnects SDK's interface connections and removes the SDK from the
+// repository / connections. The SDK must have its manual connections stored and
+// reconnected on undo (the auto connections will be reconnected automatically).
+func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.Tomb) (err error) {
 	st := task.State()
-	user, project, w, err := handlersetup.UserProjectWorkshop(task)
+	_, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
 	st.Lock()
+	defer st.Unlock()
 	s, err := handlersetup.Sdk(task)
-	st.Unlock()
 	if err != nil {
 		return err
 	}
@@ -327,90 +326,37 @@ func (m *InterfaceManager) doAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (
 	// Save 'source' attributes for the content interface connections as some of
 	// them may have been remounted to a non-default locations, so these can be
 	// set after refresh for this SDK.
-	cattrs := m.contentSources(project.ProjectId, w, s)
+	cattrs := m.remountSources(project.ProjectId, w, s)
 
 	if len(cattrs) > 0 {
-		st.Lock()
 		chg := task.Change()
 		var remounts map[string]map[string]interface{}
 		if err = chg.Get("remounts", &remounts); errors.Is(err, state.ErrNoState) {
 			remounts = make(map[string]map[string]interface{})
 		} else if err != nil {
-			st.Unlock()
 			return err
 		}
 		maps.Copy(remounts, cattrs)
 		chg.Set("remounts", remounts)
-		st.Unlock()
 	}
 
-	disconnected, err := m.repo.DisconnectSdk(project.ProjectId, w, s)
+	conns, err := getConns(m.state)
 	if err != nil {
 		return err
 	}
 
-	if err := m.repo.RemoveSdk(project.ProjectId, w, s); err != nil {
-		return err
-	}
-
-	st.Lock()
-	_, err = m.reloadConnections(project.ProjectId, w, s)
-	st.Unlock()
+	connections, err := m.repo.Connections(project.ProjectId, w, s)
 	if err != nil {
 		return err
 	}
 
-	for _, backend := range m.repo.Backends() {
-		// If there are not plugs or slots declared by the SDK the profile does
-		// not neccessarily exist for the SDK.
-		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
-			return err
-		}
-	}
+	ts := m.batchDisconnectTasks(project, w, s, conns, connections)
 
-	ref := sdk.Ref{ProjectId: project.ProjectId, Workshop: w, Sdk: s}
-	for _, s := range disconnected {
-		if ref != s.Ref() {
-			for _, backend := range m.repo.Backends() {
-				if err = backend.Setup(ctx, s.Ref(), m.repo); err != nil {
-					return err
-				}
-			}
-		}
-	}
+	handlersetup.InjectTasks(task, ts)
+	m.state.EnsureBefore(0)
+	task.SetStatus(state.DoneStatus)
+
 	return nil
-}
-
-func (m *InterfaceManager) undoAutoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
-	st := task.State()
-	user, project, w, err := handlersetup.UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	st.Lock()
-	sdkName, err := handlersetup.Sdk(task)
-	st.Unlock()
-	if err != nil {
-		return err
-	}
-
-	inst, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-
-	sdkInfo, err := inst.SdkInfo(ctx, sdkName)
-	if err != nil {
-		return err
-	}
-
-	st.Lock()
-	defer st.Unlock()
-	return m.setupAutoConnections(task, project, sdkInfo, nil)
 }
 
 func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRef, error) {
@@ -469,11 +415,20 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	var delayedSetupProfile bool
+	if err := task.Get("delayed-setup-profile", &delayedSetupProfile); err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+
 	cref := &interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
 	conn, err := m.repo.Connect(cref, plug.Attrs, plugDynamicAttrs,
 		slot.Attrs, slotDynamicAttrs, connectCheck)
 	if err != nil || conn == nil {
 		return err
+	}
+
+	if old, ok := conns[cref.ID()]; ok && old.Undesired {
+		task.Set("old-conn", old)
 	}
 
 	conns[cref.ID()] = &schema.ConnState{
@@ -485,6 +440,88 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		Auto:             autoConnect,
 	}
 	setConns(st, conns)
+
+	if !delayedSetupProfile {
+		for _, ref := range []sdk.Ref{conn.Plug.Sdk().Ref(), conn.Slot.Sdk().Ref()} {
+			ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+			defer cancel()
+			for _, backend := range m.repo.Backends() {
+				if err := backend.Setup(ctx, ref, m.repo); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *InterfaceManager) undoConnect(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var user string
+	err := task.Change().Get("user", &user)
+	if err != nil {
+		return err
+	}
+
+	plugRef, slotRef, err := getPlugAndSlotRefs(task)
+	if err != nil {
+		return err
+	}
+
+	connRef := interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+	var old schema.ConnState
+	err = task.Get("old-conn", &old)
+	if err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+	if err == nil {
+		conns[connRef.ID()] = &old
+	} else {
+		delete(conns, connRef.ID())
+	}
+	setConns(st, conns)
+
+	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
+	if plug == nil {
+		return fmt.Errorf("SDK %q has no %q plug", plugRef.Sdk, plugRef.Name)
+	}
+
+	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
+	if slot == nil {
+		return fmt.Errorf("SDK %q has no %q slot", slotRef.Sdk, slotRef.Name)
+	}
+
+	if err = m.repo.Disconnect(plugRef.ProjectId, plugRef.Workshop,
+		plugRef.Sdk, plugRef.Name, slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name); err != nil {
+		return err
+	}
+
+	var delayedSetupProfile bool
+	if err := task.Get("delayed-setup-profile", &delayedSetupProfile); err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+	if delayedSetupProfile {
+		logger.Debugf("Connect undo handler: skipping setupSdkSecurity for SDKs %q and %q", connRef.PlugRef.Sdk, connRef.SlotRef.Sdk)
+		return nil
+	}
+
+	for _, ref := range []sdk.Ref{plug.Sdk.Ref(), slot.Sdk.Ref()} {
+		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+		defer cancel()
+		for _, backend := range m.repo.Backends() {
+			if err := backend.Setup(ctx, ref, m.repo); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -551,6 +588,84 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	}
 	setConns(st, conns)
 
+	plugSdk, slotSdk := sdk.Ref{ProjectId: plugRef.ProjectId, Workshop: plugRef.Workshop, Sdk: plugRef.Sdk},
+		sdk.Ref{ProjectId: slotRef.ProjectId, Workshop: slotRef.Workshop, Sdk: slotRef.Sdk}
+
+	for _, ref := range []sdk.Ref{plugSdk, slotSdk} {
+		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+		defer cancel()
+		for _, backend := range m.repo.Backends() {
+			if err := backend.Setup(ctx, ref, m.repo); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (err error) {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var user string
+	err = task.Change().Get("user", &user)
+
+	plugRef, slotRef, err := getPlugAndSlotRefs(task)
+	if err != nil {
+		return err
+	}
+
+	var forget bool
+	if err := task.Get("forget", &forget); err != nil && !errors.Is(err, state.ErrNoState) {
+		return fmt.Errorf("internal error: cannot read 'forget' flag: %s", err)
+	}
+	var oldconn schema.ConnState
+	if err = task.Get("old-conn", &oldconn); err != nil {
+		return err
+	}
+
+	cref := interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
+	conns, err := getConns(st)
+	if err != nil {
+		return err
+	}
+	plug := m.repo.Plug(cref.PlugRef.ProjectId, cref.PlugRef.Workshop, cref.PlugRef.Sdk, cref.PlugRef.Name)
+	slot := m.repo.Slot(cref.SlotRef.ProjectId, cref.SlotRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
+
+	if forget && (plug == nil || slot == nil) {
+		// we were trying to forget an inactive connection that was
+		// referring to a non-existing plug or slot; just restore it
+		// in the conns state but do not reconnect via repository.
+		conns[cref.ID()] = &oldconn
+		setConns(st, conns)
+		return nil
+	}
+	if plug == nil {
+		return fmt.Errorf("SDK %q has no %q plug", cref.PlugRef.Sdk, cref.PlugRef.Name)
+	}
+	if slot == nil {
+		return fmt.Errorf("SDK %q has no %q slot", cref.SlotRef.Sdk, cref.SlotRef.Name)
+	}
+
+	c, err := m.repo.Connect(&cref, oldconn.StaticPlugAttrs, oldconn.DynamicPlugAttrs,
+		oldconn.StaticSlotAttrs, oldconn.DynamicSlotAttrs, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, ref := range []sdk.Ref{c.Plug.Sdk().Ref(), c.Slot.Sdk().Ref()} {
+		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
+		defer cancel()
+		for _, backend := range m.repo.Backends() {
+			if err := backend.Setup(ctx, ref, m.repo); err != nil {
+				return err
+			}
+		}
+	}
+
+	conns[cref.ID()] = &oldconn
+	setConns(st, conns)
 	return nil
 }
 
@@ -681,6 +796,75 @@ func (m *InterfaceManager) undoSetupProfiles(task *state.Task, tomb *tomb.Tomb) 
 	return nil
 }
 
+func (m *InterfaceManager) doRemoveProfiles(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	user, p, w, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	st.Lock()
+	s, err := handlersetup.Sdk(task)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := handlersetup.BackendContext(tomb, user, p.ProjectId)
+	defer cancel()
+
+	_, err = m.repo.DisconnectSdk(p.ProjectId, w, s)
+	if err != nil {
+		return err
+	}
+
+	if err = m.repo.RemoveSdk(p.ProjectId, w, s); err != nil {
+		return err
+	}
+
+	for _, backend := range m.repo.Backends() {
+		// If there are not plugs or slots declared by the SDK the profile does
+		// not neccessarily exist for the SDK.
+		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *InterfaceManager) undoRemoveProfiles(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
+	defer cancel()
+
+	st.Lock()
+	sdkName, err := handlersetup.Sdk(task)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
+	inst, err := m.backend.Workshop(ctx, w)
+	if err != nil {
+		return err
+	}
+
+	sdkInfo, err := inst.SdkInfo(ctx, sdkName)
+	if err != nil {
+		return err
+	}
+
+	if err := m.repo.AddSdk(sdkInfo); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := handlersetup.UserProjectWorkshop(task)
 	if err != nil {
@@ -726,7 +910,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 		return err
 	}
 	if len(plugConns) != 1 {
-		return fmt.Errorf("plug %q must have exactly one connection to be remounted", plug.String())
+		return fmt.Errorf("plug %q must have exactly one connection to be remounted", plug.ShortRef())
 	}
 	connRef := plugConns[0]
 	// get the connected plug-slot pair to get its existing attributes (source)
@@ -754,7 +938,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	revert.Add(func() {
 		_ = connection.Plug.SetAttr("source", oldSource)
 		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
-			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.String())
+			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.ShortRef())
 		}
 	})
 

@@ -30,8 +30,18 @@ type ExecCall struct {
 	Args *Execution
 }
 
-type WorkshopExecCall struct {
+type FsCall struct {
 	Name string
+}
+
+type AssignProfileCall struct {
+	Name    string
+	Profile SdkProfile
+}
+
+type RemoveProfileCall struct {
+	Name    string
+	Profile string
 }
 
 type FakeWorkshopBackend struct {
@@ -46,7 +56,13 @@ type FakeWorkshopBackend struct {
 	ExecCalls []*ExecCall
 
 	WorkshopFsCallback func(ctx context.Context, name string) (WorkshopFs, error)
-	WorkshopFsCalls    []*WorkshopExecCall
+	WorkshopFsCalls    []*FsCall
+
+	AssignProfileCallback func(ctx context.Context, workshop string, profile SdkProfile) error
+	AssignProfileCalls    []*AssignProfileCall
+
+	RemoveProfileCallback func(ctx context.Context, workshop string, profile string) error
+	RemoveProfileCalls    []*RemoveProfileCall
 }
 
 func NewFakeWorkshopBackend() *FakeWorkshopBackend {
@@ -206,15 +222,22 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 }
 
 func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
+	f.AssignProfileCalls = append(f.AssignProfileCalls, &AssignProfileCall{Name: workshop, Profile: profile})
+
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
 	f.Workshops[projectId][workshop].Profiles = append(f.Workshops[projectId][workshop].Profiles, profile)
+
+	if f.AssignProfileCallback != nil {
+		return f.AssignProfileCallback(ctx, workshop, profile)
+	}
 	return nil
 }
 
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
+	s.RemoveProfileCalls = append(s.RemoveProfileCalls, &RemoveProfileCall{Name: workshop, Profile: profile})
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return err
@@ -223,9 +246,20 @@ func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string
 	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == profile })
 	if idx != -1 {
 		s.Workshops[projectId][workshop].Profiles = slices.Delete(profiles, idx, idx+1)
+		if s.RemoveProfileCallback != nil {
+			return s.RemoveProfileCallback(ctx, workshop, profile)
+		}
 		return nil
 	}
 	return errors.New("profile not found")
+}
+
+func (f *FakeWorkshopBackend) Profiles(ctx context.Context, workshop string) ([]SdkProfile, error) {
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return f.Workshops[projectId][workshop].Profiles, nil
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {
@@ -296,7 +330,7 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter W
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
-	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &WorkshopExecCall{Name: name})
+	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &FsCall{Name: name})
 	if s.WorkshopFsCallback != nil {
 		return s.WorkshopFsCallback(ctx, name)
 	}

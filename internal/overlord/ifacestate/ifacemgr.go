@@ -31,14 +31,15 @@ func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceMan
 	}
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
-	r.AddHandler("auto-disconnect", OnDo(m.doAutoDisconnect), m.undoAutoDisconnect)
+	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
-	r.AddHandler("connect", m.doConnect, m.doDisconnect)
-	r.AddHandler("disconnect", m.doDisconnect, nil)
+	r.AddHandler("connect", m.doConnect, m.undoConnect)
+	r.AddHandler("disconnect", m.doDisconnect, m.undoDisconnect)
 
 	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
 
 	r.AddHandler("setup-profiles", m.doSetupProfiles, m.undoSetupProfiles)
+	r.AddHandler("remove-profiles", m.doRemoveProfiles, m.undoRemoveProfiles)
 
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it

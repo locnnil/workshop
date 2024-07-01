@@ -36,7 +36,7 @@ function cleanup_environment() {
 
 function start_sdk_store() {
     # run fake GCS bucket storage to emulate SDK store
-  publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
+  publish_test_sdk_content "$SDKS" "$SDK_STORE_BUCKET_DIR"
   chown -R ubuntu.ubuntu /data # a bug with fake-gcs-server that returns 404 if not owned by the user
   mkdir -p /storage
   chown -R ubuntu.ubuntu /storage

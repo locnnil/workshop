@@ -66,9 +66,14 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
-// String returns the "workshop/sdk:plug" representation of a plug reference.
+// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+}
+
+// String returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
+func (ref PlugRef) ShortRef() string {
+	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when plug should be sorted before the other
@@ -103,9 +108,14 @@ type SlotRef struct {
 	Name      string `json:"slot"`
 }
 
-// String returns the "workshop:sdk:slot" representation of a slot reference.
+// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
 func (ref SlotRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+}
+
+// String returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
+func (ref SlotRef) ShortRef() string {
+	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when slot should be sorted before the other

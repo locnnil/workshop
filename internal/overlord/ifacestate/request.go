@@ -45,6 +45,7 @@ func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, erro
 
 	connectInterface.Set("slot", connRef.SlotRef)
 	connectInterface.Set("plug", connRef.PlugRef)
+	connectInterface.Set("delayed-setup-profile", false)
 
 	return state.NewTaskSet(connectInterface), nil
 }
