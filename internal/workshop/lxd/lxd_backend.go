@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -727,7 +728,7 @@ func (s *Backend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, er
 		return nil, nil, fmt.Errorf("cannot find a base image for the workshop")
 	}
 
-	alias, _, err := imageServer.GetImageAlias(fmt.Sprintf("%s/amd64", names[1]))
+	alias, _, err := imageServer.GetImageAlias(fmt.Sprintf("%s/%s", names[1], runtime.GOARCH))
 	if err != nil {
 		return nil, nil, err
 	}
