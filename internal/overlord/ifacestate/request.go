@@ -66,7 +66,17 @@ func Connect(st *state.State, w *workshop.Workshop, connRef *interfaces.ConnRef)
 	return ts, nil
 }
 
-func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
+func disconnect(st *state.State, conn *interfaces.ConnRef, forget bool) *state.TaskSet {
+	dt := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", conn.PlugRef.ShortRef(), conn.SlotRef.ShortRef()))
+	dt.Set("plug", conn.PlugRef)
+	dt.Set("slot", conn.SlotRef)
+	dt.Set("forget", forget)
+
+	return state.NewTaskSet(dt)
+}
+
+// Disconnect returns a set of tasks for disconnecting an interface.
+func Disconnect(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
 	if err != nil {
@@ -78,36 +88,5 @@ func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.Task
 	if err != nil {
 		return nil, err
 	}
-
-	disconnectTask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s/%s:%s from %s/%s:%s", plugWorkshop, conn.PlugRef.Sdk, conn.PlugRef.Name,
-		slotWorkshop, conn.SlotRef.Sdk, conn.SlotRef.Name))
-
-	disconnectTask.Set("slot", conn.SlotRef)
-	disconnectTask.Set("plug", conn.PlugRef)
-	disconnectTask.Set("forget", true)
-	return state.NewTaskSet(disconnectTask), nil
-}
-
-// Disconnect returns a set of tasks for disconnecting an interface.
-func Disconnect(st *state.State, conn *interfaces.Connection, forget bool) (*state.TaskSet, error) {
-	plugProject, plugWorkshop := conn.Plug.Ref().ProjectId, conn.Plug.Ref().Workshop
-	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
-	if err != nil {
-		return nil, err
-	}
-
-	slotProject, slotWorkshop := conn.Slot.Ref().ProjectId, conn.Slot.Ref().Workshop
-	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
-	if err != nil {
-		return nil, err
-	}
-
-	disconnectTask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s/%s:%s from %s/%s:%s", plugWorkshop, conn.Plug.Ref().Sdk, conn.Plug.Name(),
-		slotWorkshop, conn.Slot.Ref().Sdk, conn.Slot.Ref().Name))
-
-	disconnectTask.Set("slot", conn.Slot.Ref())
-	disconnectTask.Set("plug", conn.Plug.Ref())
-	disconnectTask.Set("forget", forget)
-
-	return state.NewTaskSet(disconnectTask), nil
+	return disconnect(st, conn, forget), nil
 }

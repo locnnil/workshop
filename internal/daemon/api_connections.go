@@ -370,24 +370,19 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		repo := c.d.overlord.InterfaceManager().Repository()
 		for _, connRef := range conns {
 			var ts *state.TaskSet
-			var conn *interfaces.Connection
 
-			if a.Forget {
-				// Forget must use a connRef as the connection may only exist in
-				// the state and not in the repo.
-				ts, err = ifacestate.Forget(st, connRef, a.Forget)
+			if !a.Forget {
+				// Ensure the connection exists if it is not going to be
+				// forgotten (if forget is true the conenction may present only
+				// in the state and not in the repository).
+				_, err = repo.Connection(connRef)
 				if err != nil {
 					break
 				}
-			} else {
-				conn, err = repo.Connection(connRef)
-				if err != nil {
-					break
-				}
-				ts, err = ifacestate.Disconnect(st, conn, a.Forget)
-				if err != nil {
-					break
-				}
+			}
+			ts, err = ifacestate.Disconnect(st, connRef, a.Forget)
+			if err != nil {
+				break
 			}
 
 			ts.JoinLane(st.NewLane())
