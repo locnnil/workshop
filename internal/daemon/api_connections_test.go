@@ -1272,7 +1272,7 @@ func (s *apiSuite) TestConnectFailureOnConflict(c *check.C) {
 	})
 }
 
-func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName string) {
+func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName string, auto, forget bool) {
 	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
 	defer restore()
 
@@ -1294,6 +1294,7 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 	st.Set("conns", map[string]interface{}{
 		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
 			"interface": "test",
+			"auto":      auto,
 		},
 	})
 	st.Unlock()
@@ -1303,6 +1304,7 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 
 	action := &client.InterfaceAction{
 		Action: "disconnect",
+		Forget: forget,
 		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}},
 		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}},
 	}
@@ -1338,15 +1340,39 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
-	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot")
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", false, false)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectPlugAutoSuccess(c *check.C) {
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", true, false)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns, check.DeepEquals, map[string]interface{}{"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{"auto": true, "interface": "test", "undesired": true}})
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", true, true)
+	var conns map[string]interface{}
+	s.d.state.Lock()
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccessWithEmptyPlug(c *check.C) {
-	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot")
+	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", false, false)
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccessWithEmptySlot(c *check.C) {
-	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "", "", "")
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "", "", "", false, false)
 }
 
 func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {

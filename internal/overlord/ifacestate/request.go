@@ -109,10 +109,5 @@ func Disconnect(st *state.State, conn *interfaces.Connection, forget bool) (*sta
 	disconnectTask.Set("plug", conn.Plug.Ref())
 	disconnectTask.Set("forget", forget)
 
-	disconnectTask.Set("slot-static", conn.Slot.StaticAttrs())
-	disconnectTask.Set("slot-dynamic", conn.Slot.DynamicAttrs())
-	disconnectTask.Set("plug-static", conn.Plug.StaticAttrs())
-	disconnectTask.Set("plug-dynamic", conn.Plug.DynamicAttrs())
-
 	return state.NewTaskSet(disconnectTask), nil
 }

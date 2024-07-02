@@ -373,6 +373,8 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			var conn *interfaces.Connection
 
 			if a.Forget {
+				// Forget must use a connRef as the connection may only exist in
+				// the state and not in the repo.
 				ts, err = ifacestate.Forget(st, connRef, a.Forget)
 				if err != nil {
 					break
