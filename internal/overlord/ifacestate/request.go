@@ -6,6 +6,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // ErrAlreadyConnected describes the error that occurs when attempting to connect already connected interface.
@@ -18,7 +19,7 @@ func (e ErrAlreadyConnected) Error() string {
 }
 
 // Connect returns a set of tasks for connecting an interface.
-func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
+func Connect(st *state.State, w *workshop.Workshop, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
 	if err != nil {
@@ -40,14 +41,29 @@ func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, erro
 		return nil, &ErrAlreadyConnected{Connection: *connRef}
 	}
 
-	connectInterface := st.NewTask("connect", fmt.Sprintf("Connect %s/%s:%s to %s/%s:%s", plugWorkshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name,
-		slotWorkshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name))
+	master, affected := maybeBound(w, connRef.PlugRef)
+	masterTask := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", master.ShortRef(), connRef.SlotRef.ShortRef()))
 
-	connectInterface.Set("slot", connRef.SlotRef)
-	connectInterface.Set("plug", connRef.PlugRef)
-	connectInterface.Set("delayed-setup-profile", false)
+	masterTask.Set("slot", connRef.SlotRef)
+	masterTask.Set("plug", master)
+	masterTask.Set("delayed-setup-profile", false)
 
-	return state.NewTaskSet(connectInterface), nil
+	ts := state.NewTaskSet(masterTask)
+	prev := masterTask
+	for _, p := range affected {
+		slave := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", p.ShortRef(), connRef.SlotRef.ShortRef()))
+		slave.Set("slot", connRef.SlotRef)
+		slave.Set("plug", p)
+		slave.Set("delayed-setup-profile", true)
+		slave.Set("plug-dynamic", map[string]interface{}{
+			"bind": map[string]interface{}{"plug": connRef.PlugRef, "slot": connRef.SlotRef}})
+
+		slave.WaitFor(prev)
+		prev = slave
+		ts.AddTask(slave)
+	}
+
+	return ts, nil
 }
 
 func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {

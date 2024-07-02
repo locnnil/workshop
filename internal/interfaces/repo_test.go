@@ -971,7 +971,6 @@ func (s *RepositorySuite) TestSdkSpecification(c *C) {
 	c.Assert(repo.AddPlug(s.plug), IsNil)
 	c.Assert(repo.AddSlot(s.slot), IsNil)
 
-	// Snaps should get static security now
 	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{"static plug snippet"})
@@ -985,7 +984,6 @@ func (s *RepositorySuite) TestSdkSpecification(c *C) {
 	_, err = repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
-	// Snaps should get static and connection-specific security now
 	spec, err = repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
 	c.Assert(err, IsNil)
 	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{
@@ -1001,7 +999,46 @@ func (s *RepositorySuite) TestSdkSpecification(c *C) {
 	})
 }
 
-func (s *RepositorySuite) TestSnapSpecificationFailureWithConnectionSnippets(c *C) {
+func (s *RepositorySuite) TestSdkSpecificationBoundPlugs(c *C) {
+	repo := s.emptyRepo
+	backend := &ifacetest.TestSecurityBackend{BackendName: testSecurity}
+	c.Assert(repo.AddBackend(backend), IsNil)
+	c.Assert(repo.AddInterface(testInterface), IsNil)
+	// the plug's connection is bound which means it has the "bind" dynamic
+	// attribute that points to the connection it is bound to
+	s.plug.Attrs["bind"] = map[string]interface{}{}
+	c.Assert(repo.AddPlug(s.plug), IsNil)
+	c.Assert(repo.AddSlot(s.slot), IsNil)
+
+	spec, err := repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
+	c.Assert(err, IsNil)
+	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{"static plug snippet"})
+
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
+	c.Assert(err, IsNil)
+	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{"static slot snippet"})
+
+	// Establish connection between plug and slot
+	connRef := NewConnRef(s.plug, s.slot)
+	_, err = repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, IsNil)
+
+	// Ensure that the connection snippet is not generated for the bound plug's
+	// connection (it will use the bind's plug connection instead).
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.plug.Sdk.Ref())
+	c.Assert(err, IsNil)
+	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{
+		"static plug snippet",
+	})
+
+	spec, err = repo.SdkSpecification(s.context, testSecurity, s.slot.Sdk.Ref())
+	c.Assert(err, IsNil)
+	c.Check(spec.(*ifacetest.Specification).Snippets, DeepEquals, []string{
+		"static slot snippet",
+	})
+}
+
+func (s *RepositorySuite) TestSdkSpecificationFailureWithConnectionSnippets(c *C) {
 	var testSecurity SecuritySystem = "security"
 	backend := &ifacetest.TestSecurityBackend{BackendName: testSecurity}
 	iface := &ifacetest.TestInterface{
@@ -1032,7 +1069,7 @@ func (s *RepositorySuite) TestSnapSpecificationFailureWithConnectionSnippets(c *
 	c.Assert(spec, IsNil)
 }
 
-func (s *RepositorySuite) TestSnapSpecificationFailureWithPermanentSnippets(c *C) {
+func (s *RepositorySuite) TestSdkSpecificationFailureWithPermanentSnippets(c *C) {
 	var testSecurity SecuritySystem = "security"
 	iface := &ifacetest.TestInterface{
 		InterfaceName: "interface",

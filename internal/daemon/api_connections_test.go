@@ -49,6 +49,19 @@ plugs:
   key: value
   label: label
 `
+	consumerYamlBound = `
+name: consumer
+base: ubuntu@22.04
+plugs:
+ plug:
+  interface: test
+  key: value
+  label: label
+ plug2:
+  interface: test
+  key: value2
+  label: label2
+`
 	producerYaml = `
 name: producer
 base: ubuntu@22.04
@@ -957,6 +970,70 @@ func (s *apiSuite) TestConnectPlugSuccess(c *check.C) {
 		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
 		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}})
+}
+
+func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+
+	s.mockInstalledSDK(c, consumerYamlBound, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
+	c.Check(err, check.IsNil)
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
+	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: "consumer:plug"}
+
+	d.Overlord().Loop()
+	defer d.Overlord().Stop()
+
+	action := &client.InterfaceAction{
+		Action: "connect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	cmd := apiCmd("/v1/connections")
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 202)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	id := body["change"].(string)
+
+	st := d.Overlord().State()
+	st.Lock()
+	chg := st.Change(id)
+	st.Unlock()
+	c.Assert(chg, check.NotNil)
+
+	<-chg.Ready()
+
+	st.Lock()
+	err = chg.Err()
+	st.Unlock()
+	c.Assert(err, check.IsNil)
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	ifaces := repo.Interfaces()
+	c.Assert(ifaces.Connections, check.HasLen, 2)
+
+	mainConn := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	boundConn := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug2"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{mainConn, boundConn})
 }
 
 func mockIface(c *check.C, d *Daemon, iface interfaces.Interface) {

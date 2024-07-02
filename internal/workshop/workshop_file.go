@@ -106,7 +106,7 @@ func readWorkshop(pathname string) (*File, error) {
 	// checks (at this stage). Later, when SDK metadata will be received, the
 	// plugs must be checked again (e.g. ensure all those plugs actually exist).
 	for _, s := range file.Sdks {
-		for _, p := range s.Plugs {
+		for name, p := range s.Plugs {
 			comps := strings.Split(p.Bind, ":")
 			if len(comps) != 2 {
 				return nil, fmt.Errorf("incorrect bind plug reference: %q (use <sdk>:<plug>)", p.Bind)
@@ -117,6 +117,11 @@ func readWorkshop(pathname string) (*File, error) {
 			if ixd := slices.IndexFunc(file.Sdks, func(sr SdkRecord) bool { return comps[0] == sr.Name }); ixd == -1 {
 				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", p.Bind)
 			}
+			if comps[0] == s.Name && name == comps[1] {
+				return nil, fmt.Errorf("cannot bind plug %s:%s to itself", s.Name, name)
+			}
+
+			// TODO: check if we try to bind to a plug that is already bound
 		}
 	}
 

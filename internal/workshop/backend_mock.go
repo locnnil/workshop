@@ -138,6 +138,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 		Running: true,
 		Project: prj,
 		Base:    file.Base,
+		File:    file,
 	}
 	ws.Config = make(map[string]string)
 	ws.Devices = make(map[string]map[string]string)
