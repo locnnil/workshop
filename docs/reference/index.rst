@@ -7,11 +7,7 @@ These reference guides
 provide technical background
 that may be required to use |project_markup|.
 
-
-Command-line interface
-----------------------
-
-A complete tour of :program:`workshop`'s commands.
+A complete tour of :program:`workshop`'s commands:
 
 .. toctree::
    :maxdepth: 1
@@ -19,11 +15,8 @@ A complete tour of :program:`workshop`'s commands.
    cli/index
 
 
-Workshops, SDKs
----------------
-
 Details of everything that goes into defining a workshop
-and maintaining it at run-time.
+and maintaining it at run-time:
 
 .. toctree::
    :maxdepth: 1
