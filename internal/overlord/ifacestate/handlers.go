@@ -203,7 +203,8 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, wp *worksh
 		if ref.PlugRef != master && len(slaves) > 0 {
 			// the plug is bound which excludes other dynamicq attributes
 			maps.Clear(plugDynamic[ref.ID()])
-			plugDynamic[ref.ID()]["bind"] = map[string]interface{}{"plug": master, "slot": ref.SlotRef}
+			bref := interfaces.ConnRef{PlugRef: master, SlotRef: ref.SlotRef}
+			plugDynamic[ref.ID()]["bind"] = bref.ID()
 		}
 
 		if plugDynamic != nil {
@@ -628,6 +629,9 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 		if forget && (notConnected || noPlugOrSlot) {
 			delete(conns, cref.ID())
 			setConns(st, conns)
+			// NB: If undo is executed in this scenario, it would restore a
+			// previously undesired connection, but will not run a profile
+			// setup.
 			return nil
 		}
 		return fmt.Errorf("workshop changed, please retry the operation: %v", err)
@@ -693,7 +697,7 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 	plug := m.repo.Plug(cref.PlugRef.ProjectId, cref.PlugRef.Workshop, cref.PlugRef.Sdk, cref.PlugRef.Name)
 	slot := m.repo.Slot(cref.SlotRef.ProjectId, cref.SlotRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
 
-	if forget && (plug == nil || slot == nil) {
+	if forget && (plug == nil || slot == nil || oldconn.Undesired) {
 		// we were trying to forget an inactive connection that was
 		// referring to a non-existing plug or slot; just restore it
 		// in the conns state but do not reconnect via repository.

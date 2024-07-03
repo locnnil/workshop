@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -138,6 +139,7 @@ func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, w
 			var source, target string
 			err = connection.Plug.Attr("source", &source)
 			if err != nil {
+				logger.Noticef(`Cannot obtain '`)
 				continue
 			}
 			// check if the source exists as otherwise the mount is broken

@@ -25,6 +25,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/sdk"
@@ -1006,7 +1007,11 @@ func (s *RepositorySuite) TestSdkSpecificationBoundPlugs(c *C) {
 	c.Assert(repo.AddInterface(testInterface), IsNil)
 	// the plug's connection is bound which means it has the "bind" dynamic
 	// attribute that points to the connection it is bound to
-	s.plug.Attrs["bind"] = map[string]interface{}{}
+	bref := interfaces.ConnRef{
+		PlugRef: PlugRef{ProjectId: s.plug.Sdk.ProjectId, Workshop: s.plug.Sdk.Workshop, Sdk: s.plug.Sdk.Name, Name: "some-plug"},
+		SlotRef: SlotRef{ProjectId: s.slot.Sdk.ProjectId, Workshop: s.slot.Sdk.Workshop, Sdk: s.slot.Sdk.Name, Name: s.slot.Name},
+	}
+	s.plug.Attrs["bind"] = bref.ID()
 	c.Assert(repo.AddPlug(s.plug), IsNil)
 	c.Assert(repo.AddSlot(s.slot), IsNil)
 

@@ -221,13 +221,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectBoundPlugConnected(c *check.C) {
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, map[string]interface{}{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
-			"interface":   "mock-network",
-			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"bind": map[string]interface{}{
-				"plug": map[string]interface{}{"project-id": s.prj.ProjectId, "workshop": "ws", "sdk": "consumer", "plug": "plug2"},
-				"slot": map[string]interface{}{"project-id": s.prj.ProjectId, "workshop": "ws-producer", "sdk": "producer", "slot": "slot"},
-			}},
+			"interface":    "mock-network",
+			"auto":         true,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot"},
 		},
 		"42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":   "mock-network",
@@ -265,8 +262,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	chg := s.newAutoconnectChange()
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -305,8 +301,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 	s.state.Unlock()
 
 	// Execute
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -332,8 +327,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.
 	chg.AddTask(t2)
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -371,8 +365,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 	chg.AddTask(t2)
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -415,8 +408,7 @@ slots:
 	chg.AddTask(t1)
 
 	s.state.Unlock()
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 
@@ -448,8 +440,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 	chg.AddTask(t1)
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -537,7 +528,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	change := s.newRemountChange(newSource)
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -581,7 +572,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	change := s.newRemountChange(newSource)
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -629,7 +620,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	change := s.newRemountChange(newSource)
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -667,7 +658,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	change := s.newRemountChange(newSource)
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -704,7 +695,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	defer func() { s.secBackend.SetupCallback = nil }()
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -738,7 +729,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	change := s.newRemountChange(newSource)
 
 	// Execute
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	// Validate
 	s.state.Lock()
@@ -807,7 +798,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	chg := s.newDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -837,7 +828,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	chg := s.newDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -876,7 +867,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectDisconnected(c *check.C) {
 	chg := s.newDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -907,7 +898,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectNoSdkProfile(c *check.C) {
 	chg := s.newDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -962,7 +953,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C)
 	chg := s.newUndoDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1012,7 +1003,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesManualRestored(c *c
 	chg := s.newUndoDisconnectInterfacesChange("consumer")
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1073,7 +1064,7 @@ func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 	// Execute
 	chg := s.disconnectChange(c, "ws", false)
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1117,7 +1108,7 @@ func (s *interfaceHandlersSuite) TestDisconnectAuto(c *check.C) {
 	// Execute
 	chg := s.disconnectChange(c, "ws", false)
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1166,7 +1157,7 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	// Execute
 	chg := s.disconnectChange(c, "ws", true)
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1187,6 +1178,115 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	c.Assert(conns, check.HasLen, 0)
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
+	// Setup
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+	s.state.Lock()
+	s.state.Set("conns", map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"interface":    "mock-network",
+			"auto":         false,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug2 42424242/ws/producer:slot"},
+		},
+	})
+	s.state.Unlock()
+
+	chg := s.disconnectChange(c, "ws", false)
+	s.state.Lock()
+	terr := s.state.NewTask("error-trigger", "...")
+	terr.WaitFor(chg.Tasks()[0])
+	chg.AddTask(terr)
+	s.state.Unlock()
+
+	// Execute
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
+
+	// Validate
+	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+
+	conns, err = repo.Connections(s.prj.ProjectId, "ws", "producer")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+
+	conn, err := repo.Connection(conns[0])
+	c.Assert(err, check.IsNil)
+	_, ok := conn.CheckBound()
+	c.Assert(ok, check.Equals, true)
+
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 4)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestundoDisconnectUndesiredSuccess(c *check.C) {
+	// Setup
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+	s.state.Lock()
+	conn := map[string]interface{}{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+			"interface": "mock-network",
+			"auto":      true,
+			"undesired": true,
+		},
+	}
+	s.state.Set("conns", conn)
+	s.state.Unlock()
+
+	chg := s.disconnectChange(c, "ws", true)
+	disc, err := repo.Connections("42424242", "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(disc, check.HasLen, 1)
+	// emulate an undesired connection
+	repo.DisconnectAll(disc)
+
+	s.state.Lock()
+	terr := s.state.NewTask("error-trigger", "...")
+	terr.WaitFor(chg.Tasks()[0])
+	chg.AddTask(terr)
+	s.state.Unlock()
+
+	// Execute
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
+
+	// Validate
+	cons, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(cons, check.HasLen, 0)
+
+	prods, err := repo.Connections(s.prj.ProjectId, "ws", "producer")
+	c.Assert(err, check.IsNil)
+	c.Assert(prods, check.HasLen, 0)
+
+	conns := map[string]interface{}{}
+	s.state.Get("conns", &conns)
+	c.Assert(conns, check.DeepEquals, conn)
+
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
@@ -1221,8 +1321,7 @@ func (s *interfaceHandlersSuite) TestConnectSuccess(c *check.C) {
 	// Execute
 	chg := s.connectChange("ws", false, true)
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1253,8 +1352,7 @@ func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 	// Execute
 	chg := s.connectChange("ws", false, false)
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1288,8 +1386,7 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	s.state.Unlock()
 
 	// Execute
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1322,8 +1419,7 @@ func (s *interfaceHandlersSuite) TestConnectAuto(c *check.C) {
 	// Execute
 	chg := s.connectChange("ws", true, true)
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1379,14 +1475,13 @@ func (s *interfaceHandlersSuite) TestUndoConnectUndesired(c *check.C) {
 	chg.AddTask(et)
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
 
 	// Validate
-	c.Assert(t.Status(), check.Equals, state.UndoneStatus)
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 0)
@@ -1423,14 +1518,13 @@ func (s *interfaceHandlersSuite) TestUndoConnectBackendSetup(c *check.C) {
 	chg.AddTask(et)
 	s.state.Unlock()
 
-	err := s.o.Settle(5 * time.Second)
-	c.Check(err, check.IsNil)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
 
 	// Validate
-	c.Assert(t.Status(), check.Equals, state.UndoneStatus)
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 0)
@@ -1483,7 +1577,7 @@ func (s *interfaceHandlersSuite) TestDiscardConnsSuccess(c *check.C) {
 	chg.AddTask(t1)
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1550,7 +1644,7 @@ func (s *interfaceHandlersSuite) TestUndoDiscardConnsSuccess(c *check.C) {
 	chg.AddTask(t2)
 	s.state.Unlock()
 
-	s.o.Settle(5 * time.Second)
+	s.settle(c)
 
 	s.state.Lock()
 	defer s.state.Unlock()
