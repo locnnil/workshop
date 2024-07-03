@@ -488,16 +488,6 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		task.Set("old-conn", old)
 	}
 
-	conns[cref.ID()] = &schema.ConnState{
-		Interface:        conn.Interface(),
-		StaticPlugAttrs:  conn.Plug.StaticAttrs(),
-		DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
-		StaticSlotAttrs:  conn.Slot.StaticAttrs(),
-		DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
-		Auto:             autoConnect,
-	}
-	setConns(st, conns)
-
 	// To setup a profile immediately it needs to be a master plug (i.e. bound
 	// to or a completely unbound plug) AND the task must request the setup on
 	// the spot and not as part of another task which usually happens with
@@ -513,6 +503,16 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 			}
 		}
 	}
+
+	conns[cref.ID()] = &schema.ConnState{
+		Interface:        conn.Interface(),
+		StaticPlugAttrs:  conn.Plug.StaticAttrs(),
+		DynamicPlugAttrs: conn.Plug.DynamicAttrs(),
+		StaticSlotAttrs:  conn.Slot.StaticAttrs(),
+		DynamicSlotAttrs: conn.Slot.DynamicAttrs(),
+		Auto:             autoConnect,
+	}
+	setConns(st, conns)
 
 	return nil
 }

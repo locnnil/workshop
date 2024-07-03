@@ -1382,8 +1382,19 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 
 	chg := s.connectChange("ws", false, true)
 	s.state.Lock()
-	chg.Tasks()[0].Set("plug-dynamic", map[string]interface{}{"dynamic": "value"})
+	tsk := chg.Tasks()[0]
+	tsk.Set("plug-dynamic", map[string]interface{}{"dynamic": "value"})
+	tsk.Set("delayed-setup-profile", false)
 	s.state.Unlock()
+
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+		c.Check(err, check.IsNil)
+		conn, err := repo.Connection(conns[0])
+		c.Check(err, check.IsNil)
+		conn.Plug.SetAttr("set-from-profile-setup", "value")
+		return nil
+	}
 
 	// Execute
 	s.settle(c)
@@ -1403,6 +1414,8 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	conn, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
 	v, _ := conn.Plug.Lookup("dynamic")
+	c.Assert(v, check.Equals, "value")
+	v, _ = conn.Plug.Lookup("set-from-profile-setup")
 	c.Assert(v, check.Equals, "value")
 }
 

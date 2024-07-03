@@ -16,7 +16,6 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -132,29 +131,46 @@ func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, w
 	for _, conn := range connections {
 		connection, err := repo.Connection(conn)
 		if err != nil {
+			st.Warnf("cannot obtain %s plug connection: %v", conn.PlugRef.ShortRef(), err)
 			continue
 		}
-
 		if connection.Interface() == "content" {
-			var source, target string
-			err = connection.Plug.Attr("source", &source)
+			source, target, err := sourceTarget(repo, connection)
 			if err != nil {
-				logger.Noticef(`Cannot obtain '`)
-				continue
-			}
-			// check if the source exists as otherwise the mount is broken
-			if _, err = os.Stat(source); osutil.IsDirNotExist(err) {
-				st.Warnf("%s/%s:%s mount is broken: %s does not exist", w, sdk, connection.Plug.Name(), source)
-			}
-
-			err = connection.Plug.Attr("target", &target)
-			if err != nil {
+				st.Warnf("cannot obtain %s mount properties: %v", conn.PlugRef.ShortRef(), err)
 				continue
 			}
 			mounts = append(mounts, &Mount{Source: source, Target: target, Plug: conn.PlugRef})
 		}
 	}
 	return mounts
+}
+
+func sourceTarget(repo *interfaces.Repository, connection *interfaces.Connection) (string, string, error) {
+	var source, target string
+
+	if bref, ok := connection.CheckBound(); ok {
+		bind, err := repo.Connection(bref)
+		if err != nil {
+			return source, target, err
+		}
+		connection = bind
+	}
+
+	err := connection.Plug.Attr("source", &source)
+	if err != nil {
+		return source, target, err
+	}
+	// check if the source exists as otherwise the mount is broken
+	if _, err = os.Stat(source); osutil.IsDirNotExist(err) {
+		return source, target, fmt.Errorf("%s mount is broken: %s does not exist", connection.Plug.Ref().ShortRef(), source)
+	}
+
+	err = connection.Plug.Attr("target", &target)
+	if err != nil {
+		return source, target, err
+	}
+	return source, target, nil
 }
 
 func newWorkshopChange(st *state.State, kind string, user, projectId string, reqData *workshopReq) *state.Change {

@@ -56,8 +56,8 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 		slave.Set("plug", p)
 		slave.Set("delayed-setup-profile", true)
 		// mark the plug's connection as bound
-		slave.Set("plug-dynamic", map[string]interface{}{
-			"bind": connRef.ID()})
+		bref := interfaces.ConnRef{PlugRef: master, SlotRef: connRef.SlotRef}
+		slave.Set("plug-dynamic", map[string]interface{}{"bind": bref.ID()})
 
 		slave.WaitFor(prev)
 		prev = slave

@@ -1045,6 +1045,26 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{mainConn, boundConn})
+
+	var conns map[string]interface{}
+	s.d.state.Lock()
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 2)
+	c.Assert(conns, check.DeepEquals,
+		map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+				"interface":   "test",
+				"plug-static": map[string]interface{}{"key": "value"},
+				"slot-static": map[string]interface{}{"key": "value"},
+			},
+			"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot": map[string]interface{}{
+				"interface":    "test",
+				"plug-static":  map[string]interface{}{"key": "value2"},
+				"slot-static":  map[string]interface{}{"key": "value"},
+				"plug-dynamic": map[string]interface{}{"bind": "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
+			},
+		})
+	s.d.state.Unlock()
 }
 
 func mockIface(c *check.C, d *Daemon, iface interfaces.Interface) {
@@ -1289,7 +1309,7 @@ type disconnectOpts struct {
 	bind   map[string]workshop.Plug
 }
 
-func (s *apiSuite) connect(c *check.C, plug string, auto bool) *interfaces.ConnRef {
+func (s *apiSuite) connect(c *check.C, plug string) *interfaces.ConnRef {
 	repo := s.d.Overlord().InterfaceManager().Repository()
 	connRef := &interfaces.ConnRef{
 		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: plug},
@@ -1311,11 +1331,11 @@ func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, 
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	conns := map[string]interface{}{}
-	connRef := s.connect(c, "plug", opts.auto)
+	connRef := s.connect(c, "plug")
 	conns[connRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto}
 
 	for n := range opts.bind {
-		cRef := s.connect(c, n, opts.auto)
+		cRef := s.connect(c, n)
 		conns[cRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto,
 			"plug-dynamic": map[string]interface{}{"bind": connRef.ID()}}
 	}
