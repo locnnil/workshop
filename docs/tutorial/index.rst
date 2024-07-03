@@ -29,12 +29,6 @@ see the
 :ref:`how-to guides <howto_index>`.
 
 
-.. important::
-
-   One technical detail before you start:
-   currently, |project_markup| supports only :samp:`amd64`.
-
-
 Install |project_markup|
 ------------------------
 
