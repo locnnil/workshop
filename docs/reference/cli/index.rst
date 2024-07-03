@@ -5,8 +5,7 @@
 CLI commands
 ============
 
-The :program:`workshop`
-:ref:`utility <exp_workshop_cli>`
+The :program:`workshop` utility
 exposes the following commands,
 each with its own set of options,
 and also has a number of global options
