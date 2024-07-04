@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 	"syscall"
 
 	"golang.org/x/exp/maps"
@@ -398,9 +397,9 @@ func maybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRe
 	var slaves = make(map[interfaces.PlugRef]interfaces.PlugRef)
 
 	for _, s := range w.File.Sdks {
-		for name, bind := range s.Plugs {
-			comps := strings.Split(bind.Bind, ":")
-			mkey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: comps[0], Name: comps[1]}
+		for name, pl := range s.Plugs {
+			sdk, plug := pl.Bind.Sdk, pl.Bind.Plug
+			mkey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sdk, Name: plug}
 			skey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name, Name: name}
 			masters[mkey] = append(masters[mkey], skey)
 			slaves[skey] = mkey

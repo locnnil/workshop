@@ -51,7 +51,7 @@ Notes:
 func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 	var err error
 
-	plugRef, err := client.ParsePlugRef(av[0])
+	plugRef, err := client.ParseShortPlugRef(av[0])
 	if err != nil {
 		return err
 	}

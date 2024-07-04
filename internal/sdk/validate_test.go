@@ -84,5 +84,5 @@ base: ubuntu@21.04
 }
 
 func (s *ValidateSuite) TestAcceptableSdkBases(c *check.C) {
-	c.Assert(sdk.ValidBases, check.DeepEquals, []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"})
+	c.Assert(sdk.AllowedBases, check.DeepEquals, []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"})
 }

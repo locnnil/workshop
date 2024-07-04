@@ -9,21 +9,21 @@ import (
 )
 
 var (
-	ValidBases   = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	ValidName    = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	ValidChannel = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
+	sdkName      = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 	// Regular expression describing correct plug, slot and interface names.
 	validPlugSlotIface = regexp.MustCompile("^[a-z](?:-?[a-z0-9])*$")
 )
 
 func Validate(sdk *Info) error {
 
-	if !ValidName.MatchString(sdk.Name) {
+	if !sdkName.MatchString(sdk.Name) {
 		return fmt.Errorf("invalid sdk name: %q", sdk.Name)
 	}
 
-	if !slices.Contains(ValidBases, sdk.Base) {
-		return fmt.Errorf("invalid sdk base: %q; supported bases: %s", sdk.Base, strings.Join(ValidBases, ", "))
+	if !slices.Contains(AllowedBases, sdk.Base) {
+		return fmt.Errorf("invalid sdk base: %q; supported bases: %s", sdk.Base, strings.Join(AllowedBases, ", "))
 	}
 
 	for plugName, plug := range sdk.Plugs {

@@ -14,7 +14,7 @@ func FuzzRemount(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, a string) {
-		ref, err := client.ParsePlugRef(a)
+		ref, err := client.ParseShortPlugRef(a)
 		if err == nil {
 			if fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name) != a {
 				t.Errorf("plug %s cannot be reverted to a PlugRef after parsing", a)

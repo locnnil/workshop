@@ -59,7 +59,7 @@ func (w *Project) ReadWorkshops() ([]*File, error) {
 		}
 
 		// The first element in names will contain the workshop name if matched
-		if names := validWorkshopFilename.FindStringSubmatch(info.Name()); names != nil {
+		if names := filename.FindStringSubmatch(info.Name()); names != nil {
 			f, err := readWorkshop(filepath.Join(w.Path, info.Name()))
 			if err != nil {
 				logger.Noticef("Cannot parse %s: %v", info.Name(), err)

@@ -195,7 +195,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBoundPlugConnected(c *check.C) {
 	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: "consumer:plug2"}
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug2"}}
 
 	// Execute
 	s.state.Lock()

@@ -178,6 +178,15 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 			continue
 		}
 		sort.Sort(bySlotRef(connectedSlots))
+		var bind *interfaces.PlugRef
+		if pb, ok := plug.Sdk.PlugBinds[plug.Name]; ok {
+			bind = &interfaces.PlugRef{
+				ProjectId: pb.ProjectId,
+				Workshop:  pb.Workshop,
+				Sdk:       pb.Sdk,
+				Name:      pb.Name,
+			}
+		}
 		pj := &plugJSON{
 			ProjectId:   plugRef.ProjectId,
 			Workshop:    plugRef.Workshop,
@@ -186,6 +195,7 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 			Interface:   plug.Interface,
 			Attrs:       plug.Attrs,
 			Label:       plug.Label,
+			Bind:        bind,
 			Connections: connectedSlots,
 		}
 		connsjson.Plugs = append(connsjson.Plugs, pj)

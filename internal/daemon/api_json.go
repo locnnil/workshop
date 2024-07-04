@@ -32,6 +32,7 @@ type plugJSON struct {
 	Interface string                 `json:"interface,omitempty"`
 	Attrs     map[string]interface{} `json:"attrs,omitempty"`
 	Label     string                 `json:"label,omitempty"`
+	Bind      *interfaces.PlugRef    `json:"bind,omitempty"`
 	// Connections are synthesized, they are not on the original type.
 	Connections []interfaces.SlotRef `json:"connections,omitempty"`
 }

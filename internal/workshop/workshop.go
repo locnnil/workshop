@@ -14,6 +14,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -137,18 +138,18 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	defer wsfs.Close()
 
 	sdkPath := sdk.SdkCurrentPath(sdkName)
-	sdkYamlFile, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
+	yamlf, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %q SDK metadata (%v)", sdkName, err)
 	}
-	defer sdkYamlFile.Close()
+	defer yamlf.Close()
 
-	yamlData, err := io.ReadAll(sdkYamlFile)
+	data, err := io.ReadAll(yamlf)
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := sdk.ReadSdkInfo(yamlData, w.Project.ProjectId, w.Name)
+	info, err := sdk.ReadSdkInfo(data, w.Project.ProjectId, w.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,34 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
 
+	if err = w.setupPlugBinds(info); err != nil {
+		return nil, err
+	}
+
 	return info, nil
+}
+
+func (w *Workshop) setupPlugBinds(info *sdk.Info) error {
+	if info.Type == sdk.Agent {
+		return nil
+	}
+
+	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
+	if idx == -1 {
+		return fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
+	}
+
+	for n, plug := range w.File.Sdks[idx].Plugs {
+		if _, ok := info.Plugs[n]; ok {
+			info.PlugBinds[n] = &sdk.PlugBind{
+				ProjectId: w.Project.ProjectId,
+				Workshop:  w.Name,
+				Sdk:       plug.Bind.Sdk,
+				Name:      plug.Bind.Plug,
+			}
+		}
+	}
+	return nil
 }
 
 // Returns a list of SDK info for installed SDKs. The info includes SDK details

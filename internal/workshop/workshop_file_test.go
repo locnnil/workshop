@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
@@ -20,6 +21,8 @@ type workshopFile struct {
 }
 
 var _ = check.Suite(&workshopFile{})
+
+func TestWorkshop(t *testing.T) { check.TestingT(t) }
 
 func (f *workshopFile) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
@@ -66,8 +69,8 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "two:plug"}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "one:plug"}}},
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "two", Plug: "plug"}}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "one", Plug: "plug"}}}},
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -139,8 +142,8 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: "etl-sdk:cache"}}},
-		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: "data-sdk:cache"}}},
+		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.Bind{Sdk: "etl-sdk", Plug: "cache"}}}},
+		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.Bind{Sdk: "data-sdk", Plug: "cache"}}}},
 	})
 }
 

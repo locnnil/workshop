@@ -2,7 +2,6 @@ package sdk_test
 
 import (
 	"testing"
-	"time"
 
 	"gopkg.in/check.v1"
 
@@ -12,7 +11,6 @@ import (
 
 type SdkSuite struct {
 	testutil.BaseTest
-	setup     sdk.Setup
 	projectId string
 }
 
@@ -22,14 +20,6 @@ func TestSdkSuite(t *testing.T) { check.TestingT(t) }
 
 func (s *SdkSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
-	t := time.Now()
-	s.setup = sdk.Setup{
-		Name:        "sdk",
-		Channel:     "latest/stable",
-		Revision:    1,
-		InstallTime: &t,
-	}
-
 	s.projectId = "prj42prj42"
 
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))

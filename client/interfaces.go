@@ -33,6 +33,7 @@ type Plug struct {
 	Interface   string                 `json:"interface,omitempty"`
 	Attrs       map[string]interface{} `json:"attrs,omitempty"`
 	Label       string                 `json:"label,omitempty"`
+	Bind        *PlugRef               `json:"bind,omitempty"`
 	Connections []SlotRef              `json:"connections,omitempty"`
 }
 
@@ -95,7 +96,28 @@ type DisconnectOptions struct {
 	Forget bool
 }
 
-func ParsePlugRef(plug string) (*PlugRef, error) {
+func ParseFullPlugRef(plug string) (*PlugRef, error) {
+	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
+	var plugRef PlugRef
+
+	parts := strings.Split(plug, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+	}
+
+	wssdk := strings.Split(parts[0], "/")
+	if len(wssdk) != 3 {
+		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+	}
+
+	plugRef.ProjectId = wssdk[0]
+	plugRef.Workshop = wssdk[1]
+	plugRef.Sdk = wssdk[2]
+	plugRef.Name = parts[1]
+	return &plugRef, nil
+}
+
+func ParseShortPlugRef(plug string) (*PlugRef, error) {
 	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
 	var plugRef PlugRef
 
@@ -119,9 +141,9 @@ func ParsePlugRef(plug string) (*PlugRef, error) {
 // change when/if go will enable individual fields access for generic types
 // which would allow to have one generic function returning plug or slot
 // reference type on request.
-func ParseSlotRef(slot string) (*SlotRef, error) {
+func ParseShortSlotRef(slot string) (*SlotRef, error) {
 	// the expected format of the plug ref is <workshop>/<sdk>:<plug>
-	plugRef, err := ParsePlugRef(slot)
+	plugRef, err := ParseShortPlugRef(slot)
 	if err != nil {
 		return nil, err
 	}
