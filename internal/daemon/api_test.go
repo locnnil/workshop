@@ -39,9 +39,8 @@ type apiSuite struct {
 
 	vars map[string]string
 
-	restoreMuxVars    func()
-	restoreUserLookup func()
-	restoreProjectId  func()
+	restoreMuxVars   func()
+	restoreProjectId func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -49,24 +48,22 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
-	s.username = "testuser"
+	usr, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.username = usr.Name
 	s.project = &workshop.Project{
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
 	s.b = workshop.NewFakeWorkshopBackend()
 
-	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
-		return &user.User{Username: s.username}, nil
-	}, &workshop.LookupUsername)
-
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
+	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.username)
 
-	_, _, err := s.b.CreateOrLoadProject(s.ctx, s.project.Path)
+	_, _, err = s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
 }
 
@@ -74,7 +71,6 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workshopDir = ""
 	s.restoreMuxVars()
-	s.restoreUserLookup()
 	s.restoreProjectId()
 }
 

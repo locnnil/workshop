@@ -41,7 +41,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 		return nil, &ErrAlreadyConnected{Connection: *connRef}
 	}
 
-	master, affected := maybeBound(plugW, connRef.PlugRef)
+	master, affected := MaybeBound(plugW, connRef.PlugRef)
 	masterTask := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", master.ShortRef(), connRef.SlotRef.ShortRef()))
 
 	masterTask.Set("slot", connRef.SlotRef)
@@ -68,7 +68,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 }
 
 func disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool) *state.TaskSet {
-	master, affected := maybeBound(plugW, conn.PlugRef)
+	master, affected := MaybeBound(plugW, conn.PlugRef)
 
 	mtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", master, conn.SlotRef.ShortRef()))
 	mtask.Set("plug", master)

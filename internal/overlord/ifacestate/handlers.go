@@ -195,7 +195,7 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, wp *worksh
 			plugDynamic[ref.ID()]["source"] = src
 		}
 
-		master, slaves := maybeBound(wp, ref.PlugRef)
+		master, slaves := MaybeBound(wp, ref.PlugRef)
 		// If this plug is bound AND not a master (i.e. not bound to) then mark
 		// it in the attributes for the backend to NOT set a profile for this
 		// connection as it will be bound to its master's connection effect.
@@ -392,7 +392,7 @@ func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRe
 	return plugRef, slotRef, nil
 }
 
-func maybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRef, []interfaces.PlugRef) {
+func MaybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRef, []interfaces.PlugRef) {
 	var masters = make(map[interfaces.PlugRef][]interfaces.PlugRef)
 	var slaves = make(map[interfaces.PlugRef]interfaces.PlugRef)
 
@@ -984,7 +984,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 
 	var oldSource string
 	if err := connection.Plug.Attr("source", &oldSource); err != nil {
-		return err
+		logger.Noticef("Plug %s is connected but the source attribute is not known", connRef.PlugRef.ShortRef())
 	}
 
 	if err := connection.Plug.SetAttr("source", source); err != nil {

@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
-	"golang.org/x/exp/slices"
 )
 
 var (

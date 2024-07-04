@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -651,10 +652,17 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 		return nil, err
 	}
 
-	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s/%s:%s`, plug.Workshop, plug.Sdk, plug.Name))
+	wp, err := w.Workshop(ctx, plug.Workshop, plug.ProjectId)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load workshop %q: %w", plug.Workshop, err)
+	}
+
+	master, _ := ifacestate.MaybeBound(wp, plug)
+
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s`, plug.ShortRef()))
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
-	remount.Set("plug", plug)
+	remount.Set("plug", master)
 	remount.Set("source", source)
 
 	return state.NewTaskSet(remount), nil
