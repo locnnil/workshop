@@ -270,6 +270,7 @@ Try moving it temporarily and re-run :command:`list`:
      ~/hi-workshop          golang     Ready   -
 
    $ mv hi-workshop hello-workshop
+   $ cd hello-workshop
 
 
 This means that the workshop stays operational without extra steps on your part.
@@ -460,9 +461,9 @@ are visible in the project directory, and vice versa:
 
 .. code-block:: console
 
-   $ touch outside.txt
+   $ touch outside_workshop.txt
    $ workshop exec golang -- bash -c "ls -l"
-   $ workshop exec golang -- touch inside.txt
+   $ workshop exec golang -- touch inside_workshop.txt
    $ ls -l
 
 
