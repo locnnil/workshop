@@ -48,6 +48,10 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 	masterTask.Set("plug", master)
 	masterTask.Set("delayed-setup-profile", false)
 
+	// master's plug connection that every other connection from affected will
+	// be bound to.
+	bref := interfaces.ConnRef{PlugRef: master, SlotRef: connRef.SlotRef}
+
 	ts := state.NewTaskSet(masterTask)
 	prev := masterTask
 	for _, p := range affected {
@@ -55,8 +59,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 		slave.Set("slot", connRef.SlotRef)
 		slave.Set("plug", p)
 		slave.Set("delayed-setup-profile", true)
-		// mark the plug's connection as bound
-		bref := interfaces.ConnRef{PlugRef: master, SlotRef: connRef.SlotRef}
+
 		slave.Set("plug-dynamic", map[string]interface{}{"bind": bref.ID()})
 
 		slave.WaitFor(prev)
