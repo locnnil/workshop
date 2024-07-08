@@ -274,6 +274,13 @@ Try moving it temporarily and re-run :command:`list`:
 
 This means that the workshop stays operational without extra steps on your part.
 
+.. note::
+
+   This is achieved by using a hidden :file:`.lock` file;
+   it must remain in the project directory
+   and must not be copied or stored externally, e.g. in a repository.
+
+
 Check out the recent :ref:`changes <ref_workshop_changes>`
 to see how |project_markup| keeps track of its environment:
 
