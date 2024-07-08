@@ -134,7 +134,7 @@ sdks:
     channel: latest/stable
     plugs:
       data: 
-        bind: data-sdk:cache
+        bind: data-sdk:aux
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
@@ -143,7 +143,7 @@ sdks:
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
 		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.Bind{Sdk: "etl-sdk", Plug: "cache"}}}},
-		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.Bind{Sdk: "data-sdk", Plug: "cache"}}}},
+		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.Bind{Sdk: "data-sdk", Plug: "aux"}}}},
 	})
 }
 
@@ -206,4 +206,52 @@ sdks:
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `incorrect bind plug reference: "cache" \(use <sdk>:<plug>\)`)
+}
+
+func (f *workshopFile) TestBindToAlreadyBoundPlug(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        bind: etl-sdk:cache
+      aux:
+        bind: etl-sdk:data
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      cache: 
+        bind: etl-sdk:data
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `cannot bind etl-sdk:cache to etl-sdk:data; plug etl-sdk:cache must not be bound`)
+}
+
+func (f *workshopFile) TestIndirectBindToAlreadyBoundPlug(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      data:
+        bind: data-sdk:aux
+      aux:
+        bind: etl-sdk:cache
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        bind: data-sdk:data
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `cannot bind data-sdk:aux to etl-sdk:cache; plug data-sdk:aux must not be bound`)
 }

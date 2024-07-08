@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
@@ -138,15 +139,41 @@ func readWorkshop(pathname string) (*File, error) {
 	// All bindings must refer to the existing SDKs and meet the name validity
 	// checks (at this stage). Later, when SDK metadata will be received, the
 	// plugs must be checked again (e.g. ensure all those plugs actually exist).
+	type plug struct {
+		sdk  string
+		name string
+	}
+	var masters map[plug][]plug = make(map[plug][]plug)
+	var slaves map[plug]plug = make(map[plug]plug)
 	for _, s := range file.Sdks {
 		for name, p := range s.Plugs {
+			mr := plug{sdk: p.Bind.Sdk, name: p.Bind.Plug}
+			sl := plug{sdk: s.Name, name: name}
+			masters[mr] = append(masters[mr], sl)
+			slaves[sl] = mr
+
 			if ixd := slices.IndexFunc(file.Sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }); ixd == -1 {
 				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Plug))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Plug == name {
 				return nil, fmt.Errorf("cannot bind plug %s:%s to itself", s.Name, name)
 			}
-			// TODO: check if we try to bind to a plug that is already bound
+		}
+	}
+
+	// Ensure that there are no "multi-level" binds, e.g. s1 bind to m1 bind to m2.
+	slaveKeysOrdered := maps.Keys(slaves)
+	slices.SortFunc(slaveKeysOrdered, func(a, b plug) int {
+		c := cmp.Compare(a.sdk, b.sdk)
+		if c == 0 {
+			return cmp.Compare(a.name, b.name)
+		}
+		return c
+	})
+	for _, sl := range slaveKeysOrdered {
+		m := slaves[sl]
+		if _, ok := masters[sl]; ok {
+			return nil, fmt.Errorf("cannot bind %s:%s to %s:%s; plug %s:%s must not be bound", sl.sdk, sl.name, m.sdk, m.name, sl.sdk, sl.name)
 		}
 	}
 
