@@ -29,12 +29,6 @@ see the
 :ref:`how-to guides <howto_index>`.
 
 
-.. important::
-
-   One technical detail before you start:
-   currently, |project_markup| supports only :samp:`amd64`.
-
-
 Install |project_markup|
 ------------------------
 
@@ -276,9 +270,17 @@ Try moving it temporarily and re-run :command:`list`:
      ~/hi-workshop          golang     Ready   -
 
    $ mv hi-workshop hello-workshop
+   $ cd hello-workshop
 
 
 This means that the workshop stays operational without extra steps on your part.
+
+.. note::
+
+   This is achieved by using a hidden :file:`.lock` file;
+   it must remain in the project directory
+   and must not be copied or stored externally, e.g. in a repository.
+
 
 Check out the recent :ref:`changes <ref_workshop_changes>`
 to see how |project_markup| keeps track of its environment:
@@ -459,9 +461,9 @@ are visible in the project directory, and vice versa:
 
 .. code-block:: console
 
-   $ touch outside.txt
+   $ touch outside_workshop.txt
    $ workshop exec golang -- bash -c "ls -l"
-   $ workshop exec golang -- touch inside.txt
+   $ workshop exec golang -- touch inside_workshop.txt
    $ ls -l
 
 

@@ -5,3 +5,7 @@ base: ubuntu@22.04
 summary: test-sdk-go SDK
 description: |
   test-sdk-go SDK
+plugs:
+  mod-cache:
+    interface: content
+    target: /home/workshop/go/pkg/mod

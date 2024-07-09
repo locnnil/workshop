@@ -6,7 +6,6 @@
 |project_markup|
 ================
 
-
 .. toctree::
    :hidden:
 
@@ -43,7 +42,7 @@ a plethora of SDKs from many vendors
 and a grocery list of libraries and languages.
 That's where |project_markup| thrives.
 
----------
+----
 
 
 In this documentation
@@ -70,7 +69,7 @@ In this documentation
 
       **Technical details**, specifications, APIs
 
----------
+----
 
 
 Project and community
