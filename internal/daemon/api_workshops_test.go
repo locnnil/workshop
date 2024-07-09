@@ -97,10 +97,11 @@ func (s *apiSuite) TestProjectsGetWorkshop(c *check.C) {
 			"go": {Sdk: "go", Message: "test health check message", Code: "check-waiting", CheckResult: healthstate.CheckWaiting},
 		}}
 	})
-	restoreMounts := FakeSdkMounts(func(st *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount {
-		return []*Mount{
-			{Source: "/home/user/" + sdk, Target: "/home/workshop/" + sdk, Plug: interfaces.PlugRef{ProjectId: projectId, Workshop: workshop, Sdk: sdk, Name: "content-plug"}},
-		}
+	restoreMounts := FakeSdkMounts(func(ctx context.Context, back workshop.Backend, w *workshop.Workshop) (map[string][]*Mount, error) {
+		return map[string][]*Mount{
+			"go":   {{Source: "/home/user/go", Target: "/home/workshop/go", Plug: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-test", Sdk: "go", Name: "content-plug"}}},
+			"java": {{Source: "/home/user/java", Target: "/home/workshop/java", Plug: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-test", Sdk: "java", Name: "content-plug"}}},
+		}, nil
 	})
 
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
@@ -178,9 +179,9 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)
-		c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
+		c.Check(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 		if rsp.Type == ResponseTypeError {
-			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+			c.Check(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
 		}
 
 		if rsp.Type == ResponseTypeAsync {
@@ -188,14 +189,14 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			st.Lock()
 			change := s.d.state.Change(rsp.Change)
 			st.Unlock()
-			c.Assert(change, check.NotNil)
-			c.Assert(change.Kind(), check.Equals, expected[num].Kind)
-			c.Assert(change.Summary(), check.Equals, expected[num].Summary)
+			c.Check(change, check.NotNil)
+			c.Check(change.Kind(), check.Equals, expected[num].Kind)
+			c.Check(change.Summary(), check.Equals, expected[num].Summary)
 		}
 	}
 }
 
-func (s *apiSuite) TestProjectsPostProjectWorkshopLaunch(c *check.C) {
+func (s *apiSuite) TestProjectWorkshopLaunchBasic(c *check.C) {
 	// Setup
 
 	name := "workshop"
@@ -238,6 +239,203 @@ base: ubuntu@20.04
 
 	// all successful responses must initiate the ensure call
 	c.Assert(soon, check.Equals, 1)
+}
+
+var testsdk = `
+name: test-sdk
+base: ubuntu@20.04
+title: title
+summary: summary
+description: SDK
+plugs:
+  data:
+    interface: content
+    target: /opt/data
+  cache:
+    interface: content
+    target: /opt/cache
+  ssh-agent:
+    interface: ssh-agent
+`
+
+func (s *apiSuite) TestProjectWorkshopLaunchPlugBindsSuccess(c *check.C) {
+	// Setup
+
+	name := "workshop"
+	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
+base: ubuntu@20.04
+sdks: 
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      data:
+        bind: test-sdk:cache
+`, name)), 0644)
+	c.Check(err, check.IsNil)
+
+	s.store.ActionCallback = func(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+		info, err := sdk.ReadSdkInfo([]byte(testsdk), s.project.ProjectId, "workshop")
+		c.Assert(err, check.IsNil)
+		return []sdk.SdkResult{{info}}, nil
+	}
+	defer func() {
+		s.store.ActionCallback = nil
+	}()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshop"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshop" workshop`,
+		},
+	}
+
+	soon := 0
+	ensure := func(st *state.State, d time.Duration) {
+		soon++
+	}
+
+	s.runActionTest(c, requests, expected, ensure)
+
+	// all successful responses must initiate the ensure call
+	c.Assert(soon, check.Equals, 1)
+}
+
+func (s *apiSuite) TestProjectWorkshopLaunchBindPlugNoMasterPlug(c *check.C) {
+	// Setup
+
+	name := "workshop"
+	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
+base: ubuntu@20.04
+sdks: 
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      data:
+        bind: test-sdk:unknown
+`, name)), 0644)
+	c.Check(err, check.IsNil)
+
+	s.store.ActionCallback = func(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+		info, err := sdk.ReadSdkInfo([]byte(testsdk), s.project.ProjectId, "workshop")
+		c.Assert(err, check.IsNil)
+		return []sdk.SdkResult{{info}}, nil
+	}
+	defer func() {
+		s.store.ActionCallback = nil
+	}()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshop"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot bind: SDK "test-sdk" does not have a plug "unknown"`,
+		},
+	}
+
+	soon := 0
+	ensure := func(st *state.State, d time.Duration) {
+		soon++
+	}
+
+	s.runActionTest(c, requests, expected, ensure)
+}
+
+func (s *apiSuite) TestProjectWorkshopLaunchBindPlugNoSlavePlug(c *check.C) {
+	// Setup
+
+	name := "workshop"
+	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
+base: ubuntu@20.04
+sdks: 
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      unknown:
+        bind: test-sdk:data
+`, name)), 0644)
+	c.Check(err, check.IsNil)
+
+	s.store.ActionCallback = func(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+		info, err := sdk.ReadSdkInfo([]byte(testsdk), s.project.ProjectId, "workshop")
+		c.Assert(err, check.IsNil)
+		return []sdk.SdkResult{{info}}, nil
+	}
+	defer func() {
+		s.store.ActionCallback = nil
+	}()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshop"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot bind: SDK "test-sdk" does not have a plug "unknown"`,
+		},
+	}
+
+	soon := 0
+	ensure := func(st *state.State, d time.Duration) {
+		soon++
+	}
+
+	s.runActionTest(c, requests, expected, ensure)
+}
+
+func (s *apiSuite) TestProjectWorkshopLaunchBindPlugIncompatibleIface(c *check.C) {
+	// Setup
+
+	name := "workshop"
+	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)), []byte(fmt.Sprintf(`name: %s
+base: ubuntu@20.04
+sdks: 
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        bind: test-sdk:ssh-agent
+`, name)), 0644)
+	c.Check(err, check.IsNil)
+
+	s.store.ActionCallback = func(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+		info, err := sdk.ReadSdkInfo([]byte(testsdk), s.project.ProjectId, "workshop")
+		c.Assert(err, check.IsNil)
+		return []sdk.SdkResult{{info}}, nil
+	}
+	defer func() {
+		s.store.ActionCallback = nil
+	}()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshop"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot bind: test-sdk:ssh-agent and test-sdk:cache must be of the same interface`,
+		},
+	}
+
+	soon := 0
+	ensure := func(st *state.State, d time.Duration) {
+		soon++
+	}
+
+	s.runActionTest(c, requests, expected, ensure)
 }
 
 func (s *apiSuite) TestProjectsRefreshWorkshopIncorrectInput(c *check.C) {

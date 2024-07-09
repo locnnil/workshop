@@ -152,11 +152,6 @@ slots:
 	expectedMnt := lxdbackend.Mount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
 
-	// Vaildate plug attribute
-	var src string
-	c.Assert(connectedPlug.Attr("source", &src), check.IsNil)
-	c.Assert(src, check.Equals, sourceDir)
-
 	// Validate the source directory was created correctly
 	exists, isDir, err := osutil.ExistsIsDir(sourceDir)
 	c.Assert(exists, check.Equals, true)

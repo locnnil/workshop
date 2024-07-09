@@ -52,8 +52,8 @@ type FakeWorkshopBackend struct {
 	// the key is a username
 	projects map[string][]*Project
 
-	DoExec    ExecFunc
-	ExecCalls []*ExecCall
+	ExecCallback ExecFunc
+	ExecCalls    []*ExecCall
 
 	WorkshopFsCallback func(ctx context.Context, name string) (WorkshopFs, error)
 	WorkshopFsCalls    []*FsCall
@@ -71,7 +71,7 @@ func NewFakeWorkshopBackend() *FakeWorkshopBackend {
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
 	be.projects = make(map[string][]*Project)
 
-	be.DoExec = DoExecDefault
+	be.ExecCallback = DoExecDefault
 
 	return &be
 }
@@ -237,6 +237,19 @@ func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string
 	return nil
 }
 
+func (s *FakeWorkshopBackend) Profile(ctx context.Context, w string, pr string) (SdkProfile, error) {
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return SdkProfile{}, err
+	}
+	profiles := s.Workshops[projectId][w].Profiles
+	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == pr })
+	if idx != -1 {
+		return s.Workshops[projectId][w].Profiles[idx], nil
+	}
+	return SdkProfile{}, errors.New("profile not found")
+}
+
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
 	s.RemoveProfileCalls = append(s.RemoveProfileCalls, &RemoveProfileCall{Name: workshop, Profile: profile})
 	_, projectId, err := s.userProject(ctx)
@@ -345,7 +358,7 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (Work
 
 func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
-	return f.DoExec(ctx, name, args)
+	return f.ExecCallback(ctx, name, args)
 }
 
 func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecContext, error) {

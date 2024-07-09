@@ -22,6 +22,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -29,8 +30,9 @@ import (
 var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
-	d *Daemon
-	b *workshop.FakeWorkshopBackend
+	d     *Daemon
+	b     *workshop.FakeWorkshopBackend
+	store *sdk.FakeStore
 
 	workshopDir string
 	username    string
@@ -56,6 +58,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		ProjectId: "b8639dea",
 	}
 	s.b = workshop.NewFakeWorkshopBackend()
+	s.store = &sdk.FakeStore{}
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
@@ -87,6 +90,8 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()
 	s.d = d
+
+	sdk.ReplaceStore(s.d.state, s.store)
 	return d
 }
 

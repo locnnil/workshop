@@ -12,7 +12,6 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
@@ -62,7 +61,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	inst, err := m.backend.Workshop(ctx, w)
+	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -74,24 +73,13 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
-	sdkInfo, err := inst.SdkInfo(ctx, s)
+	info, err := wp.SdkInfo(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	if err = policy.CheckInterfaces(sdkInfo); err != nil {
-		return err
-	}
-	if len(sdkInfo.BadInterfaces) > 0 {
-		task.Logf("%s", sdk.BadInterfacesSummary(sdkInfo))
-	}
-
 	st.Lock()
 	defer st.Unlock()
-
-	if err := m.repo.AddSdk(sdkInfo); err != nil {
-		return err
-	}
 
 	chg := task.Change()
 	// If auto-connect is executed during refresh, chances are, that there are
@@ -110,11 +98,11 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// Ensure that if the SDK is connected there will be no conflicting bind
 	// mount targets in the workshop, i.e. the situation when a two or more
 	// sources are bind mount at the same target in the workshop.
-	if err := m.checkConflictingTargets(sdkInfo); err != nil {
+	if err := m.checkConflictingTargets(info); err != nil {
 		return err
 	}
 
-	return m.connectAuto(task, project, inst, sdkInfo, remounts)
+	return m.connectAuto(task, wp, info, remounts)
 }
 
 func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
@@ -172,13 +160,10 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 	return candidates
 }
 
-func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, wp *workshop.Workshop, info *sdk.Info, refs []*interfaces.ConnRef, remounts map[string]string, plugDynamic, slotDynamic map[string]map[string]interface{}) (*state.TaskSet, error) {
+func (m *InterfaceManager) batchAutoConnectTasks(wp *workshop.Workshop, info *sdk.Info, refs []*interfaces.ConnRef, plugDynamic, slotDynamic map[string]map[string]interface{}) (*state.TaskSet, error) {
 
 	connectTs := state.NewTaskSet()
 	var affected = map[sdk.Ref]bool{}
-	if plugDynamic == nil {
-		plugDynamic = make(map[string]map[string]interface{})
-	}
 	for _, ref := range refs {
 		connect := m.state.NewTask("connect", fmt.Sprintf("Connect %s to %s", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 
@@ -186,43 +171,6 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, wp *worksh
 		connect.Set("slot", ref.SlotRef)
 		connect.Set("auto", true)
 		connect.Set("delayed-setup-profile", true)
-		if plugDynamic[ref.ID()] == nil {
-			plugDynamic[ref.ID()] = make(map[string]interface{})
-		}
-
-		if src, ok := remounts[ref.ID()]; ok {
-			plugDynamic[ref.ID()]["source"] = src
-		}
-
-		master, slaves := MaybeBound(wp, ref.PlugRef)
-		// If this plug is bound AND not a master (i.e. not bound to) then mark
-		// it in the attributes for the backend to NOT set a profile for this
-		// connection as it will be bound to its master's connection effect.
-		if ref.PlugRef != master && len(slaves) > 0 {
-			// the plug is bound which excludes other dynamic attributes
-			maps.Clear(plugDynamic[ref.ID()])
-
-			// Find the master's slot reference (must also present, otherwise it
-			// breaks the auto-connection integrity -- no bound connection must
-			// be connected if the master is not auto-connectable).
-			idx := slices.IndexFunc(refs, func(r *interfaces.ConnRef) bool { return r.PlugRef == master })
-			if idx == -1 {
-				return nil, fmt.Errorf("cannot auto-connect %s: plug bind %s does not exist or not auto-connectable",
-					ref.PlugRef.ShortRef(), master.ShortRef())
-			}
-			bref := interfaces.ConnRef{PlugRef: master, SlotRef: refs[idx].SlotRef}
-			plugDynamic[ref.ID()]["bind"] = bref.ID()
-		} else {
-			// Make sure that all the plugs that are bound to this master can
-			// also be auto-connected (i.e. present in the refs). Otherwise, it
-			// breaks the integrity when a bound plug is not connected whilst
-			// its master is.
-			for _, r := range slaves {
-				if idx := slices.IndexFunc(refs, func(cr *interfaces.ConnRef) bool { return cr.PlugRef == r }); idx == -1 {
-					return nil, fmt.Errorf("cannot auto-connect %s: bound plug %s cannot be auto-connected", master.ShortRef(), r.ShortRef())
-				}
-			}
-		}
 
 		if plugDynamic != nil {
 			connect.Set("plug-dynamic", plugDynamic[ref.ID()])
@@ -250,43 +198,92 @@ func (m *InterfaceManager) batchAutoConnectTasks(p *workshop.Project, wp *worksh
 	for _, tsk := range connectTs.Tasks() {
 		tsk.Set("workshop", info.Workshop)
 		tsk.Set("sdk", info.Name)
-		tsk.Set("project", p)
+		tsk.Set("project", wp.Project)
 	}
 
 	return connectTs, nil
 }
 
-func (m *InterfaceManager) connectAuto(task *state.Task, p *workshop.Project, wp *workshop.Workshop, sdkInfo *sdk.Info, remounts map[string]string) error {
+func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, info *sdk.Info, remounts map[string]string) error {
 	conns, err := getConns(m.state)
 	if err != nil {
 		return err
 	}
 
 	var connectRefs = []*interfaces.ConnRef{}
+	var plugDynamic = make(map[string]map[string]interface{})
 
-	for _, plug := range sdkInfo.Plugs {
-		candidates := m.repo.AutoConnectCandidateSlots(sdkInfo.ProjectId, sdkInfo.Workshop,
-			sdkInfo.Name, plug.Name, autoConnectCheck)
+	for _, plug := range info.Plugs {
+		ref := interfaces.NewPlugRef(plug)
+		master, slaves := MaybeBound(wp, ref)
+		if master != ref {
+			// the plug is bound to, its connection will be setup together with
+			// its master.
+			continue
+		}
+		candidates := m.repo.AutoConnectCandidateSlots(info.ProjectId, info.Workshop,
+			info.Name, plug.Name, autoConnectCheck)
+
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
-
-			if _, ok := conns[connRef.ID()]; ok {
-				// Suggested connection already exist (or has
-				// Undesired flag set) so don't clobber it.
-				// NOTE: we don't log anything here as this is
-				// a normal and common condition.
-				continue
+			if plugDynamic[connRef.ID()] == nil {
+				plugDynamic[connRef.ID()] = make(map[string]interface{})
 			}
 
+			if src, ok := remounts[connRef.ID()]; ok {
+				plugDynamic[connRef.ID()]["source"] = src
+			}
+
+			slotRef := interfaces.NewSlotRef(slot)
+			for _, slave := range slaves {
+				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
+				if _, ok := conns[slref.ID()]; !ok {
+					connectRefs = append(connectRefs, slref)
+					plugDynamic[slref.ID()] = make(map[string]interface{})
+					plugDynamic[slref.ID()]["bind"] = connRef.ID()
+				}
+			}
+
+			if _, ok := conns[connRef.ID()]; ok {
+				// Suggested connection already exist (or has Undesired flag
+				// set) so don't clobber it. NOTE: we don't log anything here as
+				// this is a normal and common condition.
+				continue
+			}
 			connectRefs = append(connectRefs, connRef)
 		}
 	}
 
-	for _, slot := range sdkInfo.Slots {
-		candidates := m.repo.AutoConnectCandidatePlugs(sdkInfo.ProjectId, sdkInfo.Workshop,
-			sdkInfo.Name, slot.Name, autoConnectCheck)
+	for _, slot := range info.Slots {
+		candidates := m.repo.AutoConnectCandidatePlugs(info.ProjectId, info.Workshop,
+			info.Name, slot.Name, autoConnectCheck)
 		for _, plug := range candidates {
+			ref := interfaces.NewPlugRef(plug)
+			master, slaves := MaybeBound(wp, ref)
+			if master != ref {
+				// the plug is bound to, its connection will be setup together with
+				// its master.
+				continue
+			}
 			connRef := interfaces.NewConnRef(plug, slot)
+
+			if plugDynamic[connRef.ID()] == nil {
+				plugDynamic[connRef.ID()] = make(map[string]interface{})
+			}
+
+			if src, ok := remounts[connRef.ID()]; ok {
+				plugDynamic[connRef.ID()]["source"] = src
+			}
+
+			slotRef := interfaces.NewSlotRef(slot)
+			for _, slave := range slaves {
+				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
+				if _, ok := conns[slref.ID()]; !ok {
+					connectRefs = append(connectRefs, slref)
+					plugDynamic[slref.ID()] = make(map[string]interface{})
+					plugDynamic[slref.ID()]["bind"] = connRef.ID()
+				}
+			}
 
 			if _, ok := conns[connRef.ID()]; ok {
 				continue
@@ -301,7 +298,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, p *workshop.Project, wp
 	// without changes to its 'source' attribute in the new workshop
 	// (given the new workshop also has an SDK with exactly the same
 	// plug; the target directory may change in the new workshop).
-	ts, err := m.batchAutoConnectTasks(p, wp, sdkInfo, connectRefs, remounts, nil, nil)
+	ts, err := m.batchAutoConnectTasks(wp, info, connectRefs, plugDynamic, nil)
 	if err != nil {
 		return err
 	}
@@ -977,14 +974,19 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.remount(ctx, task, &plug, source, inst.Running)
+	return m.remount(ctx, task, user, &plug, source, inst.Running)
 }
 
-func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
+func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user string, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
 	revert := revert.New()
 	defer revert.Fail()
 
 	conns, err := getConns(m.state)
+	if err != nil {
+		return err
+	}
+
+	usr, err := workshop.LookupUsername(user)
 	if err != nil {
 		return err
 	}
@@ -1004,8 +1006,10 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	}
 
 	var oldSource string
-	if err := connection.Plug.Attr("source", &oldSource); err != nil {
-		logger.Noticef("Plug %s is connected but the source attribute is not known", connRef.PlugRef.ShortRef())
+	if err := connection.Plug.Attr("source", &oldSource); err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
+		return err
+	} else if errors.Is(err, sdk.AttributeNotFoundError{}) {
+		oldSource = sdk.DefaultContentSource(usr.HomeDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
 	}
 
 	if err := connection.Plug.SetAttr("source", source); err != nil {
@@ -1028,7 +1032,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 
 	_, err = os.Stat(oldSource)
 	if osutil.IsDirNotExist(err) {
-		task.State().Warnf("%s/%s:%s's source at %q did not exist, the mount was re-created", plug.Workshop, plug.Sdk, plug.Name, oldSource)
+		task.State().Warnf("%s/%s:%s's source at %q does not exist; will attempt to recreate", plug.Workshop, plug.Sdk, plug.Name, oldSource)
 	} else if err != nil {
 		return err
 	} else {
@@ -1066,13 +1070,18 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 		}
 	}
 
+	var auto bool
+	if old, ok := conns[connRef.ID()]; ok {
+		auto = old.Auto
+	}
+
 	conns[connRef.ID()] = &schema.ConnState{
 		Interface:        newConnection.Interface(),
 		StaticPlugAttrs:  newConnection.Plug.StaticAttrs(),
 		DynamicPlugAttrs: newConnection.Plug.DynamicAttrs(),
 		StaticSlotAttrs:  newConnection.Slot.StaticAttrs(),
 		DynamicSlotAttrs: newConnection.Slot.DynamicAttrs(),
-		Auto:             true,
+		Auto:             auto,
 	}
 
 	setConns(m.state, conns)

@@ -66,6 +66,10 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
+func NewPlugRef(info *sdk.PlugInfo) PlugRef {
+	return PlugRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
+}
+
 // String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
@@ -106,6 +110,10 @@ type SlotRef struct {
 	Workshop  string `json:"workshop"`
 	Sdk       string `json:"sdk"`
 	Name      string `json:"slot"`
+}
+
+func NewSlotRef(info *sdk.SlotInfo) SlotRef {
+	return SlotRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
 }
 
 // String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
@@ -154,8 +162,8 @@ type ConnRef struct {
 // NewConnRef creates a connection reference for given plug and slot
 func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 	return &ConnRef{
-		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Sdk: plug.Sdk.Name, Name: plug.Name, Workshop: plug.Sdk.Workshop},
-		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Sdk: slot.Sdk.Name, Name: slot.Name, Workshop: slot.Sdk.Workshop},
+		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Workshop: plug.Sdk.Workshop, Sdk: plug.Sdk.Name, Name: plug.Name},
+		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Workshop: slot.Sdk.Workshop, Sdk: slot.Sdk.Name, Name: slot.Name},
 	}
 }
 

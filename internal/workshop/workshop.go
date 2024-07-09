@@ -42,6 +42,10 @@ type Workshop struct {
 // the SDK to the workshop content. This method is idempotent, so if an SDK
 // existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
+	if s.Name == sdk.Agent.String() {
+		return nil
+	}
+
 	now := InstallTimeNow()
 	s.InstallTime = &now
 	w.Content[s.Name] = s
@@ -85,6 +89,10 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK to the workshop content. This method is idempotent, so if an
 // SDK did not exist, the result will be a no-op
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
+	if name == sdk.Agent.String() {
+		return nil
+	}
+
 	delete(w.Content, name)
 	newSequence, err := json.Marshal(w.Content)
 	if err != nil {

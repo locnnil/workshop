@@ -13,17 +13,28 @@ func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 	return download
 }
 
-func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
-	tasks := []*state.Task{}
+func InstallAgent(st *state.State) *state.TaskSet {
+	name := sdk.Agent.String()
+	install := st.NewTask("install-agent-sdk", fmt.Sprintf("Install %q SDK", name))
+	install.Set("sdk-setup", sdk.Setup{
+		Name: name,
+	})
+	install.Set("sdk-retrieve-task", install.ID())
 
+	link := st.NewTask("link-sdk", fmt.Sprintf("Link %q SDK", name))
+	link.Set("sdk-retrieve-task", install.ID())
+	link.WaitFor(install)
+
+	return state.NewTaskSet(install, link)
+}
+
+func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
 	install := st.NewTask("install-sdk", fmt.Sprintf("Install %q SDK", sdk))
 	install.Set("sdk-retrieve-task", retrieveId)
-	tasks = append(tasks, install)
 
 	link := st.NewTask("link-sdk", fmt.Sprintf("Link %q SDK", sdk))
 	link.Set("sdk-retrieve-task", retrieveId)
 	link.WaitFor(install)
-	tasks = append(tasks, link)
 
-	return state.NewTaskSet(tasks...)
+	return state.NewTaskSet(install, link)
 }

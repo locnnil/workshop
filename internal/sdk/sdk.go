@@ -300,8 +300,12 @@ type PlugBind struct {
 	Name      string
 }
 
+func SdkRootPath(sdkName string) string {
+	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
+}
+
 func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(dirs.WorkshopSdksDir, sdkName, "current")
+	return filepath.Join(SdkRootPath(sdkName), "current")
 }
 
 func SdkHooksDir(sdkName string) string {
@@ -310,6 +314,11 @@ func SdkHooksDir(sdkName string) string {
 
 func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
+}
+
+func DefaultContentSource(homedir, pid, wp, sdk, plug string) string {
+	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content", dir)
 }
 
 func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {

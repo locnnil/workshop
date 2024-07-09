@@ -35,6 +35,14 @@ type Connection struct {
 }
 
 func (c *Connection) CheckBound() (*ConnRef, bool) {
+	// info := c.Plug.plugInfo.Sdk
+	// if bind, ok := info.PlugBinds[c.Plug.Name()]; ok {
+	// 	return &ConnRef{
+	// 		PlugRef: PlugRef{ProjectId: info.ProjectId, Workshop: info.Workshop, Sdk: bind.Name, Name: bind.Name},
+	// 		SlotRef: SlotRef{ProjectId: info.ProjectId, Workshop: info.Workshop, Sdk: c.Slot.slotInfo.Sdk.Name, Name: c.Slot.Name()},
+	// 	}, true
+	// }
+	// return NewConnRef(c.Plug.plugInfo, c.Slot.slotInfo), false
 	attr, ok := c.Plug.Lookup("bind")
 	if attr == nil {
 		return nil, false

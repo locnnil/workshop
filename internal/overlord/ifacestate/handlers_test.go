@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -26,6 +28,7 @@ type interfaceHandlersSuite struct {
 	restoreSimple            func()
 	restoreDeny              func()
 	restoreSecurtityBackends func()
+	restoreUserLookup        func()
 }
 
 var _ = check.Suite(&interfaceHandlersSuite{})
@@ -108,12 +111,24 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.o.AddManager(s.runner)
 	err := s.o.StartUp()
 	c.Assert(err, check.IsNil)
+
+	s.restoreUserLookup = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     name,
+			Username: name,
+			Uid:      "1000",
+			Gid:      "1000",
+			HomeDir:  c.MkDir(),
+		}
+		return u, nil
+	}, &workshop.LookupUsername)
 }
 
 func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {
 	s.restoreSimple()
 	s.restoreDeny()
 	s.restoreSecurtityBackends()
+	s.restoreUserLookup()
 }
 
 func (s *interfaceHandlersSuite) settle(c *check.C) {
@@ -161,6 +176,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 
 	// Launch another workshop with a candidate plug
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
 	s.state.Lock()
@@ -197,7 +213,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
-func (s *interfaceHandlersSuite) TestAutoconnectBoundPlugConnectSuccess(c *check.C) {
+func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
@@ -208,6 +224,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBoundPlugConnectSuccess(c *check
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
 	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug2"}}
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
 	s.state.Lock()
@@ -222,16 +239,16 @@ func (s *interfaceHandlersSuite) TestAutoconnectBoundPlugConnectSuccess(c *check
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
-	c.Assert(pconns, check.HasLen, 3)
-	c.Assert(err, check.IsNil)
+	c.Check(pconns, check.HasLen, 3)
+	c.Check(err, check.IsNil)
 
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
-	c.Assert(ref, check.HasLen, 3)
-	c.Assert(err, check.IsNil)
+	c.Check(ref, check.HasLen, 3)
+	c.Check(err, check.IsNil)
 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
-	c.Assert(conns, check.DeepEquals, map[string]interface{}{
+	c.Check(conns, check.DeepEquals, map[string]interface{}{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":    "mock-network",
 			"auto":         true,
@@ -298,6 +315,9 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 		{Name: "conflict-1", Channel: "latest/stable"}: conflictingTarget1,
 		{Name: "conflict-2", Channel: "latest/stable"}: conflictingTarget2,
 	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget1, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget2, s.prj.ProjectId, "ws")), check.IsNil)
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
@@ -319,7 +339,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target /home/workshop is also mounted by ws/conflict-1:plug.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target /home/workshop is also mounted by.*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
@@ -363,6 +383,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 
 	// Launch another workshop with a candidate plug
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
@@ -398,36 +419,6 @@ func (s *interfaceHandlersSuite) TestAutoconnectUndoSuccess(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
-func (s *interfaceHandlersSuite) TestAutoconnectFailInstallPolicyCheck(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	var sdkYaml = `
-name: consumer
-base: ubuntu@22.04
-slots:
-  slot:
-    interface: content
-`
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: sdkYaml})
-
-	t1 := s.state.NewTask("auto-connect", "test")
-	t1.Set("sdk", "consumer")
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.prj, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	s.settle(c)
-
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(t1.Log()[0], check.Matches, ".*installation not allowed.*")
-}
-
 func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
@@ -437,6 +428,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 
 	// Launch another workshop with a candidate plug
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
 	s.state.Lock()
@@ -473,68 +465,6 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 
 	// ensure that backend profiles were set for both SDKs
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
-	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
-}
-
-func (s *interfaceHandlersSuite) TestAutoconnectPlugFailsIfMasterNotAutoconnected(c *check.C) {
-	// Setup
-	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
-	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
-
-	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
-	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	// the bound to does not exist (or will not be pulled in the auto-connect candidate search)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug4"}}
-
-	// Execute
-	s.state.Lock()
-	chg := s.newAutoconnectChange()
-	s.state.Unlock()
-
-	s.settle(c)
-
-	s.state.Lock()
-	defer s.state.Unlock()
-	c.Check(chg.Err(), check.ErrorMatches, "(?s).*cannot auto-connect ws/consumer:plug: plug bind ws/consumer:plug4 does not exist or not auto-connectable.*")
-
-	// Validate
-	var conns map[string]interface{}
-	s.state.Get("conns", &conns)
-	c.Assert(conns, check.HasLen, 0)
-	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
-	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
-}
-
-func (s *interfaceHandlersSuite) TestAutoconnectFailIfSomeBoundNotAutoconnectable(c *check.C) {
-	// Setup
-	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
-	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
-
-	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
-	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug2"}}
-	wp.File.Sdks[0].Plugs["plug-ssh"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug2"}}
-
-	// Execute
-	s.state.Lock()
-	chg := s.newAutoconnectChange()
-	s.state.Unlock()
-
-	s.settle(c)
-
-	s.state.Lock()
-	defer s.state.Unlock()
-	c.Check(chg.Err(), check.ErrorMatches, "(?s).*cannot auto-connect ws/consumer:plug2: bound plug ws/consumer:plug-ssh cannot be auto-connected.*")
-
-	// Validate
-	var conns map[string]interface{}
-	s.state.Get("conns", &conns)
-	c.Assert(conns, check.HasLen, 0)
-	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 

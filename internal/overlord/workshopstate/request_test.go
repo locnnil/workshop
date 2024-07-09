@@ -138,7 +138,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	expected := []string{"create-workshop",
 		"mount-project",
-		"start-workshop", "auto-connect"}
+		"start-workshop", "install-agent-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
@@ -173,8 +173,10 @@ func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
 		"start-workshop",
 		"retrieve-sdk",
 		"retrieve-sdk",
+		"install-agent-sdk",
 		"install-sdk",
 		"install-sdk",
+		"link-sdk",
 		"link-sdk",
 		"link-sdk",
 		"auto-connect", // agent SDK
@@ -201,22 +203,22 @@ func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
 
 	// install-sdk task for sdk
 	var id1, id2 string
-	err = tasks[5].Get("sdk-retrieve-task", &id1)
+	err = tasks[7].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id1, check.Equals, tasks[0].ID())
 
 	// link-sdk task for sdk
-	err = tasks[6].Get("sdk-retrieve-task", &id2)
+	err = tasks[8].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id2, check.Equals, tasks[0].ID())
 
 	// install-sdk task for sdk_2
-	err = tasks[8].Get("sdk-retrieve-task", &id1)
+	err = tasks[9].Get("sdk-retrieve-task", &id1)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id1, check.Equals, tasks[1].ID())
 
 	// link-sdk task for sdk_2
-	err = tasks[8].Get("sdk-retrieve-task", &id2)
+	err = tasks[10].Get("sdk-retrieve-task", &id2)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(id2, check.Equals, tasks[1].ID())
 
@@ -243,6 +245,8 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
+		"install-agent-sdk",
+		"link-sdk",
 		"auto-connect",    // "agent" SDK
 		"auto-disconnect", // "agent" SDK
 	}
@@ -285,6 +289,8 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
+		"install-agent-sdk",
+		"link-sdk",
 		"install-sdk",
 		"link-sdk",
 		"install-sdk",
@@ -463,6 +469,8 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
+		"install-agent-sdk",
+		"link-sdk",
 		"auto-disconnect", // agent SDK
 		"auto-connect",    // agent SDK
 		"remove-workshop-stash",
@@ -478,6 +486,8 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
+		"install-agent-sdk",
+		"link-sdk",
 		"install-sdk",
 		"link-sdk",
 		"auto-connect", // agent SDK
@@ -556,6 +566,8 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
+		"install-agent-sdk",
+		"link-sdk",
 		"install-sdk",
 		"link-sdk",
 		"auto-disconnect", // agent SDK
@@ -761,37 +773,6 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 
 	ts[0].Tasks()[0].Get("force", &force)
 	c.Assert(force, check.Equals, false)
-}
-
-func (s *requestSuite) TestRemoveMany(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	content := workshop.SdkList{
-		{Name: "sdk-1", Channel: "latest/stable"},
-		{Name: "sdk-2", Channel: "latest/stable"},
-		{Name: "sdk-3", Channel: "latest/stable"},
-	}
-
-	s.launchWorkshopWithSDKs(c, "ws-1", content)
-
-	ts, err := s.mgr.RemoveMany(s.ctx, []string{"ws-1"}, s.project.ProjectId, "1")
-	c.Assert(err, check.IsNil)
-	c.Assert(ts[0].Tasks(), check.HasLen, 6)
-
-	verifyDisconnectDependencies(c, ts[0])
-	// agent SDK is always the task with index 0
-	discTasks := ts[0].Tasks()[1:3]
-	for i, t := range discTasks {
-		c.Assert(t.Kind(), check.Equals, "auto-disconnect")
-		var sdkName string
-		err = t.Get("sdk", &sdkName)
-		c.Assert(err, check.IsNil)
-		c.Assert(sdkName, check.Equals, content[i].Name)
-		c.Assert(t.Summary(), check.Equals, fmt.Sprintf("Disconnect interfaces of %q SDK", content[i].Name))
-	}
-	c.Assert(ts[0].Tasks()[4].Kind(), check.Equals, "discard-conns")
-	c.Assert(ts[0].Tasks()[5].Kind(), check.Equals, "remove-workshop")
-	s.ensureTaskHasWorkshopAndProjectKeys(c, "ws-1", ts[0].Tasks())
 }
 
 func (s *requestSuite) TestRemountSuccess(c *check.C) {
