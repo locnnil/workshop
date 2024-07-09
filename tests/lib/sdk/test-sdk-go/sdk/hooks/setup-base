@@ -1,3 +1,8 @@
 #!/usr/bin/bash
 echo "setup-base ran successfully!"
 sudo snap install go --classic
+echo "PATH=/home/workshop/go/bin:$PATH" >> /home/workshop/.bashrc
+
+# create a mod cache to be mounted from the host using the content interface
+cache=$(sudo -u workshop -- go env GOMODCACHE)
+sudo -u workshop -- mkdir -p $cache
