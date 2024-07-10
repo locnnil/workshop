@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -65,7 +66,7 @@ type WorkshopInfo struct {
 }
 
 var ensureStateSoon = stateEnsureBefore
-var sdkMounts = mounts
+var workshopMounts = mounts
 
 func workshopFileToInfo(file *workshop.File, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
@@ -122,7 +123,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 	return &info
 }
 
-func mounts(ctx context.Context, back workshop.Backend, w *workshop.Workshop) (map[string][]*Mount, error) {
+func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error) {
 	var mnts = map[string][]*Mount{}
 
 	content, err := w.ContentInfo(ctx)
@@ -140,10 +141,13 @@ func mounts(ctx context.Context, back workshop.Backend, w *workshop.Workshop) (m
 	}
 
 	for _, sk := range content {
-		prof, err := back.Profile(ctx, w.Name, sk.Name)
-		if err != nil {
+		prof, err := w.Backend.Profile(ctx, w.Name, sk.Name)
+		if err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			logger.Noticef("Failed to obtain mounts for %s/%s: %v", w.Name, sk.Name, err)
 			return mnts, err
+		}
+		if errors.Is(err, workshop.ErrSdkProfileNotFound) {
+			continue
 		}
 		for n, dev := range prof.Devices {
 			if dev.Type == workshop.BindMount {
@@ -336,7 +340,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	health := workshopHealth(wrkmgr, w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	ms, err := sdkMounts(ctx, c.d.overlord.WorkshopBackend(), w)
+	ms, err := workshopMounts(ctx, w)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}

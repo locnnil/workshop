@@ -503,7 +503,9 @@ slots:
     slot:
         interface: content        
 `
-	s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
+	wm, err := s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
+	c.Assert(err, check.IsNil)
+	wm.Running = true
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, agentYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
@@ -516,7 +518,7 @@ slots:
 			"plug-dynamic": map[string]interface{}{"source": source},
 		},
 	})
-	_, err := ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
+	_, err = ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
 	c.Assert(err, check.IsNil)
 	s.state.Unlock()
 }

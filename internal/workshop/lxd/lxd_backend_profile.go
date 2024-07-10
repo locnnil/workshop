@@ -192,6 +192,9 @@ func (s *Backend) Profile(ctx context.Context, wp, profile string) (workshop.Sdk
 	lxdname := profileName(projectId, wp, profile)
 	lxdp, _, err := conn.GetProfile(lxdname)
 	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return pr, workshop.ErrSdkProfileNotFound
+		}
 		return pr, err
 	}
 	for name, dev := range lxdp.Devices {

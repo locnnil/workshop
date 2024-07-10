@@ -25,6 +25,11 @@ base: ubuntu@20.04`), 0644)
 
 	err := s.b.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
+
+	wp, err := s.b.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	wp.Running = true
+
 	return projectsCmd
 }
 

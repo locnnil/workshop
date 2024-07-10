@@ -83,6 +83,22 @@ type FakeStore struct {
 	DownloadCallback func(ctx context.Context, setup Setup) error
 }
 
+func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)) func() {
+	old := f.ActionCallback
+	f.ActionCallback = fa
+	return func() {
+		f.ActionCallback = old
+	}
+}
+
+func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup) error) func() {
+	old := f.DownloadCallback
+	f.DownloadCallback = fa
+	return func() {
+		f.DownloadCallback = old
+	}
+}
+
 func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error) {
 	f.ActionCalls = append(f.ActionCalls, TestActionCall{
 		CurrentSdks: currentSdks,

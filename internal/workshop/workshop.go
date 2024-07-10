@@ -209,3 +209,27 @@ func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	}
 	return infos, nil
 }
+
+func (w *Workshop) InstallAgentSdk(ctx context.Context) error {
+	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
+	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
+		return err
+	}
+
+	// /var/lib/workshop/sdk/agent/current/meta
+	file, err := wfs.OpenFile(filepath.Join(agentMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Write([]byte(sdk.AgentSdkMeta(w.Base))); err != nil {
+		return err
+	}
+	return nil
+}

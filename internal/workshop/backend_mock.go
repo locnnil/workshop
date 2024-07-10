@@ -129,13 +129,13 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
 	if _, ok := f.Workshops[projectId][file.Name]; ok {
-		return api.StatusErrorf(http.StatusNotFound, "workshop exists already")
+		return errors.New("workshop exists")
 	}
 
 	ws := &FakeWorkshop{}
 	ws.Workshop = &Workshop{Backend: f,
 		Name:    file.Name,
-		Running: true,
+		Running: false,
 		Project: prj,
 		Base:    file.Base,
 		File:    file,
@@ -147,6 +147,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 
 	content := make(map[string]sdk.Setup)
 	f.Workshops[projectId][file.Name] = ws
+
 	for _, s := range file.Sdks {
 		setup := sdk.Setup{
 			Name:    s.Name,
@@ -242,16 +243,25 @@ func (s *FakeWorkshopBackend) Profile(ctx context.Context, w string, pr string) 
 	if err != nil {
 		return SdkProfile{}, err
 	}
-	profiles := s.Workshops[projectId][w].Profiles
+	wp, ok := s.Workshops[projectId][w]
+	if !ok {
+		return SdkProfile{}, ErrWorkshopNotFound
+	}
+
+	profiles := wp.Profiles
 	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == pr })
 	if idx != -1 {
 		return s.Workshops[projectId][w].Profiles[idx], nil
 	}
-	return SdkProfile{}, errors.New("profile not found")
+	return SdkProfile{}, ErrSdkProfileNotFound
 }
 
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
 	s.RemoveProfileCalls = append(s.RemoveProfileCalls, &RemoveProfileCall{Name: workshop, Profile: profile})
+
+	if s.RemoveProfileCallback != nil {
+		return s.RemoveProfileCallback(ctx, workshop, profile)
+	}
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return err
@@ -260,12 +270,9 @@ func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string
 	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == profile })
 	if idx != -1 {
 		s.Workshops[projectId][workshop].Profiles = slices.Delete(profiles, idx, idx+1)
-		if s.RemoveProfileCallback != nil {
-			return s.RemoveProfileCallback(ctx, workshop, profile)
-		}
 		return nil
 	}
-	return errors.New("profile not found")
+	return ErrSdkProfileNotFound
 }
 
 func (f *FakeWorkshopBackend) Profiles(ctx context.Context, workshop string) ([]SdkProfile, error) {
@@ -370,7 +377,7 @@ func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecConte
 }
 
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) error {
@@ -410,11 +417,11 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 }
 
 func (s *FakeWorkshopBackend) CreateStateStorage(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) DeleteStateStorage(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {

@@ -19,9 +19,11 @@ import (
 	"net/http"
 	"os/user"
 	"testing"
+	"time"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -36,6 +38,8 @@ type apiSuite struct {
 
 	workshopDir string
 	username    string
+	userhome    string
+	installTime time.Time
 	project     *workshop.Project
 	ctx         context.Context
 
@@ -43,6 +47,8 @@ type apiSuite struct {
 
 	restoreMuxVars   func()
 	restoreProjectId func()
+	restoreUser      func()
+	restoreTime      func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -50,15 +56,25 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
-	usr, err := user.Current()
+
+	s.username = "testuser"
+	s.userhome = c.MkDir()
+	cur, err := user.Current()
 	c.Assert(err, check.IsNil)
-	s.username = usr.Name
+	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		c.Check(name, check.Equals, s.username)
+		return &user.User{Name: s.username, HomeDir: s.userhome, Uid: cur.Uid, Gid: cur.Gid}, nil
+	})
+
 	s.project = &workshop.Project{
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
 	s.b = workshop.NewFakeWorkshopBackend()
 	s.store = &sdk.FakeStore{}
+
+	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
@@ -75,6 +91,8 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreProjectId()
+	s.restoreUser()
+	s.restoreTime()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {
@@ -85,6 +103,8 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
+	dirs.SetRootDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
 	d, err := New(&Options{Dir: s.workshopDir}, s.b)
 	c.Assert(err, check.IsNil)
 	c.Assert(d.overlord.StartUp(), check.IsNil)

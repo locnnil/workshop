@@ -198,6 +198,7 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	}
 	setupHook.WaitAll(install)
 	autoConnect.WaitAll(setupHook)
+	autoConnect.WaitAll(install)
 
 	all := state.NewTaskSet(install.Tasks()...)
 	all.AddAll(setupHook)

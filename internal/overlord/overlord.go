@@ -137,6 +137,9 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 	o.stateEng = NewStateEngine(s)
 	o.runner = state.NewTaskRunner(s)
 
+	sto := store.New()
+	sdk.ReplaceStore(s, sto)
+
 	// any unknown task should be ignored and succeed
 	matchAnyUnknownTask := func(_ *state.Task) bool {
 		return true
@@ -162,9 +165,6 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
-
-	sto := store.New()
-	sdk.ReplaceStore(s, sto)
 
 	return o, nil
 }

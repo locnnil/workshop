@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
-	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -24,8 +22,6 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
-
-var InstallTimeNow = time.Now
 
 func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	st := task.State()
@@ -72,27 +68,11 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	client := store.New()
+	st.Lock()
+	store := sdk.StoreService(st)
+	st.Unlock()
 
-	return client.DownloadSdk(ctx, rec)
-}
-
-func installAgentSdk(wfs workshop.WorkshopFs, base string) error {
-	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
-	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
-		return err
-	}
-
-	// /var/lib/workshop/sdk/agent/current/meta
-	file, err := wfs.OpenFile(filepath.Join(agentMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
-	if err != nil {
-		return err
-	}
-
-	if _, err = file.Write([]byte(sdk.AgentSdkMeta(base))); err != nil {
-		return err
-	}
-	return nil
+	return store.DownloadSdk(ctx, rec)
 }
 
 func (m *SdkManager) doInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -109,13 +89,7 @@ func (m *SdkManager) doInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error 
 		return err
 	}
 
-	wfs, err := m.backend.WorkshopFs(ctx, w)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	return installAgentSdk(wfs, wp.Base)
+	return wp.InstallAgentSdk(ctx)
 }
 
 func (m *SdkManager) undoInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error {

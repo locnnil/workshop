@@ -49,11 +49,11 @@ func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshop.W
 	}
 }
 
-func FakeSdkMounts(f func(ctx context.Context, back workshop.Backend, w *workshop.Workshop) (map[string][]*Mount, error)) (restore func()) {
-	old := sdkMounts
-	sdkMounts = f
+func FakeSdkMounts(f func(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error)) (restore func()) {
+	old := workshopMounts
+	workshopMounts = f
 	return func() {
-		sdkMounts = old
+		workshopMounts = old
 	}
 }
 

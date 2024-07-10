@@ -73,6 +73,7 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 
 	workshop, err := s.backend.Workshop(s.ctx, ws)
 	c.Assert(err, check.IsNil)
+	workshop.Running = true
 	return workshop
 }
 

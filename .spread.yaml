@@ -4,7 +4,7 @@ environment:
       PATH: $PATH:~/go/bin
       PROJECT_PATH: /workshop
       TESTSLIB: $PROJECT_PATH/tests/lib
-      SDKCONTENT: $PROJECT_PATH/tests/lib/sdk
+      SDKS: $PROJECT_PATH/tests/lib/sdk
       SDK_STORE_BUCKET_DIR: /data/sdk-store
 repack: |
     test -f tests/*.snap || snapcraft -o tests/

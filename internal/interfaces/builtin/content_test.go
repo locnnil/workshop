@@ -132,6 +132,8 @@ slots:
 	homeDir := c.MkDir()
 	usr, err := user.Current()
 	c.Assert(err, check.IsNil)
+	
+	
 
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
