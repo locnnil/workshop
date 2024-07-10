@@ -473,7 +473,7 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 
 	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
 	if slot == nil {
-		return fmt.Errorf("snap %q has no %q slot", slotRef.Sdk, slotRef.Name)
+		return fmt.Errorf("SDK %q has no %q slot", slotRef.Sdk, slotRef.Name)
 	}
 
 	var plugDynamicAttrs, slotDynamicAttrs map[string]interface{}

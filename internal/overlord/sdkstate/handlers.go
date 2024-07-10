@@ -229,6 +229,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	rev := revert.New()
+	defer rev.Fail()
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -272,7 +273,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 	rev.Add(func() {
-		if err := m.repo.RemoveSdk(project.ProjectId, w, state.ErrNoState.Error()); err != nil {
+		if err := m.repo.RemoveSdk(project.ProjectId, w, setup.Name); err != nil {
 			st.Lock()
 			task.Logf("Link SDK cleanup: could not remove %q SDK: %v", setup.Name, err)
 			st.Unlock()

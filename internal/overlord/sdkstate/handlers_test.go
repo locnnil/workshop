@@ -71,6 +71,21 @@ plugs:
     attr2: value2
 `
 
+var sdkYamlBrokenPolicy = `
+name: test-broken
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: test-interface
+    attr: value
+  plug2:
+    interface: test-interface
+    attr2: value2
+slots:
+  slot:
+    interface: content	
+`
+
 func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
@@ -111,7 +126,10 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
 
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
+		{Name: "test", Channel: "latest/stable"},
+		{Name: "test-broken", Channel: "latest/stable"},
+	}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
@@ -367,7 +385,6 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content
-	c.Check(info, check.HasLen, 1)
 	c.Check(info["test"], check.DeepEquals, testSdk)
 
 	sdkInfo, err := props.SdkInfo(s.ctx, info["test"].Name)
@@ -378,6 +395,52 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 2)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.NotNil)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.NotNil)
+}
+
+func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+	s.mockTestSdk(c, "test-broken", sdkYamlBrokenPolicy)
+
+	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
+
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", testSdk)
+	t1 := s.state.NewTask("link-sdk", "test-broken")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "content".*`)
+
+	// not in the fs (removed)
+	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, err = wfs.Stat(sdk.SdkCurrentPath("test-broken"))
+	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
+
+	// not in the content (unlinked)
+	wp, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, ok := wp.Content["test-broken"]
+	c.Check(ok, check.Equals, false)
+
+	// not in the repo (removed)
+	c.Check(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Check(s.repo.Slots(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 }
 
 func (s *sdkStateSuite) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
@@ -410,8 +473,8 @@ func (s *sdkStateSuite) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Content
-	c.Check(info, check.HasLen, 0)
+	_, ok := props.Content["test"]
+	c.Check(ok, check.Equals, false)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)
 
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)

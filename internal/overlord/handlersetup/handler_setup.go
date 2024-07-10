@@ -2,7 +2,6 @@ package handlersetup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"gopkg.in/tomb.v2"
@@ -33,14 +32,7 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 		st.Lock()
 		defer st.Unlock()
 
-		switch {
-		case errors.Is(err, context.Canceled):
-			task.Logf("The task execution was cancelled")
-			// the context cancellation here means the change was aborted and
-			// the undo logic chain started. we don't report the context
-			// cancellation as error here as it is an expected interruption
-			return nil
-		case err != nil:
+		if err != nil {
 			change := task.Change()
 			if change.Kind() == "refresh" {
 				var setup conflict.RefreshSetup
@@ -63,7 +55,6 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 				}
 
 			}
-
 			return err
 		}
 

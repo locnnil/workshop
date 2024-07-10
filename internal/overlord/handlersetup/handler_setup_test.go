@@ -1,9 +1,7 @@
 package handlersetup_test
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"testing"
 
@@ -42,23 +40,6 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.project = &workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
-}
-
-func (s *CommonStateFuncs) TestContextCancelled(c *check.C) {
-	task := s.setupTask()
-
-	s.state.Lock()
-	chg := task.Change()
-	chg.Set("refresh-setup", conflict.RefreshSetup{Mode: conflict.RefreshWaitOnError.String()})
-	chg.Set("project-id", s.project.ProjectId)
-	task.Change().Abort()
-	s.state.Unlock()
-
-	handler := handlersetup.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
-		return fmt.Errorf("execution error %w", context.Canceled)
-	})
-	err := handler(task, nil)
-	c.Assert(err, check.IsNil)
 }
 
 func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {

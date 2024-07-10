@@ -162,7 +162,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, []*WorkshopInfo{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*WorkshopInfo{
 		{
 			Name:      "manysdks",
 			Base:      "ubuntu@22.04",
