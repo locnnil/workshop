@@ -114,13 +114,13 @@ Plugs and slots
 
 To provide access to these resource types,
 |project_markup| exposes *interface slots*.
-For example, a :ref:`content interface slot <exp_content_interface>`
+For example, a :ref:`content interface <exp_content_interface>` slot
 creates an internal host directory to be mounted inside the workshop;
 think of the slot as the provider of the resource.
 
 Further, individual SDKs define *plugs*
 to connect to a slot of a certain interface type.
-In our :ref:`previous example <exp_sdk_definition>`,
+In our :ref:`definition example <exp_sdk_definition>`,
 it's the *content interface* mentioned above.
 
 You can think of the plug as the recipient of the resources exposed by the slot;

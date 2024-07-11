@@ -91,7 +91,7 @@ They stay there even if you remove the workshop:
 
 From here, you can do whatever you like with your repo,
 because |project_markup| handles
-:ref:`moving files around <how_moving_projects>` quite well.
+:ref:`moving projects around <how_moving_projects>` quite well.
 
 With your dependencies accounted for,
 restoring your build system after cloning the repo elsewhere
