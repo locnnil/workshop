@@ -167,7 +167,6 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	var prevAuto = st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
 	prevAuto.Set("sdk", "agent")
 	autoConnect := state.NewTaskSet(prevAuto)
-	autoConnect.WaitAll(install)
 
 	for idx, sdk := range sdks {
 		// The install task sets must not run concurrently as exec ops are not

@@ -105,36 +105,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	return m.connectAuto(task, wp, info, remounts)
 }
 
-func (m *InterfaceManager) undoAutoConnect(task *state.Task, tomb *tomb.Tomb) error {
-	_, project, w, err := handlersetup.UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	st := task.State()
-	st.Lock()
-	s, err := handlersetup.Sdk(task)
-	st.Unlock()
-	if err != nil {
-		return err
-	}
-
-	_, err = m.repo.DisconnectSdk(project.ProjectId, w, s)
-	if err != nil {
-		return err
-	}
-	if err := m.repo.RemoveSdk(project.ProjectId, w, s); err != nil {
-		return err
-	}
-	st.Lock()
-	_, err = m.reloadConnections(project.ProjectId, w, s)
-	st.Unlock()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Returns content interface connection IDs of the SDK and their corresponding
 // plug's dynamic attributes.
 func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]string {

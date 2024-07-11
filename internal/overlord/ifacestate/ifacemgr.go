@@ -30,7 +30,7 @@ func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceMan
 		repo:    interfaces.NewRepository(),
 	}
 
-	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
+	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
 	r.AddHandler("connect", OnDo(m.doConnect), m.undoConnect)
