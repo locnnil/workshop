@@ -40,7 +40,7 @@ A simple definition might look like this:
 It specifies a *base* and an *SDK*.
 A more complete definition would usually list several SDKs
 that use different :ref:`interfaces <exp_interfaces>`,
-packages and :ref:`hooks <exp_sdk_hooks>`.
+software packages and :ref:`hooks <exp_sdk_hooks>`.
 
 
 .. _exp_base:

@@ -20,8 +20,8 @@ For a workshop to be operational,
 the plugs defined by the SDKs listed in the workshop definition
 must at some point *connect* to the appropriate interface slots.
 
-Such connections are uniformly established via a
-:ref:`special SDK <exp_agent_sdk>`
+Such connections are uniformly established via the
+:ref:`agent SDK <exp_agent_sdk>`
 that is quietly present in every workshop,
 but not immediately visible to its users.
 

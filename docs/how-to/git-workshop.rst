@@ -31,7 +31,7 @@ in your repository:
 
 
 Next,
-:command:`launch` the workshop
+launch the workshop
 and start working on your code:
 
 .. code-block:: console

@@ -11,7 +11,7 @@ Let's spend some time talking about different aspects of this.
 Before launch
 -------------
 
-A workshop that you didn't :command:`launch`
+A workshop that you didn't launch
 is just a definition file
 that behaves like any good file should.
 Things change *after* you run :command:`workshop launch`:

@@ -13,8 +13,8 @@ under the :samp:`latest/edge` channel.
 
 .. note::
 
-   This guide assumes that you already have |project_markup|
-   :ref:`installed <tutorial>` and know how to use it.
+   This guide assumes that you already have |project_markup| installed
+   and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
    so we'll use their
    `tutorials
@@ -142,7 +142,7 @@ Try this for yourself:
 
 
 This time, the build should be much quicker,
-although :command:`refresh` rebuilds the workshop from scratch,
+although :command:`workshop refresh` rebuilds the workshop from scratch,
 including any SDK updates.
 
 The host-mapped contents of the workshop can actually be seen
