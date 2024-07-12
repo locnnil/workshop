@@ -102,7 +102,7 @@ we'll help you get it out there.
 
 - `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
 
-- `Product map <https://warthogs.atlassian.net/projects/SDK?selectedItem=com.atlassian.plugins.atlassian-connect-plugin:com.herocoders.plugins.jira.epicsmap__epics-map-page>`__
+- `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
 
 - `Contribution and participation <https://github.com/canonical/workshop/pulls>`__
 

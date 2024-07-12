@@ -4,7 +4,7 @@ How to debug issues in workshops
 ================================
 
 To trace the root cause
-of a workshop misbehaving at :command:`refresh` or any other action,
+of a workshop misbehaving at :command:`workshop refresh` or any other action,
 you can explore its underlying changes and tasks, stop on error,
 list system-wide warnings and acknowledge false positives.
 
@@ -26,7 +26,7 @@ from the :samp:`latest/edge` channel:
        channel: latest/edge
 
 
-Suppose something goes wrong during a :command:`refresh`:
+Suppose something goes wrong during :command:`workshop refresh`:
 
 .. code-block:: console
 
@@ -82,8 +82,8 @@ The SDK-specific reason can be addressed individually.
 Wait on error
 -------------
 
-The :option:`!--wait-on-error` option can be used with :command:`refresh`
-to pause the process when an error occurs;
+The :option:`!--wait-on-error` option in :command:`workshop refresh`
+pauses the refresh when an error occurs;
 instead of reverting the workshop to its previous state,
 |project_markup| will leave it as is for you to investigate:
 

@@ -29,7 +29,7 @@ that |project_markup| runs at the appropriate moments
 to consistently handle such data, collectively known as *SDK state*.
 
 For example, before changes are applied to the workshop
-during a :command:`refresh`,
+during :command:`workshop refresh`,
 the states of the SDKs are saved
 by invoking their :samp:`save-state` hooks.
 On success,
@@ -81,7 +81,7 @@ Specific examples include :samp:`setup-base`,
 :samp:`save-state` and :samp:`restore-state`.
 
 You may see individual hooks mentioned in the output of
-:command:`changes` and :command:`tasks` commands;
+:command:`workshop changes` and :command:`workshop tasks`;
 understanding the events that trigger them can help you with troubleshooting.
 
 
@@ -114,20 +114,20 @@ Plugs and slots
 
 To provide access to these resource types,
 |project_markup| exposes *interface slots*.
-For example, a :ref:`content interface slot <exp_content_interface>`
+For example, a :ref:`content interface <exp_content_interface>` slot
 creates an internal host directory to be mounted inside the workshop;
 think of the slot as the provider of the resource.
 
 Further, individual SDKs define *plugs*
 to connect to a slot of a certain interface type.
-In our :ref:`previous example <exp_sdk_definition>`,
+In our :ref:`definition example <exp_sdk_definition>`,
 it's the *content interface* mentioned above.
 
 You can think of the plug as the recipient of the resources exposed by the slot;
 note that a slot can handle connections with multiple plugs.
 
 This mechanism comes into play when you
-:command:`launch` or :command:`start` the workshop;
+:command:`workshop launch` or :command:`workshop start` the workshop;
 the plugs defined by its SDKs are automatically connected to the slots,
 provided that the definition has all |project_markup| needs to make a match.
 
@@ -157,20 +157,20 @@ Related CLI operations
 A number of basic workshop operations
 affect plugs and slots in different ways.
 
-When you :command:`launch` a workshop,
+When you :command:`workshop launch` a workshop,
 an auto-connect task handles each interface plug,
 finding a candidate slot,
 verifying the plug's eligibility for the slot based on their declarations
 and connecting the two.
 
-On :command:`refresh`,
+On :command:`workshop refresh`,
 existing connections are preserved in the refreshed workshop
 if their plugs were connected before the operation.
 A newer version of an SDK may drop a plug that was previously connected;
 such connections are removed,
 but the host-based content remains.
 
-On :command:`remove`,
+On :command:`workshop remove`,
 both the interface connections and the default host directories
 (if any have been created, for example, to accommodate content interface slots)
 are removed.
@@ -185,8 +185,8 @@ are removed.
 
 
 Also, you can manually enable or disable connections
-with :command:`connect` and :command:`disconnect` commands,
-whereas :command:`connections` can list all connections
+with :command:`workshop connect` and :command:`workshop disconnect`,
+whereas :command:`workshop connections` can list all connections
 that have been established by any |project_markup| projects.
 
 

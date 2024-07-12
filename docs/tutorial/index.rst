@@ -14,7 +14,7 @@ from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
 and :ref:`refreshing <tut_refresh>` it
 to :ref:`executing commands <tut_exec>`,
 :ref:`shelling <tut_shell>` into the workshop
-and finally :ref:`deleting <tut_remove>` it.
+and finally :ref:`removing <tut_remove>` it.
 The actions you're about to perform
 cover most of your daily needs with |project_markup|.
 
@@ -249,7 +249,7 @@ After launching, you can see the run-time :ref:`info <ref_workshop_info>`:
          channel:  latest/stable
          mounts:
            mod-cache:
-             host:      .../a4361706/content/golang_go_mod-cache.sdk
+             host:      .../6b79e889/content/golang_go_mod-cache.sdk
              workshop:  /home/workshop/go/pkg/mod
 
 
@@ -258,7 +258,7 @@ but includes extra details
 such as the :ref:`content interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
-Try moving it temporarily and re-run :command:`list`:
+Try moving it temporarily and re-run :command:`workshop list`:
 
 .. code-block:: console
 
@@ -345,9 +345,9 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 Both commands work gracefully,
 waiting for the workshop to comply;
-:command:`stop` doesn't destroy a workshop
+:command:`workshop stop` doesn't destroy a workshop
 (unlike :ref:`remove <tut_remove>`),
-and :command:`start` doesn't build it from scratch
+and :command:`workshop start` doesn't build it from scratch
 (unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`).
 
 
@@ -388,7 +388,7 @@ and refresh the workshop:
    $ workshop refresh golang
 
 
-In general, :command:`refresh` is similar to a :ref:`launch <tut_launch>`.
+Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
 However, its default priority is to keep the workshop operational;
 if problems arise, it rolls back.
 For more details, see the
@@ -401,7 +401,7 @@ Execute commands
 ----------------
 
 When the workshop is *Ready* after the refresh,
-you can :ref:`exec <ref_workshop_exec>` arbitrary commands in it.
+you can :ref:`execute <ref_workshop_exec>` arbitrary commands in it.
 
 Save this Go code in the project directory to build it inside the workshop:
 
@@ -423,7 +423,7 @@ Save this Go code in the project directory to build it inside the workshop:
 
 
 You can define environment variables for the command,
-or separate the command from :command:`exec` options:
+or separate the command from :command:`workshop exec` options:
 
 .. code-block:: console
 
@@ -487,7 +487,7 @@ use :ref:`connections <ref_workshop_connections>`:
 
 
 This is the :ref:`content interface <exp_content_interface>`
-you've seen :ref:`earlier <tut_launch>`
+you've seen at :ref:`launch <tut_launch>`
 in the output from :command:`workshop info`.
 
 Some interfaces are auto-connected, while some are not;
