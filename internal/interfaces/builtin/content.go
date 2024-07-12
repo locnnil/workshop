@@ -103,7 +103,7 @@ func (iface *contentInterface) source(user *user.User, plug *interfaces.Connecte
 		return source, err
 	}
 	// default dir: <workshop>_<sdk>_plug.sdk
-	return sdk.DefaultContentSource(user.HomeDir, plug.Sdk().ProjectId, plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
+	return sdk.SdkContentSource(user.HomeDir, plug.Sdk().ProjectId, plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {

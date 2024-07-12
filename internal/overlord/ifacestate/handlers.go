@@ -979,7 +979,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user s
 	if err := connection.Plug.Attr("source", &oldSource); err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
 		return err
 	} else if errors.Is(err, sdk.AttributeNotFoundError{}) {
-		oldSource = sdk.DefaultContentSource(usr.HomeDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
+		oldSource = sdk.SdkContentSource(usr.HomeDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
 	}
 
 	if err := connection.Plug.SetAttr("source", source); err != nil {

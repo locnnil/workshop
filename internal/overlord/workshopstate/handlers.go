@@ -13,6 +13,7 @@ import (
 
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
@@ -235,7 +236,8 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string)
 	}
 
 	var errors []error
-	projectContent := filepath.Join(usr.HomeDir, ".local", "share", "workshop", "project", projectId, "content")
+	projectContent := sdk.ProjectContentDir(usr.HomeDir, projectId)
+
 	var contentDirs []fs.DirEntry
 	if contentDirs, err = os.ReadDir(projectContent); err != nil {
 		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", w, err))
@@ -252,7 +254,8 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string)
 	for _, dir := range contentDirs {
 		// Remove all default content dirs that belong the workshop. These will be
 		// named as <workshop>_<sdk>_<plug>.sdk
-		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), w+"_") {
+		base := filepath.Base(dir.Name())
+		if dir.IsDir() && strings.HasPrefix(base, w+"_") {
 			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
 				errors = append(errors, err)
 			}

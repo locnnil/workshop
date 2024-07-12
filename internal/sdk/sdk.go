@@ -316,9 +316,13 @@ func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
 }
 
-func DefaultContentSource(homedir, pid, wp, sdk, plug string) string {
+func ProjectContentDir(homedir, pid string) string {
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content")
+}
+
+func SdkContentSource(homedir, pid, wp, sdk, plug string) string {
 	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content", dir)
+	return filepath.Join(ProjectContentDir(homedir, pid), dir)
 }
 
 func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {

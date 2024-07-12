@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -120,7 +121,7 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string
 	s.createWFile(c, name, yaml)
 
 	defer s.store.SetActionCallback(storeAction)()
-	defer s.mockWorkshopFs(c, sdks)()
+	defer s.mockInstalledSdks(c, sdks)()
 
 	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch"}`, name))
 	s.vars = map[string]string{"id": s.project.ProjectId}
@@ -230,7 +231,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
-						Source: sdk.DefaultContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
 						Target: "/opt/data",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -248,7 +249,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
-						Source: sdk.DefaultContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -300,7 +301,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
-						Source: sdk.DefaultContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -318,7 +319,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
-						Source: sdk.DefaultContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -386,6 +387,8 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 					status := change.Status()
 					st.Unlock()
 					if status == state.WaitStatus {
+						// some tests (refresh continue/abort) leave the change
+						// in the wait state and this is expected.
 						break End
 					}
 				}
@@ -415,7 +418,7 @@ func storeAction(ctx context.Context, currentSdks map[string]*sdk.Info, actions 
 	return result, nil
 }
 
-func (s *apiSuite) mockWorkshopFs(c *check.C, sdks map[string]string) func() {
+func (s *apiSuite) mockInstalledSdks(c *check.C, sdks map[string]string) func() {
 	fs := workshop.NewFakeWorkshopFs()
 
 	for n, s := range sdks {
@@ -425,9 +428,16 @@ func (s *apiSuite) mockWorkshopFs(c *check.C, sdks map[string]string) func() {
 
 		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 		c.Assert(err, check.IsNil)
+		defer file.Close()
 
 		_, err = file.Write([]byte(s))
 		c.Assert(err, check.IsNil)
+
+		for _, hook := range []string{"setup-base", "save-state", "restore-state"} {
+			setuphook, err := fs.OpenFile(sdk.SdkHookPath(n, hook), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
+			c.Assert(err, check.IsNil)
+			defer setuphook.Close()
+		}
 	}
 
 	s.b.WorkshopFsCallback = func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
@@ -477,10 +487,56 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	c.Assert(repo.Slots(s.project.ProjectId, "basic", "agent"), check.HasLen, 3)
 }
 
-func (s *apiSuite) TestWorkshopLaunchPlugBindsSuccess(c *check.C) {
+func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		cmd := args.Command
+		if strings.Contains(cmd[len(cmd)-1], "setup-base") {
+			return workshop.ExecContext{}, errors.New("cannot execute setup-base")
+		}
+		return workshop.ExecContext{
+			Environment:   args.Environment,
+			WaitExecution: func(ctx context.Context) error { return nil },
+		}, nil
+	}
+	defer func() { s.b.ExecCallback = nil }()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	_, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "agent"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "agent"), check.HasLen, 0)
+
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
+
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
+}
+
+func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 	// Setup
 	s.createWFile(c, "somebound", somebound)
-	defer s.mockWorkshopFs(c, testsdks)()
+	defer s.mockInstalledSdks(c, testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["somebound"],"action":"launch"}`),
@@ -510,7 +566,7 @@ func (s *apiSuite) TestWorkshopLaunchPlugBindsSuccess(c *check.C) {
 	c.Assert(bound, check.Equals, true)
 }
 
-func (s *apiSuite) TestWorkshopLaunchBindPlugNoMasterPlug(c *check.C) {
+func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 	// Setup
 
 	s.createWFile(c, "masterunknown", masterunknown)
@@ -530,7 +586,7 @@ func (s *apiSuite) TestWorkshopLaunchBindPlugNoMasterPlug(c *check.C) {
 	s.runActionTest(c, requests, expected)
 }
 
-func (s *apiSuite) TestWorkshopLaunchBindPlugNoSlavePlug(c *check.C) {
+func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 	// Setup
 
 	s.createWFile(c, "slaveunknown", slaveunknown)
@@ -550,7 +606,7 @@ func (s *apiSuite) TestWorkshopLaunchBindPlugNoSlavePlug(c *check.C) {
 	s.runActionTest(c, requests, expected)
 }
 
-func (s *apiSuite) TestWorkshopLaunchBindPlugIncompatibleIface(c *check.C) {
+func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	// Setup
 	s.createWFile(c, "bindincompatible", bindincompatible)
 
@@ -594,6 +650,76 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	}
 
 	s.runActionTest(c, requests, expected)
+}
+
+func (s *apiSuite) TestRefreshWorkshopFailed(c *check.C) {
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		cmd := args.Command
+		if strings.Contains(cmd[len(cmd)-1], "restore-state") {
+			return workshop.ExecContext{}, errors.New("cannot execute restore-state")
+		}
+		return workshop.ExecContext{
+			Environment:   args.Environment,
+			WaitExecution: func(ctx context.Context) error { return nil },
+		}, nil
+	}
+	defer func() { s.b.ExecCallback = nil }()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`)}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	wp, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+
+	content, err := wp.ContentInfo(s.ctx)
+	c.Assert(err, check.IsNil)
+	c.Assert(content, check.HasLen, 2)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "content"},
+		},
+	})
+
+	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "content"},
+		},
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "gpu"},
+		},
+	})
 }
 
 func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
