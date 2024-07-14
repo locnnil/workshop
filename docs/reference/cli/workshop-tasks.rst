@@ -10,6 +10,16 @@ Lists tasks for a specific change.
    $ workshop tasks <CHANGE ID> [OPTIONS]
 
 
+Examples
+--------
+
+List the tasks under change ID :samp:`42`:
+
+.. code-block:: console
+
+   $ workshop tasks 42
+
+
 Synopsis
 --------
 

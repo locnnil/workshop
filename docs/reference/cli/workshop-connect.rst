@@ -10,6 +10,30 @@ Connects a plug to a slot.
    $ workshop connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>] [OPTIONS]
 
 
+Examples
+--------
+
+Connect the :samp:`mod-cache` content interface plug
+of the :samp:`go` SDK under the :samp:`nimble` workshop
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop connect nimble/go:mod-cache :content
+
+
+The command needs to name the slot (:samp:`content`) explicitly
+because the plug has a non-default name;
+otherwise, it could be omitted.
+
+
+A full version of the command that also lists the target SDK (:samp:`agent`):
+
+.. code-block:: console
+
+   $ workshop connect nimble/go:mod-cache nimble/agent:content
+
+
 Synopsis
 --------
 

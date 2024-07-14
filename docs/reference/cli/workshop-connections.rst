@@ -7,7 +7,25 @@ Lists interface connections.
 
 .. code-block:: console
 
-   $ workshop connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>] [OPTIONS]
+   $ workshop connections [<WORKSHOP>] [OPTIONS]
+
+
+Examples
+--------
+
+List connections for the workshop :samp:`nimble`
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop connections nimble
+
+
+List connections for all workshops in the current project directory:
+
+.. code-block:: console
+
+   $ workshop connections
 
 
 Synopsis

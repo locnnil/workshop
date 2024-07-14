@@ -10,6 +10,17 @@ Starts one or many workshops.
    $ workshop start <WORKSHOP>... [OPTIONS]
 
 
+Examples
+--------
+
+Start the :samp:`nimble` and :samp:`jazzy` workshops
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop start nimble jazzy
+
+
 Synopsis
 --------
 

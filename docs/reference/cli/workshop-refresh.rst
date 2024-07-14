@@ -10,6 +10,40 @@ Updates workshops according to their definitions.
    $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [OPTIONS]
 
 
+Examples
+--------
+
+Refresh the :samp:`nimble` and :samp:`jazzy` workshops
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop refresh nimble jazzy
+
+
+Refresh :samp:`nimble`, but stop on any errors
+(won't accept multiple workshops):
+
+.. code-block:: console
+
+   $ workshop refresh nimble --wait-on-error
+
+
+After :samp:`nimble` refresh stopped on error, abort the operation:
+
+.. code-block:: console
+
+   $ workshop refresh nimble --abort
+
+
+After :samp:`nimble` refresh stopped on error and the workshop was fixed,
+continue the operation:
+
+.. code-block:: console
+
+   $ workshop refresh nimble --continue
+
+
 Synopsis
 --------
 

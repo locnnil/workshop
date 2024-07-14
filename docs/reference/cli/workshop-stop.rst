@@ -10,6 +10,17 @@ Stops one or many workshops.
    $ workshop stop <WORKSHOP>... [OPTIONS]
 
 
+Examples
+--------
+
+Stop the :samp:`nimble` and :samp:`jazzy` workshops
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop stop nimble jazzy
+
+
 Synopsis
 --------
 

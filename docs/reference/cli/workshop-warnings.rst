@@ -10,6 +10,16 @@ Lists warnings.
    $ workshop warnings [OPTIONS]
 
 
+Examples
+--------
+
+List the globally registered warnings across all workshops:
+
+.. code-block:: console
+
+   $ workshop warnings
+
+
 Synopsis
 --------
 

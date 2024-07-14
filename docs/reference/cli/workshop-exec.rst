@@ -7,7 +7,40 @@ Runs a command and waits for it to complete.
 
 .. code-block:: console
 
-   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [-uid <USER>] [-gid <GROUP>] <COMMAND> [OPTIONS]
+   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [--uid <USER>] [--gid <GROUP>] <COMMAND> [OPTIONS]
+
+
+Examples
+--------
+
+Run the :samp:`go build main.go` command
+under the :samp:`nimble` workshop
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop exec nimble go build main.go
+
+
+A similar command that sets an environment variable and the working directory:
+
+.. code-block:: console
+
+   $ workshop exec nimble --env GO111MODULE=off -w /project/ -- go build -x
+
+
+Run a custom interactive shell:
+
+.. code-block:: console
+
+   $ workshop exec nimble -I sh
+
+
+Run a command as root (the default is :samp:`workshop`):
+
+.. code-block:: console
+
+   $ workshop exec nimble --uid 0 id
 
 
 Synopsis
