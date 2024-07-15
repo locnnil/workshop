@@ -68,7 +68,7 @@ func (cn connection) String() string {
 		opts = append(opts, "manual")
 	}
 	if cn.bind != "" && cn.bindIdx > 0 {
-		opts = append(opts, fmt.Sprintf("bind:%d", cn.bindIdx))
+		opts = append(opts, fmt.Sprintf("bind.%d", cn.bindIdx))
 	}
 	if len(opts) == 0 {
 		return "-"

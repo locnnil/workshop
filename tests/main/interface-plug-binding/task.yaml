@@ -3,12 +3,12 @@ execute: |
   . "$TESTSLIB"/utils.sh
      
   function check_original_binding() {
-    MATCH "content    ws-bind/test-sdk-content:content-plug-one  :content  bind:1" < conns.log
-    MATCH "content    ws-bind/test-sdk-content:content-plug-two  :content  bind:3" < conns.log
-    MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      :content  bind:3" < conns.log
-    MATCH "content    ws-bind/test-sdk-multiple-plugs:data       :content  bind:1" < conns.log
-    MATCH "ssh-agent  ws-bind/test-sdk-multiple-plugs:ssh-agent  -         bind:5" < conns.log
-    MATCH "ssh-agent  ws-bind/test-sdk-ssh-agent:ssh-agent       -         bind:5" < conns.log
+    MATCH "content    ws-bind/test-sdk-content:content-plug-one  :content  bind.1" < conns.log
+    MATCH "content    ws-bind/test-sdk-content:content-plug-two  :content  bind.3" < conns.log
+    MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      :content  bind.3" < conns.log
+    MATCH "content    ws-bind/test-sdk-multiple-plugs:data       :content  bind.1" < conns.log
+    MATCH "ssh-agent  ws-bind/test-sdk-multiple-plugs:ssh-agent  -         bind.5" < conns.log
+    MATCH "ssh-agent  ws-bind/test-sdk-ssh-agent:ssh-agent       -         bind.5" < conns.log
   }
   
   workshop_exec launch ws-bind
@@ -25,14 +25,14 @@ execute: |
   echo "Check disconnect affects all bound plugs"
   workshop_exec disconnect ws-bind/test-sdk-multiple-plugs:cache
   workshop_exec connections ws-bind > conns.log
-  MATCH "content    ws-bind/test-sdk-content:content-plug-two  -         bind:3" < conns.log
-  MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      -         bind:3" < conns.log
+  MATCH "content    ws-bind/test-sdk-content:content-plug-two  -         bind.3" < conns.log
+  MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      -         bind.3" < conns.log
 
   echo "Check connect affects all bound plugs"
   workshop_exec connect ws-bind/test-sdk-multiple-plugs:cache :content
   workshop_exec connections ws-bind > conns.log
-  MATCH "content    ws-bind/test-sdk-content:content-plug-two  :content  manual,bind:3" < conns.log
-  MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      :content  manual,bind:3" < conns.log
+  MATCH "content    ws-bind/test-sdk-content:content-plug-two  :content  manual,bind.3" < conns.log
+  MATCH "content    ws-bind/test-sdk-multiple-plugs:cache      :content  manual,bind.3" < conns.log
 
   echo "Check remount affects all bound plugs"
   new_source="/home/ubuntu/remount-bound-test"

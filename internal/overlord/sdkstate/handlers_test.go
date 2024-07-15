@@ -71,7 +71,7 @@ plugs:
     attr2: value2
 `
 
-var sdkYamlBrokenPolicy = `
+var sdkYamlViolatesPolicy = `
 name: test-broken
 base: ubuntu@22.04
 plugs:
@@ -402,7 +402,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	defer s.state.Unlock()
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	s.mockTestSdk(c, "test-broken", sdkYamlBrokenPolicy)
+	s.mockTestSdk(c, "test-broken", sdkYamlViolatesPolicy)
 
 	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 
