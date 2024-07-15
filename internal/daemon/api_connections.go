@@ -378,6 +378,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			}
 		}
 		repo := c.d.overlord.InterfaceManager().Repository()
+		seen := map[interfaces.ConnRef]bool{}
 		for _, connRef := range conns {
 			var ts *state.TaskSet
 			plugW, werr := c.d.overlord.WorkshopManager().Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
@@ -394,13 +395,15 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 					break
 				}
 			}
-			ts, err = ifacestate.Disconnect(st, plugW, connRef, a.Forget)
+			ts, err = ifacestate.Disconnect(st, plugW, connRef, a.Forget, seen)
 			if err != nil {
 				break
 			}
 
-			ts.JoinLane(st.NewLane())
-			tasksets = append(tasksets, ts)
+			if len(ts.Tasks()) > 0 {
+				ts.JoinLane(st.NewLane())
+				tasksets = append(tasksets, ts)
+			}
 		}
 	}
 	if err != nil {
