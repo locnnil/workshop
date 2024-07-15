@@ -49,7 +49,7 @@ plugs:
   key: value
   label: label
 `
-	consumerYamlBound = `
+	consumerYamlManyPlugs = `
 name: consumer
 base: ubuntu@22.04
 plugs:
@@ -725,7 +725,7 @@ func (s *apiSuite) TestConnectionsBoundPlug(c *check.C) {
 
 	d := s.daemon(c)
 
-	s.mockInstalledSDKBoundPlug(c, consumerYamlBound, "consumer-ws", "plug", "plug2")
+	s.mockInstalledSDKBoundPlug(c, consumerYamlManyPlugs, "consumer-ws", "plug", "plug2")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
@@ -1096,7 +1096,7 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 
 	d := s.daemon(c)
 
-	s.mockInstalledSDK(c, consumerYamlBound, "consumer-ws")
+	s.mockInstalledSDK(c, consumerYamlManyPlugs, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
@@ -1433,7 +1433,7 @@ func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, 
 
 	d := s.daemon(c)
 
-	wp := s.mockInstalledSDK(c, consumerYamlBound, "consumer-ws")
+	wp := s.mockInstalledSDK(c, consumerYamlManyPlugs, "consumer-ws")
 	wp.File.Sdks[0].Plugs = opts.bind
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
@@ -1536,6 +1536,20 @@ func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 		},
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
+	opts := &disconnectOpts{
+		bind: map[string]workshop.Plug{
+			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+		},
+	}
+	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", opts)
 	s.d.state.Lock()
 	var conns map[string]interface{}
 	s.d.state.Get("conns", &conns)

@@ -70,31 +70,46 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 	return ts, nil
 }
 
-func disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool) *state.TaskSet {
-	master, affected := MaybeBound(plugW, conn.PlugRef)
-
-	mtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", master, conn.SlotRef.ShortRef()))
-	mtask.Set("plug", master)
-	mtask.Set("slot", conn.SlotRef)
-	mtask.Set("forget", forget)
-	ts := state.NewTaskSet(mtask)
-	prev := mtask
-
-	for _, p := range affected {
-		stask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", p, conn.SlotRef.ShortRef()))
-		stask.Set("plug", p)
-		stask.Set("slot", conn.SlotRef)
-		stask.Set("forget", forget)
-
-		stask.WaitFor(prev)
-		prev = stask
-		ts.AddTask(stask)
+func maybeAddDisconnect(st *state.State, ts *state.TaskSet, conn interfaces.ConnRef, forget bool, seen map[interfaces.ConnRef]bool) error {
+	if _, ok := seen[conn]; ok {
+		return nil
 	}
-	return ts
+
+	dtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", conn.PlugRef.ShortRef(), conn.SlotRef.ShortRef()))
+	dtask.Set("plug", conn.PlugRef)
+	dtask.Set("slot", conn.SlotRef)
+	dtask.Set("forget", forget)
+
+	l := len(ts.Tasks())
+	if l > 0 {
+		dtask.WaitFor(ts.Tasks()[l-1])
+	}
+	ts.AddTask(dtask)
+	seen[conn] = true
+
+	return nil
+}
+
+func disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool, seen map[interfaces.ConnRef]bool) (*state.TaskSet, error) {
+	master, affected := MaybeBound(plugW, conn.PlugRef)
+	var ts = state.NewTaskSet()
+
+	cref := interfaces.ConnRef{PlugRef: master, SlotRef: conn.SlotRef}
+	if err := maybeAddDisconnect(st, ts, cref, forget, seen); err != nil {
+		return nil, err
+	}
+
+	for _, slave := range affected {
+		cref = interfaces.ConnRef{PlugRef: slave, SlotRef: conn.SlotRef}
+		if err := maybeAddDisconnect(st, ts, cref, forget, seen); err != nil {
+			return nil, err
+		}
+	}
+	return ts, nil
 }
 
 // Disconnect returns a set of tasks for disconnecting an interface.
-func Disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
+func Disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool, seen map[interfaces.ConnRef]bool) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
 	if err != nil {
@@ -106,5 +121,6 @@ func Disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.Conn
 	if err != nil {
 		return nil, err
 	}
-	return disconnect(st, plugW, conn, forget), nil
+
+	return disconnect(st, plugW, conn, forget, seen)
 }
