@@ -10,6 +10,17 @@ Acknowledges listed warnings.
    $ workshop okay [OPTIONS]
 
 
+Examples
+--------
+
+Acknowledge the globally registered warnings across all workshops
+(must run after :ref:`ref_workshop_warnings`):
+
+.. code-block:: console
+
+   $ workshop okay
+
+
 Synopsis
 --------
 

@@ -10,6 +10,19 @@ Mount a new source location to the content interface plug's target.
    $ workshop remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE> [OPTIONS]
 
 
+Examples
+--------
+
+Remount the :samp:`mod-cache` content interface plug
+of the :samp:`go` SDK under the :samp:`nimble` workshop
+in the current project directory
+to :file:`~/new-cache-mount/` on the host:
+
+.. code-block:: console
+
+   $ workshop remount nimble/go:mod-cache ~/new-cache-mount/
+
+
 Synopsis
 --------
 

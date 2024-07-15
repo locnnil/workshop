@@ -10,6 +10,16 @@ Lists recent changes to the workshops in a project.
    $ workshop changes [OPTIONS]
 
 
+Examples
+--------
+
+List changes for all workshops in the current project directory:
+
+.. code-block:: console
+
+   $ workshop changes
+
+
 Synopsis
 --------
 

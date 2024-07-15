@@ -10,6 +10,17 @@ Constructs one or many workshops using their definitions.
    $ workshop launch <WORKSHOP>... [OPTIONS]
 
 
+Examples
+--------
+
+Launch the :samp:`nimble` and :samp:`jazzy` workshops
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop launch nimble jazzy
+
+
 Synopsis
 --------
 

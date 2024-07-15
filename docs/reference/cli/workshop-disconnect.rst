@@ -10,6 +10,35 @@ Disconnects a plug or a slot.
    $ workshop disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>] [OPTIONS]
 
 
+Examples
+--------
+
+Disconnect the :samp:`mod-cache` content interface plug
+of the :samp:`go` SDK under the :samp:`nimble` workshop
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop disconnect nimble/go:mod-cache
+
+
+A full version of the same command
+that lists the target SDK (:samp:`agent`) and slot (:samp:`content`):
+
+.. code-block:: console
+
+   $ workshop disconnect nimble/go:mod-cache nimble/agent:content
+
+
+Disconnect *all plugs* connected to the :samp:`:content` slot
+of the :samp:`agent` SDK under the :samp:`nimble` workshop
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop disconnect nimble/agent:content
+
+
 Synopsis
 --------
 

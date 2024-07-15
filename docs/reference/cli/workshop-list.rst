@@ -10,6 +10,23 @@ Lists project workshops.
    $ workshop list [--global] [OPTIONS]
 
 
+Examples
+--------
+
+List the workshops in the current project directory:
+
+.. code-block:: console
+
+   $ workshop list
+
+
+List the globally registered workshops:
+
+.. code-block:: console
+
+   $ workshop list --global
+
+
 Synopsis
 --------
 

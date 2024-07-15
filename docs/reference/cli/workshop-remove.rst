@@ -10,6 +10,17 @@ Removes one or many workshops.
    $ workshop remove <WORKSHOP>... [OPTIONS]
 
 
+Examples
+--------
+
+Remove the :samp:`nimble` and :samp:`jazzy` workshops
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop remove nimble jazzy
+
+
 Synopsis
 --------
 

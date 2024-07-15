@@ -10,6 +10,16 @@ Prints the current status and details of a workshop as YAML.
    $ workshop info <WORKSHOP> [OPTIONS]
 
 
+Examples
+--------
+
+List details for the :samp:`nimble` workshop in the current project directory:
+
+.. code-block:: console
+
+   $ workshop info nimble
+
+
 Synopsis
 --------
 

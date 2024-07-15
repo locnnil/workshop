@@ -10,6 +10,18 @@ Starts an interactive terminal session for the workshop.
    $ workshop shell <WORKSHOP> [OPTIONS]
 
 
+Examples
+--------
+
+Open the default login shell of the :samp:`workshop` user
+into the :samp:`nimble` workshop
+in the current project directory:
+
+.. code-block:: console
+
+   $ workshop shell nimble
+
+
 Synopsis
 --------
 
