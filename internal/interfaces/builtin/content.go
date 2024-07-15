@@ -20,6 +20,7 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 	"os/user"
 	"path/filepath"
@@ -94,19 +95,15 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) (string, error) {
 	var source string
 	// see if the plug's mount has been remounted to a new location
-	if err := plug.Attr("source", &source); err == nil {
+	err := plug.Attr("source", &source)
+	if err == nil {
 		return source, nil
 	}
-
-	// <workshop>_<sdk>_plug.sdk
-	dir := strings.Join([]string{plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()}, "_") + ".sdk"
-	source = filepath.Join(user.HomeDir, ".local", "share", "workshop", "project", plug.Ref().ProjectId, "content", dir)
-
-	if err := plug.SetAttr("source", source); err != nil {
-		return "", err
+	if !errors.Is(err, sdk.AttributeNotFoundError{}) {
+		return source, err
 	}
-
-	return source, nil
+	// default dir: <workshop>_<sdk>_plug.sdk
+	return sdk.SdkContentSource(user.HomeDir, plug.Sdk().ProjectId, plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {

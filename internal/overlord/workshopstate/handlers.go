@@ -13,7 +13,6 @@ import (
 
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -33,24 +32,6 @@ func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) 
 	defer cancel()
 
 	return m.backend.RemoveWorkshop(ctx, workshop)
-}
-
-func (m *WorkshopManager) installAgentSdk(wfs workshop.WorkshopFs, base string) error {
-	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
-	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
-		return err
-	}
-
-	// /var/lib/workshop/sdk/agent/current/meta
-	file, err := wfs.OpenFile(filepath.Join(agentMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
-	if err != nil {
-		return err
-	}
-
-	if _, err = file.Write([]byte(sdk.AgentSdkMeta(base))); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -73,29 +54,9 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
 	}
 
-	var rev revert.Reverter
-	defer rev.Fail()
 	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
 		return err
 	}
-
-	// clean up must not be cancelled if the parent was cancelled and the change
-	// is winding down
-	revertCtx := context.WithoutCancel(ctx)
-	rev.Add(func() {
-		_ = m.backend.RemoveWorkshop(revertCtx, w)
-	})
-
-	wfs, err := m.backend.WorkshopFs(ctx, w)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	if err = m.installAgentSdk(wfs, wf.Base); err != nil {
-		return err
-	}
-	rev.Success()
 	return nil
 }
 
@@ -275,7 +236,8 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string)
 	}
 
 	var errors []error
-	projectContent := filepath.Join(usr.HomeDir, ".local", "share", "workshop", "project", projectId, "content")
+	projectContent := sdk.ProjectContentDir(usr.HomeDir, projectId)
+
 	var contentDirs []fs.DirEntry
 	if contentDirs, err = os.ReadDir(projectContent); err != nil {
 		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", w, err))
@@ -292,7 +254,8 @@ func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string)
 	for _, dir := range contentDirs {
 		// Remove all default content dirs that belong the workshop. These will be
 		// named as <workshop>_<sdk>_<plug>.sdk
-		if dir.IsDir() && strings.HasPrefix(filepath.Base(dir.Name()), w+"_") {
+		base := filepath.Base(dir.Name())
+		if dir.IsDir() && strings.HasPrefix(base, w+"_") {
 			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
 				errors = append(errors, err)
 			}

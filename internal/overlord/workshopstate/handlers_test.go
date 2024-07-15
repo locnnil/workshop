@@ -3,7 +3,6 @@ package workshopstate_test
 import (
 	"context"
 	"errors"
-	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -270,41 +269,4 @@ base: ubuntu@22.04
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	info, err := wfs.Stat("/var/lib/workshop/sdk/agent/current/meta/sdk.yaml")
-	c.Assert(err, check.IsNil)
-	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
-}
-
-func (s *workshopHandlers) TestCreateWorkshopAgentSdkFailedGetsUndone(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@22.04
-`), 0644)
-	c.Check(err, check.IsNil)
-	s.backend.WorkshopFsCallback = func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
-		return nil, errors.New("cannot get WorkshopFs")
-	}
-
-	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("create-workshop", "...")
-	t1.Set("base", "ubuntu@22.04")
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-	s.backend.WorkshopFsCallback = nil
-
-	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	ws, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(ws, check.IsNil)
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 }

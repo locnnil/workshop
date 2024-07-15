@@ -39,7 +39,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
-	workshop1 "github.com/canonical/workshop/internal/workshop"
+	backend "github.com/canonical/workshop/internal/workshop"
 )
 
 var (
@@ -60,7 +60,7 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 type Overlord struct {
 	stateDir        string
 	stateEng        *StateEngine
-	workshopBackend workshop1.Backend
+	workshopBackend backend.Backend
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -88,7 +88,7 @@ type Overlord struct {
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b workshop1.Backend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -137,6 +137,9 @@ func New(dir string, b workshop1.Backend, restartHandler restart.Handler) (*Over
 	o.stateEng = NewStateEngine(s)
 	o.runner = state.NewTaskRunner(s)
 
+	sto := store.New()
+	sdk.ReplaceStore(s, sto)
+
 	// any unknown task should be ignored and succeed
 	matchAnyUnknownTask := func(_ *state.Task) bool {
 		return true
@@ -145,9 +148,6 @@ func New(dir string, b workshop1.Backend, restartHandler restart.Handler) (*Over
 
 	o.workshopmgr = workshop.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.workshopmgr)
-
-	o.sdk = sdkstate.New(o.runner, o.workshopBackend)
-	o.addManager(o.sdk)
 
 	o.hookmgr = hookstate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.hookmgr)
@@ -160,11 +160,11 @@ func New(dir string, b workshop1.Backend, restartHandler restart.Handler) (*Over
 	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
 	o.addManager(o.ifacemgr)
 
+	o.sdk = sdkstate.New(o.runner, o.ifacemgr.Repository(), o.workshopBackend)
+	o.addManager(o.sdk)
+
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
-
-	sto := store.New()
-	sdk.ReplaceStore(s, sto)
 
 	return o, nil
 }
@@ -461,7 +461,7 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkshopBackend() workshop1.Backend {
+func (o *Overlord) WorkshopBackend() backend.Backend {
 	return o.workshopBackend
 }
 

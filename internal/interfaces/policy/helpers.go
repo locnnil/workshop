@@ -31,7 +31,7 @@ import (
 // check helpers
 func checkSlotType(sdkInfo *sdk.Info, types []string) error {
 	if !slices.Contains(types, string(sdkInfo.Type)) {
-		return fmt.Errorf("invalid sdk type %q", sdkInfo.Type)
+		return fmt.Errorf("invalid SDK type %q", sdkInfo.Type)
 	}
 	return nil
 }
@@ -84,11 +84,11 @@ func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	if err := constraints.SlotAttributes.Check(connc.Slot, connc); err != nil {
 		return err
 	}
-	if connc.Slot.Sdk().Type == sdk.Agent {
-		plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
-		if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
-			return fmt.Errorf("%q cannot be connected to the agent SDK from a different workshop", connc.Plug.Ref())
-		}
+
+	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
+	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
 	}
+
 	return nil
 }

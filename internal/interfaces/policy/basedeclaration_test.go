@@ -161,21 +161,7 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromDifferentWorkshop(c *C) {
-	slotYaml := `name: slot-sdk
-base: ubuntu@22.04
-type: agent
-slots:
-    content:
-`
-	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "slot-ws", "plug-ws")
-	_, err := cand.Check()
-	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
-	_, err = cand.CheckAutoConnect()
-	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
-}
-
-func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromSameWorkshop(c *C) {
+func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
 type: agent
@@ -189,14 +175,40 @@ slots:
 	c.Check(err, check.IsNil)
 }
 
-func (s *baseDeclSuite) TestAgentSlotConnectionPlugFromSameWorkshopDifferentProject(c *C) {
+func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
 type: agent
 slots:
     content:
 `
-	cand := s.connectCand(c, "content", slotYaml, "", "slot-project", "mock424242", "ws", "ws")
+	plugYaml := `name: plug-sdk
+base: ubuntu@22.04
+type: agent
+plugs:
+    content:      
+`
+	cand := s.connectCand(c, "content", slotYaml, plugYaml, "slot-project", "mock424242", "ws", "ws")
+	_, err := cand.Check()
+	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
+	_, err = cand.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
+}
+
+func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *C) {
+	slotYaml := `name: slot-sdk
+base: ubuntu@22.04
+type: agent
+slots:
+    content:
+`
+	plugYaml := `name: plug-sdk
+base: ubuntu@22.04
+type: agent
+plugs:
+    content:      
+`
+	cand := s.connectCand(c, "content", slotYaml, plugYaml, "mock424242", "mock424242", "ws", "ws-1")
 	_, err := cand.Check()
 	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
 	_, err = cand.CheckAutoConnect()

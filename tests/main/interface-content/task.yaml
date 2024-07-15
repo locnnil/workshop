@@ -2,13 +2,14 @@ summary: Check content interface scenarios
 execute: |
   . "$TESTSLIB"/utils.sh
     
-  function validate_plug_mounts() {
+  function validate_mounts() {
     test -d "$source_one"
     test -d "$source_two"
     workshop_exec exec ws-content -- bash -c "test -d /home/workshop"
     workshop_exec exec ws-content -- bash -c "test -d /opt"
     workshop_exec exec ws-content -- bash -c "touch /home/workshop/output"
     test -f "$source_one"/output
+    rm -f "$source_one"/output
   }
   
   echo "Check the content interface plug can be installed and auto-connected"
@@ -19,23 +20,32 @@ execute: |
   
   source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws-content_test-sdk-content_content-plug-one.sdk"
   source_two="/home/ubuntu/.local/share/workshop/project/"$project_id"/content/ws-content_test-sdk-content_content-plug-two.sdk"
-  validate_plug_mounts
+  validate_mounts
 
   echo "Check the content interface plugs auto-reconnected after refresh"
   workshop_exec refresh ws-content
-  validate_plug_mounts
+  validate_mounts
   
   echo "Check the content interface plugs auto-reconnected if refresh fails"
   sed -i 's/test-sdk-content/test-sdk-fail/g' .workshop.ws-content.yaml
   workshop_exec refresh ws-content || true
   sed -i 's/test-sdk-fail/test-sdk-content/g' .workshop.ws-content.yaml
-  validate_plug_mounts
+  validate_mounts
+  
+  echo "Check manual connect/disconnect works"
+  workshop_exec disconnect ws-content/test-sdk-content:content-plug-one
+  workshop_exec exec ws-content -- bash -c "touch /home/workshop/disconnect-test"
+  # no mount exists after disconnnect
+  test ! -f "$source_one"/disconnect-test
+  workshop_exec connect ws-content/test-sdk-content:content-plug-one :content
+  workshop_exec connections ws-content | MATCH "^content.+ws-content/test-sdk-content:content-plug-one.+:content.+manual$"
+  validate_mounts
   
   echo "Check the content interface slots cannot be installed by a workshop"
   sed -i 's/test-sdk-content/test-sdk-content-broken/g' .workshop.ws-content.yaml
   workshop_exec refresh ws-content 2>&1 | MATCH ".*installation not allowed by \"one\" slot rule of interface \"content\".*"
   sed -i 's/test-sdk-content-broken/test-sdk-content/g' .workshop.ws-content.yaml
-  validate_plug_mounts
+  validate_mounts
   
   echo "Check the content interface plugs removed after refresh if they don't exist anymore"
   sed -i 's/test-sdk-content/test-sdk-basic/g' .workshop.ws-content.yaml

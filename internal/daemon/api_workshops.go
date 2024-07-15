@@ -2,10 +2,11 @@ package daemon
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -65,7 +66,7 @@ type WorkshopInfo struct {
 }
 
 var ensureStateSoon = stateEnsureBefore
-var sdkMounts = sdkConnsToMounts
+var workshopMounts = mounts
 
 func workshopFileToInfo(file *workshop.File, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
@@ -122,37 +123,56 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 	return &info
 }
 
-func sdkConnsToMounts(st *state.State, repo *interfaces.Repository, projectId, w, sdk string) []*Mount {
-	connections, err := repo.Connections(projectId, w, sdk)
+func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error) {
+	var mnts = map[string][]*Mount{}
+
+	content, err := w.ContentInfo(ctx)
 	if err != nil {
-		return nil
+		return mnts, err
 	}
-	var mounts []*Mount
-	for _, conn := range connections {
-		connection, err := repo.Connection(conn)
-		if err != nil {
+
+	masters := map[interfaces.PlugRef][]interfaces.PlugRef{}
+	for _, sk := range content {
+		for s, m := range sk.PlugBinds {
+			ref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Sdk, Name: m.Name}
+			sref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: s}
+			masters[ref] = append(masters[ref], sref)
+		}
+	}
+
+	for _, sk := range content {
+		prof, err := w.Backend.Profile(ctx, w.Name, sk.Name)
+		if err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+			logger.Noticef("Failed to obtain mounts for %s/%s: %v", w.Name, sk.Name, err)
+			return mnts, err
+		}
+		if errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			continue
 		}
-
-		if connection.Interface() == "content" {
-			var source, target string
-			err = connection.Plug.Attr("source", &source)
-			if err != nil {
-				continue
+		for n, dev := range prof.Devices {
+			if dev.Type == workshop.BindMount {
+				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: n}
+				mnt := &Mount{
+					Plug:   pref,
+					Source: dev.Properties["source"],
+					Target: dev.Properties["path"],
+				}
+				mnts[sk.Name] = append(mnts[sk.Name], mnt)
+				if slaves, ok := masters[pref]; ok {
+					for _, slave := range slaves {
+						mnt := &Mount{
+							Plug:   slave,
+							Source: dev.Properties["source"],
+							Target: dev.Properties["path"],
+						}
+						mnts[slave.Sdk] = append(mnts[slave.Sdk], mnt)
+					}
+				}
 			}
-			// check if the source exists as otherwise the mount is broken
-			if _, err = os.Stat(source); osutil.IsDirNotExist(err) {
-				st.Warnf("%s/%s:%s mount is broken: %s does not exist", w, sdk, connection.Plug.Name(), source)
-			}
-
-			err = connection.Plug.Attr("target", &target)
-			if err != nil {
-				continue
-			}
-			mounts = append(mounts, &Mount{Source: source, Target: target, Plug: conn.PlugRef})
 		}
 	}
-	return mounts
+
+	return mnts, nil
 }
 
 func newWorkshopChange(st *state.State, kind string, user, projectId string, reqData *workshopReq) *state.Change {
@@ -319,11 +339,11 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 	health := workshopHealth(wrkmgr, w)
 
-	repo := c.d.overlord.InterfaceManager().Repository()
-	mounts := map[string][]*Mount{}
-	for _, sdk := range w.Content {
-		mounts[sdk.Name] = sdkMounts(state, repo, projectId, name, sdk.Name)
+	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
+	ms, err := workshopMounts(ctx, w)
+	if err != nil {
+		return statusBadRequest(err.Error())
 	}
 
-	return SyncResponse(workshopToInfo(w, health, mounts), http.StatusOK)
+	return SyncResponse(workshopToInfo(w, health, ms), http.StatusOK)
 }

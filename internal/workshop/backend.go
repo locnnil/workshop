@@ -168,3 +168,9 @@ type Backend interface {
 	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
 }
+
+func FakeUserLookup(f func(name string) (*user.User, error)) func() {
+	oldUserLookup := LookupUsername
+	LookupUsername = f
+	return func() { LookupUsername = oldUserLookup }
+}

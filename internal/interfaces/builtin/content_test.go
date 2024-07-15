@@ -132,6 +132,8 @@ slots:
 	homeDir := c.MkDir()
 	usr, err := user.Current()
 	c.Assert(err, check.IsNil)
+	
+	
 
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
@@ -151,11 +153,6 @@ slots:
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
 	expectedMnt := lxdbackend.Mount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
-
-	// Vaildate plug attribute
-	var src string
-	c.Assert(connectedPlug.Attr("source", &src), check.IsNil)
-	c.Assert(src, check.Equals, sourceDir)
 
 	// Validate the source directory was created correctly
 	exists, isDir, err := osutil.ExistsIsDir(sourceDir)

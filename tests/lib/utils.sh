@@ -3,8 +3,8 @@
 # Install and uninstall workshopd
 
 function init_lxd() {
-  snap install lxd --classic
-  snap refresh lxd --channel=latest/stable
+  snap install --classic lxd
+  snap refresh --channel=5.21/stable lxd
   
   # can already be initialised if reused
   # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
@@ -18,9 +18,10 @@ function prepare_environment() {
   systemctl start snapd.service
   
   init_lxd  
-  snap install go --classic --channel=1.21/stable
+  snap install --classic --channel=1.21/stable go
   snap install yq
-  apt install jq -y --no-install-recommends
+  apt update
+  apt install -y --no-install-recommends moreutils jq
   
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/
@@ -36,7 +37,7 @@ function cleanup_environment() {
 
 function start_sdk_store() {
     # run fake GCS bucket storage to emulate SDK store
-  publish_test_sdk_content "$SDKCONTENT" "$SDK_STORE_BUCKET_DIR"
+  publish_test_sdk_content "$SDKS" "$SDK_STORE_BUCKET_DIR"
   chown -R ubuntu.ubuntu /data # a bug with fake-gcs-server that returns 404 if not owned by the user
   mkdir -p /storage
   chown -R ubuntu.ubuntu /storage
@@ -66,6 +67,7 @@ function publish_test_sdk_content() {
       tar czf "$SDK_FILE" -C "$SDK_PATH" $(ls -A "$SDK_PATH")
       mkdir -p "$STORE_PATH"
       mv "$SDK_FILE" "$STORE_PATH"
+      cp -f "$SDK_PATH"/meta/sdk.yaml "$STORE_PATH"
     done
 }
 

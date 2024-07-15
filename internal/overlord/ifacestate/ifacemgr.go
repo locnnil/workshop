@@ -30,12 +30,16 @@ func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceMan
 		repo:    interfaces.NewRepository(),
 	}
 
-	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), m.undoAutoConnect)
-	r.AddHandler("auto-disconnect", OnDo(m.doAutoDisconnect), m.undoAutoDisconnect)
+	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
+	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
-	r.AddHandler("connect", m.doConnect, nil)
-	r.AddHandler("disconnect", m.doDisconnect, nil)
+	r.AddHandler("connect", OnDo(m.doConnect), m.undoConnect)
+	r.AddHandler("disconnect", OnDo(m.doDisconnect), m.undoDisconnect)
+
 	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
+
+	r.AddHandler("setup-profiles", OnDo(m.doSetupProfiles), m.undoSetupProfiles)
+	r.AddHandler("remove-profiles", OnDo(m.doRemoveProfiles), m.undoRemoveProfiles)
 
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it
@@ -381,8 +385,9 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 		} else {
 			// If the connection succeeded update the connection state and keep
 			// track of the sdks that were affected.
-			affected[sdk.Ref{ProjectId: connRef.PlugRef.ProjectId, Workshop: connRef.PlugRef.Workshop, Sdk: connRef.PlugRef.Sdk}] = true
-			affected[sdk.Ref{ProjectId: connRef.SlotRef.ProjectId, Workshop: connRef.SlotRef.Workshop, Sdk: connRef.SlotRef.Sdk}] = true
+
+			affected[plugInfo.Sdk.Ref()] = true
+			affected[slotInfo.Sdk.Ref()] = true
 		}
 	}
 	if connStateChanged {

@@ -178,6 +178,15 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 			continue
 		}
 		sort.Sort(bySlotRef(connectedSlots))
+		var bind *interfaces.PlugRef
+		if pb, ok := plug.Sdk.PlugBinds[plug.Name]; ok {
+			bind = &interfaces.PlugRef{
+				ProjectId: pb.ProjectId,
+				Workshop:  pb.Workshop,
+				Sdk:       pb.Sdk,
+				Name:      pb.Name,
+			}
+		}
 		pj := &plugJSON{
 			ProjectId:   plugRef.ProjectId,
 			Workshop:    plugRef.Workshop,
@@ -186,6 +195,7 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 			Interface:   plug.Interface,
 			Attrs:       plug.Attrs,
 			Label:       plug.Label,
+			Bind:        bind,
 			Connections: connectedSlots,
 		}
 		connsjson.Plugs = append(connsjson.Plugs, pj)
@@ -345,7 +355,11 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		connRef, err = repo.ResolveConnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
 			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name)
 		if err == nil {
-			ts, connErr := ifacestate.Connect(st, connRef)
+			plugW, err := c.d.overlord.WorkshopManager().Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
+			if err != nil {
+				break
+			}
+			ts, connErr := ifacestate.Connect(st, plugW, connRef)
 			if connErr != nil {
 				if _, ok := connErr.(*ifacestate.ErrAlreadyConnected); !ok {
 					return statusBadRequest(connErr.Error())
@@ -366,22 +380,23 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		repo := c.d.overlord.InterfaceManager().Repository()
 		for _, connRef := range conns {
 			var ts *state.TaskSet
-			var conn *interfaces.Connection
+			plugW, werr := c.d.overlord.WorkshopManager().Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
+			if werr != nil {
+				break
+			}
 
-			if a.Forget {
-				ts, err = ifacestate.Forget(st, connRef, a.Forget)
+			if !a.Forget {
+				// Ensure the connection exists if it is not going to be
+				// forgotten (if forget is true the conenction may present only
+				// in the state and not in the repository).
+				_, err = repo.Connection(connRef)
 				if err != nil {
 					break
 				}
-			} else {
-				conn, err = repo.Connection(connRef)
-				if err != nil {
-					break
-				}
-				ts, err = ifacestate.Disconnect(st, conn, a.Forget)
-				if err != nil {
-					break
-				}
+			}
+			ts, err = ifacestate.Disconnect(st, plugW, connRef, a.Forget)
+			if err != nil {
+				break
 			}
 
 			ts.JoinLane(st.NewLane())

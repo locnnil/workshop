@@ -1,0 +1,16 @@
+name: test-sdk-multiple-plugs
+title: test-sdk-multiple-plugs
+base: ubuntu@20.04
+
+summary: test-sdk-multiple-plugs SDK
+description: |
+  test-sdk-multiple-plugs SDK
+plugs:
+  data:
+    interface: content
+    target: /home/workshop/data
+  cache:
+    interface: content
+    target: /cache
+  ssh-agent:
+    interface: ssh-agent

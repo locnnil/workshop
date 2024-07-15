@@ -66,9 +66,18 @@ type PlugRef struct {
 	Name      string `json:"plug"`
 }
 
-// String returns the "workshop/sdk:plug" representation of a plug reference.
+func NewPlugRef(info *sdk.PlugInfo) PlugRef {
+	return PlugRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
+}
+
+// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
 func (ref PlugRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+}
+
+// String returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
+func (ref PlugRef) ShortRef() string {
+	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when plug should be sorted before the other
@@ -103,9 +112,18 @@ type SlotRef struct {
 	Name      string `json:"slot"`
 }
 
-// String returns the "workshop:sdk:slot" representation of a slot reference.
+func NewSlotRef(info *sdk.SlotInfo) SlotRef {
+	return SlotRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
+}
+
+// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
 func (ref SlotRef) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+}
+
+// String returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
+func (ref SlotRef) ShortRef() string {
+	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
 }
 
 // SortsBefore returns true when slot should be sorted before the other
@@ -144,8 +162,8 @@ type ConnRef struct {
 // NewConnRef creates a connection reference for given plug and slot
 func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
 	return &ConnRef{
-		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Sdk: plug.Sdk.Name, Name: plug.Name, Workshop: plug.Sdk.Workshop},
-		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Sdk: slot.Sdk.Name, Name: slot.Name, Workshop: slot.Sdk.Workshop},
+		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Workshop: plug.Sdk.Workshop, Sdk: plug.Sdk.Name, Name: plug.Name},
+		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Workshop: slot.Sdk.Workshop, Sdk: slot.Sdk.Name, Name: slot.Name},
 	}
 }
 

@@ -67,7 +67,7 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	plugRef, err := client.ParsePlugRef(av[0])
+	plugRef, err := client.ParseShortPlugRef(av[0])
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 			slotRef.Sdk = "agent"
 			slotRef.Name = av[1][1:]
 		} else {
-			slotRef, err = client.ParseSlotRef(av[1])
+			slotRef, err = client.ParseShortSlotRef(av[1])
 			if err != nil {
 				// see if an SDK (empty slot) reference provided
 				slotRef, err = client.ParseSlotSdkRef(av[1])

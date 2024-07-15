@@ -46,5 +46,6 @@ func (s SdkProfile) AddDevice(dev Device) error {
 
 type Profile interface {
 	AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error
+	Profile(ctx context.Context, workshop, profile string) (SdkProfile, error)
 	RemoveProfile(ctx context.Context, workshop, profile string) error
 }

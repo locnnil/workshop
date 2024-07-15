@@ -54,8 +54,9 @@ type Info struct {
 	Revision  int64
 	Channel   string
 
-	Plugs map[string]*PlugInfo
-	Slots map[string]*SlotInfo
+	Plugs     map[string]*PlugInfo
+	PlugBinds map[string]*PlugBind
+	Slots     map[string]*SlotInfo
 	// Plugs or slots with issues (they are not included in Plugs or Slots)
 	BadInterfaces map[string]string
 }
@@ -100,6 +101,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Base:          sdkYaml.Base,
 		Type:          Type(sdkYaml.Type),
 		Plugs:         make(map[string]*PlugInfo),
+		PlugBinds:     make(map[string]*PlugBind),
 		Slots:         make(map[string]*SlotInfo),
 		BadInterfaces: make(map[string]string),
 	}
@@ -291,8 +293,19 @@ func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
 	return lookupAttr(plug.Attrs, key)
 }
 
+type PlugBind struct {
+	ProjectId string
+	Workshop  string
+	Sdk       string
+	Name      string
+}
+
+func SdkRootPath(sdkName string) string {
+	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
+}
+
 func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(dirs.WorkshopSdksDir, sdkName, "current")
+	return filepath.Join(SdkRootPath(sdkName), "current")
 }
 
 func SdkHooksDir(sdkName string) string {
@@ -301,6 +314,15 @@ func SdkHooksDir(sdkName string) string {
 
 func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
+}
+
+func ProjectContentDir(homedir, pid string) string {
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content")
+}
+
+func SdkContentSource(homedir, pid, wp, sdk, plug string) string {
+	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
+	return filepath.Join(ProjectContentDir(homedir, pid), dir)
 }
 
 func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {

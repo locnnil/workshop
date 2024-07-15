@@ -183,7 +183,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
@@ -191,7 +191,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -220,7 +220,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				child, cancel := context.WithTimeout(ctx, args.Timeout)
@@ -231,7 +231,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -282,7 +282,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
@@ -290,7 +290,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one")
@@ -322,7 +322,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
@@ -330,7 +330,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -359,7 +359,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 	chg.AddTask(t1)
 
 	s.launchWorkshop(c, "one")
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return errors.New("hook execution error")
@@ -367,7 +367,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.state.Unlock()

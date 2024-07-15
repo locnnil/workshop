@@ -6,6 +6,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 // ErrAlreadyConnected describes the error that occurs when attempting to connect already connected interface.
@@ -18,7 +19,7 @@ func (e ErrAlreadyConnected) Error() string {
 }
 
 // Connect returns a set of tasks for connecting an interface.
-func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
+func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
 	if err != nil {
@@ -40,16 +41,60 @@ func Connect(st *state.State, connRef *interfaces.ConnRef) (*state.TaskSet, erro
 		return nil, &ErrAlreadyConnected{Connection: *connRef}
 	}
 
-	connectInterface := st.NewTask("connect", fmt.Sprintf("Connect %s/%s:%s to %s/%s:%s", plugWorkshop, connRef.PlugRef.Sdk, connRef.PlugRef.Name,
-		slotWorkshop, connRef.SlotRef.Sdk, connRef.SlotRef.Name))
+	master, affected := MaybeBound(plugW, connRef.PlugRef)
+	masterTask := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", master.ShortRef(), connRef.SlotRef.ShortRef()))
 
-	connectInterface.Set("slot", connRef.SlotRef)
-	connectInterface.Set("plug", connRef.PlugRef)
+	masterTask.Set("slot", connRef.SlotRef)
+	masterTask.Set("plug", master)
+	masterTask.Set("delayed-setup-profile", false)
 
-	return state.NewTaskSet(connectInterface), nil
+	// master's plug connection that every other connection from affected will
+	// be bound to.
+	bref := interfaces.ConnRef{PlugRef: master, SlotRef: connRef.SlotRef}
+
+	ts := state.NewTaskSet(masterTask)
+	prev := masterTask
+	for _, p := range affected {
+		slave := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", p.ShortRef(), connRef.SlotRef.ShortRef()))
+		slave.Set("slot", connRef.SlotRef)
+		slave.Set("plug", p)
+		slave.Set("delayed-setup-profile", true)
+
+		slave.Set("plug-dynamic", map[string]interface{}{"bind": bref.ID()})
+
+		slave.WaitFor(prev)
+		prev = slave
+		ts.AddTask(slave)
+	}
+
+	return ts, nil
 }
 
-func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
+func disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool) *state.TaskSet {
+	master, affected := MaybeBound(plugW, conn.PlugRef)
+
+	mtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", master, conn.SlotRef.ShortRef()))
+	mtask.Set("plug", master)
+	mtask.Set("slot", conn.SlotRef)
+	mtask.Set("forget", forget)
+	ts := state.NewTaskSet(mtask)
+	prev := mtask
+
+	for _, p := range affected {
+		stask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", p, conn.SlotRef.ShortRef()))
+		stask.Set("plug", p)
+		stask.Set("slot", conn.SlotRef)
+		stask.Set("forget", forget)
+
+		stask.WaitFor(prev)
+		prev = stask
+		ts.AddTask(stask)
+	}
+	return ts
+}
+
+// Disconnect returns a set of tasks for disconnecting an interface.
+func Disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool) (*state.TaskSet, error) {
 	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
 	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
 	if err != nil {
@@ -61,41 +106,5 @@ func Forget(st *state.State, conn *interfaces.ConnRef, forget bool) (*state.Task
 	if err != nil {
 		return nil, err
 	}
-
-	disconnectTask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s/%s:%s from %s/%s:%s", plugWorkshop, conn.PlugRef.Sdk, conn.PlugRef.Name,
-		slotWorkshop, conn.SlotRef.Sdk, conn.SlotRef.Name))
-
-	disconnectTask.Set("slot", conn.SlotRef)
-	disconnectTask.Set("plug", conn.PlugRef)
-	disconnectTask.Set("forget", true)
-	return state.NewTaskSet(disconnectTask), nil
-}
-
-// Disconnect returns a set of tasks for disconnecting an interface.
-func Disconnect(st *state.State, conn *interfaces.Connection, forget bool) (*state.TaskSet, error) {
-	plugProject, plugWorkshop := conn.Plug.Ref().ProjectId, conn.Plug.Ref().Workshop
-	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
-	if err != nil {
-		return nil, err
-	}
-
-	slotProject, slotWorkshop := conn.Slot.Ref().ProjectId, conn.Slot.Ref().Workshop
-	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
-	if err != nil {
-		return nil, err
-	}
-
-	disconnectTask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s/%s:%s from %s/%s:%s", plugWorkshop, conn.Plug.Ref().Sdk, conn.Plug.Name(),
-		slotWorkshop, conn.Slot.Ref().Sdk, conn.Slot.Ref().Name))
-
-	disconnectTask.Set("slot", conn.Slot.Ref())
-	disconnectTask.Set("plug", conn.Plug.Ref())
-	disconnectTask.Set("forget", forget)
-
-	disconnectTask.Set("slot-static", conn.Slot.StaticAttrs())
-	disconnectTask.Set("slot-dynamic", conn.Slot.DynamicAttrs())
-	disconnectTask.Set("plug-static", conn.Plug.StaticAttrs())
-	disconnectTask.Set("plug-dynamic", conn.Plug.DynamicAttrs())
-
-	return state.NewTaskSet(disconnectTask), nil
+	return disconnect(st, plugW, conn, forget), nil
 }

@@ -102,6 +102,8 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 	return false, nil
 }
 
+// Iterates over the list of running tasks and returns a ChangeConflictError if
+// there is another change running for the provided projectID / workshop pair.
 func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreChange string) error {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
@@ -128,7 +130,7 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreChan
 
 // Attempt to resume the change associated with the refresh operation for the
 // given workshop. Depending on the mode the change will either be turned
-// into Doing (Continue mode) or Abort (Abort mode)
+// into Doing (Continue mode) or Abort (Abort mode).
 func ResumeRefresh(st *state.State,
 	workshop string, projectId string, mode RefreshMode) (*state.Change, error) {
 	if mode != RefreshAbort && mode != RefreshContinue {

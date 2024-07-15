@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -57,7 +58,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	}
 
 	taskset := make([]*state.TaskSet, 0, len(names))
-
+	var sdks []sdk.SdkResult
 	for _, name := range names {
 		file, err := project.Workshop(name)
 		if err != nil {
@@ -72,13 +73,17 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, err
 		}
 
-		res, err := w.launchStoreInfo(ctx, projectId, *file)
+		sdks, err = launchStoreInfo(w.state, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}
 
+		if err = validatePlugBinds(sdks, file); err != nil {
+			return nil, err
+		}
+
 		sets := []sdk.Setup{}
-		for _, s := range res {
+		for _, s := range sdks {
 			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
@@ -88,8 +93,8 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string, file workshop.File) ([]sdk.SdkResult, error) {
-	sto := sdk.StoreService(w.state)
+func launchStoreInfo(st *state.State, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
+	sto := sdk.StoreService(st)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
@@ -102,6 +107,47 @@ func (w *WorkshopManager) launchStoreInfo(ctx context.Context, projectid string,
 	return res, nil
 }
 
+func validatePlugBinds(sdks []sdk.SdkResult, file *workshop.File) error {
+	type plug struct {
+		sdk  string
+		name string
+	}
+	allbinds := make(map[plug][]plug)
+	for _, sk := range file.Sdks {
+		for n, master := range sk.Plugs {
+			master := plug{master.Bind.Sdk, master.Bind.Plug}
+			slave := plug{sk.Name, n}
+			allbinds[master] = append(allbinds[slave], slave)
+		}
+	}
+
+	allplugs := make(map[plug]*sdk.PlugInfo)
+	for _, s := range sdks {
+		for name, p := range s.Plugs {
+			allplugs[plug{s.Name, name}] = p
+		}
+	}
+
+	for master, slaves := range allbinds {
+		minfo, ok := allplugs[master]
+		if !ok {
+			return fmt.Errorf("cannot bind: SDK %q does not have a plug %q", master.sdk, master.name)
+		}
+
+		for _, sl := range slaves {
+			sinfo, ok := allplugs[sl]
+			if !ok {
+				return fmt.Errorf("cannot bind: SDK %q does not have a plug %q", sl.sdk, sl.name)
+			}
+			if minfo.Interface != sinfo.Interface {
+				return fmt.Errorf("cannot bind: %s:%s and %s:%s must be of the same interface", master.sdk, master.name, sl.sdk, sl.name)
+			}
+		}
+	}
+
+	return nil
+}
+
 func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	retrieve := state.NewTaskSet()
 	for _, s := range sdks {
@@ -112,15 +158,16 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 }
 
 func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
-	var prevInstall *state.TaskSet
-	var prevSetup *state.Task
+	var prevInstall = sdkstate.InstallAgent(st)
+	install := state.NewTaskSet(prevInstall.Tasks()...)
 
-	install := state.NewTaskSet()
+	var prevSetup *state.Task
 	setupHook := state.NewTaskSet()
 
-	prevAuto := st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
+	var prevAuto = st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
 	prevAuto.Set("sdk", "agent")
-	autoConnectSet := state.NewTaskSet(prevAuto)
+	autoConnect := state.NewTaskSet(prevAuto)
+
 	for idx, sdk := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
@@ -142,18 +189,19 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 
 		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", sdk.Name))
 		autoconnect.Set("sdk", sdk.Name)
-		autoConnectSet.AddTask(autoconnect)
+		autoConnect.AddTask(autoconnect)
 		if prevAuto != nil {
 			autoconnect.WaitFor(prevAuto)
 		}
 		prevAuto = autoconnect
 	}
 	setupHook.WaitAll(install)
-	autoConnectSet.WaitAll(setupHook)
+	autoConnect.WaitAll(setupHook)
+	autoConnect.WaitAll(install)
 
 	all := state.NewTaskSet(install.Tasks()...)
 	all.AddAll(setupHook)
-	all.AddAll(autoConnectSet)
+	all.AddAll(autoConnect)
 	return all
 }
 
@@ -191,7 +239,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *wor
 	create := constructWorkshop(st, file, project)
 	create.WaitAll(retrieve)
 
-	// launch the downloaded sdks
+	// install the downloaded sdks
 	launch := installSdks(st, file.Name, sdks, retrieve)
 	launch.WaitAll(create)
 
@@ -246,7 +294,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		}
 		files = append(files, file)
 
-		res, err := w.launchStoreInfo(ctx, projectId, *file)
+		res, err := launchStoreInfo(w.state, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}
@@ -407,18 +455,17 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 }
 
 func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
-	disconnectSet := []*state.Task{}
-	prev := (*state.Task)(nil)
+	prev := st.NewTask("auto-disconnect", `Disconnect interfaces of "agent" SDK`)
+	prev.Set("sdk", "agent")
+	disconnectSet := state.NewTaskSet(prev)
 	for _, s := range content {
 		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
 		disc.Set("sdk", s.Name)
-		if prev != nil {
-			disc.WaitFor(prev)
-		}
-		disconnectSet = append(disconnectSet, disc)
+		disc.WaitFor(prev)
+		disconnectSet.AddTask(disc)
 		prev = disc
 	}
-	return state.NewTaskSet(disconnectSet...)
+	return disconnectSet
 }
 
 func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList,
@@ -652,10 +699,17 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 		return nil, err
 	}
 
-	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s/%s:%s`, plug.Workshop, plug.Sdk, plug.Name))
+	wp, err := w.Workshop(ctx, plug.Workshop, plug.ProjectId)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load workshop %q: %w", plug.Workshop, err)
+	}
+
+	master, _ := ifacestate.MaybeBound(wp, plug)
+
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s`, plug.ShortRef()))
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
-	remount.Set("plug", plug)
+	remount.Set("plug", master)
 	remount.Set("source", source)
 
 	return state.NewTaskSet(remount), nil

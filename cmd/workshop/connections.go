@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -57,12 +58,17 @@ type connection struct {
 	plug          string
 	interfaceName string
 	manual        bool
+	bind          string
+	bindIdx       int
 }
 
 func (cn connection) String() string {
 	opts := []string{}
 	if cn.manual {
 		opts = append(opts, "manual")
+	}
+	if cn.bind != "" && cn.bindIdx > 0 {
+		opts = append(opts, fmt.Sprintf("bind.%d", cn.bindIdx))
 	}
 	if len(opts) == 0 {
 		return "-"
@@ -83,6 +89,37 @@ func (b byConnectionData) Less(i, j int) bool {
 		return iCon.plug < jCon.plug
 	}
 	return iCon.slot < jCon.slot
+}
+
+func maybeBound(plug client.PlugRef, plugs []client.Plug) string {
+	var bind string
+
+	// check if this plug is bound to
+	idx := slices.IndexFunc(plugs, func(p client.Plug) bool {
+		return p.Workshop == plug.Workshop && p.Sdk == plug.Sdk && p.Name == plug.Name
+	})
+	if idx != -1 {
+		info := plugs[idx]
+		if info.Bind != nil {
+			bind = endpoint(info.Bind.Workshop, info.Bind.Sdk, info.Bind.Name)
+			return bind
+		}
+	}
+
+	// check if other plugs are bound to this one
+	idx = slices.IndexFunc(plugs, func(p client.Plug) bool {
+		if p.Bind != nil {
+			return *p.Bind == plug
+		}
+		return false
+	})
+	if idx != -1 {
+		bind = endpoint(plug.Workshop, plug.Sdk, plug.Name)
+		return bind
+	}
+
+	// not bound or bound to
+	return ""
 }
 
 func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
@@ -127,6 +164,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 			slot:          endpoint(conn.Slot.Workshop, conn.Slot.Sdk, conn.Slot.Name),
 			manual:        conn.Manual,
 			interfaceName: conn.Interface,
+			bind:          maybeBound(conn.Plug, connections.Plugs),
 		})
 	}
 
@@ -135,10 +173,12 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 
 	for _, plug := range connections.Plugs {
 		if len(plug.Connections) == 0 && c.all {
+			var bind = maybeBound(plug.Ref(), connections.Plugs)
 			annotatedConns = append(annotatedConns, connection{
 				plug:          endpoint(plug.Workshop, plug.Sdk, plug.Name),
 				slot:          "-",
 				interfaceName: plug.Interface,
+				bind:          bind,
 			})
 		}
 	}
@@ -160,6 +200,9 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 	sort.Sort(byConnectionData(annotatedConns))
 
 	for _, note := range annotatedConns {
+		// find the plug that the current connection is bound to
+		idx := slices.IndexFunc(annotatedConns, func(c connection) bool { return c.plug != "" && note.bind != "" && c.plug == note.bind })
+		note.bindIdx = idx + 1
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", note.interfaceName, note.plug, note.slot, note)
 	}
 

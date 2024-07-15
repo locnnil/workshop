@@ -1,0 +1,10 @@
+name: test-sdk-ssh-agent
+title: test-sdk-ssh-agent
+base: ubuntu@20.04
+
+summary: test-sdk-ssh-agent SDK
+description: |
+  test-sdk-ssh-agent SDK
+plugs:
+  ssh-agent:
+    interface: ssh-agent

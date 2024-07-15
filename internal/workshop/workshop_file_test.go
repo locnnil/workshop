@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
@@ -20,6 +21,8 @@ type workshopFile struct {
 }
 
 var _ = check.Suite(&workshopFile{})
+
+func TestWorkshop(t *testing.T) { check.TestingT(t) }
 
 func (f *workshopFile) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
@@ -66,8 +69,8 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "two:plug"}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: "one:plug"}}},
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "two", Plug: "plug"}}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "one", Plug: "plug"}}}},
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -131,7 +134,7 @@ sdks:
     channel: latest/stable
     plugs:
       data: 
-        bind: data-sdk:cache
+        bind: data-sdk:aux
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
@@ -139,8 +142,8 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: "etl-sdk:cache"}}},
-		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: "data-sdk:cache"}}},
+		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.Bind{Sdk: "etl-sdk", Plug: "cache"}}}},
+		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.Bind{Sdk: "data-sdk", Plug: "aux"}}}},
 	})
 }
 
@@ -203,4 +206,52 @@ sdks:
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `incorrect bind plug reference: "cache" \(use <sdk>:<plug>\)`)
+}
+
+func (f *workshopFile) TestBindToAlreadyBoundPlug(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        bind: etl-sdk:cache
+      aux:
+        bind: etl-sdk:data
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      cache: 
+        bind: etl-sdk:data
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `cannot bind etl-sdk:cache to etl-sdk:data; plug etl-sdk:cache must not be bound`)
+}
+
+func (f *workshopFile) TestIndirectBindToAlreadyBoundPlug(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      data:
+        bind: data-sdk:aux
+      aux:
+        bind: etl-sdk:cache
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        bind: data-sdk:data
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `cannot bind data-sdk:aux to etl-sdk:cache; plug data-sdk:aux must not be bound`)
 }

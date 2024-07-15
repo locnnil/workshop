@@ -19,9 +19,12 @@ import (
 	"net/http"
 	"os/user"
 	"testing"
+	"time"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -29,19 +32,23 @@ import (
 var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
-	d *Daemon
-	b workshop.Backend
+	d     *Daemon
+	b     *workshop.FakeWorkshopBackend
+	store *sdk.FakeStore
 
 	workshopDir string
 	username    string
+	userhome    string
+	installTime time.Time
 	project     *workshop.Project
 	ctx         context.Context
 
 	vars map[string]string
 
-	restoreMuxVars    func()
-	restoreUserLookup func()
-	restoreProjectId  func()
+	restoreMuxVars   func()
+	restoreProjectId func()
+	restoreUser      func()
+	restoreTime      func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -49,24 +56,33 @@ func TestApi(t *testing.T) { check.TestingT(t) }
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
+
 	s.username = "testuser"
+	s.userhome = c.MkDir()
+	cur, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		c.Check(name, check.Equals, s.username)
+		return &user.User{Name: s.username, HomeDir: s.userhome, Uid: cur.Uid, Gid: cur.Gid}, nil
+	})
+
 	s.project = &workshop.Project{
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
 	s.b = workshop.NewFakeWorkshopBackend()
+	s.store = &sdk.FakeStore{}
 
-	s.restoreUserLookup = testutil.FakeFunc(func(uid string) (*user.User, error) {
-		return &user.User{Username: s.username}, nil
-	}, &workshop.LookupUsername)
+	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
+	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.username)
 
-	_, _, err := s.b.CreateOrLoadProject(s.ctx, s.project.Path)
+	_, _, err = s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
 }
 
@@ -74,8 +90,9 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workshopDir = ""
 	s.restoreMuxVars()
-	s.restoreUserLookup()
 	s.restoreProjectId()
+	s.restoreUser()
+	s.restoreTime()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {
@@ -86,11 +103,15 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	if s.d != nil {
 		panic("called daemon() twice")
 	}
+	dirs.SetRootDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
 	d, err := New(&Options{Dir: s.workshopDir}, s.b)
 	c.Assert(err, check.IsNil)
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()
 	s.d = d
+
+	sdk.ReplaceStore(s.d.state, s.store)
 	return d
 }
 

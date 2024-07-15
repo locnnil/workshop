@@ -2,7 +2,6 @@ package handlersetup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"gopkg.in/tomb.v2"
@@ -12,12 +11,14 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-// The Do handler decoractor that helps to decide whether:
+// OnDo helps to decide whether:
 // 1. The task needs to be put on Wait (wait-on-error for refresh).
+//
 // 2. The error needs to be reported but safely ingored (ContextCancelled can
 // happen if a user cancells or something gets interrupted during the execution
 // due to abortion, e.g. a running hook is called off because their change was
 // aborted.
+//
 // 3. The error needs to be reported as is which will abort the change (or the
 // affected lanes).
 func OnDo(handler state.HandlerFunc) state.HandlerFunc {
@@ -31,14 +32,7 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 		st.Lock()
 		defer st.Unlock()
 
-		switch {
-		case errors.Is(err, context.Canceled):
-			task.Logf("The task execution was cancelled")
-			// the context cancellation here means the change was aborted and
-			// the undo logic chain started. we don't report the context
-			// cancellation as error here as it is an expected interruption
-			return nil
-		case err != nil:
+		if err != nil {
 			change := task.Change()
 			if change.Kind() == "refresh" {
 				var setup conflict.RefreshSetup
@@ -61,12 +55,29 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 				}
 
 			}
-
 			return err
 		}
 
 		return nil
 	}
+}
+
+func User(change *state.Change) (string, error) {
+	var user string
+	err := change.Get("user", &user)
+	return user, err
+}
+
+func Workshop(task *state.Task) (string, error) {
+	var w string
+	err := task.Get("workshop", &w)
+	return w, err
+}
+
+func Sdk(task *state.Task) (string, error) {
+	var s string
+	err := task.Get("sdk", &s)
+	return s, err
 }
 
 func UserProjectWorkshop(task *state.Task) (string, *workshop.Project, string, error) {
@@ -110,4 +121,32 @@ func BackendContext(tomb *tomb.Tomb, user string, projectId string) (context.Con
 	ctxUser := context.WithValue(ctxProject, workshop.ContextUser, user)
 	ctxCancel, cancel := context.WithCancel(ctxUser)
 	return ctxCancel, cancel
+}
+
+// InjectTasks makes all the halt tasks of the mainTask wait for extraTasks;
+// extraTasks join the same lane and change as the mainTask.
+func InjectTasks(mainTask *state.Task, extraTasks *state.TaskSet) {
+	lanes := mainTask.Lanes()
+	if len(lanes) == 1 && lanes[0] == 0 {
+		lanes = nil
+	}
+	for _, l := range lanes {
+		extraTasks.JoinLane(l)
+	}
+
+	chg := mainTask.Change()
+	// Change shouldn't normally be nil, except for cases where
+	// this helper is used before tasks are added to a change.
+	if chg != nil {
+		chg.AddAll(extraTasks)
+	}
+
+	// make all halt tasks of the mainTask wait on extraTasks
+	ht := mainTask.HaltTasks()
+	for _, t := range ht {
+		t.WaitAll(extraTasks)
+	}
+
+	// make the extra tasks wait for main task
+	extraTasks.WaitFor(mainTask)
 }

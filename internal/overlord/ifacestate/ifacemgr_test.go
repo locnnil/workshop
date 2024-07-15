@@ -71,7 +71,7 @@ func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.Worksho
 	c.Assert(afero.WriteFile(fs, sdkPath, []byte(yaml), 0644), check.IsNil)
 }
 
-func (s *interfaceManagerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdkYamls map[sdk.Setup]string) {
+func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdkYamls map[sdk.Setup]string) (*workshop.Workshop, error) {
 	ctx := context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
@@ -104,6 +104,8 @@ slots:
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
+
+	return s.wsbackend.Workshop(ctx, ws)
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {
@@ -116,7 +118,7 @@ plugs:
   attr: plug-value
 `
 
-	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 	})
 
@@ -184,7 +186,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})
@@ -227,7 +229,7 @@ slots:
   interface: content
   attr2: value2
 `
-	s.launchWorkshopWithSDKs(c, "ws", map[sdk.Setup]string{
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
 		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
 		{Name: "producer", Channel: "latest/stable"}: producerYaml,
 	})

@@ -3,6 +3,7 @@ package sdkstate_test
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,9 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -22,13 +26,14 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-type H struct {
+type sdkStateSuite struct {
 	fs          afero.Fs
 	backend     *workshop.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
-	wsmgr       *sdkstate.SdkManager
+	sdkmgr      *sdkstate.SdkManager
+	repo        *interfaces.Repository
 	ctx         context.Context
 	project     *workshop.Project
 	installTime time.Time
@@ -37,7 +42,7 @@ type H struct {
 	restoreInstallTime func()
 }
 
-var _ = check.Suite(&H{})
+var _ = check.Suite(&sdkStateSuite{})
 
 func Test(t *testing.T) { check.TestingT(t) }
 
@@ -54,7 +59,34 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 
 var ErrTrigger = errors.New("error out")
 
-func (s *H) SetUpTest(c *check.C) {
+var sdkYaml = `
+name: test
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: test-interface
+    attr: value
+  plug2:
+    interface: test-interface
+    attr2: value2
+`
+
+var sdkYamlViolatesPolicy = `
+name: test-broken
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: test-interface
+    attr: value
+  plug2:
+    interface: test-interface
+    attr2: value2
+slots:
+  slot:
+    interface: content	
+`
+
+func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
@@ -75,7 +107,10 @@ func (s *H) SetUpTest(c *check.C) {
 
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wsmgr = sdkstate.New(s.runner, s.backend)
+
+	s.repo = interfaces.NewRepository()
+	mockIface(c, s.repo, &ifacetest.TestInterface{InterfaceName: "test-interface"})
+	s.sdkmgr = sdkstate.New(s.runner, s.repo, s.backend)
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
@@ -85,41 +120,41 @@ func (s *H) SetUpTest(c *check.C) {
 
 	s.se = overlord.NewStateEngine(s.state)
 	s.se.StartUp()
-	s.se.AddManager(s.wsmgr)
+	s.se.AddManager(s.sdkmgr)
 	s.se.AddManager(s.runner)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
 
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
+		{Name: "test", Channel: "latest/stable"},
+		{Name: "test-broken", Channel: "latest/stable"},
+	}}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
-	var sdkYaml = `
-name: test
-base: ubuntu@22.04
-plugs:
-  plug:
-    interface: content
-    target: /project/sub
-`
-	s.mockTestSdk(c, sdkYaml)
+	s.mockTestSdk(c, "test", sdkYaml)
 }
 
-func (s *H) mockTestSdk(c *check.C, sdkYaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, "test", "current", "meta", "sdk.yaml")
+func (s *sdkStateSuite) mockTestSdk(c *check.C, name, sdkYaml string) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
 	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 
-func (s *H) TearDownTest(c *check.C) {
+func mockIface(c *check.C, repo *interfaces.Repository, iface interfaces.Interface) {
+	err := repo.AddInterface(iface)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *sdkStateSuite) TearDownTest(c *check.C) {
 	s.restoreProjectId()
 	s.restoreInstallTime()
 }
 
-func (s *H) TestDoInstallSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
@@ -148,11 +183,11 @@ func (s *H) TestDoInstallSdkSuccess(c *check.C) {
 		"--one-top-level=/var/lib/workshop/sdk/test-2/2",
 		"--no-same-owner",
 	})
-
+	c.Check(chg.Err(), check.IsNil)
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
-func (s *H) TestDoInstallSdkSuccessWhenLocked(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallSdkSuccessWhenLocked(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
@@ -192,7 +227,7 @@ func (s *H) TestDoInstallSdkSuccessWhenLocked(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
-func (s *H) TestDoInstallSdkExecFail(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallSdkExecFail(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -208,7 +243,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		args.Stderr.Write([]byte(os.ErrDeadlineExceeded.Error()))
 		return workshop.ExecContext{}, os.ErrDeadlineExceeded
 	}
@@ -221,7 +256,7 @@ func (s *H) TestDoInstallSdkExecFail(c *check.C) {
 	c.Check(strings.HasSuffix(t1.Log()[0], os.ErrDeadlineExceeded.Error()), check.Equals, true)
 }
 
-func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -243,7 +278,7 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(terr)
 
 	// emulate install behaviour that unpacks an SDK to a certain directory
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		fs, _ := s.backend.WorkshopFs(ctx, name)
 		fs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "new"), 0755)
 		return workshop.ExecContext{}, nil
@@ -261,9 +296,72 @@ func (s *H) TestUndoInstallSdkSuccess(c *check.C) {
 	c.Check(exist, check.Equals, false)
 }
 
-func (s *H) TestDoLinkSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallAgentSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
+	newSdk := sdk.Setup{Name: "agent"}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-agent-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	s.se.Ensure()
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(chg.Err(), check.IsNil)
+	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	info, err := wfs.Stat("/var/lib/workshop/sdk/agent/current/meta/sdk.yaml")
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
+}
+
+func (s *sdkStateSuite) TestUndoInstallAgentSdkSuccess(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	newSdk := sdk.Setup{Name: "agent"}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	t1 := s.state.NewTask("install-agent-sdk", "test")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(t1)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t, t1, terr)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+	chg.AddTask(terr)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Check(chg.Err(), check.NotNil)
+	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, err = wfs.Stat("/var/lib/workshop/sdk/agent")
+	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
+}
+
+func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 
@@ -287,16 +385,65 @@ func (s *H) TestDoLinkSdkSuccess(c *check.C) {
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	info := props.Content
-	c.Check(info, check.HasLen, 1)
 	c.Check(info["test"], check.DeepEquals, testSdk)
 
 	sdkInfo, err := props.SdkInfo(s.ctx, info["test"].Name)
 	c.Assert(err, check.IsNil)
-	c.Assert(sdkInfo.Plugs, check.HasLen, 1)
+	c.Assert(sdkInfo.Plugs, check.HasLen, 2)
 	c.Assert(sdkInfo.Slots, check.HasLen, 0)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 2)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.NotNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.NotNil)
 }
 
-func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
+func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+	s.mockTestSdk(c, "test-broken", sdkYamlViolatesPolicy)
+
+	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
+
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", testSdk)
+	t1 := s.state.NewTask("link-sdk", "test-broken")
+	t1.Set("sdk-retrieve-task", t.ID())
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "content".*`)
+
+	// not in the fs (removed)
+	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, err = wfs.Stat(sdk.SdkCurrentPath("test-broken"))
+	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
+
+	// not in the content (unlinked)
+	wp, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, ok := wp.Content["test-broken"]
+	c.Check(ok, check.Equals, false)
+
+	// not in the repo (removed)
+	c.Check(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Check(s.repo.Slots(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+}
+
+func (s *sdkStateSuite) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -326,7 +473,11 @@ func (s *H) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Content
-	c.Check(info, check.HasLen, 0)
+	_, ok := props.Content["test"]
+	c.Check(ok, check.Equals, false)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
 }

@@ -49,6 +49,19 @@ plugs:
   key: value
   label: label
 `
+	consumerYamlBound = `
+name: consumer
+base: ubuntu@22.04
+plugs:
+ plug:
+  interface: test
+  key: value
+  label: label
+ plug2:
+  interface: test
+  key: value2
+  label: label2
+`
 	producerYaml = `
 name: producer
 base: ubuntu@22.04
@@ -60,11 +73,41 @@ slots:
 `
 )
 
-func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) {
+func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
+	file := &workshop.File{Name: ws, Base: "ubuntu@20.04"}
+	for _, s := range sdks {
+		file.Sdks = append(file.Sdks, workshop.SdkRecord{
+			Name:    s.Name,
+			Channel: "latest/stable",
+			Plugs:   make(map[string]workshop.Plug),
+		})
+	}
+	return file
+}
+
+func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
-	wf := &workshop.File{Name: w, Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: info.Name, Channel: "latest/stable"}}}
+	wf := s.workshopFile(w, []*sdk.Info{info})
 	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
+	wp, err := s.b.Workshop(s.ctx, w)
+	c.Check(err, check.IsNil)
+	return wp
+}
+
+func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, from, to string) *workshop.Workshop {
+	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
+	info.PlugBinds[from] = &sdk.PlugBind{
+		ProjectId: s.project.ProjectId,
+		Workshop:  w,
+		Sdk:       info.Name,
+		Name:      to}
+	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
+	wf := s.workshopFile(w, []*sdk.Info{info})
+	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
+	wp, err := s.b.Workshop(s.ctx, w)
+	c.Check(err, check.IsNil)
+	return wp
 }
 
 func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string, connsState map[string]interface{}, repoConnected []string, expected map[string]interface{}) {
@@ -676,6 +719,94 @@ func (s *apiSuite) TestConnectionsDefaultAuto(c *check.C) {
 	})
 }
 
+func (s *apiSuite) TestConnectionsBoundPlug(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+
+	s.mockInstalledSDKBoundPlug(c, consumerYamlBound, "consumer-ws", "plug", "plug2")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+			"interface": "test",
+			"auto":      true,
+			"plug-static": map[string]interface{}{
+				"key": "value",
+			},
+			"plug-dynamic": map[string]interface{}{
+				"foo-plug-dynamic": "bar-dynamic",
+			},
+			"slot-static": map[string]interface{}{
+				"key": "value",
+			},
+			"slot-dynamic": map[string]interface{}{
+				"foo-slot-dynamic": "bar-dynamic",
+			},
+		},
+	}, nil, map[string]interface{}{
+		"result": map[string]interface{}{
+			"plugs": []interface{}{
+				map[string]interface{}{
+					"project-id": "b8639dea",
+					"workshop":   "consumer-ws",
+					"sdk":        "consumer",
+					"plug":       "plug",
+					"interface":  "test",
+					"attrs":      map[string]interface{}{"key": "value"},
+					"label":      "label",
+					"bind":       map[string]interface{}{"plug": "plug2", "project-id": "b8639dea", "sdk": "consumer", "workshop": "consumer-ws"},
+					"connections": []interface{}{
+						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					},
+				},
+				map[string]interface{}{
+					"project-id": "b8639dea",
+					"workshop":   "consumer-ws",
+					"sdk":        "consumer",
+					"plug":       "plug2",
+					"interface":  "test",
+					"attrs":      map[string]interface{}{"key": "value2"},
+					"label":      "label2",
+				},
+			},
+			"slots": []interface{}{
+				map[string]interface{}{
+					"project-id": "b8639dea",
+					"workshop":   "producer-ws",
+					"sdk":        "producer",
+					"slot":       "slot",
+					"interface":  "test",
+					"attrs":      map[string]interface{}{"key": "value"},
+					"label":      "label",
+					"connections": []interface{}{
+						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					},
+				},
+			},
+			"established": []interface{}{
+				map[string]interface{}{
+					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"interface": "test",
+					"plug-attrs": map[string]interface{}{
+						"key":              "value",
+						"foo-plug-dynamic": "bar-dynamic",
+					},
+					"slot-attrs": map[string]interface{}{
+						"key":              "value",
+						"foo-slot-dynamic": "bar-dynamic",
+					},
+				},
+			},
+		},
+		"status":      "OK",
+		"status-code": 200.0,
+		"type":        "sync",
+	})
+}
+
 func (s *apiSuite) TestConnectionsAll(c *check.C) {
 	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
 	defer restore()
@@ -959,6 +1090,90 @@ func (s *apiSuite) TestConnectPlugSuccess(c *check.C) {
 	}})
 }
 
+func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
+	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
+	defer restore()
+
+	d := s.daemon(c)
+
+	s.mockInstalledSDK(c, consumerYamlBound, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
+	c.Check(err, check.IsNil)
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
+	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}}
+
+	d.Overlord().Loop()
+	defer d.Overlord().Stop()
+
+	action := &client.InterfaceAction{
+		Action: "connect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	cmd := apiCmd("/v1/connections")
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 202)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	id := body["change"].(string)
+
+	st := d.Overlord().State()
+	st.Lock()
+	chg := st.Change(id)
+	st.Unlock()
+	c.Assert(chg, check.NotNil)
+
+	<-chg.Ready()
+
+	st.Lock()
+	err = chg.Err()
+	st.Unlock()
+	c.Assert(err, check.IsNil)
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	ifaces := repo.Interfaces()
+	c.Assert(ifaces.Connections, check.HasLen, 2)
+
+	mainConn := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	boundConn := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug2"},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{mainConn, boundConn})
+
+	var conns map[string]interface{}
+	s.d.state.Lock()
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 2)
+	c.Assert(conns, check.DeepEquals,
+		map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+				"interface":   "test",
+				"plug-static": map[string]interface{}{"key": "value"},
+				"slot-static": map[string]interface{}{"key": "value"},
+			},
+			"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot": map[string]interface{}{
+				"interface":    "test",
+				"plug-static":  map[string]interface{}{"key": "value2"},
+				"slot-static":  map[string]interface{}{"key": "value"},
+				"plug-dynamic": map[string]interface{}{"bind": "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
+			},
+		})
+	s.d.state.Unlock()
+}
+
 func mockIface(c *check.C, d *Daemon, iface interfaces.Interface) {
 	err := d.Overlord().InterfaceManager().Repository().AddInterface(iface)
 	c.Assert(err, check.IsNil)
@@ -1195,30 +1410,46 @@ func (s *apiSuite) TestConnectFailureOnConflict(c *check.C) {
 	})
 }
 
-func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName string) {
+type disconnectOpts struct {
+	auto   bool
+	forget bool
+	bind   map[string]workshop.Plug
+}
+
+func (s *apiSuite) connect(c *check.C, plug string) *interfaces.ConnRef {
+	repo := s.d.Overlord().InterfaceManager().Repository()
+	connRef := &interfaces.ConnRef{
+		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: plug},
+		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}
+	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+	return connRef
+}
+
+func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, sName string, opts *disconnectOpts) {
 	restore := builtin.MockInterface(&ifacetest.TestInterface{InterfaceName: "test"})
 	defer restore()
 
 	d := s.daemon(c)
 
-	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	wp := s.mockInstalledSDK(c, consumerYamlBound, "consumer-ws")
+	wp.File.Sdks[0].Plugs = opts.bind
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	repo := d.Overlord().InterfaceManager().Repository()
-	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	conns := map[string]interface{}{}
+	connRef := s.connect(c, "plug")
+	conns[connRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto}
+
+	for n := range opts.bind {
+		cRef := s.connect(c, n)
+		conns[cRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto,
+			"plug-dynamic": map[string]interface{}{"bind": connRef.ID()}}
 	}
-	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
-	c.Assert(err, check.IsNil)
 
 	st := d.Overlord().State()
 	st.Lock()
-	st.Set("conns", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
-			"interface": "test",
-		},
-	})
+	st.Set("conns", conns)
 	st.Unlock()
 
 	d.Overlord().Loop()
@@ -1226,8 +1457,9 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 
 	action := &client.InterfaceAction{
 		Action: "disconnect",
-		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}},
-		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}},
+		Forget: opts.forget,
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: pW, Sdk: pSdk, Name: pName}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: sW, Sdk: sSdk, Name: sName}},
 	}
 	text, err := json.Marshal(action)
 	c.Assert(err, check.IsNil)
@@ -1247,7 +1479,7 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 	chg := st.Change(id)
 	st.Unlock()
 	c.Assert(chg, check.NotNil)
-	c.Assert(chg.Summary(), check.Equals, fmt.Sprintf(`Disconnect %s/%s:%s`, plugWorkshop, plugSdk, plugName))
+	c.Assert(chg.Summary(), check.Equals, fmt.Sprintf(`Disconnect %s/%s:%s`, pW, pSdk, pName))
 
 	<-chg.Ready()
 
@@ -1256,20 +1488,81 @@ func (s *apiSuite) testDisconnect(c *check.C, plugWorkshop, plugSdk, plugName, s
 	st.Unlock()
 	c.Assert(err, check.IsNil)
 
+	repo := s.d.overlord.InterfaceManager().Repository()
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 0)
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
-	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot")
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", &disconnectOpts{})
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectPlugAutoSuccess(c *check.C) {
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", &disconnectOpts{auto: true})
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns, check.DeepEquals,
+		map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+				"auto": true, "interface": "test", "undesired": true,
+			}})
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
+	opts := &disconnectOpts{
+		auto:   true,
+		forget: true,
+	}
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
+	opts := &disconnectOpts{
+		bind: map[string]workshop.Plug{
+			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+		},
+	}
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
+}
+
+func (s *apiSuite) TestDisconnectBoundPlugSlaveSuccess(c *check.C) {
+	opts := &disconnectOpts{
+		bind: map[string]workshop.Plug{
+			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+		},
+	}
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug2", "producer-ws", "producer", "slot", opts)
+	s.d.state.Lock()
+	var conns map[string]interface{}
+	s.d.state.Get("conns", &conns)
+	c.Assert(conns, check.HasLen, 0)
+	s.d.state.Unlock()
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccessWithEmptyPlug(c *check.C) {
-	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot")
+	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", &disconnectOpts{})
 }
 
 func (s *apiSuite) TestDisconnectPlugSuccessWithEmptySlot(c *check.C) {
-	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "", "", "")
+	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "", "", "", &disconnectOpts{})
 }
 
 func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {

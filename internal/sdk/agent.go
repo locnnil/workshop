@@ -1,6 +1,8 @@
 package sdk
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var agentSdkYamlTemplate = `name: agent
 base: %s

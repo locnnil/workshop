@@ -34,6 +34,23 @@ type Connection struct {
 	Slot *ConnectedSlot
 }
 
+func (c *Connection) CheckBound() (*ConnRef, bool) {
+	attr, ok := c.Plug.Lookup("bind")
+	if attr == nil {
+		return nil, false
+	}
+	id, ok := attr.(string)
+	if !ok {
+		return nil, false
+	}
+
+	cref, err := ParseConnRef(id)
+	if err != nil {
+		ok = false
+	}
+	return cref, ok
+}
+
 // ConnectedPlug represents a plug that is connected to a slot.
 type ConnectedPlug struct {
 	plugInfo     *sdk.PlugInfo

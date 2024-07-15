@@ -191,7 +191,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 	}
 
 	var hookContext *hookstate.Context
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				// emulate workshopctl set-health --code=<code> error <message>
@@ -206,7 +206,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -258,7 +258,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		CheckResult: healthstate.CheckOkay,
 	}
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
@@ -279,7 +279,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -321,7 +321,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 	}
 
 	var hookContext *hookstate.Context
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				var err error
@@ -336,7 +336,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -371,7 +371,7 @@ func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.backend.DoExec = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				return context.DeadlineExceeded
@@ -379,7 +379,7 @@ func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.DoExec = workshop.DoExecDefault
+		s.backend.ExecCallback = workshop.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)

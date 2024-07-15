@@ -15,10 +15,10 @@
 package daemon
 
 import (
+	"context"
 	"net/http"
 	"time"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -49,11 +49,11 @@ func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshop.W
 	}
 }
 
-func FakeSdkMounts(f func(state *state.State, repo *interfaces.Repository, projectId, workshop, sdk string) []*Mount) (restore func()) {
-	old := sdkMounts
-	sdkMounts = f
+func FakeSdkMounts(f func(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error)) (restore func()) {
+	old := workshopMounts
+	workshopMounts = f
 	return func() {
-		sdkMounts = old
+		workshopMounts = old
 	}
 }
 

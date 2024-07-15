@@ -8,10 +8,10 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
   
-  echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
+  echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"  
   workshop_exec disconnect ws-conn/test-sdk-content:content-plug-one ws-conn/agent:content  
   workshop_exec connect ws-conn/test-sdk-content:content-plug-one ws-conn/agent:content
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"
+  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"  
   
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk> form"
   workshop_exec disconnect ws-conn/test-sdk-content:content-plug-two :content
@@ -23,11 +23,13 @@ execute: |
   workshop_exec connect ws-conn/test-sdk-gpu:gpu
   workshop_exec connections ws-conn | MATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+manual$"
   
-  echo "Check workshop refresh reconnects manually connected connections"
+  echo "Check workshop refresh does not reconnect undesired connections"
+  workshop_exec refresh ws-conn
+  workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
   workshop_exec refresh ws-conn
   workshop_exec connections ws-conn > output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$" < output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+manual$" < output.log
-  MATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+manual$" < output.log
+  MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+$" < output.log
+  MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+$" < output.log
+  NOMATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+$" < output.log
 
   

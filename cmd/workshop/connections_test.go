@@ -377,6 +377,145 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 	c.Assert(s.Stderr(), Equals, "")
 }
 
+func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
+	result := client.Connections{
+		Established: []client.Connection{
+			{
+				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "capslock"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "leds-provider", Sdk: "provider", Name: "capslock-led"},
+				Interface: "leds",
+			}, {
+				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Interface: "leds",
+				Manual:    true,
+			}, {
+				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "scrollock"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "scrollock-led"},
+				Interface: "leds",
+				Manual:    true,
+			},
+		},
+		Plugs: []client.Plug{
+			{
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "capslock",
+				Interface: "leds",
+				Connections: []client.SlotRef{{
+					ProjectId: "42424242",
+					Workshop:  "leds-provider",
+					Sdk:       "provider",
+					Name:      "capslock-led",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "numlock",
+				Interface: "leds",
+				Bind: &client.PlugRef{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "scrollock",
+				},
+				Connections: []client.SlotRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "agent",
+					Name:      "numlock-led",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "scrollock",
+				Interface: "leds",
+				Connections: []client.SlotRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "agent",
+					Name:      "scrollock-led",
+				}},
+			},
+		},
+		Slots: []client.Slot{
+			{
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "agent",
+				Name:      "numlock-led",
+				Interface: "leds",
+				Connections: []client.PlugRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "numlock",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "agent",
+				Name:      "scrollock-led",
+				Interface: "leds",
+				Connections: []client.PlugRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "scrollock",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "leds-provider",
+				Sdk:       "provider",
+				Name:      "capslock-led",
+				Interface: "leds",
+				Connections: []client.PlugRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "capslock",
+				}},
+			},
+		},
+	}
+	n := 0
+	query := url.Values{"project-id": []string{"42424242"}}
+	s.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, s.prjId, s.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Check(r.URL.Path, check.Equals, "/v1/connections")
+			c.Check(r.URL.Query(), check.DeepEquals, query)
+			body, err := io.ReadAll(r.Body)
+			c.Check(err, check.IsNil)
+			c.Check(body, check.DeepEquals, []byte{})
+			EncodeResponseBody(c, w, map[string]interface{}{
+				"type":   "sync",
+				"result": result,
+			})
+		}
+	})
+	cmd := &CmdConnections{}
+	err := cmd.Run(cmd.Command(), []string{})
+	c.Assert(err, IsNil)
+	expectedStdout := "" +
+		"Interface  Plug                              Slot                                 Notes\n" +
+		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led  -\n" +
+		"leds       keyboard-lights/lights:numlock    :numlock-led                         manual,bind.3\n" +
+		"leds       keyboard-lights/lights:scrollock  :scrollock-led                       manual,bind.3\n"
+	c.Assert(s.Stdout(), Equals, expectedStdout)
+	c.Assert(s.Stderr(), Equals, "")
+}
+
 func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 	result := client.Connections{
 		Established: []client.Connection{
@@ -512,6 +651,135 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             -\n" +
 		"leds       keyboard-lights/lights:scrollock  :scrollock-led                                -\n"
+	c.Assert(s.Stdout(), Equals, expectedStdout)
+	c.Assert(s.Stderr(), Equals, "")
+}
+
+func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
+	result := client.Connections{
+		Established: []client.Connection{
+			{
+				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "capslock"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "leds-provider", Sdk: "provider", Name: "capslock-led"},
+				Interface: "leds",
+			},
+		},
+		Undesired: []client.Connection{
+			{
+				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Interface: "leds",
+				Manual:    true,
+			},
+		},
+		Plugs: []client.Plug{
+			{
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "capslock",
+				Interface: "leds",
+				Connections: []client.SlotRef{{
+					ProjectId: "42424242",
+					Workshop:  "leds-provider",
+					Sdk:       "provider",
+					Name:      "capslock-led",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "numlock",
+				Interface: "leds",
+				Bind: &client.PlugRef{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "scrollock",
+				},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "lights",
+				Name:      "scrollock",
+				Interface: "leds",
+			},
+		},
+		Slots: []client.Slot{
+			{
+				ProjectId: "42424242",
+				Workshop:  "leds-provider",
+				Sdk:       "agent",
+				Name:      "capslock-led",
+				Interface: "leds",
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "agent",
+				Name:      "numlock-led",
+				Interface: "leds",
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "agent",
+				Name:      "scrollock-led",
+				Interface: "leds",
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "leds-provider",
+				Sdk:       "provider",
+				Name:      "capslock-led",
+				Interface: "leds",
+				Connections: []client.PlugRef{{
+					ProjectId: "42424242",
+					Workshop:  "keyboard-lights",
+					Sdk:       "lights",
+					Name:      "capslock",
+				}},
+			}, {
+				ProjectId: "42424242",
+				Workshop:  "keyboard-lights",
+				Sdk:       "numlock-provider",
+				Name:      "numlock-led",
+				Interface: "leds",
+			},
+		},
+	}
+	n := 0
+	query := url.Values{"project-id": []string{"42424242"}, "select": []string{"all"}}
+	s.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, s.prjId, s.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Check(r.URL.Path, check.Equals, "/v1/connections")
+			c.Check(r.URL.Query(), check.DeepEquals, query)
+			body, err := io.ReadAll(r.Body)
+			c.Check(err, check.IsNil)
+			c.Check(body, check.DeepEquals, []byte{})
+			EncodeResponseBody(c, w, map[string]interface{}{
+				"type":   "sync",
+				"result": result,
+			})
+		}
+	})
+
+	cmd := &CmdConnections{}
+	cmdAll := cmd.Command()
+	cmd.all = true
+	err := cmd.Run(cmdAll, []string{})
+	c.Assert(err, IsNil)
+	expectedStdout := "" +
+		"Interface  Plug                              Slot                                          Notes\n" +
+		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
+		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
+		"leds       keyboard-lights/lights:numlock    -                                             bind.4\n" +
+		"leds       keyboard-lights/lights:scrollock  -                                             bind.4\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }

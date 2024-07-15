@@ -30,8 +30,18 @@ type ExecCall struct {
 	Args *Execution
 }
 
-type WorkshopExecCall struct {
+type FsCall struct {
 	Name string
+}
+
+type AssignProfileCall struct {
+	Name    string
+	Profile SdkProfile
+}
+
+type RemoveProfileCall struct {
+	Name    string
+	Profile string
 }
 
 type FakeWorkshopBackend struct {
@@ -42,11 +52,17 @@ type FakeWorkshopBackend struct {
 	// the key is a username
 	projects map[string][]*Project
 
-	DoExec    ExecFunc
-	ExecCalls []*ExecCall
+	ExecCallback ExecFunc
+	ExecCalls    []*ExecCall
 
 	WorkshopFsCallback func(ctx context.Context, name string) (WorkshopFs, error)
-	WorkshopFsCalls    []*WorkshopExecCall
+	WorkshopFsCalls    []*FsCall
+
+	AssignProfileCallback func(ctx context.Context, workshop string, profile SdkProfile) error
+	AssignProfileCalls    []*AssignProfileCall
+
+	RemoveProfileCallback func(ctx context.Context, workshop string, profile string) error
+	RemoveProfileCalls    []*RemoveProfileCall
 }
 
 func NewFakeWorkshopBackend() *FakeWorkshopBackend {
@@ -55,7 +71,7 @@ func NewFakeWorkshopBackend() *FakeWorkshopBackend {
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
 	be.projects = make(map[string][]*Project)
 
-	be.DoExec = DoExecDefault
+	be.ExecCallback = DoExecDefault
 
 	return &be
 }
@@ -113,15 +129,16 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
 	if _, ok := f.Workshops[projectId][file.Name]; ok {
-		return api.StatusErrorf(http.StatusNotFound, "workshop exists already")
+		return errors.New("workshop exists")
 	}
 
 	ws := &FakeWorkshop{}
 	ws.Workshop = &Workshop{Backend: f,
 		Name:    file.Name,
-		Running: true,
+		Running: false,
 		Project: prj,
 		Base:    file.Base,
+		File:    file,
 	}
 	ws.Config = make(map[string]string)
 	ws.Devices = make(map[string]map[string]string)
@@ -130,6 +147,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 
 	content := make(map[string]sdk.Setup)
 	f.Workshops[projectId][file.Name] = ws
+
 	for _, s := range file.Sdks {
 		setup := sdk.Setup{
 			Name:    s.Name,
@@ -206,15 +224,44 @@ func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name str
 }
 
 func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error {
+	f.AssignProfileCalls = append(f.AssignProfileCalls, &AssignProfileCall{Name: workshop, Profile: profile})
+
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
 	f.Workshops[projectId][workshop].Profiles = append(f.Workshops[projectId][workshop].Profiles, profile)
+
+	if f.AssignProfileCallback != nil {
+		return f.AssignProfileCallback(ctx, workshop, profile)
+	}
 	return nil
 }
 
+func (s *FakeWorkshopBackend) Profile(ctx context.Context, w string, pr string) (SdkProfile, error) {
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return SdkProfile{}, err
+	}
+	wp, ok := s.Workshops[projectId][w]
+	if !ok {
+		return SdkProfile{}, ErrWorkshopNotFound
+	}
+
+	profiles := wp.Profiles
+	idx := slices.IndexFunc(profiles, func(p SdkProfile) bool { return p.Name() == pr })
+	if idx != -1 {
+		return s.Workshops[projectId][w].Profiles[idx], nil
+	}
+	return SdkProfile{}, ErrSdkProfileNotFound
+}
+
 func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string, profile string) error {
+	s.RemoveProfileCalls = append(s.RemoveProfileCalls, &RemoveProfileCall{Name: workshop, Profile: profile})
+
+	if s.RemoveProfileCallback != nil {
+		return s.RemoveProfileCallback(ctx, workshop, profile)
+	}
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return err
@@ -225,7 +272,15 @@ func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, workshop string
 		s.Workshops[projectId][workshop].Profiles = slices.Delete(profiles, idx, idx+1)
 		return nil
 	}
-	return errors.New("profile not found")
+	return ErrSdkProfileNotFound
+}
+
+func (f *FakeWorkshopBackend) Profiles(ctx context.Context, workshop string) ([]SdkProfile, error) {
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return f.Workshops[projectId][workshop].Profiles, nil
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error {
@@ -296,7 +351,7 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter W
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (WorkshopFs, error) {
-	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &WorkshopExecCall{Name: name})
+	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &FsCall{Name: name})
 	if s.WorkshopFsCallback != nil {
 		return s.WorkshopFsCallback(ctx, name)
 	}
@@ -310,7 +365,7 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (Work
 
 func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *Execution) (ExecContext, error) {
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
-	return f.DoExec(ctx, name, args)
+	return f.ExecCallback(ctx, name, args)
 }
 
 func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecContext, error) {
@@ -322,7 +377,7 @@ func DoExecDefault(ctx context.Context, name string, args *Execution) (ExecConte
 }
 
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) error {
@@ -362,11 +417,11 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 }
 
 func (s *FakeWorkshopBackend) CreateStateStorage(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) DeleteStateStorage(ctx context.Context, name string) error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {

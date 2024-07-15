@@ -175,3 +175,37 @@ func (s *Backend) RemoveProfile(ctx context.Context, w string, profile string) e
 	}
 	return err
 }
+
+func (s *Backend) Profile(ctx context.Context, wp, profile string) (workshop.SdkProfile, error) {
+	var pr = workshop.NewSdkProfile(profile)
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return pr, err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return pr, fmt.Errorf("context key project-id not found")
+	}
+
+	lxdname := profileName(projectId, wp, profile)
+	lxdp, _, err := conn.GetProfile(lxdname)
+	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return pr, workshop.ErrSdkProfileNotFound
+		}
+		return pr, err
+	}
+	for name, dev := range lxdp.Devices {
+		switch dev["type"] {
+		case "disk":
+			pr.Devices[name] = Mount(name, dev["source"], dev["path"])
+		case "gpu":
+			pr.Devices[name] = Gpu(name)
+		case "proxy":
+			pr.Devices[name] = SshAgent(name, dev["connect"], dev["listen"])
+		}
+	}
+	return pr, nil
+}
