@@ -393,6 +393,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "scrollock"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "scrollock-led"},
 				Interface: "leds",
+				Manual:    true,
 			},
 		},
 		Plugs: []client.Plug{
@@ -510,7 +511,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 		"Interface  Plug                              Slot                                 Notes\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led  -\n" +
 		"leds       keyboard-lights/lights:numlock    :numlock-led                         manual,bind:3\n" +
-		"leds       keyboard-lights/lights:scrollock  :scrollock-led                       -\n"
+		"leds       keyboard-lights/lights:scrollock  :scrollock-led                       manual,bind:3\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }
@@ -778,7 +779,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             bind:4\n" +
-		"leds       keyboard-lights/lights:scrollock  -                                             -\n"
+		"leds       keyboard-lights/lights:scrollock  -                                             bind:4\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }

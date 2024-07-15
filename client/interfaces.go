@@ -37,6 +37,10 @@ type Plug struct {
 	Connections []SlotRef              `json:"connections,omitempty"`
 }
 
+func (p *Plug) Ref() PlugRef {
+	return PlugRef{ProjectId: p.ProjectId, Workshop: p.Workshop, Sdk: p.Sdk, Name: p.Name}
+}
+
 // PlugRef is a reference to a plug.
 type PlugRef struct {
 	ProjectId string `json:"project-id"`

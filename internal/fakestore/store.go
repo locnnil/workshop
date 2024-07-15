@@ -1,6 +1,8 @@
 package store
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -205,10 +207,31 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	} else {
 		// Emulate meta data for the test SDKs. We need the name/base pair for
 		// the e2e scenarios to work.
-		sSdk.SdkYAML = fmt.Sprintf(`name: %s
-base: ubuntu@22.04`, name)
+		sSdk.SdkYAML, err = readTestMetadata(ctx, client, name, track, risk)
+		if err != nil {
+			return sSdk, err
+		}
 	}
 	return sSdk, nil
+}
+
+// Only relevant for the end to end tests
+func readTestMetadata(ctx context.Context, client *ClientWrapper, name, track, risk string) (string, error) {
+	var b bytes.Buffer
+	meta := bufio.NewWriter(&b)
+
+	bkt := client.Bucket(SDK_STORE_BUCKET_NAME)
+	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/sdk.yaml", name, track, risk))
+	r, err := obj.NewReader(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	if _, err = io.Copy(meta, r); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error) {
