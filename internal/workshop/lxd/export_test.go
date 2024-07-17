@@ -6,6 +6,7 @@ var (
 	DefaultConfig          = (*Backend).workshopConfig
 	ReadProjects           = readProjects
 	SaveProjects           = saveProjects
+	HandleLaunchUpdate     = handleLaunchUpdate
 )
 
 func (s *Backend) SetNvidia(runtime bool) {

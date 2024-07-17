@@ -45,6 +45,7 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 	workshopstate.New(s.state, s.runner, s.backend)
 
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
+		"download-base",
 		"create-workshop",
 		"start-workshop",
 		"stop-workshop",

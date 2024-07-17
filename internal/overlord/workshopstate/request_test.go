@@ -136,7 +136,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 	file := &workshop.File{Name: "test", Base: "ubuntu@22.04"}
 	ts := workshopstate.Launch(s.state, file, nil, s.project)
 
-	expected := []string{"create-workshop",
+	expected := []string{"download-base", "create-workshop",
 		"mount-project",
 		"start-workshop", "install-agent-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
@@ -148,81 +148,6 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	c.Assert(&wf, check.DeepEquals, file)
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
-}
-
-func (s *requestSuite) TestLaunchWorkshopWithSdks(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	sdk_1 := sdk.Setup{Name: "sdk", Channel: "latest/stable"}
-	sdk_2 := sdk.Setup{Name: "sdk_2", Channel: "latest/stable"}
-
-	file := &workshop.File{
-		Name: "test",
-		Base: "ubuntu@22.04",
-		Sdks: workshop.SdkList{
-			workshop.SdkRecord{Name: sdk_1.Name, Channel: sdk_1.Channel},
-			workshop.SdkRecord{Name: sdk_2.Name, Channel: sdk_2.Channel},
-		},
-	}
-
-	ts := workshopstate.Launch(s.state, file, []sdk.Setup{sdk_1, sdk_2}, s.project)
-
-	expected := []string{
-		"create-workshop",
-		"mount-project",
-		"start-workshop",
-		"retrieve-sdk",
-		"retrieve-sdk",
-		"install-agent-sdk",
-		"install-sdk",
-		"install-sdk",
-		"link-sdk",
-		"link-sdk",
-		"link-sdk",
-		"auto-connect", // agent SDK
-		"auto-connect",
-		"auto-connect",
-		"run-hook",
-		"run-hook",
-		"run-hook",
-		"run-hook"}
-
-	tasks := ts.Tasks()
-
-	verifyExpectedTasks(c, tasks, expected)
-	var err error
-
-	var s1, s2 sdk.Setup
-	err = tasks[0].Get("sdk-setup", &s1)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(s1, check.Equals, sdk_1)
-
-	err = tasks[1].Get("sdk-setup", &s2)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(s2, check.DeepEquals, sdk_2)
-
-	// install-sdk task for sdk
-	var id1, id2 string
-	err = tasks[7].Get("sdk-retrieve-task", &id1)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(id1, check.Equals, tasks[0].ID())
-
-	// link-sdk task for sdk
-	err = tasks[8].Get("sdk-retrieve-task", &id2)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(id2, check.Equals, tasks[0].ID())
-
-	// install-sdk task for sdk_2
-	err = tasks[9].Get("sdk-retrieve-task", &id1)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(id1, check.Equals, tasks[1].ID())
-
-	// link-sdk task for sdk_2
-	err = tasks[10].Get("sdk-retrieve-task", &id2)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(id2, check.Equals, tasks[1].ID())
-
-	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", tasks)
 }
 
 func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
@@ -240,6 +165,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 	expected := []string{
 		"create-state-storage",
 		"remove-state-storage",
+		"download-base",
 		"create-workshop",
 		"remove-workshop-stash",
 		"stash-workshop",
@@ -286,6 +212,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"auto-disconnect",
 		"auto-disconnect",
 		"stash-workshop",
+		"download-base",
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
@@ -465,6 +392,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 	expected_ws := []string{
 		"create-state-storage",
 		"remove-state-storage",
+		"download-base",
 		"create-workshop",
 		"stash-workshop",
 		"mount-project",
@@ -483,6 +411,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"auto-disconnect", // agent SDK
 		"auto-disconnect",
 		"stash-workshop",
+		"download-base",
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
@@ -563,6 +492,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"run-hook",
 		"auto-disconnect",
 		"stash-workshop",
+		"download-base",
 		"create-workshop",
 		"mount-project",
 		"start-workshop",

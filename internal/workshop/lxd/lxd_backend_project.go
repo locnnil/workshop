@@ -34,7 +34,7 @@ func LxdProjectUser(project string) string {
 }
 
 func LxdSystemProjectName(user string) string {
-	return LxdProjectName(user) + ".system"
+	return LxdProjectName(user) + ".stash"
 }
 
 // Initialise the Workshop project namespace.

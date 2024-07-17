@@ -77,6 +77,12 @@ type StateStorage interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
+type ProgressReporter func(label string, done, total int)
+
+type BaseImageManager interface {
+	Download(ctx context.Context, base string, report ProgressReporter) error
+}
+
 type ExecArgs struct {
 	Command     []string
 	UserId      int
@@ -112,6 +118,7 @@ type Backend interface {
 	Stash
 	StateStorage
 	Profile
+	BaseImageManager
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still

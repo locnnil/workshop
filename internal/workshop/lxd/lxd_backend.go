@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"runtime"
-	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -26,13 +24,12 @@ type Backend struct {
 }
 
 const (
-	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
+	LxdSock     = "/var/snap/lxd/common/lxd/unix.socket"
+	storagePool = "workshop"
 )
 
 var (
-	ConnectSimpleStreams = lxd.ConnectSimpleStreams
-	defaultDevices       = createDefaultDevices
-	imageServer          = "https://cloud-images.ubuntu.com/releases/"
+	defaultDevices = createDefaultDevices
 )
 
 func InstanceName(name string, project_id string) string {
@@ -66,7 +63,6 @@ func New() (workshop.Backend, error) {
 
 func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
 	var err error
-	var imageSrv lxd.ImageServer
 	var image *api.Image
 
 	conn, err := s.LxdClient(ctx)
@@ -91,16 +87,14 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 	}
 
 	// Check if we have the base image stored locally
-	if alias, _, err := conn.GetImageAlias(file.Base); err == nil {
-		if image, _, err = conn.GetImage(alias.Target); err != nil {
-			return err
-		}
-		imageSrv = conn
-	} else {
-		imageSrv, image, err = s.fetchRemoteImage(file.Base)
-		if err != nil {
-			return err
-		}
+	alias, _, err := conn.GetImageAlias(file.Base)
+	if err != nil {
+		return err
+	}
+
+	image, _, err = conn.GetImage(alias.Target)
+	if err != nil {
+		return err
 	}
 
 	usr, err := workshop.LookupUsername(userName)
@@ -125,27 +119,14 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 			Project:     LxdProjectName(userName),
 		},
 	}
-	op, err := conn.CreateInstanceFromImage(imageSrv, *image, req)
+
+	op, err := conn.CreateInstance(req)
 	if err != nil {
 		return err
 	}
 
-	if err = op.Wait(); err != nil {
+	if err = op.WaitContext(ctx); err != nil {
 		return err
-	}
-
-	_, _, err = conn.GetImageAlias(file.Base)
-	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
-		return err
-	} else if api.StatusErrorCheck(err, http.StatusNotFound) {
-		if err = conn.CreateImageAlias(api.ImageAliasesPost{ImageAliasesEntry: api.ImageAliasesEntry{
-			Name: file.Base,
-			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
-				Target: image.Fingerprint,
-			},
-		}}); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -713,38 +694,6 @@ users:
 		cfg["nvidia.runtime"] = "true"
 	}
 	return cfg, nil
-}
-
-func (s *Backend) fetchRemoteImage(base string) (lxd.ImageServer, *api.Image, error) {
-	var image *api.Image
-
-	imageServer, err := ConnectSimpleStreams(imageServer, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	names := strings.Split(base, "@")
-	if len(names) <= 1 {
-		return nil, nil, fmt.Errorf("cannot find a base image for the workshop")
-	}
-
-	alias, _, err := imageServer.GetImageAlias(fmt.Sprintf("%s/%s", names[1], runtime.GOARCH))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	image, _, err = imageServer.GetImage(alias.Target)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return imageServer, image, nil
-}
-
-func FakeImageServer(server string) func() {
-	oldImageServer := imageServer
-	imageServer = server
-	return func() { imageServer = oldImageServer }
 }
 
 func FakeDefaultDevices(f func() map[string]map[string]string) func() {

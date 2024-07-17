@@ -436,3 +436,6 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	}
 	return userName, projectId, nil
 }
+func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report ProgressReporter) error {
+	return nil
+}
