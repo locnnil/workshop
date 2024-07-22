@@ -270,3 +270,42 @@ base: ubuntu@22.04
 
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 }
+
+func (s *workshopHandlers) TestDownloadBase(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report workshop.ProgressReporter) error {
+		report("download finished", 100, 100)
+		return nil
+	}
+	defer func() {
+		s.backend.DownloadBaseCallback = nil
+	}()
+
+	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
+base: ubuntu@22.04
+`), 0644)
+	c.Check(err, check.IsNil)
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("download-base", "...")
+	t1.Set("workshop-file", wf)
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	label, done, total := t1.Progress()
+	c.Assert(label, check.Equals, "download finished")
+	c.Assert(done, check.Equals, 100)
+	c.Assert(total, check.Equals, 100)
+}

@@ -25,7 +25,7 @@ type Backend struct {
 
 const (
 	LxdSock     = "/var/snap/lxd/common/lxd/unix.socket"
-	storagePool = "workshop"
+	storagePool = "default"
 )
 
 var (
@@ -34,6 +34,10 @@ var (
 
 func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
+}
+
+func ImageAlias(name string) string {
+	return fmt.Sprintf("workshop-%s", name)
 }
 
 func New() (workshop.Backend, error) {
@@ -81,13 +85,8 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 		return fmt.Errorf("context key user not found")
 	}
 
-	// Skip if the instance exists already.
-	if _, _, err := conn.GetInstance(InstanceName(file.Name, projectId)); err == nil {
-		return fmt.Errorf("workshop \"%s\" already exists", file.Name)
-	}
-
 	// Check if we have the base image stored locally
-	alias, _, err := conn.GetImageAlias(file.Base)
+	alias, _, err := conn.GetImageAlias(ImageAlias(file.Base))
 	if err != nil {
 		return err
 	}
@@ -620,7 +619,7 @@ func (s *Backend) CreateStateStorage(ctx context.Context, name string) error {
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
 
-	return conn.CreateStoragePoolVolume("default", vol)
+	return conn.CreateStoragePoolVolume(storagePool, vol)
 }
 
 func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {
@@ -635,7 +634,7 @@ func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {
 		return fmt.Errorf("context key %s not found", workshop.ContextProjectId)
 	}
 
-	return conn.DeleteStoragePoolVolume("default", "custom", workshop.WorkshopStateVolumeName(name, pid))
+	return conn.DeleteStoragePoolVolume(storagePool, "custom", workshop.WorkshopStateVolumeName(name, pid))
 }
 
 func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
@@ -647,7 +646,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
 		return nil, err
 	} else {
-		if err = InitProject(srv, user); err != nil {
+		if err = InitLxdProject(srv, user); err != nil {
 			return nil, err
 		}
 		return srv.UseProject(LxdProjectName(user)), nil
@@ -656,7 +655,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 
 func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
-		"root":                 {"type": "disk", "pool": "default", "path": "/"},
+		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
 		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 		"workshop.socket":      {"type": "disk", "source": dirs.SocketPath + ".untrusted", "path": filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted")},
 		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},

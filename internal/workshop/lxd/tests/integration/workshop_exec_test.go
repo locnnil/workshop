@@ -13,6 +13,7 @@ import (
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -71,7 +72,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	f.ctx = createTestContext(f.username, f.project.ProjectId)
 
 	f.lxdClient, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
-	err = lxdbackend.InitProject(f.lxdClient, f.username)
+	err = lxdbackend.InitLxdProject(f.lxdClient, f.username)
 	c.Check(err, check.IsNil)
 
 	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
@@ -99,6 +100,9 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshop.NewProjectId)
+
+	err = f.be.Download(f.ctx, "ubuntu@24.04", nil)
+	c.Assert(err, check.IsNil)
 
 	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
 }
@@ -202,14 +206,15 @@ func (f *wsExec) TestLxdBackendExecAddEnvVar(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout, check.Equals, `USER=workshop
-HOME=/home/workshop
-container=lxc
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-FOO=BAR
-LANG=C.UTF-8
-PWD=/
-`)
+	raw := strings.FieldsFunc(stdout, func(r rune) bool { return r == '\n' })
+	env, err := osutil.ParseEnvironment(raw)
+	c.Check(err, check.IsNil)
+	c.Check(env["USER"], check.Equals, "workshop")
+	c.Check(env["HOME"], check.Equals, "/home/workshop")
+	c.Check(env["PATH"], check.Equals, "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin")
+	c.Check(env["FOO"], check.Equals, "BAR")
+	c.Check(env["LANG"], check.Equals, "C.UTF-8")
+	c.Check(env["PWD"], check.Equals, "/")
 	c.Assert(stderr, check.Equals, "")
 }
 

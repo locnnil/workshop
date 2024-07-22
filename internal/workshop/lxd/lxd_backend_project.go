@@ -21,6 +21,12 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+var lxdProjectConfig = map[string]string{
+	"features.images":          "true",
+	"features.profiles":        "true",
+	"features.storage.volumes": "true",
+}
+
 func LxdProjectName(user string) string {
 	return "workshop." + user
 }
@@ -38,7 +44,7 @@ func LxdSystemProjectName(user string) string {
 }
 
 // Initialise the Workshop project namespace.
-func InitProject(conn lxd.InstanceServer, username string) error {
+func InitLxdProject(conn lxd.InstanceServer, username string) error {
 	if username == "" {
 		return fmt.Errorf("cannot init LXD project: username is empty")
 	}
@@ -57,11 +63,7 @@ func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return conn.CreateProject(api.ProjectsPost{
 				ProjectPut: api.ProjectPut{
-					Config: map[string]string{
-						"features.images":          "true",
-						"features.profiles":        "true",
-						"features.storage.volumes": "true",
-					},
+					Config: lxdProjectConfig,
 				},
 				Name: projectName,
 			})

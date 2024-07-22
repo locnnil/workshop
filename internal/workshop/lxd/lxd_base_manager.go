@@ -27,10 +27,9 @@ func (b *Backend) Download(ctx context.Context, base string, report workshop.Pro
 	defer conn.Disconnect()
 
 	// Check if we have the base image stored locally
-	if _, _, err := conn.GetImageAlias(base); err == nil {
-		if report != nil {
-			report("download image", 1, 1)
-		}
+	_, _, err = conn.GetImageAlias(ImageAlias(base))
+	if err == nil {
+		// the image already exists
 		return nil
 	}
 
@@ -39,7 +38,7 @@ func (b *Backend) Download(ctx context.Context, base string, report workshop.Pro
 		return fmt.Errorf("%q base is not supported", base)
 	}
 
-	imageServer, err := ConnectSimpleStreams(imageServer, nil)
+	imageServer, err := lxd.ConnectSimpleStreams(imageServer, nil)
 	if err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func (b *Backend) Download(ctx context.Context, base string, report workshop.Pro
 		Type:       "",
 		Aliases: []api.ImageAlias{
 			{
-				Name:        base,
+				Name:        ImageAlias(base),
 				Description: "Workshop base image",
 			},
 		},
@@ -83,7 +82,18 @@ func (b *Backend) Download(ctx context.Context, base string, report workshop.Pro
 		})
 	}
 
-	return op.Wait()
+	chOperation := make(chan error)
+	go func() {
+		chOperation <- op.Wait()
+		close(chOperation)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return op.CancelTarget()
+	case err := <-chOperation:
+		return err
+	}
 }
 
 var imgDownload = regexp.MustCompile(`^rootfs: (?P<done>[0-9]+)% (?P<speed>\([\w/\.]+\))$`)
