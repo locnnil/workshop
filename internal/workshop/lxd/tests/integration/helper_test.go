@@ -6,12 +6,10 @@ package workshopbackend_test
 import (
 	"context"
 	"os"
-	"os/user"
 	"path/filepath"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
@@ -81,20 +79,9 @@ func createTestContext(username, projectId string) context.Context {
 }
 
 func launchTestWorkshop(c *check.C, ctx context.Context, be workshop.Backend, dir, username string) {
-	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     username,
-			Username: username,
-			Uid:      "1000",
-			Gid:      "1000",
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
-	defer restore()
-
 	var err error
 
-	wf := &workshop.File{Name: "test", Base: "ubuntu@22.04"}
+	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
 base: ubuntu@22.04`), 0644), check.IsNil)
 

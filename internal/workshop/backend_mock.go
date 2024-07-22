@@ -44,6 +44,10 @@ type RemoveProfileCall struct {
 	Profile string
 }
 
+type DownloadCall struct {
+	Base string
+}
+
 type FakeWorkshopBackend struct {
 	// the key is a project-id - workshop name
 	Workshops map[string]map[string]*FakeWorkshop
@@ -63,6 +67,9 @@ type FakeWorkshopBackend struct {
 
 	RemoveProfileCallback func(ctx context.Context, workshop string, profile string) error
 	RemoveProfileCalls    []*RemoveProfileCall
+
+	DownloadBaseCallback func(ctx context.Context, base string, report ProgressReporter) error
+	DownloadBaseCalls    []*DownloadCall
 }
 
 func NewFakeWorkshopBackend() *FakeWorkshopBackend {
@@ -435,4 +442,11 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 		return "", "", fmt.Errorf("context key user not found")
 	}
 	return userName, projectId, nil
+}
+func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report ProgressReporter) error {
+	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
+	if b.DownloadBaseCallback != nil {
+		return b.DownloadBaseCallback(ctx, base, report)
+	}
+	return nil
 }

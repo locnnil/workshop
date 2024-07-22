@@ -7,6 +7,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	lxd "github.com/canonical/lxd/client"
@@ -22,6 +23,7 @@ type profileTest struct {
 	username string
 	be       workshop.Backend
 
+	restoreUserLookup   func()
 	newProjectidRestore func()
 	restoreDevices      func()
 }
@@ -38,33 +40,37 @@ func (f *profileTest) SetUpSuite(c *check.C) {
 
 	f.be = &lxdbackend.Backend{}
 	f.client, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
+
+	f.restoreUserLookup = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     f.username,
+			Username: f.username,
+			Uid:      "1000",
+			Gid:      "1000",
+		}
+		return u, nil
+	}, &workshop.LookupUsername)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
+	f.newProjectidRestore = testutil.FakeFunc(testProjectId, &workshop.NewProjectId)
+
+	err := f.be.Download(f.ctx, "ubuntu@24.04", nil)
+	c.Assert(err, check.IsNil)
 }
 
 func (f *profileTest) TearDownSuite(c *check.C) {
 	f.client, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
-}
-
-func (f *profileTest) SetUpTest(c *check.C) {
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
-	f.newProjectidRestore = testutil.FakeFunc(testProjectId, &workshop.NewProjectId)
-
-	f.be = &lxdbackend.Backend{}
-	f.client, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
-	err := lxdbackend.InitProject(f.client, f.username)
-	c.Assert(err, check.IsNil)
-
-	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
-}
-
-func (f *profileTest) TearDownTest(c *check.C) {
 	cleanUpLxdProject(c, f.client, lxdbackend.LxdProjectName(f.username))
 	cleanUpLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.username))
 	f.newProjectidRestore()
 	f.restoreDevices()
+	f.restoreUserLookup()
 }
 
 func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	// Setup
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
 	// ensure the target directory is created as a workaround for the LXD bind-mount issue
@@ -104,10 +110,16 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	inst, _, err = f.client.GetInstance(lxdbackend.InstanceName("test", "42424242"))
 	c.Assert(err, check.IsNil)
 	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-sdk"})
+
+	err = backend.RemoveProfile(f.ctx, "test", profile.Sdk)
+	c.Assert(err, check.IsNil)
 }
 
 func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 	// Setup
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
 	device := lxdbackend.Mount("sdk-device", c.MkDir(), "/root/.profile")
@@ -121,6 +133,9 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 
 func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 	// Setup
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
 	sshAgentDir := c.MkDir()
@@ -148,7 +163,6 @@ func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 	agentScript, err := fs.Open("/etc/profile.d/agent.sh")
 	c.Assert(err, check.IsNil)
 	n, _ := agentScript.Read(buf)
-	c.Assert(err, check.IsNil)
 	c.Assert(string(buf[:n]), check.Equals, "export SSH_AUTH_SOCK=/home/workshop/ssh-agent.ssh")
 
 	// Execute
@@ -159,10 +173,16 @@ func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 	// Validate
 	_, err = fs.Stat("/etc/profile.d/agent.sh")
 	c.Assert(os.IsNotExist(err), check.Equals, true)
+
+	err = backend.RemoveProfile(f.ctx, "test", profile.Sdk)
+	c.Assert(err, check.IsNil)
 }
 
-func (f *profileTest) TestSdkProfileRemove(c *check.C) {
+func (f *profileTest) TestSdkProfileRemoveNotFound(c *check.C) {
 	// Setup
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	err := backend.RemoveProfile(f.ctx, "test", "sdk")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrSdkProfileNotFound)

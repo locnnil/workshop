@@ -220,15 +220,19 @@ func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
 }
 
 func constructWorkshop(st *state.State, file *workshop.File, project *workshop.Project) *state.TaskSet {
+	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
+	base.Set("workshop-file", file)
+
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("workshop-file", file)
+	create.WaitFor(base)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	start.WaitFor(mountProject)
-	return state.NewTaskSet(create, mountProject, start)
+	return state.NewTaskSet(base, create, mountProject, start)
 }
 
 func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
@@ -249,6 +253,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *wor
 	launch.AddAll(checkHealth)
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
+	all.AddAll(retrieve)
 	all.AddAll(create)
 	all.AddAll(launch)
 

@@ -33,11 +33,11 @@ base: ubuntu@22.04
 var _ = check.Suite(&wsProject{})
 
 func (f *wsProject) SetUpTest(c *check.C) {
+	var err error
 	f.username = "testuser"
 	f.ctx = context.WithValue(context.Background(), workshop.ContextUser, f.username)
 	be := lxdbackend.Backend{}
-	f.client, _ = be.LxdClient(f.ctx)
-	err := lxdbackend.InitProject(f.client, f.username)
+	f.client, err = be.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
 }
 

@@ -34,6 +34,33 @@ func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) 
 	return m.backend.RemoveWorkshop(ctx, workshop)
 }
 
+func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	var wf workshop.File
+	st.Lock()
+	err = task.Get("workshop-file", &wf)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
+	}
+
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
+	defer cancel()
+
+	reporter := func(label string, done, total int) {
+		st.Lock()
+		task.SetProgress(label, done, total)
+		st.Unlock()
+	}
+
+	return m.backend.Download(ctx, wf.Base, reporter)
+}
+
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
