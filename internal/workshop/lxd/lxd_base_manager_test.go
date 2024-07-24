@@ -15,6 +15,7 @@ func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
 		{"download_progress": "rootfs: NaN (254Kb/s)"},
 		{"download_progress": 15},
 		{"unknown": "rootfs: 65% (254.2Kb/s)"},
+		{"download_progress": "65B (254Kb/s)"},
 	}
 
 	expected := []*struct {
@@ -29,6 +30,7 @@ func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
 		nil,
 		nil,
 		nil,
+		{"download base image", 65, 100},
 	}
 
 	for i, m := range metas {

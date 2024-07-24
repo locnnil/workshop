@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
 )
@@ -77,8 +78,11 @@ type TestDownloadCall struct {
 }
 
 type FakeStore struct {
-	ActionCalls      []TestActionCall
-	DownloadCalls    []TestDownloadCall
+	ActionCalls []TestActionCall
+
+	downloadLock  sync.Mutex
+	DownloadCalls []TestDownloadCall
+
 	ActionCallback   func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
 	DownloadCallback func(ctx context.Context, setup Setup) error
 }
@@ -111,6 +115,8 @@ func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info,
 }
 
 func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup) error {
+	f.downloadLock.Lock()
+	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
 		Setup: setup,
 	})

@@ -87,7 +87,7 @@ func (f *storeIntegration) TestStoreDownloadSkipIfExists(c *check.C) {
 	go func() {
 		err := s.DownloadSdk(context.Background(), setup)
 		c.Assert(err, check.IsNil)
-		c.Assert(m.String(), check.Matches, fmt.Sprintf("*.DEBUG: %s/test-sdk-basic_0.sdk exists, nothing to download...", dirs.SdkDir))
+		c.Assert(m.String(), check.Matches, fmt.Sprintf(`*.DEBUG: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_0.sdk`, dirs.SdkDir))
 	}()
 
 	// "download" is finished

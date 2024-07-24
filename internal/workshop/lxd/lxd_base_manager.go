@@ -2,7 +2,11 @@ package lxdbackend
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"net/http"
+	"os"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -10,66 +14,93 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/lxd/shared/units"
 
+	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
-	imageServer          = "https://cloud-images.ubuntu.com/releases/"
+	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
 func (b *Backend) Download(ctx context.Context, base string, report workshop.ProgressReporter) error {
-	conn, err := b.LxdClient(ctx)
+	b.imageLock.Lock()
+	waitCh, exist := b.imageOps[base]
+	if exist {
+		b.imageLock.Unlock()
+		return waitDownloadOp(ctx, waitCh)
+	}
+
+	waitCh = make(chan error)
+	b.imageOps[base] = waitCh
+	b.imageLock.Unlock()
+
+	go b.download(ctx, waitCh, base, report)
+
+	err := waitDownloadOp(ctx, waitCh)
+
+	b.imageLock.Lock()
+	delete(b.imageOps, base)
+	b.imageLock.Unlock()
+
+	return err
+}
+
+func (b *Backend) download(ctx context.Context, waitCh chan error, base string, report workshop.ProgressReporter) (err error) {
+	defer func() {
+		waitCh <- err
+		close(waitCh)
+	}()
+
+	// LXD cannot cancel download operations
+	child := context.WithoutCancel(ctx)
+
+	conn, err := b.LxdClient(child)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	// Check if we have the base image stored locally
-	_, _, err = conn.GetImageAlias(ImageAlias(base))
+	alias, _, err := conn.GetImageAlias(ImageAlias(base))
 	if err == nil {
-		// the image already exists
-		return nil
+		logger.Debugf("BaseImageManager on Download: %q image already exists (%s)", alias.Name, alias.Target)
+		return
 	}
 
-	names := strings.Split(base, "@")
-	if len(names) <= 1 {
-		return fmt.Errorf("%q base is not supported", base)
+	names := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
+	if len(names) != 2 {
+		return fmt.Errorf("%q is not a correct base name", base)
 	}
 
-	imageServer, err := lxd.ConnectSimpleStreams(imageServer, nil)
+	imageServer, err := connectImageServer(imageServer)
 	if err != nil {
 		return err
 	}
 	defer imageServer.Disconnect()
 
 	var imageInfo *api.Image
-	alias, _, err := imageServer.GetImageAlias(fmt.Sprintf("%s/%s", names[1], runtime.GOARCH))
+	alias, _, err = imageServer.GetImageAlias(fmt.Sprintf("%s/%s", names[1], runtime.GOARCH))
 	if err != nil {
-		return err
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
 	imageInfo, _, err = imageServer.GetImage(alias.Target)
 	if err != nil {
-		return err
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
 	copyArgs := lxd.ImageCopyArgs{
 		AutoUpdate: true,
 		Public:     false,
-		Type:       "",
-		Aliases: []api.ImageAlias{
-			{
-				Name:        ImageAlias(base),
-				Description: "Workshop base image",
-			},
-		},
+		Type:       "container",
 	}
 
 	op, err := conn.CopyImage(imageServer, *imageInfo, &copyArgs)
 	if err != nil {
-		return err
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
 	if report != nil {
@@ -77,26 +108,131 @@ func (b *Backend) Download(ctx context.Context, base string, report workshop.Pro
 			if o.Metadata == nil || imageInfo.Size <= 0 {
 				return
 			}
-			// state.Task supports only int for done/total
 			handleLaunchUpdate(o.Metadata, int(imageInfo.Size), report)
 		})
 	}
 
-	chOperation := make(chan error)
-	go func() {
-		chOperation <- op.Wait()
-		close(chOperation)
-	}()
+	if err = op.Wait(); err == nil {
+		b.maybeUpdateAlias(conn, base, imageInfo.Fingerprint)
+	}
 
+	return err
+}
+
+// For the test purposes only
+func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
+	args := &lxd.ConnectionArgs{}
+
+	// Server certificate
+	if osutil.FileExists("server.crt") {
+		content, err := os.ReadFile("server.crt")
+		if err != nil {
+			return nil, err
+		}
+
+		args.TLSServerCert = string(content)
+	}
+
+	// Client certificate
+	if osutil.FileExists("client.crt") {
+		content, err := os.ReadFile("client.crt")
+		if err != nil {
+			return nil, err
+		}
+
+		args.TLSClientCert = string(content)
+	}
+
+	// Client CA
+	if osutil.FileExists("client.ca") {
+		content, err := os.ReadFile("client.ca")
+		if err != nil {
+			return nil, err
+		}
+
+		args.TLSCA = string(content)
+	}
+
+	// Client key
+	if osutil.FileExists("client.key") {
+		content, err := os.ReadFile("client.key")
+		if err != nil {
+			return nil, err
+		}
+
+		pemKey, _ := pem.Decode(content)
+		// Golang has deprecated all methods relating to PEM encryption due to a vulnerability.
+		// However, the weakness does not make PEM unsafe for our purposes as it pertains to password protection on the
+		// key file (client.key is only readable to the user in any case), so we'll ignore deprecation.
+		if x509.IsEncryptedPEMBlock(pemKey) { //nolint:staticcheck
+			return nil, fmt.Errorf("Private key is password protected and no helper was configured")
+		}
+
+		args.TLSClientKey = string(content)
+	}
+	return args, nil
+}
+
+func connectImageServer(url string) (lxd.ImageServer, error) {
+	if strings.HasPrefix(url, "simplestreams:") {
+		server, _ := strings.CutPrefix(url, "simplestreams:")
+		conn, err := ConnectSimpleStreams(server, nil)
+		if err != nil {
+			return nil, fmt.Errorf("image server is not available: %w", err)
+		}
+		return conn, err
+	}
+
+	if strings.HasPrefix(url, "lxd:") {
+		server, _ := strings.CutPrefix(url, "lxd:")
+		args, err := lxdConnectionArgs()
+		if err != nil {
+			return nil, err
+		}
+		conn, err := lxd.ConnectPublicLXD(server, args)
+		if err != nil {
+			return nil, fmt.Errorf("image server is not available: %w", err)
+		}
+		return conn, err
+	}
+
+	return nil, fmt.Errorf("unknown image server URL prefix (supported: simplestreams, lxd)")
+}
+
+func waitDownloadOp(ctx context.Context, op chan error) error {
 	select {
 	case <-ctx.Done():
-		return op.CancelTarget()
-	case err := <-chOperation:
+		// Do not try to cancel the target op here as LXD is unable to cancel
+		// image download properly. Instead, we'll wait for it to finish if
+		// the task will be restarted.
+		return ctx.Err()
+	case err := <-op:
 		return err
 	}
 }
 
-var imgDownload = regexp.MustCompile(`^rootfs: (?P<done>[0-9]+)% (?P<speed>\([\w/\.]+\))$`)
+// The LXD image alias must be updated separately as if provided to CopyImage in
+// multiple concurrent calls it will fail with "Alias already exists" once the
+// image is downloaded. This happens because LXD's CopyImage handles image
+// download and creating an alias separately and not as a single transaction.
+func (b *Backend) maybeUpdateAlias(conn lxd.InstanceServer, base, fingerprint string) {
+	alias := api.ImageAliasesPost{}
+	alias.Target = fingerprint
+	alias.Name = ImageAlias(base)
+
+	_, _, err := conn.GetImageAlias(alias.Name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		if err = conn.CreateImageAlias(alias); err != nil {
+			logger.Noticef("BaseImageManager on Download: Failed to create an alias %q for %q base: %v", alias.Name, base, err)
+		}
+	}
+}
+
+var (
+	imgDownloadSS = regexp.MustCompile(`^rootfs: (?P<done>[0-9]+)% (?P<speed>\([\w/\.]+\))$`)
+	// 225.19MB (37.46MB/s)
+	imgDownloadLXD = regexp.MustCompile(`^(?P<done>[0-9\.]+)(?P<mult>\w+) (?P<speed>\([\w/\.]+\))$`)
+)
 
 // handleLaunchUpdate parses a LXD create instance operation metadata and
 // reports the opeartion's progress if available. The LXD metadata is
@@ -112,7 +248,8 @@ func handleLaunchUpdate(opmeta map[string]interface{}, imsize int, progress work
 				continue
 			}
 
-			if data := imgDownload.FindStringSubmatch(upd); len(data) == 3 {
+			// check if the response metadata comes from a simplestream protocol
+			if data := imgDownloadSS.FindStringSubmatch(upd); len(data) == 3 {
 				done, err := strconv.Atoi(data[1])
 				if err != nil {
 					// just in case, but this is ensured by the regex
@@ -125,6 +262,22 @@ func handleLaunchUpdate(opmeta map[string]interface{}, imsize int, progress work
 				donebytes := imsize * done / 100
 				progress("download base image", donebytes, imsize)
 			}
+
+			// check if the response metadata comes from a lxd protocol
+			if data := imgDownloadLXD.FindStringSubmatch(upd); len(data) == 4 {
+				done, err := strconv.ParseFloat(data[1], 32)
+				if err != nil {
+					continue
+				}
+				// ParseByteSizeString understands only int, so we use it to get
+				// a multiplier for "done".
+				multiplier, err := units.ParseByteSizeString("1" + data[2])
+				if err != nil {
+					continue
+				}
+				progress("download base image", int(done)*int(multiplier), imsize)
+			}
+
 		}
 	}
 }

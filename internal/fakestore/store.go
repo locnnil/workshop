@@ -125,19 +125,19 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup) error {
 			// Remove the target as due to the error it may be corrupted.
 			if err != nil {
 				if err1 := os.Remove(target); err1 != nil {
-					logger.Noticef("Cannot remove %q on a failed download: %v", target, err1)
+					logger.Noticef("SDK Store on Download: Cannot remove %q on a failed download: %v", target, err1)
 				}
 				return
 			}
 			// If the SDK was downloaded successfully, remove its previous rev if any.
 			matches, err1 := filepath.Glob(filepath.Join(filepath.Dir(target), setup.Name+"_*.sdk"))
 			if err1 != nil {
-				logger.Noticef("Cannot cleanup previous downloads for %q: %v", setup.Name, err1)
+				logger.Noticef("SDK Store on Download: Cannot cleanup previous downloads for %q: %v", setup.Name, err1)
 			}
 			for _, m := range matches {
 				if m != target {
 					if err1 = os.Remove(m); err1 != nil {
-						logger.Noticef("Cannot cleanup previous download (%s): %v", m, err1)
+						logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err1)
 					}
 				}
 			}
@@ -148,7 +148,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup) error {
 			return err
 		}
 	} else {
-		logger.Debugf("%s exists, nothing to download...", target)
+		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
 	}
 
 	return nil

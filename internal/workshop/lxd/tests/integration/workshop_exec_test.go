@@ -101,10 +101,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return f.project.ProjectId, nil
 	}, &workshop.NewProjectId)
 
-	err = f.be.Download(f.ctx, "ubuntu@24.04", nil)
-	c.Assert(err, check.IsNil)
-
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.be, f.project.Path)
 }
 
 func (f *wsExec) TearDownSuite(c *check.C) {

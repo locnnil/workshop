@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -21,6 +23,9 @@ import (
 
 type Backend struct {
 	nvidiaRuntime bool
+
+	imageLock sync.Mutex
+	imageOps  map[string]chan error
 }
 
 const (
@@ -37,11 +42,13 @@ func InstanceName(name string, project_id string) string {
 }
 
 func ImageAlias(name string) string {
-	return fmt.Sprintf("workshop-%s", name)
+	return fmt.Sprintf("workshop-%s-%s", name, runtime.GOARCH)
 }
 
 func New() (workshop.Backend, error) {
-	server := Backend{}
+	server := Backend{
+		imageOps: make(map[string]chan error),
+	}
 
 	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {

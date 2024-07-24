@@ -38,7 +38,9 @@ func (f *profileTest) SetUpSuite(c *check.C) {
 	f.username = "testuser"
 	f.ctx = createTestContext(f.username, "42424242")
 
-	f.be = &lxdbackend.Backend{}
+	var err error
+	f.be, err = lxdbackend.New()
+	c.Assert(err, check.IsNil)
 	f.client, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
 
 	f.restoreUserLookup = testutil.FakeFunc(func(name string) (*user.User, error) {
@@ -52,9 +54,6 @@ func (f *profileTest) SetUpSuite(c *check.C) {
 	}, &workshop.LookupUsername)
 	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
 	f.newProjectidRestore = testutil.FakeFunc(testProjectId, &workshop.NewProjectId)
-
-	err := f.be.Download(f.ctx, "ubuntu@24.04", nil)
-	c.Assert(err, check.IsNil)
 }
 
 func (f *profileTest) TearDownSuite(c *check.C) {
@@ -68,7 +67,7 @@ func (f *profileTest) TearDownSuite(c *check.C) {
 
 func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 	defer f.be.RemoveWorkshop(f.ctx, "test")
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
@@ -117,7 +116,7 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 
 func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 	defer f.be.RemoveWorkshop(f.ctx, "test")
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
@@ -133,7 +132,7 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 
 func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 	defer f.be.RemoveWorkshop(f.ctx, "test")
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
@@ -180,7 +179,7 @@ func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {
 
 func (f *profileTest) TestSdkProfileRemoveNotFound(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.be, c.MkDir(), f.username)
+	launchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 	defer f.be.RemoveWorkshop(f.ctx, "test")
 
 	var backend workshop.Profile = &lxdbackend.Backend{}

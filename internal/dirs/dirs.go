@@ -88,7 +88,6 @@ func CreateDirs() error {
 	if err := os.MkdirAll(BaseDir, 0755); err != nil {
 		return err
 	}
-
 	if err := os.MkdirAll(SdkDir, 0755); err != nil {
 		return err
 	}
