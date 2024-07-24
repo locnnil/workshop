@@ -17,7 +17,7 @@ func (c *CmdConnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>]",
 		Args:  cobra.RangeArgs(1, 2),
-		Short: "Connect a plug to a slot.",
+		Short: "Connect a plug to a slot",
 		Long: `
 This command connects a plug to a target slot
 that is specified as the second argument or deduced from the context.
@@ -29,16 +29,21 @@ that is specified as the second argument or deduced from the context.
   <WORKSHOP>/agent:<SLOT>; <WORKSHOP> comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
-  <WORKSHOP>/<SDK>:<INTERFACE>; <INTERFACE> comes from the plug definition.
-  However, if there are several candidate slots that use this interface,
+  <WORKSHOP>/<SDK>:<INTERFACE>;
+  <INTERFACE> is the interface in the plug's definition.
+  However, if there are several candidate slots that match the interface,
   the command fails
 
 - If the target slot is compatible with the plug, the command attempts
   to connect them and returns the result
 
-Notes:
+
+  Notes:
+
 - To be compatible, the plug and the slot must use the same interface
+
 - Multiple plugs can be connected to the same slot, but not vice versa
+
 - The 'workshop connections' output will list the connection as 'manual'
 `,
 		RunE:    c.Run,

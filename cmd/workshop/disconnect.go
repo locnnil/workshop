@@ -18,7 +18,7 @@ func (c *CmdDisconnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>]",
 		Args:  cobra.RangeArgs(1, 2),
-		Short: "Disconnect a plug or a slot.",
+		Short: "Disconnect a plug or a slot",
 		Long: `
 This command disconnects a plug from its slot, or a slot from all its plugs.
 
@@ -29,9 +29,12 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   <WORKSHOP>/agent:<SLOT>; <WORKSHOP> comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
-  <WORKSHOP>/<SDK>:<INTERFACE>; <INTERFACE> comes from the plug definition
+  <WORKSHOP>/<SDK>:<INTERFACE>;
+  <INTERFACE> is the interface in the plug's definition
 
-Notes:
+
+  Notes:
+
 - After an auto-connected plug is thus disconnected,
   it is reconnected during 'workshop refresh'
   only if the '--forget' option was used with 'workshop disconnect'

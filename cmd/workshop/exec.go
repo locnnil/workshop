@@ -45,7 +45,7 @@ type CmdShellAlias struct {
 	execCommand *CmdExec
 }
 
-var shortExecHelp = "Run a command and wait for it to complete."
+var shortExecHelp = "Run a command and wait for it to complete"
 var longExecHelp = `
 The 'exec' subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
@@ -54,34 +54,44 @@ To accept an 'exec' command, the workshop must be *Ready* or *Pending*.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
+
 - Non-interactively (for scripts)
+
 
 To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 'exec' deduces the mode based on the nature of its own streams:
 
 - If stdin and stdout are terminals, the mode is interactive
+
 - Otherwise, it's non-interactive
+
 
 To separate the 'exec' subcommand from the command itself,
 use shell syntax such as '--':
 
   $ workshop exec nimble -- echo -n foo bar
 
+
 Notes:
+
 - To start a workshop before running commands in it, use 'workshop start'
+
 - You can set the working directory, environment variables, user and group ID
   for running the command in the workshop; reasonable defaults are provided
 `
 
-var shortShellHelp = "Start an interactive terminal session for the workshop."
+var shortShellHelp = "Start an interactive terminal session for the workshop"
 var longShellHelp = `
 The 'shell' subcommand runs an interactive terminal session
 in the specified workshop.
 
 To accept a 'shell' command, the workshop must be *Ready* or *Pending*.
 
+
 Notes:
+
 - To start a workshop before running a terminal session, use 'workshop start'
+
 - The subcommand is a shorthand for 'workshop exec';
   it launches the login shell for 'workshop',
   the default non-privileged user in a workshop

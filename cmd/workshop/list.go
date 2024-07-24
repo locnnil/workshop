@@ -23,19 +23,25 @@ func (c *CmdList) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "list",
 		Args:  cobra.MaximumNArgs(0),
-		Short: "List project workshops.",
+		Short: "List project workshops",
 		Long: `
 This command enumerates all workshops in the project, printing a compact list:
 
-- Project: absolute pathname of the project where this workshop belongs
+- Project:  absolute pathname of the project where this workshop belongs
+
 - Workshop: workshop name, as set by its definition
-- Status: workshop status, such as *Off*, *Ready*, *Pending* and so on
-- Notes: internal remarks on the overall state of the workshop
+
+- Status:   workshop status, such as *Off*, *Ready*, *Pending* and so on
+
+- Notes:    internal remarks on the overall state of the workshop
+
 
 The '--global' option lists all workshops from *all* projects in the system;
 however, it doesn't include any that are *Off*.
 
+
 Notes:
+
 - For details of a single workshop, use 'workshop info' instead
 `,
 		RunE:    c.Run,

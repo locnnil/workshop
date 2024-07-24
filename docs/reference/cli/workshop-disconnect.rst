@@ -53,7 +53,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
 
 - If the second argument only names the workshop and SDK, the target is
   :samp:`<WORKSHOP>/<SDK>:<INTERFACE>`;
-  :samp:`<INTERFACE>` comes from the plug definition
+  :samp:`<INTERFACE>` is the interface in the plug's definition
 
 
 Notes

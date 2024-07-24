@@ -56,6 +56,7 @@ definitions once again.  For each workshop, it:
 - Applies and verifies the changes to the workshop
 - Restores the working state of the workshop
 
+
 The :option:`!--wait-on-error` option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workshop.

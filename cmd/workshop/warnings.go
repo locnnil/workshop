@@ -54,7 +54,7 @@ func (c *CmdWarnings) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "warnings [OPTIONS]",
 		Args:  cobra.NoArgs,
-		Short: "List warnings.",
+		Short: "List warnings",
 		Long: `
 This command lists the warnings that were reported to the system.
 
@@ -94,7 +94,7 @@ func (c *CmdOkay) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "okay",
 		Args:  cobra.NoArgs,
-		Short: "Acknowledge listed warnings.",
+		Short: "Acknowledge listed warnings",
 		Long: `
 This command acknowledges all warnings
 listed previously by the 'workshop warnings' command.
