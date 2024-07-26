@@ -275,8 +275,8 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report workshop.ProgressReporter) error {
-		report("download finished", 100, 100)
+	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *workshop.ProgressReporter) error {
+		report.Report("download finished", 100, 100)
 		return nil
 	}
 	defer func() {

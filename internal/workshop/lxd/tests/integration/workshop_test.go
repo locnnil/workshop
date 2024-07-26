@@ -227,9 +227,13 @@ func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *che
 	wg.Add(3)
 	for i := 0; i < 3; i++ {
 		go func() {
-			err := f.bd.Download(wcancel, "ubuntu@22.04", func(label string, done, total int) {
-				once.Do(func() { cancel() })
-			})
+			r := &workshop.ProgressReporter{
+				Name: "1",
+				Report: func(label string, done, total int) {
+					once.Do(func() { cancel() })
+				},
+			}
+			err := f.bd.Download(wcancel, "ubuntu@22.04", r)
 			c.Check(err, testutil.ErrorIs, context.Canceled)
 			wg.Done()
 		}()

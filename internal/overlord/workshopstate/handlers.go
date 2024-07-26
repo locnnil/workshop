@@ -52,13 +52,16 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	reporter := func(label string, done, total int) {
-		st.Lock()
-		task.SetProgress(label, done, total)
-		st.Unlock()
+	reporter := workshop.ProgressReporter{
+		Name: task.ID(),
+		Report: func(label string, done, total int) {
+			st.Lock()
+			task.SetProgress(label, done, total)
+			st.Unlock()
+		},
 	}
 
-	return m.backend.Download(ctx, wf.Base, reporter)
+	return m.backend.Download(ctx, wf.Base, &reporter)
 }
 
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {

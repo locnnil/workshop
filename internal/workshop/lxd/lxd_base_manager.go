@@ -26,33 +26,47 @@ var (
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
-func (b *Backend) Download(ctx context.Context, base string, report workshop.ProgressReporter) error {
+func (b *Backend) Download(ctx context.Context, base string, report *workshop.ProgressReporter) error {
+	defer func() {
+		if report != nil {
+			b.imageLock.Lock()
+			if op, exist := b.currentDownloads[base]; exist {
+				op.RemoveReporter(report.Name)
+			}
+			b.imageLock.Unlock()
+		}
+	}()
+
 	b.imageLock.Lock()
-	waitCh, exist := b.imageOps[base]
+	op, exist := b.currentDownloads[base]
 	if exist {
+		if report != nil {
+			op.AddReporter(report)
+		}
 		b.imageLock.Unlock()
-		return waitDownloadOp(ctx, waitCh)
+		return waitDownloadOp(ctx, op)
 	}
 
-	waitCh = make(chan error)
-	b.imageOps[base] = waitCh
+	op = newImageDownloadOp()
+	if report != nil {
+		op.AddReporter(report)
+	}
+	b.currentDownloads[base] = op
 	b.imageLock.Unlock()
 
-	go b.download(ctx, waitCh, base, report)
+	go b.download(ctx, op, base)
 
-	err := waitDownloadOp(ctx, waitCh)
-
-	b.imageLock.Lock()
-	delete(b.imageOps, base)
-	b.imageLock.Unlock()
-
-	return err
+	return waitDownloadOp(ctx, op)
 }
 
-func (b *Backend) download(ctx context.Context, waitCh chan error, base string, report workshop.ProgressReporter) (err error) {
+func (b *Backend) download(ctx context.Context, op *imageDownloadOp, base string) (err error) {
 	defer func() {
-		waitCh <- err
-		close(waitCh)
+		op.waitCh <- err
+		close(op.waitCh)
+
+		b.imageLock.Lock()
+		delete(b.currentDownloads, base)
+		b.imageLock.Unlock()
 	}()
 
 	// LXD cannot cancel download operations
@@ -98,21 +112,21 @@ func (b *Backend) download(ctx context.Context, waitCh chan error, base string, 
 		Type:       "container",
 	}
 
-	op, err := conn.CopyImage(imageServer, *imageInfo, &copyArgs)
+	copyop, err := conn.CopyImage(imageServer, *imageInfo, &copyArgs)
 	if err != nil {
 		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
-	if report != nil {
-		op.AddHandler(func(o api.Operation) {
-			if o.Metadata == nil || imageInfo.Size <= 0 {
-				return
-			}
-			handleLaunchUpdate(o.Metadata, int(imageInfo.Size), report)
-		})
-	}
+	copyop.AddHandler(func(o api.Operation) {
+		if o.Metadata == nil || imageInfo.Size <= 0 {
+			return
+		}
+		if upd := handleLaunchUpdate(o.Metadata, int(imageInfo.Size)); upd != nil {
+			op.Update(*upd)
+		}
+	})
 
-	if err = op.Wait(); err == nil {
+	if err = copyop.Wait(); err == nil {
 		b.maybeUpdateAlias(conn, base, imageInfo.Fingerprint)
 	}
 
@@ -199,14 +213,14 @@ func connectImageServer(url string) (lxd.ImageServer, error) {
 	return nil, fmt.Errorf("unknown image server URL prefix (supported: simplestreams, lxd)")
 }
 
-func waitDownloadOp(ctx context.Context, op chan error) error {
+func waitDownloadOp(ctx context.Context, op *imageDownloadOp) error {
 	select {
 	case <-ctx.Done():
 		// Do not try to cancel the target op here as LXD is unable to cancel
 		// image download properly. Instead, we'll wait for it to finish if
 		// the task will be restarted.
 		return ctx.Err()
-	case err := <-op:
+	case err := <-op.waitCh:
 		return err
 	}
 }
@@ -240,7 +254,7 @@ var (
 // looking for specific progress labels. NOTE: There is no guarantee that the
 // LXD's progress reporting formant won't change; this meta data parser is valid
 // for LXD 5.21.
-func handleLaunchUpdate(opmeta map[string]interface{}, imsize int, progress workshop.ProgressReporter) {
+func handleLaunchUpdate(opmeta map[string]interface{}, imsize int) *downloadUpdate {
 	for key, value := range opmeta {
 		if key == "download_progress" {
 			upd, ok := value.(string)
@@ -260,7 +274,7 @@ func handleLaunchUpdate(opmeta map[string]interface{}, imsize int, progress work
 				// to calculate the download speed. Thus, covert percentages to
 				// bytes.
 				donebytes := imsize * done / 100
-				progress("download base image", donebytes, imsize)
+				return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
 			}
 
 			// check if the response metadata comes from a lxd protocol
@@ -275,11 +289,12 @@ func handleLaunchUpdate(opmeta map[string]interface{}, imsize int, progress work
 				if err != nil {
 					continue
 				}
-				progress("download base image", int(done)*int(multiplier), imsize)
+				donebytes := int(done) * int(multiplier)
+				return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
 			}
-
 		}
 	}
+	return nil
 }
 
 func FakeImageServer(server string) func() {

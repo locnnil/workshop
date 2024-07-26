@@ -77,10 +77,13 @@ type StateStorage interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
-type ProgressReporter func(label string, done, total int)
+type ProgressReporter struct {
+	Name   string
+	Report func(label string, done, total int)
+}
 
 type BaseImageManager interface {
-	Download(ctx context.Context, base string, report ProgressReporter) error
+	Download(ctx context.Context, base string, report *ProgressReporter) error
 }
 
 type ExecArgs struct {

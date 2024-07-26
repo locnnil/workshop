@@ -68,7 +68,7 @@ type FakeWorkshopBackend struct {
 	RemoveProfileCallback func(ctx context.Context, workshop string, profile string) error
 	RemoveProfileCalls    []*RemoveProfileCall
 
-	DownloadBaseCallback func(ctx context.Context, base string, report ProgressReporter) error
+	DownloadBaseCallback func(ctx context.Context, base string, report *ProgressReporter) error
 	DownloadBaseCalls    []*DownloadCall
 }
 
@@ -443,7 +443,7 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	}
 	return userName, projectId, nil
 }
-func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report ProgressReporter) error {
+func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *ProgressReporter) error {
 	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, base, report)

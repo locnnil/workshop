@@ -24,27 +24,23 @@ func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
 		total int
 	}{
 		nil,
-		{"download base image", 65, 100},
-		{"download base image", 65, 100},
+		{"download", 65, 100},
+		{"download", 65, 100},
 		nil,
 		nil,
 		nil,
 		nil,
-		{"download base image", 65, 100},
+		{"download", 65, 100},
 	}
 
 	for i, m := range metas {
-		i := i
-		reported := false
-		checker := func(label string, done, total int) {
-			c.Check(label, check.Equals, expected[i].label)
-			c.Check(done, check.Equals, expected[i].done)
-			c.Check(total, check.Equals, expected[i].total)
-			reported = true
-		}
-		lxdbackend.HandleLaunchUpdate(m, 100, checker)
+		upd := lxdbackend.HandleLaunchUpdate(m, 100)
 		if expected[i] != nil {
-			c.Assert(reported, check.Equals, true, check.Commentf("No progress was reported on %v, expected: %v", m, expected[i]))
+			c.Check(upd.Label, check.Equals, expected[i].label)
+			c.Check(upd.Done, check.Equals, expected[i].done)
+			c.Check(upd.Total, check.Equals, expected[i].total)
+		} else {
+			c.Check(upd, check.IsNil)
 		}
 	}
 }
