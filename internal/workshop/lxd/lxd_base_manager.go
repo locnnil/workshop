@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/progress"
 )
 
 var (
@@ -26,7 +27,7 @@ var (
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
-func (b *Backend) Download(ctx context.Context, base string, report *workshop.ProgressReporter) error {
+func (b *Backend) Download(ctx context.Context, base string, report *progress.Reporter) error {
 	defer func() {
 		if report != nil {
 			b.imageLock.Lock()
@@ -59,7 +60,7 @@ func (b *Backend) Download(ctx context.Context, base string, report *workshop.Pr
 	return waitDownloadOp(ctx, op)
 }
 
-func (b *Backend) download(ctx context.Context, op *imageDownloadOp, base string) (err error) {
+func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (err error) {
 	defer func() {
 		op.waitCh <- err
 		close(op.waitCh)
@@ -213,7 +214,7 @@ func connectImageServer(url string) (lxd.ImageServer, error) {
 	return nil, fmt.Errorf("unknown image server URL prefix (supported: simplestreams, lxd)")
 }
 
-func waitDownloadOp(ctx context.Context, op *imageDownloadOp) error {
+func waitDownloadOp(ctx context.Context, op *downloadOp) error {
 	select {
 	case <-ctx.Done():
 		// Do not try to cancel the target op here as LXD is unable to cancel
@@ -295,6 +296,45 @@ func handleLaunchUpdate(opmeta map[string]interface{}, imsize int) *downloadUpda
 		}
 	}
 	return nil
+}
+
+type downloadUpdate struct {
+	Label string
+	Done  int
+	Total int
+}
+
+type downloadOp struct {
+	waitCh chan error
+
+	reportersLock sync.Mutex
+	reporters     map[string]*progress.Reporter
+}
+
+func newImageDownloadOp() *downloadOp {
+	return &downloadOp{waitCh: make(chan error), reporters: make(map[string]*progress.Reporter, 0)}
+}
+
+func (r *downloadOp) AddReporter(rep *progress.Reporter) {
+	r.reportersLock.Lock()
+	defer r.reportersLock.Unlock()
+
+	r.reporters[rep.Name] = rep
+}
+
+func (r *downloadOp) RemoveReporter(name string) {
+	r.reportersLock.Lock()
+	defer r.reportersLock.Unlock()
+	delete(r.reporters, name)
+}
+
+func (r *downloadOp) Update(upd downloadUpdate) {
+	r.reportersLock.Lock()
+	defer r.reportersLock.Unlock()
+
+	for _, rep := range r.reporters {
+		rep.Report(upd.Label, upd.Done, upd.Total)
+	}
 }
 
 func FakeImageServer(server string) func() {

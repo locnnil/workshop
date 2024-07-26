@@ -23,3 +23,7 @@ docs/.sphinx/styles/
 docs/__pycache__/
 package*.json
 docs/_build
+
+# sentitive files
+*.crt
+*.key

@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"sync"
 
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -227,7 +228,7 @@ func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *che
 	wg.Add(3)
 	for i := 0; i < 3; i++ {
 		go func() {
-			r := &workshop.ProgressReporter{
+			r := &progress.Reporter{
 				Name: "1",
 				Report: func(label string, done, total int) {
 					once.Do(func() { cancel() })

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/canonical/workshop/internal/progress"
 )
 
 type ContextKeyProjectId string
@@ -77,13 +79,8 @@ type StateStorage interface {
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
-type ProgressReporter struct {
-	Name   string
-	Report func(label string, done, total int)
-}
-
 type BaseImageManager interface {
-	Download(ctx context.Context, base string, report *ProgressReporter) error
+	Download(ctx context.Context, base string, report *progress.Reporter) error
 }
 
 type ExecArgs struct {

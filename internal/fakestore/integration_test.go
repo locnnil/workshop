@@ -9,12 +9,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"testing"
+	"sync"
 
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"gopkg.in/check.v1"
@@ -26,10 +26,8 @@ type storeIntegration struct {
 
 var _ = check.Suite(&storeIntegration{})
 
-func TestFakeStoreIntegration(t *testing.T) { check.TestingT(t) }
-
 func (f *storeIntegration) SetUpSuite(c *check.C) {
-	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080"), check.IsNil)
+	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 	f.oldRoot = dirs.BaseDir
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
@@ -43,9 +41,27 @@ func (f *storeIntegration) TearDownSuite(c *check.C) {
 func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
 	s := store.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
-	err := s.DownloadSdk(context.Background(), setup)
+	err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(setup.Filename(), testutil.FilePresent)
+	c.Assert(os.Remove(setup.Filename()), check.IsNil)
+}
+
+func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
+	s := store.New()
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
+	done, total := 0, 0
+	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
+		done += d
+		total = t
+	}}
+	err := s.DownloadSdk(context.Background(), setup, r)
+	c.Assert(err, check.IsNil)
+	c.Assert(setup.Filename(), testutil.FilePresent)
+	c.Check(done > 0, check.Equals, true)
+	c.Check(total > 0, check.Equals, true)
+	c.Check(done == total, check.Equals, true)
+	c.Assert(os.Remove(setup.Filename()), check.IsNil)
 }
 
 func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
@@ -54,21 +70,22 @@ func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
 	prev := filepath.Join(dirs.SdkDir, setup.Name) + "_5.sdk"
 	_, err := os.Create(prev)
 	c.Assert(err, check.IsNil)
-	err = s.DownloadSdk(context.Background(), setup)
+	err = s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(setup.Filename(), testutil.FilePresent)
 	c.Assert(prev, check.Not(testutil.FilePresent))
+	c.Assert(os.Remove(setup.Filename()), check.IsNil)
 }
 
 func (f *storeIntegration) TestStoreDownloadNotfound(c *check.C) {
 	s := store.New()
 	setup := sdk.Setup{Name: "test-sdk-unknown", Channel: "latest/stable"}
-	err := s.DownloadSdk(context.Background(), setup)
-	c.Assert(err, check.ErrorMatches, `SDK not found`)
+	err := s.DownloadSdk(context.Background(), setup, nil)
+	c.Assert(err, check.ErrorMatches, `SDK not found in "latest/stable"`)
 	c.Assert(setup.Filename(), check.Not(testutil.FilePresent))
 }
 
-func (f *storeIntegration) TestStoreDownloadSkipIfExists(c *check.C) {
+func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.C) {
 	os.Setenv("WORKSHOP_DEBUG", "1")
 	defer os.Unsetenv("WORKSHOP_DEBUG")
 
@@ -80,20 +97,24 @@ func (f *storeIntegration) TestStoreDownloadSkipIfExists(c *check.C) {
 
 	// Lock the file to emulate a concurrent download is going on
 	target := setup.Filename()
-	fl, err := osutil.NewFileLock(target + ".lock")
+	fl, err := sdk.OpenLock(setup.Name)
 	c.Assert(err, check.IsNil)
 	c.Assert(fl.Lock(), check.IsNil)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		err := s.DownloadSdk(context.Background(), setup)
-		c.Assert(err, check.IsNil)
-		c.Assert(m.String(), check.Matches, fmt.Sprintf(`*.DEBUG: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_0.sdk`, dirs.SdkDir))
+		err := s.DownloadSdk(context.Background(), setup, nil)
+		c.Check(err, check.IsNil)
+		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_0.sdk.*`, dirs.SdkDir))
+		wg.Done()
 	}()
 
 	// "download" is finished
 	_, err = os.Create(target)
 	c.Assert(err, check.IsNil)
 	fl.Close()
+	wg.Wait()
 }
 
 type failingReader struct{}
@@ -111,12 +132,12 @@ func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
 
 	s := store.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: 55}
-	err := s.DownloadSdk(context.Background(), setup)
+	err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(setup.Filename(), check.Not(testutil.FilePresent))
 }
 
-func (s *storeSuite) TestSdkActionInstallStoreError(c *check.C) {
+func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	store := store.New()
@@ -129,5 +150,5 @@ func (s *storeSuite) TestSdkActionInstallStoreError(c *check.C) {
 	}}
 	res, err := store.SdkAction(context.Background(), nil, acts)
 	c.Assert(res, check.HasLen, 0)
-	c.Assert(err, check.ErrorMatches, `SDK not found`)
+	c.Assert(err, check.ErrorMatches, `(?s).*SDK not found in "latest/stable".*`)
 }

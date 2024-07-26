@@ -17,6 +17,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -275,7 +276,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *workshop.ProgressReporter) error {
+	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *progress.Reporter) error {
 		report.Report("download finished", 100, 100)
 		return nil
 	}

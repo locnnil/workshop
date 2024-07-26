@@ -1,12 +1,10 @@
 package sdkstate
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
@@ -17,6 +15,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -64,15 +63,23 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, _ := BackendContext(tomb, user, project.ProjectId)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
 	st.Lock()
 	store := sdk.StoreService(st)
 	st.Unlock()
 
-	return store.DownloadSdk(ctx, rec)
+	reporter := &progress.Reporter{
+		Name: task.ID(),
+		Report: func(label string, done, total int) {
+			st.Lock()
+			task.SetProgress(label, done, total)
+			st.Unlock()
+		},
+	}
+
+	return store.DownloadSdk(ctx, rec, reporter)
 }
 
 func (m *SdkManager) doInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error {

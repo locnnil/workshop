@@ -21,50 +21,11 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-type downloadUpdate struct {
-	Label string
-	Done  int
-	Total int
-}
-
-type imageDownloadOp struct {
-	waitCh chan error
-
-	reportersLock sync.Mutex
-	reporters     map[string]*workshop.ProgressReporter
-}
-
-func newImageDownloadOp() *imageDownloadOp {
-	return &imageDownloadOp{waitCh: make(chan error), reporters: make(map[string]*workshop.ProgressReporter, 0)}
-}
-
-func (r *imageDownloadOp) AddReporter(rep *workshop.ProgressReporter) {
-	r.reportersLock.Lock()
-	defer r.reportersLock.Unlock()
-
-	r.reporters[rep.Name] = rep
-}
-
-func (r *imageDownloadOp) RemoveReporter(name string) {
-	r.reportersLock.Lock()
-	defer r.reportersLock.Unlock()
-	delete(r.reporters, name)
-}
-
-func (r *imageDownloadOp) Update(upd downloadUpdate) {
-	r.reportersLock.Lock()
-	defer r.reportersLock.Unlock()
-
-	for _, rep := range r.reporters {
-		rep.Report(upd.Label, upd.Done, upd.Total)
-	}
-}
-
 type Backend struct {
 	nvidiaRuntime bool
 
 	imageLock        sync.Mutex
-	currentDownloads map[string]*imageDownloadOp
+	currentDownloads map[string]*downloadOp
 }
 
 const (
@@ -86,7 +47,7 @@ func ImageAlias(name string) string {
 
 func New() (workshop.Backend, error) {
 	server := Backend{
-		currentDownloads: make(map[string]*imageDownloadOp),
+		currentDownloads: make(map[string]*downloadOp),
 	}
 
 	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
