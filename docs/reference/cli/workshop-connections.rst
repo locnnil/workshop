@@ -46,6 +46,7 @@ Notes
 - The :option:`!--all` option needn't be used with an argument;
   if a workshop is supplied, disconnected plugs are also listed
 
+
 Options
 -------
 

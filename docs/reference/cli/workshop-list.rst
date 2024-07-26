@@ -32,10 +32,16 @@ Synopsis
 
 This command enumerates all workshops in the project, printing a compact list:
 
-- Project: absolute pathname of the project where this workshop belongs
-- Workshop: workshop name, as set by its definition
-- Status: workshop status, such as *Off*, *Ready*, *Pending* and so on
-- Notes: internal remarks on the overall state of the workshop
++-----------+-------------------------------------------------------------+
+| Project   | Absolute pathname of the project where this workshop belongs|
++-----------+-------------------------------------------------------------+
+| Workshop  | Workshop name, as set by its definition                     |
++-----------+-------------------------------------------------------------+
+| Status    | Workshop status, such as *Off*, *Ready*, *Pending* and so on|
++-----------+-------------------------------------------------------------+
+| Notes     | Internal remarks on the overall state of the workshop       |
++-----------+-------------------------------------------------------------+
+
 
 The :option:`!--global` option
 lists all workshops from *all* projects in the system;

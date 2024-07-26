@@ -32,6 +32,7 @@ definitions and installing their components.  For each workshop, it:
 - Runs SDK setup hooks to initialise the working state
 - On success, ties the workshop to the project and starts it
 
+
 If multiple workshops are listed and an error occurs,
 the operation is aborted and no workshops are constructed.
 

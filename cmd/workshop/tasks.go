@@ -20,7 +20,7 @@ func (c *CmdTasks) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "tasks <CHANGE ID>",
 		Args:  cobra.RangeArgs(1, 1),
-		Short: "List tasks for a specific change.",
+		Short: "List tasks for a specific change",
 		Long: `
 Any substantial operation on a workshop is a *change* that consists of *tasks*;
 the command lists individual tasks that comprise a specific change.
@@ -32,8 +32,11 @@ For each task, it prints the following details:
 - Ready:   tells when the task was finished
 - Summary: lists actions, affected SDKs and workshops, other information
 
+
 Notes:
+
 - The command may print additional log details for tasks that store them
+
 - To investigate recent changes in a project, use 'workshop changes' instead
 `,
 		RunE:    c.Run,

@@ -50,8 +50,8 @@ that is specified as the second argument or deduced from the context.
 
 - If the second argument only names the workshop and SDK, the target is
   :samp:`<WORKSHOP>/<SDK>:<INTERFACE>`;
-  :samp:`<INTERFACE>` comes from the plug definition.
-  However, if there are several candidate slots that use this interface,
+  :samp:`<INTERFACE>` is the interface in the plug's definition.
+  However, if there are several candidate slots that match the interface,
   the command fails
 
 - If the target slot is compatible with the plug, the command attempts
