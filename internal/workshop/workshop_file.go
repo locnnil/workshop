@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	allowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
+	workshopName   = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	channel        = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
@@ -132,7 +132,7 @@ func readWorkshop(pathname string) (*File, error) {
 		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
 	}
 
-	if !slices.Contains(allowedBases, file.Base) {
+	if !slices.Contains(SupportedBases, file.Base) {
 		return nil, fmt.Errorf("unsupported base: %s", file.Base)
 	}
 

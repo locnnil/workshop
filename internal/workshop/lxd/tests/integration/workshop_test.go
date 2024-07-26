@@ -7,7 +7,9 @@ import (
 	"context"
 	"os"
 	"os/user"
+	"sync"
 
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -15,10 +17,7 @@ import (
 )
 
 type wsOps struct {
-	// per suite
-	be workshop.Backend
-
-	// per test
+	bd                 workshop.Backend
 	ctx                context.Context
 	username           string
 	project            *workshop.Project
@@ -33,7 +32,7 @@ var _ = check.Suite(&wsOps{})
 func (f *wsOps) SetUpSuite(c *check.C) {
 	var err error
 
-	f.be, err = lxdbackend.New()
+	f.bd, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
 
 	f.username = "testuser"
@@ -52,13 +51,10 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	f.restoreNewId = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshop.NewProjectId)
-
-	err = f.be.Download(f.ctx, "ubuntu@24.04", nil)
-	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TearDownSuite(c *check.C) {
-	lxdclient, err := f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
+	lxdclient, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 
 	cleanUpLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.username))
@@ -74,59 +70,59 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
-	defer f.be.RemoveWorkshop(f.ctx, "test")
+	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer f.bd.RemoveWorkshop(f.ctx, "test")
 
 	// Execute
-	err := f.be.StashWorkshop(f.ctx, "test")
+	err := f.bd.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test")
+	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.UnstashWorkshop(f.ctx, "test")
+	err = f.bd.UnstashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test")
+	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Execute
-	err := f.be.StashWorkshop(f.ctx, "test")
+	err := f.bd.StashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test")
+	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.NotNil)
 
 	// Execute
-	err = f.be.RemoveWorkshopStash(f.ctx, "test")
+	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
-	err = f.be.UnstashWorkshop(f.ctx, "test")
+	err = f.bd.UnstashWorkshop(f.ctx, "test")
 	c.Assert(err, check.ErrorMatches, "workshop not found")
 }
 
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
-	defer f.be.RemoveWorkshop(f.ctx, "test")
+	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer f.bd.RemoveWorkshop(f.ctx, "test")
 
 	// Execute
-	err := f.be.CreateStateStorage(f.ctx, "test")
+	err := f.bd.CreateStateStorage(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.be.DeleteStateStorage(f.ctx, "test")
+	err = f.bd.DeleteStateStorage(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -134,33 +130,151 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Execute
-	err := f.be.StashWorkshop(f.ctx, "test")
+	err := f.bd.StashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test")
+	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 
 	// Execute
-	err = f.be.RemoveWorkshopStash(f.ctx, "test")
+	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path, f.username)
+	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Validate
-	err := f.be.RemoveWorkshop(f.ctx, "test")
+	err := f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	_, err = f.be.Workshop(f.ctx, "test")
+	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 }
 
+func (f *wsOps) image(c *check.C, alias string) (string, error) {
+	cli, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
+	c.Check(err, check.IsNil)
+	entry, _, err := cli.GetImageAlias(lxdbackend.ImageAlias(alias))
+	if err != nil {
+		return "", err
+	}
+	return entry.Target, err
+}
+
+func (f *wsOps) deleteimage(c *check.C, fp string) error {
+	cli, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
+	c.Check(err, check.IsNil)
+	op, err := cli.DeleteImage(fp)
+	c.Check(err, check.IsNil)
+	return op.Wait()
+}
+
 func (f *wsOps) TestLxdBackendDownloadWorkshopBase(c *check.C) {
-	err := f.be.Download(f.ctx, "ubuntu@24.04", nil)
+	// ensure there is no image in LXD storage
+	fp, err := f.image(c, "ubuntu@22.04")
+	if err == nil {
+		c.Assert(f.deleteimage(c, fp), check.IsNil)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(5)
+	for i := 0; i < 5; i++ {
+		go func() {
+			err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
+			c.Check(err, check.IsNil)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	fp, err = f.image(c, "ubuntu@22.04")
 	c.Assert(err, check.IsNil)
+	c.Assert(f.deleteimage(c, fp), check.IsNil)
+}
+func (f *wsOps) TestLxdBackendDownloadMalformedBase(c *check.C) {
+	err := f.bd.Download(f.ctx, "ubuntu:24.04", nil)
+	c.Check(err, check.ErrorMatches, `"ubuntu:24.04" is not a correct base name`)
+	err = f.bd.Download(f.ctx, "ubuntu@", nil)
+	c.Check(err, check.ErrorMatches, `"ubuntu@" is not a correct base name`)
+}
+
+func (f *wsOps) TestLxdBackendDownloadBaseImageNotFound(c *check.C) {
+	err := f.bd.Download(f.ctx, "ubuntu@1.01", nil)
+	c.Check(err, check.ErrorMatches, `"ubuntu@1.01" download failed.*`)
+}
+
+func (f *wsOps) TestLxdBackendDownloadProtocolNotSupported(c *check.C) {
+	defer lxdbackend.FakeImageServer("https://cloud-images.ubuntu.com/minimal/releases/")()
+	err := f.bd.Download(f.ctx, "ubuntu@20.04", nil)
+	c.Check(err, check.ErrorMatches, `unknown image server URL prefix \(supported: simplestreams, lxd\)`)
+}
+
+func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *check.C) {
+	// ensure there is no image in LXD storage
+	fp, err := f.image(c, "ubuntu@22.04")
+	if err == nil {
+		c.Assert(f.deleteimage(c, fp), check.IsNil)
+	}
+
+	wcancel, cancel := context.WithCancel(f.ctx)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	var once sync.Once
+	wg.Add(3)
+	for i := 0; i < 3; i++ {
+		go func() {
+			r := &progress.Reporter{
+				Name: "1",
+				Report: func(label string, done, total int) {
+					once.Do(func() { cancel() })
+				},
+			}
+			err := f.bd.Download(wcancel, "ubuntu@22.04", r)
+			c.Check(err, testutil.ErrorIs, context.Canceled)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// attempt to download after interruption (must pickup an ongoing operation
+	// and wait for it).
+	err = f.bd.Download(f.ctx, "ubuntu@22.04", nil)
+	c.Assert(err, check.IsNil)
+
+	fp, err = f.image(c, "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	c.Assert(f.deleteimage(c, fp), check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendDownloadMultipleBasesConcurrently(c *check.C) {
+	// ensure there is no image in LXD storage
+	for _, b := range workshop.SupportedBases {
+		fp, err := f.image(c, b)
+		if err == nil {
+			c.Assert(f.deleteimage(c, fp), check.IsNil)
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(workshop.SupportedBases))
+	for i := 0; i < len(workshop.SupportedBases); i++ {
+		idx := i
+		go func() {
+			err := f.bd.Download(f.ctx, workshop.SupportedBases[idx], nil)
+			c.Check(err, check.IsNil)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	for _, b := range workshop.SupportedBases {
+		fp, err := f.image(c, b)
+		c.Assert(err, check.IsNil)
+		c.Assert(f.deleteimage(c, fp), check.IsNil)
+	}
 }

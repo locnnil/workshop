@@ -10,12 +10,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -43,6 +46,7 @@ type storeSdk struct {
 	Channel  string `json:"channel"`
 	Revision int64  `json:"revision"`
 	SdkYAML  string `json:"sdk-yaml"`
+	Size     int64  `json:"size"`
 }
 
 type SdkActionError struct {
@@ -86,7 +90,7 @@ func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.In
 			info.Revision = s.Revision
 			info.Channel = s.Channel
 
-			results = append(results, sdk.SdkResult{info})
+			results = append(results, sdk.SdkResult{Info: info})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
@@ -99,13 +103,20 @@ func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.In
 	return results, nil
 }
 
-func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup) error {
-	r, err := storeSdkReader(ctx, setup)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
+type reporterWriter struct {
+	r     *progress.Reporter
+	done  int
+	total int
+}
 
+func (r *reporterWriter) Write(p []byte) (n int, err error) {
+	plen := len(p)
+	r.done += plen
+	r.r.Report("download", r.done, r.total)
+	return plen, nil
+}
+
+func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {
 		return err
@@ -114,6 +125,17 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup) error {
 		return err
 	}
 	defer fl.Close()
+
+	info, err := storeSdkInfo(ctx, setup.Name, setup.Channel)
+	if err != nil {
+		return err
+	}
+
+	r, err := storeSdkReader(ctx, setup)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
 
 	target := setup.Filename()
 	if !osutil.FileExists(target) {
@@ -125,30 +147,37 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup) error {
 			// Remove the target as due to the error it may be corrupted.
 			if err != nil {
 				if err1 := os.Remove(target); err1 != nil {
-					logger.Noticef("Cannot remove %q on a failed download: %v", target, err1)
+					logger.Noticef("SDK Store on Download: Cannot remove %q on a failed download: %v", target, err1)
 				}
 				return
 			}
 			// If the SDK was downloaded successfully, remove its previous rev if any.
 			matches, err1 := filepath.Glob(filepath.Join(filepath.Dir(target), setup.Name+"_*.sdk"))
 			if err1 != nil {
-				logger.Noticef("Cannot cleanup previous downloads for %q: %v", setup.Name, err1)
+				logger.Noticef("SDK Store on Download: Cannot cleanup previous downloads for %q: %v", setup.Name, err1)
 			}
 			for _, m := range matches {
 				if m != target {
 					if err1 = os.Remove(m); err1 != nil {
-						logger.Noticef("Cannot cleanup previous download (%s): %v", m, err1)
+						logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err1)
 					}
 				}
 			}
 		}()
 		defer file.Close()
 
-		if _, err = io.Copy(file, r); err != nil {
+		var writer io.Writer
+		if report != nil {
+			writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(info.Size)})
+		} else {
+			writer = file
+		}
+
+		if _, err = io.Copy(writer, r); err != nil {
 			return err
 		}
 	} else {
-		logger.Debugf("%s exists, nothing to download...", target)
+		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
 	}
 
 	return nil
@@ -190,7 +219,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	atr, err := obj.Attrs(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
-			return sSdk, errors.New("SDK not found")
+			return sSdk, fmt.Errorf("SDK not found in %q", channel)
 		}
 		return sSdk, err
 	}
@@ -198,6 +227,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
 	sSdk.Revision = atr.Generation % 1000
+	sSdk.Size = atr.Size
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {
 		if _, ok := atr.Metadata["sdk-yaml"]; !ok {
@@ -247,7 +277,11 @@ func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, er
 	}
 	track, risk := sa[0], sa[1]
 	bkt := client.Bucket(SDK_STORE_BUCKET_NAME)
-	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", setup.Name, track, risk, setup.Name))
+
+	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", setup.Name, track, risk, setup.Name)).Retryer(
+		storage.WithBackoff(gax.Backoff{Initial: 2 * time.Second}),
+		storage.WithPolicy(storage.RetryIdempotent),
+	)
 	r, err := obj.NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {

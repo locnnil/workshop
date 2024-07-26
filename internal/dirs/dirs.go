@@ -40,6 +40,8 @@ var (
 	XdgRuntimeDirBase string
 	// Run directory
 	WorkshopdRunDir string
+	// Locks directory
+	WorkshopdLocksDir string
 )
 
 func getEnvPaths() (workshopdDir string, socketPath string) {
@@ -82,17 +84,20 @@ func SetRootDir(rootdir string) {
 	BaseDir = rootdir
 	SdkDir = filepath.Join(BaseDir, "sdk")
 	WorkshopdRunDir = filepath.Join(BaseDir, "/run/workshopd")
+	WorkshopdLocksDir = filepath.Join(WorkshopdRunDir, "locks")
 }
 
 func CreateDirs() error {
 	if err := os.MkdirAll(BaseDir, 0755); err != nil {
 		return err
 	}
-
 	if err := os.MkdirAll(SdkDir, 0755); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(WorkshopdRunDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(WorkshopdLocksDir, 0755); err != nil {
 		return err
 	}
 	return nil

@@ -9,7 +9,7 @@ import (
 
 // OpenLock creates and opens a lock file associated with a particular SDK file.
 func OpenLock(sdkName string) (*osutil.FileLock, error) {
-	flock, err := osutil.NewFileLock(filepath.Join(dirs.WorkshopdRunDir, sdkName+".lock"))
+	flock, err := osutil.NewFileLock(filepath.Join(dirs.WorkshopdLocksDir, sdkName+".lock"))
 	if err != nil {
 		return nil, err
 	}

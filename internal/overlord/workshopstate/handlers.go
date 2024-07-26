@@ -13,6 +13,7 @@ import (
 
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -52,10 +53,13 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	reporter := func(label string, done, total int) {
-		st.Lock()
-		task.SetProgress(label, done, total)
-		st.Unlock()
+	reporter := &progress.Reporter{
+		Name: task.ID(),
+		Report: func(label string, done, total int) {
+			st.Lock()
+			task.SetProgress(label, done, total)
+			st.Unlock()
+		},
 	}
 
 	return m.backend.Download(ctx, wf.Base, reporter)

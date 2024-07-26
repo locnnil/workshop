@@ -2,8 +2,10 @@ package sdk
 
 import (
 	"context"
+	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/progress"
 )
 
 type StoreAction int
@@ -58,7 +60,7 @@ func StoreService(st *state.State) Store {
 
 type Store interface {
 	SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
-	DownloadSdk(ctx context.Context, setup Setup) error
+	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
 func NewFakeStore() Store {
@@ -77,10 +79,13 @@ type TestDownloadCall struct {
 }
 
 type FakeStore struct {
-	ActionCalls      []TestActionCall
-	DownloadCalls    []TestDownloadCall
+	ActionCalls []TestActionCall
+
+	downloadLock  sync.Mutex
+	DownloadCalls []TestDownloadCall
+
 	ActionCallback   func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
-	DownloadCallback func(ctx context.Context, setup Setup) error
+	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
 func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)) func() {
@@ -91,7 +96,7 @@ func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, currentSdks m
 	}
 }
 
-func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup) error) func() {
+func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup, report *progress.Reporter) error) func() {
 	old := f.DownloadCallback
 	f.DownloadCallback = fa
 	return func() {
@@ -110,12 +115,14 @@ func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info,
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup) error {
+func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) error {
+	f.downloadLock.Lock()
+	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
 		Setup: setup,
 	})
 	if f.DownloadCallback != nil {
-		return f.DownloadCallback(ctx, setup)
+		return f.DownloadCallback(ctx, setup, report)
 	}
 	return nil
 }
