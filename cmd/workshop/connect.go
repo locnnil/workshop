@@ -23,10 +23,10 @@ This command connects a plug to a target slot
 that is specified as the second argument or deduced from the context.
 
 - If the second argument is omitted entirely, the target is assumed to be
-  <WORKSHOP>/agent:<PLUG>; <WORKSHOP> and <PLUG> come from the first argument
+  <WORKSHOP>/host:<PLUG>; <WORKSHOP> and <PLUG> come from the first argument
 
 - If the second argument only names the slot itself, the target is
-  <WORKSHOP>/agent:<SLOT>; <WORKSHOP> comes from the first argument
+  <WORKSHOP>/host:<SLOT>; <WORKSHOP> comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
   <WORKSHOP>/<SDK>:<INTERFACE>;
@@ -80,10 +80,10 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 
 	slotRef := &client.SlotRef{}
 	if len(av) > 1 {
-		// check if the second arg is a short version of the agent-provided slot reference
+		// check if the second arg is a short version of the host-provided slot reference
 		if strings.HasPrefix(av[1], ":") {
 			slotRef.Workshop = plugRef.Workshop
-			slotRef.Sdk = "agent"
+			slotRef.Sdk = "host"
 			slotRef.Name = av[1][1:]
 		} else {
 			slotRef, err = client.ParseShortSlotRef(av[1])
@@ -98,11 +98,11 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 		slotRef.ProjectId = plugRef.ProjectId
 	} else {
 		// workshop connect <workshop>/<sdk>:plug which means that the plug will
-		// be attempted to connect to the same name slot in the agent SDK (if
+		// be attempted to connect to the same name slot in the host SDK (if
 		// exists)
 		slotRef.ProjectId = plugRef.ProjectId
 		slotRef.Workshop = plugRef.Workshop
-		slotRef.Sdk = "agent"
+		slotRef.Sdk = "host"
 		slotRef.Name = plugRef.Name
 	}
 

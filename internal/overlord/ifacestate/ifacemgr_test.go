@@ -91,16 +91,16 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdkYamls m
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	var agentYaml = `name: agent
+	var hostYaml = `name: host
 base: ubuntu@22.04
-type: agent
+type: host
 slots:
   slot:
     interface: content
     attr: slot-value
 `
-	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "agent", "current", "meta", "sdk.yaml"), 0655), check.IsNil)
-	s.writeSDKMetaFile(c, wsfs, "agent", agentYaml)
+	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "host", "current", "meta", "sdk.yaml"), 0655), check.IsNil)
+	s.writeSDKMetaFile(c, wsfs, "host", hostYaml)
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
@@ -123,7 +123,7 @@ plugs:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/agent:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/host:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
 			"interface": "content",
@@ -149,7 +149,7 @@ plugs:
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	cref := &interfaces.ConnRef{
 		PlugRef: interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "agent", Name: "slot"}}
+		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "host", Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)

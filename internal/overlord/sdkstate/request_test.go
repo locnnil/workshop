@@ -23,7 +23,7 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	sdk := workshop.SdkRecord{Name: "sdk", Channel: "latest/stable"}
+	sdk := workshop.SdkRecord{Name: "sdk"}
 
 	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
 

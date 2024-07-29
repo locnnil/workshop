@@ -112,7 +112,7 @@ func (s *daemonSuite) TestExplicitPaths(c *C) {
 }
 
 func (s *daemonSuite) TestCommandMethodDispatch(c *check.C) {
-	fakeUserAgent := "some-agent-talking-to-pebble/1.0"
+	fakeUserAgent := "some-agent-talking-to-workshop/1.0"
 
 	cmd := &Command{d: s.newDaemon(c)}
 	handler := &fakeHandler{cmd: cmd}

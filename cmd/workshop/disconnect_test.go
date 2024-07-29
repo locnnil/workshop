@@ -37,7 +37,7 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 			map[string]interface{}{
 				"project-id": "42424242",
 				"workshop":   "ws",
-				"sdk":        "agent",
+				"sdk":        "host",
 				"slot":       "content",
 			},
 		},

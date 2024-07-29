@@ -42,7 +42,7 @@ type Workshop struct {
 // the SDK to the workshop content. This method is idempotent, so if an SDK
 // existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	if s.Name == sdk.Agent.String() {
+	if s.Name == sdk.Host.String() {
 		return nil
 	}
 
@@ -89,7 +89,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK to the workshop content. This method is idempotent, so if an
 // SDK did not exist, the result will be a no-op
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	if name == sdk.Agent.String() {
+	if name == sdk.Host.String() {
 		return nil
 	}
 
@@ -136,7 +136,7 @@ func WorkshopStateVolumeName(ws, pid string) string {
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
 	setup, ok := w.Content[sdkName]
-	if sdkName != sdk.Agent.String() && !ok {
+	if sdkName != sdk.Host.String() && !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
 	}
 
@@ -174,7 +174,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 }
 
 func (w *Workshop) setupPlugBinds(info *sdk.Info) error {
-	if info.Type == sdk.Agent {
+	if info.Type == sdk.Host {
 		return nil
 	}
 
@@ -210,25 +210,26 @@ func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	return infos, nil
 }
 
-func (w *Workshop) InstallAgentSdk(ctx context.Context) error {
+func (w *Workshop) InstallHostSdk(ctx context.Context) error {
 	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
 	defer wfs.Close()
 
-	agentMetaDir := filepath.Join(sdk.SdkCurrentPath("agent"), "meta")
-	if err := wfs.MkdirAll(agentMetaDir, 0655); err != nil {
+	hostMetaDir := filepath.Join(sdk.SdkCurrentPath("host"), "meta")
+	if err := wfs.MkdirAll(hostMetaDir, 0655); err != nil {
 		return err
 	}
 
-	// /var/lib/workshop/sdk/agent/current/meta
-	file, err := wfs.OpenFile(filepath.Join(agentMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	// /var/lib/workshop/sdk/host/current/meta
+	file, err := wfs.OpenFile(filepath.Join(hostMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	if _, err = file.Write([]byte(sdk.AgentSdkMeta(w.Base))); err != nil {
+	if _, err = file.Write([]byte(sdk.HostSdkMeta(w.Base))); err != nil {
 		return err
 	}
 	return nil

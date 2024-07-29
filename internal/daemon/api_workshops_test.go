@@ -484,7 +484,7 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(s.b.AssignProfileCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "basic", "agent"), check.HasLen, 3)
+	c.Assert(repo.Slots(s.project.ProjectId, "basic", "host"), check.HasLen, 3)
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
@@ -523,8 +523,8 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "agent"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "agent"), check.HasLen, 0)
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "host"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "host"), check.HasLen, 0)
 
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
@@ -704,7 +704,7 @@ func (s *apiSuite) TestRefreshWorkshopFailed(c *check.C) {
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "host", Name: "content"},
 		},
 	})
 
@@ -713,11 +713,11 @@ func (s *apiSuite) TestRefreshWorkshopFailed(c *check.C) {
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "host", Name: "content"},
 		},
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "agent", Name: "gpu"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "host", Name: "gpu"},
 		},
 	})
 }

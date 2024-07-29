@@ -296,13 +296,13 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	c.Check(exist, check.Equals, false)
 }
 
-func (s *sdkStateSuite) TestDoInstallAgentSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallHostSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "agent"}
+	newSdk := sdk.Setup{Name: "host"}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-agent-sdk", "test")
+	t1 := s.state.NewTask("install-host-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
@@ -319,18 +319,18 @@ func (s *sdkStateSuite) TestDoInstallAgentSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info, err := wfs.Stat("/var/lib/workshop/sdk/agent/current/meta/sdk.yaml")
+	info, err := wfs.Stat("/var/lib/workshop/sdk/host/current/meta/sdk.yaml")
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
 }
 
-func (s *sdkStateSuite) TestUndoInstallAgentSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestUndoInstallHostSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "agent"}
+	newSdk := sdk.Setup{Name: "host"}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-agent-sdk", "test")
+	t1 := s.state.NewTask("install-host-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
@@ -353,7 +353,7 @@ func (s *sdkStateSuite) TestUndoInstallAgentSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.NotNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, err = wfs.Stat("/var/lib/workshop/sdk/agent")
+	_, err = wfs.Stat("/var/lib/workshop/sdk/host")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
 

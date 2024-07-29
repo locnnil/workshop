@@ -254,12 +254,12 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 				Interface: "leds",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "numlock-led"},
 				Interface: "leds",
 				Manual:    true,
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "scrollock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "scrollock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "scrollock-led"},
 				Interface: "leds",
 			},
 		},
@@ -285,7 +285,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "keyboard-lights",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "numlock-led",
 				}},
 			}, {
@@ -297,7 +297,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "keyboard-lights",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "scrollock-led",
 				}},
 			},
@@ -306,7 +306,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 			{
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "numlock-led",
 				Interface: "leds",
 				Connections: []client.PlugRef{{
@@ -318,7 +318,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "scrollock-led",
 				Interface: "leds",
 				Connections: []client.PlugRef{{
@@ -386,12 +386,12 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 				Interface: "leds",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "numlock-led"},
 				Interface: "leds",
 				Manual:    true,
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "scrollock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "scrollock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "scrollock-led"},
 				Interface: "leds",
 				Manual:    true,
 			},
@@ -424,7 +424,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "keyboard-lights",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "numlock-led",
 				}},
 			}, {
@@ -436,7 +436,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "keyboard-lights",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "scrollock-led",
 				}},
 			},
@@ -445,7 +445,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 			{
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "numlock-led",
 				Interface: "leds",
 				Connections: []client.PlugRef{{
@@ -457,7 +457,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "scrollock-led",
 				Interface: "leds",
 				Connections: []client.PlugRef{{
@@ -521,7 +521,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 		Established: []client.Connection{
 			{
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "scrollock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "scrollock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "scrollock-led"},
 				Interface: "leds",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "capslock"},
@@ -532,7 +532,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 		Undesired: []client.Connection{
 			{
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "numlock-led"},
 				Interface: "leds",
 				Manual:    true,
 			},
@@ -565,7 +565,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "keyboard-lights",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "scrollock-led",
 				}},
 			},
@@ -574,19 +574,19 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 			{
 				ProjectId: "42424242",
 				Workshop:  "leds-provider",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "capslock-led",
 				Interface: "leds",
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "numlock-led",
 				Interface: "leds",
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "scrollock-led",
 				Interface: "leds",
 				Connections: []client.PlugRef{{
@@ -667,7 +667,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 		Undesired: []client.Connection{
 			{
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "lights", Name: "numlock"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "agent", Name: "numlock-led"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "keyboard-lights", Sdk: "host", Name: "numlock-led"},
 				Interface: "leds",
 				Manual:    true,
 			},
@@ -709,19 +709,19 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 			{
 				ProjectId: "42424242",
 				Workshop:  "leds-provider",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "capslock-led",
 				Interface: "leds",
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "numlock-led",
 				Interface: "leds",
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "keyboard-lights",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "scrollock-led",
 				Interface: "leds",
 			}, {
@@ -907,15 +907,15 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Interface: "content",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "desktop-plug"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "agent", Name: "desktop"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "host", Name: "desktop"},
 				Interface: "desktop",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "x11-plug"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "agent", Name: "x11"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "host", Name: "x11"},
 				Interface: "x11",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "def", Sdk: "foo", Name: "a-x11-plug"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "def", Sdk: "agent", Name: "x11"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "def", Sdk: "host", Name: "x11"},
 				Interface: "x11",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "a-foo", Name: "plug"},
@@ -923,7 +923,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Interface: "content",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "def", Sdk: "keyboard-app", Name: "x11"},
-				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "def", Sdk: "agent", Name: "x11"},
+				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "def", Sdk: "host", Name: "x11"},
 				Interface: "x11",
 				Manual:    true,
 			},
@@ -963,7 +963,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "desktop",
 				}},
 			}, {
@@ -975,7 +975,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "x11",
 				}},
 			}, {
@@ -987,7 +987,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "x11",
 				}},
 			}, {
@@ -1011,7 +1011,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
-					Sdk:       "agent",
+					Sdk:       "host",
 					Name:      "x11",
 				}},
 			}, {
@@ -1061,7 +1061,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "def",
-				Sdk:       "agent",
+				Sdk:       "host",
 				Name:      "x11",
 				Interface: "x11",
 				Connections: []client.PlugRef{{

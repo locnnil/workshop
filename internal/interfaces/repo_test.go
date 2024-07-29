@@ -1664,7 +1664,7 @@ slots:
 	s3 := sdk.MockInfo(c, `
 name: s3
 base: ubuntu@22.04
-type: agent
+type: host
 slots:
   i2:
 `, s.projectId, "ws")

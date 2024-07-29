@@ -40,7 +40,7 @@ const contentBaseDeclarationSlots = `
   content:
     allow-installation:
       slot-sdk-type:
-        - agent
+        - host
     allow-connection: true
     allow-auto-connection: true
 `

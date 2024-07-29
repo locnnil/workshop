@@ -45,12 +45,12 @@ Notes:
 	return cmd
 }
 
-func isAgentSdk(sdkName string) bool {
-	return sdkName == "agent"
+func isHostSdk(sdkName string) bool {
+	return sdkName == "host"
 }
 
 func endpoint(workshop, sdkName, name string) string {
-	if isAgentSdk(sdkName) {
+	if isHostSdk(sdkName) {
 		return ":" + name
 	}
 	return workshop + "/" + sdkName + ":" + name
@@ -186,7 +186,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 	for _, slot := range connections.Slots {
-		if isAgentSdk(slot.Sdk) {
+		if isHostSdk(slot.Sdk) {
 			// displaying unconnected system snap slots is boring,
 			// unless explicitly asked to show them
 			continue

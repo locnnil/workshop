@@ -51,26 +51,26 @@ import (
 //     manual-connected-implicit-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - agent                     # implicit slot
+//           - host                     # implicit slot
 //       deny-auto-connection: true     # force manual connect
 //
 //     auto-connected-implicit-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - agent                     # implicit slot
+//           - host                     # implicit slot
 //       allow-auto-connection: true    # allow auto-connect
 //
 //     manual-connected-provided-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - sdk                      # sdk provided slot
+//           - regular                      # sdk provided slot
 //       deny-connection: true          # require allow-connection in sdk decl
 //       deny-auto-connection: true     # force manual connect
 //
 //     auto-connected-provided-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - sdk                      # sdk provided slot
+//           - regular                      # sdk provided slot
 //       deny-connection: true          # require allow-connection in sdk decl
 
 const baseDeclarationHeader = `
