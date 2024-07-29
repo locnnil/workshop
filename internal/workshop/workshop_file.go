@@ -21,7 +21,7 @@ var (
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
 	filename     = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
-	sdkBlacklist = []string{"agent"}
+	sdkBlacklist = []string{"agent", "host"}
 )
 
 type Plug struct {
@@ -152,7 +152,7 @@ func readWorkshop(pathname string) (*File, error) {
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
-			if ixd := slices.IndexFunc(file.Sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }); ixd == -1 {
+			if !slices.ContainsFunc(file.Sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return nil, fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Plug))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Plug == name {
@@ -178,8 +178,8 @@ func readWorkshop(pathname string) (*File, error) {
 	}
 
 	for _, s := range file.Sdks {
-		if idx := slices.Index(sdkBlacklist, s.Name); idx != -1 {
-			return nil, fmt.Errorf(`"agent" is a reserved SDK name`)
+		if slices.Contains(sdkBlacklist, s.Name) {
+			return nil, fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
 		if matches := channel.FindStringSubmatch(s.Channel); matches != nil {
 			continue

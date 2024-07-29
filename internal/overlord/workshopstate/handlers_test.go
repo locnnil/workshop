@@ -246,7 +246,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration is not found.*`)
 }
 
-func (s *workshopHandlers) TestCreateWorkshopWithAgentSdk(c *check.C) {
+func (s *workshopHandlers) TestCreateWorkshopWithHostSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws

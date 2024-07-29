@@ -38,7 +38,7 @@ type Type string
 
 const (
 	Regular Type = "regular"
-	Agent   Type = "agent"
+	Host    Type = "host"
 )
 
 func (t Type) String() string {

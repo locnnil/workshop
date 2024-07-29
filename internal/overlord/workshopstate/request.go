@@ -158,14 +158,14 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 }
 
 func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
-	var prevInstall = sdkstate.InstallAgent(st)
+	var prevInstall = sdkstate.InstallHostSdk(st)
 	install := state.NewTaskSet(prevInstall.Tasks()...)
 
 	var prevSetup *state.Task
 	setupHook := state.NewTaskSet()
 
-	var prevAuto = st.NewTask("auto-connect", `Auto-connect interfaces of "agent" SDK`)
-	prevAuto.Set("sdk", "agent")
+	var prevAuto = st.NewTask("auto-connect", `Auto-connect interfaces of "host" SDK`)
+	prevAuto.Set("sdk", "host")
 	autoConnect := state.NewTaskSet(prevAuto)
 
 	for idx, sdk := range sdks {
@@ -460,8 +460,8 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 }
 
 func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
-	prev := st.NewTask("auto-disconnect", `Disconnect interfaces of "agent" SDK`)
-	prev.Set("sdk", "agent")
+	prev := st.NewTask("auto-disconnect", `Disconnect interfaces of "host" SDK`)
+	prev.Set("sdk", "host")
 	disconnectSet := state.NewTaskSet(prev)
 	for _, s := range content {
 		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))

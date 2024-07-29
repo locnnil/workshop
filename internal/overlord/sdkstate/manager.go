@@ -17,7 +17,7 @@ func New(runner *state.TaskRunner, repo *interfaces.Repository, server backend.B
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
 	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), manager.undoInstallSdk)
-	runner.AddHandler("install-agent-sdk", OnDo(manager.doInstallAgentSdk), manager.undoInstallAgentSdk)
+	runner.AddHandler("install-host-sdk", OnDo(manager.doInstallHostSdk), manager.undoInstallHostSdk)
 	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), manager.undoLinkSdk)
 
 	return manager

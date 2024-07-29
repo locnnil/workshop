@@ -111,13 +111,13 @@ func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  agent:
+  host:
     channel: latest/stable
 `)
 	dir := c.MkDir()
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
-	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
+	c.Assert(err, check.ErrorMatches, `"host" is a reserved SDK name`)
 	c.Assert(file, check.IsNil)
 }
 

@@ -9,10 +9,10 @@ execute: |
   . "$TESTSLIB"/utils.sh
   
   echo "Check disconnect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
-  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one ws-disconn/agent:content  
+  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one ws-disconn/host:content  
   workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
   
-  echo "Check disconnect <workshop>/<sdk>:<plug> :<slot> form (agent SDK)"
+  echo "Check disconnect <workshop>/<sdk>:<plug> :<slot> form (host SDK)"
   workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-two :content  
   workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-two.+-.+\-$"
   
@@ -23,7 +23,7 @@ execute: |
   workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-two.+:content.+\-$"  
 
   echo "Check disconnect <workshop>/<sdk>:<plug or slot> form (must disconnect all slots auto connections)"
-  workshop_exec disconnect ws-disconn/agent:content
+  workshop_exec disconnect ws-disconn/host:content
   workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
   workshop_exec connections ws-disconn | MATCH "^content.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"  
   

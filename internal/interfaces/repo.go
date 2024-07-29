@@ -1072,10 +1072,10 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 	}
 
 	if slotSdkName == "" {
-		// Use the agent SDK if the slot-side snap name is empty
+		// Use the host SDK if the slot-side snap name is empty
 		slotProjectId = plugProjectId
 		slotWorkshop = plugWorkshop
-		slotSdkName = sdk.Agent.String()
+		slotSdkName = sdk.Host.String()
 	}
 
 	slotKey := plugOrSlotKey(slotProjectId, slotWorkshop, slotSdkName)

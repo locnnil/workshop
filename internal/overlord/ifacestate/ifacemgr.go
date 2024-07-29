@@ -150,11 +150,11 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
-				agent, err := workshop.SdkInfo(pctx, sdk.Agent.String())
+				host, err := workshop.SdkInfo(pctx, sdk.Host.String())
 				if err != nil {
 					continue
 				}
-				if err = m.repo.AddSdk(agent); err != nil {
+				if err = m.repo.AddSdk(host); err != nil {
 					continue
 				}
 
@@ -244,13 +244,13 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// 1: <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot>
 	// Return exactly one plug/slot or an error if it doesn't exist.
 	case plugName != "" && slotName != "":
-		// The SDK name can be omitted to implicitly refer to the agent SDK.
+		// The SDK name can be omitted to implicitly refer to the host SDK.
 		if plugSdk == "" {
-			plugSdk = sdk.Agent.String()
+			plugSdk = sdk.Host.String()
 		}
-		// The SDK name can be omitted to implicitly refer to the agent SDK.
+		// The SDK name can be omitted to implicitly refer to the host SDK.
 		if slotSdk == "" {
-			slotSdk = sdk.Agent.String()
+			slotSdk = sdk.Host.String()
 		}
 		// Ensure that slot and plug are connected
 		isConnected, err := connected(plugProject, plugWorkshop, plugSdk, plugName, slotProject, slotWorkshop, slotSdk, slotName)
@@ -274,14 +274,14 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop != "" && plugName != "" && slotWorkshop == "" && slotName == "":
 		if plugSdk == "" {
-			plugSdk = sdk.Agent.String()
+			plugSdk = sdk.Host.String()
 		}
 		return connectedPlugOrSlot(plugProject, plugWorkshop, plugSdk, plugName)
 	// 2: <workshop>/<sdk>:<plug or slot> (through 2nd pair)
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop == "" && plugName == "" && slotWorkshop != "" && slotName != "":
 		if slotSdk == "" {
-			slotSdk = sdk.Agent.String()
+			slotSdk = sdk.Host.String()
 		}
 		return connectedPlugOrSlot(slotProject, slotWorkshop, slotSdk, slotName)
 	default:

@@ -82,7 +82,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return store.DownloadSdk(ctx, rec, reporter)
 }
 
-func (m *SdkManager) doInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -96,10 +96,10 @@ func (m *SdkManager) doInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error 
 		return err
 	}
 
-	return wp.InstallAgentSdk(ctx)
+	return wp.InstallHostSdk(ctx)
 }
 
-func (m *SdkManager) undoInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) undoInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (m *SdkManager) undoInstallAgentSdk(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	defer wfs.Close()
 
-	return wfs.RemoveAll(sdk.SdkRootPath("agent"))
+	return wfs.RemoveAll(sdk.SdkRootPath("host"))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {

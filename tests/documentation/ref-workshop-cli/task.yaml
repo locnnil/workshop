@@ -62,9 +62,9 @@ execute: |
   # Disconnect, Connect
   workshop_exec disconnect nimble/test-sdk-go:mod-cache
   workshop_exec connect nimble/test-sdk-go:mod-cache :content
-  workshop_exec disconnect nimble/test-sdk-go:mod-cache nimble/agent:content
-  workshop_exec connect nimble/test-sdk-go:mod-cache nimble/agent:content
-  workshop_exec disconnect nimble/agent:content
+  workshop_exec disconnect nimble/test-sdk-go:mod-cache nimble/host:content
+  workshop_exec connect nimble/test-sdk-go:mod-cache nimble/host:content
+  workshop_exec disconnect nimble/host:content
   workshop_exec connect nimble/test-sdk-go:mod-cache :content
 
   # Remount
