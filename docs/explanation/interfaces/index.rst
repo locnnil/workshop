@@ -21,7 +21,7 @@ the plugs defined by the SDKs listed in the workshop definition
 must at some point *connect* to the appropriate interface slots.
 
 Such connections are uniformly established via the
-:ref:`agent SDK <exp_agent_sdk>`
+:ref:`host SDK <exp_host_sdk>`
 that is quietly present in every workshop,
 but not immediately visible to its users.
 
@@ -51,12 +51,12 @@ For example, content interface plugs are auto-connected,
 whereas an SSH interface plug requires manual connection.
 
 
-.. _exp_agent_sdk:
+.. _exp_host_sdk:
 
-Agent SDK
-~~~~~~~~~
+Host SDK
+~~~~~~~~
 
-Every workshop contains an *agent SDK*
+Every workshop contains a *host SDK*
 that exposes system resources through interface slots.
 It's essentially a special SDK type,
 which is not available from the SDK Store but is auto-added to each workshop.
@@ -64,8 +64,8 @@ It's installed first at :command:`workshop launch`
 and removed last at :command:`workshop remove`,
 ensuring internal consistency.
 
-The purpose of the agent SDK isn't to add hooks or additional content;
-it's only there to expose system resources to other SDKs in a consistent way.
+The purpose of the host SDK isn't to add hooks or additional content;
+it's only there to expose host system resources to other SDKs consistently.
 As such, it can't be removed by the user
 and isn't listed in the :command:`workshop info` output.
 

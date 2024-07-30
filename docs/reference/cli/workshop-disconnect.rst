@@ -23,20 +23,20 @@ in the current project directory:
 
 
 A full version of the same command
-that lists the target SDK (:samp:`agent`) and slot (:samp:`content`):
+that lists the target SDK (:samp:`host`) and slot (:samp:`content`):
 
 .. code-block:: console
 
-   $ workshop disconnect nimble/go:mod-cache nimble/agent:content
+   $ workshop disconnect nimble/go:mod-cache nimble/host:content
 
 
 Disconnect *all plugs* connected to the :samp:`:content` slot
-of the :samp:`agent` SDK under the :samp:`nimble` workshop
+of the :samp:`host` SDK under the :samp:`nimble` workshop
 in the current project directory:
 
 .. code-block:: console
 
-   $ workshop disconnect nimble/agent:content
+   $ workshop disconnect nimble/host:content
 
 
 Synopsis
@@ -48,7 +48,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   with two arguments, the first one is the plug, and the second one is the slot
 
 - If the second argument only names the slot itself, the target is
-  :samp:`<WORKSHOP>/agent:<SLOT>`;
+  :samp:`<WORKSHOP>/host:<SLOT>`;
   :samp:`<WORKSHOP>` comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
