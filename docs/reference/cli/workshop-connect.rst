@@ -27,11 +27,11 @@ because the plug has a non-default name;
 otherwise, it could be omitted.
 
 
-A full version of the command that also lists the target SDK (:samp:`agent`):
+A full version of the command that also lists the target SDK (:samp:`host`):
 
 .. code-block:: console
 
-   $ workshop connect nimble/go:mod-cache nimble/agent:content
+   $ workshop connect nimble/go:mod-cache nimble/host:content
 
 
 Synopsis
@@ -41,11 +41,11 @@ This command connects a plug to a target slot
 that is specified as the second argument or deduced from the context.
 
 - If the second argument is omitted entirely, the target is assumed to be
-  :samp:`<WORKSHOP>/agent:<PLUG>`;
+  :samp:`<WORKSHOP>/host:<PLUG>`;
   :samp:`<WORKSHOP>` and :samp:`<PLUG>` come from the first argument
 
 - If the second argument only names the slot itself, the target is
-  :samp:`<WORKSHOP>/agent:<SLOT>`;
+  :samp:`<WORKSHOP>/host:<SLOT>`;
   :samp:`<WORKSHOP>` comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
