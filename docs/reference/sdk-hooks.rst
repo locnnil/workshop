@@ -1,3 +1,5 @@
+:hide-toc:
+
 .. _ref_sdk_hooks:
 
 SDK hooks
