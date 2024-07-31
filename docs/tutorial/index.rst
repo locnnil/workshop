@@ -109,28 +109,13 @@ is enabled and running:
 Install
 ~~~~~~~
 
-Build the :program:`workshop` snap
-from the |project_markup| source code on
-`GitHub`_:
-
-.. code-block:: console
-
-   $ git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
-   $ cd workshop
-   $ sudo snap install snapcraft --classic
-   $ snapcraft clean && snapcraft
-
-.. tip::
-
-   In case of :program:`lxd`-related issues with :program:`snapcraft`,
-   ensure you're a member of the :samp:`lxd` group:
-   
-   .. code-block:: console
-      
-      $ id -nG <USERNAME>
-      $ sudo adduser <USERNAME> lxd
-
-Install the resulting :file:`.snap` file,
+Download the latest snap from the
+`Releases <https://github.com/canonical/workshop/releases/>`_
+page on GitHub and install it,
+using the options
+`--dangerous <https://snapcraft.io/docs/install-modes#heading--dangerous>`_
+and
+`--classic <https://snapcraft.io/docs/install-modes#heading--classic>`_,
 for example:
 
 .. code-block:: console
