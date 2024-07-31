@@ -25,9 +25,9 @@ Synopsis
 
 This command lists the warnings that were reported to the system.
 
-All warnings listed by :command:`workshop warnings`
+All warnings listed by :command:`workshop warnings`
 can be acknowledged with the :ref:`ref_workshop_okay` command.
-Acknowledged warnings aren't listed by :command:`workshop warnings`
+Acknowledged warnings aren't listed by :command:`workshop warnings`
 unless they occur again after their cooldown period has elapsed
 or the :option:`!--all` option is used.
 

@@ -142,7 +142,7 @@ Try this for yourself:
 
 
 This time, the build should be much quicker,
-although :command:`workshop refresh` rebuilds the workshop from scratch,
+although :command:`workshop refresh` rebuilds the workshop from scratch,
 including any SDK updates.
 
 The host-mapped contents of the workshop can actually be seen

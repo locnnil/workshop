@@ -243,7 +243,7 @@ but includes extra details
 such as the :ref:`content interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
-Try moving it temporarily and re-run :command:`workshop list`:
+Try moving it temporarily and re-run :command:`workshop list`:
 
 .. code-block:: console
 
@@ -330,9 +330,9 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 Both commands work gracefully,
 waiting for the workshop to comply;
-:command:`workshop stop` doesn't destroy a workshop
+:command:`workshop stop` doesn't destroy a workshop
 (unlike :ref:`remove <tut_remove>`),
-and :command:`workshop start` doesn't build it from scratch
+and :command:`workshop start` doesn't build it from scratch
 (unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`).
 
 
@@ -373,7 +373,7 @@ and refresh the workshop:
    $ workshop refresh golang
 
 
-Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
+Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
 However, its default priority is to keep the workshop operational;
 if problems arise, it rolls back.
 For more details, see the
@@ -408,7 +408,7 @@ Save this Go code in the project directory to build it inside the workshop:
 
 
 You can define environment variables for the command,
-or separate the command from :command:`workshop exec` options:
+or separate the command from :command:`workshop exec` options:
 
 .. code-block:: console
 
@@ -473,7 +473,7 @@ use :ref:`connections <ref_workshop_connections>`:
 
 This is the :ref:`content interface <exp_content_interface>`
 you've seen at :ref:`launch <tut_launch>`
-in the output from :command:`workshop info`.
+in the output from :command:`workshop info`.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.

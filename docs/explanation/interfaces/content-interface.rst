@@ -15,7 +15,7 @@ The interface defines a target directory inside the workshop,
 to which a source directory from the host file system is mounted at run-time.
 Typically, this is a directory that stores SDK-specific data,
 accumulated over time or created
-when the :command:`workshop launch` or :command:`workshop refresh` commands run.
+when the :command:`workshop launch` or :command:`workshop refresh` commands run.
 
 
 Connection
@@ -23,7 +23,7 @@ Connection
 
 The interface is connected automatically at launch and refresh;
 also,
-the :command:`workshop connect` and :command:`workshop disconnect` commands
+the :command:`workshop connect` and :command:`workshop disconnect` commands
 can be invoked manually.
 
 Establishing a connection means
@@ -31,8 +31,8 @@ a directory created by |project_markup| on the host file system
 is mounted to the target directory inside the workshop;
 the best part is that it's preserved
 between |project_markup| operations such as
-:command:`workshop refresh`, :command:`workshop start`
-and :command:`workshop stop`,
+:command:`workshop refresh`, :command:`workshop start`
+and :command:`workshop stop`,
 so you benefit from a pre-populated directory without doing extra work.
 
 To check if the interface is connected:
@@ -74,7 +74,7 @@ this is done for security reasons.
 Remount
 -------
 
-The :command:`workshop remount` command sets a new source directory on the host
+The :command:`workshop remount` command sets a new source directory on the host
 for the target directory inside the workshop:
 
 .. code-block:: console
