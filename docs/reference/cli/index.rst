@@ -1,3 +1,4 @@
+:hide-toc:
 :slug: ref-workshop-cli
 
 .. _ref_workshop_cli:

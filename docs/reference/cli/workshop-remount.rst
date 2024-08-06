@@ -47,10 +47,10 @@ Notes
   for the workshop
 
 - :ref:`ref_workshop_refresh` mounts the last source
-  set by :command:`workshop remount`, if any
+  set by :command:`workshop remount`, if any
 
 - During :ref:`ref_workshop_remove`,
-  non-default sources set by :command:`workshop remount` aren't removed
+  non-default sources set by :command:`workshop remount` aren't removed
 
 
 Options

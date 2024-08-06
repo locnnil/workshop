@@ -32,15 +32,15 @@ while still allowing controlled interactions with system resources.
 
 Here's how it works from the outside:
 
-- The :command:`workshop connect` command establishes a connection
+- The :command:`workshop connect` command establishes a connection
   between a workshop and a system interface,
   allowing the workshop to securely access system resources.
 
-- Conversely, the :command:`workshop disconnect` command
+- Conversely, the :command:`workshop disconnect` command
   terminates existing connections between a workshop and a system interface,
   revoking the access to system resources granted by the connection.
 
-- Finally, the :command:`workshop connections` command
+- Finally, the :command:`workshop connections` command
   lists all existing connections and their states,
   providing an overview of how workshops are communicating with the system.
 
@@ -60,14 +60,14 @@ Every workshop contains a *host SDK*
 that exposes system resources through interface slots.
 It's essentially a special SDK type,
 which is not available from the SDK Store but is auto-added to each workshop.
-It's installed first at :command:`workshop launch`
-and removed last at :command:`workshop remove`,
+It's installed first at :command:`workshop launch`
+and removed last at :command:`workshop remove`,
 ensuring internal consistency.
 
 The purpose of the host SDK isn't to add hooks or additional content;
 it's only there to expose host system resources to other SDKs consistently.
 As such, it can't be removed by the user
-and isn't listed in the :command:`workshop info` output.
+and isn't listed in the :command:`workshop info` output.
 
 
 See also

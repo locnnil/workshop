@@ -38,14 +38,17 @@ for low-level operation:
    sudo lxd init --auto
 
 
-Build and install the ``workshop`` snap, for example:
+Download the latest snap from the
+`Releases <https://github.com/canonical/workshop/releases/>`_
+page on GitHub and install it,
+using the options
+`--dangerous <https://snapcraft.io/docs/install-modes#heading--dangerous>`_
+and
+`--classic <https://snapcraft.io/docs/install-modes#heading--confinement>`_,
+for example:
 
 .. code-block:: console
 
-   git clone git@github.com:canonical/workshop.git  # or git clone https://github.com/canonical/workshop.git
-   cd workshop
-   sudo snap install snapcraft --classic
-   snapcraft clean && snapcraft
    sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 
 

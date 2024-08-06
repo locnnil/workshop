@@ -62,7 +62,7 @@ Notes
 - After an auto-connected plug is thus disconnected,
   it is reconnected during :ref:`ref_workshop_refresh`
   only if the :option:`!--forget` option was used
-  with :command:`workshop disconnect`
+  with :command:`workshop disconnect`
 
 
 Options

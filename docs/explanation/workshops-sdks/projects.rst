@@ -12,7 +12,7 @@ To initialise a directory as a project,
 create a
 :ref:`workshop definition <exp_workshop_def>`
 in it
-and run :command:`workshop launch`.
+and run :command:`workshop launch`.
 Launching a workshop from a project
 establishes the relationship between the two
 that's required to actually start a workshop.
@@ -20,9 +20,9 @@ This is achieved by using a hidden :file:`.lock` file;
 it must remain in the project directory
 and must not be copied or stored externally, e.g. in a repository.
 
-When the workshop is then started with :command:`workshop start`,
+When the workshop is then started with :command:`workshop start`,
 the project directory is mounted to it as :file:`/project/`;
-conversely, the :command:`workshop stop` command unmounts it.
+conversely, the :command:`workshop stop` command unmounts it.
 
 .. note::
 
@@ -39,7 +39,7 @@ If the project is deleted by external means
 without first removing its workshops,
 any workshops that reference it
 enter the *Error* state;
-the only command applicable to them is :command:`workshop remove`.
+the only command applicable to them is :command:`workshop remove`.
 
 
 See also

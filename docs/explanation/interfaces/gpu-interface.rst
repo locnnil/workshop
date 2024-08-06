@@ -19,7 +19,7 @@ Connection
 
 The interface is connected automatically at launch and refresh;
 also,
-the :command:`workshop connect` and :command:`workshop disconnect` commands
+the :command:`workshop connect` and :command:`workshop disconnect` commands
 can be invoked manually.
 
 Establishing a connection means

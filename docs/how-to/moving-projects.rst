@@ -14,7 +14,7 @@ Before launch
 A workshop that you didn't launch
 is just a definition file
 that behaves like any good file should.
-Things change *after* you run :command:`workshop launch`:
+Things change *after* you run :command:`workshop launch`:
 
 .. code-block:: yaml
    :caption: /home/user/old/.workshop.golang.yaml
