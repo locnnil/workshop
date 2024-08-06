@@ -60,8 +60,8 @@ func New() (workshop.Backend, error) {
 		return nil, err
 	}
 
-	// check if nvidia card(s) are present as this requires additional
-	// configuration for the GPU interfaces runtime passthrough
+	// Check if nvidia card(s) are present as this requires additional
+	// configuration for the GPU interfaces runtime passthrough.
 	for _, card := range resources.GPU.Cards {
 		if card.Nvidia != nil {
 			server.nvidiaRuntime = true

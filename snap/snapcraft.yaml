@@ -15,6 +15,9 @@ description: |
   tidying up your system and streamlining your work.
 confinement: classic
 grade: devel
+hooks:
+    remove:
+      plugs: [lxd]
 apps:
   workshop:
     environment:

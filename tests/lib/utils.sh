@@ -24,14 +24,12 @@ function prepare_environment() {
   apt install -y --no-install-recommends moreutils jq
   
   snap install --dangerous --classic /workshop/tests/*.snap
-  snap set workshop store.url=http://localhost:8080/storage/v1/
+  snap set workshop store.url=http://localhost:8080/storage/v1/  
   snap restart workshop
 }
 
 function cleanup_environment() {
-  snap remove workshop --purge
-  lxc delete $(lxc list -c n -f csv --project workshop.ubuntu) --force --project workshop.ubuntu
-  lxc project set workshop.ubuntu user.workshop.projects ""
+  snap remove workshop --purge   
   find /workshop -name .workshop.lock -delete
 }
 
