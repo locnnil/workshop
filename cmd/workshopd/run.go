@@ -82,8 +82,7 @@ func (rcmd *cmdRun) run(ready chan<- func()) {
 		if err == daemon.ErrRestartSocket {
 			// No "error: " prefix as this isn't an error.
 			fmt.Fprintf(os.Stdout, "%v\n", err)
-			// This exit code must be in system'd SuccessExitStatus.
-			panic(&exitStatus{42})
+			os.Exit(0)
 		}
 		fmt.Fprintf(os.Stderr, "cannot run workshop: %v\n", err)
 		panic(&exitStatus{1})

@@ -24,7 +24,7 @@ function prepare_environment() {
   apt install -y --no-install-recommends moreutils jq
   
   snap install --dangerous --classic /workshop/tests/*.snap
-  snap set workshop store.url=http://localhost:8080/storage/v1/  
+  snap set workshop store.url=http://localhost:8080/storage/v1/
   snap restart workshop
 }
 

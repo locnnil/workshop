@@ -25,17 +25,16 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/netutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/restart"
@@ -366,15 +365,18 @@ func logit(handler http.Handler) http.Handler {
 // Init sets up the Daemon's internal workings.
 // Don't call more than once.
 func (d *Daemon) Init() error {
-	listenerMap := make(map[string]net.Listener)
+	listenerMap, err := netutil.ActivationListeners()
+	if err != nil {
+		return err
+	}
 
-	if listener, err := getListener(d.normalSocketPath, listenerMap); err == nil {
+	if listener, err := netutil.GetListener(d.normalSocketPath, listenerMap); err == nil {
 		d.generalListener = &ucrednetListener{Listener: listener}
 	} else {
 		return fmt.Errorf("when trying to listen on %s: %w", d.normalSocketPath, err)
 	}
 
-	if listener, err := getListener(d.untrustedSocketPath, listenerMap); err == nil {
+	if listener, err := netutil.GetListener(d.untrustedSocketPath, listenerMap); err == nil {
 		// This listener may also be nil if that socket wasn't among
 		// the listeners, so check it before using it.
 		d.untrustedListener = &ucrednetListener{Listener: listener}
@@ -493,7 +495,7 @@ func (d *Daemon) Start() error {
 	// the daemon and can listen to the activation sockets. In
 	// this case we would need to create a workshopd.socket unit
 	// for systemd similarly to how snapd does it.
-	// d.initStandbyHandling()
+	d.initStandbyHandling()
 
 	d.overlord.Loop()
 
@@ -582,7 +584,7 @@ func (d *Daemon) Stop(sigCh chan<- os.Signal) error {
 	d.mu.Unlock()
 
 	d.generalListener.Close()
-	// d.standbyOpinions.Stop()
+	d.standbyOpinions.Stop()
 
 	if d.untrustedListener != nil {
 		d.untrustedListener.Close()
@@ -781,41 +783,6 @@ func New(opts *Options, be workshop.Backend) (*Daemon, error) {
 	d.overlord = ovld
 	d.state = ovld.State()
 	return d, nil
-}
-
-// GetListener tries to get a listener for the given socket path from
-// the listener map, and if it fails it tries to set it up directly.
-func getListener(socketPath string, listenerMap map[string]net.Listener) (net.Listener, error) {
-	if listener, ok := listenerMap[socketPath]; ok {
-		return listener, nil
-	}
-
-	if c, err := net.Dial("unix", socketPath); err == nil {
-		c.Close()
-		return nil, fmt.Errorf("socket %q already in use", socketPath)
-	}
-
-	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	address, err := net.ResolveUnixAddr("unix", socketPath)
-	if err != nil {
-		return nil, err
-	}
-
-	runtime.LockOSThread()
-	oldmask := syscall.Umask(0111)
-	listener, err := net.ListenUnix("unix", address)
-	syscall.Umask(oldmask)
-	runtime.UnlockOSThread()
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Debugf("socket %q was not activated; listening", socketPath)
-
-	return listener, nil
 }
 
 func (d *Daemon) Overlord() *overlord.Overlord {

@@ -2,4 +2,9 @@
 
 SDK_STORE_URL=$(snapctl get store.url)
 export SDK_STORE_URL
-"$SNAP"/bin/workshopd run --create-dirs
+
+read -r sbpid _ < /proc/self/stat
+export LISTEN_PID="${sbpid}"
+
+# shellcheck disable=SC2086
+exec "$SNAP"/bin/workshopd run --create-dirs

@@ -930,7 +930,6 @@ func (s *daemonSuite) TestRestartExpectedRebootGiveUp(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
-	c.Skip("no standby support for workshop yet")
 	notifySocket := filepath.Join(c.MkDir(), "notify.socket")
 	os.Setenv("NOTIFY_SOCKET", notifySocket)
 	defer os.Setenv("NOTIFY_SOCKET", "")
@@ -967,8 +966,6 @@ func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
-	c.Skip("no standby support for workshop yet")
-
 	os.Setenv("NOTIFY_SOCKET", c.MkDir())
 	defer os.Setenv("NOTIFY_SOCKET", "")
 
