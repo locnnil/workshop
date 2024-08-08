@@ -1,4 +1,3 @@
-:hide-toc:
 :slug: ref-workshop-cli
 
 .. _ref_workshop_cli:
@@ -17,6 +16,24 @@ such as :option:`!--help` or :option:`!-h`:
    :maxdepth: 1
 
    workshop-*
+
+
+Shell completion
+----------------
+
+To configure shell completion,
+follow the instructions offered by :command:`workshop completion`:
+
+.. code-block:: console
+
+   $ workshop completion -h
+
+
+For example, in your :file:`~/.bashrc` file:
+
+.. code-block:: shell
+
+   source <(workshop completion bash)
 
 
 See also
