@@ -1,7 +1,7 @@
 name: workshop
 title: Workshop
 base: core22
-version: 0.1.0
+version: 0.1.1
 summary: A tool for defining and managing ephemeral development environments
 description: |
   Define your prerequisites and dependencies in simple YAML.
