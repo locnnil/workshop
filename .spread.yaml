@@ -32,6 +32,10 @@ backends:
           image=$(echo $SPREAD_SYSTEM | sed -e 's/ubuntu-\(.*\)-64/\1/')
           instance_name="spread-${image/./}"
       fi
+      # If the spread run in a GitHub runner was interrupted, the instance may
+      # remain.
+      multipass delete --purge "$instance_name" || true
+      
       if [ -z "${image}" ]; then
         FATAL "$SPREAD_SYSTEM is not supported!"
       fi

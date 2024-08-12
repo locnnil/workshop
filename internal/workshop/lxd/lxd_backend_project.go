@@ -405,9 +405,6 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 		// if we allocated a new project ID successfully,
 		// store it in the lock file immediately.
 		if err = project.CreateProjectLock(); err != nil {
-			// a possible reason to fail here is to try to create
-			// a project in a directory where a different user has
-			// a project already.
 			return nil, false, err
 		}
 	}

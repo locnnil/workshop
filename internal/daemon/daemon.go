@@ -490,11 +490,6 @@ func (d *Daemon) Start() error {
 		ConnState: d.connTracker.trackConn,
 	}
 
-	// TODO: Return standby handling to the workshopd
-	// when creating an actual distribution which launches
-	// the daemon and can listen to the activation sockets. In
-	// this case we would need to create a workshopd.socket unit
-	// for systemd similarly to how snapd does it.
 	d.initStandbyHandling()
 
 	d.overlord.Loop()
