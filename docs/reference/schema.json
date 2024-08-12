@@ -21,6 +21,20 @@
                 "properties":{
                     "channel":{
                         "type":"string"
+                    },
+                    "plugs":{
+                        "type":"object",
+                        "additionalProperties":{
+                            "type":"object",
+                            "properties":{
+                                "bind":{
+                                    "type":"string"
+                                }
+                            },
+                            "required":[
+                                "bind"
+                            ]
+                        }
                     }
                 },
                 "required":[
