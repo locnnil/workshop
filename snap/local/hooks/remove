@@ -22,13 +22,6 @@ for p in $(echo "$projects" | xargs -L1 echo); do
       lxc profile delete "$profile" --project "$p"
     fi
   done
-  
-  images=$(lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
-  if [ -n "$images" ]; then
-    echo "Removing images: $images"
-    # shellcheck disable=SC2086
-    lxc image delete $images --project "$p"
-  fi
 
   lxc project delete "$p" 
 done 

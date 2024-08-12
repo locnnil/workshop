@@ -21,18 +21,18 @@ hooks:
 apps:
   workshop:
     environment:
-      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/unix.socket
+      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: bin/workshop
   workshopd:
     environment:
       WORKSHOP: ${SNAP_DATA}
-      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/unix.socket
+      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: commands/run_daemon
     daemon: notify
     restart-condition: on-failure
     sockets:
       unix:
-        listen-stream: $SNAP_COMMON/workshop/unix.socket
+        listen-stream: $SNAP_COMMON/workshop/workshop.socket
         socket-mode: 0666
     plugs:
       - home
@@ -41,8 +41,6 @@ apps:
       - network-bind
       - daemon-notify
   workshopctl:
-    environment:
-      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/unix.socket.untrusted
     command: bin/workshopctl
 parts:
   workshop:

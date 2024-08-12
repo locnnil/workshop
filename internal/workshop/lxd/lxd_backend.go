@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -48,6 +49,10 @@ func ImageAlias(name string) string {
 func New() (workshop.Backend, error) {
 	server := Backend{
 		currentDownloads: make(map[string]*downloadOp),
+	}
+
+	if srv := os.Getenv("WORKSHOP_IMAGE_SERVER"); srv != "" {
+		imageServer = srv
 	}
 
 	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
@@ -661,10 +666,13 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 }
 
 func createDefaultDevices() map[string]map[string]string {
+	// configure .untrusted socket mount
+	shostpath := dirs.SocketPath + ".untrusted"
+	swspath := filepath.Join(dirs.WorkshopRunDir, filepath.Base(shostpath))
 	return map[string]map[string]string{
 		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
 		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-		"workshop.socket":      {"type": "disk", "source": dirs.SocketPath + ".untrusted", "path": filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted")},
+		"workshop.socket":      {"type": "disk", "source": shostpath, "path": swspath},
 		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
 	}
 }

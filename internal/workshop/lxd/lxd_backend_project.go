@@ -22,7 +22,7 @@ import (
 )
 
 var lxdProjectConfig = map[string]string{
-	"features.images":          "true",
+	"features.images":          "false",
 	"features.profiles":        "true",
 	"features.storage.volumes": "true",
 }
@@ -388,18 +388,26 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 		return nil, false, workshop.ErrNotAProject
 	}
 
-	// If there is at least one workshop, we consider the path
-	// as a project and create a new project id
-	if project.ProjectId, err = workshop.NewProjectId(); err != nil {
+	project.ProjectId, err = workshop.ProjectId(projectDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, false, err
-	} else {
+	}
+
+	// No .workshop.lock in the project dir yet
+	if errors.Is(err, os.ErrNotExist) {
+		// If there is at least one workshop, we consider the path
+		// as a project and create a new project id
+		project.ProjectId, err = workshop.NewProjectId()
+		if err != nil {
+			return nil, false, err
+		}
+
 		// if we allocated a new project ID successfully,
-		// we store it in the lock file immediately
+		// store it in the lock file immediately.
 		if err = project.CreateProjectLock(); err != nil {
 			// a possible reason to fail here is to try to create
 			// a project in a directory where a different user has
-			// a project already. That project will not be visible to
-			// anyone but the owner.
+			// a project already.
 			return nil, false, err
 		}
 	}

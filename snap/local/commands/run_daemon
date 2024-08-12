@@ -3,6 +3,9 @@
 SDK_STORE_URL=$(snapctl get store.url)
 export SDK_STORE_URL
 
+WORKSHOP_IMAGE_SERVER=$(snapctl get workshop.image.server.url)
+export WORKSHOP_IMAGE_SERVER
+
 read -r sbpid _ < /proc/self/stat
 export LISTEN_PID="${sbpid}"
 

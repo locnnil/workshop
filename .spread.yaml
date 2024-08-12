@@ -1,14 +1,15 @@
 project: workshop
 path: /workshop
 environment:
-      PATH: $PATH:~/go/bin
-      PROJECT_PATH: /workshop
-      TESTSLIB: $PROJECT_PATH/tests/lib
-      SDKS: $PROJECT_PATH/tests/lib/sdk
-      SDK_STORE_BUCKET_DIR: /data/sdk-store
+  PATH: $PATH:~/go/bin
+  PROJECT_PATH: /workshop
+  TESTSLIB: $PROJECT_PATH/tests/lib
+  SDKS: $PROJECT_PATH/tests/lib/sdk
+  SDK_STORE_BUCKET_DIR: /data/sdk-store
+  IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |
-    test -f tests/*.snap || snapcraft -o tests/
-    cat <&3 >&4
+  test -f tests/*.snap || snapcraft -o tests/
+  cat <&3 >&4
 backends:
   # Only for local usage, GitHub self-hosted runners
   # fail on IP allocation for a VM (it is allocated but much later 

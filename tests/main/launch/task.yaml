@@ -8,10 +8,12 @@ execute: |
     workshop_exec launch "$1"
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
     # ensure the workshop has a socket for workshopctl
-    workshop_exec exec "$1" -- test -S /var/lib/workshop/.workshop.socket.untrusted
+    workshop_exec exec "$1" -- test -S /var/lib/workshop/run/workshop.socket.untrusted
     workshop_exec remove "$1"
   }
   
   launch_and_validate ws-20
   launch_and_validate ws-22
+  launch_and_validate ws-24
+
   

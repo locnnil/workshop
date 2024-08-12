@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/canonical/workshop/client"
@@ -31,7 +32,7 @@ import (
 
 var clientConfig = client.Config{
 	// we need the less privileged workshop socket in workshopctl
-	Socket: dirs.SocketPath + ".untrusted",
+	Socket: filepath.Join(dirs.WorkshopRunDir, filepath.Base(dirs.SocketPath)+".untrusted"),
 }
 
 func main() {
