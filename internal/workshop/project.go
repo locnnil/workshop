@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -15,6 +15,8 @@ import (
 
 var (
 	ErrProjectNotFound        = errors.New("project not found")
+	ErrProjectLockNotFound    = errors.New("project lock file not found")
+	ErrProjectAlreadyExists   = errors.New("project already exists")
 	ErrNotAProject            = errors.New("not a project (no workshop files found)")
 	ErrNoRelativePathsAllowed = errors.New("absolute project path must be used")
 
@@ -72,63 +74,50 @@ func (w *Project) ReadWorkshops() ([]*File, error) {
 }
 
 func (w *Project) UpdateProjectLock() error {
-	lock, err := osutil.NewFileLockWithMode(LockPath(w.Path), 0644)
-	if err != nil {
-		return err
-	}
-	if err := lock.Lock(); err != nil {
-		return err
-	}
-	defer lock.Close()
-
-	_, err = lock.File().Write([]byte(w.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	return lock.File().Sync()
+	return w.createLock()
 }
 
 func (w *Project) CreateProjectLock() error {
-	lock, err := osutil.NewFileLockWithMode(LockPath(w.Path), 0644)
-	if err != nil {
-		return err
+	if osutil.FileExists(LockPath(w.Path)) {
+		return ErrProjectAlreadyExists
 	}
-	if err := lock.Lock(); err != nil {
+	return w.createLock()
+}
+
+func (w *Project) createLock() error {
+	lock, err := os.Create(LockPath(w.Path))
+	if err != nil {
 		return err
 	}
 	defer lock.Close()
 
-	id, err := io.ReadAll(lock.File())
+	// get the desired ownership
+	info, err := os.Stat(w.Path)
 	if err != nil {
 		return err
 	}
 
-	if len(id) > 0 {
-		return fmt.Errorf("project already exists")
+	uid, gid := 0, 0
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		uid = int(stat.Uid)
+		gid = int(stat.Gid)
 	}
 
-	_, err = lock.File().Write([]byte(w.ProjectId))
+	if err = os.Chown(LockPath(w.Path), uid, gid); err != nil {
+		return err
+	}
+
+	_, err = lock.Write([]byte(w.ProjectId))
 	if err != nil {
 		return err
 	}
 
-	return lock.File().Sync()
+	return nil
 }
 
 // Read a project id from projectDir (.workshop.lock)
 func ProjectId(projectDir string) (string, error) {
-	lock, err := osutil.OpenExistingLockForReading(LockPath(projectDir))
-	if err != nil {
-		return "", err
-	}
-
-	if err := lock.ReadLock(); err != nil {
-		return "", err
-	}
-
-	defer lock.Close()
-	buf, err := io.ReadAll(lock.File())
+	buf, err := os.ReadFile(LockPath(projectDir))
 	if err != nil {
 		return "", err
 	}

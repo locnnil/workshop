@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -91,7 +92,6 @@ func (c *CmdList) runList() error {
 		return err
 	} else {
 		w := tabWriter()
-		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 
 		projects, err := c.cli.Projects()
 		slices.SortFunc(projects, func(a, b *client.Project) int { return cmp.Compare(a.Path, b.Path) })
@@ -99,10 +99,16 @@ func (c *CmdList) runList() error {
 		if err != nil {
 			return err
 		}
-
+		var header sync.Once
+		printHeader := func() {
+			fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
+		}
 		for _, i := range projects {
 			workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
 			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
+			if len(workshops) > 0 {
+				header.Do(printHeader)
+			}
 
 			if err != nil {
 				return err

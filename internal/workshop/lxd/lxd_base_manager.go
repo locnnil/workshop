@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/lxd/shared/units"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
@@ -139,8 +141,9 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 	args := &lxd.ConnectionArgs{}
 
 	// Server certificate
-	if osutil.FileExists("server.crt") {
-		content, err := os.ReadFile("server.crt")
+	scrt := filepath.Join(dirs.WorkshopTlsDir, "server.crt")
+	if osutil.FileExists(scrt) {
+		content, err := os.ReadFile(scrt)
 		if err != nil {
 			return nil, err
 		}
@@ -149,8 +152,9 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 	}
 
 	// Client certificate
-	if osutil.FileExists("client.crt") {
-		content, err := os.ReadFile("client.crt")
+	ccrt := filepath.Join(dirs.WorkshopTlsDir, "client.crt")
+	if osutil.FileExists(ccrt) {
+		content, err := os.ReadFile(ccrt)
 		if err != nil {
 			return nil, err
 		}
@@ -159,8 +163,9 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 	}
 
 	// Client CA
-	if osutil.FileExists("client.ca") {
-		content, err := os.ReadFile("client.ca")
+	cca := filepath.Join(dirs.WorkshopTlsDir, "client.ca")
+	if osutil.FileExists(cca) {
+		content, err := os.ReadFile(cca)
 		if err != nil {
 			return nil, err
 		}
@@ -169,8 +174,9 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 	}
 
 	// Client key
-	if osutil.FileExists("client.key") {
-		content, err := os.ReadFile("client.key")
+	ckey := filepath.Join(dirs.WorkshopTlsDir, "client.key")
+	if osutil.FileExists(ckey) {
+		content, err := os.ReadFile(ckey)
 		if err != nil {
 			return nil, err
 		}

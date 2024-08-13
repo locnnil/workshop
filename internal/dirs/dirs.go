@@ -23,7 +23,10 @@ var (
 	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 
 	// Base directory for the workshop state storage
-	WorkshopStateDir = "/var/lib/workshop/state"
+	WorkshopStateDir = filepath.Join(WorkshopBaseDir, "/state")
+
+	// Run directory inside workshop
+	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "/run")
 )
 
 // Variables for workshopd (host paths)
@@ -42,6 +45,8 @@ var (
 	WorkshopdRunDir string
 	// Locks directory
 	WorkshopdLocksDir string
+	// Certificates
+	WorkshopTlsDir string
 )
 
 func getEnvPaths() (workshopdDir string, socketPath string) {
@@ -51,7 +56,7 @@ func getEnvPaths() (workshopdDir string, socketPath string) {
 	}
 	socketPath = os.Getenv("WORKSHOP_SOCKET")
 	if socketPath == "" {
-		socketPath = filepath.Join(workshopdDir, ".workshop.socket")
+		socketPath = filepath.Join(workshopdDir, "workshop.socket")
 	}
 	return workshopdDir, socketPath
 }
@@ -83,6 +88,7 @@ func SetRootDir(rootdir string) {
 	}
 	BaseDir = rootdir
 	SdkDir = filepath.Join(BaseDir, "sdk")
+	WorkshopTlsDir = filepath.Join(BaseDir, "tls")
 	WorkshopdRunDir = filepath.Join(BaseDir, "/run/workshopd")
 	WorkshopdLocksDir = filepath.Join(WorkshopdRunDir, "locks")
 }
@@ -98,6 +104,9 @@ func CreateDirs() error {
 		return err
 	}
 	if err := os.MkdirAll(WorkshopdLocksDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(WorkshopTlsDir, 0755); err != nil {
 		return err
 	}
 	return nil

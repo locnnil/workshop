@@ -1,0 +1,34 @@
+#!/bin/sh -e
+
+# The workshop services are stopped by the moment the configure 
+# hook is called. Therefore, for now, we walk the LXD projects created 
+# by the workshop and remove all instances/profiles/images.
+projects=$(lxc project list -f compact | awk '$1 ~ /^workshop\..*/ {print $1}')
+
+for p in $(echo "$projects" | xargs -L1 echo); do
+  echo "Found LXD project: $p" 
+  instances=$(lxc list -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
+  if [ -n "$instances" ]; then
+    echo "Removing instances: $instances"
+    # shellcheck disable=SC2086
+    lxc delete --force $instances --project "$p" 
+  fi
+  
+  profiles=$(lxc profile list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
+  echo "Removing profiles: $profiles"
+  for profile in $(echo "$profiles" | xargs -L1 echo); do
+    # default profiles are protected
+    if [ "$profile" != "default" ]; then
+      lxc profile delete "$profile" --project "$p"
+    fi
+  done
+  
+  images=$(lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
+  if [ -n "$images" ]; then
+    echo "Removing images: $images"
+    # shellcheck disable=SC2086
+    lxc image delete $images --project "$p"
+  fi
+
+  lxc project delete "$p" 
+done 

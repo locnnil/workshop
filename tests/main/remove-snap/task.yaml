@@ -1,0 +1,14 @@
+summary: Check "snap remove workshop" removes all workshops
+priority: -100
+execute: |
+  # shellcheck source=tests/lib/utils.sh
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec launch --project $(pwd)/project-1 ws-snap-remove-1 ws-snap-remove-1a
+  workshop_exec launch --project $(pwd)/project-2 ws-snap-remove-2 ws-snap-remove-2a
+
+  echo "Check that workshops will be removed on snap removal"       
+  snap remove workshop
+  snap install --dangerous --classic /workshop/tests/*.snap
+
+  [[ $(workshop_exec list --global | wc -c) -eq 0 ]] || (echo "no workshops must remain after snap removal" && exit 1)

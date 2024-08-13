@@ -103,3 +103,35 @@ func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
 /home/project-2  ws        Ready   -
 `)
 }
+
+func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
+	cmd := &CmdList{}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := `{"type": "sync", "result": []}`
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects/1/workshops")
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopList)
+		case 3:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects/2/workshops")
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopList2)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	cmd.global = true
+	err := cmd.runList()
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, ``)
+}

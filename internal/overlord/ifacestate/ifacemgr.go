@@ -294,11 +294,12 @@ func (m *InterfaceManager) ResolveDisconnect(
 // become invalid on the daemon restart / update. Thus, recreating them upon
 // every daemon restart makes sure they still point to the correct files.
 func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string) error {
-	socket := lxdbackend.Mount("workshop.socket", dirs.SocketPath+".untrusted",
-		filepath.Join(dirs.WorkshopBaseDir, ".workshop.socket.untrusted"))
+	hostpath := dirs.SocketPath + ".untrusted"
+	sname := filepath.Base(hostpath)
+	wspath := filepath.Join(dirs.WorkshopRunDir, sname)
+	socket := lxdbackend.Mount("workshop.socket", hostpath, wspath)
 
 	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
-
 	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
 		return err
 	}

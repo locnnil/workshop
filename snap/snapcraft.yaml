@@ -1,7 +1,7 @@
 name: workshop
 title: Workshop
 base: core22
-version: 0.1.0
+version: 0.1.2
 summary: A tool for defining and managing ephemeral development environments
 description: |
   Define your prerequisites and dependencies in simple YAML.
@@ -15,24 +15,32 @@ description: |
   tidying up your system and streamlining your work.
 confinement: classic
 grade: devel
+hooks:
+    remove:
+      plugs: [lxd]
 apps:
   workshop:
     environment:
-      WORKSHOP: ${SNAP_COMMON}
+      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: bin/workshop
   workshopd:
     environment:
-      WORKSHOP: ${SNAP_COMMON}
+      WORKSHOP: ${SNAP_DATA}
+      WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: commands/run_daemon
-    daemon: simple
+    daemon: notify
     restart-condition: on-failure
+    sockets:
+      unix:
+        listen-stream: $SNAP_COMMON/workshop/workshop.socket
+        socket-mode: 0666
     plugs:
       - home
       - lxd
       - network
+      - network-bind
+      - daemon-notify
   workshopctl:
-    environment:
-      WORKSHOP: ${SNAP_COMMON}
     command: bin/workshopctl
 parts:
   workshop:
@@ -50,7 +58,7 @@ parts:
         export CGO_LDFLAGS="-Wl,-rpath=/snap/core22/current/lib/aarch64-linux-gnu -Wl,--disable-new-dtags -Wl,-dynamic-linker=/snap/core22/current/lib/ld-linux-aarch64.so.1"
       fi
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshop" ./cmd/workshop
-      go build -trimpath -o "${CRAFT_PART_INSTALL}/bin/workshopd" ./cmd/workshopd
+      go build -o "${CRAFT_PART_INSTALL}/bin/workshopd" ./cmd/workshopd
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
     prime:
       - bin/workshop
