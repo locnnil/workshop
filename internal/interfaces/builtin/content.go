@@ -42,7 +42,9 @@ const contentBaseDeclarationSlots = `
       slot-sdk-type:
         - host
     allow-connection: true
-    allow-auto-connection: true
+    allow-auto-connection:
+      slot-attributes:
+        source: $MISSING
 `
 
 // contentInterface allows sharing content between sdks

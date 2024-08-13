@@ -59,7 +59,7 @@ func StoreService(st *state.State) Store {
 }
 
 type Store interface {
-	SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
+	SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
 	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
@@ -70,8 +70,7 @@ func NewFakeStore() Store {
 }
 
 type TestActionCall struct {
-	CurrentSdks map[string]*Info
-	Actions     []SdkAction
+	Actions []SdkAction
 }
 
 type TestDownloadCall struct {
@@ -84,11 +83,11 @@ type FakeStore struct {
 	downloadLock  sync.Mutex
 	DownloadCalls []TestDownloadCall
 
-	ActionCallback   func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)
+	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
 	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
-func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error)) func() {
+func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)) func() {
 	old := f.ActionCallback
 	f.ActionCallback = fa
 	return func() {
@@ -104,13 +103,12 @@ func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup
 	}
 }
 
-func (f *FakeStore) SdkAction(ctx context.Context, currentSdks map[string]*Info, actions []SdkAction) ([]SdkResult, error) {
+func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error) {
 	f.ActionCalls = append(f.ActionCalls, TestActionCall{
-		CurrentSdks: currentSdks,
-		Actions:     actions,
+		Actions: actions,
 	})
 	if f.ActionCallback != nil {
-		return f.ActionCallback(ctx, currentSdks, actions)
+		return f.ActionCallback(ctx, actions)
 	}
 	return nil, nil
 }

@@ -78,6 +78,9 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, err
 		}
 
+		// Plug binds can only be fully validated when all SDKs meta data of the
+		// workshop is obtained from the store. Therefore, we validate it here
+		// in addition to essential checks in readWorkshop().
 		if err = validatePlugBinds(sdks, file); err != nil {
 			return nil, err
 		}
@@ -100,7 +103,7 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
 		acts = append(acts, act)
 	}
-	res, err := sto.SdkAction(ctx, nil, acts)
+	res, err := sto.SdkAction(ctx, acts)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +224,7 @@ func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
 
 func constructWorkshop(st *state.State, file *workshop.File, project *workshop.Project) *state.TaskSet {
 	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-	base.Set("workshop-file", file)
+	base.Set("workshop-base", file.Base)
 
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	create.Set("workshop-file", file)

@@ -114,9 +114,9 @@ plugs:
 	})
 }
 
-func (s *SdkSuite) TestUnmarshalLastPlugDefinitionWins(c *check.C) {
+func (s *SdkSuite) TestUnmarshalDuplicatePlugFails(c *check.C) {
 	// NOTE: yaml content cannot use tabs, indent the section with spaces.
-	info, err := sdk.ReadSdkInfo([]byte(`
+	_, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 plugs:
     net:
@@ -126,15 +126,7 @@ plugs:
         interface: content
         attr: 2
 `), s.projectId, "ws")
-	c.Assert(err, check.IsNil)
-	c.Assert(info.Plugs, check.HasLen, 1)
-	c.Assert(info.Slots, check.HasLen, 0)
-	c.Assert(info.Plugs["net"], check.DeepEquals, &sdk.PlugInfo{
-		Sdk:       info,
-		Name:      "net",
-		Interface: "content",
-		Attrs:     map[string]interface{}{"attr": int64(2)},
-	})
+	c.Assert(err, check.ErrorMatches, `(?s).*line 7: mapping key \"net\" already defined at line 4`)
 }
 
 func (s *SdkSuite) TestUnmarshalPlugWithoutInterfaceName(c *check.C) {
@@ -208,7 +200,7 @@ plugs:
     net:
         1: ok
 `), s.projectId, "ws")
-	c.Assert(err, check.ErrorMatches, `plug "net" has attribute key that is not a string \(found int\)`)
+	c.Assert(err, check.ErrorMatches, `plug "net" has malformed definition \(found map\[interface {}\]interface {}\)`)
 }
 
 func (s *SdkSuite) TestUnmarshalCorruptedPlugWithEmptyAttributeKey(c *check.C) {
@@ -353,9 +345,9 @@ slots:
 	})
 }
 
-func (s *SdkSuite) TestUnmarshalLastSlotDefinitionWins(c *check.C) {
+func (s *SdkSuite) TestUnmarshalDuplicateSlotFail(c *check.C) {
 	// NOTE: yaml content cannot use tabs, indent the section with spaces.
-	info, err := sdk.ReadSdkInfo([]byte(`
+	_, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
     net:
@@ -365,15 +357,7 @@ slots:
         interface: content
         attr: 2
 `), s.projectId, "ws")
-	c.Assert(err, check.IsNil)
-	c.Check(info.Plugs, check.HasLen, 0)
-	c.Check(info.Slots, check.HasLen, 1)
-	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
-		Sdk:       info,
-		Name:      "net",
-		Interface: "content",
-		Attrs:     map[string]interface{}{"attr": int64(2)},
-	})
+	c.Assert(err, check.ErrorMatches, `(?s).*line 7: mapping key \"net\" already defined at line 4`)
 }
 
 func (s *SdkSuite) TestUnmarshalSlotWithoutInterfaceName(c *check.C) {
@@ -446,7 +430,7 @@ slots:
     net:
         1: ok
 `), s.projectId, "ws")
-	c.Assert(err, check.ErrorMatches, `slot "net" has attribute key that is not a string \(found int\)`)
+	c.Assert(err, check.ErrorMatches, `slot \"net\" has malformed definition \(found map\[interface {}\]interface {}\)`)
 }
 
 func (s *SdkSuite) TestUnmarshalCorruptedSlotWithEmptyAttributeKey(c *check.C) {
@@ -492,4 +476,69 @@ slots:
         foo: null
 `), s.projectId, "ws")
 	c.Assert(err, check.ErrorMatches, `attribute "foo" of slot \"serial\": invalid scalar:.*`)
+}
+
+func (s *SdkSuite) TestAddingWorkshopSlotOK(c *check.C) {
+	var mockYaml = []byte(`name: sdk
+base: ubuntu@20.04
+slots:
+  training:
+    interface: content
+    source: /project
+`)
+
+	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Slots, check.HasLen, 1)
+	c.Assert(info.Plugs, check.HasLen, 0)
+	c.Assert(*info.Slots["training"], check.DeepEquals, sdk.SlotInfo{
+		Sdk:       info,
+		Name:      "training",
+		Interface: "content",
+		Attrs:     map[string]interface{}{"source": "/project"},
+	})
+	slots := map[string]interface{}{
+		"cache": map[string]interface{}{
+			"interface": "content",
+			"source":    "/var/cache",
+		},
+	}
+	err = info.SetWorkshopSlots(slots)
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Slots, check.HasLen, 2)
+	c.Assert(info.Plugs, check.HasLen, 0)
+	c.Assert(*info.Slots["cache"], check.DeepEquals, sdk.SlotInfo{
+		Sdk:       info,
+		Name:      "cache",
+		Interface: "content",
+		Attrs:     map[string]interface{}{"source": "/var/cache"},
+	})
+}
+
+func (s *SdkSuite) TestAddingAlreadyExistingSlotFails(c *check.C) {
+	var mockYaml = []byte(`name: sdk
+base: ubuntu@20.04
+slots:
+  training:
+    interface: content
+    source: /project
+`)
+
+	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Slots, check.HasLen, 1)
+	c.Assert(info.Plugs, check.HasLen, 0)
+	c.Assert(*info.Slots["training"], check.DeepEquals, sdk.SlotInfo{
+		Sdk:       info,
+		Name:      "training",
+		Interface: "content",
+		Attrs:     map[string]interface{}{"source": "/project"},
+	})
+	slots := map[string]interface{}{
+		"training": map[string]interface{}{
+			"source": "/data",
+		},
+	}
+	err = info.SetWorkshopSlots(slots)
+	c.Assert(err, check.ErrorMatches, `cannot add "training" slot to "sdk" SDK: already exists`)
 }

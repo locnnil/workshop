@@ -144,7 +144,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 	verifyExpectedTasks(c, tasks, expected)
 
 	var wf workshop.File
-	err := tasks[0].Get("workshop-file", &wf)
+	err := tasks[1].Get("workshop-file", &wf)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(&wf, check.DeepEquals, file)
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())

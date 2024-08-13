@@ -148,7 +148,7 @@ func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {
 		Name:      "test-sdk-unknown",
 		Channel:   "latest/stable",
 	}}
-	res, err := store.SdkAction(context.Background(), nil, acts)
+	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 0)
 	c.Assert(err, check.ErrorMatches, `(?s).*SDK not found in "latest/stable".*`)
 }

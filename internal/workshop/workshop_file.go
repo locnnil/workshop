@@ -21,7 +21,7 @@ var (
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
 	filename     = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
-	sdkBlacklist = []string{"agent", "host"}
+	sdkBlacklist = []string{"agent"}
 )
 
 type Plug struct {
@@ -57,9 +57,10 @@ func (b Bind) MarshalYAML() (interface{}, error) {
 }
 
 type SdkRecord struct {
-	Name    string          `yaml:"name"`
-	Channel string          `yaml:"channel"`
-	Plugs   map[string]Plug `yaml:"plugs,omitempty"`
+	Name    string                 `yaml:"name"`
+	Channel string                 `yaml:"channel"`
+	Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
+	Slots   map[string]interface{} `yaml:"slots,omitempty"`
 }
 
 type SdkList []SdkRecord
@@ -72,13 +73,14 @@ type File struct {
 
 func (p SdkList) MarshalYAML() (interface{}, error) {
 	type sdkDef struct {
-		Channel string          `yaml:"channel"`
-		Plugs   map[string]Plug `yaml:"plugs,omitempty"`
+		Channel string                 `yaml:"channel"`
+		Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
+		Slots   map[string]interface{} `yaml:"slots,omitempty"`
 	}
 	b := map[string]sdkDef{}
 
 	for _, v := range p {
-		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs}
+		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots}
 	}
 
 	node := &yaml.Node{}
@@ -181,9 +183,12 @@ func readWorkshop(pathname string) (*File, error) {
 		if slices.Contains(sdkBlacklist, s.Name) {
 			return nil, fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
-		if matches := channel.FindStringSubmatch(s.Channel); matches != nil {
+
+		// an SDK installed from a local source does not have a channel.
+		if s.Channel == "" {
 			continue
-		} else {
+		}
+		if matches := channel.FindStringSubmatch(s.Channel); matches == nil {
 			return nil, fmt.Errorf("unsupported channel %s for \"%s\"", s.Channel, s.Name)
 		}
 	}

@@ -166,24 +166,36 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
 
-	if err = w.setupPlugBinds(info); err != nil {
+	// Now add changes defined for this SDK in the workshop file (e.g. plug
+	// binds, slots).
+	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
+	if idx == -1 && sdkName != sdk.Host.String() {
+		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
+	}
+
+	// host SDK is an optional entry in a workshop file, so it's not an error
+	// scenario.
+	if idx == -1 && sdkName == sdk.Host.String() {
+		return info, nil
+	}
+
+	if err = w.setupPlugBinds(info, w.File.Sdks[idx]); err != nil {
+		return nil, err
+	}
+
+	if err = info.SetWorkshopSlots(w.File.Sdks[idx].Slots); err != nil {
 		return nil, err
 	}
 
 	return info, nil
 }
 
-func (w *Workshop) setupPlugBinds(info *sdk.Info) error {
+func (w *Workshop) setupPlugBinds(info *sdk.Info, sr SdkRecord) error {
 	if info.Type == sdk.Host {
 		return nil
 	}
 
-	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
-	if idx == -1 {
-		return fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
-	}
-
-	for n, plug := range w.File.Sdks[idx].Plugs {
+	for n, plug := range sr.Plugs {
 		if _, ok := info.Plugs[n]; ok {
 			info.PlugBinds[n] = &sdk.PlugBind{
 				ProjectId: w.Project.ProjectId,

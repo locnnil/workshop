@@ -42,9 +42,9 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	st := task.State()
-	var wf workshop.File
+	var base string
 	st.Lock()
-	err = task.Get("workshop-file", &wf)
+	err = task.Get("workshop-base", &base)
 	st.Unlock()
 	if err != nil {
 		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
@@ -62,7 +62,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 		},
 	}
 
-	return m.backend.Download(ctx, wf.Base, reporter)
+	return m.backend.Download(ctx, base, reporter)
 }
 
 func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {

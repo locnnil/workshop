@@ -111,13 +111,13 @@ func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  host:
+  agent:
     channel: latest/stable
 `)
 	dir := c.MkDir()
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert-gpu"))
-	c.Assert(err, check.ErrorMatches, `"host" is a reserved SDK name`)
+	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
 	c.Assert(file, check.IsNil)
 }
 
@@ -254,4 +254,22 @@ sdks:
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `cannot bind data-sdk:aux to etl-sdk:cache; plug data-sdk:aux must not be bound`)
+}
+
+func (f *workshopFile) TestHostSdkSlot(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  host:    
+    slots:
+      training-data:
+        source: relative/path
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
+	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+		workshop.SdkRecord{Name: "host", Slots: map[string]interface{}{"training-data": map[string]interface{}{"source": "relative/path"}}}})
 }

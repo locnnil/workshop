@@ -292,7 +292,7 @@ base: ubuntu@22.04
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("download-base", "...")
-	t1.Set("workshop-file", wf)
+	t1.Set("workshop-base", wf.Base)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)

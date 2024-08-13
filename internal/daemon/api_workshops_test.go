@@ -405,7 +405,7 @@ func (s *apiSuite) createWFile(c *check.C, name, yaml string) {
 	c.Assert(err, check.IsNil)
 }
 
-func storeAction(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
 	var result = []sdk.SdkResult{}
 	for _, act := range actions {
 		info, err := sdk.ReadSdkInfo([]byte(testsdks[act.Name]), act.ProjectId, act.Workshop)
