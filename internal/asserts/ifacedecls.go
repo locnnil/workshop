@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 		"plug-sdk-type": validSdkType,
 	}
 
+	nameConstraints      = []string{"plug-names", "slot-names"}
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}
 
 	slotIDConstraints = []string{"plug-sdk-type"}
@@ -42,11 +44,33 @@ var (
 	}
 )
 
+const (
+	// feature label for plug-names/slot-names constraints
+	nameConstraintsFeature = "name-constraints"
+)
+
 // SlotInstallationConstraints specifies a set of constraints on an
 // interface slot relevant to the installation of SDK.
 type SlotInstallationConstraints struct {
 	SlotTypes      []string
 	SlotAttributes *AttributeConstraints
+	SlotNames      *NameConstraints
+}
+
+func (c *SlotInstallationConstraints) feature(flabel string) bool {
+	if flabel == nameConstraintsFeature {
+		return c.SlotNames != nil
+	}
+	return c.SlotAttributes.feature(flabel)
+}
+
+func (c *SlotInstallationConstraints) setNameConstraints(field string, cstrs *NameConstraints) {
+	switch field {
+	case "slot-names":
+		c.SlotNames = cstrs
+	default:
+		panic("unknown SlotInstallationConstraints field " + field)
+	}
 }
 
 func (c *SlotInstallationConstraints) setIDConstraints(field string, cstrs []string) {
@@ -94,6 +118,9 @@ func (ac SideArityConstraint) Any() bool {
 type SlotConnectionConstraints struct {
 	PlugSdkTypes []string
 
+	SlotNames *NameConstraints
+	PlugNames *NameConstraints
+
 	SlotAttributes *AttributeConstraints
 	PlugAttributes *AttributeConstraints
 
@@ -101,6 +128,24 @@ type SlotConnectionConstraints struct {
 	SlotsPerPlug SideArityConstraint
 	// PlugsPerSlot is always * (any) (for now)
 	PlugsPerSlot SideArityConstraint
+}
+
+func (c *SlotConnectionConstraints) feature(flabel string) bool {
+	if flabel == nameConstraintsFeature {
+		return c.PlugNames != nil || c.SlotNames != nil
+	}
+	return c.PlugAttributes.feature(flabel) || c.SlotAttributes.feature(flabel)
+}
+
+func (c *SlotConnectionConstraints) setNameConstraints(field string, cstrs *NameConstraints) {
+	switch field {
+	case "plug-names":
+		c.PlugNames = cstrs
+	case "slot-names":
+		c.SlotNames = cstrs
+	default:
+		panic("unknown SlotConnectionConstraints field " + field)
+	}
 }
 
 func (c *SlotConnectionConstraints) setIDConstraints(field string, cstrs []string) {
@@ -164,6 +209,91 @@ func normalizeSideArityConstraints(context *subruleContext, c sideArityConstrain
 		// connection slots-per-plug can be only any
 		c.setSlotsPerPlug(any)
 	}
+}
+
+type nameMatcher interface {
+	match(name string, special map[string]string) error
+}
+
+var (
+	// validates special name constraints like $INTERFACE
+	validSpecialNameConstraint = regexp.MustCompile(`^\$[A-Z][A-Z0-9_]*$`)
+)
+
+func compileNameMatcher(whichName string, v interface{}) (nameMatcher, error) {
+	s, ok := v.(string)
+	if !ok {
+		return nil, fmt.Errorf("%s constraint entry must be a regexp or special $ value", whichName)
+	}
+	if strings.HasPrefix(s, "$") {
+		if !validSpecialNameConstraint.MatchString(s) {
+			return nil, fmt.Errorf("%s constraint entry special value %q is invalid", whichName, s)
+		}
+		return specialNameMatcher{special: s}, nil
+	}
+	if strings.IndexFunc(s, unicode.IsSpace) != -1 {
+		return nil, fmt.Errorf("%s constraint entry regexp contains unexpected spaces", whichName)
+	}
+	rx, err := regexp.Compile("^(" + s + ")$")
+	if err != nil {
+		return nil, fmt.Errorf("cannot compile %s constraint entry %q: %v", whichName, s, err)
+	}
+	return regexpNameMatcher{rx}, nil
+}
+
+type regexpNameMatcher struct {
+	*regexp.Regexp
+}
+
+func (matcher regexpNameMatcher) match(name string, special map[string]string) error {
+	if !matcher.Regexp.MatchString(name) {
+		return fmt.Errorf("%q does not match %v", name, matcher.Regexp)
+	}
+	return nil
+}
+
+type specialNameMatcher struct {
+	special string
+}
+
+func (matcher specialNameMatcher) match(name string, special map[string]string) error {
+	expected := special[matcher.special]
+	if expected == "" || expected != name {
+		return fmt.Errorf("%q does not match %v", name, matcher.special)
+	}
+	return nil
+}
+
+// NameConstraints implements a set of constraints on the names of slots or plugs.
+// See https://forum.snapcraft.io/t/plug-slot-rules-plug-names-slot-names-constraints/12439
+type NameConstraints struct {
+	matchers []nameMatcher
+}
+
+func compileNameConstraints(whichName string, constraints interface{}) (*NameConstraints, error) {
+	l, ok := constraints.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%s constraints must be a list of regexps and special $ values", whichName)
+	}
+	matchers := make([]nameMatcher, 0, len(l))
+	for _, nm := range l {
+		matcher, err := compileNameMatcher(whichName, nm)
+		if err != nil {
+			return nil, err
+		}
+		matchers = append(matchers, matcher)
+	}
+	return &NameConstraints{matchers: matchers}, nil
+}
+
+// Check checks whether name doesn't match the constraints.
+func (nc *NameConstraints) Check(whichName, name string, special map[string]string) error {
+	for _, m := range nc.matchers {
+		if err := m.match(name, special); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s %q does not match constraints", whichName, name)
 }
 
 // SlotRule holds the rule of what is allowed, wrt installation and
@@ -232,7 +362,7 @@ func castSlotInstallationConstraints(cstrs []constraintsHolder) (res []*SlotInst
 
 func compileSlotInstallationConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	slotInstCstrs := &SlotInstallationConstraints{}
-	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-attributes"}, []string{"slot-sdk-type"})
+	err := baseCompileConstraints(context, cDef, slotInstCstrs, []string{"slot-names"}, []string{"slot-attributes"}, []string{"slot-sdk-type"})
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +371,7 @@ func compileSlotInstallationConstraints(context *subruleContext, cDef constraint
 
 func compileSlotConnectionConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	slotConnCstrs := &SlotConnectionConstraints{}
-	err := baseCompileConstraints(context, cDef, slotConnCstrs, attributeConstraints, slotIDConstraints)
+	err := baseCompileConstraints(context, cDef, slotConnCstrs, nameConstraints, attributeConstraints, slotIDConstraints)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +463,7 @@ type Attrer interface {
 	Lookup(path string) (interface{}, bool)
 }
 
-func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target constraintsHolder, attrConstraints, idConstraints []string) error {
+func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target constraintsHolder, nameConstraints, attrConstraints, idConstraints []string) error {
 	cMap := cDef.cMap
 	if cMap == nil {
 		fixed := AlwaysMatchAttributes // "true"
@@ -346,6 +476,18 @@ func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target
 		return nil
 	}
 	defaultUsed := 0
+	for _, field := range nameConstraints {
+		v := cMap[field]
+		if v != nil {
+			nc, err := compileNameConstraints(field, v)
+			if err != nil {
+				return err
+			}
+			target.setNameConstraints(field, nc)
+		} else {
+			defaultUsed++
+		}
+	}
 	for _, field := range attrConstraints {
 		cstrs := AlwaysMatchAttributes
 		v := cMap[field]
@@ -385,6 +527,9 @@ func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target
 		} else {
 			defaultUsed++
 		}
+	}
+	if defaultUsed == len(nameConstraints)+len(attributeConstraints)+len(idConstraints)+len(sideArityConstraints) {
+		return fmt.Errorf("%s must specify at least one of %s, %s, %s, %s", context, strings.Join(nameConstraints, ", "), strings.Join(attrConstraints, ", "), strings.Join(idConstraints, ", "), strings.Join(sideArityConstraints, ", "))
 	}
 	return nil
 }
@@ -441,6 +586,7 @@ type constraintsDef struct {
 }
 
 type constraintsHolder interface {
+	setNameConstraints(field string, cstrs *NameConstraints)
 	setIDConstraints(field string, cstrs []string)
 	setAttributeConstraints(field string, cstrs *AttributeConstraints)
 }

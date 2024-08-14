@@ -41,8 +41,8 @@ const contentBaseDeclarationSlots = `
         - host
     allow-connection: true
     allow-auto-connection:
-      slot-attributes:
-        source: $MISSING
+      slot-names:
+        - $INTERFACE
 `
 
 // contentInterface allows sharing content between sdks
