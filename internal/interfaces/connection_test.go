@@ -307,11 +307,11 @@ func (s *connSuite) TestOverwriteStaticAttrError(c *check.C) {
 
 	err := plug.SetAttr("attr", "overwrite")
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the sdk details`)
+	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "consumer" sdk details`)
 
 	err = slot.SetAttr("attr", "overwrite")
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the sdk details`)
+	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "producer" sdk details`)
 }
 
 func (s *connSuite) TestCopyAttributes(c *check.C) {

@@ -121,7 +121,7 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 			continue
 		}
 		if conn.Interface() == "content" {
-			attrs := conn.Plug.DynamicAttrs()
+			attrs := conn.Slot.DynamicAttrs()
 			if attrs != nil && attrs["source"] != nil {
 				candidates[cref.ID()] = attrs["source"].(string)
 			}
@@ -182,6 +182,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 
 	var connectRefs = []*interfaces.ConnRef{}
 	var plugDynamic = make(map[string]map[string]interface{})
+	var slotDynamic = make(map[string]map[string]interface{})
 
 	for _, plug := range info.Plugs {
 		ref := interfaces.NewPlugRef(plug)
@@ -196,15 +197,16 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
-			if plugDynamic[connRef.ID()] == nil {
-				plugDynamic[connRef.ID()] = make(map[string]interface{})
+			if slotDynamic[connRef.ID()] == nil {
+				slotDynamic[connRef.ID()] = make(map[string]interface{})
 			}
 
 			if src, ok := remounts[connRef.ID()]; ok {
-				plugDynamic[connRef.ID()]["source"] = src
+				slotDynamic[connRef.ID()]["source"] = src
 			}
 
 			slotRef := interfaces.NewSlotRef(slot)
+			// save associated binds as a dynamic attribute
 			for _, slave := range slaves {
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
 				if _, ok := conns[slref.ID()]; !ok {
@@ -237,12 +239,12 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 			}
 			connRef := interfaces.NewConnRef(plug, slot)
 
-			if plugDynamic[connRef.ID()] == nil {
-				plugDynamic[connRef.ID()] = make(map[string]interface{})
+			if slotDynamic[connRef.ID()] == nil {
+				slotDynamic[connRef.ID()] = make(map[string]interface{})
 			}
 
 			if src, ok := remounts[connRef.ID()]; ok {
-				plugDynamic[connRef.ID()]["source"] = src
+				slotDynamic[connRef.ID()]["source"] = src
 			}
 
 			slotRef := interfaces.NewSlotRef(slot)
@@ -268,7 +270,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 	// without changes to its 'source' attribute in the new workshop
 	// (given the new workshop also has an SDK with exactly the same
 	// plug; the target directory may change in the new workshop).
-	ts, err := m.batchAutoConnectTasks(wp, info, connectRefs, plugDynamic, nil)
+	ts, err := m.batchAutoConnectTasks(wp, info, connectRefs, plugDynamic, slotDynamic)
 	if err != nil {
 		return err
 	}
@@ -976,13 +978,13 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user s
 	}
 
 	var oldSource string
-	if err := connection.Plug.Attr("source", &oldSource); err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
+	if err := connection.Slot.Attr("source", &oldSource); err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
 		return err
 	} else if errors.Is(err, sdk.AttributeNotFoundError{}) {
 		oldSource = sdk.SdkContentSource(usr.HomeDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
 	}
 
-	if err := connection.Plug.SetAttr("source", source); err != nil {
+	if err := connection.Slot.SetAttr("source", source); err != nil {
 		return err
 	}
 
@@ -994,7 +996,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user s
 	}
 
 	revert.Add(func() {
-		_ = connection.Plug.SetAttr("source", oldSource)
+		_ = connection.Slot.SetAttr("source", oldSource)
 		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
 			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.ShortRef())
 		}

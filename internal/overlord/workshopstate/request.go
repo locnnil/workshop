@@ -100,6 +100,9 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 	sto := sdk.StoreService(st)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
+		if sd.Name == sdk.Host.String() {
+			continue
+		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
 		acts = append(acts, act)
 	}

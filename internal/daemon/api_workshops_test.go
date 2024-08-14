@@ -83,6 +83,20 @@ sdks:
     channel: latest/stable
 `
 
+	workshopslot = `name: workshopslot
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      training:
+        interface: content
+        source: .
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+`
+
 	testsdk = `
 name: test-sdk
 base: ubuntu@20.04
@@ -335,11 +349,12 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 }
 
 type expectedResp struct {
-	Type    ResponseType
-	Status  int
-	Message string
-	Kind    string
-	Summary string
+	Type      ResponseType
+	Status    int
+	Message   string
+	Kind      string
+	Summary   string
+	ChangeErr string // an error that happens during the change execution
 }
 
 func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected []*expectedResp) {
@@ -485,6 +500,33 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	c.Assert(s.b.AssignProfileCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
 	c.Assert(repo.Slots(s.project.ProjectId, "basic", "host"), check.HasLen, 3)
+}
+
+func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
+	// Setup
+	s.createWFile(c, "workshopslot", workshopslot)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopslot"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshopslot" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	_, err := s.b.Workshop(s.ctx, "workshopslot")
+	c.Assert(err, check.IsNil)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "host", "training"), check.Not(check.IsNil))
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {

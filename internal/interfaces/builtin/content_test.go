@@ -27,7 +27,6 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/device"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -87,7 +86,6 @@ base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
-  content: mycont
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
@@ -100,12 +98,62 @@ base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
-  content: mycont
   target: ../foo
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content interface path is not clean:.*")
+}
+
+func (s *contentSuite) TestSanitizeSlotOK(c *check.C) {
+	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
+slots:
+ content-slot:
+  interface: content
+  source: images/low-res
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["content-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
+}
+
+func (s *contentSuite) TestSanitizeSlotNoSource(c *check.C) {
+	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
+slots:
+ content-slot:
+  interface: content
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["content-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
+}
+
+func (s *contentSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {
+	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
+slots:
+ content-slot:
+  interface: content
+  source: /root
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["content-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"source\" must be within project subtree`)
+}
+
+func (s *contentSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
+	const mockSdkYaml = `name: content-slot-sdk
+base: ubuntu@22.04
+slots:
+ content-slot:
+  interface: content
+  source: ../../../../../../../../root/
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["content-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"source\" must be within project subtree`)
 }
 
 func (s *contentSuite) TestInterfaces(c *check.C) {
@@ -132,8 +180,6 @@ slots:
 	homeDir := c.MkDir()
 	usr, err := user.Current()
 	c.Assert(err, check.IsNil)
-	
-	
 
 	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
@@ -153,10 +199,4 @@ slots:
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
 	expectedMnt := lxdbackend.Mount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
-
-	// Validate the source directory was created correctly
-	exists, isDir, err := osutil.ExistsIsDir(sourceDir)
-	c.Assert(exists, check.Equals, true)
-	c.Assert(isDir, check.Equals, true)
-	c.Assert(err, check.IsNil)
 }

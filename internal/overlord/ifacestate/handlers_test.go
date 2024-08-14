@@ -414,7 +414,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 			"interface":    "mock-network",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"source": "/old/source"},
+			"slot-dynamic": map[string]interface{}{"source": "/old/source"},
 		},
 	})
 
@@ -470,7 +470,7 @@ slots:
 			"interface":    "content",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"target": "/opt"},
-			"plug-dynamic": map[string]interface{}{"source": source},
+			"slot-dynamic": map[string]interface{}{"source": source},
 		},
 	})
 	_, err = ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
@@ -505,7 +505,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -519,9 +519,9 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 		Interface:        "content",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{}})
+		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -549,7 +549,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -565,9 +565,9 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 		Interface:        "content",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{}})
+		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -597,7 +597,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -635,7 +635,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -673,7 +673,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(err, check.IsNil)
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -705,7 +705,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)

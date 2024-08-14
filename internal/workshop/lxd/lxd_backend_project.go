@@ -74,6 +74,29 @@ func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
 	return nil
 }
 
+func (s *Backend) loadProjectFromId(client lxd.InstanceServer, ctx context.Context, id string) (*workshop.Project, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
+	}
+
+	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
+	if err != nil {
+		return nil, err
+	}
+
+	projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
+	if err != nil {
+		return nil, err
+	}
+
+	idx := slices.IndexFunc(projects, func(p *workshop.Project) bool { return p.ProjectId == id })
+	if idx == -1 {
+		return nil, workshop.ErrProjectNotFound
+	}
+	return projects[idx], nil
+}
+
 func (s *Backend) loadProjectFromPath(client lxd.InstanceServer, ctx context.Context, path string) (*workshop.Project, error) {
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
