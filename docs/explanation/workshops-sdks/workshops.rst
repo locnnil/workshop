@@ -105,3 +105,10 @@ Explanation:
 
 - :ref:`exp_projects`
 - :ref:`exp_sdk`
+
+
+Reference:
+
+- :ref:`ref_workshop_connections`
+- :ref:`ref_workshop_def_yaml`
+- :ref:`ref_workshop_status`

@@ -23,3 +23,4 @@ and maintaining it at run-time:
 
    sdk-hooks
    workshop-definition
+   workshop-status

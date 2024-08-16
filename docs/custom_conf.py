@@ -147,6 +147,7 @@ custom_extensions = [
     "canonical.custom-rst-roles",
     "canonical.terminal-output",
     "discoursetopic",
+    "sphinxcontrib.mermaid"
 ]
 
 # Add custom required Python modules that must be added to the
@@ -155,7 +156,7 @@ custom_extensions = [
 # added here: canonical-sphinx-extensions, furo, linkify-it-py, myst-parser,
 # pyspelling, sphinx, sphinx-autobuild, sphinx-copybutton, sphinx-design,
 # sphinx-reredirects, sphinx-tabs, sphinxcontrib-jquery, sphinxext-opengraph
-custom_required_modules = ["watchfiles"]
+custom_required_modules = ["watchfiles", "sphinxcontrib.mermaid"]
 
 # Add files or directories that should be excluded from processing.
 custom_excludes = ["readme.rst"]
