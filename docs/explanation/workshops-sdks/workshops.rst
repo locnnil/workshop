@@ -130,7 +130,7 @@ because they reference the same entity:
          channel: latest/stable
          mounts:
            data:
-             host:      /new-mount/
+             host:      /new-mount
              workshop:  /home/workshop/.keras/datasets/
 
 
