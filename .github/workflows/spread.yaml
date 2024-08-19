@@ -37,17 +37,14 @@ jobs:
         suite: [main, documentation, integration]
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: canonical/action-tmate@main
+      - name: Install LXD
+        uses: canonical/setup-lxd@main
+        with:
+            channel: 5.21/stable
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
-          sudo snap remove multipass --purge || true
-          sudo snap refresh --channel=5.21/stable lxd
-          lxd init --auto
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -68,6 +65,4 @@ jobs:
           go install ./...
       - name: Run spread
         run: |  
-          # Installed docker related packages might interfere with LXD networking
-          sudo iptables -P FORWARD ACCEPT
           spread tests/${{matrix.suite}}/
