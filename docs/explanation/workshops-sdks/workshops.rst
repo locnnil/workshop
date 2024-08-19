@@ -94,7 +94,7 @@ Base image
 
 The base is a supported OS image
 that is used as the basis for the workshop.
-Currently, it can be either
+Currently, it can be
 :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04` or :samp:`ubuntu@24.04`.
 
 

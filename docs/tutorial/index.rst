@@ -109,7 +109,7 @@ is enabled and running:
 Install
 ~~~~~~~
 
-Download the latest snap from the
+Download the latest snap from |project_markup|'s
 `Releases <https://github.com/canonical/workshop/releases/>`_
 page on GitHub and install it,
 using the options
@@ -181,7 +181,7 @@ Define
           channel: latest/stable
 
 
-#. To ensure |project_markup| sees the definition,
+#. To confirm |project_markup| sees the definition,
    :ref:`list <ref_workshop_list>` the workshops
    in the project directory:
 
@@ -243,7 +243,8 @@ but includes extra details
 such as the :ref:`content interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
-Try moving it temporarily and re-run :command:`workshop list`:
+To see this for yourself,
+you can move it temporarily and re-run :command:`workshop list`:
 
 .. code-block:: console
 
@@ -262,8 +263,8 @@ This means that the workshop stays operational without extra steps on your part.
 
 .. note::
 
-   This is achieved by using a hidden :file:`.lock` file;
-   it must remain in the project directory
+   This is achieved with a hidden :file:`.lock` file,
+   which must remain in the project directory
    and must not be copied or stored externally, e.g. in a repository.
 
 
