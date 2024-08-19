@@ -31,10 +31,10 @@ List connections for all workshops in the current project directory:
 Synopsis
 --------
 
-This command lists connections between interface plugs and slots
-for the entire project or for a single workshop in it;
-each line represents a connection between a plug and a slot via an interface,
-with extra notes provided if needed.
+This command lists the connections between interface plugs and slots
+for the entire project or a single workshop within it.
+Each line represents a connection between a plug and a slot via an interface;
+additional notes, including specific plug bindings, are provided as needed.
 
 
 Notes

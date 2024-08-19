@@ -22,7 +22,7 @@ Description
 
 The definition in the file must be written in
 `YAML <https://yaml.org/>`__
-and include the following three keys:
+and include three required keys:
 
 .. list-table::
    :header-rows: 1
@@ -56,7 +56,9 @@ and include the following three keys:
        and specifies its retrieval channel.
 
 
-In turn, any single entry in :samp:`sdks` must define one and only one key:
+In turn, any entry in :samp:`sdks` must be named after an existing SDK
+that is available from the SDK store.
+Each SDK is described with the following keys:
 
 .. list-table::
    :header-rows: 1
@@ -67,7 +69,7 @@ In turn, any single entry in :samp:`sdks` must define one and only one key:
      - Value
      - Description
 
-   * - :samp:`channel`
+   * - :samp:`channel` (required)
      - string
      - SDK version to retrieve during
        :ref:`launch <ref_workshop_launch>`
@@ -79,6 +81,16 @@ In turn, any single entry in :samp:`sdks` must define one and only one key:
        `snap-like format <https://snapcraft.io/docs/channels>`__
        of :samp:`<TRACK>/<RISK>`
        without the :samp:`<BRANCH>` part.
+
+   * - :samp:`plugs`
+     - object
+     - Defines plug bindings;
+       each entry must be named after a plug in this SDK
+       and contain a single :samp:`bind` key.
+
+       In turn, :samp:`bind` must be a string
+       that references a plug of the same interface in a different SDK
+       using the :samp:`<SDK>/<PLUG>` format.
 
 
 JSON Schema
@@ -92,10 +104,10 @@ formalises the description above:
    :language: json
 
 
-Example
--------
+Examples
+--------
 
-This YAML file defines a workshop named :samp:`golang`
+This YAML file defines a :samp:`golang` workshop
 with a single :samp:`go` SDK
 from the :samp:`latest/stable` channel:
 
@@ -107,6 +119,26 @@ from the :samp:`latest/stable` channel:
    sdks:
      go:
        channel: latest/stable
+
+
+This YAML file defines a :samp:`go-dev` workshop
+that uses two SDKs, :samp:`go` and :samp:`dev-tunnel`;
+the :samp:`data` plug defined by the :samp:`dev-tunnel` SDK
+is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
+
+.. code-block:: yaml
+   :caption: .workshop.go-dev.yaml
+
+   name: go-dev
+   base: ubuntu@22.04
+   sdks:
+     go:
+       channel: latest/candidate
+     dev-tunnel:
+       channel: latest/edge
+       plugs:
+         data:
+           bind: go:mod-cache
 
 
 See also
