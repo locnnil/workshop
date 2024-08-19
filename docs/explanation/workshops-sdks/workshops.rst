@@ -69,59 +69,69 @@ or simply use a singleton-like interface (:samp:`gpu` is a good example).
 
 .. note::
 
-   To use binding, you have to know the plug layout of the SDKs
-   and may need additional instructions from the SDK publisher.
+   Double-check the plug layout
+   with :command:`workshop connections`;
+   you may also need additional info from the SDK publishers.
 
 
-In the following example,
-the workshop uses two SDKs, :samp:`go` and :samp:`dev-tunnel`;
-the :samp:`data` plug, presumably defined by the :samp:`dev-tunnel` SDK,
-is bound to the :samp:`mod-cache` plug, assumed to exist in the :samp:`go` SDK:
+As an example,
+imagine two SDKs, :samp:`pytorch` and :samp:`tensorflow`,
+that store their training data in the workshop under
+:file:`~/.cache/torchvision/datasets/` and :file:`~/.keras/datasets/`,
+respectively.
+The data should be persisted,
+so each SDK has a corresponding content interface plug, :samp:`datasets`.
+
+Now, what if our workshop includes both SDKs;
+can we leverage bindings to reuse the data?
+Here, the :samp:`datasets` plug of the :samp:`pytorch` SDK
+is bound to the :samp:`datasets` plug under :samp:`tensorflow`:
 
 .. code-block:: yaml
-   :caption: .workshop.go-dev.yaml
+   :caption: .workshop.digits.yaml
+   :emphasize-lines: 8
 
-   name: go-dev
+   name: digits
    base: ubuntu@22.04
    sdks:
-     go:
-       channel: latest/candidate
-     dev-tunnel:
-       channel: latest/edge
+     pytorch:
+       channel: latest/stable
        plugs:
-         data:
-           bind: go:mod-cache
+         datasets:
+           bind: tensorflow:datasets
+     tensorflow:
+       channel: latest/stable
 
 
-This binds :samp:`dev-tunnel:data` to the location of :samp:`go:mod-cache`,
-so the :samp:`dev-tunnel` SDK can now apply its logic to the data there.
-For instance, if :samp:`dev-tunnel` synchronises its data with the cloud,
-it will independently occur on top of caching provided by :samp:`go`.
+This binds :samp:`pytorch:datasets`
+to the location of :samp:`tensorflow:datasets`;
+you benefit from sharing the data between the two frameworks,
+while simultaneously persisting it on the host.
 
 Any actions on the plug thus bound affect all its bindings.
-In our example, if you remount :samp:`dev-tunnel/data`,
-the :samp:`go:mod-cache` plug is remounted as well
-because they're just two aliases of the same entity:
+Here, if you remount :samp:`pytorch:datasets`,
+the :samp:`tensorflow:datasets` plug is also remounted
+because they reference the same entity:
 
 .. code-block:: console
 
-   $ workshop remount go-dev/dev-tunnel:data /new-mount/
-   $ workshop info go-dev
+   $ workshop remount digits/pytorch:datasets /new-mount/
+   $ workshop info digits
 
      ...
      sdks:
-       go:
-         channel: latest/candidate
+       pytorch:
+         channel: latest/stable
          mounts:
-           mod-cache:
+           datasets:
              host:      /new-mount/
-             workshop:  /data
-       dev-tunnel:
-         channel: latest/edge
+             workshop:  /home/workshop/.cache/torchvision/datasets/
+       tensorflow:
+         channel: latest/stable
          mounts:
            data:
              host:      /new-mount/
-             workshop:  /data
+             workshop:  /home/workshop/.keras/datasets/
 
 
 This avoids the need to reconfigure each mount manually,
@@ -133,15 +143,15 @@ along with the line number of the target plug:
 
 .. code-block:: console
 
-   $ workshop connections go-dev
+   $ workshop connections digits
 
-     Interface  Plug                     Slot      Notes
-     content    go-dev/dev-tunnel:data   :content  bind.2
-     content    go-dev/go:mod-cache      :content  bind.2
+     Interface  Plug                        Slot      Notes
+     content    digits/pytorch:datasets     :content  bind.2
+     content    digits/tensorflow:datasets  :content  bind.2
 
 
-Here, both plugs are listed as :samp:`bind.2`, so they point to the second line
-because they are just aliases of the same entity, :samp:`go:mod-cache`.
+Here, both plugs are listed as :samp:`bind.2`,
+pointing to :samp:`tensorflow:datasets` in the second line.
 
 
 See also

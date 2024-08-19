@@ -375,6 +375,10 @@ strong.command {
     font-weight: normal;
 }
 
+.admonition strong.command {
+    font-size: var(--admonition-font-size);
+}
+
 /* Make inline program names lighter */
 strong.program {
     font-weight: normal;
