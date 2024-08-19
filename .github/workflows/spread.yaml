@@ -8,6 +8,12 @@ on:
     - cron: "0 0 */2 * *"
   workflow_dispatch:
 
+# Cancel currently-running builds when pushing new commits to a PR or branch
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   build-snap:
     runs-on: ubuntu-latest
@@ -34,12 +40,11 @@ jobs:
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
+          sudo snap remove multipass --purge || true
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
-      - name: Install multipass
-        run: sudo snap install multipass
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
@@ -48,6 +53,8 @@ jobs:
         with:
           name: snap
           path: ${{ github.workspace }}/tests/
+      - name: Setup tmate session
+        uses: canonical/action-tmate@main
       - name: Install spread
         run: |
           # go install is not supported for forks...
