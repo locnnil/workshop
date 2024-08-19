@@ -131,7 +131,7 @@ because they reference the same entity:
          mounts:
            data:
              host:      /new-mount
-             workshop:  /home/workshop/.keras/datasets/
+             workshop:  /home/workshop/.keras/datasets
 
 
 This avoids the need to reconfigure each mount manually,
