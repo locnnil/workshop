@@ -125,7 +125,7 @@ because they reference the same entity:
          mounts:
            datasets:
              host:      /new-mount
-             workshop:  /home/workshop/.cache/torchvision/datasets/
+             workshop:  /home/workshop/.cache/torchvision/datasets
        tensorflow:
          channel: latest/stable
          mounts:
