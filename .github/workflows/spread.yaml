@@ -8,6 +8,12 @@ on:
     - cron: "0 0 */2 * *"
   workflow_dispatch:
 
+# Cancel currently-running builds when pushing new commits to a PR or branch
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   build-snap:
     runs-on: ubuntu-latest
@@ -25,11 +31,16 @@ jobs:
   snap-tests:
     needs: build-snap
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04-64]
         suite: [main, documentation, integration]
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
+      - name: Install LXD
+        uses: canonical/setup-lxd@main
+        with:
+            channel: 5.21/stable
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
@@ -38,8 +49,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
-      - name: Install multipass
-        run: sudo snap install multipass
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
@@ -55,6 +64,5 @@ jobs:
           cd spread
           go install ./...
       - name: Run spread
-        run: | 
-          lxd init --auto
+        run: |  
           spread tests/${{matrix.suite}}/
