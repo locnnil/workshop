@@ -12,6 +12,50 @@ Currently, these containers are hosted by
 but it's not recommended to rely on this implementation detail.
 
 
+.. _exp_workshop_status:
+
+Workshop status
+---------------
+
+A workshop's life-cycle can see it switch between several statuses:
+
+.. list-table::
+   :header-rows: 1
+
+   * - State
+     - Description
+     - Definition
+     - Container
+
+   * - *Off*
+     - Initial state; just defined
+     - In the project directory
+     - Doesn't exist
+
+   * - *Ready*
+     - Can perform meaningful work
+     - In the project directory
+     - Running
+
+   * - *Stopped*
+     - Temporarily stopped, can be restarted
+     - In the project directory
+     - Stopped
+
+   * - *Pending*
+     - Being updated, not ready for work
+     - In the project directory
+     - Running, being updated
+
+   * - *Error*
+     - Non-operational
+     - Can be missing
+     - Can be non-operational
+
+
+Reference diagrams in `See also`_ provide more details of possible transitions.
+
+
 .. _exp_workshop_def:
 
 Workshop definition
@@ -46,7 +90,7 @@ software packages and :ref:`hooks <exp_sdk_hooks>`.
 .. _exp_base:
 
 Base image
-----------
+~~~~~~~~~~
 
 The base is a supported OS image
 that is used as the basis for the workshop.
@@ -164,5 +208,7 @@ Explanation:
 
 
 Reference:
+
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_def_yaml`
+- :ref:`ref_workshop_status`

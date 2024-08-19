@@ -39,6 +39,7 @@ sdk
 sdkcraft
 snapcraft
 snapd
+stateDiagram
 subcommand
 transactional
 uid
