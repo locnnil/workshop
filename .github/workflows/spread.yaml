@@ -31,16 +31,23 @@ jobs:
   snap-tests:
     needs: build-snap
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04-64]
         suite: [main, documentation, integration]
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
+      - uses: actions/checkout@v3
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: canonical/action-tmate@main
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
           sudo snap remove multipass --purge || true
+          sudo snap refresh --channel=5.21/stable lxd
+          lxd init --auto
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -53,8 +60,6 @@ jobs:
         with:
           name: snap
           path: ${{ github.workspace }}/tests/
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
       - name: Install spread
         run: |
           # go install is not supported for forks...
@@ -62,6 +67,7 @@ jobs:
           cd spread
           go install ./...
       - name: Run spread
-        run: | 
-          lxd init --auto
+        run: |  
+          # Installed docker related packages might interfere with LXD networking
+          sudo iptables -P FORWARD ACCEPT
           spread tests/${{matrix.suite}}/

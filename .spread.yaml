@@ -14,6 +14,7 @@ backends:
   lxd:
     systems:
       - ubuntu-22.04:
+          workers: 2
 suites:
   tests/main/:
     summary: Core workshop scenarios

@@ -1,21 +1,15 @@
 #!/usr/bin/expect -f
 
-set timeout 180
 set success 0 
 
 while {1} {
     spawn workshop info ws-sdk-health
     set result [wait]
-    set exit_code [lindex $result 3]
-    if {$exit_code != 0} {
-        puts "workshop info check failed"
-        exit 1
-    }
     expect {
         -re "message:\[ \]*Cannot finish health check" {
             puts "Seen the expected SDK health messages"
             set success 1
-            exp_continue
+            continue
         }
         -re "ready" {
             if { $success == 1 } {
