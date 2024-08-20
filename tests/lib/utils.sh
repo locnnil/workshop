@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Install and uninstall workshopd
-
-function init_lxd() {
+function setup_lxd() {
   snap install --classic lxd
   snap refresh --channel=5.21/stable lxd
+  lxd waitready --timeout=30
   
   # can already be initialised if reused
   # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
@@ -16,8 +15,12 @@ function init_lxd() {
 function prepare_environment() {
   systemctl unmask snapd.service
   systemctl start snapd.service
+  snap wait system seed.loaded
+  # The /snap directory does not exist in some environments
+  [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
   
-  init_lxd  
+  setup_lxd
+  
   snap install --classic --channel=1.21/stable go
   snap install yq
   apt update
