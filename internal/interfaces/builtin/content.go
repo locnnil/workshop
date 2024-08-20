@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -44,6 +45,9 @@ const contentBaseDeclarationSlots = `
       slot-names:
         - $INTERFACE
 `
+
+var knownPlugAttributes = []string{"target"}
+var knownSlotAttributes = []string{"source"}
 
 // contentInterface allows sharing content between sdks
 type contentInterface struct{}
@@ -72,6 +76,11 @@ func validatePath(path string) error {
 }
 
 func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
+	for name := range plug.Attrs {
+		if !slices.Contains(knownPlugAttributes, name) {
+			return fmt.Errorf(`unknown attribute for content interface plug: %q`, name)
+		}
+	}
 	target, ok := plug.Attrs["target"].(string)
 	if !ok || len(target) == 0 {
 		return fmt.Errorf("content plug must contain target path")
@@ -79,11 +88,15 @@ func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	if err := validatePath(target); err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
+	for name := range slot.Attrs {
+		if !slices.Contains(knownSlotAttributes, name) {
+			return fmt.Errorf(`unknown attribute for content interface slot: %q`, name)
+		}
+	}
 	source, exist := slot.Attrs["source"]
 	if !exist {
 		// perfectly fine scenario for the default content slot

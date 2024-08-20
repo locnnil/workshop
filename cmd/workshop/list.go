@@ -105,14 +105,11 @@ func (c *CmdList) runList() error {
 		}
 		for _, i := range projects {
 			workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
-			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
-			if len(workshops) > 0 {
-				header.Do(printHeader)
-			}
-
 			if err != nil {
 				return err
 			}
+			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
+
 			for _, j := range workshops {
 				// --global flag would not list Off workshops for consistency.
 				// We may not be aware of all the project directories on the system
@@ -120,6 +117,7 @@ func (c *CmdList) runList() error {
 				// to the workshops that are in any other state, i.e. running instances, which we always know
 				// about from the workshop backend)
 				if j.Status != "Off" {
+					header.Do(printHeader)
 					fmt.Fprintln(w, strings.Join(printWorkshop(j, i), "\t"))
 				}
 			}

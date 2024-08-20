@@ -466,12 +466,23 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	rev := revert.New()
+	defer rev.Fail()
+
 	cref := &interfaces.ConnRef{PlugRef: plugRef, SlotRef: slotRef}
 	conn, err := m.repo.Connect(cref, plug.Attrs, plugDynamicAttrs,
 		slot.Attrs, slotDynamicAttrs, connectCheck)
 	if err != nil || conn == nil {
 		return err
 	}
+
+	rev.Add(func() {
+		err := m.repo.Disconnect(cref.PlugRef.ProjectId, cref.PlugRef.Workshop, cref.PlugRef.Sdk, cref.PlugRef.Name,
+			cref.SlotRef.ProjectId, cref.PlugRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
+		if err != nil {
+			logger.Noticef("On doConnect: Cannot revert connection %q", cref.ID())
+		}
+	})
 
 	if old, ok := conns[cref.ID()]; ok && old.Undesired {
 		task.Set("old-conn", old)
@@ -502,6 +513,8 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		Auto:             autoConnect,
 	}
 	setConns(st, conns)
+
+	rev.Success()
 
 	return nil
 }

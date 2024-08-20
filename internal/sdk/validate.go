@@ -17,7 +17,6 @@ var (
 )
 
 func Validate(sdk *Info) error {
-
 	if !sdkName.MatchString(sdk.Name) {
 		return fmt.Errorf("invalid sdk name: %q", sdk.Name)
 	}

@@ -1331,6 +1331,37 @@ func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
+func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *check.C) {
+	// Setup
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		return errors.New("cannot finish backend setup")
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
+	// Execute
+	chg := s.connectChange("ws", false, false)
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate that even if a connection was created in the repository, it
+	// won't persist if the backend setup fails.
+	c.Check(chg.Tasks()[0].Status(), check.Equals, state.ErrorStatus)
+	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 0)
+}
+
 func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	// Setup
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
