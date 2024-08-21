@@ -78,13 +78,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, err
 		}
 
-		// Plug binds can only be fully validated when all SDKs meta data of the
-		// workshop is obtained from the store. Therefore, we validate it here
-		// in addition to essential checks in readWorkshop().
-		if err = validatePlugBinds(sdks, file); err != nil {
-			return nil, err
-		}
-
 		sets := []sdk.Setup{}
 		for _, s := range sdks {
 			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
@@ -111,47 +104,6 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 		return nil, err
 	}
 	return res, nil
-}
-
-func validatePlugBinds(sdks []sdk.SdkResult, file *workshop.File) error {
-	type plug struct {
-		sdk  string
-		name string
-	}
-	allbinds := make(map[plug][]plug)
-	for _, sk := range file.Sdks {
-		for n, master := range sk.Plugs {
-			master := plug{master.Bind.Sdk, master.Bind.Plug}
-			slave := plug{sk.Name, n}
-			allbinds[master] = append(allbinds[slave], slave)
-		}
-	}
-
-	allplugs := make(map[plug]*sdk.PlugInfo)
-	for _, s := range sdks {
-		for name, p := range s.Plugs {
-			allplugs[plug{s.Name, name}] = p
-		}
-	}
-
-	for master, slaves := range allbinds {
-		minfo, ok := allplugs[master]
-		if !ok {
-			return fmt.Errorf("cannot bind: SDK %q does not have a plug %q", master.sdk, master.name)
-		}
-
-		for _, sl := range slaves {
-			sinfo, ok := allplugs[sl]
-			if !ok {
-				return fmt.Errorf("cannot bind: SDK %q does not have a plug %q", sl.sdk, sl.name)
-			}
-			if minfo.Interface != sinfo.Interface {
-				return fmt.Errorf("cannot bind: %s:%s and %s:%s must be of the same interface", master.sdk, master.name, sl.sdk, sl.name)
-			}
-		}
-	}
-
-	return nil
 }
 
 func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {

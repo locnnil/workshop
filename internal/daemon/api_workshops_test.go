@@ -53,7 +53,7 @@ sdks:
   test-sdk:
     channel: latest/stable
     plugs:
-      data:
+      unknown-data:
         bind: test-sdk-2:unknown
   test-sdk-2:
     channel: latest/stable
@@ -95,6 +95,35 @@ sdks:
     channel: latest/stable
   test-sdk-2:
     channel: latest/stable
+`
+
+	workshopconns = `name: workshopconns
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      training:
+        interface: content
+        source: .
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:data
+    slot: host:training
+`
+
+	workshopbrokenconn = `name: workshopbrokenconn
+base: ubuntu@22.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:data-unknown-plug
+    slot: host:content
 `
 
 	testsdk = `
@@ -410,6 +439,9 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			}
 			c.Check(change.Kind(), check.Equals, expected[num].Kind)
 			c.Check(change.Summary(), check.Equals, expected[num].Summary)
+			if expected[num].ChangeErr != "" {
+				c.Check(change.Err(), check.ErrorMatches, expected[num].ChangeErr)
+			}
 		}
 	}
 }
@@ -610,8 +642,8 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 
 func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 	// Setup
-
 	s.createWFile(c, "masterunknown", masterunknown)
+	defer s.mockInstalledSdks(c, testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["masterunknown"],"action":"launch"}`),
@@ -619,9 +651,11 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot bind: SDK "test-sdk-2" does not have a plug "unknown"`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "masterunknown" workshop`,
+			ChangeErr: `(?s).*SDK masterunknown/test-sdk has no "unknown-data" plug.*`,
 		},
 	}
 
@@ -630,8 +664,8 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 
 func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 	// Setup
-
 	s.createWFile(c, "slaveunknown", slaveunknown)
+	defer s.mockInstalledSdks(c, testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["slaveunknown"],"action":"launch"}`),
@@ -639,9 +673,11 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot bind: SDK "test-sdk" does not have a plug "unknown"`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "slaveunknown" workshop`,
+			ChangeErr: `(?s).*SDK slaveunknown/test-sdk has no "unknown" plug.*`,
 		},
 	}
 
@@ -651,6 +687,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	// Setup
 	s.createWFile(c, "bindincompatible", bindincompatible)
+	defer s.mockInstalledSdks(c, testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["bindincompatible"],"action":"launch"}`),
@@ -658,13 +695,93 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot bind: test-sdk-2:gpu and test-sdk:data must be of the same interface`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "bindincompatible" workshop`,
+			ChangeErr: `(?s).*cannot bind bindincompatible/test-sdk:data \("content" interface\) to bindincompatible/test-sdk-2:gpu \("gpu" interface\).*`,
 		},
 	}
 
 	s.runActionTest(c, requests, expected)
+}
+
+func (s *apiSuite) TestLaunchWorkshopConnectionsOK(c *check.C) {
+	// Setup
+	s.createWFile(c, "workshopconns", workshopconns)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshopconns" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	_, err := s.b.Workshop(s.ctx, "workshopconns")
+	c.Assert(err, check.IsNil)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "host", "training"), check.Not(check.IsNil))
+
+	conns, err := repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "training"},
+		},
+	})
+
+	conns, err = repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "content"},
+		}, {
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "gpu"},
+		},
+	})
+}
+
+func (s *apiSuite) TestLaunchWorkshopMalformedConnections(c *check.C) {
+	// Setup
+	s.createWFile(c, "workshopbrokenconn", workshopbrokenconn)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopbrokenconn"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "workshopbrokenconn" workshop`,
+			ChangeErr: `(?s).*SDK "workshopbrokenconn/test-sdk" has no plug named "data-unknown-plug".*`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	conns, err := repo.Connections(s.project.ProjectId, "workshopbrokenconn", "test-sdk")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 0)
+	conns, err = repo.Connections(s.project.ProjectId, "workshopbrokenconn", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 0)
 }
 
 func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {

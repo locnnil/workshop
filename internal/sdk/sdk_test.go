@@ -503,7 +503,7 @@ slots:
 			"source":    "/var/cache",
 		},
 	}
-	err = info.SetWorkshopSlots(slots)
+	err = info.SetupWorkshopSlots(slots)
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Slots, check.HasLen, 2)
 	c.Assert(info.Plugs, check.HasLen, 0)
@@ -539,6 +539,6 @@ slots:
 			"source": "/data",
 		},
 	}
-	err = info.SetWorkshopSlots(slots)
+	err = info.SetupWorkshopSlots(slots)
 	c.Assert(err, check.ErrorMatches, `cannot add "training" slot to "sdk" SDK: already exists`)
 }

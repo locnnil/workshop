@@ -128,7 +128,7 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 
 	// Execute
 	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.ErrorMatches, `.*cannot create a workshop mount with target "/root/.profile": the target is not a directory`)
+	c.Assert(err, check.ErrorMatches, `sdk:sdk-device's "target" /root/.profile is not a directory`)
 }
 
 func (f *profileTest) TestSdkProfileBindMountAbsSourceOK(c *check.C) {
@@ -184,7 +184,7 @@ func (f *profileTest) TestSdkProfileBindMountRelativeSourceNotExist(c *check.C) 
 
 	// Execute
 	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.ErrorMatches, fmt.Sprintf(`"source" %s is not an existing directory`, filepath.Join(pd, "relpath")))
+	c.Assert(err, check.ErrorMatches, fmt.Sprintf(`sdk:sdk-device's "source" %s is not an existing directory`, filepath.Join(pd, "relpath")))
 }
 
 func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {

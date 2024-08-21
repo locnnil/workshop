@@ -42,8 +42,12 @@ const contentBaseDeclarationSlots = `
         - host
     allow-connection: true
     allow-auto-connection:
-      slot-names:
-        - $INTERFACE
+      -
+        slot-names:
+          - $INTERFACE
+      -
+        plug-attributes:
+          auto-explicit: true
 `
 
 var knownPlugAttributes = []string{"target"}

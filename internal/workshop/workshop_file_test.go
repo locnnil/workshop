@@ -69,8 +69,8 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "two", Plug: "plug"}}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.Bind{Sdk: "one", Plug: "plug"}}}},
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -142,8 +142,8 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		workshop.SdkRecord{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.Bind{Sdk: "etl-sdk", Plug: "cache"}}}},
-		workshop.SdkRecord{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.Bind{Sdk: "data-sdk", Plug: "aux"}}}},
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
 }
 
@@ -191,7 +191,7 @@ sdks:
 	c.Assert(err, check.ErrorMatches, `"workshop/no-sdk" isn't a valid SDK name`)
 }
 
-func (f *workshopFile) TestBindPlugIncorrectPlugRef(c *check.C) {
+func (f *workshopFile) TestBindPlugInvalidPlugRef(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
@@ -205,7 +205,7 @@ sdks:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `incorrect bind plug reference: "cache" \(use <sdk>:<plug>\)`)
+	c.Assert(err, check.ErrorMatches, `invalid plug or slot reference: "cache" \(use <sdk>:<plug or slot>\)`)
 }
 
 func (f *workshopFile) TestBindToAlreadyBoundPlug(c *check.C) {
@@ -271,5 +271,108 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		workshop.SdkRecord{Name: "host", Slots: map[string]interface{}{"training-data": map[string]interface{}{"source": "relative/path"}}}})
+		{Name: "host", Slots: map[string]interface{}{"training-data": map[string]interface{}{"source": "relative/path"}}}})
+}
+
+func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: data-sdk:data
+    slot: host:content
+  - plug: etl-sdk:data
+    slot: data-sdk:data-slot
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
+	c.Assert(file.Connections, testutil.DeepUnsortedMatches, []workshop.Connection{
+		{PlugRef: workshop.PlugRef{Sdk: "data-sdk", Name: "data"}, SlotRef: workshop.SlotRef{Sdk: "host", Name: "content"}},
+		{PlugRef: workshop.PlugRef{Sdk: "etl-sdk", Name: "data"}, SlotRef: workshop.SlotRef{Sdk: "data-sdk", Name: "data-slot"}},
+	})
+}
+
+func (f *workshopFile) TestWorkshopConnectionsInvalidRefs(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: data-sdk
+    slot: host:content
+  - plug: etl-sdk:data
+    slot: data-sdk:data-slot
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `invalid plug or slot reference: "data-sdk" \(use <sdk>:<plug or slot>\)`)
+}
+
+func (f *workshopFile) TestWorkshopConnectionsSlotSdkNotInTheList(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: data-sdk:data
+    slot: lost-sdk:content
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `invalid slot reference "lost-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+}
+
+func (f *workshopFile) TestWorkshopConnectionsPlugSdkNotInTheList(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: lost-sdk:data
+    slot: data-sdk:content
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `invalid plug reference "lost-sdk:data": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+}
+
+func (f *workshopFile) TestWorkshopConnectionsImplicitHostSdkPlugSlot(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: host:data
+    slot: host:content
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
 }

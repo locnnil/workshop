@@ -66,7 +66,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 					return err
 				}
 			} else if !info.IsDir() {
-				return fmt.Errorf(`"target" %s is not a directory`, target)
+				return fmt.Errorf(`%s:%s's "target" %s is not a directory`, profile.Sdk, dev.Name, target)
 			}
 
 			source := dev.Properties["source"]
@@ -82,7 +82,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 				// fail but there will still be changes made to the instance
 				// configuration which is not acceptable.
 				if !osutil.IsDir(abs) {
-					return fmt.Errorf(`"source" %s is not an existing directory`, abs)
+					return fmt.Errorf(`%s:%s's "source" %s is not an existing directory`, profile.Sdk, dev.Name, abs)
 				}
 				dev.Properties["source"] = abs
 				continue

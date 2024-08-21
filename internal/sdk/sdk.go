@@ -69,8 +69,26 @@ func (i *Info) Ref() Ref {
 	}
 }
 
+func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
+	if i.Type == Host {
+		return nil
+	}
+
+	for name, plug := range binds {
+		if _, ok := i.Plugs[name]; ok {
+			// The existence of plugs that are bound to it will be checked at
+			// the connecting stage, i.e. when all plugs from all SDKs are in
+			// the repository already.
+			i.PlugBinds[name] = plug
+		} else {
+			return fmt.Errorf("SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
+		}
+	}
+	return nil
+}
+
 // Adds slots defined for this SDK in a workshop file.
-func (i *Info) SetWorkshopSlots(slots map[string]interface{}) error {
+func (i *Info) SetupWorkshopSlots(slots map[string]interface{}) error {
 	for name, data := range slots {
 		if _, exist := i.Slots[name]; exist {
 			return fmt.Errorf("cannot add %q slot to %q SDK: already exists", name, i.Name)

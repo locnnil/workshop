@@ -992,7 +992,6 @@ func (r *Repository) AutoConnectCandidateSlots(projectId, workshop, plugSdkName,
 			}
 			iface := slotInfo.Interface
 
-			// declaration based checks disallow
 			ok, err := policyCheck(NewConnectedPlug(plugInfo, nil, nil), NewConnectedSlot(slotInfo, nil, nil))
 			if !ok || err != nil {
 				continue
