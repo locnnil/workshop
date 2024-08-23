@@ -3,7 +3,7 @@
 function setup_lxd() {
   snap install --classic lxd
   snap refresh --channel=5.21/stable lxd
-  lxd waitready --timeout=30
+  lxd waitready --timeout=180
   
   # can already be initialised if reused
   # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
