@@ -126,6 +126,31 @@ connections:
     slot: host:content
 `
 
+	connsplugbound = `name: connsplugbound
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      training:
+        interface: content
+        source: .
+      photos:
+        interface: content
+        source: .
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      data: 
+        bind: test-sdk-2:photos
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:data
+    slot: host:training
+  - plug: test-sdk-2:photos
+    slot: host:photos
+`
+
 	testsdk = `
 name: test-sdk
 base: ubuntu@20.04
@@ -706,7 +731,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	s.runActionTest(c, requests, expected)
 }
 
-func (s *apiSuite) TestLaunchWorkshopConnectionsOK(c *check.C) {
+func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
 	defer s.mockInstalledSdks(c, testsdks)()
@@ -754,7 +779,7 @@ func (s *apiSuite) TestLaunchWorkshopConnectionsOK(c *check.C) {
 	})
 }
 
-func (s *apiSuite) TestLaunchWorkshopMalformedConnections(c *check.C) {
+func (s *apiSuite) TestConnectionsUnknownPlug(c *check.C) {
 	// Setup
 	s.createWFile(c, "workshopbrokenconn", workshopbrokenconn)
 	defer s.mockInstalledSdks(c, testsdks)()
@@ -782,6 +807,46 @@ func (s *apiSuite) TestLaunchWorkshopMalformedConnections(c *check.C) {
 	conns, err = repo.Connections(s.project.ProjectId, "workshopbrokenconn", "test-sdk-2")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 0)
+}
+
+func (s *apiSuite) TestWorkshopConnectionsPlugIsBound(c *check.C) {
+	// Setup
+	s.createWFile(c, "connsplugbound", connsplugbound)
+	defer s.mockInstalledSdks(c, testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["connsplugbound"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "connsplugbound" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	// The explicit connection for "test-sdk:data" will be ignored as the plug is bound to another
+	// plug.
+	repo := s.d.overlord.InterfaceManager().Repository()
+	conns, err := repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].SlotRef.Name, check.Equals, "photos")
+
+	connection, err := repo.Connection(conns[0])
+	c.Assert(err, check.IsNil)
+	_, bound := connection.CheckBound()
+	c.Assert(bound, check.Equals, true)
+
+	// The explicit connection for "test-sdk-2:photo" will be set as usual.
+	conns, err = repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk-2", "photos")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].SlotRef.Name, check.Equals, "photos")
 }
 
 func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
@@ -1134,11 +1199,12 @@ func (s *apiSuite) TestStopWorkshop(c *check.C) {
 func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	// Setup
 
-	s.createWFile(c, "basic", basic)
+	s.createWFile(c, "workshopconns", workshopconns)
+	defer s.mockInstalledSdks(c, testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"remove"}`),
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"remove"}`),
 	}
 
 	expected := []*expectedResp{
@@ -1146,19 +1212,19 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "launch",
-			Summary: `Launch "basic" workshop`,
+			Summary: `Launch "workshopconns" workshop`,
 		},
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "remove",
-			Summary: `Remove "basic" workshop`,
+			Summary: `Remove "workshopconns" workshop`,
 		},
 	}
 
 	s.runActionTest(c, requests, expected)
 
-	_, err := s.b.Workshop(s.ctx, "basic")
+	_, err := s.b.Workshop(s.ctx, "workshopconns")
 	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
-	c.Check(s.b.RemoveProfileCalls, check.HasLen, 1)
+	c.Check(s.b.RemoveProfileCalls, check.HasLen, 4)
 }
