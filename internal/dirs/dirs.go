@@ -42,6 +42,8 @@ var (
 	SdkDir string
 	// Path to the daemon's unix socket
 	SocketPath string
+	// State lock file
+	WorkshopStateLockFile string
 	// Base for the XDG runtime directory of a host user
 	XdgRuntimeDirBase string
 	// Run directory
@@ -91,6 +93,7 @@ func SetRootDir(rootdir string) {
 	}
 	BaseDir = rootdir
 	SdkDir = filepath.Join(BaseDir, "sdk")
+	WorkshopStateLockFile = filepath.Join(BaseDir, "state.lock")
 	WorkshopTlsDir = filepath.Join(BaseDir, "tls")
 	WorkshopdRunDir = filepath.Join(BaseDir, "/run/workshopd")
 	WorkshopdLocksDir = filepath.Join(WorkshopdRunDir, "locks")

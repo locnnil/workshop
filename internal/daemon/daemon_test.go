@@ -29,9 +29,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/check.v1"
+
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/patch"
 	"github.com/canonical/workshop/internal/overlord/restart"
@@ -58,6 +60,7 @@ var _ = check.Suite(&daemonSuite{})
 
 func (s *daemonSuite) SetUpTest(c *check.C) {
 	s.workshopDir = c.MkDir()
+	dirs.SetRootDir(s.workshopDir)
 	s.statePath = filepath.Join(s.workshopDir, "state.json")
 	systemdSdNotify = func(notif string) error {
 		s.notified = append(s.notified, notif)

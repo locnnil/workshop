@@ -43,11 +43,13 @@ func (s *apiSuite) runMountTest(c *check.C, wp string, buffers []*bytes.Buffer, 
 			c.Assert(change.Kind(), check.Equals, expected[num].Kind)
 			c.Assert(change.Summary(), check.Equals, expected[num].Summary)
 			<-change.Ready()
+			st.Lock()
 			if expected[num].ChangeErr != "" {
 				c.Assert(change.Err(), check.ErrorMatches, expected[num].ChangeErr)
 			} else {
 				c.Assert(change.Err(), check.IsNil)
 			}
+			st.Unlock()
 		}
 	}
 }
