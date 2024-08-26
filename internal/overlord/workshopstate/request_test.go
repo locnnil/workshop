@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type requestSuite struct {
@@ -37,7 +38,7 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state), s.backend)
 	s.project, _, _ = s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.project.ProjectId)

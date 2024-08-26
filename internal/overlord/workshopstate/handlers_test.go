@@ -20,11 +20,12 @@ import (
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type workshopHandlers struct {
 	fs                afero.Fs
-	backend           *workshop.FakeWorkshopBackend
+	backend           *fakebackend.FakeWorkshopBackend
 	state             *state.State
 	runner            *state.TaskRunner
 	se                *overlord.StateEngine
@@ -54,7 +55,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())

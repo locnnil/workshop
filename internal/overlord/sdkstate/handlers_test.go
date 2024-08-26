@@ -24,11 +24,12 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type sdkStateSuite struct {
 	fs          afero.Fs
-	backend     *workshop.FakeWorkshopBackend
+	backend     *fakebackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
@@ -94,7 +95,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 	s.project = &workshop.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",

@@ -17,6 +17,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type managerSuite struct {
@@ -32,7 +33,7 @@ var _ = check.Suite(&managerSuite{})
 
 func (s *managerSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner, s.backend)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")

@@ -32,6 +32,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 func TestHealthState(t *testing.T) { check.TestingT(t) }
@@ -41,7 +42,7 @@ type healthSuite struct {
 	se      *overlord.StateEngine
 	state   *state.State
 	runner  *state.TaskRunner
-	backend *workshop.FakeWorkshopBackend
+	backend *fakebackend.FakeWorkshopBackend
 	hookMgr *hookstate.HookManager
 	project *workshop.Project
 	ctx     context.Context
@@ -56,7 +57,7 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -206,7 +207,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -279,7 +280,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -336,7 +337,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)
@@ -379,7 +380,7 @@ func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one", true)

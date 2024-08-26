@@ -7,10 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/canonical/workshop/internal/sdk"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
+
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 var (

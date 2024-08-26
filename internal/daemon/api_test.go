@@ -27,13 +27,14 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
 	d     *Daemon
-	b     *workshop.FakeWorkshopBackend
+	b     *fakebackend.FakeWorkshopBackend
 	store *sdk.FakeStore
 
 	workshopDir string
@@ -70,7 +71,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
-	s.b = workshop.NewFakeWorkshopBackend()
+	s.b = fakebackend.New()
 	s.store = &sdk.FakeStore{}
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)

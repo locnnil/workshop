@@ -34,7 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/version"
-	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 func TestOverlord(t *testing.T) { TestingT(t) }
@@ -201,7 +201,7 @@ func (wm *witnessManager) Ensure() error {
 }
 
 func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), nil)
 	c.Assert(err, IsNil)
 
 	err = o.StartUp()
@@ -214,7 +214,7 @@ func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
 }
 
 func (ovs *overlordSuite) TestUnknownTasks(c *C) {
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), nil)
 	c.Assert(err, IsNil)
 
 	// unknown tasks are ignored and succeed
@@ -536,7 +536,7 @@ func (ovs *overlordSuite) TestOverlordStartUpSetsStartOfOperation(c *C) {
 	restoreIntv := overlord.FakePruneInterval(100*time.Millisecond, 1000*time.Millisecond, 1*time.Hour)
 	defer restoreIntv()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), nil)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -558,7 +558,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneDoesntAbortShortlyAfterStartOfOpera
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to unknown kind
@@ -609,7 +609,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneAbortsOld(c *C) {
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to having unknown kind
@@ -938,7 +938,7 @@ func (rb *testRestartHandler) RebootIsMissing(_ *state.State) error {
 func (ovs *overlordSuite) TestRequestRestartHandler(c *C) {
 	rb := &testRestartHandler{}
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	o, err := overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -957,7 +957,7 @@ func (ovs *overlordSuite) TestVerifyRebootNoPendingReboot(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -970,7 +970,7 @@ func (ovs *overlordSuite) TestVerifyRebootOK(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -984,7 +984,7 @@ func (ovs *overlordSuite) TestVerifyRebootOKButError(c *C) {
 	e := errors.New("boom")
 	rb := &testRestartHandler{rebootVerifiedErr: e}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, Equals, e)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -1000,7 +1000,7 @@ func (ovs *overlordSuite) TestVerifyRebootIsMissing(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "did-not-happen")
@@ -1017,7 +1017,7 @@ func (ovs *overlordSuite) TestVerifyRebootIsMissingError(c *C) {
 	e := errors.New("boom")
 	rb := &testRestartHandler{rebootVerifiedErr: e}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, fakebackend.New(), rb)
 	c.Assert(err, Equals, e)
 
 	c.Check(rb.rebootState, Equals, "did-not-happen")

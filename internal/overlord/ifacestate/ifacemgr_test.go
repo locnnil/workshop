@@ -21,6 +21,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type interfaceManagerSuite struct {
@@ -52,7 +53,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	s.wsbackend = workshop.NewFakeWorkshopBackend()
+	s.wsbackend = fakebackend.New()
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)

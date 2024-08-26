@@ -17,10 +17,11 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type hookSuite struct {
-	backend     *workshop.FakeWorkshopBackend
+	backend     *fakebackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
@@ -46,7 +47,7 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 }
 
 func (s *hookSuite) SetUpTest(c *check.C) {
-	s.backend = workshop.NewFakeWorkshopBackend()
+	s.backend = fakebackend.New()
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
@@ -197,7 +198,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -237,7 +238,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -296,7 +297,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one")
@@ -336,7 +337,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -373,7 +374,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
