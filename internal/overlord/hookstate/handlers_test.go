@@ -122,8 +122,12 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
-	// ensure that the save-state handler has created the required state directory
+	// ensure that the save-state handler has created the required state
+	// directory (reattacg the storage to the workshop to check).W
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	defer ws.Close()
+	err = s.backend.AttachStateStorage(s.ctx, "ws", workshop.WorkshopStateVolumeName("ws", s.project.ProjectId))
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -151,9 +155,11 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	// setup state storage (usually already set by the save-state)
+	// setup state storage (must be already set by the save-state in a real use
+	// case).
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
+	defer ws.Close()
 	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
 
@@ -470,6 +476,7 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	defer ws.Close()
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)
 	c.Check(err, check.IsNil)

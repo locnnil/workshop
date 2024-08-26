@@ -22,8 +22,11 @@ var (
 	// SDKs directory to install an SDK in a workshop
 	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 
-	// Base directory for the workshop state storage
+	// Base directory for the state storage
 	WorkshopStateDir = filepath.Join(WorkshopBaseDir, "/state")
+
+	// Base directory for the SDK state storage
+	WorkshopSdkStateDir = filepath.Join(WorkshopStateDir, "/sdk")
 
 	// Run directory inside workshop
 	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "/run")

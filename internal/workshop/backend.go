@@ -68,14 +68,17 @@ type Stash interface {
 }
 
 type StateStorage interface {
-	// Create a temporary state storage volume for the workshop. It can be
-	// mounted to the instance separately. This does not mount the device to the
-	// workshop, it must be mounted to the required workshop as a separate
-	// operation (see AddWorkshopDevice).
+	// Create a temporary state storage volume for the workshop. It does not
+	// mount the device to the workshop, it must be mounted to the required
+	// workshop as a separate operation.
 	CreateStateStorage(ctx context.Context, name string) error
 
-	// Delete a temporary state storage volume for the workshop. It does
-	// not unmount the volume from the workshop if mounted.
+	AttachStateStorage(ctx context.Context, wp, name string) error
+
+	DetachStateStorage(ctx context.Context, wp, name string) error
+
+	// Delete a temporary state storage volume for the workshop. It does not
+	// unmount the volume from the workshop if mounted.
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 

@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 
 	"github.com/canonical/lxd/shared/api"
+	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -54,6 +57,8 @@ type FakeWorkshopBackend struct {
 	Workshops map[string]map[string]*FakeWorkshop
 	// workshops put to stash (e.g. during refresh)
 	StashedWorkshops map[string]map[string]*FakeWorkshop
+	// state storages, the key is a volume name
+	WorkshopStateStorages map[string]map[string]bool
 	// the key is a username
 	projects map[string][]*Project
 
@@ -77,6 +82,7 @@ func NewFakeWorkshopBackend() *FakeWorkshopBackend {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
+	be.WorkshopStateStorages = make(map[string]map[string]bool)
 	be.projects = make(map[string][]*Project)
 
 	be.ExecCallback = DoExecDefault
@@ -405,6 +411,41 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	workshop.Name = StashNamePrefix + name
 	delete(s.Workshops[projectId], name)
 	return nil
+}
+
+func (s *FakeWorkshopBackend) AttachStateStorage(ctx context.Context, wp, name string) error {
+	paths := s.WorkshopStateStorages[name]
+	if paths == nil {
+		s.WorkshopStateStorages[name] = map[string]bool{}
+		return nil
+	}
+	wfs, err := s.WorkshopFs(ctx, wp)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+	for path := range paths {
+		if err = wfs.MkdirAll(path, 0755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *FakeWorkshopBackend) DetachStateStorage(ctx context.Context, wp, name string) error {
+	wfs, err := s.WorkshopFs(ctx, wp)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	afero.Walk(wfs, dirs.WorkshopStateDir, func(path string, info fs.FileInfo, err error) error {
+		s.WorkshopStateStorages[name][path] = true
+		return nil
+	})
+
+	err = wfs.RemoveAll(dirs.WorkshopStateDir)
+	return err
 }
 
 func (s *FakeWorkshopBackend) CreateStateStorage(ctx context.Context, name string) error {

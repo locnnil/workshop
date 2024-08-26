@@ -26,6 +26,16 @@ var (
 	basic = `name: basic
 base: ubuntu@22.04
 `
+
+	basic_refreshed = `name: basic
+base: ubuntu@22.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+`
+
 	manysdks = `name: manysdks
 base: ubuntu@22.04
 sdks:
@@ -33,6 +43,17 @@ sdks:
     channel: latest/stable
   test-sdk-2:
     channel: latest/stable
+`
+	manysdks_refreshed = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:data-non-existent
+    slot: host:content
 `
 
 	somebound = `name: somebound
@@ -114,6 +135,15 @@ connections:
     slot: host:training
 `
 
+	workshopconns_refreshed = `name: workshopconns
+base: ubuntu@22.04
+sdks:
+  test-sdk:
+    channel: latest/stable
+  test-sdk-2:
+    channel: latest/stable
+`
+
 	workshopbrokenconn = `name: workshopbrokenconn
 base: ubuntu@22.04
 sdks:
@@ -189,7 +219,7 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string
 	s.createWFile(c, name, yaml)
 
 	defer s.store.SetActionCallback(storeAction)()
-	defer s.mockInstalledSdks(c, sdks)()
+	defer s.mockDoInstallSdk(c, name, sdks)()
 
 	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch"}`, name))
 	s.vars = map[string]string{"id": s.project.ProjectId}
@@ -412,7 +442,6 @@ type expectedResp struct {
 }
 
 func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected []*expectedResp) {
-	s.daemon(c)
 	defer s.store.SetActionCallback(storeAction)()
 
 	s.vars = map[string]string{"id": s.project.ProjectId}
@@ -423,9 +452,6 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 		c.Assert(err, check.IsNil)
 		requests = append(requests, req)
 	}
-
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
 
 	for num, req := range requests {
 		// Execute
@@ -464,9 +490,13 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			}
 			c.Check(change.Kind(), check.Equals, expected[num].Kind)
 			c.Check(change.Summary(), check.Equals, expected[num].Summary)
+			st.Lock()
 			if expected[num].ChangeErr != "" {
 				c.Check(change.Err(), check.ErrorMatches, expected[num].ChangeErr)
+			} else {
+				c.Assert(change.Err(), check.IsNil)
 			}
+			st.Unlock()
 		}
 	}
 }
@@ -490,38 +520,48 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 	return result, nil
 }
 
-func (s *apiSuite) mockInstalledSdks(c *check.C, sdks map[string]string) func() {
-	fs := workshop.NewFakeWorkshopFs()
+func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]string) func() {
+	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		// check if the command is to install an SDK
+		if args.Command[0] != "tar" {
+			return workshop.ExecContext{WaitExecution: func(ctx context.Context) error { return nil }}, nil
+		}
 
-	for n, s := range sdks {
-		metadir := filepath.Join(sdk.SdkCurrentPath(n), "meta")
-		err := fs.MkdirAll(metadir, 0655)
-		c.Assert(err, check.IsNil)
+		fs, err := s.b.WorkshopFs(s.ctx, ws)
+		c.Check(err, check.IsNil)
+		defer fs.Close()
+		// Get the SDK name from the exec command (we don't have a separate
+		// method to install an SDK now).
+		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_0.sdk")
+		c.Check(found, check.Equals, true)
+		metadir := filepath.Join(sdk.SdkCurrentPath(sdkname), "meta")
+		err = fs.MkdirAll(metadir, 0655)
+		c.Check(err, check.IsNil)
 
 		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
-		c.Assert(err, check.IsNil)
+		c.Check(err, check.IsNil)
 		defer file.Close()
 
-		_, err = file.Write([]byte(s))
-		c.Assert(err, check.IsNil)
+		syaml, exists := sdks[sdkname]
+		c.Check(exists, check.Equals, true)
+		_, err = file.Write([]byte(syaml))
+		c.Check(err, check.IsNil)
 
 		for _, hook := range []string{"setup-base", "save-state", "restore-state"} {
-			setuphook, err := fs.OpenFile(sdk.SdkHookPath(n, hook), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
-			c.Assert(err, check.IsNil)
+			setuphook, err := fs.OpenFile(sdk.SdkHookPath(sdkname, hook), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
+			c.Check(err, check.IsNil)
 			defer setuphook.Close()
 		}
+		return workshop.ExecContext{WaitExecution: func(ctx context.Context) error { return nil }}, nil
 	}
-
-	s.b.WorkshopFsCallback = func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
-		wp, ok := s.b.Workshops[s.project.ProjectId][name]
-		c.Assert(ok, check.Equals, true)
-		wp.WorkshopFilesystem = fs
-		return fs, nil
-	}
-	return func() { s.b.WorkshopFsCallback = nil }
+	return func() { s.b.ExecCallback = nil }
 }
 
 func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
 	// Setup
 	s.createWFile(c, "basic", basic)
 
@@ -560,9 +600,12 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopslot", workshopslot)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "workshopslot", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopslot"],"action":"launch"}`),
@@ -587,21 +630,17 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
 
-	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
-		cmd := args.Command
-		if strings.Contains(cmd[len(cmd)-1], "setup-base") {
-			return workshop.ExecContext{}, errors.New("cannot execute setup-base")
-		}
-		return workshop.ExecContext{
-			Environment:   args.Environment,
-			WaitExecution: func(ctx context.Context) error { return nil },
-		}, nil
+	s.b.AssignProfileCallback = func(ctx context.Context, workshop string, profile workshop.SdkProfile) error {
+		return fmt.Errorf(`cannot assign profile to %q`, workshop)
 	}
-	defer func() { s.b.ExecCallback = nil }()
+	defer func() { s.b.AssignProfileCallback = nil }()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -609,10 +648,11 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "manysdks" workshop`,
+			ChangeErr: `(?s).*cannot assign profile to "manysdks".*`,
 		},
 	}
 
@@ -633,9 +673,12 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "somebound", somebound)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "somebound", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["somebound"],"action":"launch"}`),
@@ -666,9 +709,12 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "masterunknown", masterunknown)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "masterunknown", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["masterunknown"],"action":"launch"}`),
@@ -688,9 +734,12 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "slaveunknown", slaveunknown)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "slaveunknown", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["slaveunknown"],"action":"launch"}`),
@@ -710,9 +759,12 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 }
 
 func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "bindincompatible", bindincompatible)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "bindincompatible", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["bindincompatible"],"action":"launch"}`),
@@ -732,9 +784,12 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 }
 
 func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "workshopconns", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
@@ -780,9 +835,12 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 }
 
 func (s *apiSuite) TestConnectionsUnknownPlug(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopbrokenconn", workshopbrokenconn)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "workshopbrokenconn", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopbrokenconn"],"action":"launch"}`),
@@ -810,9 +868,12 @@ func (s *apiSuite) TestConnectionsUnknownPlug(c *check.C) {
 }
 
 func (s *apiSuite) TestWorkshopConnectionsPlugIsBound(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "connsplugbound", connsplugbound)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "connsplugbound", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["connsplugbound"],"action":"launch"}`),
@@ -850,14 +911,15 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBound(c *check.C) {
 }
 
 func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
 	}
-
 	expected := []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
@@ -865,6 +927,16 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 			Kind:    "launch",
 			Summary: `Launch "basic" workshop`,
 		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "basic", basic_refreshed)
+	defer s.mockDoInstallSdk(c, "basic", testsdks)()
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+	}
+	expected = []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
@@ -874,44 +946,61 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	}
 
 	s.runActionTest(c, requests, expected)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+
+	conns, err := repo.Connections(s.project.ProjectId, "basic", "test-sdk")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "host", Name: "content"},
+		},
+	})
+
+	conns, err = repo.Connections(s.project.ProjectId, "basic", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "host", Name: "content"},
+		}, {
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "host", Name: "gpu"},
+		},
+	})
 }
 
-func (s *apiSuite) TestRefreshWorkshopFailed(c *check.C) {
+func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.mockInstalledSdks(c, testsdks)()
-
-	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
-		cmd := args.Command
-		if strings.Contains(cmd[len(cmd)-1], "restore-state") {
-			return workshop.ExecContext{}, errors.New("cannot execute restore-state")
-		}
-		return workshop.ExecContext{
-			Environment:   args.Environment,
-			WaitExecution: func(ctx context.Context) error { return nil },
-		}, nil
-	}
-	defer func() { s.b.ExecCallback = nil }()
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`)}
+
+	expected := []*expectedResp{{
+		Type:    ResponseTypeAsync,
+		Status:  http.StatusAccepted,
+		Kind:    "launch",
+		Summary: `Launch "manysdks" workshop`,
+	}}
+	s.runActionTest(c, requests, expected)
+
+	// Setup "refresh" with a new workshop that will trigger an error
+	s.createWFile(c, "manysdks", manysdks_refreshed)
+	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`)}
-
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
-		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "manysdks" workshop`,
-		},
-	}
-
+	expected = []*expectedResp{{
+		Type:      ResponseTypeAsync,
+		Status:    http.StatusAccepted,
+		Kind:      "refresh",
+		Summary:   `Refresh "manysdks" workshop`,
+		ChangeErr: `(?s).*SDK "manysdks/test-sdk" has no plug named "data-non-existent".*`,
+	}}
 	s.runActionTest(c, requests, expected)
 
 	wp, err := s.b.Workshop(s.ctx, "manysdks")
@@ -947,6 +1036,9 @@ func (s *apiSuite) TestRefreshWorkshopFailed(c *check.C) {
 }
 
 func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	requests := []*bytes.Buffer{
 		// try continue without starting wait-on-error
@@ -987,6 +1079,9 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 }
 
 func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	s.createWFile(c, "basic", basic)
 
 	var errOnce sync.Once
@@ -1036,6 +1131,9 @@ func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
 }
 
 func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
 
@@ -1068,6 +1166,9 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 }
 
 func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
 
@@ -1100,10 +1201,11 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 			Summary: `Refresh "basic" workshop`,
 		},
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "basic" workshop`,
+			ChangeErr: `(?s).*cannot remove profile.*`,
 		},
 	}
 
@@ -1117,7 +1219,89 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
+func (s *apiSuite) TestRefreshWorkshopRestoreUserDefinedConnsIfFailed(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	// Setup "launch"
+	s.createWFile(c, "workshopconns", workshopconns)
+	defer s.mockDoInstallSdk(c, "workshopconns", testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{{
+		Type:    ResponseTypeAsync,
+		Status:  http.StatusAccepted,
+		Kind:    "launch",
+		Summary: `Launch "workshopconns" workshop`,
+	}}
+	s.runActionTest(c, requests, expected)
+
+	// Validate
+	wp, err := s.b.Workshop(s.ctx, "workshopconns")
+	c.Assert(err, check.IsNil)
+
+	// Setup "refresh"
+	s.createWFile(c, "workshopconns", workshopconns_refreshed)
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+	}
+	expected = []*expectedResp{{
+		Type:      ResponseTypeAsync,
+		Status:    http.StatusAccepted,
+		Kind:      "refresh",
+		Summary:   `Refresh "workshopconns" workshop`,
+		ChangeErr: `(?s)*.cannot assign profile to "workshopconns".*`,
+	}}
+	var errOnce sync.Once
+	s.b.AssignProfileCallback = func(ctx context.Context, workshop string, profile workshop.SdkProfile) error {
+		var err error
+		// trigger the refresh failure
+		errOnce.Do(func() {
+			err = fmt.Errorf(`cannot assign profile to %q`, workshop)
+		})
+		return err
+	}
+	defer func() { s.b.AssignProfileCallback = nil }()
+
+	s.runActionTest(c, requests, expected)
+
+	content, err := wp.ContentInfo(s.ctx)
+	c.Assert(err, check.IsNil)
+	c.Assert(content, check.HasLen, 2)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	conns, err := repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "training"},
+		},
+	})
+
+	conns, err = repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "content"},
+		},
+		{
+			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "host", Name: "gpu"},
+		},
+	})
+}
+
 func (s *apiSuite) TestStartWorkshop(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
 	// Setup
@@ -1165,6 +1349,9 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 }
 
 func (s *apiSuite) TestStopWorkshop(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
 
@@ -1197,10 +1384,13 @@ func (s *apiSuite) TestStopWorkshop(c *check.C) {
 }
 
 func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
-	// Setup
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
 
+	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
-	defer s.mockInstalledSdks(c, testsdks)()
+	defer s.mockDoInstallSdk(c, "workshopconns", testsdks)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),

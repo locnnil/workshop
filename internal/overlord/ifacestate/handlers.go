@@ -638,6 +638,17 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 		return fmt.Errorf("workshop changed, please retry the operation: %v", err)
 	}
 
+	rev := revert.New()
+	defer rev.Fail()
+
+	rev.Add(func() {
+		_, err1 := m.repo.Connect(&cref, conn.StaticPlugAttrs, conn.DynamicPlugAttrs, conn.StaticSlotAttrs,
+			conn.DynamicSlotAttrs, nil)
+		if err1 != nil {
+			logger.Noticef("On doDisconnect: Cannot recover disconnected %q", cref.ID())
+		}
+	})
+
 	switch {
 	case forget:
 		delete(conns, cref.ID())
@@ -665,6 +676,8 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 			}
 		}
 	}
+
+	rev.Success()
 	return nil
 }
 
