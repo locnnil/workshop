@@ -22,13 +22,6 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-type Backend struct {
-	nvidiaRuntime bool
-
-	imageLock        sync.Mutex
-	currentDownloads map[string]*downloadOp
-}
-
 const (
 	LxdSock     = "/var/snap/lxd/common/lxd/unix.socket"
 	storagePool = "default"
@@ -37,6 +30,25 @@ const (
 var (
 	defaultDevices = createDefaultDevices
 )
+
+var (
+	// However many backend instances are created, downloads are always a single
+	// instance map with the LXD backend.
+	imageLock        sync.Mutex
+	currentDownloads map[string]*downloadOp
+)
+
+func init() {
+	imageLock.Lock()
+	defer imageLock.Unlock()
+	if currentDownloads == nil {
+		currentDownloads = make(map[string]*downloadOp)
+	}
+}
+
+type Backend struct {
+	nvidiaRuntime bool
+}
 
 func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
@@ -47,9 +59,7 @@ func ImageAlias(name string) string {
 }
 
 func New() (workshop.Backend, error) {
-	server := Backend{
-		currentDownloads: make(map[string]*downloadOp),
-	}
+	server := Backend{}
 
 	if srv := os.Getenv("WORKSHOP_IMAGE_SERVER"); srv != "" {
 		imageServer = srv

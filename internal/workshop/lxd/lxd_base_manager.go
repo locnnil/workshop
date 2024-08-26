@@ -32,21 +32,21 @@ var (
 func (b *Backend) Download(ctx context.Context, base string, report *progress.Reporter) error {
 	defer func() {
 		if report != nil {
-			b.imageLock.Lock()
-			if op, exist := b.currentDownloads[base]; exist {
+			imageLock.Lock()
+			if op, exist := currentDownloads[base]; exist {
 				op.RemoveReporter(report.Name)
 			}
-			b.imageLock.Unlock()
+			imageLock.Unlock()
 		}
 	}()
 
-	b.imageLock.Lock()
-	op, exist := b.currentDownloads[base]
+	imageLock.Lock()
+	op, exist := currentDownloads[base]
 	if exist {
 		if report != nil {
 			op.AddReporter(report)
 		}
-		b.imageLock.Unlock()
+		imageLock.Unlock()
 		return waitDownloadOp(ctx, op)
 	}
 
@@ -54,8 +54,8 @@ func (b *Backend) Download(ctx context.Context, base string, report *progress.Re
 	if report != nil {
 		op.AddReporter(report)
 	}
-	b.currentDownloads[base] = op
-	b.imageLock.Unlock()
+	currentDownloads[base] = op
+	imageLock.Unlock()
 
 	go b.download(ctx, op, base)
 
@@ -67,9 +67,9 @@ func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (er
 		op.waitCh <- err
 		close(op.waitCh)
 
-		b.imageLock.Lock()
-		delete(b.currentDownloads, base)
-		b.imageLock.Unlock()
+		imageLock.Lock()
+		delete(currentDownloads, base)
+		imageLock.Unlock()
 	}()
 
 	// LXD cannot cancel download operations
@@ -130,6 +130,10 @@ func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (er
 	})
 
 	if err = copyop.Wait(); err == nil {
+		// The LXD image alias must be updated separately as if provided to CopyImage in
+		// multiple concurrent calls it will fail with "Alias already exists" once the
+		// image is downloaded. This happens because LXD's CopyImage handles image
+		// download and creating an alias separately and not as a single transaction.
 		b.maybeUpdateAlias(conn, base, imageInfo.Fingerprint)
 	}
 
@@ -232,10 +236,6 @@ func waitDownloadOp(ctx context.Context, op *downloadOp) error {
 	}
 }
 
-// The LXD image alias must be updated separately as if provided to CopyImage in
-// multiple concurrent calls it will fail with "Alias already exists" once the
-// image is downloaded. This happens because LXD's CopyImage handles image
-// download and creating an alias separately and not as a single transaction.
 func (b *Backend) maybeUpdateAlias(conn lxd.InstanceServer, base, fingerprint string) {
 	alias := api.ImageAliasesPost{}
 	alias.Target = fingerprint
