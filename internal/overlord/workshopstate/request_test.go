@@ -69,6 +69,10 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks worksh
 	w, err := s.backend.Workshop(s.ctx, ws)
 	c.Assert(err, check.IsNil)
 
+	for _, sd := range sdks {
+		c.Assert(w.LinkSdk(s.ctx, sdk.Setup{Name: sd.Name, Channel: sd.Channel}), check.IsNil)
+	}
+
 	return w
 }
 

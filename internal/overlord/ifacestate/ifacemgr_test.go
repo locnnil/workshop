@@ -105,7 +105,16 @@ slots:
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
 
-	return s.wsbackend.Workshop(ctx, ws)
+	w, err := s.wsbackend.Workshop(ctx, ws)
+	c.Assert(err, check.IsNil)
+
+	for s := range sdkYamls {
+		if err = w.LinkSdk(ctx, s); err != nil {
+			c.Assert(err, check.IsNil)
+		}
+	}
+
+	return w, nil
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {

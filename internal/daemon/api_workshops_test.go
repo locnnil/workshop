@@ -1226,5 +1226,5 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 
 	_, err := s.b.Workshop(s.ctx, "workshopconns")
 	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
-	c.Check(s.b.RemoveProfileCalls, check.HasLen, 4)
+	c.Check(s.b.RemoveProfileCalls, check.HasLen, 3)
 }

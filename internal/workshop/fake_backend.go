@@ -141,6 +141,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 	}
 
 	ws := &FakeWorkshop{}
+	ws.WorkshopFilesystem = NewFakeWorkshopFs()
 	ws.Workshop = &Workshop{Backend: f,
 		Name:    file.Name,
 		Running: false,
@@ -149,30 +150,12 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *File) er
 		File:    file,
 	}
 	ws.Config = make(map[string]string)
+	ws.Config[ConfigWorkshopContent] = `{}`
 	ws.Devices = make(map[string]map[string]string)
-	ws.WorkshopFilesystem = NewFakeWorkshopFs()
 	ws.Content = make(map[string]sdk.Setup)
-
-	content := make(map[string]sdk.Setup)
-	f.Workshops[projectId][file.Name] = ws
-
-	for _, s := range file.Sdks {
-		setup := sdk.Setup{
-			Name:    s.Name,
-			Channel: s.Channel,
-		}
-		ws.LinkSdk(ctx, setup)
-		content[setup.Name] = setup
-	}
-
-	buf, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-
-	ws.Config[ConfigWorkshopContent] = string(buf)
-
 	ws.Profiles = make([]SdkProfile, 0)
+
+	f.Workshops[projectId][file.Name] = ws
 	return nil
 }
 

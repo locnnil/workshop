@@ -86,12 +86,19 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 }
 
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
+
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
-	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
 	wf := s.workshopFile(w, []*sdk.Info{info})
 	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
+
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
+
+	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
+
 	return wp
 }
 

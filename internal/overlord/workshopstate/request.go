@@ -93,6 +93,8 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 	sto := sdk.StoreService(st)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
+		// "host" SDK is bootstrapped and installed by Workshop locally in a
+		// separate task.
 		if sd.Name == sdk.Host.String() {
 			continue
 		}
