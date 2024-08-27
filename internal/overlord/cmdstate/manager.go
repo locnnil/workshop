@@ -30,12 +30,15 @@ type CommandManager struct {
 }
 
 // New creates a new CommandManager.
-func New(runner *state.TaskRunner, backend workshop.Backend) *CommandManager {
+func New(st *state.State, runner *state.TaskRunner) *CommandManager {
 	manager := &CommandManager{
 		executions:     make(map[string]*execution),
 		executionsCond: sync.NewCond(&sync.Mutex{}),
-		backend:        backend,
 	}
+	st.Lock()
+	manager.backend = workshop.WorkshopBackend(st)
+	st.Unlock()
+
 	runner.AddHandler("exec", manager.doExec, nil)
 	return manager
 }

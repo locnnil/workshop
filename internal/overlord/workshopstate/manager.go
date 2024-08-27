@@ -20,11 +20,14 @@ type WorkshopManager struct {
 	state   *state.State
 }
 
-func New(st *state.State, runner *state.TaskRunner, server workshop.Backend) *WorkshopManager {
+func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	manager := &WorkshopManager{
-		backend: server,
-		state:   st,
+		state: st,
 	}
+
+	st.Lock()
+	manager.backend = workshop.WorkshopBackend(st)
+	st.Unlock()
 
 	runner.AddHandler("download-base", OnDo(manager.doDownloadBase), nil)
 	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), manager.undoCreateWorkshop)

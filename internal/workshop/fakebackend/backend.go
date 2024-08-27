@@ -80,7 +80,7 @@ type FakeWorkshopBackend struct {
 	DownloadBaseCalls    []*DownloadCall
 }
 
-func New() *FakeWorkshopBackend {
+func New() (workshop.Backend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
@@ -89,7 +89,7 @@ func New() *FakeWorkshopBackend {
 
 	be.ExecCallback = DoExecDefault
 
-	return &be
+	return &be, nil
 }
 
 func (s *FakeWorkshopBackend) CreateOrLoadProject(ctx context.Context, path string) (*workshop.Project, bool, error) {

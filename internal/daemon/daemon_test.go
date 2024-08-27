@@ -35,6 +35,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/patch"
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/standby"
@@ -47,13 +48,14 @@ import (
 // Hook up check.v1 into the "go test" runner
 
 type daemonSuite struct {
-	workshopDir string
-	socketPath  string
-	httpAddress string
-	statePath   string
-	authorized  bool
-	err         error
-	notified    []string
+	workshopDir       string
+	socketPath        string
+	httpAddress       string
+	statePath         string
+	authorized        bool
+	err               error
+	notified          []string
+	restoreBackendNew func()
 }
 
 var _ = check.Suite(&daemonSuite{})
@@ -62,6 +64,8 @@ func (s *daemonSuite) SetUpTest(c *check.C) {
 	s.workshopDir = c.MkDir()
 	dirs.SetRootDir(s.workshopDir)
 	s.statePath = filepath.Join(s.workshopDir, "state.json")
+	s.restoreBackendNew = overlord.MockBackendNew(fakebackend.New)
+
 	systemdSdNotify = func(notif string) error {
 		s.notified = append(s.notified, notif)
 		return nil
@@ -69,6 +73,7 @@ func (s *daemonSuite) SetUpTest(c *check.C) {
 }
 
 func (s *daemonSuite) TearDownTest(c *check.C) {
+	s.restoreBackendNew()
 	systemdSdNotify = systemd.SdNotify
 	s.notified = nil
 	s.authorized = false
@@ -80,7 +85,7 @@ func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
 		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,
 		HTTPAddress: s.httpAddress,
-	}, fakebackend.New())
+	})
 	c.Assert(err, check.IsNil)
 	d.addRoutes()
 	return d

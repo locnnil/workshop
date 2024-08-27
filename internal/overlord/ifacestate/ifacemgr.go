@@ -24,12 +24,15 @@ type InterfaceManager struct {
 	repo    *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	m := &InterfaceManager{
-		state:   s,
-		backend: be,
-		repo:    interfaces.NewRepository(),
+		state: s,
+		repo:  interfaces.NewRepository(),
 	}
+
+	s.Lock()
+	m.backend = workshop.WorkshopBackend(s)
+	s.Unlock()
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)

@@ -38,8 +38,9 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend = fakebackend.New()
-	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state), s.backend)
+	s.backend, _ = fakebackend.New()
+	workshop.ReplaceBackend(s.state, s.backend)
+	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state))
 	s.project, _, _ = s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.project.ProjectId)
 }

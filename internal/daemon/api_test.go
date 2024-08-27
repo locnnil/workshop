@@ -24,6 +24,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -46,13 +47,18 @@ type apiSuite struct {
 
 	vars map[string]string
 
-	restoreMuxVars   func()
-	restoreProjectId func()
-	restoreUser      func()
-	restoreTime      func()
+	restoreMuxVars    func()
+	restoreProjectId  func()
+	restoreUser       func()
+	restoreTime       func()
+	restoreBackendNew func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
+
+func (s *apiSuite) backendNew() (workshop.Backend, error) {
+	return s.b, nil
+}
 
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
@@ -71,8 +77,12 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}
-	s.b = fakebackend.New()
+
 	s.store = &sdk.FakeStore{}
+
+	b, _ := fakebackend.New()
+	s.b = b.(*fakebackend.FakeWorkshopBackend)
+	s.restoreBackendNew = overlord.MockBackendNew(s.backendNew)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
@@ -94,6 +104,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.restoreProjectId()
 	s.restoreUser()
 	s.restoreTime()
+	s.restoreBackendNew()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {
@@ -106,7 +117,7 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	}
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
-	d, err := New(&Options{Dir: s.workshopDir}, s.b)
+	d, err := New(&Options{Dir: s.workshopDir})
 	c.Assert(err, check.IsNil)
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()

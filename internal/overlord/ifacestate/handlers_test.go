@@ -95,7 +95,7 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.restoreSimple = builtin.MockInterface(simpleIface{name: "mock-network"})
 	s.restoreDeny = builtin.MockInterface(denyAutoIface{name: "mock-ssh-agent"})
 
-	s.mgr = ifacestate.New(s.state, s.runner, s.wsbackend)
+	s.mgr = ifacestate.New(s.state, s.runner)
 	c.Assert(s.mgr, check.NotNil)
 
 	s.runner.AddHandler("fake-task", fakeHandler, nil)

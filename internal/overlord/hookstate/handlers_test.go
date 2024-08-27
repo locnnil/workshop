@@ -47,7 +47,8 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 }
 
 func (s *hookSuite) SetUpTest(c *check.C) {
-	s.backend = fakebackend.New()
+	be, _ := fakebackend.New()
+	s.backend = be.(*fakebackend.FakeWorkshopBackend)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
@@ -57,11 +58,12 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
+	workshop.ReplaceBackend(s.state, s.backend)
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
 	s.mockHandler = hooktest.NewMockHandler()
-	s.hookmgr = hookstate.New(s.state, s.runner, s.backend)
+	s.hookmgr = hookstate.New(s.state, s.runner)
 	s.hookmgr.Register(regexp.MustCompile("^fake-hook$"), func(context *hookstate.Context) hookstate.Handler {
 		return s.mockHandler
 	})

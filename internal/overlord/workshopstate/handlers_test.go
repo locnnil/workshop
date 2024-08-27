@@ -55,7 +55,8 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend = fakebackend.New()
+	be, _ := fakebackend.New()
+	s.backend = be.(*fakebackend.FakeWorkshopBackend)
 
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -77,8 +78,9 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 
 	// empty task handler
+	workshop.ReplaceBackend(s.state, s.backend)
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
-	s.wrkmgr = workshopstate.New(s.state, s.runner, s.backend)
+	s.wrkmgr = workshopstate.New(s.state, s.runner)
 
 	// error-provoking task handler
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {

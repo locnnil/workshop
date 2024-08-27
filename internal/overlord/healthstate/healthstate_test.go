@@ -57,14 +57,17 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	s.backend = fakebackend.New()
+	be, _ := fakebackend.New()
+	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	workshop.ReplaceBackend(s.state, s.backend)
+
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
-	s.hookMgr = hookstate.New(s.state, s.runner, s.backend)
+	s.hookMgr = hookstate.New(s.state, s.runner)
 
 	s.se = overlord.NewStateEngine(s.state)
 	s.se.AddManager(s.hookMgr)

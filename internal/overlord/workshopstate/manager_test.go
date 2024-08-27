@@ -33,9 +33,10 @@ var _ = check.Suite(&managerSuite{})
 
 func (s *managerSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.backend = fakebackend.New()
+	s.backend, _ = fakebackend.New()
+	workshop.ReplaceBackend(s.state, s.backend)
 	s.runner = state.NewTaskRunner(s.state)
-	s.manager = workshopstate.New(s.state, s.runner, s.backend)
+	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
 	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
@@ -43,7 +44,7 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {
-	workshopstate.New(s.state, s.runner, s.backend)
+	workshopstate.New(s.state, s.runner)
 
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
 		"download-base",

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/dirs"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
@@ -39,10 +40,10 @@ import (
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/systemd"
-	backend "github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 var (
@@ -68,9 +69,8 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 type Overlord struct {
 	stateFLock *osutil.FileLock
 
-	stateDir        string
-	stateEng        *StateEngine
-	workshopBackend backend.Backend
+	stateDir string
+	stateEng *StateEngine
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -83,8 +83,8 @@ type Overlord struct {
 	// managers
 	inited      bool
 	startedUp   bool
-	sdk         *sdkstate.SdkManager
-	workshopmgr *workshop.WorkshopManager
+	sdkmgr      *sdkstate.SdkManager
+	workshopmgr *workshopstate.WorkshopManager
 	hookmgr     *hookstate.HookManager
 	commandmgr  *cmdstate.CommandManager
 	ifacemgr    *ifacestate.InterfaceManager
@@ -93,9 +93,11 @@ type Overlord struct {
 	startOfOperationTime time.Time
 }
 
+var workshopBackendNew = lxdbackend.New
+
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -110,8 +112,6 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 	if !osutil.IsDir(dir) {
 		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
-
-	o.workshopBackend = b
 
 	statePath := filepath.Join(dir, "state.json")
 
@@ -130,28 +130,34 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 	sto := store.New()
 	sdk.ReplaceStore(s, sto)
 
+	wbe, err := workshopBackendNew()
+	if err != nil {
+		return nil, err
+	}
+	workshop.ReplaceBackend(s, wbe)
+
 	// any unknown task should be ignored and succeed
 	matchAnyUnknownTask := func(_ *state.Task) bool {
 		return true
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workshopmgr = workshop.New(s, o.runner, o.workshopBackend)
+	o.workshopmgr = workshopstate.New(s, o.runner)
 	o.addManager(o.workshopmgr)
 
-	o.hookmgr = hookstate.New(s, o.runner, o.workshopBackend)
+	o.hookmgr = hookstate.New(s, o.runner)
 	o.addManager(o.hookmgr)
 
 	healthstate.Init(o.hookmgr)
 
-	o.commandmgr = cmdstate.New(o.runner, o.workshopBackend)
+	o.commandmgr = cmdstate.New(s, o.runner)
 	o.addManager(o.commandmgr)
 
-	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
+	o.ifacemgr = ifacestate.New(s, o.runner)
 	o.addManager(o.ifacemgr)
 
-	o.sdk = sdkstate.New(o.runner, o.ifacemgr.Repository(), o.workshopBackend)
-	o.addManager(o.sdk)
+	o.sdkmgr = sdkstate.New(s, o.runner, o.ifacemgr.Repository())
+	o.addManager(o.sdkmgr)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
@@ -501,11 +507,11 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkshopBackend() backend.Backend {
-	return o.workshopBackend
+func (o *Overlord) WorkshopBackend() workshop.Backend {
+	return workshop.WorkshopBackend(o.State())
 }
 
-func (o *Overlord) WorkshopManager() *workshop.WorkshopManager {
+func (o *Overlord) WorkshopManager() *workshopstate.WorkshopManager {
 	return o.workshopmgr
 }
 
@@ -519,6 +525,13 @@ func (o *Overlord) HookManager() *hookstate.HookManager {
 
 func (o *Overlord) InterfaceManager() *ifacestate.InterfaceManager {
 	return o.ifacemgr
+}
+
+func MockBackendNew(new func() (workshop.Backend, error)) (restore func()) {
+	workshopBackendNew = new
+	return func() {
+		workshopBackendNew = lxdbackend.New
+	}
 }
 
 // Fake creates an Overlord without any managers and with a backend

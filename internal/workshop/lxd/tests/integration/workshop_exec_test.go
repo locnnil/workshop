@@ -51,7 +51,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	d, err := daemon.New(&daemon.Options{
 		Dir:        c.MkDir(),
 		SocketPath: socketPath,
-	}, f.be)
+	})
 	c.Assert(err, check.IsNil)
 	err = d.Init()
 	c.Assert(err, check.IsNil)
