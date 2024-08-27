@@ -5,6 +5,7 @@ package workshopbackend_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/user"
@@ -127,7 +128,63 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 
 	// Execute
 	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.ErrorMatches, `.*cannot create a workshop mount with target "/root/.profile": the target is not a directory`)
+	c.Assert(err, check.ErrorMatches, `sdk:sdk-device's "target" /root/.profile is not a directory`)
+}
+
+func (f *profileTest) TestSdkProfileBindMountAbsSourceOK(c *check.C) {
+	// Setup
+	pd := c.MkDir()
+	launchTestWorkshop(c, f.ctx, f.be, pd)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
+	var backend workshop.Profile = &lxdbackend.Backend{}
+	profile := workshop.NewSdkProfile("sdk")
+	abs := filepath.Join(c.MkDir(), "absolute", "source")
+	device := lxdbackend.Mount("sdk-device", abs, "/opt")
+	err := profile.AddDevice(device)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = backend.AssignProfile(f.ctx, "test", profile)
+	c.Assert(err, check.IsNil)
+	c.Assert(abs, testutil.FilePresent)
+}
+
+func (f *profileTest) TestSdkProfileBindMountRelativeSourceOK(c *check.C) {
+	// Setup
+	pd := c.MkDir()
+	launchTestWorkshop(c, f.ctx, f.be, pd)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
+	err := os.MkdirAll(filepath.Join(pd, "relpath"), 0744)
+	c.Assert(err, check.IsNil)
+
+	var backend workshop.Profile = &lxdbackend.Backend{}
+	profile := workshop.NewSdkProfile("sdk")
+	device := lxdbackend.Mount("sdk-device", "relpath", "/opt")
+	err = profile.AddDevice(device)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = backend.AssignProfile(f.ctx, "test", profile)
+	c.Assert(err, check.IsNil)
+}
+
+func (f *profileTest) TestSdkProfileBindMountRelativeSourceNotExist(c *check.C) {
+	// Setup
+	pd := c.MkDir()
+	launchTestWorkshop(c, f.ctx, f.be, pd)
+	defer f.be.RemoveWorkshop(f.ctx, "test")
+
+	var backend workshop.Profile = &lxdbackend.Backend{}
+	profile := workshop.NewSdkProfile("sdk")
+	device := lxdbackend.Mount("sdk-device", "relpath", "/opt")
+	err := profile.AddDevice(device)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = backend.AssignProfile(f.ctx, "test", profile)
+	c.Assert(err, check.ErrorMatches, fmt.Sprintf(`sdk:sdk-device's "source" %s is not an existing directory`, filepath.Join(pd, "relpath")))
 }
 
 func (f *profileTest) TestSdkProfileSshAgentProxy(c *check.C) {

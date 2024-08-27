@@ -42,6 +42,8 @@ const sshAgentBaseDeclarationSlots = `
     allow-installation:
       slot-sdk-type:
         - host
+      slot-names:
+        - $INTERFACE
     allow-connection: true
     deny-auto-connection: true
 `

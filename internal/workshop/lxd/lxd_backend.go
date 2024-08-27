@@ -22,13 +22,6 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-type Backend struct {
-	nvidiaRuntime bool
-
-	imageLock        sync.Mutex
-	currentDownloads map[string]*downloadOp
-}
-
 const (
 	LxdSock     = "/var/snap/lxd/common/lxd/unix.socket"
 	storagePool = "default"
@@ -37,6 +30,25 @@ const (
 var (
 	defaultDevices = createDefaultDevices
 )
+
+var (
+	// However many backend instances are created, downloads are always a single
+	// instance map with the LXD backend.
+	imageLock        sync.Mutex
+	currentDownloads map[string]*downloadOp
+)
+
+func init() {
+	imageLock.Lock()
+	defer imageLock.Unlock()
+	if currentDownloads == nil {
+		currentDownloads = make(map[string]*downloadOp)
+	}
+}
+
+type Backend struct {
+	nvidiaRuntime bool
+}
 
 func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
@@ -47,9 +59,7 @@ func ImageAlias(name string) string {
 }
 
 func New() (workshop.Backend, error) {
-	server := Backend{
-		currentDownloads: make(map[string]*downloadOp),
-	}
+	server := Backend{}
 
 	if srv := os.Getenv("WORKSHOP_IMAGE_SERVER"); srv != "" {
 		imageServer = srv
@@ -290,7 +300,7 @@ func (s *Backend) AddWorkshopDevice(ctx context.Context, name string, device wor
 		return err
 	}
 
-	return op.Wait()
+	return op.WaitContext(ctx)
 }
 
 func (s *Backend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
@@ -311,9 +321,12 @@ func (s *Backend) RemoveWorkshopDevice(ctx context.Context, name string, device 
 	}
 
 	delete(inst.Devices, device)
-	op, _ := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	if err != nil {
+		return err
+	}
 
-	return op.Wait()
+	return op.WaitContext(ctx)
 }
 
 func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
@@ -632,6 +645,14 @@ func (s *Backend) CreateStateStorage(ctx context.Context, name string) error {
 	vol.Config = map[string]string{}
 
 	return conn.CreateStoragePoolVolume(storagePool, vol)
+}
+
+func (s *Backend) AttachStateStorage(ctx context.Context, wp, name string) error {
+	return s.AddWorkshopDevice(ctx, wp, Volume(name, dirs.WorkshopStateDir, name))
+}
+
+func (s *Backend) DetachStateStorage(ctx context.Context, wp, name string) error {
+	return s.RemoveWorkshopDevice(ctx, wp, name)
 }
 
 func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {

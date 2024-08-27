@@ -25,7 +25,7 @@ func (s *apiSuite) runMountTest(c *check.C, wp string, buffers []*bytes.Buffer, 
 
 		// Verify
 		c.Check(rsp.Type, check.Equals, expected[num].Type)
-		c.Assert(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v: %v", num, rsp))
+		c.Check(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v: %v", num, rsp))
 		if rsp.Type == ResponseTypeError {
 			c.Assert(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
 		}
@@ -39,7 +39,13 @@ func (s *apiSuite) runMountTest(c *check.C, wp string, buffers []*bytes.Buffer, 
 			c.Assert(change.Kind(), check.Equals, expected[num].Kind)
 			c.Assert(change.Summary(), check.Equals, expected[num].Summary)
 			<-change.Ready()
-			c.Assert(change.Err(), check.IsNil)
+			st.Lock()
+			if expected[num].ChangeErr != "" {
+				c.Assert(change.Err(), check.ErrorMatches, expected[num].ChangeErr)
+			} else {
+				c.Assert(change.Err(), check.IsNil)
+			}
+			st.Unlock()
 		}
 	}
 }
@@ -97,7 +103,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	conn, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(conn.Plug.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"source": src})
+	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"source": src})
 }
 
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
@@ -176,4 +182,29 @@ func (s *apiSuite) TestWorkshopRemountInvalidInterface(c *check.C) {
 	}
 
 	s.runMountTest(c, "manysdks", requests, expected)
+}
+
+func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
+	// Setup
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.launchWorkshop(c, "workshopconns", workshopconns, testsdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "remount",
+			Summary:   `Remount workshopconns/test-sdk:data`,
+			ChangeErr: `(?s).*cannot change attribute \"source\" as it was statically specified in the \"host\" sdk details.*`,
+		},
+	}
+
+	s.runMountTest(c, "workshopconns", requests, expected)
 }

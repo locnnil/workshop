@@ -68,7 +68,7 @@ type ClientWrapper struct {
 	isTesting bool
 }
 
-func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.Info, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
+func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
 	results := []sdk.SdkResult{}
 	actError := &SdkActionError{
 		errors: make(map[string]error),
@@ -76,6 +76,9 @@ func (c *GcsStore) SdkAction(ctx context.Context, currentSdks map[string]*sdk.In
 	for _, act := range actions {
 		switch act.Action {
 		case sdk.Install:
+			if act.Channel == "" {
+				continue
+			}
 			s, err := storeSdkInfo(ctx, act.Name, act.Channel)
 			if err != nil {
 				actError.errors[act.Name] = err
@@ -212,7 +215,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 
 	var sa = strings.Split(channel, "/")
 	if len(sa) != 2 {
-		return sSdk, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", name, channel)
+		return sSdk, fmt.Errorf("%q has an invalid channel %q, must take the form <track>/<risk>", name, channel)
 	}
 	track, risk := sa[0], sa[1]
 	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))

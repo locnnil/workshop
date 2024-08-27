@@ -4,8 +4,9 @@ import "io"
 
 // Headers helpers to test
 var (
-	ParseHeaders    = parseHeaders
-	CompileSlotRule = compileSlotRule
+	ParseHeaders           = parseHeaders
+	CompileSlotRule        = compileSlotRule
+	CompileNameConstraints = compileNameConstraints
 )
 
 func init() {

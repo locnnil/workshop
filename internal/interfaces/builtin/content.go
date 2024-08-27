@@ -22,13 +22,12 @@ package builtin
 import (
 	"errors"
 	"fmt"
-	"os/user"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/device"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -42,8 +41,17 @@ const contentBaseDeclarationSlots = `
       slot-sdk-type:
         - host
     allow-connection: true
-    allow-auto-connection: true
+    allow-auto-connection:
+      -
+        slot-names:
+          - $INTERFACE
+      -
+        plug-attributes:
+          auto-explicit: true
 `
+
+var knownPlugAttributes = []string{"target"}
+var knownSlotAttributes = []string{"source"}
 
 // contentInterface allows sharing content between sdks
 type contentInterface struct{}
@@ -72,6 +80,11 @@ func validatePath(path string) error {
 }
 
 func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
+	for name := range plug.Attrs {
+		if !slices.Contains(knownPlugAttributes, name) {
+			return fmt.Errorf(`unknown attribute for content interface plug: %q`, name)
+		}
+	}
 	target, ok := plug.Attrs["target"].(string)
 	if !ok || len(target) == 0 {
 		return fmt.Errorf("content plug must contain target path")
@@ -79,7 +92,27 @@ func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	if err := validatePath(target); err != nil {
 		return err
 	}
+	return nil
+}
 
+func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
+	for name := range slot.Attrs {
+		if !slices.Contains(knownSlotAttributes, name) {
+			return fmt.Errorf(`unknown attribute for content interface slot: %q`, name)
+		}
+	}
+	source, exist := slot.Attrs["source"]
+	if !exist {
+		// perfectly fine scenario for the default content slot
+		return nil
+	}
+	path, ok := source.(string)
+	if !ok {
+		return fmt.Errorf(`content slot "source" is not a string (found %T)`, source)
+	}
+	if !filepath.IsLocal(path) {
+		return fmt.Errorf(`content slot "source" must be within project subtree`)
+	}
 	return nil
 }
 
@@ -92,10 +125,9 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 	return ""
 }
 
-func (iface *contentInterface) source(user *user.User, plug *interfaces.ConnectedPlug) (string, error) {
+func (iface *contentInterface) source(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
-	// see if the plug's mount has been remounted to a new location
-	err := plug.Attr("source", &source)
+	err := slot.Attr("source", &source)
 	if err == nil {
 		return source, nil
 	}
@@ -103,7 +135,7 @@ func (iface *contentInterface) source(user *user.User, plug *interfaces.Connecte
 		return source, err
 	}
 	// default dir: <workshop>_<sdk>_plug.sdk
-	return sdk.SdkContentSource(user.HomeDir, plug.Sdk().ProjectId, plug.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
+	return sdk.SdkContentSource(baseDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -122,17 +154,8 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	source, err := iface.source(user, plug)
+	source, err := iface.source(user.HomeDir, plug, slot)
 	if err != nil {
-		return err
-	}
-
-	uid, gid, err := osutil.UidGid(user)
-	if err != nil {
-		return err
-	}
-
-	if err = osutil.MkdirAllChown(source, 0744, uid, gid); err != nil {
 		return err
 	}
 

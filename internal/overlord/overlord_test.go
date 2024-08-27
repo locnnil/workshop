@@ -18,7 +18,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -27,6 +30,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/patch"
@@ -34,7 +38,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/version"
-	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 func TestOverlord(t *testing.T) { TestingT(t) }
@@ -42,6 +46,8 @@ func TestOverlord(t *testing.T) { TestingT(t) }
 type overlordSuite struct {
 	dir       string
 	statePath string
+
+	restoreBackendNew func()
 }
 
 var _ = Suite(&overlordSuite{})
@@ -68,17 +74,20 @@ func fakePruneTicker() (w *ticker, restore func()) {
 
 func (ovs *overlordSuite) SetUpTest(c *C) {
 	ovs.dir = c.MkDir()
+	dirs.SetRootDir(ovs.dir)
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
+	ovs.restoreBackendNew = overlord.MockBackendNew(fakebackend.New)
 }
 
 func (ovs *overlordSuite) TearDownTest(c *C) {
+	ovs.restoreBackendNew()
 }
 
 func (ovs *overlordSuite) TestNew(c *C) {
 	restore := patch.Mock(42, 2, nil)
 	defer restore()
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 	c.Check(o, NotNil)
 
@@ -103,7 +112,7 @@ func (ovs *overlordSuite) TestNewWithGoodState(c *C) {
 	err := os.WriteFile(ovs.statePath, fakeState, 0600)
 	c.Assert(err, IsNil)
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	state := o.State()
@@ -131,7 +140,7 @@ func (ovs *overlordSuite) TestNewWithInvalidState(c *C) {
 	err := os.WriteFile(ovs.statePath, fakeState, 0600)
 	c.Assert(err, IsNil)
 
-	_, err = overlord.New(ovs.dir, nil, nil)
+	_, err = overlord.New(ovs.dir, nil)
 	c.Assert(err, ErrorMatches, "cannot read state: EOF")
 }
 
@@ -150,7 +159,7 @@ func (ovs *overlordSuite) TestNewWithPatches(c *C) {
 	err := os.WriteFile(ovs.statePath, fakeState, 0600)
 	c.Assert(err, IsNil)
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	state := o.State()
@@ -201,7 +210,7 @@ func (wm *witnessManager) Ensure() error {
 }
 
 func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	err = o.StartUp()
@@ -214,7 +223,7 @@ func (ovs *overlordSuite) TestTrivialRunAndStop(c *C) {
 }
 
 func (ovs *overlordSuite) TestUnknownTasks(c *C) {
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	// unknown tasks are ignored and succeed
@@ -536,7 +545,7 @@ func (ovs *overlordSuite) TestOverlordStartUpSetsStartOfOperation(c *C) {
 	restoreIntv := overlord.FakePruneInterval(100*time.Millisecond, 1000*time.Millisecond, 1*time.Hour)
 	defer restoreIntv()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -558,7 +567,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneDoesntAbortShortlyAfterStartOfOpera
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to unknown kind
@@ -609,7 +618,7 @@ func (ovs *overlordSuite) TestEnsureLoopPruneAbortsOld(c *C) {
 	w, restoreTicker := fakePruneTicker()
 	defer restoreTicker()
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	// avoid immediate transition to Done due to having unknown kind
@@ -664,7 +673,7 @@ func (ovs *overlordSuite) TestCheckpoint(c *C) {
 	oldUmask := syscall.Umask(0)
 	defer syscall.Umask(oldUmask)
 
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	s := o.State()
@@ -905,7 +914,7 @@ func (ovs *overlordSuite) TestSettleExplicitEnsureBefore(c *C) {
 }
 
 func (ovs *overlordSuite) TestRequestRestartNoHandler(c *C) {
-	o, err := overlord.New(ovs.dir, nil, nil)
+	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -938,7 +947,7 @@ func (rb *testRestartHandler) RebootIsMissing(_ *state.State) error {
 func (ovs *overlordSuite) TestRequestRestartHandler(c *C) {
 	rb := &testRestartHandler{}
 
-	o, err := overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	o, err := overlord.New(ovs.dir, rb)
 	c.Assert(err, IsNil)
 
 	st := o.State()
@@ -957,7 +966,7 @@ func (ovs *overlordSuite) TestVerifyRebootNoPendingReboot(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -970,7 +979,7 @@ func (ovs *overlordSuite) TestVerifyRebootOK(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -984,7 +993,7 @@ func (ovs *overlordSuite) TestVerifyRebootOKButError(c *C) {
 	e := errors.New("boom")
 	rb := &testRestartHandler{rebootVerifiedErr: e}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, rb)
 	c.Assert(err, Equals, e)
 
 	c.Check(rb.rebootState, Equals, "as-expected")
@@ -1000,7 +1009,7 @@ func (ovs *overlordSuite) TestVerifyRebootIsMissing(c *C) {
 
 	rb := &testRestartHandler{}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, rb)
 	c.Assert(err, IsNil)
 
 	c.Check(rb.rebootState, Equals, "did-not-happen")
@@ -1017,7 +1026,7 @@ func (ovs *overlordSuite) TestVerifyRebootIsMissingError(c *C) {
 	e := errors.New("boom")
 	rb := &testRestartHandler{rebootVerifiedErr: e}
 
-	_, err = overlord.New(ovs.dir, workshop.NewFakeWorkshopBackend(), rb)
+	_, err = overlord.New(ovs.dir, rb)
 	c.Assert(err, Equals, e)
 
 	c.Check(rb.rebootState, Equals, "did-not-happen")
@@ -1049,4 +1058,66 @@ func (ovs *overlordSuite) TestOverlordCanStandby(c *C) {
 	}
 
 	c.Assert(o.CanStandby(), Equals, true)
+}
+
+func (ovs *overlordSuite) TestLockWithTimeoutHappy(c *C) {
+	f, err := ioutil.TempFile("", "testlock-*")
+	defer func() {
+		f.Close()
+		os.Remove(f.Name())
+	}()
+	c.Assert(err, IsNil)
+	flock, err := osutil.NewFileLock(f.Name())
+	c.Assert(err, IsNil)
+
+	err = overlord.LockWithTimeout(flock, time.Second)
+	c.Check(err, IsNil)
+}
+
+func (ovs *overlordSuite) TestLockWithTimeoutFailed(c *C) {
+	// Set the state lock retry interval to 0.1 ms; the timeout is not used in
+	// this test (we specify the timeout when calling the lockWithTimeout()
+	// function below); we set it to a big value in order to trigger a test
+	// failure in case the logic gets modified and it suddenly becomes
+	// relevant.
+	restoreTimeout := overlord.MockStateLockTimeout(time.Hour, 100*time.Microsecond)
+	defer restoreTimeout()
+
+	var notifyCalls []string
+	restoreNotify := overlord.FakeSystemdSdNotify(func(notifyState string) error {
+		notifyCalls = append(notifyCalls, notifyState)
+		return nil
+	})
+	defer restoreNotify()
+
+	f, err := ioutil.TempFile("", "testlock-*")
+	defer func() {
+		f.Close()
+		os.Remove(f.Name())
+	}()
+	c.Assert(err, IsNil)
+	flock, err := osutil.NewFileLock(f.Name())
+	c.Assert(err, IsNil)
+
+	cmd := exec.Command("flock", "-w", "2", f.Name(), "-c", "echo acquired && sleep 5")
+	stdout, err := cmd.StdoutPipe()
+	c.Assert(err, IsNil)
+	err = cmd.Start()
+	c.Assert(err, IsNil)
+	defer func() {
+		cmd.Process.Kill()
+		cmd.Wait()
+	}()
+
+	// Wait until the shell command prints "acquired"
+	buf := make([]byte, 8)
+	bytesRead, err := io.ReadAtLeast(stdout, buf, len(buf))
+	c.Assert(err, IsNil)
+	c.Assert(bytesRead, Equals, len(buf))
+
+	err = overlord.LockWithTimeout(flock, 5*time.Millisecond)
+	c.Check(err, ErrorMatches, "timeout for state lock file expired")
+	c.Check(notifyCalls, DeepEquals, []string{
+		"EXTEND_TIMEOUT_USEC=5000",
+	})
 }

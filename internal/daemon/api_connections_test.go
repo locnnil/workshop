@@ -86,12 +86,19 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 }
 
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
+
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
-	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
 	wf := s.workshopFile(w, []*sdk.Info{info})
 	c.Assert(s.b.LaunchWorkshop(s.ctx, wf), check.IsNil)
+
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
+
+	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
+
 	return wp
 }
 
@@ -1102,7 +1109,7 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}}
+	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
 
 	d.Overlord().Loop()
 	defer d.Overlord().Stop()
@@ -1532,7 +1539,7 @@ func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
@@ -1546,7 +1553,7 @@ func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", opts)
@@ -1560,7 +1567,7 @@ func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundPlugSlaveSuccess(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.Bind{Sdk: "consumer", Plug: "plug"}},
+			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug2", "producer-ws", "producer", "slot", opts)

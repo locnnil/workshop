@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+var LockWithTimeout = lockWithTimeout
+
 // FakeEnsureInterval sets the overlord ensure interval for tests.
 func FakeEnsureInterval(d time.Duration) (restore func()) {
 	old := ensureInterval
@@ -51,6 +53,26 @@ func FakePruneTicker(f func(t *time.Ticker) <-chan time.Time) (restore func()) {
 // FakeEnsureNext sets o.ensureNext for tests.
 func FakeEnsureNext(o *Overlord, t time.Time) {
 	o.ensureNext = t
+}
+
+func FakeSystemdSdNotify(f func(notifyState string) error) (restore func()) {
+	old := systemdSdNotify
+	systemdSdNotify = f
+	return func() {
+		systemdSdNotify = old
+	}
+}
+
+// MockStateLockTimeout sets the overlord state lock timeout for the tests.
+func MockStateLockTimeout(timeout, retryInterval time.Duration) (restore func()) {
+	oldTimeout := stateLockTimeout
+	oldRetryInterval := stateLockRetryInterval
+	stateLockTimeout = timeout
+	stateLockRetryInterval = retryInterval
+	return func() {
+		stateLockTimeout = oldTimeout
+		stateLockRetryInterval = oldRetryInterval
+	}
 }
 
 // Engine exposes the state engine in an Overlord for tests.

@@ -8,13 +8,11 @@ import (
 	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
@@ -37,13 +35,13 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
-		if err := h.backend.AddWorkshopDevice(ctx, w, lxdbackend.Volume(volume, dirs.WorkshopStateDir, volume)); err != nil {
+		if err := h.backend.AttachStateStorage(ctx, w, volume); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
 		defer func() {
-			if err := h.backend.RemoveWorkshopDevice(ctx, w, volume); err != nil {
-				logger.Noticef("Cannot remove SDK state storage volume %s", volume)
+			if err := h.backend.DetachStateStorage(ctx, w, volume); err != nil {
+				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %s", volume)
 			}
 		}()
 	}

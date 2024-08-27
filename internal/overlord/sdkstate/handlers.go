@@ -268,10 +268,12 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		}
 	})
 
-	// validate that the SDK is of the acceptable type, no non-regular SDKs are
-	// allowed from outside
 	info, err := wp.SdkInfo(ctx, setup.Name)
 	if err != nil {
+		return err
+	}
+
+	if err = policy.CheckInterfaces(info); err != nil {
 		return err
 	}
 
@@ -287,9 +289,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		}
 	})
 
-	if err = policy.CheckInterfaces(info); err != nil {
-		return err
-	}
 	if len(info.BadInterfaces) > 0 {
 		st := task.State()
 		st.Lock()

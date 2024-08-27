@@ -65,13 +65,16 @@ type HookManager struct {
 	contexts      map[string]*Context
 }
 
-func New(s *state.State, runner *state.TaskRunner, server workshop.Backend) *HookManager {
+func New(s *state.State, runner *state.TaskRunner) *HookManager {
 	manager := &HookManager{
 		state:      s,
-		backend:    server,
 		repository: newRepository(),
 		contexts:   make(map[string]*Context),
 	}
+
+	s.Lock()
+	manager.backend = workshop.WorkshopBackend(s)
+	s.Unlock()
 
 	runner.AddHandler("run-hook", handlersetup.OnDo(manager.doRunHook), nil)
 

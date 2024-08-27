@@ -24,11 +24,12 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type sdkStateSuite struct {
 	fs          afero.Fs
-	backend     *workshop.FakeWorkshopBackend
+	backend     *fakebackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
@@ -94,7 +95,9 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
-	s.backend = workshop.NewFakeWorkshopBackend()
+	be, _ := fakebackend.New()
+	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+
 	s.project = &workshop.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",
@@ -105,12 +108,14 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
+	workshop.ReplaceBackend(s.state, s.backend)
+
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
 
 	s.repo = interfaces.NewRepository()
 	mockIface(c, s.repo, &ifacetest.TestInterface{InterfaceName: "test-interface"})
-	s.sdkmgr = sdkstate.New(s.runner, s.repo, s.backend)
+	s.sdkmgr = sdkstate.New(s.state, s.runner, s.repo)
 
 	/* error-provoking task handler */
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {

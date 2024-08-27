@@ -27,7 +27,9 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -37,9 +39,11 @@ import (
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	workshop "github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
-	backend "github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/systemd"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var (
@@ -48,7 +52,12 @@ var (
 	pruneWait      = 24 * time.Hour * 1
 	abortWait      = 24 * time.Hour * 7
 
+	stateLockTimeout       = 1 * time.Minute
+	stateLockRetryInterval = 1 * time.Second
+
 	pruneMaxChanges = 500
+
+	systemdSdNotify = systemd.SdNotify
 )
 
 var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
@@ -58,9 +67,10 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
-	stateDir        string
-	stateEng        *StateEngine
-	workshopBackend backend.Backend
+	stateFLock *osutil.FileLock
+
+	stateDir string
+	stateEng *StateEngine
 
 	// ensure loop
 	loopTomb    *tomb.Tomb
@@ -73,22 +83,21 @@ type Overlord struct {
 	// managers
 	inited      bool
 	startedUp   bool
-	sdk         *sdkstate.SdkManager
-	workshopmgr *workshop.WorkshopManager
+	sdkmgr      *sdkstate.SdkManager
+	workshopmgr *workshopstate.WorkshopManager
 	hookmgr     *hookstate.HookManager
 	commandmgr  *cmdstate.CommandManager
 	ifacemgr    *ifacestate.InterfaceManager
 	runner      *state.TaskRunner
 
 	startOfOperationTime time.Time
-
-	// exclusive file lock for the state to avoid multiple running workshops (temporary)
-	stateFileLock *osutil.FileLock
 }
+
+var workshopBackendNew = lxdbackend.New
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
-func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlord, error) {
+func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	o := &Overlord{
 		stateDir: dir,
 		loopTomb: new(tomb.Tomb),
@@ -104,32 +113,13 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 		return nil, fmt.Errorf("directory %q does not exist", dir)
 	}
 
-	o.stateFileLock, err = osutil.NewFileLock(filepath.Join(dir, ".lock"))
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		err = o.stateFileLock.TryLock()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "cannot start, could another workshopd be running?")
-			fmt.Fprintln(os.Stderr, "retry in 5 seconds...")
-
-			time.Sleep(5 * time.Second)
-		} else {
-			break
-		}
-	}
-
-	o.workshopBackend = b
-
 	statePath := filepath.Join(dir, "state.json")
 
 	backend := &overlordStateBackend{
 		path:         statePath,
 		ensureBefore: o.ensureBefore,
 	}
-	s, err := loadState(statePath, restartHandler, backend)
+	s, err := o.loadState(statePath, restartHandler, backend)
 	if err != nil {
 		return nil, err
 	}
@@ -140,28 +130,34 @@ func New(dir string, b backend.Backend, restartHandler restart.Handler) (*Overlo
 	sto := store.New()
 	sdk.ReplaceStore(s, sto)
 
+	wbe, err := workshopBackendNew()
+	if err != nil {
+		return nil, err
+	}
+	workshop.ReplaceBackend(s, wbe)
+
 	// any unknown task should be ignored and succeed
 	matchAnyUnknownTask := func(_ *state.Task) bool {
 		return true
 	}
 	o.runner.AddOptionalHandler(matchAnyUnknownTask, handleUnknownTask, nil)
 
-	o.workshopmgr = workshop.New(s, o.runner, o.workshopBackend)
+	o.workshopmgr = workshopstate.New(s, o.runner)
 	o.addManager(o.workshopmgr)
 
-	o.hookmgr = hookstate.New(s, o.runner, o.workshopBackend)
+	o.hookmgr = hookstate.New(s, o.runner)
 	o.addManager(o.hookmgr)
 
 	healthstate.Init(o.hookmgr)
 
-	o.commandmgr = cmdstate.New(o.runner, o.workshopBackend)
+	o.commandmgr = cmdstate.New(s, o.runner)
 	o.addManager(o.commandmgr)
 
-	o.ifacemgr = ifacestate.New(s, o.runner, o.workshopBackend)
+	o.ifacemgr = ifacestate.New(s, o.runner)
 	o.addManager(o.ifacemgr)
 
-	o.sdk = sdkstate.New(o.runner, o.ifacemgr.Repository(), o.workshopBackend)
-	o.addManager(o.sdk)
+	o.sdkmgr = sdkstate.New(s, o.runner, o.ifacemgr.Repository())
+	o.addManager(o.sdkmgr)
 
 	// the shared task runner should be added last!
 	o.stateEng.AddManager(o.runner)
@@ -209,7 +205,57 @@ func (o *Overlord) addManager(mgr StateManager) {
 	o.stateEng.AddManager(mgr)
 }
 
-func loadState(statePath string, restartHandler restart.Handler, backend state.Backend) (*state.State, error) {
+func initStateFileLock() (*osutil.FileLock, error) {
+	lockFilePath := dirs.WorkshopStateLockFile
+	if err := os.MkdirAll(filepath.Dir(lockFilePath), 0755); err != nil {
+		return nil, err
+	}
+
+	return osutil.NewFileLockWithMode(lockFilePath, 0644)
+}
+
+func lockWithTimeout(l *osutil.FileLock, timeout time.Duration) error {
+	startTime := time.Now()
+	systemdWasNotified := false
+	for {
+		err := l.TryLock()
+		if err != osutil.ErrAlreadyLocked {
+			// We return nil if err is nil (that is, if we got the lock); we
+			// also return for any error except for ErrAlreadyLocked, because
+			// in that case we want to continue trying.
+			return err
+		}
+
+		// The state is locked. Let's notify systemd that our startup might be
+		// longer than usual, or we risk getting killed if we overstep the
+		// systemd timeout.
+		if !systemdWasNotified {
+			logger.Noticef("Adjusting startup timeout by %v", timeout)
+			systemdSdNotify(fmt.Sprintf("EXTEND_TIMEOUT_USEC=%d", timeout.Microseconds()))
+			systemdWasNotified = true
+		}
+
+		if time.Since(startTime) >= timeout {
+			return errors.New("timeout for state lock file expired")
+		}
+		time.Sleep(stateLockRetryInterval)
+	}
+}
+
+func (o *Overlord) loadState(statePath string, restartHandler restart.Handler, backend state.Backend) (*state.State, error) {
+	flock, err := initStateFileLock()
+	if err != nil {
+		return nil, fmt.Errorf("fatal: error opening lock file: %v", err)
+	}
+	o.stateFLock = flock
+
+	logger.Noticef("Acquiring state lock file")
+	if err := lockWithTimeout(o.stateFLock, stateLockTimeout); err != nil {
+		logger.Noticef("Failed to lock state file")
+		return nil, fmt.Errorf("fatal: could not lock state file: %v", err)
+	}
+	logger.Noticef("Acquired state lock file")
+
 	curBootID, err := osutil.BootID()
 	if err != nil {
 		return nil, fmt.Errorf("fatal: cannot find current boot ID: %w", err)
@@ -461,11 +507,11 @@ func (o *Overlord) TaskRunner() *state.TaskRunner {
 	return o.runner
 }
 
-func (o *Overlord) WorkshopBackend() backend.Backend {
-	return o.workshopBackend
+func (o *Overlord) WorkshopBackend() workshop.Backend {
+	return workshop.WorkshopBackend(o.State())
 }
 
-func (o *Overlord) WorkshopManager() *workshop.WorkshopManager {
+func (o *Overlord) WorkshopManager() *workshopstate.WorkshopManager {
 	return o.workshopmgr
 }
 
@@ -479,6 +525,13 @@ func (o *Overlord) HookManager() *hookstate.HookManager {
 
 func (o *Overlord) InterfaceManager() *ifacestate.InterfaceManager {
 	return o.ifacemgr
+}
+
+func MockBackendNew(new func() (workshop.Backend, error)) (restore func()) {
+	workshopBackendNew = new
+	return func() {
+		workshopBackendNew = lxdbackend.New
+	}
 }
 
 // Fake creates an Overlord without any managers and with a backend

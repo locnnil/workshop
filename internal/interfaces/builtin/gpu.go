@@ -33,8 +33,10 @@ const gpuBaseDeclarationSlots = `
     allow-installation:
       slot-sdk-type:
         - host
-      allow-connection: true
-      allow-auto-connection: true
+      slot-names:
+        - $INTERFACE
+    allow-connection: true
+    allow-auto-connection: true
 `
 
 type gpuInterface struct{}

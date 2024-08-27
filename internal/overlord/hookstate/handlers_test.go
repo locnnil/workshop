@@ -17,10 +17,11 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type hookSuite struct {
-	backend     *workshop.FakeWorkshopBackend
+	backend     *fakebackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
@@ -46,7 +47,8 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 }
 
 func (s *hookSuite) SetUpTest(c *check.C) {
-	s.backend = workshop.NewFakeWorkshopBackend()
+	be, _ := fakebackend.New()
+	s.backend = be.(*fakebackend.FakeWorkshopBackend)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	var err error
@@ -56,11 +58,12 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
+	workshop.ReplaceBackend(s.state, s.backend)
 
 	// empty task handler
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
 	s.mockHandler = hooktest.NewMockHandler()
-	s.hookmgr = hookstate.New(s.state, s.runner, s.backend)
+	s.hookmgr = hookstate.New(s.state, s.runner)
 	s.hookmgr.Register(regexp.MustCompile("^fake-hook$"), func(context *hookstate.Context) hookstate.Handler {
 		return s.mockHandler
 	})
@@ -122,8 +125,12 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
 		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
-	// ensure that the save-state handler has created the required state directory
+	// ensure that the save-state handler has created the required state
+	// directory (reattach the storage to the workshop to check).
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	defer ws.Close()
+	err = s.backend.AttachStateStorage(s.ctx, "ws", workshop.WorkshopStateVolumeName("ws", s.project.ProjectId))
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -151,9 +158,11 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	// setup state storage (usually already set by the save-state)
+	// setup state storage (must be already set by the save-state in a real use
+	// case).
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
+	defer ws.Close()
 	err = ws.MkdirAll("/var/lib/workshop/state/sdk/one", 0755)
 	c.Check(err, check.IsNil)
 
@@ -191,7 +200,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -231,7 +240,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -290,7 +299,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.launchWorkshop(c, "one")
@@ -330,7 +339,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -367,7 +376,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 		}, nil
 	}
 	defer func() {
-		s.backend.ExecCallback = workshop.DoExecDefault
+		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
 	s.state.Unlock()
@@ -470,6 +479,7 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	defer ws.Close()
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)
 	c.Check(err, check.IsNil)

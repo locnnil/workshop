@@ -27,9 +27,24 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	uname, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key user not found")
+	}
+
+	user, err := workshop.LookupUsername(uname)
+	if err != nil {
+		return err
+	}
+
+	pid, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
+	}
+
+	p, err := s.loadProjectFromId(conn, ctx, pid)
+	if err != nil {
+		return err
 	}
 
 	fs, err := s.WorkshopFs(ctx, w)
@@ -51,7 +66,39 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 					return err
 				}
 			} else if !info.IsDir() {
-				return fmt.Errorf("cannot create a workshop mount with target %q: the target is not a directory", target)
+				return fmt.Errorf(`%s:%s's "target" %s is not a directory`, profile.Sdk, dev.Name, target)
+			}
+
+			source := dev.Properties["source"]
+			// A path relative to the project directory (from the slot
+			// declared in a workshop).
+			if filepath.IsLocal(source) {
+				abs := filepath.Join(p.Path, source)
+				// Ensure that the source path exists here. LXD allows to
+				// require the source attribute when updating an instance
+				// configuration but it would fail and still save changes to the
+				// instace profile even if the source does not exist. For
+				// Workshop that would mean that the interface connection would
+				// fail but there will still be changes made to the instance
+				// configuration which is not acceptable.
+				if !osutil.IsDir(abs) {
+					return fmt.Errorf(`%s:%s's "source" %s is not an existing directory`, profile.Sdk, dev.Name, abs)
+				}
+				dev.Properties["source"] = abs
+				continue
+			}
+
+			// The dir is being dynamically created (no source attribute
+			// provided by the slot).
+			if !osutil.IsDir(source) {
+				uid, gid, err := osutil.UidGid(user)
+				if err != nil {
+					return err
+				}
+
+				if err = osutil.MkdirAllChown(source, 0744, uid, gid); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -63,7 +110,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 		}
 	}
 
-	lxdname := profileName(projectId, w, profile.Name())
+	lxdname := profileName(pid, w, profile.Name())
 	lxddevs := make(map[string]map[string]string)
 	for _, dev := range profile.Devices {
 		if lxddevs[dev.Name] == nil {
@@ -77,7 +124,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 	}
 
 	// Either create or update an existing LXD profile for the SDK so that later
-	// it can be assigned to the required workshop
+	// it can be assigned to the required workshop.
 	oldProfile, etag, err := conn.GetProfile(lxdname)
 	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
 		return err
@@ -100,16 +147,16 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 		}
 	}
 
-	inst, etag, err := conn.GetInstance(InstanceName(w, projectId))
+	inst, etag, err := conn.GetInstance(InstanceName(w, pid))
 	if err != nil {
 		return err
 	}
 
 	if slices.Index(inst.Profiles, lxdname) == -1 {
-		// Assigning the profile for the first time
+		// Assigning the profile for the first time.
 		put := inst.InstancePut
 		put.Profiles = append(put.Profiles, lxdname)
-		op, err := conn.UpdateInstance(InstanceName(w, projectId), put, etag)
+		op, err := conn.UpdateInstance(InstanceName(w, pid), put, etag)
 		if err != nil {
 			return err
 		}

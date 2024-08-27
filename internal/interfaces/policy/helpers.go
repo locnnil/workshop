@@ -36,7 +36,21 @@ func checkSlotType(sdkInfo *sdk.Info, types []string) error {
 	return nil
 }
 
+func checkNameConstraints(c *asserts.NameConstraints, iface, which, name string) error {
+	if c == nil {
+		return nil
+	}
+	special := map[string]string{
+		"$INTERFACE": iface,
+	}
+	return c.Check(which, name, special)
+}
+
 func checkSlotInstallationConstraints(ic *InstallCandidate, slot *sdk.SlotInfo, constraints *asserts.SlotInstallationConstraints) error {
+	if err := checkNameConstraints(constraints.SlotNames, slot.Interface, "slot name", slot.Name); err != nil {
+		return err
+	}
+
 	if err := constraints.SlotAttributes.Check(slot, nil); err != nil {
 		return err
 	}
@@ -78,6 +92,12 @@ func checkSlotConnectionAltConstraints(connc *ConnectCandidate, altConstraints [
 }
 
 func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asserts.SlotConnectionConstraints) error {
+	if err := checkNameConstraints(constraints.PlugNames, connc.Plug.Interface(), "plug name", connc.Plug.Name()); err != nil {
+		return err
+	}
+	if err := checkNameConstraints(constraints.SlotNames, connc.Slot.Interface(), "slot name", connc.Slot.Name()); err != nil {
+		return err
+	}
 	if err := constraints.PlugAttributes.Check(connc.Plug, connc); err != nil {
 		return err
 	}

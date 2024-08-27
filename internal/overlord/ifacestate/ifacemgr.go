@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -23,12 +24,15 @@ type InterfaceManager struct {
 	repo    *interfaces.Repository
 }
 
-func New(s *state.State, r *state.TaskRunner, be workshop.Backend) *InterfaceManager {
+func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	m := &InterfaceManager{
-		state:   s,
-		backend: be,
-		repo:    interfaces.NewRepository(),
+		state: s,
+		repo:  interfaces.NewRepository(),
 	}
+
+	s.Lock()
+	m.backend = workshop.WorkshopBackend(s)
+	s.Unlock()
 
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
@@ -395,6 +399,46 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 		setConns(m.state, conns)
 	}
 	return affected, nil
+}
+
+func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) error {
+	for _, conn := range w.File.Connections {
+		_, err := m.repo.ResolveConnect(w.Project.ProjectId, w.Name, conn.PlugRef.Sdk, conn.PlugRef.Name,
+			w.Project.ProjectId, w.Name, conn.SlotRef.Sdk, conn.SlotRef.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
+	allPlugs := m.repo.AllPlugs("content")
+
+	for _, plug := range sdkInfo.Plugs {
+		if plug.Interface != "content" {
+			continue
+		}
+		candidateTarget, _ := plug.Lookup("target")
+
+		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
+			// only plugs from the same workshop will be considered
+			if pi.Sdk.ProjectId != plug.Sdk.ProjectId || pi.Sdk.Workshop != plug.Sdk.Workshop {
+				return false
+			}
+			// exclude oneself
+			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
+				return false
+			}
+			target, _ := pi.Lookup("target")
+			return target == candidateTarget
+		})
+		if idx != -1 {
+			return fmt.Errorf(`cannot connect "%s/%s:%s": target %s is also mounted by %s/%s:%s`, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name, candidateTarget,
+				allPlugs[idx].Sdk.Workshop, allPlugs[idx].Sdk.Name, allPlugs[idx].Name)
+		}
+	}
+	return nil
 }
 
 var securityBackendsOverride []interfaces.SecurityBackend

@@ -1,0 +1,31 @@
+summary: Check that "workshop connections" works as expected
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  mkdir user-data user-data-2
+  workshop_exec launch ws-user-conns
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove ws-user-conns
+  rm -rf user-data user-data-2
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check connections"
+  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-one.+:user-slot.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-two.+:user-slot-2.+\-$"
+
+  echo "Check mounts"
+  workshop_exec info ws-user-conns | grep -v notes > mounts.log
+  yq '.content["test-sdk-content"].mounts["content-plug-one"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data" 
+  yq '.content["test-sdk-content"].mounts["content-plug-two"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data-2"
+
+  echo "Check refresh that removes a connection"
+  mv -f .workshop.ws-user-conns.yaml.new .workshop.ws-user-conns.yaml
+  workshop_exec refresh ws-user-conns
+  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-one.+:content.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-two.+:user-slot-2.+\-$"
+
+  echo "Check mounts"
+  workshop_exec info ws-user-conns | grep -v notes > mounts.log
+  yq '.content["test-sdk-content"].mounts["content-plug-one"]' < mounts.log | MATCH "^host:.*ws-user-conns_test-sdk-content_content-plug-one.sdk" 
+  yq '.content["test-sdk-content"].mounts["content-plug-two"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data-2"

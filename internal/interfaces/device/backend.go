@@ -35,7 +35,10 @@ func (b *Backend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfac
 	for _, dev := range spec.devices {
 		profile.AddDevice(dev)
 	}
-	return b.profile.AssignProfile(context, sdkInfo.Workshop, profile)
+	if err = b.profile.AssignProfile(context, sdkInfo.Workshop, profile); err != nil {
+		return fmt.Errorf("%q SDK setup failed: %v", sdkInfo.Sdk, err)
+	}
+	return err
 }
 
 // Remove removes profile of a given sdk.

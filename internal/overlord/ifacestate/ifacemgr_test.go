@@ -21,6 +21,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 type interfaceManagerSuite struct {
@@ -52,7 +53,10 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	s.wsbackend = workshop.NewFakeWorkshopBackend()
+	be, _ := fakebackend.New()
+	s.wsbackend = be.(*fakebackend.FakeWorkshopBackend)
+	workshop.ReplaceBackend(s.state, s.wsbackend)
+
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
@@ -105,7 +109,16 @@ slots:
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
 
-	return s.wsbackend.Workshop(ctx, ws)
+	w, err := s.wsbackend.Workshop(ctx, ws)
+	c.Assert(err, check.IsNil)
+
+	for s := range sdkYamls {
+		if err = w.LinkSdk(ctx, s); err != nil {
+			c.Assert(err, check.IsNil)
+		}
+	}
+
+	return w, nil
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {
@@ -139,7 +152,7 @@ plugs:
 	})
 	s.state.Unlock()
 
-	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	mgr := ifacestate.New(s.state, s.o.TaskRunner())
 	err := mgr.StartUp()
 	c.Assert(err, check.IsNil)
 
@@ -202,7 +215,7 @@ slots:
 	})
 	s.state.Unlock()
 
-	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	mgr := ifacestate.New(s.state, s.o.TaskRunner())
 	err := mgr.StartUp()
 	c.Assert(err, check.IsNil)
 
@@ -245,7 +258,7 @@ slots:
 	})
 	s.state.Unlock()
 
-	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	mgr := ifacestate.New(s.state, s.o.TaskRunner())
 	err := mgr.StartUp()
 	c.Assert(err, check.IsNil)
 
@@ -313,7 +326,7 @@ slots:
         interface: test
         attr2: value2
 `, "pid", "ws")
-	mgr := ifacestate.New(s.state, s.o.TaskRunner(), s.wsbackend)
+	mgr := ifacestate.New(s.state, s.o.TaskRunner())
 	err := mgr.StartUp()
 	c.Assert(err, check.IsNil)
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 )
 
@@ -68,14 +69,17 @@ type Stash interface {
 }
 
 type StateStorage interface {
-	// Create a temporary state storage volume for the workshop. It can be
-	// mounted to the instance separately. This does not mount the device to the
-	// workshop, it must be mounted to the required workshop as a separate
-	// operation (see AddWorkshopDevice).
+	// Create a temporary state storage volume for the workshop. It does not
+	// mount the device to the workshop, it must be mounted to the required
+	// workshop as a separate operation.
 	CreateStateStorage(ctx context.Context, name string) error
 
-	// Delete a temporary state storage volume for the workshop. It does
-	// not unmount the volume from the workshop if mounted.
+	AttachStateStorage(ctx context.Context, wp, name string) error
+
+	DetachStateStorage(ctx context.Context, wp, name string) error
+
+	// Delete a temporary state storage volume for the workshop. It does not
+	// unmount the volume from the workshop if mounted.
 	DeleteStateStorage(ctx context.Context, name string) error
 }
 
@@ -174,6 +178,33 @@ type Backend interface {
 	// and redirect its IO using args.ExecControls. ExecContext.Environment will
 	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
+}
+
+type cachedBackendKey struct{}
+
+// ReplaceBackend replaces the store used by the manager.
+func ReplaceBackend(state *state.State, backend Backend) {
+	state.Lock()
+	state.Cache(cachedBackendKey{}, backend)
+	state.Unlock()
+}
+
+func cachedBackend(st *state.State) Backend {
+	backend := st.Cached(cachedBackendKey{})
+	if backend == nil {
+		return nil
+	}
+	return backend.(Backend)
+}
+
+// Store returns the store service provided by the optional device context or
+// the one used by the snapstate package if the former has no
+// override.
+func WorkshopBackend(st *state.State) Backend {
+	if cachedStore := cachedBackend(st); cachedStore != nil {
+		return cachedStore
+	}
+	panic("internal error: needing the store before managers have initialized it")
 }
 
 func FakeUserLookup(f func(name string) (*user.User, error)) func() {

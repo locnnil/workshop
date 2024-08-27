@@ -49,6 +49,10 @@ func isHostSdk(sdkName string) bool {
 	return sdkName == "host"
 }
 
+func isDefaultHostSlot(slot client.Slot) bool {
+	return isHostSdk(slot.Sdk) && slot.Interface == slot.Name
+}
+
 func endpoint(workshop, sdkName, name string) string {
 	if isHostSdk(sdkName) {
 		return ":" + name
@@ -186,7 +190,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 	for _, slot := range connections.Slots {
-		if isHostSdk(slot.Sdk) {
+		if isDefaultHostSlot(slot) {
 			// displaying unconnected system snap slots is boring,
 			// unless explicitly asked to show them
 			continue

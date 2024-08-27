@@ -95,7 +95,7 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.restoreSimple = builtin.MockInterface(simpleIface{name: "mock-network"})
 	s.restoreDeny = builtin.MockInterface(denyAutoIface{name: "mock-ssh-agent"})
 
-	s.mgr = ifacestate.New(s.state, s.runner, s.wsbackend)
+	s.mgr = ifacestate.New(s.state, s.runner)
 	c.Assert(s.mgr, check.NotNil)
 
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
@@ -223,7 +223,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.Bind{Sdk: "consumer", Plug: "plug2"}}
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -414,7 +414,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 			"interface":    "mock-network",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"source": "/old/source"},
+			"slot-dynamic": map[string]interface{}{"source": "/old/source"},
 		},
 	})
 
@@ -470,7 +470,7 @@ slots:
 			"interface":    "content",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"target": "/opt"},
-			"plug-dynamic": map[string]interface{}{"source": source},
+			"slot-dynamic": map[string]interface{}{"source": source},
 		},
 	})
 	_, err = ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
@@ -505,7 +505,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -519,9 +519,9 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 		Interface:        "content",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{}})
+		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -549,7 +549,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Plug.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -565,9 +565,9 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 		Interface:        "content",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{"source": newSource},
+		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{}})
+		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -597,7 +597,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -635,7 +635,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -673,7 +673,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(err, check.IsNil)
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -705,7 +705,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Plug.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)
@@ -1329,6 +1329,37 @@ func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *check.C) {
+	// Setup
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
+		csetup: consumer,
+		psetup: producer,
+	})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		return errors.New("cannot finish backend setup")
+	}
+	defer func() { s.secBackend.SetupCallback = nil }()
+
+	// Execute
+	chg := s.connectChange("ws", false, false)
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	// Validate that even if a connection was created in the repository, it
+	// won't persist if the backend setup fails.
+	c.Check(chg.Tasks()[0].Status(), check.Equals, state.ErrorStatus)
+	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 0)
 }
 
 func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {

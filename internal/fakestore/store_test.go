@@ -56,7 +56,7 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 		Channel:   "latest/stable",
 	},
 	}
-	res, _ := store.SdkAction(context.Background(), nil, acts)
+	res, _ := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
 }
 
@@ -95,7 +95,7 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 		Name:      "test-sdk-valid",
 		Channel:   "latest/stable",
 	}}
-	res, err := store.SdkAction(context.Background(), nil, acts)
+	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
 	c.Assert(err, check.ErrorMatches, "(?s)*.test-sdk-broken: yaml: block sequence entries are not allowed in this context")
 }

@@ -647,6 +647,8 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
+		"leds       -                                 :capslock-led                                 -\n" +
+		"leds       -                                 :numlock-led                                  -\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             -\n" +
@@ -710,7 +712,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 				ProjectId: "42424242",
 				Workshop:  "leds-provider",
 				Sdk:       "host",
-				Name:      "capslock-led",
+				Name:      "leds",
 				Interface: "leds",
 			}, {
 				ProjectId: "42424242",
@@ -776,10 +778,12 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
+		"leds       -                                 :numlock-led                                  -\n" +
+		"leds       -                                 :scrollock-led                                -\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
-		"leds       keyboard-lights/lights:numlock    -                                             bind.4\n" +
-		"leds       keyboard-lights/lights:scrollock  -                                             bind.4\n"
+		"leds       keyboard-lights/lights:numlock    -                                             bind.6\n" +
+		"leds       keyboard-lights/lights:scrollock  -                                             bind.6\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }

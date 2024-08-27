@@ -36,22 +36,3 @@ func (w *InstanceFs) Symlink(source, target string) error {
 func (w *InstanceFs) Close() {
 	w.client.Close()
 }
-
-/* Fake workshop fs implementation for tests */
-
-type FakeInstanceFs struct {
-	afero.Fs
-}
-
-func NewFakeWorkshopFs() WorkshopFs {
-	var fs FakeInstanceFs
-	fs.Fs = afero.NewMemMapFs()
-	return &fs
-}
-
-func (w *FakeInstanceFs) Symlink(source, target string) error {
-	return w.Fs.Mkdir(target, os.ModeSymlink)
-}
-
-func (w *FakeInstanceFs) Close() {
-}

@@ -28,14 +28,13 @@ var (
 var InstallTimeNow = time.Now
 
 type Workshop struct {
-	Name string
-
 	Backend Backend
 	Project *Project
 	File    *File
+	Name    string
 	Base    string
-	Content map[string]sdk.Setup
 	Running bool
+	Content map[string]sdk.Setup
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
@@ -166,34 +165,32 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
 
-	if err = w.setupPlugBinds(info); err != nil {
+	// Now add changes defined for this SDK in the workshop file (e.g. plug
+	// binds, slots).
+	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
+	if idx == -1 && sdkName != sdk.Host.String() {
+		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
+	}
+
+	// host SDK is an optional entry in a workshop file, so it's not an error
+	// scenario.
+	if idx == -1 && sdkName == sdk.Host.String() {
+		return info, nil
+	}
+
+	binds := map[string]*sdk.PlugBind{}
+	for name, m := range w.File.Sdks[idx].Plugs {
+		binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+	}
+	if err = info.SetupPlugBinds(binds); err != nil {
+		return nil, err
+	}
+
+	if err = info.SetupWorkshopSlots(w.File.Sdks[idx].Slots); err != nil {
 		return nil, err
 	}
 
 	return info, nil
-}
-
-func (w *Workshop) setupPlugBinds(info *sdk.Info) error {
-	if info.Type == sdk.Host {
-		return nil
-	}
-
-	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
-	if idx == -1 {
-		return fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
-	}
-
-	for n, plug := range w.File.Sdks[idx].Plugs {
-		if _, ok := info.Plugs[n]; ok {
-			info.PlugBinds[n] = &sdk.PlugBind{
-				ProjectId: w.Project.ProjectId,
-				Workshop:  w.Name,
-				Sdk:       plug.Bind.Sdk,
-				Name:      plug.Bind.Plug,
-			}
-		}
-	}
-	return nil
 }
 
 // Returns a list of SDK info for installed SDKs. The info includes SDK details
