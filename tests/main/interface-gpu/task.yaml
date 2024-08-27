@@ -1,5 +1,5 @@
 summary: Check GPU interface scenarios
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch ws-gpu
 restore: |
@@ -7,17 +7,17 @@ restore: |
   workshop_exec remove ws-gpu
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
   echo "Check the GPU interface plug can be auto-connected"
   workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+\-$"
-  
+
   echo "Check the GPU interface plug can be connected and disconnected manually"
   workshop_exec disconnect ws-gpu/test-sdk-gpu:gpu  
   workshop_exec connect ws-gpu/test-sdk-gpu:gpu
   workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+manual$"
-  
+
   echo "Ensure a GPU device is created when connected"
-  
+
   # Ideally, check that a GPU device exists in the workshop (as a side effect of
   # the interface being connected). However, given the VM env without a card0,
   # ensure that the LXD profile contains a gpu device with a proper
@@ -28,3 +28,7 @@ execute: |
   MATCH "gputype: physical" < output.log
   MATCH 'uid: "1000"' < output.log
   MATCH 'gid: "1000"' < output.log
+
+  echo "Check a user cannot install a GPU slot (violates slot declaration)"
+  workshop_exec launch ws-gpu-fail > launch.log || true
+  MATCH ".*installation not allowed by \"user-gpu\" slot rule of interface \"gpu\"" < launch.log

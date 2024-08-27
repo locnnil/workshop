@@ -24,11 +24,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/canonical/workshop/internal/dirs"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/x-go/randutil"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -44,6 +43,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var (

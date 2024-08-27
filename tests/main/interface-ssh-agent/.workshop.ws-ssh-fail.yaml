@@ -1,0 +1,9 @@
+name: ws-ssh-fail
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      user-ssh:
+        interface: ssh-agent
+  test-sdk-ssh-agent:
+    channel: latest/stable
