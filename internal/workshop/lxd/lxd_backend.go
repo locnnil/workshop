@@ -496,7 +496,7 @@ func (s *Backend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter wor
 	return toReturn, nil
 }
 
-func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.File, []*workshop.Workshop, error) {
+func (s *Backend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.Workshop, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key project-id not found")
@@ -540,7 +540,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.File, []*wo
 		return nil, nil, err
 	}
 
-	var projectWorkshops []*workshop.Workshop
+	var workshops []*workshop.Workshop
 	for _, i := range instances {
 		if i.Config[workshop.ConfigProjectId] == p.ProjectId {
 			ws, err := s.loadWorkshop(&i, p)
@@ -548,34 +548,15 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.File, []*wo
 				logger.Debugf("error loading workshop: %v", err)
 				continue
 			}
-			projectWorkshops = append(projectWorkshops, ws)
+			workshops = append(workshops, ws)
 		}
 	}
 
-	wsFiles, wsInstances := mergeInstancesAndFiles(files, projectWorkshops)
-	return wsFiles, wsInstances, nil
-}
-
-// Examine the lists of project's workshop files and workshops. Returns two
-// lists. The first has *only* the workshop files that do not have any launched
-// workshops yet, the second contains workshops that are launched with or
-// without an associated file.
-func mergeInstancesAndFiles(f []*workshop.File, instances []*workshop.Workshop) ([]*workshop.File, []*workshop.Workshop) {
-	files := make([]*workshop.File, len(f))
-	copy(files, f)
-	// Walk both lists from to build a list of workshops with their states
-	for _, ws := range instances {
-		finder := func(p *workshop.File) bool { return p.Name == ws.Name }
-		idx := slices.IndexFunc(files, finder)
-		if idx != -1 {
-			/* Both a file and instance exist */
-			files = slices.Delete(files, idx, idx+1)
-		}
+	for _, ws := range workshops {
+		finder := func(p string) bool { return p == ws.Name }
+		files = slices.DeleteFunc(files, finder)
 	}
-
-	// At this point, files contain only inactive workshops and instances
-	// contain the workshops that have workshop files available.
-	return files, instances
+	return files, workshops, nil
 }
 
 func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {

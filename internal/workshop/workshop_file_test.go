@@ -229,7 +229,7 @@ sdks:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot bind etl-sdk:cache to etl-sdk:data; plug etl-sdk:cache must not be bound`)
+	c.Assert(err, check.ErrorMatches, `invalid binding etl-sdk:cache to etl-sdk:data; plug "etl-sdk:cache" must not be bound to`)
 }
 
 func (f *workshopFile) TestIndirectBindToAlreadyBoundPlug(c *check.C) {
@@ -253,7 +253,7 @@ sdks:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot bind data-sdk:aux to etl-sdk:cache; plug data-sdk:aux must not be bound`)
+	c.Assert(err, check.ErrorMatches, `invalid binding data-sdk:aux to etl-sdk:cache; plug "data-sdk:aux" must not be bound to`)
 }
 
 func (f *workshopFile) TestHostSdkSlot(c *check.C) {

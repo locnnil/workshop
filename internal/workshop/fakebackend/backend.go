@@ -323,7 +323,7 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 	return wp.Workshop, nil
 }
 
-func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*workshop.File, []*workshop.Workshop, error) {
+func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.Workshop, error) {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return nil, nil, err

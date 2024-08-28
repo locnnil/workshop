@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/canonical/workshop/internal/logger"
@@ -47,28 +48,27 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	return readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
 }
 
-func (w *Project) ReadWorkshops() ([]*File, error) {
-	files, err := os.ReadDir(w.Path)
+func (w *Project) ReadWorkshops() ([]string, error) {
+	// *.yaml is the only supported extension for workshop files as the only
+	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
+	// single way of naming workshop files avoids unneccesary inconsistencies.
+	files, err := filepath.Glob(filepath.Join(w.Path, ".workshop.*.yaml"))
 	if err != nil {
 		return nil, err
 	}
 
-	var workshops = make([]*File, 0, len(files))
-
-	for _, info := range files {
-		if info.IsDir() || !info.Type().IsRegular() {
+	var workshops = make([]string, 0, len(files))
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			logger.Noticef("On ReadWorkshops: Cannot stat a workshop file %q: %v", f, err)
 			continue
 		}
-
-		// The first element in names will contain the workshop name if matched
-		if names := filename.FindStringSubmatch(info.Name()); names != nil {
-			f, err := readWorkshop(filepath.Join(w.Path, info.Name()))
-			if err != nil {
-				logger.Noticef("Cannot parse %s: %v", info.Name(), err)
-				continue
-			}
-			workshops = append(workshops, f)
+		if !info.Mode().IsRegular() {
+			continue
 		}
+		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), ".workshop."), ".yaml")
+		workshops = append(workshops, name)
 	}
 	return workshops, nil
 }

@@ -63,65 +63,6 @@ sdks:
 	})
 }
 
-func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstances(c *check.C) {
-	// Setup
-	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t1.yaml"), []byte(`name: t1
-base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
-base: ubuntu@20.04`), 0644)
-	files, err := f.project.ReadWorkshops()
-	c.Assert(err, check.IsNil)
-
-	instances := []*workshop.Workshop{
-		{
-			Name: "t1",
-		},
-		{
-			Name: "t2",
-		},
-	}
-
-	instances[0].Running = true
-	instances[1].Running = true
-
-	// Execute
-	_, merged := lxdbackend.MergeInstancesAndFiles(files, instances)
-
-	// Validate
-	c.Assert(merged, check.HasLen, 2)
-	c.Assert(merged[0].Running, check.Equals, true)
-	c.Assert(merged[1].Running, check.Equals, true)
-}
-
-func (f *LxdBeTests) TestLxdBackendMergeFilesAndInstancesWorkshopOff(c *check.C) {
-	// Setup
-
-	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t1.yaml"), []byte(`name: t1
-base: ubuntu@20.04`), 0644)
-	os.WriteFile(filepath.Join(f.project.Path, ".workshop.t2.yaml"), []byte(`name: t2
-base: ubuntu@20.04`), 0644)
-
-	files, err := f.project.ReadWorkshops()
-	c.Assert(err, check.IsNil)
-
-	instances := []*workshop.Workshop{
-		{
-			Name: "t1",
-		},
-	}
-
-	instances[0].Running = true
-
-	// Execute
-	wsFiles, merged := lxdbackend.MergeInstancesAndFiles(files, instances)
-
-	// Validate
-	c.Assert(merged, check.HasLen, 1)
-	c.Assert(wsFiles, check.HasLen, 1)
-
-	c.Assert(merged[0].Running, check.Equals, true)
-}
-
 func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
 	root := c.MkDir()
 	cases := []struct {

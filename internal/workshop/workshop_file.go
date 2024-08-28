@@ -16,14 +16,10 @@ import (
 
 var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	workshopName   = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	channel        = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+	sdkBlacklist   = []string{"agent"}
 
-	// *.yaml is the only supported extension for workshop files as the only
-	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
-	// single way of naming workshop files avoids unneccesary inconsistencies.
-	filename     = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
-	sdkBlacklist = []string{"agent"}
+	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 )
 
 type Plug struct {
@@ -106,7 +102,7 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	seen := map[string]bool{}
 	for i := 0; i < len(value.Content); i += 2 {
 		var res = &(*p)[i/2]
-		var name string
+		var name string		
 		if err := value.Content[i].Decode(&name); err != nil {
 			return err
 		} else {
@@ -197,7 +193,7 @@ func validateBinding(sdks SdkList) error {
 				return fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Name))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
-				return fmt.Errorf("cannot bind plug %s:%s to itself", s.Name, name)
+				return fmt.Errorf(`cannot bind plug "%s:%s" to itself`, s.Name, name)
 			}
 		}
 	}
@@ -214,7 +210,7 @@ func validateBinding(sdks SdkList) error {
 	for _, sl := range slaveKeysOrdered {
 		m := slaves[sl]
 		if _, ok := masters[sl]; ok {
-			return fmt.Errorf("cannot bind %s:%s to %s:%s; plug %s:%s must not be bound", sl.Sdk, sl.Name, m.Sdk, m.Name, sl.Sdk, sl.Name)
+			return fmt.Errorf(`invalid binding %s:%s to %s:%s; plug "%s:%s" must not be bound to`, sl.Sdk, sl.Name, m.Sdk, m.Name, sl.Sdk, sl.Name)
 		}
 	}
 	return nil

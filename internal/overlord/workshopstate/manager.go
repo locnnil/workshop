@@ -85,9 +85,9 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	return workshop, nil
 }
 
-// Loads all workshops for a project, the state must be locked as it is used to find out the
-// workshop state
-func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.File, []*workshop.Workshop, error) {
+// Returns all workshops and workshop files for a project, the state must be
+// locked as it is used to find out the workshop state.
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]string, []*workshop.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 

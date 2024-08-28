@@ -68,18 +68,11 @@ type WorkshopInfo struct {
 var ensureStateSoon = stateEnsureBefore
 var workshopMounts = mounts
 
-func workshopFileToInfo(file *workshop.File, pid string) *WorkshopInfo {
+func workshopFileToInfo(file string, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
-	ws.Name = file.Name
-	ws.Base = file.Base
+	ws.Name = file
 	ws.ProjectId = pid
 	ws.Status = healthstate.OffStatus.String()
-	for _, i := range file.Sdks {
-		ws.Content = append(ws.Content, &SdkInfo{
-			Name:    i.Name,
-			Channel: i.Channel,
-		})
-	}
 	return &ws
 }
 
