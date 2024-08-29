@@ -4,9 +4,11 @@ import "io"
 
 // Headers helpers to test
 var (
-	ParseHeaders           = parseHeaders
-	CompileSlotRule        = compileSlotRule
-	CompileNameConstraints = compileNameConstraints
+	ParseHeaders                = parseHeaders
+	CompilePlugRule             = compilePlugRule
+	CompileSlotRule             = compileSlotRule
+	CompileNameConstraints      = compileNameConstraints
+	CompileAttributeConstraints = compileAttributeConstraints
 )
 
 func init() {
@@ -85,4 +87,12 @@ func CompileAttrMatcher(constraints interface{}, allowedOperations []string) (fu
 		})
 	}
 	return domatch, nil
+}
+
+type featureExposer interface {
+	feature(flabel string) bool
+}
+
+func RuleFeature(rule featureExposer, flabel string) bool {
+	return rule.feature(flabel)
 }

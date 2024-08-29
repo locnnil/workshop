@@ -65,6 +65,12 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
+	// Ensure that all plugs that the workshop bindings bind to actually exist
+	// in the repository.
+	if err = m.resolveWorkshopBindings(wp); err != nil {
+		return err
+	}
+
 	// Ensure that connections requested via the workshop file use existing and
 	// compatible plugs and slots.
 	if err = m.resolveWorkshopConnections(wp); err != nil {
@@ -387,6 +393,9 @@ func MaybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRe
 
 	for _, s := range w.File.Sdks {
 		for name, pl := range s.Plugs {
+			if pl.Bind == nil {
+				continue
+			}
 			sdk, plug := pl.Bind.Sdk, pl.Bind.Name
 			mkey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sdk, Name: plug}
 			skey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name, Name: name}

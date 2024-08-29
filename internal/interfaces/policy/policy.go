@@ -47,6 +47,13 @@ func (ic *InstallCandidate) checkSlotRule(slot *sdk.SlotInfo, rule *asserts.Slot
 }
 
 func (ic *InstallCandidate) checkPlugRule(plug *sdk.PlugInfo, rule *asserts.PlugRule) error {
+	context := ""
+	if checkPlugInstallationAltConstraints(ic, plug, rule.DenyInstallation) == nil {
+		return fmt.Errorf("installation denied by %q plug rule of interface %q%s", plug.Name, plug.Interface, context)
+	}
+	if checkPlugInstallationAltConstraints(ic, plug, rule.AllowInstallation) != nil {
+		return fmt.Errorf("installation not allowed by %q plug rule of interface %q%s", plug.Name, plug.Interface, context)
+	}
 	return nil
 }
 
@@ -111,9 +118,23 @@ func (connc *ConnectCandidate) PlugAttr(arg string) (interface{}, error) {
 func (connc *ConnectCandidate) SlotAttr(arg string) (interface{}, error) {
 	return nestedGet("slot", connc.Slot, arg)
 }
-
 func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule, sdkRule bool) (interfaces.SideArity, error) {
-	return sideArity{asserts.SideArityConstraint{1}}, nil
+	context := ""
+	denyConst := rule.DenyConnection
+	allowConst := rule.AllowConnection
+	if kind == "auto-connection" {
+		denyConst = rule.DenyAutoConnection
+		allowConst = rule.AllowAutoConnection
+	}
+	if _, err := checkPlugConnectionAltConstraints(connc, denyConst); err == nil {
+		return nil, fmt.Errorf("%s denied by plug rule of interface %q%s", kind, connc.Plug.Interface(), context)
+	}
+
+	allowedConstraints, err := checkPlugConnectionAltConstraints(connc, allowConst)
+	if err != nil {
+		return nil, fmt.Errorf("%s not allowed by plug rule of interface %q%s", kind, connc.Plug.Interface(), context)
+	}
+	return sideArity{allowedConstraints.SlotsPerPlug}, nil
 }
 
 func (connc *ConnectCandidate) checkSlotRule(kind string, rule *asserts.SlotRule, sdkRule bool) (interfaces.SideArity, error) {

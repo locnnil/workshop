@@ -41,6 +41,15 @@ const contentBaseDeclarationSlots = `
       slot-sdk-type:
         - host
     allow-connection: true
+    allow-auto-connection: true
+`
+
+const contentBaseDeclarationPlugs = `
+  content:
+    allow-installation:
+      plug-sdk-type:
+        - regular
+    allow-connection: true
     allow-auto-connection:
       -
         slot-names:
@@ -63,6 +72,7 @@ func (iface *contentInterface) Name() string {
 func (iface *contentInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              contentSummary,
+		BaseDeclarationPlugs: contentBaseDeclarationPlugs,
 		BaseDeclarationSlots: contentBaseDeclarationSlots,
 		AffectsPlugOnRefresh: true,
 	}

@@ -48,6 +48,17 @@ const sshAgentBaseDeclarationSlots = `
     deny-auto-connection: true
 `
 
+const sshAgentDeclarationPlugs = `
+  ssh-agent:
+    allow-installation:
+      plug-sdk-type:
+        - regular
+      plug-names:
+        - $INTERFACE
+    allow-connection: true
+    allow-auto-connection: false
+`
+
 type sshAgentInterface struct{}
 
 func (iface *sshAgentInterface) Name() string {
@@ -57,6 +68,7 @@ func (iface *sshAgentInterface) Name() string {
 func (iface *sshAgentInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              sshAgentSummary,
+		BaseDeclarationPlugs: sshAgentDeclarationPlugs,
 		BaseDeclarationSlots: sshAgentBaseDeclarationSlots,
 		AffectsPlugOnRefresh: true,
 	}

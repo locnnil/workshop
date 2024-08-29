@@ -401,6 +401,20 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 	return affected, nil
 }
 
+func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
+	for _, s := range w.File.Sdks {
+		for _, plug := range s.Plugs {
+			if plug.Bind != nil {
+				master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
+				if master == nil {
+					return fmt.Errorf("SDK %q has no %q plug", plug.Bind.Sdk, plug.Bind.Name)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) error {
 	for _, conn := range w.File.Connections {
 		_, err := m.repo.ResolveConnect(w.Project.ProjectId, w.Name, conn.PlugRef.Sdk, conn.PlugRef.Name,

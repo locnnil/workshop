@@ -223,7 +223,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -270,6 +270,40 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	// ensure that backend profiles were set for both SDKs
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a candidate SDK/slot
+	repo := s.mgr.Repository()
+	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
+
+	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
+	c.Check(err, check.IsNil)
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+
+	// Execute
+	s.state.Lock()
+	chg := s.newAutoconnectChange()
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "consumer" has no "no-such-plug2" plug.*`)
+
+	// Validate
+	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Check(pconns, check.HasLen, 0)
+	c.Check(err, check.IsNil)
+
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
+	c.Check(ref, check.HasLen, 0)
+	c.Check(err, check.IsNil)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {

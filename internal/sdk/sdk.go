@@ -91,13 +91,36 @@ func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
 func (i *Info) SetupWorkshopSlots(slots map[string]interface{}) error {
 	for name, data := range slots {
 		if _, exist := i.Slots[name]; exist {
-			return fmt.Errorf("cannot add %q slot to %q SDK: already exists", name, i.Name)
+			return fmt.Errorf("cannot add slot %q to %q SDK: already exists", name, i.Name)
 		}
 		iface, label, attrs, err := convertToSlotOrPlugData("slot", name, data)
 		if err != nil {
 			return err
 		}
 		i.Slots[name] = &SlotInfo{
+			Sdk:       i,
+			Name:      name,
+			Interface: iface,
+			Attrs:     attrs,
+			Label:     label,
+		}
+	}
+
+	SanitizePlugsSlots(i)
+	return nil
+}
+
+// Adds slots defined for this SDK in a workshop file.
+func (i *Info) SetupWorkshopPlugs(plugs map[string]interface{}) error {
+	for name, data := range plugs {
+		if _, exist := i.Plugs[name]; exist {
+			return fmt.Errorf("cannot add plug %q to %q SDK: already exists", name, i.Name)
+		}
+		iface, label, attrs, err := convertToSlotOrPlugData("plug", name, data)
+		if err != nil {
+			return err
+		}
+		i.Plugs[name] = &PlugInfo{
 			Sdk:       i,
 			Name:      name,
 			Interface: iface,

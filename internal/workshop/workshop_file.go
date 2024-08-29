@@ -23,12 +23,17 @@ var (
 )
 
 type Plug struct {
-	Bind PlugRef `yaml:"bind,omitempty"`
+	Bind       *PlugRef               `yaml:"bind,omitempty"`
+	Attributes map[string]interface{} `yaml:",inline"`
 }
 
 type PlugRef struct {
 	Sdk  string
 	Name string
+}
+
+func (p PlugRef) String() string {
+	return fmt.Sprintf("%s:%s", p.Sdk, p.Name)
 }
 
 type SlotRef = PlugRef
@@ -102,7 +107,7 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	seen := map[string]bool{}
 	for i := 0; i < len(value.Content); i += 2 {
 		var res = &(*p)[i/2]
-		var name string		
+		var name string
 		if err := value.Content[i].Decode(&name); err != nil {
 			return err
 		} else {
@@ -165,12 +170,20 @@ func validateSdks(sdks SdkList) error {
 			return fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
 
-		// an SDK installed from a local source does not have a channel.
+		// An SDK installed from a local source (e.g. host SDK) does not have a
+		// channel.
 		if s.Channel == "" {
 			continue
 		}
 		if matches := channel.FindStringSubmatch(s.Channel); matches == nil {
 			return fmt.Errorf("unsupported channel %s for \"%s\"", s.Channel, s.Name)
+		}
+		// A plug must either be bound or declared/extended with dynamic
+		// attributes.
+		for _, plug := range s.Plugs {
+			if plug.Bind != nil && len(plug.Attributes) > 0 {
+				return fmt.Errorf("plug %q is bound and must not define other attributes", plug.Bind.String())
+			}
 		}
 	}
 	return nil
@@ -184,6 +197,9 @@ func validateBinding(sdks SdkList) error {
 	var slaves map[PlugRef]PlugRef = make(map[PlugRef]PlugRef)
 	for _, s := range sdks {
 		for name, p := range s.Plugs {
+			if p.Bind == nil {
+				continue
+			}
 			mr := PlugRef{Sdk: p.Bind.Sdk, Name: p.Bind.Name}
 			sl := PlugRef{Sdk: s.Name, Name: name}
 			masters[mr] = append(masters[mr], sl)

@@ -69,8 +69,8 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -142,9 +142,55 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
-		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: &workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
+}
+
+func (f *workshopFile) TestPlugDefinedButNotBound(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      cache:
+        attr1: val
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      data: 
+        bind: data-sdk:aux
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	file, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
+	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Attributes: map[string]interface{}{"attr1": "val"}}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
+	})
+}
+
+func (f *workshopFile) TestPlugDefinedAndBoundFails(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+  etl-sdk:
+    channel: latest/stable
+    plugs:
+      data: 
+        bind: data-sdk:aux
+        attr2: val
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `plug "data-sdk:aux" is bound and must not define other attributes`)
 }
 
 func (f *workshopFile) TestBindPlugNoSdk(c *check.C) {

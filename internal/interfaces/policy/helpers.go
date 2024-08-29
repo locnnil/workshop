@@ -28,8 +28,77 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
+func checkPlugInstallationConstraints1(ic *InstallCandidate, plug *sdk.PlugInfo, constraints *asserts.PlugInstallationConstraints) error {
+	if err := checkNameConstraints(constraints.PlugNames, plug.Interface, "plug name", plug.Name); err != nil {
+		return err
+	}
+
+	// TODO: allow evaluated attr constraints here too?
+	if err := constraints.PlugAttributes.Check(plug, nil); err != nil {
+		return err
+	}
+	if err := checkSdkType(plug.Sdk, constraints.PlugSdkTypes); err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkPlugInstallationAltConstraints(ic *InstallCandidate, plug *sdk.PlugInfo, altConstraints []*asserts.PlugInstallationConstraints) error {
+	var firstErr error
+	// OR of constraints
+	for _, constraints := range altConstraints {
+		err := checkPlugInstallationConstraints1(ic, plug, constraints)
+		if err == nil {
+			return nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+func checkPlugConnectionConstraints1(connc *ConnectCandidate, constraints *asserts.PlugConnectionConstraints) error {
+	if err := checkNameConstraints(constraints.PlugNames, connc.Plug.Interface(), "plug name", connc.Plug.Name()); err != nil {
+		return err
+	}
+	if err := checkNameConstraints(constraints.SlotNames, connc.Slot.Interface(), "slot name", connc.Slot.Name()); err != nil {
+		return err
+	}
+
+	if err := constraints.PlugAttributes.Check(connc.Plug, connc); err != nil {
+		return err
+	}
+	if err := constraints.SlotAttributes.Check(connc.Slot, connc); err != nil {
+		return err
+	}
+	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
+	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
+	}
+	return nil
+}
+
+func checkPlugConnectionAltConstraints(connc *ConnectCandidate, altConstraints []*asserts.PlugConnectionConstraints) (*asserts.PlugConnectionConstraints, error) {
+	var firstErr error
+	// OR of constraints
+	for _, constraints := range altConstraints {
+		err := checkPlugConnectionConstraints1(connc, constraints)
+		if err == nil {
+			return constraints, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	return nil, firstErr
+}
+
 // check helpers
-func checkSlotType(sdkInfo *sdk.Info, types []string) error {
+func checkSdkType(sdkInfo *sdk.Info, types []string) error {
+	if len(types) == 0 {
+		return nil
+	}
 	if !slices.Contains(types, string(sdkInfo.Type)) {
 		return fmt.Errorf("invalid SDK type %q", sdkInfo.Type)
 	}
@@ -55,7 +124,7 @@ func checkSlotInstallationConstraints(ic *InstallCandidate, slot *sdk.SlotInfo, 
 		return err
 	}
 
-	if err := checkSlotType(slot.Sdk, constraints.SlotTypes); err != nil {
+	if err := checkSdkType(slot.Sdk, constraints.SlotSdkTypes); err != nil {
 		return err
 	}
 	return nil

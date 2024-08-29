@@ -17,19 +17,65 @@ func (s *baseDeclSuite) TestDecodeOK(c *check.C) {
 	encoded := `type: base-declaration
 authority-id: canonical
 series: 1
+plugs:
+  interface1:
+    deny-installation: false
+    allow-auto-connection:
+      slot-sdk-type:
+        - host
+      slot-attributes:
+        a1: /foo/.*
+      plug-attributes:
+        b1: B1
+    deny-auto-connection:
+      slot-attributes:
+        a1: !A1
+      plug-attributes:
+        b1: !B1
+  interface2:
+    allow-installation: true
+    allow-connection:
+      plug-attributes:
+        a2: A2
+      slot-attributes:
+        b2: B2
+    deny-connection:
+      plug-attributes:
+        a2: !A2
+      slot-attributes:
+        b2: !B2
 slots:
   interface3:
-    deny-installation: true
+    deny-installation: false
     allow-auto-connection:
       plug-sdk-type:
         - host
+      slot-attributes:
+        c1: /foo/.*
+      plug-attributes:
+        d1: C1
+    deny-auto-connection:
+      slot-attributes:
+        c1: !C1
+      plug-attributes:
+        d1: !D1
   interface4:
-    allow-connection: true
-    deny-connection: false
+    allow-connection:
+      plug-attributes:
+        c2: C2
+      slot-attributes:
+        d2: D2
+    deny-connection:
+      plug-attributes:
+        c2: !D2
+      slot-attributes:
+        d2: !D2
     allow-installation:
       slot-sdk-type:
         - host
         - regular
+      slot-attributes:
+        e1: E1
 timestamp: 2016-09-29T19:50:49Z
 sign-key-sha3-384: Jv8_JiHiIzJVcO9M55pPdqSDWUvuhfDIBJUS-3VW7F_idjix7Ffn5qMxB21ZQuij
 
@@ -53,7 +99,7 @@ AXNpZw==`
 
 	slotRule4 := baseDecl.SlotRule("interface4")
 	c.Assert(slotRule4, check.NotNil)
-	c.Check(slotRule4.AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"host", "regular"})
+	c.Check(slotRule4.AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{"host", "regular"})
 	c.Assert(slotRule4.DenyInstallation, check.HasLen, 1)
 	c.Assert(slotRule3.AllowConnection, check.HasLen, 1)
 	c.Assert(slotRule3.DenyConnection, check.HasLen, 1)
@@ -79,6 +125,8 @@ func (s *baseDeclSuite) TestDecodeInvalid(c *check.C) {
 	invalidTests := []struct{ original, invalid, expectedErr string }{
 		{"series: 16\n", "", `"series" header is mandatory`},
 		{"series: 16\n", "series: \n", `"series" header should not be empty`},
+		{"plugs:\n  interface1: true\n", "plugs: \n", `"plugs" header must be a map`},
+		{"plugs:\n  interface1: true\n", "plugs:\n  intf1:\n    foo: bar\n", `plug rule for interface "intf1" must specify at least one of.*`},
 		{"slots:\n  interface2: true\n", "slots: \n", `"slots" header must be a map`},
 		{"slots:\n  interface2: true\n", "slots:\n  intf1:\n    foo: bar\n", `slot rule for interface "intf1" must specify at least one of.*`},
 		{tsLine, "", `"timestamp" header is mandatory`},
@@ -104,6 +152,8 @@ type: base-declaration
 authority-id: canonical
 series: 1
 revision: 0
+plugs:
+  network: true
 slots:
   network:
     allow-installation:
@@ -122,7 +172,8 @@ slots:
 
 	c.Check(baseDecl.AuthorityID(), check.Equals, "canonical")
 	c.Check(baseDecl.Series(), check.Equals, "1")
-	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotTypes, check.DeepEquals, []string{"host"})
+	c.Check(baseDecl.PlugRule("network").AllowAutoConnection[0].SlotAttributes, check.Equals, asserts.AlwaysMatchAttributes)
+	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{"host"})
 
 	enc := asserts.Encode(baseDecl)
 	// it's expected that it cannot be decoded

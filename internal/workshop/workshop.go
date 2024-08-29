@@ -179,9 +179,19 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	}
 
 	binds := map[string]*sdk.PlugBind{}
+	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
-		binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+		if m.Bind == nil {
+			plugs[name] = m.Attributes
+		} else {
+			binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+		}
 	}
+
+	if err = info.SetupWorkshopPlugs(plugs); err != nil {
+		return nil, err
+	}
+
 	if err = info.SetupPlugBinds(binds); err != nil {
 		return nil, err
 	}

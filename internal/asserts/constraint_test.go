@@ -37,18 +37,6 @@ type attrMatcherSuite struct {
 
 var _ = Suite(&attrMatcherSuite{})
 
-type testEvalAttr struct {
-	comp func(side string, arg string) (interface{}, error)
-}
-
-func (ca testEvalAttr) SlotAttr(arg string) (interface{}, error) {
-	return ca.comp("slot", arg)
-}
-
-func (ca testEvalAttr) PlugAttr(arg string) (interface{}, error) {
-	return ca.comp("plug", arg)
-}
-
 func vals(yml string) map[string]interface{} {
 	var vs map[string]interface{}
 	err := yaml.Unmarshal([]byte(yml), &vs)
