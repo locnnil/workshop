@@ -408,7 +408,7 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 	// no workshops found in the directory provided
 	// it means we won't be creating a project
 	if len(workshops) == 0 {
-		return nil, false, workshop.ErrNotAProject
+		return nil, false, workshop.ErrNotProject
 	}
 
 	project.ProjectId, err = workshop.ProjectId(projectDir)

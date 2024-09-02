@@ -827,7 +827,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	s.runActionTest(c, requests, expected)
 }
 
-func (s *apiSuite) TestLaunchWorkshopPlugAdded(c *check.C) {
+func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()

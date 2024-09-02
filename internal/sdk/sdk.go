@@ -418,7 +418,7 @@ func BadInterfacesSummary(sdkInfo *Info) string {
 		inverted[reason] = append(inverted[reason], name)
 	}
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "sdk %q has bad plugs or slots: ", sdkInfo.Name)
+	fmt.Fprintf(&buf, "%q SDK has bad plugs or slots: ", sdkInfo.Name)
 	reasons := make([]string, 0, len(inverted))
 	for reason := range inverted {
 		reasons = append(reasons, reason)

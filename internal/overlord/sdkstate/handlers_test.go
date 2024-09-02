@@ -451,6 +451,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 func (s *sdkStateSuite) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	newSdk := sdk.Info{Workshop: "ws", Name: "test"}
 	t := s.state.NewTask("fake-task", "retrieve")
@@ -481,6 +482,41 @@ func (s *sdkStateSuite) TestUndoLinkSdkAndRemoveSdk(c *check.C) {
 	_, ok := props.Content["test"]
 	c.Check(ok, check.Equals, false)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
+}
+
+func (s *sdkStateSuite) TestLinkSdkBadInterfacesFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	newSdk := sdk.Info{Workshop: "ws", Name: "test"}
+	t := s.state.NewTask("fake-task", "retrieve")
+	t.Set("sdk-setup", newSdk)
+	link := s.state.NewTask("link-sdk", "test")
+	link.Set("sdk-retrieve-task", t.ID())
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(link)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, link, t)
+
+	chg.Set("user", "testuser")
+	chg.AddTask(link)
+	chg.AddTask(t)
+	chg.AddTask(terr)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*"test" SDK has bad plugs or slots: plug, plug2 \(unknown interface "test-interface"\).*`)
 
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)

@@ -17,7 +17,7 @@ var (
 	ErrProjectNotFound        = errors.New("project not found")
 	ErrProjectLockNotFound    = errors.New("project lock file not found")
 	ErrProjectAlreadyExists   = errors.New("project already exists")
-	ErrNotAProject            = errors.New("not a project (no workshop files found)")
+	ErrNotProject             = errors.New("not a project (no workshop files found)")
 	ErrNoRelativePathsAllowed = errors.New("absolute project path must be used")
 
 	NewProjectId = allocateProjectId

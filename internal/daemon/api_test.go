@@ -52,6 +52,7 @@ type apiSuite struct {
 	restoreUser       func()
 	restoreTime       func()
 	restoreBackendNew func()
+	restoreSanitize   func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -95,6 +96,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	_, _, err = s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
+
+	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -105,6 +108,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.restoreUser()
 	s.restoreTime()
 	s.restoreBackendNew()
+	s.restoreSanitize()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {

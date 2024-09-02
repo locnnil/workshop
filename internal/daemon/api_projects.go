@@ -43,9 +43,9 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 	wBackend := c.d.overlord.WorkshopBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
-	if err != nil && !errors.Is(err, workshop.ErrNotAProject) {
+	if err != nil && !errors.Is(err, workshop.ErrNotProject) {
 		return statusInternalError("cannot create or load project at %q: %v", reqData.Path, err)
-	} else if errors.Is(err, workshop.ErrNotAProject) {
+	} else if errors.Is(err, workshop.ErrNotProject) {
 		return statusBadRequest("%v", err)
 	}
 
