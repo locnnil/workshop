@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +44,7 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	return readWorkshop(filepath.Join(w.Path, fmt.Sprintf(".workshop.%s.yaml", workshop)))
+	return readWorkshop(filepath.Join(w.Path, Filename(workshop)))
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {

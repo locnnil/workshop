@@ -527,14 +527,14 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.W
 	p = projects[user][idx]
 
 	files, err := p.ReadWorkshops()
-	// if the dir does not exist it does not mean there are no workshops. It
+	// If the dir does not exist it does not mean there are no workshops. It
 	// could be because the dir was removed with some workshops still operating
-	// resulting in a missing-project error
+	// resulting in a missing-project error.
 	if err != nil && !osutil.IsDirNotExist(err) {
 		return nil, nil, err
 	}
 
-	// get all the running workshops for this project
+	// Get all the running workshops for this project.
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
 		return nil, nil, err

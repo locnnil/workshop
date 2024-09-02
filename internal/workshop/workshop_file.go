@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -21,6 +22,10 @@ var (
 	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 )
+
+func Filename(name string) string {
+	return fmt.Sprintf(".workshop.%s.yaml", name)
+}
 
 type Plug struct {
 	Bind       *PlugRef               `yaml:"bind,omitempty"`
@@ -44,12 +49,15 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	parts := strings.SplitN(refStr, ":", 2)
+	parts := strings.Split(refStr, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid plug or slot reference: %q (use <sdk>:<plug or slot>)", refStr)
+		return fmt.Errorf("%q is not a valid plug or slot reference (use <sdk>:<plug or slot>)", refStr)
+	}
+	if len(parts[0]) == 0 {
+		parts[0] = sdk.Host.String()
 	}
 	if !workshopName.MatchString(parts[0]) {
-		return fmt.Errorf("%q isn't a valid SDK name", parts[0])
+		return fmt.Errorf("%q is not a valid plug or slot reference (%q is an invalid SDK name)", refStr, parts[0])
 	}
 
 	b.Sdk = parts[0]
@@ -137,6 +145,11 @@ func readWorkshop(pathname string) (*File, error) {
 		return nil, err
 	}
 
+	fname := filepath.Base(pathname)
+	if Filename(file.Name) != fname {
+		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
+	}
+
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
@@ -205,7 +218,7 @@ func validateBinding(sdks SdkList) error {
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
-			if !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
+			if p.Bind.Sdk != sdk.Host.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Name))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
@@ -235,10 +248,10 @@ func validateBinding(sdks SdkList) error {
 func validateConnections(wfile *File) error {
 	for _, conn := range wfile.Connections {
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`invalid plug reference "%s:%s": %q SDK is not found in %q workshop`, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.PlugRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug "%s:%s": %q SDK is not found in %q workshop`, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.PlugRef.Sdk, wfile.Name)
 		}
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`invalid slot reference "%s:%s": %q SDK is not found in %q workshop`, conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect slot "%s:%s": %q SDK is not found in %q workshop`, conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
 		}
 	}
 	return nil

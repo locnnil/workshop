@@ -359,7 +359,11 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (work
 	if err != nil {
 		return nil, err
 	}
-	return s.Workshops[projectId][name].WorkshopFilesystem, nil
+	fs, exists := s.Workshops[projectId][name]
+	if !exists {
+		return nil, fmt.Errorf(`%q filesystem is not available`, name)
+	}
+	return fs.WorkshopFilesystem, nil
 }
 
 func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {

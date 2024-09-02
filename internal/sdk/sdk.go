@@ -76,12 +76,12 @@ func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
 
 	for name, plug := range binds {
 		if _, ok := i.Plugs[name]; ok {
-			// The existence of plugs that are bound to it will be checked at
-			// the connecting stage, i.e. when all plugs from all SDKs are in
-			// the repository already.
+			// Check plugs that are bound. The existence of plugs that are
+			// "bound to" it will be checked at the connecting stage, i.e. when
+			// all plugs from all SDKs are in the repository already.
 			i.PlugBinds[name] = plug
 		} else {
-			return fmt.Errorf("SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
+			return fmt.Errorf("plug binding failed: SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
 		}
 	}
 	return nil

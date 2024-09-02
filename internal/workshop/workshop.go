@@ -30,10 +30,13 @@ var InstallTimeNow = time.Now
 type Workshop struct {
 	Backend Backend
 	Project *Project
+	// Workshop file that was used to launch it; it may be out of sync with the
+	// file in the project directory due to user's edits, etc.
 	File    *File
 	Name    string
 	Base    string
 	Running bool
+	// Installed SDKs.
 	Content map[string]sdk.Setup
 }
 

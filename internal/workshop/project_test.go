@@ -28,7 +28,7 @@ connections:
 `
 
 func createWorkshop(dir, name string) error {
-	return os.WriteFile(filepath.Join(dir, fmt.Sprintf(".workshop.%s.yaml", name)), []byte(fmt.Sprintf(w, name)), 0644)
+	return os.WriteFile(filepath.Join(dir, workshop.Filename(name)), []byte(fmt.Sprintf(w, name)), 0644)
 }
 
 func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
