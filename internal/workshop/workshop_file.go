@@ -245,13 +245,38 @@ func validateBinding(sdks SdkList) error {
 	return nil
 }
 
+func isBound(plug PlugRef, wf *File) bool {
+	return slices.ContainsFunc(wf.Sdks, func(s SdkRecord) bool {
+		if s.Name != plug.Sdk {
+			return false
+		}
+
+		for name, p := range s.Plugs {
+			if name == plug.Name && p.Bind != nil {
+				return true
+			}
+		}
+		return false
+	})
+}
+
 func validateConnections(wfile *File) error {
 	for _, conn := range wfile.Connections {
+		if isBound(conn.PlugRef, wfile) {
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": plug is bound`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
+				conn.SlotRef.Name)
+		}
+
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`cannot connect plug "%s:%s": %q SDK is not found in %q workshop`, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.PlugRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
+				conn.SlotRef.Name, conn.PlugRef.Sdk, wfile.Name)
 		}
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`cannot connect slot "%s:%s": %q SDK is not found in %q workshop`, conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name,
+				conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
 		}
 	}
 	return nil

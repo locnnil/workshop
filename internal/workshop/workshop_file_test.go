@@ -383,7 +383,7 @@ connections:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot connect slot "lost-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "lost-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
 }
 
 func (f *workshopFile) TestWorkshopConnectionsPlugSdkNotInTheList(c *check.C) {
@@ -402,7 +402,7 @@ connections:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot connect plug "lost-sdk:data": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "lost-sdk:data" to slot "data-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
 }
 
 func (f *workshopFile) TestWorkshopConnectionsImplicitHostSdkPlugSlot(c *check.C) {
@@ -422,4 +422,28 @@ connections:
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
+}
+
+func (f *workshopFile) TestWorkshopConnectionsBoundPlugCannotBeConnected(c *check.C) {
+	buf := []byte(`name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  data-sdk:
+    channel: latest/stable
+    plugs:
+      data: 
+        bind: etl-sdk:data
+  etl-sdk:
+    channel: latest/stable
+connections:
+  - plug: data-sdk:data
+    slot: host:content
+  - plug: etl-sdk:data
+    slot: data-sdk:data-slot
+`)
+	dir := c.MkDir()
+	p := workshop.Project{Path: dir, ProjectId: "42424242"}
+	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
+	_, err := p.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "host:content": plug is bound`)
 }
