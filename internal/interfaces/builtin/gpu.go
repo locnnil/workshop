@@ -39,6 +39,17 @@ const gpuBaseDeclarationSlots = `
     allow-auto-connection: true
 `
 
+const gpuBaseDeclarationPlugs = `
+  gpu:
+    allow-installation:
+      plug-sdk-type:
+        - regular
+      plug-names:
+        - $INTERFACE
+    allow-connection: true
+    allow-auto-connection: true
+`
+
 type gpuInterface struct{}
 
 func (iface *gpuInterface) Name() string {
@@ -48,6 +59,7 @@ func (iface *gpuInterface) Name() string {
 func (iface *gpuInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              gpuSummary,
+		BaseDeclarationPlugs: gpuBaseDeclarationPlugs,
 		BaseDeclarationSlots: gpuBaseDeclarationSlots,
 		AffectsPlugOnRefresh: true,
 	}

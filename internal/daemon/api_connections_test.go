@@ -1109,7 +1109,7 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
+	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
 
 	d.Overlord().Loop()
 	defer d.Overlord().Stop()
@@ -1539,7 +1539,7 @@ func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
+			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
@@ -1553,7 +1553,7 @@ func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
+			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", opts)
@@ -1567,7 +1567,7 @@ func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 func (s *apiSuite) TestDisconnectBoundPlugSlaveSuccess(c *check.C) {
 	opts := &disconnectOpts{
 		bind: map[string]workshop.Plug{
-			"plug2": {Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
+			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug2", "producer-ws", "producer", "slot", opts)

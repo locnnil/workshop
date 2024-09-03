@@ -540,5 +540,33 @@ slots:
 		},
 	}
 	err = info.SetupWorkshopSlots(slots)
-	c.Assert(err, check.ErrorMatches, `cannot add "training" slot to "sdk" SDK: already exists`)
+	c.Assert(err, check.ErrorMatches, `cannot add slot "training" to "sdk" SDK: already exists`)
+}
+
+func (s *SdkSuite) TestAddingAlreadyExistingPlugFails(c *check.C) {
+	var mockYaml = []byte(`name: sdk
+base: ubuntu@20.04
+plugs:
+  training:
+    interface: content
+    target: /project
+`)
+
+	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Slots, check.HasLen, 0)
+	c.Assert(info.Plugs, check.HasLen, 1)
+	c.Assert(*info.Plugs["training"], check.DeepEquals, sdk.PlugInfo{
+		Sdk:       info,
+		Name:      "training",
+		Interface: "content",
+		Attrs:     map[string]interface{}{"target": "/project"},
+	})
+	plugs := map[string]interface{}{
+		"training": map[string]interface{}{
+			"target": "/data",
+		},
+	}
+	err = info.SetupWorkshopPlugs(plugs)
+	c.Assert(err, check.ErrorMatches, `cannot add plug "training" to "sdk" SDK: already exists`)
 }

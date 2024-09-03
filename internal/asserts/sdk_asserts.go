@@ -28,6 +28,13 @@ import (
 )
 
 func compilePlugRules(plugs map[string]interface{}, compiled func(iface string, plugRule *PlugRule)) error {
+	for iface, rule := range plugs {
+		plugRule, err := compilePlugRule(iface, rule)
+		if err != nil {
+			return err
+		}
+		compiled(iface, plugRule)
+	}
 	return nil
 }
 

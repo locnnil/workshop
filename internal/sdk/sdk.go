@@ -76,12 +76,12 @@ func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
 
 	for name, plug := range binds {
 		if _, ok := i.Plugs[name]; ok {
-			// The existence of plugs that are bound to it will be checked at
-			// the connecting stage, i.e. when all plugs from all SDKs are in
-			// the repository already.
+			// Check plugs that are bound. The existence of plugs that are
+			// "bound to" it will be checked at the connecting stage, i.e. when
+			// all plugs from all SDKs are in the repository already.
 			i.PlugBinds[name] = plug
 		} else {
-			return fmt.Errorf("SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
+			return fmt.Errorf("plug binding failed: SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
 		}
 	}
 	return nil
@@ -91,13 +91,36 @@ func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
 func (i *Info) SetupWorkshopSlots(slots map[string]interface{}) error {
 	for name, data := range slots {
 		if _, exist := i.Slots[name]; exist {
-			return fmt.Errorf("cannot add %q slot to %q SDK: already exists", name, i.Name)
+			return fmt.Errorf("cannot add slot %q to %q SDK: already exists", name, i.Name)
 		}
 		iface, label, attrs, err := convertToSlotOrPlugData("slot", name, data)
 		if err != nil {
 			return err
 		}
 		i.Slots[name] = &SlotInfo{
+			Sdk:       i,
+			Name:      name,
+			Interface: iface,
+			Attrs:     attrs,
+			Label:     label,
+		}
+	}
+
+	SanitizePlugsSlots(i)
+	return nil
+}
+
+// Adds slots defined for this SDK in a workshop file.
+func (i *Info) SetupWorkshopPlugs(plugs map[string]interface{}) error {
+	for name, data := range plugs {
+		if _, exist := i.Plugs[name]; exist {
+			return fmt.Errorf("cannot add plug %q to %q SDK: already exists", name, i.Name)
+		}
+		iface, label, attrs, err := convertToSlotOrPlugData("plug", name, data)
+		if err != nil {
+			return err
+		}
+		i.Plugs[name] = &PlugInfo{
 			Sdk:       i,
 			Name:      name,
 			Interface: iface,
@@ -395,7 +418,7 @@ func BadInterfacesSummary(sdkInfo *Info) string {
 		inverted[reason] = append(inverted[reason], name)
 	}
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "sdk %q has bad plugs or slots: ", sdkInfo.Name)
+	fmt.Fprintf(&buf, "%q SDK has bad plugs or slots: ", sdkInfo.Name)
 	reasons := make([]string, 0, len(inverted))
 	for reason := range inverted {
 		reasons = append(reasons, reason)

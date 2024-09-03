@@ -61,7 +61,7 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks worksh
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, sdks)
 
-	err = os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(".workshop.%s.yaml", ws)), workshopFile.Bytes(), 0644)
+	err = os.WriteFile(filepath.Join(s.project.Path, workshop.Filename(ws)), workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
 	wf := workshop.File{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}

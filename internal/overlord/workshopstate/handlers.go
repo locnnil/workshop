@@ -179,8 +179,8 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	if err = m.cleanUpWorkshopAfterRemoval(user, prj.ProjectId, w); err != nil {
 		st := task.State()
 		st.Lock()
-		defer st.Unlock()
 		task.Logf("%v", err)
+		st.Unlock()
 	}
 
 	return nil

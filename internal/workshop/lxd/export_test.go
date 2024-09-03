@@ -1,7 +1,6 @@
 package lxdbackend
 
 var (
-	MergeInstancesAndFiles = mergeInstancesAndFiles
 	LoadWorkshop           = (*Backend).loadWorkshop
 	DefaultConfig          = (*Backend).workshopConfig
 	ReadProjects           = readProjects

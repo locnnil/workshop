@@ -19,8 +19,12 @@ var (
 	}
 
 	invertedOutcome = map[string]interface{}{
-		"allow-installation": "false",
-		"deny-installation":  "true",
+		"allow-installation":    "false",
+		"allow-connection":      "false",
+		"allow-auto-connection": "false",
+		"deny-installation":     "true",
+		"deny-connection":       "true",
+		"deny-auto-connection":  "true",
 	}
 
 	ruleSubrules = []string{"allow-installation", "deny-installation", "allow-connection", "deny-connection", "allow-auto-connection", "deny-auto-connection"}
@@ -36,6 +40,7 @@ var (
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}
 
 	slotIDConstraints = []string{"plug-sdk-type"}
+	plugIDConstraints = []string{"slot-sdk-type"}
 
 	sideArityConstraints        = []string{"slots-per-plug", "plugs-per-slot"}
 	sideArityConstraintsSetters = map[string]func(sideArityConstraintsHolder, SideArityConstraint){
@@ -52,7 +57,7 @@ const (
 // SlotInstallationConstraints specifies a set of constraints on an
 // interface slot relevant to the installation of SDK.
 type SlotInstallationConstraints struct {
-	SlotTypes      []string
+	SlotSdkTypes   []string
 	SlotAttributes *AttributeConstraints
 	SlotNames      *NameConstraints
 }
@@ -76,7 +81,7 @@ func (c *SlotInstallationConstraints) setNameConstraints(field string, cstrs *Na
 func (c *SlotInstallationConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
 	case "slot-sdk-type":
-		c.SlotTypes = cstrs
+		c.SlotSdkTypes = cstrs
 	default:
 		panic("unknown SlotInstallationConstraints field " + field)
 	}
@@ -534,10 +539,245 @@ func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target
 	return nil
 }
 
-// PlugRule holds the rule of what is allowed, wrt installation and
+// PlugInstallationConstraints specifies a set of constraints on an interface plug relevant to the installation of snap.
+type PlugInstallationConstraints struct {
+	PlugSdkTypes []string
+
+	PlugNames *NameConstraints
+
+	PlugAttributes *AttributeConstraints
+}
+
+func (c *PlugInstallationConstraints) feature(flabel string) bool {
+	if flabel == nameConstraintsFeature {
+		return c.PlugNames != nil
+	}
+	return c.PlugAttributes.feature(flabel)
+}
+
+func (c *PlugInstallationConstraints) setNameConstraints(field string, cstrs *NameConstraints) {
+	switch field {
+	case "plug-names":
+		c.PlugNames = cstrs
+	default:
+		panic("unknown PlugInstallationConstraints field " + field)
+	}
+}
+
+func (c *PlugInstallationConstraints) setAttributeConstraints(field string, cstrs *AttributeConstraints) {
+	switch field {
+	case "plug-attributes":
+		c.PlugAttributes = cstrs
+	default:
+		panic("unknown PlugInstallationConstraints field " + field)
+	}
+}
+
+func (c *PlugInstallationConstraints) setIDConstraints(field string, cstrs []string) {
+	switch field {
+	case "plug-sdk-type":
+		c.PlugSdkTypes = cstrs
+	default:
+		panic("unknown PlugInstallationConstraints field " + field)
+	}
+}
+
+func compilePlugInstallationConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
+	plugInstCstrs := &PlugInstallationConstraints{}
+	// plug-snap-id is supported here mainly for symmetry with the slot case
+	// see discussion there
+	err := baseCompileConstraints(context, cDef, plugInstCstrs, []string{"plug-names"}, []string{"plug-attributes"}, []string{"plug-sdk-type"})
+	if err != nil {
+		return nil, err
+	}
+	return plugInstCstrs, nil
+}
+
+// PlugConnectionConstraints specfies a set of constraints on an
+// interface plug for a snap relevant to its connection or
+// auto-connection.
+type PlugConnectionConstraints struct {
+	SlotSdkTypes []string
+
+	PlugNames *NameConstraints
+	SlotNames *NameConstraints
+
+	PlugAttributes *AttributeConstraints
+	SlotAttributes *AttributeConstraints
+
+	// SlotsPerPlug defaults to 1 for auto-connection, can be * (any)
+	SlotsPerPlug SideArityConstraint
+	// PlugsPerSlot is always * (any) (for now)
+	PlugsPerSlot SideArityConstraint
+}
+
+func (c *PlugConnectionConstraints) feature(flabel string) bool {
+	if flabel == nameConstraintsFeature {
+		return c.PlugNames != nil || c.SlotNames != nil
+	}
+	return c.PlugAttributes.feature(flabel) || c.SlotAttributes.feature(flabel)
+}
+
+func (c *PlugConnectionConstraints) setNameConstraints(field string, cstrs *NameConstraints) {
+	switch field {
+	case "plug-names":
+		c.PlugNames = cstrs
+	case "slot-names":
+		c.SlotNames = cstrs
+	default:
+		panic("unknown PlugConnectionConstraints field " + field)
+	}
+}
+
+func (c *PlugConnectionConstraints) setAttributeConstraints(field string, cstrs *AttributeConstraints) {
+	switch field {
+	case "plug-attributes":
+		c.PlugAttributes = cstrs
+	case "slot-attributes":
+		c.SlotAttributes = cstrs
+	default:
+		panic("unknown PlugConnectionConstraints field " + field)
+	}
+}
+
+func (c *PlugConnectionConstraints) setIDConstraints(field string, cstrs []string) {
+	switch field {
+	case "slot-sdk-type":
+		c.SlotSdkTypes = cstrs
+	default:
+		panic("unknown PlugConnectionConstraints field " + field)
+	}
+}
+
+func (c *PlugConnectionConstraints) setSlotsPerPlug(a SideArityConstraint) {
+	c.SlotsPerPlug = a
+}
+
+func (c *PlugConnectionConstraints) setPlugsPerSlot(a SideArityConstraint) {
+	c.PlugsPerSlot = a
+}
+
+func (c *PlugConnectionConstraints) slotsPerPlug() SideArityConstraint {
+	return c.SlotsPerPlug
+}
+
+func (c *PlugConnectionConstraints) plugsPerSlot() SideArityConstraint {
+	return c.PlugsPerSlot
+}
+
+func compilePlugConnectionConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
+	plugConnCstrs := &PlugConnectionConstraints{}
+	err := baseCompileConstraints(context, cDef, plugConnCstrs, nameConstraints, attributeConstraints, plugIDConstraints)
+	if err != nil {
+		return nil, err
+	}
+	normalizeSideArityConstraints(context, plugConnCstrs)
+	return plugConnCstrs, nil
+}
+
+// PlugRule holds the rule of what is allowed, wrt instalation and
 // connection, for a plug of a specific interface for a sdk.
 type PlugRule struct {
 	Interface string
+
+	AllowInstallation []*PlugInstallationConstraints
+	DenyInstallation  []*PlugInstallationConstraints
+
+	AllowConnection []*PlugConnectionConstraints
+	DenyConnection  []*PlugConnectionConstraints
+
+	AllowAutoConnection []*PlugConnectionConstraints
+	DenyAutoConnection  []*PlugConnectionConstraints
+}
+
+func (r *PlugRule) feature(flabel string) bool {
+	for _, cs := range [][]*PlugInstallationConstraints{r.AllowInstallation, r.DenyInstallation} {
+		for _, c := range cs {
+			if c.feature(flabel) {
+				return true
+			}
+		}
+	}
+
+	for _, cs := range [][]*PlugConnectionConstraints{r.AllowConnection, r.DenyConnection, r.AllowAutoConnection, r.DenyAutoConnection} {
+		for _, c := range cs {
+			if c.feature(flabel) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func castPlugInstallationConstraints(cstrs []constraintsHolder) (res []*PlugInstallationConstraints) {
+	res = make([]*PlugInstallationConstraints, len(cstrs))
+	for i, cstr := range cstrs {
+		res[i] = cstr.(*PlugInstallationConstraints)
+	}
+	return res
+}
+
+func castPlugConnectionConstraints(cstrs []constraintsHolder) (res []*PlugConnectionConstraints) {
+	res = make([]*PlugConnectionConstraints, len(cstrs))
+	for i, cstr := range cstrs {
+		res[i] = cstr.(*PlugConnectionConstraints)
+	}
+	return res
+}
+
+func (r *PlugRule) setConstraints(field string, cstrs []constraintsHolder) {
+	if len(cstrs) == 0 {
+		panic(fmt.Sprintf("cannot set PlugRule field %q to empty", field))
+	}
+	switch cstrs[0].(type) {
+	case *PlugInstallationConstraints:
+		switch field {
+		case "allow-installation":
+			r.AllowInstallation = castPlugInstallationConstraints(cstrs)
+			return
+		case "deny-installation":
+			r.DenyInstallation = castPlugInstallationConstraints(cstrs)
+			return
+		}
+	case *PlugConnectionConstraints:
+		switch field {
+		case "allow-connection":
+			r.AllowConnection = castPlugConnectionConstraints(cstrs)
+			return
+		case "deny-connection":
+			r.DenyConnection = castPlugConnectionConstraints(cstrs)
+			return
+		case "allow-auto-connection":
+			r.AllowAutoConnection = castPlugConnectionConstraints(cstrs)
+			return
+		case "deny-auto-connection":
+			r.DenyAutoConnection = castPlugConnectionConstraints(cstrs)
+			return
+		}
+	}
+	panic(fmt.Sprintf("cannot set PlugRule field %q with %T elements", field, cstrs[0]))
+}
+
+var plugRuleCompilers = map[string]subruleCompiler{
+	"allow-installation":    compilePlugInstallationConstraints,
+	"deny-installation":     compilePlugInstallationConstraints,
+	"allow-connection":      compilePlugConnectionConstraints,
+	"deny-connection":       compilePlugConnectionConstraints,
+	"allow-auto-connection": compilePlugConnectionConstraints,
+	"deny-auto-connection":  compilePlugConnectionConstraints,
+}
+
+func compilePlugRule(interfaceName string, rule interface{}) (*PlugRule, error) {
+	context := fmt.Sprintf("plug rule for interface %q", interfaceName)
+	plugRule := &PlugRule{
+		Interface: interfaceName,
+	}
+	err := baseCompileRule(context, rule, plugRule, ruleSubrules, plugRuleCompilers, defaultOutcome, invertedOutcome)
+	if err != nil {
+		return nil, err
+	}
+	return plugRule, nil
 }
 
 // subruleContext carries queryable context information about one the

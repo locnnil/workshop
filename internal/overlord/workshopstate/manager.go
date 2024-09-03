@@ -3,11 +3,13 @@ package workshopstate
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -85,9 +87,9 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	return workshop, nil
 }
 
-// Loads all workshops for a project, the state must be locked as it is used to find out the
-// workshop state
-func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.File, []*workshop.Workshop, error) {
+// Returns all workshops and workshop files for a project, the state must be
+// locked as it is used to find out the workshop state.
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]string, []*workshop.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 
@@ -121,15 +123,17 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 		Timestamp: time.Now(),
 	}
 
-	// check the project directory exists
+	// Check the project directory exists.
 	if !ws.Project.Exists() {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-project"
 		return healthState
 	}
 
-	// check if the workshop file exists
-	if _, err := ws.Project.Workshop(ws.Name); err != nil {
+	// Check if the associated workshop file exists. We only check if that file
+	// exists in the project directory here; its state (e.g. if it is in sync
+	// with the workshop instance or has any errors) is not checked.
+	if !osutil.FileExists(filepath.Join(ws.Project.Path, workshop.Filename(ws.Name))) {
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-file"
 		return healthState

@@ -273,6 +273,10 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	if len(info.BadInterfaces) > 0 {
+		return fmt.Errorf(sdk.BadInterfacesSummary(info))
+	}
+
 	if err = policy.CheckInterfaces(info); err != nil {
 		return err
 	}
@@ -288,13 +292,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 			st.Unlock()
 		}
 	})
-
-	if len(info.BadInterfaces) > 0 {
-		st := task.State()
-		st.Lock()
-		task.Logf("%s", sdk.BadInterfacesSummary(info))
-		st.Unlock()
-	}
 
 	rev.Success()
 	return nil

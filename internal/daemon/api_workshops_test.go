@@ -104,6 +104,50 @@ sdks:
     channel: latest/stable
 `
 
+	workshopplug = `name: workshopplug
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      training-slot:
+        interface: content
+        source: .
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      training-plug:
+        interface: content
+        target: /opt
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:training-plug
+    slot: host:training-slot
+`
+
+	workshopplugbound = `name: workshopplugbound
+base: ubuntu@22.04
+sdks:
+  host:
+    slots:
+      training-slot:
+        interface: content
+        source: .
+  test-sdk:
+    channel: latest/stable
+    plugs:
+      training-plug:
+        interface: content
+        target: /opt
+      data:
+        bind: test-sdk:training-plug
+  test-sdk-2:
+    channel: latest/stable
+connections:
+  - plug: test-sdk:training-plug
+    slot: host:training-slot
+`
+
 	workshopslot = `name: workshopslot
 base: ubuntu@22.04
 sdks:
@@ -169,16 +213,14 @@ sdks:
         source: .
   test-sdk:
     channel: latest/stable
-    plugs:
-      data: 
-        bind: test-sdk-2:photos
   test-sdk-2:
     channel: latest/stable
+    plugs:
+      photos: 
+        bind: test-sdk:data
 connections:
   - plug: test-sdk:data
     slot: host:training
-  - plug: test-sdk-2:photos
-    slot: host:photos
 `
 
 	testsdk = `
@@ -783,6 +825,75 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	s.runActionTest(c, requests, expected)
 }
 
+func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	// Setup
+	s.createWFile(c, "workshopplug", workshopplug)
+	defer s.mockDoInstallSdk(c, "workshopplug", testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopplug"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshopplug" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Plug(s.project.ProjectId, "workshopplug", "test-sdk", "training-plug"), check.NotNil)
+	conns, err := repo.Connected(s.project.ProjectId, "workshopplug", "test-sdk", "training-plug")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplug/test-sdk:training-plug %s/workshopplug/host:training-slot`, s.project.ProjectId, s.project.ProjectId))
+}
+
+func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	// Setup
+	s.createWFile(c, "workshopplugbound", workshopplugbound)
+	defer s.mockDoInstallSdk(c, "workshopplugbound", testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopplugbound"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "workshopplugbound" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Plug(s.project.ProjectId, "workshopplugbound", "test-sdk", "training-plug"), check.NotNil)
+	conns, err := repo.Connected(s.project.ProjectId, "workshopplugbound", "test-sdk", "training-plug")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:training-plug %s/workshopplugbound/host:training-slot`, s.project.ProjectId, s.project.ProjectId))
+
+	conns, err = repo.Connected(s.project.ProjectId, "workshopplugbound", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:data %s/workshopplugbound/host:training-slot`, s.project.ProjectId, s.project.ProjectId))
+}
+
 func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -834,7 +945,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	})
 }
 
-func (s *apiSuite) TestConnectionsUnknownPlug(c *check.C) {
+func (s *apiSuite) TestWorkshopConnectionsUnknownPlug(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -867,7 +978,7 @@ func (s *apiSuite) TestConnectionsUnknownPlug(c *check.C) {
 	c.Assert(conns, check.HasLen, 0)
 }
 
-func (s *apiSuite) TestWorkshopConnectionsPlugIsBound(c *check.C) {
+func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -890,24 +1001,21 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBound(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	// The explicit connection for "test-sdk:data" will be ignored as the plug is bound to another
-	// plug.
 	repo := s.d.overlord.InterfaceManager().Repository()
 	conns, err := repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk", "data")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].SlotRef.Name, check.Equals, "photos")
+	c.Assert(conns[0].SlotRef.Name, check.Equals, "training")
+
+	conns, err = repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk-2", "photos")
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 1)
+	c.Assert(conns[0].SlotRef.Name, check.Equals, "training")
 
 	connection, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
 	_, bound := connection.CheckBound()
 	c.Assert(bound, check.Equals, true)
-
-	// The explicit connection for "test-sdk-2:photo" will be set as usual.
-	conns, err = repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk-2", "photos")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].SlotRef.Name, check.Equals, "photos")
 }
 
 func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {

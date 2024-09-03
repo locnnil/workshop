@@ -30,10 +30,13 @@ var InstallTimeNow = time.Now
 type Workshop struct {
 	Backend Backend
 	Project *Project
+	// Workshop file that was used to launch it; it may be out of sync with the
+	// file in the project directory due to user's edits, etc.
 	File    *File
 	Name    string
 	Base    string
 	Running bool
+	// Installed SDKs.
 	Content map[string]sdk.Setup
 }
 
@@ -179,9 +182,19 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	}
 
 	binds := map[string]*sdk.PlugBind{}
+	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
-		binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+		if m.Bind == nil {
+			plugs[name] = m.Attributes
+		} else {
+			binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+		}
 	}
+
+	if err = info.SetupWorkshopPlugs(plugs); err != nil {
+		return nil, err
+	}
+
 	if err = info.SetupPlugBinds(binds); err != nil {
 		return nil, err
 	}

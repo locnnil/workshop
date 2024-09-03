@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -16,23 +17,28 @@ import (
 
 var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	workshopName   = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	channel        = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+	sdkBlacklist   = []string{"agent"}
 
-	// *.yaml is the only supported extension for workshop files as the only
-	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
-	// single way of naming workshop files avoids unneccesary inconsistencies.
-	filename     = regexp.MustCompile(`^\.workshop\.(?P<name>[a-z_][a-z0-9_-]*)\.yaml$`)
-	sdkBlacklist = []string{"agent"}
+	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 )
 
+func Filename(name string) string {
+	return fmt.Sprintf(".workshop.%s.yaml", name)
+}
+
 type Plug struct {
-	Bind PlugRef `yaml:"bind,omitempty"`
+	Bind       *PlugRef               `yaml:"bind,omitempty"`
+	Attributes map[string]interface{} `yaml:",inline"`
 }
 
 type PlugRef struct {
 	Sdk  string
 	Name string
+}
+
+func (p PlugRef) String() string {
+	return fmt.Sprintf("%s:%s", p.Sdk, p.Name)
 }
 
 type SlotRef = PlugRef
@@ -43,12 +49,15 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	parts := strings.SplitN(refStr, ":", 2)
+	parts := strings.Split(refStr, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid plug or slot reference: %q (use <sdk>:<plug or slot>)", refStr)
+		return fmt.Errorf("%q is not a valid plug or slot reference (use <sdk>:<plug or slot>)", refStr)
+	}
+	if len(parts[0]) == 0 {
+		parts[0] = sdk.Host.String()
 	}
 	if !workshopName.MatchString(parts[0]) {
-		return fmt.Errorf("%q isn't a valid SDK name", parts[0])
+		return fmt.Errorf("%q is not a valid plug or slot reference (%q is an invalid SDK name)", refStr, parts[0])
 	}
 
 	b.Sdk = parts[0]
@@ -136,6 +145,11 @@ func readWorkshop(pathname string) (*File, error) {
 		return nil, err
 	}
 
+	fname := filepath.Base(pathname)
+	if Filename(file.Name) != fname {
+		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
+	}
+
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
@@ -169,12 +183,20 @@ func validateSdks(sdks SdkList) error {
 			return fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
 
-		// an SDK installed from a local source does not have a channel.
+		// An SDK installed from a local source (e.g. host SDK) does not have a
+		// channel.
 		if s.Channel == "" {
 			continue
 		}
 		if matches := channel.FindStringSubmatch(s.Channel); matches == nil {
 			return fmt.Errorf("unsupported channel %s for \"%s\"", s.Channel, s.Name)
+		}
+		// A plug must either be bound or declared/extended with dynamic
+		// attributes.
+		for _, plug := range s.Plugs {
+			if plug.Bind != nil && len(plug.Attributes) > 0 {
+				return fmt.Errorf("plug %q is bound and must not define other attributes", plug.Bind.String())
+			}
 		}
 	}
 	return nil
@@ -188,16 +210,19 @@ func validateBinding(sdks SdkList) error {
 	var slaves map[PlugRef]PlugRef = make(map[PlugRef]PlugRef)
 	for _, s := range sdks {
 		for name, p := range s.Plugs {
+			if p.Bind == nil {
+				continue
+			}
 			mr := PlugRef{Sdk: p.Bind.Sdk, Name: p.Bind.Name}
 			sl := PlugRef{Sdk: s.Name, Name: name}
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
-			if !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
+			if p.Bind.Sdk != sdk.Host.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Name))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
-				return fmt.Errorf("cannot bind plug %s:%s to itself", s.Name, name)
+				return fmt.Errorf(`cannot bind plug "%s:%s" to itself`, s.Name, name)
 			}
 		}
 	}
@@ -214,19 +239,44 @@ func validateBinding(sdks SdkList) error {
 	for _, sl := range slaveKeysOrdered {
 		m := slaves[sl]
 		if _, ok := masters[sl]; ok {
-			return fmt.Errorf("cannot bind %s:%s to %s:%s; plug %s:%s must not be bound", sl.Sdk, sl.Name, m.Sdk, m.Name, sl.Sdk, sl.Name)
+			return fmt.Errorf(`invalid binding %s:%s to %s:%s; plug "%s:%s" must not be bound to`, sl.Sdk, sl.Name, m.Sdk, m.Name, sl.Sdk, sl.Name)
 		}
 	}
 	return nil
 }
 
+func isBound(plug PlugRef, wf *File) bool {
+	return slices.ContainsFunc(wf.Sdks, func(s SdkRecord) bool {
+		if s.Name != plug.Sdk {
+			return false
+		}
+
+		for name, p := range s.Plugs {
+			if name == plug.Name && p.Bind != nil {
+				return true
+			}
+		}
+		return false
+	})
+}
+
 func validateConnections(wfile *File) error {
 	for _, conn := range wfile.Connections {
+		if isBound(conn.PlugRef, wfile) {
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": plug is bound`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
+				conn.SlotRef.Name)
+		}
+
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`invalid plug reference "%s:%s": %q SDK is not found in %q workshop`, conn.PlugRef.Sdk, conn.PlugRef.Name, conn.PlugRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
+				conn.SlotRef.Name, conn.PlugRef.Sdk, wfile.Name)
 		}
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.Host.String() }) {
-			return fmt.Errorf(`invalid slot reference "%s:%s": %q SDK is not found in %q workshop`, conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
+				conn.PlugRef.Sdk, conn.PlugRef.Name,
+				conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
 		}
 	}
 	return nil

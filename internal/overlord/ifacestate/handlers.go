@@ -65,6 +65,12 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 		return err
 	}
 
+	// Ensure that all plugs that the workshop bindings bind to actually exist
+	// in the repository.
+	if err = m.resolveWorkshopBindings(wp); err != nil {
+		return err
+	}
+
 	// Ensure that connections requested via the workshop file use existing and
 	// compatible plugs and slots.
 	if err = m.resolveWorkshopConnections(wp); err != nil {
@@ -387,6 +393,9 @@ func MaybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRe
 
 	for _, s := range w.File.Sdks {
 		for name, pl := range s.Plugs {
+			if pl.Bind == nil {
+				continue
+			}
 			sdk, plug := pl.Bind.Sdk, pl.Bind.Name
 			mkey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sdk, Name: plug}
 			skey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name, Name: name}
@@ -820,6 +829,9 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
+	rev := revert.New()
+	defer rev.Fail()
+
 	for _, ref := range sdks {
 		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
 		defer cancel()
@@ -827,8 +839,17 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 			if err := backend.Setup(ctx, ref, m.repo); err != nil {
 				return err
 			}
+
+			ref := ref
+			backend := backend
+			rev.Add(func() {
+				if err1 := backend.Remove(ctx, ref.Workshop, ref.Sdk); err1 != nil {
+					logger.Noticef(`On doSetupProfiles: Failed to clean up "%s/%s" SDK backend setup`, ref.Workshop, ref.Sdk)
+				}
+			})
 		}
 	}
+	rev.Success()
 	return nil
 }
 

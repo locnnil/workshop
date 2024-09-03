@@ -68,6 +68,14 @@ plugs:
     interface: mock-ssh-agent	
 `
 
+var consumer2 = `name: consumer2
+base: ubuntu@22.04
+plugs:
+  plug2:
+    interface: mock-network
+    attribute: one
+`
+
 var conflictingTarget1 = `name: conflict-1
 base: ubuntu@22.04
 plugs:
@@ -85,6 +93,7 @@ plugs:
 `
 
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable"}
+var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable"}
 
 var consumerNoPlugs = `name: consumer
 base: ubuntu@22.04
@@ -223,7 +232,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -272,6 +281,40 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
+func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a candidate SDK/slot
+	repo := s.mgr.Repository()
+	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
+
+	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
+	c.Check(err, check.IsNil)
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
+	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+
+	// Execute
+	s.state.Lock()
+	chg := s.newAutoconnectChange()
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "consumer" has no "no-such-plug2" plug.*`)
+
+	// Validate
+	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Check(pconns, check.HasLen, 0)
+	c.Check(err, check.IsNil)
+
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
+	c.Check(ref, check.HasLen, 0)
+	c.Check(err, check.IsNil)
+}
+
 func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	// Setup
 	// Create an already launched workshop with a candidate SDK/slot
@@ -279,10 +322,20 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
-	s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: consumerManyPlugs})
+	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs, csetup2: consumer2})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer2, s.prj.ProjectId, "ws")), check.IsNil)
 
+	n := 0
+	// One of the SDKs setup fails, we need to make sure that any partial
+	// progress will be aborted (i.e. previously created profiles for other SDKs
+	// will be removed).
 	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
-		return errors.New("cannot finish backend setup")
+		if n > 0 {
+			return errors.New("cannot finish backend setup")
+		}
+		n++
+		return nil
 	}
 	defer func() { s.secBackend.SetupCallback = nil }()
 
@@ -295,9 +348,11 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(chg.Err(), check.NotNil)
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*cannot finish backend setup.*")
 
 	// Validate
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
 
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")

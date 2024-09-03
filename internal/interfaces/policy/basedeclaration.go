@@ -100,6 +100,16 @@ func composeBaseDeclaration(ifaces []interfaces.Interface) ([]byte, error) {
 	if _, err := buf.WriteString(trimTrailingNewline(baseDeclarationHeader)); err != nil {
 		return nil, err
 	}
+	if _, err := buf.WriteString(trimTrailingNewline(baseDeclarationPlugs)); err != nil {
+		return nil, err
+	}
+	for _, iface := range ifaces {
+		plugPolicy := interfaces.StaticInfoOf(iface).BaseDeclarationPlugs
+		if _, err := buf.WriteString(trimTrailingNewline(plugPolicy)); err != nil {
+			return nil, err
+		}
+	}
+
 	if _, err := buf.WriteString(trimTrailingNewline(baseDeclarationSlots)); err != nil {
 		return nil, err
 	}

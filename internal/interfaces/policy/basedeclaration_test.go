@@ -45,16 +45,16 @@ func Test(t *testing.T) {
 	check.TestingT(t)
 }
 
-func (s *baseDeclSuite) SetUpSuite(c *C) {
+func (s *baseDeclSuite) SetUpSuite(c *check.C) {
 	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
 	s.baseDecl = asserts.BuiltinBaseDeclaration()
 }
 
-func (s *baseDeclSuite) TearDownSuite(c *C) {
+func (s *baseDeclSuite) TearDownSuite(c *check.C) {
 	s.restoreSanitize()
 }
 
-func (s *baseDeclSuite) connectCand(c *C, iface, slotYaml, plugYaml string, slotprj, plugprj string, slotws, plugws string) *policy.ConnectCandidate {
+func (s *baseDeclSuite) connectCand(c *check.C, iface, slotYaml, plugYaml string, slotprj, plugprj string, slotws, plugws string) *policy.ConnectCandidate {
 	if slotYaml == "" {
 		slotYaml = fmt.Sprintf(`name: slot-sdk
 base: ubuntu@22.04
@@ -78,7 +78,7 @@ plugs:
 	}
 }
 
-func (s *baseDeclSuite) installSlotCand(c *C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
+func (s *baseDeclSuite) installSlotCand(c *check.C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
 	if yaml == "" {
 		yaml = fmt.Sprintf(`name: install-slot-sdk
 base: ubuntu@22.04
@@ -94,7 +94,7 @@ slots:
 	}
 }
 
-func (s *baseDeclSuite) installPlugCand(c *C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
+func (s *baseDeclSuite) installPlugCand(c *check.C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
 	if yaml == "" {
 		yaml = fmt.Sprintf(`name: install-plug-sdk
 base: ubuntu@22.04
@@ -110,7 +110,41 @@ plugs:
 	}
 }
 
-func (s *baseDeclSuite) TestContentAutoConnection(c *C) {
+func (s *baseDeclSuite) TestAutoConnection(c *C) {
+	all := builtin.Interfaces()
+
+	// these have more complex or in flux policies and have their
+	// own separate tests
+	snowflakes := map[string]bool{
+		"content":   true,
+		"ssh-agent": true,
+	}
+
+	// these simply auto-connect, anything else doesn't
+	autoconnect := map[string]bool{
+		"gpu": true,
+	}
+
+	for _, iface := range all {
+		if snowflakes[iface.Name()] {
+			continue
+		}
+		expected := autoconnect[iface.Name()]
+		comm := Commentf(iface.Name())
+
+		// check base declaration
+		cand := s.connectCand(c, iface.Name(), "", "", "", "", "", "")
+		arity, err := cand.CheckAutoConnect()
+		if expected {
+			c.Check(err, IsNil, comm)
+			c.Check(arity.SlotsPerPlugAny(), Equals, false)
+		} else {
+			c.Check(err, NotNil, comm)
+		}
+	}
+}
+
+func (s *baseDeclSuite) TestContentAutoConnection(c *check.C) {
 	slotYaml := fmt.Sprintf(`name: slot-sdk
 base: ubuntu@22.04
 slots:
@@ -123,7 +157,7 @@ slots:
 	c.Check(arity.SlotsPerPlugAny(), check.Equals, false)
 }
 
-func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
+func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *check.C) {
 	all := builtin.Interfaces()
 
 	for _, iface := range all {
@@ -131,7 +165,7 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *C) {
 	}
 }
 
-func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
+func (s *baseDeclSuite) TestContentSlotInstallation(c *check.C) {
 	// test content specially
 	ic := s.installSlotCand(c, "content", sdk.Regular, ``)
 	err := ic.Check()
@@ -143,7 +177,7 @@ func (s *baseDeclSuite) TestContentSlotInstallation(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *baseDeclSuite) TestComposeBaseDeclaration(c *C) {
+func (s *baseDeclSuite) TestComposeBaseDeclaration(c *check.C) {
 	decl, err := policy.ComposeBaseDeclaration(nil)
 	c.Assert(err, IsNil)
 	c.Assert(string(decl), testutil.Contains, `
@@ -154,14 +188,14 @@ revision: 0
 `)
 }
 
-func (s *baseDeclSuite) TestDoesNotPanic(c *C) {
+func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 	// In case there are any issues in the actual interfaces we'd get a panic
 	// on startup. This test prevents this from happing unnoticed.
 	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
 	c.Assert(err, IsNil)
 }
 
-func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *C) {
+func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
 type: host
@@ -175,7 +209,7 @@ slots:
 	c.Check(err, check.IsNil)
 }
 
-func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *C) {
+func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
 type: host
@@ -184,18 +218,18 @@ slots:
 `
 	plugYaml := `name: plug-sdk
 base: ubuntu@22.04
-type: host
+type: regular
 plugs:
     content:      
 `
 	cand := s.connectCand(c, "content", slotYaml, plugYaml, "slot-project", "mock424242", "ws", "ws")
 	_, err := cand.Check()
-	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "content"`)
 	_, err = cand.CheckAutoConnect()
-	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "content"`)
 }
 
-func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *C) {
+func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
 type: host
@@ -204,13 +238,13 @@ slots:
 `
 	plugYaml := `name: plug-sdk
 base: ubuntu@22.04
-type: host
+type: regular
 plugs:
-    content:      
+    content:
 `
 	cand := s.connectCand(c, "content", slotYaml, plugYaml, "mock424242", "mock424242", "ws", "ws-1")
 	_, err := cand.Check()
-	c.Check(err, check.ErrorMatches, `connection not allowed by slot rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "content"`)
 	_, err = cand.CheckAutoConnect()
-	c.Check(err, check.ErrorMatches, `auto-connection not allowed by slot rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "content"`)
 }

@@ -59,7 +59,7 @@ func (f *wsProject) TestLxdBackendCreateProjectNoWorkshopFiles(c *check.C) {
 
 	// Validate
 	c.Assert(prj, check.IsNil)
-	c.Assert(err, check.Equals, workshop.ErrNotAProject)
+	c.Assert(err, check.Equals, workshop.ErrNotProject)
 	c.Assert(workshop.LockPath(projectDir), testutil.FileAbsent)
 	projects, _ := be.Projects(f.ctx)
 	c.Assert(projects[f.username], check.HasLen, 0)
