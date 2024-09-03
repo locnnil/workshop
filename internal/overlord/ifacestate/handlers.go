@@ -829,6 +829,9 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
+	rev := revert.New()
+	defer rev.Fail()
+
 	for _, ref := range sdks {
 		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
 		defer cancel()
@@ -836,8 +839,17 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 			if err := backend.Setup(ctx, ref, m.repo); err != nil {
 				return err
 			}
+
+			ref := ref
+			backend := backend
+			rev.Add(func() {
+				if err1 := backend.Remove(ctx, ref.Workshop, ref.Sdk); err1 != nil {
+					logger.Noticef(`On doSetupProfiles: Failed to clean up "%s/%s" SDK backend setup`, ref.Workshop, ref.Sdk)
+				}
+			})
 		}
 	}
+	rev.Success()
 	return nil
 }
 
