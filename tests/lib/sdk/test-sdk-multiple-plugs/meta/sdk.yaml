@@ -8,9 +8,9 @@ description: |
 plugs:
   data:
     interface: content
-    target: /home/workshop/data
+    workshop-target: /home/workshop/data
   cache:
     interface: content
-    target: /cache
+    workshop-target: /cache
   ssh-agent:
     interface: ssh-agent

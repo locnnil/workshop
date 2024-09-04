@@ -301,7 +301,7 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	hostpath := dirs.SocketPath + ".untrusted"
 	sname := filepath.Base(hostpath)
 	wspath := filepath.Join(dirs.WorkshopRunDir, sname)
-	socket := lxdbackend.Mount("workshop.socket", hostpath, wspath)
+	socket := lxdbackend.HostWorkshopMount("workshop.socket", hostpath, wspath)
 
 	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
 	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
@@ -311,7 +311,7 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := lxdbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
+	workshopctl := lxdbackend.HostWorkshopMount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
 		"/usr/bin/workshopctl")
 
 	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name)
@@ -433,7 +433,7 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 		if plug.Interface != "content" {
 			continue
 		}
-		candidateTarget, _ := plug.Lookup("target")
+		candidateTarget, _ := plug.Lookup("workshop-target")
 
 		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
 			// only plugs from the same workshop will be considered
@@ -444,7 +444,7 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
 				return false
 			}
-			target, _ := pi.Lookup("target")
+			target, _ := pi.Lookup("workshop-target")
 			return target == candidateTarget
 		})
 		if idx != -1 {

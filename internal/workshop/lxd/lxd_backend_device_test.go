@@ -15,7 +15,7 @@ func (f *devTest) SetUpTest(c *check.C) {
 }
 
 func (f *devTest) TestMountDevice(c *check.C) {
-	mount := lxdbackend.Mount("sdk", "/source", "/target")
+	mount := lxdbackend.HostWorkshopMount("sdk", "/source", "/target")
 	c.Assert(mount.Name, check.Equals, "sdk")
 	c.Assert(mount.Properties, check.DeepEquals, map[string]string{"type": "disk", "source": "/source", "path": "/target"})
 }

@@ -40,6 +40,9 @@ const contentBaseDeclarationSlots = `
     allow-installation:
       slot-sdk-type:
         - host
+    deny-installation:
+      slot-attributes:
+        host-source: .*      
     allow-connection: true
     allow-auto-connection: true
 `
@@ -59,8 +62,8 @@ const contentBaseDeclarationPlugs = `
           auto-explicit: true
 `
 
-var knownPlugAttributes = []string{"target"}
-var knownSlotAttributes = []string{"source"}
+var knownPlugAttributes = []string{"workshop-target"}
+var knownSlotAttributes = []string{"workshop-source", "host-source"}
 
 // contentInterface allows sharing content between sdks
 type contentInterface struct{}
@@ -95,7 +98,7 @@ func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 			return fmt.Errorf(`unknown attribute for content interface plug: %q`, name)
 		}
 	}
-	target, ok := plug.Attrs["target"].(string)
+	target, ok := plug.Attrs["workshop-target"].(string)
 	if !ok || len(target) == 0 {
 		return fmt.Errorf("content plug must contain target path")
 	}
@@ -111,17 +114,17 @@ func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 			return fmt.Errorf(`unknown attribute for content interface slot: %q`, name)
 		}
 	}
-	source, exist := slot.Attrs["source"]
+	source, exist := slot.Attrs["workshop-source"]
 	if !exist {
 		// perfectly fine scenario for the default content slot
 		return nil
 	}
 	path, ok := source.(string)
 	if !ok {
-		return fmt.Errorf(`content slot "source" is not a string (found %T)`, source)
+		return fmt.Errorf(`content slot "workshop-source" is not a string (found %T)`, source)
 	}
 	if !filepath.IsLocal(path) {
-		return fmt.Errorf(`content slot "source" must be within project subtree`)
+		return fmt.Errorf(`content slot "workshop-source" must be within project subtree`)
 	}
 	return nil
 }
@@ -129,23 +132,33 @@ func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 	var target string
 
-	if err := attrs.Attr("target", &target); err == nil {
+	if err := attrs.Attr("workshop-target", &target); err == nil {
 		return target
 	}
 	return ""
 }
 
-func (iface *contentInterface) source(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *contentInterface) workshopSource(slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
-	err := slot.Attr("source", &source)
+	err := slot.Attr("workshop-source", &source)
 	if err == nil {
 		return source, nil
 	}
-	if !errors.Is(err, sdk.AttributeNotFoundError{}) {
-		return source, err
+	return "", err
+}
+
+func (iface *contentInterface) hostSource(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+	var source string
+	err := slot.Attr("host-source", &source)
+	if err == nil {
+		return source, nil
 	}
 	// default dir: <workshop>_<sdk>_plug.sdk
-	return sdk.SdkContentSource(baseDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name()), nil
+	source = sdk.SdkMountHostSource(baseDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
+	if err = slot.SetAttr("host-source", source); err != nil {
+		return "", err
+	}
+	return source, nil
 }
 
 func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -164,13 +177,22 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 
-	source, err := iface.source(user.HomeDir, plug, slot)
-	if err != nil {
+	source, err := iface.workshopSource(slot)
+	if err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
 		return err
 	}
+	if err == nil {
+		spec.AddDeviceEntry(lxdbackend.WorkshopToWorkshopMount(plug.Name(), source, iface.target(plug)))
+		return nil
+	}
 
-	spec.AddDeviceEntry(lxdbackend.Mount(plug.Name(), source, iface.target(plug)))
-	return nil
+	source, err = iface.hostSource(user.HomeDir, plug, slot)
+	if err == nil {
+		spec.AddDeviceEntry(lxdbackend.HostWorkshopMount(plug.Name(), source, iface.target(plug)))
+		return nil
+	}
+
+	return err
 }
 
 func init() {

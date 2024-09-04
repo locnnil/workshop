@@ -13,9 +13,9 @@ type ProfileSuite struct {
 var _ = check.Suite(&ProfileSuite{})
 
 func (f *ProfileSuite) TestWorkshopDeviceTypes(c *check.C) {
-	mount := lxdbackend.Mount("mount", "/tmp/project", "/project")
+	mount := lxdbackend.HostWorkshopMount("mount", "/tmp/project", "/project")
 	c.Assert(mount.Name, check.Equals, "mount")
-	c.Assert(mount.Type, check.Equals, workshop.BindMount)
+	c.Assert(mount.Type, check.Equals, workshop.HostWorkshopMount)
 
 	volume := lxdbackend.Volume("volume", "/tmp/project", "state-volume")
 	c.Assert(volume.Name, check.Equals, "volume")

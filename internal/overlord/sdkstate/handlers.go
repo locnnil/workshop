@@ -145,7 +145,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := lxdbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
+	sdkMount := lxdbackend.HostWorkshopMount(sdkSetup.Name, sdkSetup.Filename(), target)
 	if err = m.backend.AddWorkshopDevice(ctx, w, sdkMount); err != nil {
 		return err
 	}

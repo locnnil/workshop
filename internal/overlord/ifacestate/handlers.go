@@ -104,8 +104,8 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 		}
 		if conn.Interface() == "content" {
 			attrs := conn.Slot.DynamicAttrs()
-			if attrs != nil && attrs["source"] != nil {
-				candidates[cref.ID()] = attrs["source"].(string)
+			if attrs != nil && attrs["host-source"] != nil {
+				candidates[cref.ID()] = attrs["host-source"].(string)
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 			}
 
 			if src, ok := remounts[connRef.ID()]; ok {
-				slotDynamic[connRef.ID()]["source"] = src
+				slotDynamic[connRef.ID()]["host-source"] = src
 			}
 
 			slotRef := interfaces.NewSlotRef(slot)
@@ -238,7 +238,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 			}
 
 			if src, ok := remounts[connRef.ID()]; ok {
-				slotDynamic[connRef.ID()]["source"] = src
+				slotDynamic[connRef.ID()]["host-source"] = src
 			}
 
 			slotRef := interfaces.NewSlotRef(slot)
@@ -983,7 +983,7 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	var source string
-	if err := task.Get("source", &source); err != nil {
+	if err := task.Get("host-source", &source); err != nil {
 		return err
 	}
 
@@ -992,19 +992,14 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.remount(ctx, task, user, &plug, source, inst.Running)
+	return m.remount(ctx, task, &plug, source, inst.Running)
 }
 
-func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user string, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
+func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
 	revert := revert.New()
 	defer revert.Fail()
 
 	conns, err := getConns(m.state)
-	if err != nil {
-		return err
-	}
-
-	usr, err := workshop.LookupUsername(user)
 	if err != nil {
 		return err
 	}
@@ -1024,27 +1019,27 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user s
 	}
 
 	var oldSource string
-	if err := connection.Slot.Attr("source", &oldSource); err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
+	if err := connection.Slot.Attr("host-source", &oldSource); err != nil {
 		return err
-	} else if errors.Is(err, sdk.AttributeNotFoundError{}) {
-		oldSource = sdk.SdkContentSource(usr.HomeDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
 	}
 
-	if err := connection.Slot.SetAttr("source", source); err != nil {
+	if err := connection.Slot.SetAttr("host-source", source); err != nil {
 		return err
 	}
 
 	// the connection exists already; this connect is required to update the
 	// plug's source attribute
-	newConnection, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil)
+	newConnection, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(),
+		connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil)
 	if err != nil {
 		return err
 	}
 
 	revert.Add(func() {
-		_ = connection.Slot.SetAttr("source", oldSource)
-		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(), connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
-			logger.Debugf("cannot reconnect %q plug on a failed remount", plug.ShortRef())
+		_ = connection.Slot.SetAttr("host-source", oldSource)
+		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(),
+			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
+			logger.Debugf("On doRemount: cannot reconnect %q plug on a failed remount", plug.ShortRef())
 		}
 	})
 
@@ -1076,7 +1071,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, user s
 		} else {
 			revert.Add(func() {
 				if err := os.Rename(source, oldSource); err != nil {
-					logger.Debugf("cannot rename %s to %s on a failed remount", source, oldSource)
+					logger.Debugf("On doRemount: Cannot rename %s to %s on a failed remount", source, oldSource)
 				}
 			})
 		}

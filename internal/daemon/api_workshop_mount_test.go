@@ -103,7 +103,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	conn, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"source": src})
+	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
 }
 
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
@@ -202,7 +202,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*cannot change attribute \"source\" as it was statically specified in the \"host\" sdk details.*`,
+			ChangeErr: `(?s).*sdk \"host\" does not have attribute \"host-source\" for interface \"content\".*`,
 		},
 	}
 

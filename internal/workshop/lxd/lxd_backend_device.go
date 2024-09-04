@@ -1,12 +1,25 @@
 package lxdbackend
 
-import "github.com/canonical/workshop/internal/workshop"
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
 
-func Mount(name, source, target string) workshop.Device {
+	"github.com/canonical/workshop/internal/workshop"
+)
+
+func HostWorkshopMount(name, source, target string) workshop.Device {
 	return workshop.Device{Name: name,
-		Type: workshop.BindMount,
+		Type: workshop.HostWorkshopMount,
 		Properties: map[string]string{"type": "disk", "source": source,
 			"path": target},
+	}
+}
+
+func WorkshopToWorkshopMount(name, source, target string) workshop.Device {
+	return workshop.Device{Name: name,
+		Type:       workshop.WorkshopWorkshopMount,
+		Properties: map[string]string{"type": "none"},
 	}
 }
 
@@ -53,4 +66,22 @@ func SshAgent(name string, from, to string) workshop.Device {
 		Type:       workshop.SshAgentProxy,
 		Properties: map[string]string{"type": "proxy", "connect": "unix:" + from, "listen": "unix:" + to, "uid": "1000", "gid": "1000", "bind": "instance"},
 	}
+}
+
+func installSshAgent(fs workshop.WorkshopFs, dev workshop.Device, workshop string) error {
+	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+	if err != nil {
+		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
+	}
+
+	_, err = env.Write([]byte("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Properties["listen"], "unix:")))
+	if err != nil {
+		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
+	}
+	_ = env.Close()
+	return nil
+}
+
+func removeSshAgent(fs workshop.WorkshopFs, name string) {
+	_ = fs.Remove(filepath.Join("/etc/profile.d", name+".sh"))
 }

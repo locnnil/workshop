@@ -740,7 +740,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	var src string
 	c.Assert(task.Get("plug", &plugRef), check.IsNil)
 	c.Assert(plugRef, check.DeepEquals, plug)
-	c.Assert(task.Get("source", &src), check.IsNil)
+	c.Assert(task.Get("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, source)
 }
 

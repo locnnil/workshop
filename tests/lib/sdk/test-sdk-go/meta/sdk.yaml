@@ -8,4 +8,4 @@ description: |
 plugs:
   mod-cache:
     interface: content
-    target: /home/workshop/go/pkg/mod
+    workshop-target: /home/workshop/go/pkg/mod

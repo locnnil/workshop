@@ -14,7 +14,7 @@ sdks:
     plugs:
       wp-plug:
         interface: content
-        target: /mnt/wp-plug
+        workshop-target: /mnt/wp-plug
 connections:
   - plug: test-sdk-content:content-plug-one
     slot: host:user-slot

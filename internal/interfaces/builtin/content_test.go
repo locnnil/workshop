@@ -73,7 +73,7 @@ base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
-  target: import
+  workshop-target: import
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
@@ -98,7 +98,7 @@ base: ubuntu@22.04
 plugs:
  content-plug:
   interface: content
-  target: ../foo
+  workshop-target: ../foo
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
@@ -111,7 +111,7 @@ base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
-  source: images/low-res
+  workshop-source: images/low-res
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
@@ -136,11 +136,11 @@ base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
-  source: /root
+  workshop-source: /root
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"source\" must be within project subtree`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be within project subtree`)
 }
 
 func (s *contentSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
@@ -149,11 +149,11 @@ base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
-  source: ../../../../../../../../root/
+  workshop-source: ../../../../../../../../root/
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"source\" must be within project subtree`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be within project subtree`)
 }
 
 func (s *contentSuite) TestInterfaces(c *check.C) {
@@ -165,7 +165,7 @@ func (s *contentSuite) TestContentInterface(c *check.C) {
 base: ubuntu@22.04
 plugs:
  content:
-  target: /project/training
+  workshop-target: /project/training
 `, s.projectId, "ws", "consumer", "content")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
@@ -197,6 +197,6 @@ slots:
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
-	expectedMnt := lxdbackend.Mount(plug.Name, sourceDir, "/project/training")
+	expectedMnt := lxdbackend.HostWorkshopMount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
 }

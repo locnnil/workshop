@@ -74,7 +74,7 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
 	// ensure the target directory is created as a workaround for the LXD bind-mount issue
-	device := lxdbackend.Mount("sdk-device", c.MkDir(), "/new-dir")
+	device := lxdbackend.HostWorkshopMount("sdk-device", c.MkDir(), "/new-dir")
 	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
@@ -93,7 +93,7 @@ func (f *profileTest) TestSdkProfileCreatedAndUpdatedSuccessfully(c *check.C) {
 	c.Assert(inst.Profiles, testutil.DeepUnsortedMatches, []string{"default", "test-42424242-sdk"})
 
 	// Setup (now, update the already existing profile with a new device)
-	err = profile.AddDevice(lxdbackend.Mount("sdk-device-2", c.MkDir(), "/home"))
+	err = profile.AddDevice(lxdbackend.HostWorkshopMount("sdk-device-2", c.MkDir(), "/home"))
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -122,13 +122,13 @@ func (f *profileTest) TestSdkProfileBindMountFailsIfTargetIsAFile(c *check.C) {
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
-	device := lxdbackend.Mount("sdk-device", c.MkDir(), "/root/.profile")
+	device := lxdbackend.HostWorkshopMount("sdk-device", c.MkDir(), "/root/.profile")
 	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
 	// Execute
 	err = backend.AssignProfile(f.ctx, "test", profile)
-	c.Assert(err, check.ErrorMatches, `sdk:sdk-device's "target" /root/.profile is not a directory`)
+	c.Assert(err, check.ErrorMatches, `sdk:sdk-device's "workshop-target" /root/.profile is not a directory`)
 }
 
 func (f *profileTest) TestSdkProfileBindMountAbsSourceOK(c *check.C) {
@@ -140,7 +140,7 @@ func (f *profileTest) TestSdkProfileBindMountAbsSourceOK(c *check.C) {
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
 	abs := filepath.Join(c.MkDir(), "absolute", "source")
-	device := lxdbackend.Mount("sdk-device", abs, "/opt")
+	device := lxdbackend.HostWorkshopMount("sdk-device", abs, "/opt")
 	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
@@ -161,7 +161,7 @@ func (f *profileTest) TestSdkProfileBindMountRelativeSourceOK(c *check.C) {
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
-	device := lxdbackend.Mount("sdk-device", "relpath", "/opt")
+	device := lxdbackend.HostWorkshopMount("sdk-device", "relpath", "/opt")
 	err = profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 
@@ -178,7 +178,7 @@ func (f *profileTest) TestSdkProfileBindMountRelativeSourceNotExist(c *check.C) 
 
 	var backend workshop.Profile = &lxdbackend.Backend{}
 	profile := workshop.NewSdkProfile("sdk")
-	device := lxdbackend.Mount("sdk-device", "relpath", "/opt")
+	device := lxdbackend.HostWorkshopMount("sdk-device", "relpath", "/opt")
 	err := profile.AddDevice(device)
 	c.Assert(err, check.IsNil)
 

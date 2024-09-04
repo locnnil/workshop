@@ -12,6 +12,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -53,7 +54,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 	}
 	defer fs.Close()
 	for _, dev := range profile.Devices {
-		if dev.Type == workshop.BindMount {
+		if dev.Type == workshop.HostWorkshopMount {
 			// confirm the target path exists
 			target := dev.Properties["path"]
 			if info, err := fs.Stat(target); err != nil {
@@ -66,7 +67,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 					return err
 				}
 			} else if !info.IsDir() {
-				return fmt.Errorf(`%s:%s's "target" %s is not a directory`, profile.Sdk, dev.Name, target)
+				return fmt.Errorf(`%s:%s's "workshop-target" %s is not a directory`, profile.Sdk, dev.Name, target)
 			}
 
 			source := dev.Properties["source"]
@@ -104,7 +105,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 
 		if dev.Type == workshop.SshAgentProxy {
 			// add SSH_AUTH_SOCK variable to the workshop's environment
-			if err = setSshAuthSock(fs, dev, w); err != nil {
+			if err = installSshAgent(fs, dev, w); err != nil {
 				return err
 			}
 		}
@@ -138,7 +139,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 		for key, dev := range oldProfile.Devices {
 			if _, ok := newProfile.Devices[key]; !ok {
 				if dev["type"] == "proxy" {
-					unsetSshAuthSock(fs, key)
+					removeSshAgent(fs, key)
 				}
 			}
 		}
@@ -152,7 +153,7 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 		return err
 	}
 
-	if slices.Index(inst.Profiles, lxdname) == -1 {
+	if !slices.Contains(inst.Profiles, lxdname) {
 		// Assigning the profile for the first time.
 		put := inst.InstancePut
 		put.Profiles = append(put.Profiles, lxdname)
@@ -165,24 +166,6 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 	}
 
 	return nil
-}
-
-func setSshAuthSock(fs workshop.WorkshopFs, dev workshop.Device, workshop string) error {
-	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
-	if err != nil {
-		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
-	}
-
-	_, err = env.Write([]byte("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Properties["listen"], "unix:")))
-	if err != nil {
-		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
-	}
-	_ = env.Close()
-	return nil
-}
-
-func unsetSshAuthSock(fs workshop.WorkshopFs, name string) {
-	_ = fs.Remove(filepath.Join("/etc/profile.d", name+".sh"))
 }
 
 func (s *Backend) RemoveProfile(ctx context.Context, w string, profile string) error {
@@ -247,11 +230,13 @@ func (s *Backend) Profile(ctx context.Context, wp, profile string) (workshop.Sdk
 	for name, dev := range lxdp.Devices {
 		switch dev["type"] {
 		case "disk":
-			pr.Devices[name] = Mount(name, dev["source"], dev["path"])
+			pr.Devices[name] = HostWorkshopMount(name, dev["source"], dev["path"])
 		case "gpu":
 			pr.Devices[name] = Gpu(name)
 		case "proxy":
 			pr.Devices[name] = SshAgent(name, dev["connect"], dev["listen"])
+		default:
+			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, dev["type"])
 		}
 	}
 	return pr, nil

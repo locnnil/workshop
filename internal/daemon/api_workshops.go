@@ -143,7 +143,7 @@ func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, err
 			continue
 		}
 		for n, dev := range prof.Devices {
-			if dev.Type == workshop.BindMount {
+			if dev.Type == workshop.HostWorkshopMount {
 				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: n}
 				mnt := &Mount{
 					Plug:   pref,

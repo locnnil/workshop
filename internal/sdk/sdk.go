@@ -377,7 +377,7 @@ func ProjectContentDir(homedir, pid string) string {
 	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content")
 }
 
-func SdkContentSource(homedir, pid, wp, sdk, plug string) string {
+func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {
 	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
 	return filepath.Join(ProjectContentDir(homedir, pid), dir)
 }

@@ -117,7 +117,7 @@ sdks:
     plugs:
       training-plug:
         interface: content
-        target: /opt
+        workshop-target: /opt
   test-sdk-2:
     channel: latest/stable
 connections:
@@ -138,7 +138,7 @@ sdks:
     plugs:
       training-plug:
         interface: content
-        target: /opt
+        workshop-target: /opt
       data:
         bind: test-sdk:training-plug
   test-sdk-2:
@@ -169,7 +169,7 @@ sdks:
     slots:
       training:
         interface: content
-        source: .
+        workshop-source: .
   test-sdk:
     channel: latest/stable
   test-sdk-2:
@@ -232,7 +232,7 @@ description: SDK
 plugs:
   data:
     interface: content
-    target: /opt/data
+    workshop-target: /opt/data
   ssh-agent:
     interface: test
 `
@@ -246,7 +246,7 @@ description: SDK
 plugs:
   photos:
     interface: content
-    target: /opt/data2
+    workshop-target: /opt/data2
   gpu:
     interface: gpu
 `
@@ -371,7 +371,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
-						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+						Source: sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
 						Target: "/opt/data",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -389,7 +389,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
-						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+						Source: sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -441,7 +441,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
-						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+						Source: sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,
@@ -459,7 +459,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
-						Source: sdk.SdkContentSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+						Source: sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 						Target: "/opt/data2",
 						Plug: interfaces.PlugRef{
 							ProjectId: s.project.ProjectId,

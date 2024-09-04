@@ -675,7 +675,7 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
 	remount.Set("plug", master)
-	remount.Set("source", source)
+	remount.Set("host-source", source)
 
 	return state.NewTaskSet(remount), nil
 }

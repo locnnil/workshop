@@ -8,7 +8,8 @@ import (
 type DeviceType int
 
 const (
-	BindMount DeviceType = iota
+	HostWorkshopMount DeviceType = iota
+	WorkshopWorkshopMount
 	DiskVolume
 	GPU
 	SshAgentProxy

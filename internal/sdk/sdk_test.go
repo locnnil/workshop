@@ -50,7 +50,7 @@ base: ubuntu@20.04
 plugs:
   training:
     interface: content
-    target: /project
+    workshop-target: /project
 `)
 
 	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
@@ -61,7 +61,7 @@ plugs:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "content",
-		Attrs:     map[string]interface{}{"target": "/project"},
+		Attrs:     map[string]interface{}{"workshop-target": "/project"},
 	})
 }
 
@@ -549,7 +549,7 @@ base: ubuntu@20.04
 plugs:
   training:
     interface: content
-    target: /project
+    workshop-target: /project
 `)
 
 	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
@@ -560,11 +560,11 @@ plugs:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "content",
-		Attrs:     map[string]interface{}{"target": "/project"},
+		Attrs:     map[string]interface{}{"workshop-target": "/project"},
 	})
 	plugs := map[string]interface{}{
 		"training": map[string]interface{}{
-			"target": "/data",
+			"workshop-target": "/data",
 		},
 	}
 	err = info.SetupWorkshopPlugs(plugs)

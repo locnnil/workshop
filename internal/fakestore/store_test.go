@@ -29,7 +29,7 @@ description: |
 plugs:
   data:
     interface: content
-    target: /test
+    workshop-target: /test
   gpu:
     interface: gpu
 `
