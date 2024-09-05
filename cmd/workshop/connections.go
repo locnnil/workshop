@@ -46,7 +46,7 @@ Notes:
 }
 
 func isHostSdk(sdkName string) bool {
-	return sdkName == "host"
+	return sdkName == "system"
 }
 
 func isDefaultHostSlot(slot client.Slot) bool {

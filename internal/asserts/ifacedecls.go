@@ -29,7 +29,7 @@ var (
 
 	ruleSubrules = []string{"allow-installation", "deny-installation", "allow-connection", "deny-connection", "allow-auto-connection", "deny-auto-connection"}
 
-	validSdkType = regexp.MustCompile(`^(?:host|regular)$`)
+	validSdkType = regexp.MustCompile(`^(?:system|regular)$`)
 
 	validIDConstraints = map[string]*regexp.Regexp{
 		"slot-sdk-type": validSdkType,

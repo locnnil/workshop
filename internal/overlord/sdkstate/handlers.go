@@ -82,7 +82,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return store.DownloadSdk(ctx, rec, reporter)
 }
 
-func (m *SdkManager) doInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (m *SdkManager) doInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return wp.InstallHostSdk(ctx)
 }
 
-func (m *SdkManager) undoInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) undoInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (m *SdkManager) undoInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error
 	}
 	defer wfs.Close()
 
-	return wfs.RemoveAll(sdk.SdkRootPath("host"))
+	return wfs.RemoveAll(sdk.SdkRootPath(sdk.System.String()))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -169,6 +169,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level

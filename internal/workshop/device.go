@@ -18,6 +18,7 @@ const (
 type Device struct {
 	Name       string
 	Properties map[string]string
+	Config     map[string]string
 	Type       DeviceType
 }
 

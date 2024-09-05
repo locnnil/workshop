@@ -38,6 +38,7 @@ func (b *Backend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfac
 	if err = b.profile.AssignProfile(context, sdkInfo.Workshop, profile); err != nil {
 		return fmt.Errorf("%q SDK setup failed: %v", sdkInfo.Sdk, err)
 	}
+
 	return err
 }
 

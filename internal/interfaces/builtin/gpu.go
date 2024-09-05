@@ -26,13 +26,13 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-const gpuSummary = `allows sharing host GPUs with SDKs`
+const gpuSummary = `allows sharing system GPUs with SDKs`
 
 const gpuBaseDeclarationSlots = `
   gpu:
     allow-installation:
       slot-sdk-type:
-        - host
+        - system
       slot-names:
         - $INTERFACE
     allow-connection: true

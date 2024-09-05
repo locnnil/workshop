@@ -505,10 +505,10 @@ plugs:
         interface: content
         workshop-target: /home/workshop
 `
-	var hostYaml = `
-name: host
+	var systemYaml = `
+name: system
 base: ubuntu@22.04
-type: host
+type: system
 slots:
     slot:
         interface: content        
@@ -517,11 +517,11 @@ slots:
 	c.Assert(err, check.IsNil)
 	wm.Running = true
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
-	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, hostYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
+	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, systemYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/host:slot": map[string]interface{}{
+		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot": map[string]interface{}{
 			"interface":    "content",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"target": "/opt"},
@@ -861,7 +861,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	var attrs map[string]interface{}
 	c.Assert(chg.Get("remounts", &attrs), check.IsNil)
 	c.Assert(attrs, check.HasLen, 1)
-	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/host:slot"],
+	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot"],
 		check.DeepEquals, source)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)

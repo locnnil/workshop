@@ -23,6 +23,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type actionOpts struct {
@@ -51,9 +52,10 @@ type SdkInfo struct {
 }
 
 type Mount struct {
-	Plug   interfaces.PlugRef `json:"plug"`
-	Source string             `json:"source"`
-	Target string             `json:"target"`
+	Plug           interfaces.PlugRef `json:"plug"`
+	WorkshopSource string             `json:"workshop-source,omitempty"`
+	HostSource     string             `json:"host-source,omitempty"`
+	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
 type WorkshopInfo struct {
@@ -146,21 +148,32 @@ func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, err
 			if dev.Type == workshop.HostWorkshopMount {
 				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: n}
 				mnt := &Mount{
-					Plug:   pref,
-					Source: dev.Properties["source"],
-					Target: dev.Properties["path"],
+					Plug:           pref,
+					HostSource:     dev.Properties["source"],
+					WorkshopTarget: dev.Properties["path"],
 				}
 				mnts[sk.Name] = append(mnts[sk.Name], mnt)
 				if slaves, ok := masters[pref]; ok {
 					for _, slave := range slaves {
 						mnt := &Mount{
-							Plug:   slave,
-							Source: dev.Properties["source"],
-							Target: dev.Properties["path"],
+							Plug:           slave,
+							HostSource:     dev.Properties["source"],
+							WorkshopTarget: dev.Properties["path"],
 						}
 						mnts[slave.Sdk] = append(mnts[slave.Sdk], mnt)
 					}
 				}
+			}
+			if dev.Type == workshop.WorkshopWorkshopMount {
+				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: n}
+				source := dev.Config[lxdbackend.WorkshopSrcKey(sk.Name, n)]
+				target := dev.Config[lxdbackend.WorkshopTgtKey(sk.Name, n)]
+				mnt := &Mount{
+					Plug:           pref,
+					WorkshopSource: source,
+					WorkshopTarget: target,
+				}
+				mnts[sk.Name] = append(mnts[sk.Name], mnt)
 			}
 		}
 	}

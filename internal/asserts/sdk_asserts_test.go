@@ -7,6 +7,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/asserts"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 var _ = check.Suite(&baseDeclSuite{})
@@ -22,7 +23,7 @@ plugs:
     deny-installation: false
     allow-auto-connection:
       slot-sdk-type:
-        - host
+        - system
       slot-attributes:
         a1: /foo/.*
       plug-attributes:
@@ -49,7 +50,7 @@ slots:
     deny-installation: false
     allow-auto-connection:
       plug-sdk-type:
-        - host
+        - system
       slot-attributes:
         c1: /foo/.*
       plug-attributes:
@@ -72,7 +73,7 @@ slots:
         d2: !D2
     allow-installation:
       slot-sdk-type:
-        - host
+        - system
         - regular
       slot-attributes:
         e1: E1
@@ -95,11 +96,11 @@ AXNpZw==`
 	c.Assert(slotRule3, check.NotNil)
 	c.Assert(slotRule3.DenyInstallation, check.HasLen, 1)
 	c.Assert(slotRule3.AllowAutoConnection, check.HasLen, 1)
-	c.Check(slotRule3.AllowAutoConnection[0].PlugSdkTypes, check.DeepEquals, []string{"host"})
+	c.Check(slotRule3.AllowAutoConnection[0].PlugSdkTypes, check.DeepEquals, []string{sdk.System.String()})
 
 	slotRule4 := baseDecl.SlotRule("interface4")
 	c.Assert(slotRule4, check.NotNil)
-	c.Check(slotRule4.AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{"host", "regular"})
+	c.Check(slotRule4.AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
 	c.Assert(slotRule4.DenyInstallation, check.HasLen, 1)
 	c.Assert(slotRule3.AllowConnection, check.HasLen, 1)
 	c.Assert(slotRule3.DenyConnection, check.HasLen, 1)
@@ -158,7 +159,7 @@ slots:
   network:
     allow-installation:
       slot-sdk-type:
-        - host
+        - system
 `
 
 	err := asserts.InitBuiltinBaseDeclaration([]byte(headers))
@@ -173,7 +174,7 @@ slots:
 	c.Check(baseDecl.AuthorityID(), check.Equals, "canonical")
 	c.Check(baseDecl.Series(), check.Equals, "1")
 	c.Check(baseDecl.PlugRule("network").AllowAutoConnection[0].SlotAttributes, check.Equals, asserts.AlwaysMatchAttributes)
-	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{"host"})
+	c.Check(baseDecl.SlotRule("network").AllowInstallation[0].SlotSdkTypes, check.DeepEquals, []string{sdk.System.String()})
 
 	enc := asserts.Encode(baseDecl)
 	// it's expected that it cannot be decoded

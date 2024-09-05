@@ -1,7 +1,7 @@
 name: ws-gpu-fail
 base: ubuntu@22.04
 sdks:
-  host:
+  system:
     slots:
       user-gpu:
         interface: gpu

@@ -38,7 +38,7 @@ type Type string
 
 const (
 	Regular Type = "regular"
-	Host    Type = "host"
+	System  Type = "system"
 )
 
 func (t Type) String() string {
@@ -70,7 +70,7 @@ func (i *Info) Ref() Ref {
 }
 
 func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
-	if i.Type == Host {
+	if i.Type == System {
 		return nil
 	}
 

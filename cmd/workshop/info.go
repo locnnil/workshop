@@ -127,9 +127,18 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				fmt.Fprintf(w, "    mounts:\n")
 				slices.SortFunc(sdk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 				for _, mount := range sdk.Mounts {
-					fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-					fmt.Fprintf(w, "        host:\t%s\n", shortenDefaulPath(mount.Source))
-					fmt.Fprintf(w, "        workshop:\t%s\n", mount.Target)
+					if mount.HostSource != "" {
+						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
+						fmt.Fprintf(w, "        host-source:\t%s\n", shortenDefaulPath(mount.HostSource))
+						fmt.Fprintf(w, "        workshop-target:\t%s\n", mount.WorkshopTarget)
+						continue
+					}
+					if mount.WorkshopSource != "" {
+						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
+						fmt.Fprintf(w, "        workshop-source:\t%s\n", mount.WorkshopSource)
+						fmt.Fprintf(w, "        workshop-target:\t%s\n", mount.WorkshopTarget)
+						continue
+					}
 				}
 			}
 		}

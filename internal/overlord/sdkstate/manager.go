@@ -22,7 +22,7 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
 	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), manager.undoInstallSdk)
-	runner.AddHandler("install-host-sdk", OnDo(manager.doInstallHostSdk), manager.undoInstallHostSdk)
+	runner.AddHandler("install-system-sdk", OnDo(manager.doInstallSystemSdk), manager.undoInstallSystemSdk)
 	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), manager.undoLinkSdk)
 
 	return manager

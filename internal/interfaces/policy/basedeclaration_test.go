@@ -169,10 +169,9 @@ func (s *baseDeclSuite) TestContentSlotInstallation(c *check.C) {
 	// test content specially
 	ic := s.installSlotCand(c, "content", sdk.Regular, ``)
 	err := ic.Check()
-	c.Assert(err, Not(IsNil))
-	c.Assert(err, ErrorMatches, "installation not allowed by \"content\" slot rule of interface \"content\"")
+	c.Assert(err, IsNil)
 
-	ic = s.installSlotCand(c, "content", sdk.Host, ``)
+	ic = s.installSlotCand(c, "content", sdk.System, ``)
 	err = ic.Check()
 	c.Assert(err, IsNil)
 }
@@ -198,7 +197,7 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
     content:
 `
@@ -212,7 +211,7 @@ slots:
 func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
     content:
 `
@@ -232,7 +231,7 @@ plugs:
 func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
     content:
 `

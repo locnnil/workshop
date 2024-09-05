@@ -144,7 +144,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	expected := []string{"download-base", "create-workshop",
 		"mount-project",
-		"start-workshop", "install-host-sdk", "link-sdk", "auto-connect"}
+		"start-workshop", "install-system-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
@@ -177,10 +177,10 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-host-sdk",
+		"install-system-sdk",
 		"link-sdk",
-		"auto-connect",    // "host" SDK
-		"auto-disconnect", // "host" SDK
+		"auto-connect",    // "system" SDK
+		"auto-disconnect", // "system" SDK
 	}
 
 	tasks := ts.Tasks()
@@ -214,7 +214,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-state-storage",
 		"run-hook",        // save-state sdk-1
 		"run-hook",        // save-state sdk-2
-		"auto-disconnect", // "host" SDK
+		"auto-disconnect", // "system" SDK
 		"auto-disconnect",
 		"auto-disconnect",
 		"stash-workshop",
@@ -222,13 +222,13 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-host-sdk",
+		"install-system-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
-		"auto-connect", // "host" SDK
+		"auto-connect", // "system" SDK
 		"auto-connect",
 		"auto-connect",
 		"run-hook", // setup-base sdk-1
@@ -403,10 +403,10 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-host-sdk",
+		"install-system-sdk",
 		"link-sdk",
-		"auto-disconnect", // host SDK
-		"auto-connect",    // host SDK
+		"auto-disconnect", // system SDK
+		"auto-connect",    // system SDK
 		"remove-workshop-stash",
 	}
 
@@ -414,18 +414,18 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"retrieve-sdk",
 		"create-state-storage",
 		"run-hook",        // save-state hook
-		"auto-disconnect", // host SDK
+		"auto-disconnect", // system SDK
 		"auto-disconnect",
 		"stash-workshop",
 		"download-base",
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-host-sdk",
+		"install-system-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
-		"auto-connect", // host SDK
+		"auto-connect", // system SDK
 		"auto-connect",
 		"run-hook", // setup-base hook
 		"run-hook", // restore-state hook
@@ -502,12 +502,12 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-host-sdk",
+		"install-system-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
-		"auto-disconnect", // host SDK
-		"auto-connect",    // host SDK
+		"auto-disconnect", // system SDK
+		"auto-connect",    // system SDK
 		"auto-connect",
 		"run-hook", // setup-base hook
 		"run-hook", // restore state hook

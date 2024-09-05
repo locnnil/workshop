@@ -35,13 +35,13 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-const sshAgentSummary = `allows sharing host's ssh-agent socket with SDKs`
+const sshAgentSummary = `allows sharing system's ssh-agent socket with SDKs`
 
 const sshAgentBaseDeclarationSlots = `
   ssh-agent:
     allow-installation:
       slot-sdk-type:
-        - host
+        - system
       slot-names:
         - $INTERFACE
     allow-connection: true

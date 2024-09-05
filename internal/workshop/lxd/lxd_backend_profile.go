@@ -1,6 +1,7 @@
 package lxdbackend
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"maps"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"golang.org/x/exp/slices"
 
@@ -53,6 +55,8 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 		return err
 	}
 	defer fs.Close()
+
+	reloadRequired := false
 	for _, dev := range profile.Devices {
 		if dev.Type == workshop.HostWorkshopMount {
 			// confirm the target path exists
@@ -109,18 +113,30 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 				return err
 			}
 		}
+
+		if dev.Type == workshop.WorkshopWorkshopMount {
+			reloadRequired = true
+			if err = installWorkshopToWorkshopMount(s, fs, profile.Sdk, dev); err != nil {
+				return err
+			}
+		}
 	}
 
 	lxdname := profileName(pid, w, profile.Name())
 	lxddevs := make(map[string]map[string]string)
+	lxdconfig := make(map[string]string)
+
 	for _, dev := range profile.Devices {
 		if lxddevs[dev.Name] == nil {
 			lxddevs[dev.Name] = make(map[string]string)
 		}
 		maps.Copy(lxddevs[dev.Name], dev.Properties)
+		maps.Copy(lxdconfig, dev.Config)
 	}
+
 	newProfile := api.ProfilePut{
 		Devices:     lxddevs,
+		Config:      lxdconfig,
 		Description: fmt.Sprintf("%q SDK profile for %q workshop", profile.Name(), w),
 	}
 
@@ -140,6 +156,12 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 			if _, ok := newProfile.Devices[key]; !ok {
 				if dev["type"] == "proxy" {
 					removeSshAgent(fs, key)
+				}
+				if dev["type"] == "none" {
+					reloadRequired = true
+					_ = removeWorkshopToWorkshopMount(s, fs,
+						oldProfile.Config[WorkshopSrcKey(profile.Name(), key)],
+						oldProfile.Config[WorkshopTgtKey(profile.Name(), key)])
 				}
 			}
 		}
@@ -162,10 +184,46 @@ func (s *Backend) AssignProfile(ctx context.Context, w string, profile workshop.
 			return err
 		}
 
-		return op.WaitContext(ctx)
+		if err = op.WaitContext(ctx); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	if reloadRequired {
+		return s.reloadWorkshopConfiguration(conn, ctx, w)
+	}
+	return err
+}
+
+func (s *Backend) reloadWorkshopConfiguration(conn lxd.InstanceServer, ctx context.Context, w string) error {
+	var out bytes.Buffer
+
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
+			UserId:  0,
+			GroupId: 0,
+			Command: []string{
+				"mount",
+				"-a",
+			},
+			WorkDir: "/",
+		},
+		ExecControls: workshop.ExecControls{
+			Stdin:  nil,
+			Stdout: nil,
+			Stderr: &out,
+		},
+	}
+
+	execCtx, err := s.execCommand(conn, ctx, w, &args)
+	if err != nil {
+		return err
+	}
+	err = execCtx.WaitExecution(ctx)
+	if err != nil {
+		logger.Noticef("On reload Workshop mounts: %s", out.String())
+	}
+	return err
 }
 
 func (s *Backend) RemoveProfile(ctx context.Context, w string, profile string) error {
@@ -235,6 +293,8 @@ func (s *Backend) Profile(ctx context.Context, wp, profile string) (workshop.Sdk
 			pr.Devices[name] = Gpu(name)
 		case "proxy":
 			pr.Devices[name] = SshAgent(name, dev["connect"], dev["listen"])
+		case "none":
+			pr.Devices[name] = WorkshopToWorkshopMount(profile, name, lxdp.Config[WorkshopSrcKey(profile, name)], lxdp.Config[WorkshopTgtKey(profile, name)])
 		default:
 			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, dev["type"])
 		}

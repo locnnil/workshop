@@ -5,4 +5,4 @@ sdks:
     channel: latest/stable
 connections:
   - plug: test-sdk-ssh-agent:ssh-agent
-    slot: host:ssh-agent
+    slot: system:ssh-agent

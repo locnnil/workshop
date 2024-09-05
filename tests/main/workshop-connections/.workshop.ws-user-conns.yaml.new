@@ -1,13 +1,13 @@
 name: ws-user-conns
 base: ubuntu@22.04
 sdks:
-  host:
+  system:
     slots:
       user-slot-2:
         interface: content
-        source: user-data-2
+        workshop-source: user-data-2
   test-sdk-content:
     channel: latest/stable
 connections:
   - plug: test-sdk-content:content-plug-two
-    slot: host:user-slot-2
+    slot: system:user-slot-2

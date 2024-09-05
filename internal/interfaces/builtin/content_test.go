@@ -111,7 +111,7 @@ base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
-  workshop-source: images/low-res
+  workshop-source: /images/low-res
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
@@ -136,11 +136,11 @@ base: ubuntu@22.04
 slots:
  content-slot:
   interface: content
-  workshop-source: /root
+  workshop-source: root
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be within project subtree`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be absolute`)
 }
 
 func (s *contentSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
@@ -153,7 +153,7 @@ slots:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be within project subtree`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be absolute`)
 }
 
 func (s *contentSuite) TestInterfaces(c *check.C) {

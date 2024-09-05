@@ -102,9 +102,9 @@ type ExecArgs struct {
 }
 
 type ExecControls struct {
-	Stdin   io.ReadCloser
-	Stdout  io.WriteCloser
-	Stderr  io.WriteCloser
+	Stdin   io.Reader
+	Stdout  io.Writer
+	Stderr  io.Writer
 	Control func(conn *websocket.Conn)
 }
 

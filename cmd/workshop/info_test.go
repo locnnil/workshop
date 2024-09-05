@@ -100,8 +100,8 @@ content:
 var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
 "content":[
 	{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z",
-	"mounts":[{"source":"/home/user/src","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
-	{"source":"%s/.local/share/workshop/project/17942561/content/ws_go_mod-cache.sdk","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
+	"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
+	{"host-source":"%s/.local/share/workshop/project/17942561/content/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
 }]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
@@ -140,10 +140,10 @@ content:
     channel:  latest/edge  2017-03-22  1
     mounts:
       plug-default:
-        host:      .../17942561/content/ws_go_mod-cache.sdk
-        workshop:  /home/workshop/target
+        host-source:      .../17942561/content/ws_go_mod-cache.sdk
+        workshop-target:  /home/workshop/target
       plug-name:
-        host:      /home/user/src
-        workshop:  /home/workshop/target
+        host-source:      /home/user/src
+        workshop-target:  /home/workshop/target
 `, m.prjDir))
 }

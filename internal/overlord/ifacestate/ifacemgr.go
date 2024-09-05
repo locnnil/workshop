@@ -154,11 +154,11 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
-				host, err := workshop.SdkInfo(pctx, sdk.Host.String())
+				system, err := workshop.SdkInfo(pctx, sdk.System.String())
 				if err != nil {
 					continue
 				}
-				if err = m.repo.AddSdk(host); err != nil {
+				if err = m.repo.AddSdk(system); err != nil {
 					continue
 				}
 
@@ -248,13 +248,13 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// 1: <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot>
 	// Return exactly one plug/slot or an error if it doesn't exist.
 	case plugName != "" && slotName != "":
-		// The SDK name can be omitted to implicitly refer to the host SDK.
+		// The SDK name can be omitted to implicitly refer to the system SDK.
 		if plugSdk == "" {
-			plugSdk = sdk.Host.String()
+			plugSdk = sdk.System.String()
 		}
-		// The SDK name can be omitted to implicitly refer to the host SDK.
+		// The SDK name can be omitted to implicitly refer to the system SDK.
 		if slotSdk == "" {
-			slotSdk = sdk.Host.String()
+			slotSdk = sdk.System.String()
 		}
 		// Ensure that slot and plug are connected
 		isConnected, err := connected(plugProject, plugWorkshop, plugSdk, plugName, slotProject, slotWorkshop, slotSdk, slotName)
@@ -278,14 +278,14 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop != "" && plugName != "" && slotWorkshop == "" && slotName == "":
 		if plugSdk == "" {
-			plugSdk = sdk.Host.String()
+			plugSdk = sdk.System.String()
 		}
 		return connectedPlugOrSlot(plugProject, plugWorkshop, plugSdk, plugName)
 	// 2: <workshop>/<sdk>:<plug or slot> (through 2nd pair)
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop == "" && plugName == "" && slotWorkshop != "" && slotName != "":
 		if slotSdk == "" {
-			slotSdk = sdk.Host.String()
+			slotSdk = sdk.System.String()
 		}
 		return connectedPlugOrSlot(slotProject, slotWorkshop, slotSdk, slotName)
 	default:

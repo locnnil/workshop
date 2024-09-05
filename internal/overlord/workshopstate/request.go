@@ -93,9 +93,9 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 	sto := sdk.StoreService(st)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		// "host" SDK is bootstrapped and installed by Workshop locally in a
+		// "system" SDK is bootstrapped and installed by Workshop locally in a
 		// separate task.
-		if sd.Name == sdk.Host.String() {
+		if sd.Name == sdk.System.String() {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
@@ -124,8 +124,8 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	var prevSetup *state.Task
 	setupHook := state.NewTaskSet()
 
-	var prevAuto = st.NewTask("auto-connect", `Auto-connect interfaces of "host" SDK`)
-	prevAuto.Set("sdk", "host")
+	var prevAuto = st.NewTask("auto-connect", fmt.Sprintf(`Auto-connect interfaces of %q SDK`, sdk.System.String()))
+	prevAuto.Set("sdk", sdk.System.String())
 	autoConnect := state.NewTaskSet(prevAuto)
 
 	for idx, sdk := range sdks {
@@ -420,8 +420,8 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 }
 
 func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
-	prev := st.NewTask("auto-disconnect", `Disconnect interfaces of "host" SDK`)
-	prev.Set("sdk", "host")
+	prev := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, sdk.System.String()))
+	prev.Set("sdk", sdk.System.String())
 	disconnectSet := state.NewTaskSet(prev)
 	for _, s := range content {
 		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))

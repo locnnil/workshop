@@ -13,9 +13,10 @@ type HealthCheck struct {
 }
 
 type Mount struct {
-	Plug   PlugRef `json:"plug"`
-	Source string  `json:"source"`
-	Target string  `json:"target"`
+	Plug           PlugRef `json:"plug"`
+	HostSource     string  `json:"host-source,omitempty"`
+	WorkshopSource string  `json:"workshop-source,omitempty"`
+	WorkshopTarget string  `json:"workshop-target"`
 }
 
 type Sdk struct {

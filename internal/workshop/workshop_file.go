@@ -54,7 +54,7 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 		return fmt.Errorf("%q is not a valid plug or slot reference (use <sdk>:<plug or slot>)", refStr)
 	}
 	if len(parts[0]) == 0 {
-		parts[0] = sdk.Host.String()
+		parts[0] = sdk.System.String()
 	}
 	if !workshopName.MatchString(parts[0]) {
 		return fmt.Errorf("%q is not a valid plug or slot reference (%q is an invalid SDK name)", refStr, parts[0])
@@ -183,7 +183,7 @@ func validateSdks(sdks SdkList) error {
 			return fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
 
-		// An SDK installed from a local source (e.g. host SDK) does not have a
+		// An SDK installed from a local source (e.g. system SDK) does not have a
 		// channel.
 		if s.Channel == "" {
 			continue
@@ -218,7 +218,7 @@ func validateBinding(sdks SdkList) error {
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
-			if p.Bind.Sdk != sdk.Host.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
+			if p.Bind.Sdk != sdk.System.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Name))
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
@@ -268,12 +268,12 @@ func validateConnections(wfile *File) error {
 				conn.SlotRef.Name)
 		}
 
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.Host.String() }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.System.String() }) {
 			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
 				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
 				conn.SlotRef.Name, conn.PlugRef.Sdk, wfile.Name)
 		}
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.Host.String() }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.System.String() }) {
 			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
 				conn.PlugRef.Sdk, conn.PlugRef.Name,
 				conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)

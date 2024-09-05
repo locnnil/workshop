@@ -123,6 +123,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	hook.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
 	args := workshop.Execution{

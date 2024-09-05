@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-var hostSdkYaml = `name: host
+var systemSdkYaml = `name: system
 base: %s
-type: host
+type: system
 slots:
   content:
     interface: content
@@ -16,6 +16,6 @@ slots:
     interface: ssh-agent
 `
 
-func HostSdkMeta(base string) string {
-	return fmt.Sprintf(hostSdkYaml, base)
+func SystemSdkMeta(base string) string {
+	return fmt.Sprintf(systemSdkYaml, base)
 }

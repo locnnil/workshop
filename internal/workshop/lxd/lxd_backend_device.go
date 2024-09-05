@@ -2,9 +2,12 @@ package lxdbackend
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -16,11 +19,81 @@ func HostWorkshopMount(name, source, target string) workshop.Device {
 	}
 }
 
-func WorkshopToWorkshopMount(name, source, target string) workshop.Device {
+func WorkshopSrcKey(sdk, name string) string {
+	return fmt.Sprintf("user.workshop.%s.%s.workshop-source", sdk, name)
+}
+
+func WorkshopTgtKey(sdk, name string) string {
+	return fmt.Sprintf("user.workshop.%s.%s.workshop-target", sdk, name)
+}
+
+func WorkshopToWorkshopMount(sdk, name, source, target string) workshop.Device {
+	cfgsrc := WorkshopSrcKey(sdk, name)
+	cfgtgt := WorkshopTgtKey(sdk, name)
 	return workshop.Device{Name: name,
 		Type:       workshop.WorkshopWorkshopMount,
 		Properties: map[string]string{"type": "none"},
+		Config:     map[string]string{cfgsrc: source, cfgtgt: target},
 	}
+}
+
+func installWorkshopToWorkshopMount(backend workshop.Backend, fs workshop.WorkshopFs, sdk string, dev workshop.Device) error {
+	fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
+	if err != nil {
+		return err
+	}
+	defer fstab.Close()
+
+	mounts, err := osutil.ReadMountProfile(fstab)
+	if err != nil {
+		return err
+	}
+
+	name := dev.Config[WorkshopSrcKey(sdk, dev.Name)]
+	dir := dev.Config[WorkshopTgtKey(sdk, dev.Name)]
+	check := func(me osutil.MountEntry) bool { return me.Name == name && me.Dir == dir }
+
+	_, err = fs.Stat(name)
+	if err != nil {
+		return fmt.Errorf(`stat workshop-target %q: %v`, dir, err)
+	}
+
+	_, err = fs.Stat(dir)
+	if err != nil {
+		return fmt.Errorf(`stat workshop-source %q: %v`, dir, err)
+	}
+
+	if !slices.ContainsFunc(mounts.Entries, check) {
+		entry := osutil.MountEntry{Name: name, Dir: dir, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
+		mounts.Entries = append(mounts.Entries, entry)
+		_, err = mounts.WriteTo(fstab)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func removeWorkshopToWorkshopMount(backend workshop.Backend, fs workshop.WorkshopFs, name, dir string) error {
+	fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
+	if err != nil {
+		return err
+	}
+	defer fstab.Close()
+
+	mounts, err := osutil.ReadMountProfile(fstab)
+	if err != nil {
+		return err
+	}
+	deleter := func(me osutil.MountEntry) bool { return me.Name == name && me.Dir == dir }
+
+	mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
+	_, err = mounts.WriteTo(fstab)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Volume(name, mountTo, volume string) workshop.Device {

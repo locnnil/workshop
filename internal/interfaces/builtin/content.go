@@ -39,10 +39,11 @@ const contentBaseDeclarationSlots = `
   content:
     allow-installation:
       slot-sdk-type:
-        - host
+        - system
+        - regular
     deny-installation:
       slot-attributes:
-        host-source: .*      
+        host-source: .*
     allow-connection: true
     allow-auto-connection: true
 `
@@ -65,14 +66,14 @@ const contentBaseDeclarationPlugs = `
 var knownPlugAttributes = []string{"workshop-target"}
 var knownSlotAttributes = []string{"workshop-source", "host-source"}
 
-// contentInterface allows sharing content between sdks
-type contentInterface struct{}
+// mountInterface allows sharing content between sdks
+type mountInterface struct{}
 
-func (iface *contentInterface) Name() string {
+func (iface *mountInterface) Name() string {
 	return "content"
 }
 
-func (iface *contentInterface) StaticInfo() interfaces.StaticInfo {
+func (iface *mountInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
 		Summary:              contentSummary,
 		BaseDeclarationPlugs: contentBaseDeclarationPlugs,
@@ -92,7 +93,7 @@ func validatePath(path string) error {
 	return nil
 }
 
-func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
+func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	for name := range plug.Attrs {
 		if !slices.Contains(knownPlugAttributes, name) {
 			return fmt.Errorf(`unknown attribute for content interface plug: %q`, name)
@@ -108,7 +109,7 @@ func (iface *contentInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	return nil
 }
 
-func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
+func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	for name := range slot.Attrs {
 		if !slices.Contains(knownSlotAttributes, name) {
 			return fmt.Errorf(`unknown attribute for content interface slot: %q`, name)
@@ -123,13 +124,18 @@ func (iface *contentInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	if !ok {
 		return fmt.Errorf(`content slot "workshop-source" is not a string (found %T)`, source)
 	}
-	if !filepath.IsLocal(path) {
-		return fmt.Errorf(`content slot "workshop-source" must be within project subtree`)
+
+	if strings.HasPrefix(path, "$SDK") {
+		path = strings.Replace(path, "$SDK", sdk.SdkCurrentPath(slot.Sdk.Name), 1)
+	}
+
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf(`content slot "workshop-source" must be absolute`)
 	}
 	return nil
 }
 
-func (iface *contentInterface) target(attrs interfaces.Attrer) string {
+func (iface *mountInterface) target(attrs interfaces.Attrer) string {
 	var target string
 
 	if err := attrs.Attr("workshop-target", &target); err == nil {
@@ -138,16 +144,20 @@ func (iface *contentInterface) target(attrs interfaces.Attrer) string {
 	return ""
 }
 
-func (iface *contentInterface) workshopSource(slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
 	err := slot.Attr("workshop-source", &source)
-	if err == nil {
-		return source, nil
+	if err != nil {
+		return "", err
 	}
-	return "", err
+
+	if strings.HasPrefix(source, "$SDK") {
+		return strings.Replace(source, "$SDK", sdk.SdkCurrentPath(slot.Ref().Sdk), 1), nil
+	}
+	return source, nil
 }
 
-func (iface *contentInterface) hostSource(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *mountInterface) hostSource(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
 	err := slot.Attr("host-source", &source)
 	if err == nil {
@@ -161,17 +171,17 @@ func (iface *contentInterface) hostSource(baseDir string, plug *interfaces.Conne
 	return source, nil
 }
 
-func (iface *contentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
+func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	// allow what declarations allowed
 	return true
 }
 
-func (iface *contentInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *mountInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	return nil
 }
 
 // Interactions with the mount backend.
-func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *mountInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	user, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
@@ -182,7 +192,7 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 		return err
 	}
 	if err == nil {
-		spec.AddDeviceEntry(lxdbackend.WorkshopToWorkshopMount(plug.Name(), source, iface.target(plug)))
+		spec.AddDeviceEntry(lxdbackend.WorkshopToWorkshopMount(plug.Ref().Sdk, plug.Name(), source, iface.target(plug)))
 		return nil
 	}
 
@@ -196,5 +206,5 @@ func (iface *contentInterface) MountConnectedPlug(spec *device.Specification, pl
 }
 
 func init() {
-	registerIface(&contentInterface{})
+	registerIface(&mountInterface{})
 }
