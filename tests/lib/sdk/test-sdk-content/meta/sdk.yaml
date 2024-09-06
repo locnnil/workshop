@@ -7,8 +7,8 @@ description: |
   test-sdk-content SDK
 plugs:
   content-plug-one:
-    interface: content
+    interface: mount
     workshop-target: /home/workshop
   content-plug-two:
-    interface: content
+    interface: mount
     workshop-target: /opt

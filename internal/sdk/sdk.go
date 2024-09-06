@@ -374,7 +374,7 @@ func SdkHookPath(sdkName, hookName string) string {
 }
 
 func ProjectContentDir(homedir, pid string) string {
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content")
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "mount")
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

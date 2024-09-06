@@ -33,10 +33,10 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-const contentSummary = `allows sharing host code and data with SDKs`
+const mountSummary = `allows sharing host code and data with SDKs`
 
-const contentBaseDeclarationSlots = `
-  content:
+const mountBaseDeclarationSlots = `
+  mount:
     allow-installation:
       slot-sdk-type:
         - system
@@ -48,8 +48,8 @@ const contentBaseDeclarationSlots = `
     allow-auto-connection: true
 `
 
-const contentBaseDeclarationPlugs = `
-  content:
+const mountBaseDeclarationPlugs = `
+  mount:
     allow-installation:
       plug-sdk-type:
         - regular
@@ -70,14 +70,14 @@ var knownSlotAttributes = []string{"workshop-source", "host-source"}
 type mountInterface struct{}
 
 func (iface *mountInterface) Name() string {
-	return "content"
+	return "mount"
 }
 
 func (iface *mountInterface) StaticInfo() interfaces.StaticInfo {
 	return interfaces.StaticInfo{
-		Summary:              contentSummary,
-		BaseDeclarationPlugs: contentBaseDeclarationPlugs,
-		BaseDeclarationSlots: contentBaseDeclarationSlots,
+		Summary:              mountSummary,
+		BaseDeclarationPlugs: mountBaseDeclarationPlugs,
+		BaseDeclarationSlots: mountBaseDeclarationSlots,
 		AffectsPlugOnRefresh: true,
 	}
 }

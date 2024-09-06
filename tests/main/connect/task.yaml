@@ -9,14 +9,14 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"  
-  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-one ws-conn/system:content  
-  workshop_exec connect ws-conn/test-sdk-content:content-plug-one ws-conn/system:content
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"  
+  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-one ws-conn/system:mount  
+  workshop_exec connect ws-conn/test-sdk-content:content-plug-one ws-conn/system:mount
+  workshop_exec connections ws-conn | MATCH "^mount.+ws-conn/test-sdk-content:content-plug-one.+:mount.+manual$"  
 
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk> form"
-  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-two :content
+  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-two :mount
   workshop_exec connect ws-conn/test-sdk-content:content-plug-two ws-conn/system
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+manual$"
+  workshop_exec connections ws-conn | MATCH "^mount.+ws-conn/test-sdk-content:content-plug-two.+:mount.+manual$"
 
   echo "Check connect <workshop>/<sdk>:<plug> form"
   workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
@@ -28,6 +28,6 @@ execute: |
   workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
   workshop_exec refresh ws-conn
   workshop_exec connections ws-conn > output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+$" < output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+$" < output.log
+  MATCH "^mount.+ws-conn/test-sdk-content:content-plug-one.+:mount.+$" < output.log
+  MATCH "^mount.+ws-conn/test-sdk-content:content-plug-two.+:mount.+$" < output.log
   NOMATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+$" < output.log

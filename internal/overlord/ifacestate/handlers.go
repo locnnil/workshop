@@ -102,7 +102,7 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 		if err != nil {
 			continue
 		}
-		if conn.Interface() == "content" {
+		if conn.Interface() == "mount" {
 			attrs := conn.Slot.DynamicAttrs()
 			if attrs != nil && attrs["host-source"] != nil {
 				candidates[cref.ID()] = attrs["host-source"].(string)

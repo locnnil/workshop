@@ -202,7 +202,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*sdk \"system\" does not have attribute \"host-source\" for interface \"content\".*`,
+			ChangeErr: `(?s).*sdk "system" does not have attribute "host-source" for interface "mount".*`,
 		},
 	}
 

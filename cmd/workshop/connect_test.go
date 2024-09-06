@@ -38,7 +38,7 @@ func (m *connectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "system",
-				"slot":       "content",
+				"slot":       "mount",
 			},
 		},
 	}
@@ -67,7 +67,7 @@ func (m *connectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws/sdk:plug", ":content"})
+	err := cmd.Run(cmd.Command(), []string{"ws/sdk:plug", ":mount"})
 	c.Assert(err, check.IsNil)
 
 	n = 0

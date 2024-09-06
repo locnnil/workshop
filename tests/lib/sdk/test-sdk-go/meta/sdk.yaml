@@ -7,5 +7,5 @@ description: |
   test-sdk-go SDK
 plugs:
   mod-cache:
-    interface: content
+    interface: mount
     workshop-target: /home/workshop/go/pkg/mod

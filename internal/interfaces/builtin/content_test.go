@@ -44,7 +44,7 @@ func Test(t *testing.T) {
 }
 
 var _ = check.Suite(&contentSuite{
-	iface: builtin.MustInterface("content"),
+	iface: builtin.MustInterface("mount"),
 })
 
 func (s *contentSuite) SetUpTest(c *check.C) {
@@ -52,7 +52,7 @@ func (s *contentSuite) SetUpTest(c *check.C) {
 }
 
 func (s *contentSuite) TestName(c *check.C) {
-	c.Assert(s.iface.Name(), check.Equals, "content")
+	c.Assert(s.iface.Name(), check.Equals, "mount")
 }
 
 func (s *contentSuite) TestSanitizeSlotSimple(c *check.C) {
@@ -60,7 +60,7 @@ func (s *contentSuite) TestSanitizeSlotSimple(c *check.C) {
 base: ubuntu@22.04
 slots:
  content-slot:
-  interface: content
+  interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
@@ -72,7 +72,7 @@ func (s *contentSuite) TestSanitizePlugSimple(c *check.C) {
 base: ubuntu@22.04
 plugs:
  content-plug:
-  interface: content
+  interface: mount
   workshop-target: import
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
@@ -85,7 +85,7 @@ func (s *contentSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
 base: ubuntu@22.04
 plugs:
  content-plug:
-  interface: content
+  interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["content-plug"]
@@ -97,7 +97,7 @@ func (s *contentSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
 base: ubuntu@22.04
 plugs:
  content-plug:
-  interface: content
+  interface: mount
   workshop-target: ../foo
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
@@ -110,7 +110,7 @@ func (s *contentSuite) TestSanitizeSlotOK(c *check.C) {
 base: ubuntu@22.04
 slots:
  content-slot:
-  interface: content
+  interface: mount
   workshop-source: /images/low-res
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
@@ -123,7 +123,7 @@ func (s *contentSuite) TestSanitizeSlotNoSource(c *check.C) {
 base: ubuntu@22.04
 slots:
  content-slot:
-  interface: content
+  interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["content-slot"]
@@ -135,7 +135,7 @@ func (s *contentSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {
 base: ubuntu@22.04
 slots:
  content-slot:
-  interface: content
+  interface: mount
   workshop-source: root
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
@@ -148,7 +148,7 @@ func (s *contentSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
 base: ubuntu@22.04
 slots:
  content-slot:
-  interface: content
+  interface: mount
   workshop-source: ../../../../../../../../root/
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
@@ -164,16 +164,16 @@ func (s *contentSuite) TestContentInterface(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
- content:
+ mount:
   workshop-target: /project/training
-`, s.projectId, "ws", "consumer", "content")
+`, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
 base: ubuntu@22.04
 slots:
- content:
-`, s.projectId, "ws", "producer", "content")
+ mount:
+`, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec := &device.Specification{}
 
@@ -196,7 +196,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/content/ws_consumer_content.sdk")
+	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
 	expectedMnt := lxdbackend.HostWorkshopMount(plug.Name, sourceDir, "/project/training")
 	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
 }

@@ -55,12 +55,12 @@ func installWorkshopToWorkshopMount(backend workshop.Backend, fs workshop.Worksh
 
 	_, err = fs.Stat(name)
 	if err != nil {
-		return fmt.Errorf(`stat workshop-target %q: %v`, dir, err)
+		return fmt.Errorf(`stat workshop-source %q: %v`, name, err)
 	}
 
 	_, err = fs.Stat(dir)
 	if err != nil {
-		return fmt.Errorf(`stat workshop-source %q: %v`, dir, err)
+		return fmt.Errorf(`stat workshop-target %q: %v`, dir, err)
 	}
 
 	if !slices.ContainsFunc(mounts.Entries, check) {

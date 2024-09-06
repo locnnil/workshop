@@ -4,15 +4,15 @@ sdks:
   system:
     slots:
       user-slot:
-        interface: content
+        interface: mount
       user-slot-2:
-        interface: content
-        workshop-source: user-data-2
+        interface: mount
+        workshop-source: /project/user-data-2
   test-sdk-content:
     channel: latest/stable
     plugs:
       wp-plug:
-        interface: content
+        interface: mount
         workshop-target: /mnt/wp-plug
 connections:
   - plug: test-sdk-content:content-plug-one

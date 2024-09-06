@@ -904,11 +904,11 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			{
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "plug"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "a-content-provider", Name: "data"},
-				Interface: "content",
+				Interface: "mount",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "plug"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "b-content-provider", Name: "data"},
-				Interface: "content",
+				Interface: "mount",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "desktop-plug"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "system", Name: "desktop"},
@@ -924,7 +924,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "a-foo", Name: "plug"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "a-content-provider", Name: "data"},
-				Interface: "content",
+				Interface: "mount",
 			}, {
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "def", Sdk: "keyboard-app", Name: "x11"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "def", Sdk: "system", Name: "x11"},
@@ -936,7 +936,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			{
 				Plug:      client.PlugRef{ProjectId: "42424242", Workshop: "abc", Sdk: "foo", Name: "plug"},
 				Slot:      client.SlotRef{ProjectId: "42424242", Workshop: "abc", Sdk: "c-content-provider", Name: "data"},
-				Interface: "content",
+				Interface: "mount",
 				Manual:    true,
 			},
 		},
@@ -946,7 +946,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Workshop:  "abc",
 				Sdk:       "foo",
 				Name:      "plug",
-				Interface: "content",
+				Interface: "mount",
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
@@ -999,7 +999,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Workshop:  "abc",
 				Sdk:       "a-foo",
 				Name:      "plug",
-				Interface: "content",
+				Interface: "mount",
 				Connections: []client.SlotRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
@@ -1032,13 +1032,13 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Workshop:  "abc",
 				Sdk:       "c-content-provider",
 				Name:      "data",
-				Interface: "content",
+				Interface: "mount",
 			}, {
 				ProjectId: "42424242",
 				Workshop:  "abc",
 				Sdk:       "a-content-provider",
 				Name:      "data",
-				Interface: "content",
+				Interface: "mount",
 				Connections: []client.PlugRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
@@ -1055,7 +1055,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 				Workshop:  "abc",
 				Sdk:       "b-content-provider",
 				Name:      "data",
-				Interface: "content",
+				Interface: "mount",
 				Connections: []client.PlugRef{{
 					ProjectId: "42424242",
 					Workshop:  "abc",
@@ -1126,13 +1126,13 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                         Slot                           Notes\n" +
-		"content    -                            abc/c-content-provider:data    -\n" +
-		"content    abc/a-foo:plug               abc/a-content-provider:data    -\n" +
-		"content    abc/foo:plug                 abc/a-content-provider:data    -\n" +
-		"content    abc/foo:plug                 abc/b-content-provider:data    -\n" +
 		"desktop    abc/foo:desktop-plug         :desktop                       -\n" +
 		"leds       -                            abc/leds-provider:numlock-led  -\n" +
 		"leds       abc/keyboard-lights:numlock  -                              -\n" +
+		"mount      -                            abc/c-content-provider:data    -\n" +
+		"mount      abc/a-foo:plug               abc/a-content-provider:data    -\n" +
+		"mount      abc/foo:plug                 abc/a-content-provider:data    -\n" +
+		"mount      abc/foo:plug                 abc/b-content-provider:data    -\n" +
 		"x11        abc/foo:x11-plug             :x11                           -\n" +
 		"x11        def/foo:a-x11-plug           :x11                           -\n" +
 		"x11        def/keyboard-app:x11         :x11                           manual\n"

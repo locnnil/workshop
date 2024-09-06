@@ -84,7 +84,7 @@ plugs:
     attr2: value2
 slots:
   slot:
-    interface: content
+    interface: mount
     host-source: /root
 `
 
@@ -430,7 +430,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	}
 	s.state.Lock()
 
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation denied by "slot" slot rule of interface "content".*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation denied by "slot" slot rule of interface "mount".*`)
 
 	// not in the fs (removed)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")

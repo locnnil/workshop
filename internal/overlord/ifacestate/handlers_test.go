@@ -80,7 +80,7 @@ var conflictingTarget1 = `name: conflict-1
 base: ubuntu@22.04
 plugs:
   plug:
-    interface: content
+    interface: mount
     workshop-target: /home/workshop  
 `
 
@@ -88,7 +88,7 @@ var conflictingTarget2 = `name: conflict-2
 base: ubuntu@22.04
 plugs:
   plug:
-    interface: content
+    interface: mount
     workshop-target: /home/workshop  
 `
 
@@ -502,7 +502,7 @@ name: consumer
 base: ubuntu@22.04
 plugs:
     plug:
-        interface: content
+        interface: mount
         workshop-target: /home/workshop
 `
 	var systemYaml = `
@@ -511,7 +511,7 @@ base: ubuntu@22.04
 type: system
 slots:
     slot:
-        interface: content        
+        interface: mount        
 `
 	wm, err := s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
 	c.Assert(err, check.IsNil)
@@ -522,7 +522,7 @@ slots:
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
 		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot": map[string]interface{}{
-			"interface":    "content",
+			"interface":    "mount",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"target": "/opt"},
 			"slot-dynamic": map[string]interface{}{"host-source": source},
@@ -571,7 +571,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(err, check.IsNil)
 	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
 		Auto:             true,
-		Interface:        "content",
+		Interface:        "mount",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},
@@ -617,7 +617,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(err, check.IsNil)
 	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
 		Auto:             true,
-		Interface:        "content",
+		Interface:        "mount",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},

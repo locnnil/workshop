@@ -427,10 +427,10 @@ func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) erro
 }
 
 func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
-	allPlugs := m.repo.AllPlugs("content")
+	allPlugs := m.repo.AllPlugs("mount")
 
 	for _, plug := range sdkInfo.Plugs {
-		if plug.Interface != "content" {
+		if plug.Interface != "mount" {
 			continue
 		}
 		candidateTarget, _ := plug.Lookup("workshop-target")

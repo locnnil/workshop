@@ -23,8 +23,8 @@ function prepare_environment() {
   
   snap install --classic --channel=1.21/stable go
   snap install yq
-  apt update
-  apt install -y --no-install-recommends moreutils jq
+  apt-get update
+  apt-get install -y --no-install-recommends moreutils jq
   
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/

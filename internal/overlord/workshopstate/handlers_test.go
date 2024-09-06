@@ -186,7 +186,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	c.Check(err, check.IsNil)
 
 	// create content plugs directories
-	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "content")
+	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "mount")
 	var plugs = []string{"ws_test_plug1.sdk", "ws_test_plug2.sdk", "another-ws_test_plug3.sdk"}
 	for _, p := range plugs {
 		err = os.MkdirAll(filepath.Join(projectContent, p), 0744)

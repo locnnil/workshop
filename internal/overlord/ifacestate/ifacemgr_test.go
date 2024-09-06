@@ -100,7 +100,7 @@ base: ubuntu@22.04
 type: system
 slots:
   slot:
-    interface: content
+    interface: mount
     attr: slot-value
 `
 	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "current", "meta", "sdk.yaml"), 0655), check.IsNil)
@@ -127,7 +127,7 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr: plug-value
 `
 
@@ -139,14 +139,14 @@ plugs:
 	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/system:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
-			"interface": "content",
+			"interface": "mount",
 			"plug-static": map[string]interface{}{
-				"content": "foo",
-				"attr":    "stored-value",
+				"mount": "foo",
+				"attr":  "stored-value",
 			},
 			"slot-static": map[string]interface{}{
-				"content": "foo",
-				"attr":    "stored-value",
+				"mount": "foo",
+				"attr":  "stored-value",
 			},
 		},
 	})
@@ -169,13 +169,13 @@ plugs:
 	c.Assert(err, check.IsNil)
 	c.Assert(conn.Plug.Name(), check.Equals, "plug")
 	c.Assert(conn.Plug.StaticAttrs(), check.DeepEquals, map[string]interface{}{
-		"content": "foo",
-		"attr":    "stored-value",
+		"mount": "foo",
+		"attr":  "stored-value",
 	})
 	c.Assert(conn.Slot.Name(), check.Equals, "slot")
 	c.Assert(conn.Slot.StaticAttrs(), check.DeepEquals, map[string]interface{}{
-		"content": "foo",
-		"attr":    "stored-value",
+		"mount": "foo",
+		"attr":  "stored-value",
 	})
 }
 
@@ -185,10 +185,10 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr1: value1
  otherplug:
-  interface: content
+  interface: mount
 `
 
 	var producerYaml = `
@@ -196,7 +196,7 @@ name: producer
 base: ubuntu@22.04
 slots:
  slot:
-  interface: content
+  interface: mount
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
@@ -228,10 +228,10 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr1: value1
  otherplug:
-  interface: content
+  interface: mount
 `
 
 	var producerYaml = `
@@ -239,7 +239,7 @@ name: producer
 base: ubuntu@22.04
 slots:
  slot:
-  interface: content
+  interface: mount
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{

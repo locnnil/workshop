@@ -8,8 +8,8 @@ var systemSdkYaml = `name: system
 base: %s
 type: system
 slots:
-  content:
-    interface: content
+  mount:
+    interface: mount
   gpu:
     interface: gpu
   ssh-agent:

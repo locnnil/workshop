@@ -53,7 +53,7 @@ sdks:
     channel: latest/stable
 connections:
   - plug: test-sdk:data-non-existent
-    slot: system:content
+    slot: system:mount
 `
 
 	somebound = `name: somebound
@@ -110,13 +110,13 @@ sdks:
   system:
     slots:
       training-slot:
-        interface: content
+        interface: mount
         source: .
   test-sdk:
     channel: latest/stable
     plugs:
       training-plug:
-        interface: content
+        interface: mount
         workshop-target: /opt
   test-sdk-2:
     channel: latest/stable
@@ -131,13 +131,13 @@ sdks:
   system:
     slots:
       training-slot:
-        interface: content
+        interface: mount
         source: .
   test-sdk:
     channel: latest/stable
     plugs:
       training-plug:
-        interface: content
+        interface: mount
         workshop-target: /opt
       data:
         bind: test-sdk:training-plug
@@ -154,7 +154,7 @@ sdks:
   system:
     slots:
       training:
-        interface: content
+        interface: mount
         source: .
   test-sdk:
     channel: latest/stable
@@ -168,7 +168,7 @@ sdks:
   system:
     slots:
       training:
-        interface: content
+        interface: mount
         workshop-source: .
   test-sdk:
     channel: latest/stable
@@ -197,7 +197,7 @@ sdks:
     channel: latest/stable
 connections:
   - plug: test-sdk:data-unknown-plug
-    slot: system:content
+    slot: system:mount
 `
 
 	connsplugbound = `name: connsplugbound
@@ -206,10 +206,10 @@ sdks:
   system:
     slots:
       training:
-        interface: content
+        interface: mount
         source: .
       photos:
-        interface: content
+        interface: mount
         source: .
   test-sdk:
     channel: latest/stable
@@ -231,7 +231,7 @@ summary: summary
 description: SDK
 plugs:
   data:
-    interface: content
+    interface: mount
     workshop-target: /opt/data
   ssh-agent:
     interface: test
@@ -245,7 +245,7 @@ summary: summary
 description: SDK
 plugs:
   photos:
-    interface: content
+    interface: mount
     workshop-target: /opt/data2
   gpu:
     interface: gpu
@@ -818,7 +818,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "bindincompatible" workshop`,
-			ChangeErr: `(?s).*cannot bind bindincompatible/test-sdk:data \("content" interface\) to bindincompatible/test-sdk-2:gpu \("gpu" interface\).*`,
+			ChangeErr: `(?s).*cannot bind bindincompatible/test-sdk:data \("mount" interface\) to bindincompatible/test-sdk-2:gpu \("gpu" interface\).*`,
 		},
 	}
 
@@ -937,7 +937,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "mount"},
 		}, {
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
 			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "gpu"},
@@ -1062,7 +1062,7 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
 		},
 	})
 
@@ -1071,7 +1071,7 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
 		}, {
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
 			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "gpu"},
@@ -1125,7 +1125,7 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
 		},
 	})
 
@@ -1134,7 +1134,7 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
 		},
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
@@ -1397,7 +1397,7 @@ func (s *apiSuite) TestRefreshWorkshopRestoreUserDefinedConnsIfFailed(c *check.C
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "content"},
+			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "mount"},
 		},
 		{
 			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},

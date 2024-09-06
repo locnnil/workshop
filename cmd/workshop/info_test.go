@@ -101,7 +101,7 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
 "content":[
 	{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z",
 	"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
-	{"host-source":"%s/.local/share/workshop/project/17942561/content/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
+	{"host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
 }]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
@@ -140,7 +140,7 @@ content:
     channel:  latest/edge  2017-03-22  1
     mounts:
       plug-default:
-        host-source:      .../17942561/content/ws_go_mod-cache.sdk
+        host-source:      .../17942561/mount/ws_go_mod-cache.sdk
         workshop-target:  /home/workshop/target
       plug-name:
         host-source:      /home/user/src

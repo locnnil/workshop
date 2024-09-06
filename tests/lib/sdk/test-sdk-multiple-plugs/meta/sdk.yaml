@@ -7,10 +7,10 @@ description: |
   test-sdk-multiple-plugs SDK
 plugs:
   data:
-    interface: content
+    interface: mount
     workshop-target: /home/workshop/data
   cache:
-    interface: content
+    interface: mount
     workshop-target: /cache
   ssh-agent:
     interface: ssh-agent

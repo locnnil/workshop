@@ -49,7 +49,7 @@ func (s *SdkSuite) TestMinimalisticPlug(c *check.C) {
 base: ubuntu@20.04
 plugs:
   training:
-    interface: content
+    interface: mount
     workshop-target: /project
 `)
 
@@ -60,7 +60,7 @@ plugs:
 	c.Assert(*info.Plugs["training"], check.DeepEquals, sdk.PlugInfo{
 		Sdk:       info,
 		Name:      "training",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"workshop-target": "/project"},
 	})
 }
@@ -70,7 +70,7 @@ func (s *SdkSuite) TestMinimalisticSlot(c *check.C) {
 base: ubuntu@20.04
 slots:
   training:
-    interface: content
+    interface: mount
     source: /project
 `)
 
@@ -81,7 +81,7 @@ slots:
 	c.Assert(*info.Slots["training"], check.DeepEquals, sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "training",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"source": "/project"},
 	})
 }
@@ -120,10 +120,10 @@ func (s *SdkSuite) TestUnmarshalDuplicatePlugFails(c *check.C) {
 name: sdk
 plugs:
     net:
-        interface: content
+        interface: mount
         attr: 1
     net:
-        interface: content
+        interface: mount
         attr: 2
 `), s.projectId, "ws")
 	c.Assert(err, check.ErrorMatches, `(?s).*line 7: mapping key \"net\" already defined at line 4`)
@@ -134,16 +134,16 @@ func (s *SdkSuite) TestUnmarshalPlugWithoutInterfaceName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 plugs:
-    content:
+    mount:
         ipv6-aware: true
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 1)
 	c.Check(info.Slots, check.HasLen, 0)
-	c.Assert(info.Plugs["content"], check.DeepEquals, &sdk.PlugInfo{
+	c.Assert(info.Plugs["mount"], check.DeepEquals, &sdk.PlugInfo{
 		Sdk:       info,
-		Name:      "content",
-		Interface: "content",
+		Name:      "mount",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }
@@ -269,15 +269,15 @@ func (s *SdkSuite) TestUnmarshalStandaloneImplicitSlot(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    content:
+    mount:
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
-	c.Assert(info.Slots["content"], check.DeepEquals, &sdk.SlotInfo{
+	c.Assert(info.Slots["mount"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
-		Name:      "content",
-		Interface: "content",
+		Name:      "mount",
+		Interface: "mount",
 	})
 }
 
@@ -286,7 +286,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneAbbreviatedSlot(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    net: content
+    net: mount
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
@@ -294,7 +294,7 @@ slots:
 	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "content",
+		Interface: "mount",
 	})
 }
 
@@ -304,7 +304,7 @@ func (s *SdkSuite) TestUnmarshalStandaloneCompleteSlot(c *check.C) {
 name: sdk
 slots:
     net:
-        interface: content
+        interface: mount
         ipv6-aware: true
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
@@ -313,7 +313,7 @@ slots:
 	c.Assert(info.Slots["net"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "net",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }
@@ -351,10 +351,10 @@ func (s *SdkSuite) TestUnmarshalDuplicateSlotFail(c *check.C) {
 name: sdk
 slots:
     net:
-        interface: content
+        interface: mount
         attr: 1
     net:
-        interface: content
+        interface: mount
         attr: 2
 `), s.projectId, "ws")
 	c.Assert(err, check.ErrorMatches, `(?s).*line 7: mapping key \"net\" already defined at line 4`)
@@ -365,16 +365,16 @@ func (s *SdkSuite) TestUnmarshalSlotWithoutInterfaceName(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`
 name: sdk
 slots:
-    content:
+    mount:
         ipv6-aware: true
 `), s.projectId, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(info.Plugs, check.HasLen, 0)
 	c.Check(info.Slots, check.HasLen, 1)
-	c.Assert(info.Slots["content"], check.DeepEquals, &sdk.SlotInfo{
+	c.Assert(info.Slots["mount"], check.DeepEquals, &sdk.SlotInfo{
 		Sdk:       info,
-		Name:      "content",
-		Interface: "content",
+		Name:      "mount",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"ipv6-aware": true},
 	})
 }
@@ -483,7 +483,7 @@ func (s *SdkSuite) TestAddingWorkshopSlotOK(c *check.C) {
 base: ubuntu@20.04
 slots:
   training:
-    interface: content
+    interface: mount
     source: /project
 `)
 
@@ -494,12 +494,12 @@ slots:
 	c.Assert(*info.Slots["training"], check.DeepEquals, sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "training",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"source": "/project"},
 	})
 	slots := map[string]interface{}{
 		"cache": map[string]interface{}{
-			"interface": "content",
+			"interface": "mount",
 			"source":    "/var/cache",
 		},
 	}
@@ -510,7 +510,7 @@ slots:
 	c.Assert(*info.Slots["cache"], check.DeepEquals, sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "cache",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"source": "/var/cache"},
 	})
 }
@@ -520,7 +520,7 @@ func (s *SdkSuite) TestAddingAlreadyExistingSlotFails(c *check.C) {
 base: ubuntu@20.04
 slots:
   training:
-    interface: content
+    interface: mount
     source: /project
 `)
 
@@ -531,7 +531,7 @@ slots:
 	c.Assert(*info.Slots["training"], check.DeepEquals, sdk.SlotInfo{
 		Sdk:       info,
 		Name:      "training",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"source": "/project"},
 	})
 	slots := map[string]interface{}{
@@ -548,7 +548,7 @@ func (s *SdkSuite) TestAddingAlreadyExistingPlugFails(c *check.C) {
 base: ubuntu@20.04
 plugs:
   training:
-    interface: content
+    interface: mount
     workshop-target: /project
 `)
 
@@ -559,7 +559,7 @@ plugs:
 	c.Assert(*info.Plugs["training"], check.DeepEquals, sdk.PlugInfo{
 		Sdk:       info,
 		Name:      "training",
-		Interface: "content",
+		Interface: "mount",
 		Attrs:     map[string]interface{}{"workshop-target": "/project"},
 	})
 	plugs := map[string]interface{}{

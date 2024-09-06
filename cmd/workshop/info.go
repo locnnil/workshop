@@ -51,11 +51,11 @@ Notes:
 // client checks if that path is a lengthy default and substitutes its common
 // prefix with .../. Hence something like:
 //
-//	/home/dmitry/.local/share/workshop/project/17942561/content/albert_go_mod-cache.sdk
+//	/home/dmitry/.local/share/workshop/project/17942561/mount/albert_go_mod-cache.sdk
 //
 // becomes:
 //
-//	.../17942561/content/albert_go_mod-cache.sdk
+//	.../17942561/mount/albert_go_mod-cache.sdk
 func shortenDefaulPath(source string) string {
 	user, _ := user.Current()
 	defaultPathPrefix := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project")
