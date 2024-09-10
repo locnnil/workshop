@@ -222,7 +222,7 @@ func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	return infos, nil
 }
 
-func (w *Workshop) InstallHostSdk(ctx context.Context) error {
+func (w *Workshop) InstallSystemSdk(ctx context.Context) error {
 	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err

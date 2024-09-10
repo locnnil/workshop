@@ -118,7 +118,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 }
 
 func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
-	var prevInstall = sdkstate.InstallHostSdk(st)
+	var prevInstall = sdkstate.InstallSystemSdk(st)
 	install := state.NewTaskSet(prevInstall.Tasks()...)
 
 	var prevSetup *state.Task

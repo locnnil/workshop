@@ -311,7 +311,7 @@ sdks:
   system:   
     slots:
       training-data:
-        source: relative/path
+        workshop-source: relative/path
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
@@ -319,7 +319,7 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"source": "relative/path"}}}})
+		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
 }
 
 func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {

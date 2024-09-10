@@ -95,7 +95,7 @@ func (m *SdkManager) doInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error
 		return err
 	}
 
-	return wp.InstallHostSdk(ctx)
+	return wp.InstallSystemSdk(ctx)
 }
 
 func (m *SdkManager) undoInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {

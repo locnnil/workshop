@@ -355,6 +355,11 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 		Where: "/opt/data2",
 		Type:  workshop.HostWorkshop,
 	}
+	p.Mounts["photos2"] = workshop.Mount{Name: "photos2",
+		What:  "/photos",
+		Where: "/opt/data2",
+		Type:  workshop.WorkshopWorkshop,
+	}
 	w.Profiles["test-sdk-2"] = p
 
 	// Get Workshop info
@@ -411,6 +416,16 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 							Workshop:  "manysdks",
 							Sdk:       "test-sdk-2",
 							Name:      "photos",
+						},
+					},
+					{
+						WorkshopSource: "/photos",
+						WorkshopTarget: "/opt/data2",
+						Plug: interfaces.PlugRef{
+							ProjectId: s.project.ProjectId,
+							Workshop:  "manysdks",
+							Sdk:       "test-sdk-2",
+							Name:      "photos2",
 						},
 					},
 				},

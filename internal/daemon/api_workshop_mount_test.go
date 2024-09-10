@@ -68,7 +68,7 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, c.MkDir())),
 	}
 
 	expected := []*expectedResp{
@@ -103,7 +103,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	// Setup
 	src := c.MkDir()
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, src)),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, src)),
 	}
 
 	expected := []*expectedResp{
@@ -133,7 +133,7 @@ func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 	c.Check(err, check.IsNil)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -156,8 +156,8 @@ func (s *apiSuite) TestWorkshopRemountInvalidSetup(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"mount","plug":{"sdk":"test-sdk","plug":"data"},"source":"/srv/data"}`),
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data","source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"mount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data","host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -185,7 +185,7 @@ func (s *apiSuite) TestWorkshopRemountInvalidInterface(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk-2","plug":"gpu"},"source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk-2","plug":"gpu"},"host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -208,7 +208,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 	s.launchWorkshop(c, "workshopconns", workshopconns, testsdks)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, c.MkDir())),
 	}
 
 	expected := []*expectedResp{

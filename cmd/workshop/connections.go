@@ -45,16 +45,16 @@ Notes:
 	return cmd
 }
 
-func isHostSdk(sdkName string) bool {
+func isSystemSdk(sdkName string) bool {
 	return sdkName == "system"
 }
 
-func isDefaultHostSlot(slot client.Slot) bool {
-	return isHostSdk(slot.Sdk) && slot.Interface == slot.Name
+func isDefaultSystemSlot(slot client.Slot) bool {
+	return isSystemSdk(slot.Sdk) && slot.Interface == slot.Name
 }
 
 func endpoint(workshop, sdkName, name string) string {
-	if isHostSdk(sdkName) {
+	if isSystemSdk(sdkName) {
 		return ":" + name
 	}
 	return workshop + "/" + sdkName + ":" + name
@@ -190,7 +190,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 	for _, slot := range connections.Slots {
-		if isDefaultHostSlot(slot) {
+		if isDefaultSystemSlot(slot) {
 			// displaying unconnected system snap slots is boring,
 			// unless explicitly asked to show them
 			continue

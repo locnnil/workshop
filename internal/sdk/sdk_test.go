@@ -71,7 +71,7 @@ base: ubuntu@20.04
 slots:
   training:
     interface: mount
-    source: /project
+    workshop-source: /project
 `)
 
 	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
@@ -82,7 +82,7 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"source": "/project"},
+		Attrs:     map[string]interface{}{"workshop-source": "/project"},
 	})
 }
 
@@ -484,7 +484,7 @@ base: ubuntu@20.04
 slots:
   training:
     interface: mount
-    source: /project
+    workshop-source: /project
 `)
 
 	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
@@ -495,12 +495,12 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"source": "/project"},
+		Attrs:     map[string]interface{}{"workshop-source": "/project"},
 	})
 	slots := map[string]interface{}{
 		"cache": map[string]interface{}{
-			"interface": "mount",
-			"source":    "/var/cache",
+			"interface":       "mount",
+			"workshop-source": "/var/cache",
 		},
 	}
 	err = info.SetupWorkshopSlots(slots)
@@ -511,7 +511,7 @@ slots:
 		Sdk:       info,
 		Name:      "cache",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"source": "/var/cache"},
+		Attrs:     map[string]interface{}{"workshop-source": "/var/cache"},
 	})
 }
 
@@ -521,7 +521,7 @@ base: ubuntu@20.04
 slots:
   training:
     interface: mount
-    source: /project
+    workshop-source: /project
 `)
 
 	info, err := sdk.ReadSdkInfo(mockYaml, s.projectId, "ws")
@@ -532,11 +532,11 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"source": "/project"},
+		Attrs:     map[string]interface{}{"workshop-source": "/project"},
 	})
 	slots := map[string]interface{}{
 		"training": map[string]interface{}{
-			"source": "/data",
+			"workshop-source": "/data",
 		},
 	}
 	err = info.SetupWorkshopSlots(slots)
