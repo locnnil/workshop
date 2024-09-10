@@ -28,7 +28,6 @@ type FakeWorkshop struct {
 	Config             map[string]string
 	Devices            map[string]map[string]string
 	WorkshopFilesystem workshop.WorkshopFs
-	Profiles           []workshop.SdkProfile
 }
 
 type ExecCall struct {
@@ -38,16 +37,6 @@ type ExecCall struct {
 
 type FsCall struct {
 	Name string
-}
-
-type AssignProfileCall struct {
-	Name    string
-	Profile workshop.SdkProfile
-}
-
-type RemoveProfileCall struct {
-	Name    string
-	Profile string
 }
 
 type DownloadCall struct {
@@ -70,17 +59,11 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
 	WorkshopFsCalls    []*FsCall
 
-	AssignProfileCallback func(ctx context.Context, workshop string, profile workshop.SdkProfile) error
-	AssignProfileCalls    []*AssignProfileCall
-
-	RemoveProfileCallback func(ctx context.Context, workshop string, profile string) error
-	RemoveProfileCalls    []*RemoveProfileCall
-
 	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 }
 
-func New() (workshop.Backend, error) {
+func New() (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
@@ -157,11 +140,13 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 		Base:    file.Base,
 		File:    file,
 	}
+
 	ws.Config = make(map[string]string)
 	ws.Config[workshop.ConfigWorkshopContent] = `{}`
 	ws.Devices = make(map[string]map[string]string)
+
 	ws.Content = make(map[string]sdk.Setup)
-	ws.Profiles = make([]workshop.SdkProfile, 0)
+	ws.Profiles = make(map[string]workshop.SdkProfile, 0)
 
 	f.Workshops[projectId][file.Name] = ws
 	return nil
@@ -204,82 +189,23 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 	return nil
 }
 
-func (f *FakeWorkshopBackend) AddWorkshopDevice(ctx context.Context, name string, props workshop.Device) error {
+func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string, props workshop.Mount) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
-	f.Workshops[projectId][name].Devices[props.Name] = props.Properties
+	f.Workshops[projectId][name].Devices[props.Name] = map[string]string{"type": "disk", "source": props.What,
+		"path": props.Where}
 	return nil
 }
 
-func (f *FakeWorkshopBackend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
+func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name string, device string) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
 	delete(f.Workshops[projectId][name].Devices, device)
 	return nil
-}
-
-func (f *FakeWorkshopBackend) AssignProfile(ctx context.Context, workshop string, profile workshop.SdkProfile) error {
-	f.AssignProfileCalls = append(f.AssignProfileCalls, &AssignProfileCall{Name: workshop, Profile: profile})
-
-	_, projectId, err := f.userProject(ctx)
-	if err != nil {
-		return err
-	}
-	f.Workshops[projectId][workshop].Profiles = append(f.Workshops[projectId][workshop].Profiles, profile)
-
-	if f.AssignProfileCallback != nil {
-		return f.AssignProfileCallback(ctx, workshop, profile)
-	}
-	return nil
-}
-
-func (s *FakeWorkshopBackend) Profile(ctx context.Context, w string, pr string) (workshop.SdkProfile, error) {
-	_, projectId, err := s.userProject(ctx)
-	if err != nil {
-		return workshop.SdkProfile{}, err
-	}
-	wp, ok := s.Workshops[projectId][w]
-	if !ok {
-		return workshop.SdkProfile{}, workshop.ErrWorkshopNotFound
-	}
-
-	profiles := wp.Profiles
-	idx := slices.IndexFunc(profiles, func(p workshop.SdkProfile) bool { return p.Name() == pr })
-	if idx != -1 {
-		return s.Workshops[projectId][w].Profiles[idx], nil
-	}
-	return workshop.SdkProfile{}, workshop.ErrSdkProfileNotFound
-}
-
-func (s *FakeWorkshopBackend) RemoveProfile(ctx context.Context, wp string, profile string) error {
-	s.RemoveProfileCalls = append(s.RemoveProfileCalls, &RemoveProfileCall{Name: wp, Profile: profile})
-
-	if s.RemoveProfileCallback != nil {
-		return s.RemoveProfileCallback(ctx, wp, profile)
-	}
-	_, projectId, err := s.userProject(ctx)
-	if err != nil {
-		return err
-	}
-	profiles := s.Workshops[projectId][wp].Profiles
-	idx := slices.IndexFunc(profiles, func(p workshop.SdkProfile) bool { return p.Name() == profile })
-	if idx != -1 {
-		s.Workshops[projectId][wp].Profiles = slices.Delete(profiles, idx, idx+1)
-		return nil
-	}
-	return workshop.ErrSdkProfileNotFound
-}
-
-func (f *FakeWorkshopBackend) Profiles(ctx context.Context, workshop string) ([]workshop.SdkProfile, error) {
-	_, projectId, err := f.userProject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return f.Workshops[projectId][workshop].Profiles, nil
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {

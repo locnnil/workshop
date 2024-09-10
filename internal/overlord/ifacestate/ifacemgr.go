@@ -15,7 +15,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type InterfaceManager struct {
@@ -118,7 +117,7 @@ func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()
 	for _, backend := range allSecurityBackends() {
-		if err := backend.Initialize(m.backend.(workshop.Profile)); err != nil {
+		if err := backend.Initialize(); err != nil {
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
@@ -301,22 +300,22 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	hostpath := dirs.SocketPath + ".untrusted"
 	sname := filepath.Base(hostpath)
 	wspath := filepath.Join(dirs.WorkshopRunDir, sname)
-	socket := lxdbackend.HostWorkshopMount("workshop.socket", hostpath, wspath)
+	socket := workshop.Mount{Name: "workshop.socket", What: hostpath, Where: wspath}
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
-	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
+	_ = m.backend.RemoveWorkshopMount(pctx, w, socket.Name)
+	if err := m.backend.AddWorkshopMount(pctx, w, socket); err != nil {
 		return err
 	}
 
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := lxdbackend.HostWorkshopMount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
-		"/usr/bin/workshopctl")
+	workshopctl := workshop.Mount{Name: "workshop.workshopctl", What: filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where: "/usr/bin/workshopctl"}
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name)
+	_ = m.backend.RemoveWorkshopMount(pctx, w, workshopctl.Name)
 
-	if err := m.backend.AddWorkshopDevice(pctx, w, workshopctl); err != nil {
+	if err := m.backend.AddWorkshopMount(pctx, w, workshopctl); err != nil {
 		return err
 	}
 

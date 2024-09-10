@@ -5,10 +5,9 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -66,7 +65,7 @@ slots:
   ssh-agent:
 `, s.projectId, "ws", "producer", "ssh-agent")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := &device.Specification{}
+	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "SSH_AUTH_SOCK=/tmp/dir/ssh"
@@ -74,8 +73,8 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := lxdbackend.SshAgent("consumer-"+plug.Name, "/tmp/dir/ssh", "/var/lib/workshop/consumer-ssh-agent.ssh")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedProxy})
+	expectedProxy := &workshop.SshAgent{Name: "consumer-" + plug.Name, Connect: "/tmp/dir/ssh", Listen: "/var/lib/workshop/consumer-ssh-agent.ssh"}
+	c.Assert(deviceSpec.Profile.Agent, check.DeepEquals, expectedProxy)
 }
 
 func (s *sshAgentSuite) TestSshAgentInterfaceSystemctlFails(c *check.C) {
@@ -93,7 +92,7 @@ slots:
   ssh-agent:
 `, s.projectId, "ws", "producer", "ssh-agent")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := &device.Specification{}
+	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 >&2 echo -n "No medium found"

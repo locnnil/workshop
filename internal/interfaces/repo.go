@@ -796,7 +796,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	spec := backend.NewSpecification(user, projectId)
+	spec := backend.NewSpecification(user, projectId, sdkInfo.Sdk)
 
 	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
 

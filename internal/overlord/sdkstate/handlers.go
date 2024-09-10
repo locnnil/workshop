@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 func SdkSetup(task *state.Task) (sdk.Setup, error) {
@@ -145,14 +144,14 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := lxdbackend.HostWorkshopMount(sdkSetup.Name, sdkSetup.Filename(), target)
-	if err = m.backend.AddWorkshopDevice(ctx, w, sdkMount); err != nil {
+	sdkMount := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
+	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopDevice(ctx, w, sdkMount.Name); err != nil {
+		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}

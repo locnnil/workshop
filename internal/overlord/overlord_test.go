@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/version"
+	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
@@ -76,11 +78,6 @@ func (ovs *overlordSuite) SetUpTest(c *C) {
 	ovs.dir = c.MkDir()
 	dirs.SetRootDir(ovs.dir)
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
-	ovs.restoreBackendNew = overlord.MockBackendNew(fakebackend.New)
-}
-
-func (ovs *overlordSuite) TearDownTest(c *C) {
-	ovs.restoreBackendNew()
 }
 
 func (ovs *overlordSuite) TestNew(c *C) {
@@ -90,6 +87,10 @@ func (ovs *overlordSuite) TestNew(c *C) {
 	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 	c.Check(o, NotNil)
+
+	fakebe, err := fakebackend.New()
+	c.Assert(err, check.IsNil)
+	workshop.ReplaceBackend(o.State(), fakebe)
 
 	c.Check(o.StateEngine(), NotNil)
 	c.Check(o.TaskRunner(), NotNil)

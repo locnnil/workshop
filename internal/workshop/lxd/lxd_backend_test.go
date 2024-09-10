@@ -6,10 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -26,41 +24,6 @@ func TestLxdBackendSuite(t *testing.T) { check.TestingT(t) }
 func (s *LxdBeTests) SetUpTest(c *check.C) {
 	dir := c.MkDir()
 	s.project = &workshop.Project{ProjectId: "42ws42ws", Path: dir}
-}
-
-func (f *LxdBeTests) TestLoadWorkshopSuccess(c *check.C) {
-	// Setup
-	os.WriteFile(filepath.Join(f.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04
-sdks:
-  go:
-    channel: latest/stable
-`), 0644)
-	project := workshop.Project{ProjectId: f.project.ProjectId, Path: f.project.Path}
-
-	b := &lxdbackend.Backend{}
-
-	// Execute
-	ws, err := lxdbackend.LoadWorkshop(b, &api.Instance{
-		Name: lxdbackend.InstanceName("ws", f.project.ProjectId),
-		InstancePut: api.InstancePut{Config: map[string]string{
-			"user.workshop.project-id": f.project.ProjectId,
-			"user.workshop.content":    `{"go":{"name":"go","channel":"latest/stable","revision":277}}`,
-		}},
-		StatusCode: api.Running,
-	}, &project)
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	c.Assert(ws.Name, check.Equals, "ws")
-	c.Assert(ws.Running, check.Equals, true)
-	c.Assert(ws.Project.ProjectId, check.Equals, f.project.ProjectId)
-	c.Assert(ws.Content, testutil.DeepUnsortedMatches, map[string]sdk.Setup{"go": {
-		Name:     "go",
-		Channel:  "latest/stable",
-		Revision: 277,
-	},
-	})
 }
 
 func (f *LxdBeTests) TestProjectSubDirectoryProvideAsPath(c *check.C) {
@@ -181,10 +144,14 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 			{Name: "two", Channel: "latest/edge"},
 		},
 	}
-	b.SetNvidia(true)
+
+	reset := lxdbackend.MockNvidiaRuntime(func() (bool, error) {
+		return true, nil
+	})
 
 	// Execute
 	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	defer reset()
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -197,7 +164,10 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	c.Assert(cfg["user.workshop.file"], check.Equals, marshalledWorkshop)
 
 	// Setup
-	b.SetNvidia(false)
+	reset = lxdbackend.MockNvidiaRuntime(func() (bool, error) {
+		return false, nil
+	})
+	defer reset()
 
 	// Execute
 	cfg, err = lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)

@@ -53,8 +53,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	be, _ := fakebackend.New()
-	s.wsbackend = be.(*fakebackend.FakeWorkshopBackend)
+	s.wsbackend, err = fakebackend.New()
 	workshop.ReplaceBackend(s.state, s.wsbackend)
 
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")

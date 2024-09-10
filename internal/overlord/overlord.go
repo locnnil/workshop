@@ -64,6 +64,8 @@ var pruneTickerC = func(t *time.Ticker) <-chan time.Time {
 	return t.C
 }
 
+var workshopBackendOverride workshop.Backend
+
 // Overlord is the central manager of the system, keeping track
 // of all available state managers and related helpers.
 type Overlord struct {
@@ -92,8 +94,6 @@ type Overlord struct {
 
 	startOfOperationTime time.Time
 }
-
-var workshopBackendNew = lxdbackend.New
 
 // New creates a new Overlord with all its state managers.
 // It can be provided with an optional restart.Handler.
@@ -130,11 +130,15 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	sto := store.New()
 	sdk.ReplaceStore(s, sto)
 
-	wbe, err := workshopBackendNew()
-	if err != nil {
-		return nil, err
+	if workshopBackendOverride != nil {
+		workshop.ReplaceBackend(s, workshopBackendOverride)
+	} else {
+		wbe, err := lxdbackend.New()
+		if err != nil {
+			return nil, err
+		}
+		workshop.ReplaceBackend(s, wbe)
 	}
-	workshop.ReplaceBackend(s, wbe)
 
 	// any unknown task should be ignored and succeed
 	matchAnyUnknownTask := func(_ *state.Task) bool {
@@ -527,10 +531,10 @@ func (o *Overlord) InterfaceManager() *ifacestate.InterfaceManager {
 	return o.ifacemgr
 }
 
-func MockBackendNew(new func() (workshop.Backend, error)) (restore func()) {
-	workshopBackendNew = new
+func MockWorkshopBackend(b workshop.Backend) func() {
+	workshopBackendOverride = b
 	return func() {
-		workshopBackendNew = lxdbackend.New
+		workshopBackendOverride = nil
 	}
 }
 

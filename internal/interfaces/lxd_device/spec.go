@@ -1,0 +1,126 @@
+package lxd_device
+
+import (
+	"encoding/json"
+
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+)
+
+func NewSpecification(user, pid, sdk string) *Specification {
+	return &Specification{
+		devices: make(map[string]map[string]string),
+		config:  make(map[string]string),
+		Profile: workshop.NewSdkProfile(sdk),
+		user:    user,
+		pid:     pid,
+	}
+}
+
+type Specification struct {
+	Profile workshop.SdkProfile
+
+	devices map[string]map[string]string
+	config  map[string]string
+
+	user string
+	pid  string
+}
+
+func (s *Specification) User() string {
+	return s.user
+}
+
+func (s *Specification) ProjectId() string {
+	return s.pid
+}
+
+// AddPermanentSlot records side-effects of having a slot.
+func (s *Specification) AddPermanentSlot(iface interfaces.Interface, slot *sdk.SlotInfo) error {
+	return nil
+}
+
+// AddPermanentPlug records side-effects of having a plug.
+func (s *Specification) AddPermanentPlug(iface interfaces.Interface, plug *sdk.PlugInfo) error {
+	return nil
+}
+
+// AddConnectedSlot records side-effects of having a connected slot.
+func (s *Specification) AddConnectedSlot(iface interfaces.Interface, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+	type definer interface {
+		MountConnectedSlot(spec *Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
+	}
+	if iface, ok := iface.(definer); ok {
+		return iface.MountConnectedSlot(s, plug, slot)
+	}
+	return nil
+}
+
+// AddConnectedPlug records side-effects of having a connected plug.
+func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+	type definer interface {
+		MountConnectedPlug(spec *Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
+	}
+
+	if iface, ok := iface.(definer); ok {
+		return iface.MountConnectedPlug(s, plug, slot)
+	}
+	return nil
+}
+
+func (s *Specification) AddMountEntry(dev workshop.Mount) error {
+	s.Profile.Mounts[dev.Name] = dev
+
+	if dev.Type == workshop.WorkshopWorkshop {
+		s.devices[dev.Name] = map[string]string{"type": "none"}
+		buf, err := json.Marshal(dev)
+		if err != nil {
+			return err
+		}
+		s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, dev.Name)] = string(buf)
+		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, dev.Name)] = "mount"
+	}
+
+	if dev.Type == workshop.HostWorkshop {
+		s.devices[dev.Name] = map[string]string{"type": "disk", "source": dev.What,
+			"path": dev.Where}
+	}
+
+	return nil
+}
+
+func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
+	// A network protocol proxy device, opens a port on the host or in a workhop.
+	// from, to are the source and destination addresses (paths in the case of unix sockets),
+	// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
+	// bind denotes where the port is open (can be: instance, host)
+	s.Profile.Agent = &agent
+
+	s.devices[agent.Name] = map[string]string{"type": "proxy", "connect": "unix:" + agent.Connect, "listen": "unix:" + agent.Listen, "uid": "1000", "gid": "1000", "bind": "instance"}
+
+	return nil
+}
+
+func (s *Specification) SetGpu(gpu workshop.Gpu) error {
+	s.devices[gpu.Name] = map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}
+
+	s.Profile.Gpu = &workshop.Gpu{
+		Name: gpu.Name,
+		// The default workshop user must be able to acces the GPU device.
+		// Workshop assigns the GPU devices to workshop.workshop. A more
+		// traditional way here would be to add dri devices to the video/render
+		// groups, but it requires an additional workshop exec to find out the
+		// groups' ids at the LXD profile generation time. Given that we are
+		// solving the problem of access in a confined environment and workshop
+		// is a passwordless sudo user anyway, it was decided that it is OK if
+		// the workshop user owns GPU devices.
+
+		// On another note, the render and video groups are not assigned to the
+		// card*/render* dri devices by LXD properly. Both will be assigned to
+		// the group provided in "gid"; there is no way to assign video to card*
+		// and render to render* devices.
+	}
+	return nil
+}

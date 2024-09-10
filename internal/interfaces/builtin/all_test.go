@@ -28,8 +28,8 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/interfaces/device"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -43,16 +43,16 @@ var _ = Suite(&AllSuite{})
 // essentially, the only valid methods that an interface can have, apart
 // from what is defined in the Interface golang interface.
 type mountDefiner1 interface {
-	MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
+	MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
 }
 type mountDefiner2 interface {
-	MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
+	MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error
 }
 type mountDefiner3 interface {
-	MountPermanentPlug(spec *device.Specification, plug *sdk.PlugInfo) error
+	MountPermanentPlug(spec *lxd_device.Specification, plug *sdk.PlugInfo) error
 }
 type mountDefiner4 interface {
-	MountPermanentSlot(spec *device.Specification, slot *sdk.SlotInfo) error
+	MountPermanentSlot(spec *lxd_device.Specification, slot *sdk.SlotInfo) error
 }
 
 // allGoodDefiners contains all valid specification definers for all known backends.

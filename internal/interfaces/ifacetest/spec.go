@@ -30,6 +30,7 @@ type Specification struct {
 
 	user string
 	pid  string
+	sdk  string
 }
 
 // AddSnippet appends a snippet to a list stored in the specification.

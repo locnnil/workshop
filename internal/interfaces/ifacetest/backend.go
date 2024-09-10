@@ -24,7 +24,6 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 // TestSecurityBackend is a security backend intended for testing.
@@ -49,7 +48,7 @@ type TestSetupCall struct {
 }
 
 // Initialize does nothing.
-func (b *TestSecurityBackend) Initialize(backend workshop.Profile) error {
+func (b *TestSecurityBackend) Initialize() error {
 	return nil
 }
 
@@ -76,8 +75,8 @@ func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName 
 	return b.RemoveCallback(sdkName)
 }
 
-func (b *TestSecurityBackend) NewSpecification(user, pid string) interfaces.Specification {
-	return &Specification{user: user, pid: pid}
+func (b *TestSecurityBackend) NewSpecification(user, pid, sdk string) interfaces.Specification {
+	return &Specification{user: user, pid: pid, sdk: sdk}
 }
 
 func (b *TestSecurityBackend) SandboxFeatures() []string {

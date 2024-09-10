@@ -52,13 +52,13 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 var ErrTrigger = errors.New("error out")
 
 func (s *workshopHandlers) SetUpTest(c *check.C) {
+	var err error
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	be, _ := fakebackend.New()
-	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	s.backend, err = fakebackend.New()
+	c.Assert(err, check.IsNil)
 
-	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)

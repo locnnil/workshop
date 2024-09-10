@@ -52,17 +52,17 @@ var _ = check.Suite(&healthSuite{})
 
 func (s *healthSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
+	var err error
 	dirs.SetRootDir(c.MkDir())
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	be, _ := fakebackend.New()
-	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	s.backend, err = fakebackend.New()
+	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
-	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)

@@ -26,11 +26,10 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -175,7 +174,7 @@ slots:
  mount:
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := &device.Specification{}
+	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
 
 	homeDir := c.MkDir()
 	usr, err := user.Current()
@@ -197,6 +196,6 @@ slots:
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
-	expectedMnt := lxdbackend.HostWorkshopMount(plug.Name, sourceDir, "/project/training")
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedMnt})
+	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
+	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }

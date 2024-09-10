@@ -56,7 +56,16 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
+	repo := s.d.overlord.InterfaceManager().Repository()
+
 	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
+	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	conn, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	// The mock iface backend does not set this attribute as the actual one
+	// would.
+	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
@@ -80,7 +89,16 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
+	repo := s.d.overlord.InterfaceManager().Repository()
+
 	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
+	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	conn, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	// The mock iface backend does not set this attribute as the actual one
+	// would.
+	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	// Setup
 	src := c.MkDir()
@@ -98,10 +116,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	}
 
 	s.runMountTest(c, "manysdks", requests, expected)
-	repo := s.d.overlord.InterfaceManager().Repository()
-	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
-	c.Assert(err, check.IsNil)
-	conn, err := repo.Connection(ref[0])
+	conn, err = repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
 }

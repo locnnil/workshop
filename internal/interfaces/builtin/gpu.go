@@ -21,9 +21,9 @@ package builtin
 
 import (
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 const gpuSummary = `allows sharing system GPUs with SDKs`
@@ -74,16 +74,16 @@ func (iface *gpuInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) b
 	return true
 }
 
-func (iface *gpuInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *gpuInterface) MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	return nil
 }
 
-func (iface *gpuInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *gpuInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	// Add the GPU entry here. In case of a nvidia card, the device caps and
 	// runtime will be passed through by the initial workshop configuration (see
 	// defaultConfig). This is required as adding nvidia.* entries does not take
 	// effect unless the workshop is restarted.
-	spec.AddDeviceEntry(lxdbackend.Gpu(plug.Name()))
+	spec.SetGpu(workshop.Gpu{Name: plug.Name()})
 	return nil
 }
 

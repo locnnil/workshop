@@ -1,53 +1,41 @@
 package workshop
 
-import (
-	"context"
-	"fmt"
-)
-
-type DeviceType int
+type MountType int
 
 const (
-	HostWorkshopMount DeviceType = iota
-	WorkshopWorkshopMount
-	DiskVolume
-	GPU
-	SshAgentProxy
+	HostWorkshop MountType = iota
+	WorkshopWorkshop
+	Volume
 )
 
-type Device struct {
-	Name       string
-	Properties map[string]string
-	Config     map[string]string
-	Type       DeviceType
+type Mount struct {
+	Name  string    `json:"name"`
+	What  string    `json:"what"`
+	Where string    `json:"where"`
+	Type  MountType `json:"type"`
+}
+
+type SshAgent struct {
+	Name    string
+	Connect string
+	Listen  string
+}
+
+type Gpu struct {
+	Name string
 }
 
 type SdkProfile struct {
-	Sdk     string
-	Devices map[string]Device
+	Sdk string
+
+	Mounts map[string]Mount
+	Agent  *SshAgent
+	Gpu    *Gpu
 }
 
 func NewSdkProfile(sdkName string) SdkProfile {
 	return SdkProfile{
-		Sdk:     sdkName,
-		Devices: make(map[string]Device),
+		Sdk:    sdkName,
+		Mounts: make(map[string]Mount),
 	}
-}
-
-func (s SdkProfile) Name() string {
-	return s.Sdk
-}
-
-func (s SdkProfile) AddDevice(dev Device) error {
-	if _, ok := s.Devices[dev.Name]; ok {
-		return fmt.Errorf("device %s already exists in the %s SDK profile", dev.Name, s.Name())
-	}
-	s.Devices[dev.Name] = dev
-	return nil
-}
-
-type Profile interface {
-	AssignProfile(ctx context.Context, workshop string, profile SdkProfile) error
-	Profile(ctx context.Context, workshop, profile string) (SdkProfile, error)
-	RemoveProfile(ctx context.Context, workshop, profile string) error
 }

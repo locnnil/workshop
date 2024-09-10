@@ -89,6 +89,7 @@ slots:
 `
 
 func (s *sdkStateSuite) SetUpTest(c *check.C) {
+	var err error
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
@@ -96,8 +97,8 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
-	be, _ := fakebackend.New()
-	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	s.backend, err = fakebackend.New()
+	c.Check(err, check.IsNil)
 
 	s.project = &workshop.Project{
 		Path:      c.MkDir(),
@@ -136,7 +137,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err = s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
 	s.mockTestSdk(c, "test", sdkYaml)

@@ -38,6 +38,8 @@ type Workshop struct {
 	Running bool
 	// Installed SDKs.
 	Content map[string]sdk.Setup
+	// Workshop devices installed.
+	Profiles map[string]SdkProfile
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding

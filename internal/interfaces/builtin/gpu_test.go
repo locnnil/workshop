@@ -3,10 +3,9 @@ package builtin_test
 import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"gopkg.in/check.v1"
 )
 
@@ -46,11 +45,11 @@ slots:
  gpu:
 `, s.projectId, "ws", "producer", "gpu")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := &device.Specification{}
+	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	expectedDevice := lxdbackend.Gpu(plug.Name)
-	c.Assert(deviceSpec.DeviceEntries(), check.DeepEquals, []workshop.Device{expectedDevice})
+	expectedDevice := &workshop.Gpu{Name: plug.Name}
+	c.Assert(deviceSpec.Profile.Gpu, check.DeepEquals, expectedDevice)
 }

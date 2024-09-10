@@ -24,7 +24,10 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -34,9 +37,10 @@ import (
 var _ = check.Suite(&apiSuite{})
 
 type apiSuite struct {
-	d     *Daemon
-	b     *fakebackend.FakeWorkshopBackend
-	store *sdk.FakeStore
+	d          *Daemon
+	b          *fakebackend.FakeWorkshopBackend
+	secBackend *ifacetest.TestSecurityBackend
+	store      *sdk.FakeStore
 
 	workshopDir string
 	username    string
@@ -51,15 +55,11 @@ type apiSuite struct {
 	restoreProjectId  func()
 	restoreUser       func()
 	restoreTime       func()
-	restoreBackendNew func()
 	restoreSanitize   func()
+	restoreSecBackend func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
-
-func (s *apiSuite) backendNew() (workshop.Backend, error) {
-	return s.b, nil
-}
 
 func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
@@ -81,9 +81,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.store = &sdk.FakeStore{}
 
-	b, _ := fakebackend.New()
-	s.b = b.(*fakebackend.FakeWorkshopBackend)
-	s.restoreBackendNew = overlord.MockBackendNew(s.backendNew)
+	s.b, err = fakebackend.New()
+	c.Check(err, check.IsNil)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
@@ -98,6 +97,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
+	s.secBackend = &ifacetest.TestSecurityBackend{BackendName: "api-suite"}
+	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -107,8 +108,8 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.restoreProjectId()
 	s.restoreUser()
 	s.restoreTime()
-	s.restoreBackendNew()
 	s.restoreSanitize()
+	s.restoreSecBackend()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {
@@ -121,8 +122,12 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	}
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
+	undo := overlord.MockWorkshopBackend(s.b)
+	defer undo()
+
 	d, err := New(&Options{Dir: s.workshopDir})
 	c.Assert(err, check.IsNil)
+
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()
 	s.d = d

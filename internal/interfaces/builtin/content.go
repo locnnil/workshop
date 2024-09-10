@@ -27,10 +27,9 @@ import (
 	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/interfaces/device"
+	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 const mountSummary = `allows sharing host code and data with SDKs`
@@ -176,12 +175,12 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 	return true
 }
 
-func (iface *mountInterface) MountConnectedSlot(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *mountInterface) MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	return nil
 }
 
 // Interactions with the mount backend.
-func (iface *mountInterface) MountConnectedPlug(spec *device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	user, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
@@ -192,14 +191,12 @@ func (iface *mountInterface) MountConnectedPlug(spec *device.Specification, plug
 		return err
 	}
 	if err == nil {
-		spec.AddDeviceEntry(lxdbackend.WorkshopToWorkshopMount(plug.Ref().Sdk, plug.Name(), source, iface.target(plug)))
-		return nil
+		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.WorkshopWorkshop})
 	}
 
 	source, err = iface.hostSource(user.HomeDir, plug, slot)
 	if err == nil {
-		spec.AddDeviceEntry(lxdbackend.HostWorkshopMount(plug.Name(), source, iface.target(plug)))
-		return nil
+		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.HostWorkshop})
 	}
 
 	return err
