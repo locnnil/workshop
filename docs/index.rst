@@ -85,7 +85,9 @@ At its core, |project_markup| builds upon Canonical's mature tech.
 It uses `LXD <https://documentation.ubuntu.com/lxd/>`_
 as the underlying container technology;
 it also follows the tooling paradigm exemplified by
-`Snap <https://snapcraft.io/docs/>`_.
+`Snap <https://snapcraft.io/docs/>`_
+and implemented with
+`Craft CLI <https://craft-cli.readthedocs.io/>`_.
 
 Talk to us if you have a project in AI/ML, robotics or any other field
 where setting up an environment is a daily or weekly activity
