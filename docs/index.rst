@@ -81,9 +81,9 @@ within the Enterprise Engineering department here at Canonical;
 is a sibling project,
 aimed at publishers who create and distribute SDKs for |project_markup|.
 
-At its core, |project_markup| relies on
-`LXD <https://documentation.ubuntu.com/lxd/>`_
-to handle the low-level details that make the magic happen;
+At its core, |project_markup| builds upon Canonical's mature tech.
+It uses `LXD <https://documentation.ubuntu.com/lxd/>`_
+as the underlying container technology;
 it also follows the tooling paradigm exemplified by
 `Snap <https://snapcraft.io/docs/>`_.
 
