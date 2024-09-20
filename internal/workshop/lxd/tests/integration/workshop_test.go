@@ -5,6 +5,7 @@ package lxdbackend_integration_test
 
 import (
 	"context"
+	"gopkg.in/yaml.v3"
 	"os"
 	"os/user"
 	"sync"
@@ -68,6 +69,24 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 	err = os.RemoveAll(f.project.Path)
 	c.Check(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopUserData(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer f.bd.RemoveWorkshop(f.ctx, "test")
+	ws, err := f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Assert(ws, check.NotNil)
+
+	userData := ws.UserData
+
+	// Check YAML format
+	var data interface{}
+	err = yaml.Unmarshal([]byte(userData), &data)
+	c.Assert(err, check.IsNil)
+
+	// Check prefix #cloud-config
+	c.Assert(userData[0:14], check.Equals, "#cloud-config\n")
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {

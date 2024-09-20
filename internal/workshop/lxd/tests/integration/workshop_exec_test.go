@@ -250,3 +250,22 @@ func (f *wsExec) TestLxdBackendExecTimeout(c *check.C) {
 	// Validate
 	c.Assert(err, check.ErrorMatches, "(?s).*timed out after 100ms.*")
 }
+
+func (f *wsExec) TestLxdBackendExecValidateUserData(c *check.C) {
+	// Setup
+	opts := &client.ExecOptions{
+		Command:    []string{"cloud-init", "schema", "--system", "--annotate"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stderr, check.Equals, "")
+	c.Assert(strings.Contains(stdout, "Valid schema user-data"), check.Equals, true)
+	c.Assert(strings.Contains(stdout, "Error"), check.Equals, false)
+}

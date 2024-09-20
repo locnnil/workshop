@@ -23,6 +23,7 @@ var (
 	ConfigWorkshopFile      = "user.workshop.file"
 	ConfigWorkshopContent   = "user.workshop.content"
 	ConfigProjectPathDevice = "workshop.project"
+	ConfigUserData          = "user.user-data"
 )
 
 var InstallTimeNow = time.Now
@@ -40,6 +41,7 @@ type Workshop struct {
 	Content map[string]sdk.Setup
 	// Workshop devices installed.
 	Profiles map[string]SdkProfile
+	UserData string
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding

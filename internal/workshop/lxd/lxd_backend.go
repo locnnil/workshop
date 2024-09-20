@@ -478,6 +478,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p *w
 		Content:  c,
 		Profiles: profs,
 		File:     f,
+		UserData: inst.Config[workshop.ConfigUserData],
 	}, nil
 }
 
