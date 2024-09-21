@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+mkdir -p /mnt/one
+mkdir -p /opt/two
+mkdir -p /mnt/wp-plug

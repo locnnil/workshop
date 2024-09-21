@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package workshopbackend_test
+package lxdbackend_integration_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
 	"gopkg.in/check.v1"
 )
 
@@ -40,10 +41,10 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}
-	f.ctx = createTestContext(f.username, "42424242")
+	f.ctx = helper.CreateTestContext(f.username, "42424242")
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
-	f.restoreImageServer = lxdbackend.FakeImageServer(minimalImageServer)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
+	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 	f.restoreLookupUsr = testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{Name: f.username, Username: f.username, Uid: "1000", Gid: "1000"}
 		return u, nil
@@ -57,8 +58,8 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	lxdclient, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 
-	cleanUpLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, lxdclient, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.username))
+	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdSystemProjectName(f.username))
 	f.restoreLookupUsr()
 	f.restoreNewId()
 
@@ -70,7 +71,7 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer f.bd.RemoveWorkshop(f.ctx, "test")
 
 	// Execute
@@ -92,7 +93,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -112,7 +113,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
-	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer f.bd.RemoveWorkshop(f.ctx, "test")
 
 	// Execute
@@ -130,7 +131,7 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Setup
-	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -147,7 +148,7 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
-	launchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Validate
 	err := f.bd.RemoveWorkshop(f.ctx, "test")

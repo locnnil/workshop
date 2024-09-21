@@ -94,6 +94,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 		var sdkMounts []*Mount
 		if mounts != nil {
 			sdkMounts = mounts[sdk.Name]
+			slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 		}
 
 		info.Content = append(info.Content, &SdkInfo{

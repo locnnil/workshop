@@ -1,5 +1,0 @@
-name: ws-content
-base: ubuntu@22.04
-sdks:
-  test-sdk-content:
-    channel: latest/stable

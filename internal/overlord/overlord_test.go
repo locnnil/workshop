@@ -39,7 +39,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/version"
-	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
@@ -49,7 +48,7 @@ type overlordSuite struct {
 	dir       string
 	statePath string
 
-	restoreBackendNew func()
+	restorebackend func()
 }
 
 var _ = Suite(&overlordSuite{})
@@ -78,6 +77,14 @@ func (ovs *overlordSuite) SetUpTest(c *C) {
 	ovs.dir = c.MkDir()
 	dirs.SetRootDir(ovs.dir)
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
+
+	b, err := fakebackend.New()
+	c.Assert(err, check.IsNil)
+	ovs.restorebackend = overlord.MockWorkshopBackend(b)
+}
+
+func (ovs *overlordSuite) TearDownTest(c *C) {
+	ovs.restorebackend()
 }
 
 func (ovs *overlordSuite) TestNew(c *C) {
@@ -87,10 +94,6 @@ func (ovs *overlordSuite) TestNew(c *C) {
 	o, err := overlord.New(ovs.dir, nil)
 	c.Assert(err, IsNil)
 	c.Check(o, NotNil)
-
-	fakebe, err := fakebackend.New()
-	c.Assert(err, check.IsNil)
-	workshop.ReplaceBackend(o.State(), fakebe)
 
 	c.Check(o.StateEngine(), NotNil)
 	c.Check(o.TaskRunner(), NotNil)

@@ -285,13 +285,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err := m.repo.AddSdk(info); err != nil {
 		return err
 	}
-	rev.Add(func() {
-		if err := m.repo.RemoveSdk(project.ProjectId, w, setup.Name); err != nil {
-			st.Lock()
-			task.Logf("Link SDK cleanup: could not remove %q SDK: %v", setup.Name, err)
-			st.Unlock()
-		}
-	})
 
 	rev.Success()
 	return nil

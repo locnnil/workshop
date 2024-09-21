@@ -3,6 +3,7 @@ package lxdbackend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -459,10 +460,10 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p *w
 	profs := make(map[string]workshop.SdkProfile, len(c))
 	for _, s := range c {
 		sp, err := Profile(conn, p.ProjectId, f.Name, s.Name)
-		if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
+		if err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return nil, err
 		}
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
+		if errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			continue
 		}
 

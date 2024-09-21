@@ -586,7 +586,7 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleDefaults(c *check.C) {
 func (s *plugSlotRulesSuite) TestCompilePlugRuleInstalationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"plug-sdk-type": []interface{}{sdk.System.String(), "regular"},
+			"plug-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)
@@ -645,7 +645,7 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleInstallationConstraintsPlugNames
 func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]interface{}{
 		"allow-connection": map[string]interface{}{
-			"slot-sdk-type": []interface{}{sdk.System.String(), "regular"},
+			"slot-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)
@@ -1055,7 +1055,7 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleConnectionConstraintsPlugNamesSl
 func (s *plugSlotRulesSuite) TestCompileSlotRuleInstallationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompileSlotRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"slot-sdk-type": []interface{}{sdk.System.String(), "regular"},
+			"slot-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)

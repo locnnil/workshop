@@ -1,6 +1,0 @@
-#!/usr/bin/bash
-
-# LXD removes empty dirs when unmounts the disk device, so make /opt non-empty
-touch /opt/.no-remove
-mkdir -p /mnt/wp-plug
-echo "Set up base ran successfully!"

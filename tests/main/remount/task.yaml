@@ -4,27 +4,27 @@ execute: |
 
   workshop_exec launch ws-remount  
   echo "Remount: the new source is empty or does not exist"
-  new_source="/home/ubuntu/content-plug-one"
-  workshop_exec remount ws-remount/test-sdk-content:content-plug-one "$new_source"
+  new_source="/home/ubuntu/one"
+  workshop_exec remount ws-remount/test-sdk-mount:one "$new_source"
   test -d "$new_source"
 
   echo "Remount: check workshop info output"
-  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-one"]' | MATCH "^host-source:.*$new_source"
+  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*$new_source"
 
   echo "Remount: plugs remount sources are preserved after refresh"
   workshop_exec refresh ws-remount
-  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-one"]' | MATCH "^host-source:.*$new_source"
+  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*$new_source"
 
   echo "Remount: the new source is not empty"  
-  workshop_exec remount ws-remount/test-sdk-content:content-plug-one /home/ubuntu  | MATCH ".*(new source is not empty; workshop must be stopped to remount safely)"
+  workshop_exec remount ws-remount/test-sdk-mount:one /home/ubuntu  | MATCH ".*(new source is not empty; workshop must be stopped to remount safely)"
 
   echo "Remount: workshop stopped"
-  new_source="/home/ubuntu/content-plug-two"
+  new_source="/home/ubuntu/two"
   workshop_exec stop ws-remount
-  workshop_exec remount ws-remount/test-sdk-content:content-plug-two "$new_source"
-  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-two"]' | MATCH "^host-source:.*$new_source"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$new_source"
+  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$new_source"
   workshop_exec start ws-remount
-  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-two"]' | MATCH "^host-source:.*$new_source"
+  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$new_source"
   test -d "$new_source"
 
   echo "Remount: new source is on a different filesystem"
@@ -33,12 +33,12 @@ execute: |
   mkdir -p /home/ubuntu/other-fs
   mount --bind "$otherfs" /home/ubuntu/other-fs
   mkdir "$otherfs_path"
-  workshop_exec remount ws-remount/test-sdk-content:content-plug-two "$otherfs_path" | MATCH ".*(current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely)"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path" | MATCH ".*(current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely)"
   workshop_exec stop ws-remount
-  workshop_exec remount ws-remount/test-sdk-content:content-plug-two "$otherfs_path"
-  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-content"].mounts["content-plug-two"]' | MATCH "^host-source:.*$otherfs_path"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path"
+  workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$otherfs_path"
 
   echo "Remount: workshop remove does not delete remounted dirs"
   workshop_exec remove ws-remount
-  test -d "/home/ubuntu/content-plug-one"
-  test -d "/home/ubuntu/content-plug-two"
+  test -d "/home/ubuntu/one"
+  test -d "/home/ubuntu/two"

@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package workshopbackend_test
+package lxdbackend_integration_test
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
 )
 
 type wsProject struct {
@@ -42,8 +43,8 @@ func (f *wsProject) SetUpTest(c *check.C) {
 }
 
 func (f *wsProject) TearDownTest(c *check.C) {
-	cleanUpLxdProject(c, f.client, lxdbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.username))
 }
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
@@ -304,8 +305,8 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 }
 
 func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
-	defer cleanUpLxdProject(c, f.client, lxdbackend.LxdProjectName("anotheruser"))
-	defer cleanUpLxdProject(c, f.client, lxdbackend.LxdSystemProjectName("anotheruser"))
+	defer helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName("anotheruser"))
+	defer helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName("anotheruser"))
 
 	// Setup
 	be := lxdbackend.Backend{}

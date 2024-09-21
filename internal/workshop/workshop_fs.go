@@ -14,7 +14,7 @@ type WorkshopFs interface {
 	Close()
 }
 
-func NewWorkshopFs(c *sftp.Client) WorkshopFs {
+func NewWorkshopFs(c *sftp.Client) *InstanceFs {
 	var fs InstanceFs
 	fs.client = c
 	fs.Fs = sftpfs.New(fs.client)

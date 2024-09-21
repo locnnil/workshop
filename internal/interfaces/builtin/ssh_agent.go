@@ -114,7 +114,7 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specificatio
 	name := plug.Sdk().Name + "-" + plug.Name()
 
 	fromSocket := sock
-	toSocket := filepath.Join(dirs.WorkshopBaseDir, name+".ssh")
+	toSocket := filepath.Join(dirs.WorkshopRunDir, name+".ssh")
 
 	return spec.SetSshAgent(workshop.SshAgent{Name: name, Connect: fromSocket, Listen: toSocket})
 }

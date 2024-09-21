@@ -8,16 +8,16 @@ sdks:
       user-slot-2:
         interface: mount
         workshop-source: /project/user-data-2
-  test-sdk-content:
+  test-sdk-mount:
     channel: latest/stable
     plugs:
       wp-plug:
         interface: mount
         workshop-target: /mnt/wp-plug
 connections:
-  - plug: test-sdk-content:content-plug-one
+  - plug: test-sdk-mount:one
     slot: system:user-slot
-  - plug: test-sdk-content:content-plug-two
+  - plug: test-sdk-mount:two
     slot: system:user-slot-2
-  - plug: test-sdk-content:wp-plug
+  - plug: test-sdk-mount:wp-plug
     slot: system:user-slot-2

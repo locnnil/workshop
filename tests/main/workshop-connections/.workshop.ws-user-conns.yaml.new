@@ -6,8 +6,8 @@ sdks:
       user-slot-2:
         interface: mount
         workshop-source: /project/user-data-2
-  test-sdk-content:
+  test-sdk-mount:
     channel: latest/stable
 connections:
-  - plug: test-sdk-content:content-plug-two
+  - plug: test-sdk-mount:two
     slot: system:user-slot-2

@@ -3,9 +3,12 @@ package lxdbackend
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
+	"github.com/canonical/lxd/shared/api"
+
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -26,7 +29,10 @@ func Profile(conn lxd.InstanceServer, pid, wp, profile string) (workshop.SdkProf
 	name := ProfileName(pid, wp, profile)
 	lxdp, _, err := conn.GetProfile(name)
 	if err != nil {
-		return workshop.SdkProfile{}, err
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return workshop.SdkProfile{}, workshop.ErrSdkProfileNotFound
+		}
+		return workshop.SdkProfile{}, fmt.Errorf("cannot load %q profile (%w)", profile, err)
 	}
 
 	return lxdToSdkProfile(profile, lxdp.Devices, lxdp.Config)
@@ -45,11 +51,12 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		case "none":
 			cfg, exist := config[DeviceConfigKey(profile, name)]
 			if !exist {
+				logger.Noticef("On reading %q SDK profile: unknown device: %s", profile, name)
 				continue
 			}
 
-			devtype, exist := config[DeviceTypeConfigKey(profile, name)]
-			if exist && devtype == "mount" {
+			devtype := config[DeviceTypeConfigKey(profile, name)]
+			if devtype == "mount" {
 				var mnt workshop.Mount
 				if err := json.Unmarshal([]byte(cfg), &mnt); err != nil {
 					return pr, err
@@ -58,7 +65,7 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 				continue
 			}
 
-			logger.Noticef("On reading %q SDK profile: unknown device: %s", profile, name)
+			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, devtype)
 		default:
 			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, dev["type"])
 		}

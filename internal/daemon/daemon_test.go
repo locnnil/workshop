@@ -29,18 +29,19 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/check.v1"
-
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/patch"
 	"github.com/canonical/workshop/internal/overlord/restart"
 	"github.com/canonical/workshop/internal/overlord/standby"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
 
 // Hook up check.v1 into the "go test" runner
@@ -76,6 +77,11 @@ func (s *daemonSuite) TearDownTest(c *check.C) {
 }
 
 func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
+	b, err := fakebackend.New()
+	c.Assert(err, check.IsNil)
+	undo := overlord.MockWorkshopBackend(b)
+	defer undo()
+
 	d, err := New(&Options{
 		Dir:         s.workshopDir,
 		SocketPath:  s.socketPath,

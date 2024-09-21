@@ -3,8 +3,8 @@ package lxd_device
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -13,6 +13,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/randutil"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
@@ -25,6 +26,8 @@ import (
 const (
 	LxdSock = "/var/snap/lxd/common/lxd/unix.socket"
 )
+
+var workshopFs = sftpFs
 
 type Backend struct {
 }
@@ -65,23 +68,19 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			return false, err
 		}
 
-		check := func(me osutil.MountEntry) bool { return me.Name == dev.What && me.Dir == dev.Where }
-
-		_, err = fs.Stat(dev.What)
-		if err != nil {
+		if _, err = fs.Stat(dev.What); err != nil {
 			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
 		}
 
-		_, err = fs.Stat(dev.Where)
-		if err != nil {
+		if _, err = fs.Stat(dev.Where); err != nil {
 			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
 		}
 
+		check := func(me osutil.MountEntry) bool { return me.Name == dev.What && me.Dir == dev.Where }
 		if !slices.ContainsFunc(mounts.Entries, check) {
 			entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
 			mounts.Entries = append(mounts.Entries, entry)
-			_, err = mounts.WriteTo(fstab)
-			if err != nil {
+			if _, err = mounts.WriteTo(fstab); err != nil {
 				return false, err
 			}
 		}
@@ -122,58 +121,90 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 				return false, err
 			}
 		}
+		return false, nil
 	}
-	return false, nil
+	return false, fmt.Errorf(`unknown device type: %v`, dev.Type)
 }
 
-func reloadWorkshopMounts(conn lxd.InstanceServer, pid, w string) error {
+func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
 	var out bytes.Buffer
 
-	cmd := api.InstanceExecPost{
-		Command: []string{
-			"mount",
-			"-a",
-		},
+	c := api.InstanceExecPost{
+		Command:     cmd,
 		Interactive: false,
 	}
 
 	args := lxd.InstanceExecArgs{Stderr: &out}
 
-	op, err := conn.ExecInstance(lxdbackend.InstanceName(w, pid), cmd, &args)
+	op, err := conn.ExecInstance(lxdbackend.InstanceName(w, pid), c, &args)
 	if err != nil {
 		return err
 	}
 
-	err = op.Wait()
-	if err != nil {
-		logger.Noticef("On reload workshop mounts: %v (%s)", err, out.String())
+	if err = op.Wait(); err != nil {
+		logger.Noticef("On workshop mount: %v (%s)", err, out.String())
 	}
 	return err
 }
 
-func removeMount(fs workshop.WorkshopFs, mnt workshop.Mount) (reload bool, err error) {
+func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
+	return runMountCommand(conn, pid, w, []string{
+		"mount",
+		"-a",
+	})
+}
+
+func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, mnt workshop.Mount) error {
 	if mnt.Type == workshop.WorkshopWorkshop {
 		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
 		if err != nil {
-			return false, err
+			return err
 		}
 		defer fstab.Close()
 
 		mounts, err := osutil.ReadMountProfile(fstab)
 		if err != nil {
-			return false, err
+			return err
 		}
-		deleter := func(me osutil.MountEntry) bool { return me.Name == mnt.What && me.Dir == mnt.Where }
 
+		cnt := 0
+		deleter := func(me osutil.MountEntry) bool {
+			if me.Name == mnt.What && me.Dir == mnt.Where {
+				cnt++
+				return true
+			}
+			return false
+		}
 		mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
-		_, err = mounts.WriteTo(fstab)
-		if err != nil {
-			return false, err
+		if cnt == 0 {
+			return nil
 		}
-		return true, nil
-	}
 
-	return false, nil
+		tmp := "fstab" + "." + randutil.RandomString(12) + "~"
+		newfstab, err := fs.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_EXCL, 0744)
+		if err != nil {
+			return nil
+		}
+		defer newfstab.Close()
+
+		if _, err = mounts.WriteTo(newfstab); err != nil {
+			return err
+		}
+
+		if err = fs.Rename(tmp, "/etc/fstab"); err != nil {
+			return err
+		}
+
+		err = runMountCommand(conn, pid, w, []string{
+			"umount",
+			mnt.Where,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop string) error {
@@ -183,7 +214,8 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	}
 	defer env.Close()
 
-	_, err = env.Write([]byte("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen, "unix:")))
+	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen, "unix:"))
+	_, err = env.Write([]byte(varline))
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
 	}
@@ -194,7 +226,7 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
-func workshopFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
+func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
 	sftp, err := conn.GetInstanceFileSFTP(lxdbackend.InstanceName(w, pid))
 	if err != nil {
 		return nil, err
@@ -237,6 +269,12 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 			return err
 		}
 	}
+	if reload {
+		err = reloadMounts(conn, sdkInfo.ProjectId, sdkInfo.Workshop)
+		if err != nil {
+			return err
+		}
+	}
 
 	if spec.Profile.Agent != nil {
 		err = installSshAgent(fs, *spec.Profile.Agent, sdkInfo.Workshop)
@@ -246,57 +284,54 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	name := lxdbackend.ProfileName(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
-
-	// Either create or update an existing LXD profile for the SDK so that later
-	// it can be assigned to the required workshop.
-	prev, err := lxdbackend.Profile(conn, sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
-	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
-		return err
-	}
-
-	newProfile := api.ProfilePut{
+	newp := api.ProfilePut{
 		Devices:     spec.devices,
 		Config:      spec.config,
 		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkInfo.Sdk, sdkInfo.Workshop),
 	}
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		if err = conn.CreateProfile(api.ProfilesPost{ProfilePut: newProfile, Name: name}); err != nil {
+
+	// Either create or update an existing LXD profile for the SDK so that later
+	// it can be assigned to the required workshop.
+	prevp, err := lxdbackend.Profile(conn, sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
+	if err == nil {
+		// Find the difference between a set of old and new devices to detect if any
+		// clean up is required when a new profile will be assigned (updated).
+		for key, dev := range prevp.Mounts {
+			if _, exist := spec.Profile.Mounts[key]; !exist {
+				if err = removeMount(conn, fs, sdkInfo.ProjectId, sdkInfo.Workshop, dev); err != nil {
+					return err
+				}
+			}
+		}
+		if prevp.Agent != nil {
+			if spec.Profile.Agent == nil || *prevp.Agent != *spec.Profile.Agent {
+				if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+					return err
+				}
+			}
+		}
+		return conn.UpdateProfile(name, newp, "")
+	}
+
+	if errors.Is(err, workshop.ErrSdkProfileNotFound) {
+		if err = conn.CreateProfile(api.ProfilesPost{ProfilePut: newp, Name: name}); err != nil {
 			return err
 		}
 
-		inst, etag, err := conn.GetInstance(lxdbackend.InstanceName(sdkInfo.Workshop, sdkInfo.ProjectId))
+		iname := lxdbackend.InstanceName(sdkInfo.Workshop, sdkInfo.ProjectId)
+		inst, etag, err := conn.GetInstance(iname)
 		if err != nil {
 			return err
 		}
 
 		// Assigning the profile for the first time.
 		inst.InstancePut.Profiles = append(inst.InstancePut.Profiles, name)
-		op, err := conn.UpdateInstance(lxdbackend.InstanceName(sdkInfo.Workshop, sdkInfo.ProjectId), inst.InstancePut, etag)
+		op, err := conn.UpdateInstance(iname, inst.InstancePut, etag)
 		if err != nil {
 			return err
 		}
 
-		if err = op.WaitContext(ctx); err != nil {
-			return err
-		}
-	} else {
-		// Find the difference between a set of old and new devices to detect if any
-		// clean up is required when a new profile will be assigned (updated).
-		for key, dev := range prev.Mounts {
-			if _, exist := spec.Profile.Mounts[key]; !exist {
-				if reload, err = removeMount(fs, dev); err != nil {
-					return err
-				}
-			}
-		}
-
-		if err := conn.UpdateProfile(name, newProfile, ""); err != nil {
-			return err
-		}
-	}
-
-	if reload {
-		return reloadWorkshopMounts(conn, sdkInfo.ProjectId, sdkInfo.Workshop)
+		return op.WaitContext(ctx)
 	}
 
 	return err
@@ -333,9 +368,8 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 		return err
 	}
 
-	reload := false
 	for _, dev := range prof.Mounts {
-		if reload, err = removeMount(fs, dev); err != nil {
+		if err = removeMount(conn, fs, projectId, w, dev); err != nil {
 			return err
 		}
 	}
@@ -359,19 +393,18 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 		}
 	}
 
-	// 2. Delete the profile
-	err = conn.DeleteProfile(lxdbackend.ProfileName(projectId, w, profile))
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return workshop.ErrSdkProfileNotFound
-	}
-
-	if reload {
-		return reloadWorkshopMounts(conn, projectId, w)
-	}
-	return err
+	return conn.DeleteProfile(lxdname)
 }
 
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user, pid, sdk string) interfaces.Specification {
 	return NewSpecification(user, pid, sdk)
+}
+
+func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)) func() {
+	old := workshopFs
+	workshopFs = f
+	return func() {
+		workshopFs = old
+	}
 }

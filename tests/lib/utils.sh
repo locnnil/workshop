@@ -23,6 +23,9 @@ function prepare_environment() {
   
   snap install --classic --channel=1.21/stable go
   snap install yq
+  # The unattended upgrades hold locks on reusable instances
+  # and can break a spread run.
+  apt-get remove -y unattended-upgrades
   apt-get update
   apt-get install -y --no-install-recommends moreutils jq
   
@@ -38,9 +41,10 @@ function cleanup_environment() {
 }
 
 function start_sdk_store() {
-    # run fake GCS bucket storage to emulate SDK store
+  # run fake GCS bucket storage to emulate SDK store
   publish_test_sdk_content "$SDKS" "$SDK_STORE_BUCKET_DIR"
-  chown -R ubuntu.ubuntu /data # a bug with fake-gcs-server that returns 404 if not owned by the user
+  # a bug with fake-gcs-server that returns 404 if not owned by the user
+  chown -R ubuntu.ubuntu /data 
   mkdir -p /storage
   chown -R ubuntu.ubuntu /storage
   

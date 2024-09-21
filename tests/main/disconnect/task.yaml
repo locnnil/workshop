@@ -9,25 +9,25 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check disconnect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"
-  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one ws-disconn/system:mount  
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
+  workshop_exec disconnect ws-disconn/test-sdk-mount:one ws-disconn/system:mount  
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+-.+\-$"
 
   echo "Check disconnect <workshop>/<sdk>:<plug> :<slot> form (system SDK)"
-  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-two :mount  
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-two.+-.+\-$"
+  workshop_exec disconnect ws-disconn/test-sdk-mount:two :mount  
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:two.+-.+\-$"
 
   echo "Check 'workshop remove' does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
   workshop_exec remove ws-disconn
   workshop_exec launch ws-disconn
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-one.+:mount.+\-$"
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-two.+:mount.+\-$"  
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:two.+:mount.+\-$"  
 
   echo "Check disconnect <workshop>/<sdk>:<plug or slot> form (must disconnect all slots auto connections)"
   workshop_exec disconnect ws-disconn/system:mount
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-one.+-.+\-$"  
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+-.+\-$"
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+-.+\-$"  
 
   echo "Check disconnect --forget (reconnects after refresh)"
-  workshop_exec disconnect ws-disconn/test-sdk-content:content-plug-one --forget
+  workshop_exec disconnect ws-disconn/test-sdk-mount:one --forget
   workshop_exec refresh ws-disconn
-  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-content:content-plug-one.+:mount.+\-$"
+  workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"

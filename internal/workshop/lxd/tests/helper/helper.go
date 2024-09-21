@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package workshopbackend_test
+package helper
 
 import (
 	"context"
@@ -14,16 +14,16 @@ import (
 	"gopkg.in/check.v1"
 )
 
-var minimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
+var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
 
-func defaultTestDevices() map[string]map[string]string {
+func DefaultTestDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
 	}
 }
 
-func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
+func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	cli := client.UseProject(project)
 	fingers, err := cli.GetImageFingerprints()
 	c.Check(err, check.IsNil)
@@ -72,13 +72,13 @@ func cleanUpLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	c.Check(err, check.IsNil)
 }
 
-func createTestContext(username, projectId string) context.Context {
+func CreateTestContext(username, projectId string) context.Context {
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, username)
 	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
 	return ctx
 }
 
-func launchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, dir string) {
+func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, dir string) {
 	var err error
 
 	err = bd.Download(ctx, "ubuntu@24.04", nil)
