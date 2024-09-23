@@ -1,0 +1,7 @@
+name: tf-extended
+title: tf-extended
+base: ubuntu@24.04
+
+summary: tf-extended SDK
+description: |
+  tf-extended SDK

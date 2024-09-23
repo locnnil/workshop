@@ -53,8 +53,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	be, _ := fakebackend.New()
-	s.wsbackend = be.(*fakebackend.FakeWorkshopBackend)
+	s.wsbackend, err = fakebackend.New()
 	workshop.ReplaceBackend(s.state, s.wsbackend)
 
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
@@ -95,16 +94,16 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdkYamls m
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	var hostYaml = `name: host
+	var systemYaml = `name: system
 base: ubuntu@22.04
-type: host
+type: system
 slots:
   slot:
-    interface: content
+    interface: mount
     attr: slot-value
 `
-	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, "host", "current", "meta", "sdk.yaml"), 0655), check.IsNil)
-	s.writeSDKMetaFile(c, wsfs, "host", hostYaml)
+	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "current", "meta", "sdk.yaml"), 0655), check.IsNil)
+	s.writeSDKMetaFile(c, wsfs, sdk.System.String(), systemYaml)
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
@@ -127,7 +126,7 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr: plug-value
 `
 
@@ -136,17 +135,17 @@ plugs:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/host:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/system:slot", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
-			"interface": "content",
+			"interface": "mount",
 			"plug-static": map[string]interface{}{
-				"content": "foo",
-				"attr":    "stored-value",
+				"mount": "foo",
+				"attr":  "stored-value",
 			},
 			"slot-static": map[string]interface{}{
-				"content": "foo",
-				"attr":    "stored-value",
+				"mount": "foo",
+				"attr":  "stored-value",
 			},
 		},
 	})
@@ -162,20 +161,20 @@ plugs:
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	cref := &interfaces.ConnRef{
 		PlugRef: interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "host", Name: "slot"}}
+		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: sdk.System.String(), Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)
 	c.Assert(err, check.IsNil)
 	c.Assert(conn.Plug.Name(), check.Equals, "plug")
 	c.Assert(conn.Plug.StaticAttrs(), check.DeepEquals, map[string]interface{}{
-		"content": "foo",
-		"attr":    "stored-value",
+		"mount": "foo",
+		"attr":  "stored-value",
 	})
 	c.Assert(conn.Slot.Name(), check.Equals, "slot")
 	c.Assert(conn.Slot.StaticAttrs(), check.DeepEquals, map[string]interface{}{
-		"content": "foo",
-		"attr":    "stored-value",
+		"mount": "foo",
+		"attr":  "stored-value",
 	})
 }
 
@@ -185,10 +184,10 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr1: value1
  otherplug:
-  interface: content
+  interface: mount
 `
 
 	var producerYaml = `
@@ -196,7 +195,7 @@ name: producer
 base: ubuntu@22.04
 slots:
  slot:
-  interface: content
+  interface: mount
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
@@ -228,10 +227,10 @@ name: consumer
 base: ubuntu@22.04
 plugs:
  plug:
-  interface: content
+  interface: mount
   attr1: value1
  otherplug:
-  interface: content
+  interface: mount
 `
 
 	var producerYaml = `
@@ -239,7 +238,7 @@ name: producer
 base: ubuntu@22.04
 slots:
  slot:
-  interface: content
+  interface: mount
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{

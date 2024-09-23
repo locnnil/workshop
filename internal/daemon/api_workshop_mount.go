@@ -14,9 +14,9 @@ import (
 )
 
 type mountRequest struct {
-	Action string             `json:"action"`
-	Plug   interfaces.PlugRef `json:"plug"`
-	Source string             `json:"source"`
+	Action     string             `json:"action"`
+	Plug       interfaces.PlugRef `json:"plug"`
+	HostSource string             `json:"host-source"`
 }
 
 func newMountChange(st *state.State, user string, reqData *mountRequest) *state.Change {
@@ -84,11 +84,11 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(err.Error())
 	}
 
-	if conn.Plug.Interface() != "content" {
+	if conn.Plug.Interface() != "mount" {
 		return statusBadRequest("remount requires a content interface plug (provided plug is of %q interface)", conn.Plug.Interface())
 	}
 
-	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.Source, projectId)
+	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.HostSource, projectId)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}

@@ -1,0 +1,12 @@
+name: ws-mount
+base: ubuntu@22.04
+sdks:
+  test-sdk-mount:
+    channel: latest/stable
+    plugs:
+      jobs:
+        interface: mount
+        workshop-target: /etc/cron.weekly
+connections:
+  - plug: test-sdk-mount:jobs
+    slot: test-sdk-mount:jobs

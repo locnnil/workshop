@@ -24,7 +24,7 @@ var wb = `name: %s
 base: ubuntu@22.04
 connections:
   - plug:
-	- host:plug
+	- system:plug
 `
 
 func createWorkshop(dir, name string) error {

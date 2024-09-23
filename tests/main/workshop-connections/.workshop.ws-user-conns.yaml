@@ -1,24 +1,23 @@
 name: ws-user-conns
 base: ubuntu@22.04
 sdks:
-  host:
+  system:
     slots:
       user-slot:
-        interface: content
-        source: user-data
+        interface: mount
       user-slot-2:
-        interface: content
-        source: user-data-2
-  test-sdk-content:
+        interface: mount
+        workshop-source: /project/user-data-2
+  test-sdk-mount:
     channel: latest/stable
     plugs:
       wp-plug:
-        interface: content
-        target: /mnt/wp-plug
+        interface: mount
+        workshop-target: /mnt/wp-plug
 connections:
-  - plug: test-sdk-content:content-plug-one
-    slot: host:user-slot
-  - plug: test-sdk-content:content-plug-two
-    slot: host:user-slot-2
-  - plug: test-sdk-content:wp-plug
-    slot: host:user-slot-2
+  - plug: test-sdk-mount:one
+    slot: system:user-slot
+  - plug: test-sdk-mount:two
+    slot: system:user-slot-2
+  - plug: test-sdk-mount:wp-plug
+    slot: system:user-slot-2

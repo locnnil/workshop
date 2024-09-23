@@ -3,6 +3,7 @@ package lxdbackend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -28,7 +29,8 @@ const (
 )
 
 var (
-	defaultDevices = createDefaultDevices
+	defaultDevices     = createDefaultDevices
+	checkNvidiaRuntime = checkNvidia
 )
 
 var (
@@ -47,7 +49,6 @@ func init() {
 }
 
 type Backend struct {
-	nvidiaRuntime bool
 }
 
 func InstanceName(name string, project_id string) string {
@@ -58,30 +59,11 @@ func ImageAlias(name string) string {
 	return fmt.Sprintf("workshop-%s-%s", name, runtime.GOARCH)
 }
 
-func New() (workshop.Backend, error) {
+func New() (*Backend, error) {
 	server := Backend{}
 
 	if srv := os.Getenv("WORKSHOP_IMAGE_SERVER"); srv != "" {
 		imageServer = srv
-	}
-
-	srv, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resources, err := srv.GetServerResources()
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if nvidia card(s) are present as this requires additional
-	// configuration for the GPU interfaces runtime passthrough.
-	for _, card := range resources.GPU.Cards {
-		if card.Nvidia != nil {
-			server.nvidiaRuntime = true
-			break
-		}
 	}
 
 	return &server, nil
@@ -278,7 +260,7 @@ func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key str
 	return op.Wait()
 }
 
-func (s *Backend) AddWorkshopDevice(ctx context.Context, name string, device workshop.Device) error {
+func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device workshop.Mount) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -294,7 +276,15 @@ func (s *Backend) AddWorkshopDevice(ctx context.Context, name string, device wor
 	if err != nil {
 		return err
 	}
-	inst.Devices[device.Name] = device.Properties
+	if device.Type == workshop.Volume {
+		inst.Devices[device.Name] = map[string]string{"type": "disk",
+			"pool":   "default",
+			"path":   device.What,
+			"source": device.Where}
+	} else {
+		inst.Devices[device.Name] = map[string]string{"type": "disk", "source": device.What,
+			"path": device.Where}
+	}
 	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
 	if err != nil {
 		return err
@@ -303,7 +293,7 @@ func (s *Backend) AddWorkshopDevice(ctx context.Context, name string, device wor
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) RemoveWorkshopDevice(ctx context.Context, name string, device string) error {
+func (s *Backend) RemoveWorkshopMount(ctx context.Context, name string, device string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -436,7 +426,7 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		return nil, err
 	}
 
-	workshop, err := s.loadWorkshop(inst, p)
+	workshop, err := s.loadWorkshop(conn, inst, p)
 	if err != nil {
 		return nil, err
 	}
@@ -454,9 +444,7 @@ func workshopFile(lxdConfig map[string]string) (*workshop.File, error) {
 	return &f, nil
 }
 
-func (b *Backend) loadWorkshop(inst *api.Instance, p *workshop.Project) (*workshop.Workshop, error) {
-	base := inst.Config["image.os"] + "@" + inst.Config["image.version"]
-
+func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p *workshop.Project) (*workshop.Workshop, error) {
 	f, err := workshopFile(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
@@ -469,14 +457,28 @@ func (b *Backend) loadWorkshop(inst *api.Instance, p *workshop.Project) (*worksh
 		}
 	}
 
+	profs := make(map[string]workshop.SdkProfile, len(c))
+	for _, s := range c {
+		sp, err := Profile(conn, p.ProjectId, f.Name, s.Name)
+		if err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+			return nil, err
+		}
+		if errors.Is(err, workshop.ErrSdkProfileNotFound) {
+			continue
+		}
+
+		profs[s.Name] = sp
+	}
+
 	return &workshop.Workshop{
-		Backend: b,
-		Project: p,
-		Name:    workshop.WorkshopName(inst.Name),
-		Base:    base,
-		Running: inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
-		Content: c,
-		File:    f,
+		Backend:  b,
+		Project:  p,
+		Name:     f.Name,
+		Base:     f.Base,
+		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Content:  c,
+		Profiles: profs,
+		File:     f,
 	}, nil
 }
 
@@ -543,9 +545,9 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.W
 	var workshops []*workshop.Workshop
 	for _, i := range instances {
 		if i.Config[workshop.ConfigProjectId] == p.ProjectId {
-			ws, err := s.loadWorkshop(&i, p)
+			ws, err := s.loadWorkshop(conn, &i, p)
 			if err != nil {
-				logger.Debugf("error loading workshop: %v", err)
+				logger.Debugf("Workshop Backend on ProjectsWorkshops: %v", err)
 				continue
 			}
 			workshops = append(workshops, ws)
@@ -629,11 +631,11 @@ func (s *Backend) CreateStateStorage(ctx context.Context, name string) error {
 }
 
 func (s *Backend) AttachStateStorage(ctx context.Context, wp, name string) error {
-	return s.AddWorkshopDevice(ctx, wp, Volume(name, dirs.WorkshopStateDir, name))
+	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: dirs.WorkshopStateDir, Where: name, Type: workshop.Volume})
 }
 
 func (s *Backend) DetachStateStorage(ctx context.Context, wp, name string) error {
-	return s.RemoveWorkshopDevice(ctx, wp, name)
+	return s.RemoveWorkshopMount(ctx, wp, name)
 }
 
 func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {
@@ -679,6 +681,30 @@ func createDefaultDevices() map[string]map[string]string {
 	}
 }
 
+func checkNvidia() (bool, error) {
+	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Disconnect()
+
+	resources, err := conn.GetServerResources()
+	if err != nil {
+		return false, err
+	}
+
+	// Check if nvidia card(s) are present as this requires additional
+	// configuration for the GPU interfaces runtime passthrough.
+	nvidiaRuntime := false
+	for _, card := range resources.GPU.Cards {
+		if card.Nvidia != nil {
+			nvidiaRuntime = true
+			break
+		}
+	}
+	return nvidiaRuntime, nil
+}
+
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
@@ -703,7 +729,12 @@ users:
 		"user.workshop.file":       string(f),
 	}
 
-	if s.nvidiaRuntime {
+	nvidiaRuntime, err := checkNvidiaRuntime()
+	if err != nil {
+		return nil, err
+	}
+
+	if nvidiaRuntime {
 		// nvidia.* properties must be set at launch as otherwise it requires a
 		// container restart to take effect.
 		cfg["nvidia.driver.capabilities"] = "all"

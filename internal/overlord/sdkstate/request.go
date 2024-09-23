@@ -13,9 +13,9 @@ func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 	return download
 }
 
-func InstallHostSdk(st *state.State) *state.TaskSet {
-	name := sdk.Host.String()
-	install := st.NewTask("install-host-sdk", fmt.Sprintf("Install %q SDK", name))
+func InstallSystemSdk(st *state.State) *state.TaskSet {
+	name := sdk.System.String()
+	install := st.NewTask("install-system-sdk", fmt.Sprintf("Install %q SDK", name))
 	install.Set("sdk-setup", sdk.Setup{
 		Name: name,
 	})

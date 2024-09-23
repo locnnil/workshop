@@ -56,10 +56,19 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
+	repo := s.d.overlord.InterfaceManager().Repository()
+
 	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
+	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	conn, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	// The mock iface backend does not set this attribute as the actual one
+	// would.
+	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, c.MkDir())),
 	}
 
 	expected := []*expectedResp{
@@ -80,12 +89,21 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
+	repo := s.d.overlord.InterfaceManager().Repository()
+
 	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
+	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
+	c.Assert(err, check.IsNil)
+	conn, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	// The mock iface backend does not set this attribute as the actual one
+	// would.
+	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	// Setup
 	src := c.MkDir()
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, src)),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, src)),
 	}
 
 	expected := []*expectedResp{
@@ -98,12 +116,9 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	}
 
 	s.runMountTest(c, "manysdks", requests, expected)
-	repo := s.d.overlord.InterfaceManager().Repository()
-	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
+	conn, err = repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	conn, err := repo.Connection(ref[0])
-	c.Assert(err, check.IsNil)
-	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"source": src})
+	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
 }
 
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
@@ -118,7 +133,7 @@ func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 	c.Check(err, check.IsNil)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -141,8 +156,8 @@ func (s *apiSuite) TestWorkshopRemountInvalidSetup(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"mount","plug":{"sdk":"test-sdk","plug":"data"},"source":"/srv/data"}`),
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data","source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"mount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data","host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -170,7 +185,7 @@ func (s *apiSuite) TestWorkshopRemountInvalidInterface(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk-2","plug":"gpu"},"source":"/srv/data"}`),
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk-2","plug":"gpu"},"host-source":"/srv/data"}`),
 	}
 
 	expected := []*expectedResp{
@@ -193,7 +208,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 	s.launchWorkshop(c, "workshopconns", workshopconns, testsdks)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"source":%q}`, c.MkDir())),
+		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, c.MkDir())),
 	}
 
 	expected := []*expectedResp{
@@ -202,7 +217,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*cannot change attribute \"source\" as it was statically specified in the \"host\" sdk details.*`,
+			ChangeErr: `(?s).*sdk "system" does not have attribute "host-source" for interface "mount".*`,
 		},
 	}
 

@@ -51,13 +51,13 @@ import (
 //     manual-connected-implicit-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - host                     # implicit slot
+//           - system                     # implicit slot
 //       deny-auto-connection: true     # force manual connect
 //
 //     auto-connected-implicit-slot:
 //       allow-installation:
 //         slot-sdk-type:
-//           - host                     # implicit slot
+//           - system                     # implicit slot
 //       allow-auto-connection: true    # allow auto-connect
 //
 //     manual-connected-provided-slot:

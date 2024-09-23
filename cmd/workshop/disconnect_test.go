@@ -37,8 +37,8 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 			map[string]interface{}{
 				"project-id": "42424242",
 				"workshop":   "ws",
-				"sdk":        "host",
-				"slot":       "content",
+				"sdk":        "system",
+				"slot":       "mount",
 			},
 		},
 	}
@@ -67,7 +67,7 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{"ws/sdk:plug", ":content"})
+	err := cmd.Run(cmd.Command(), []string{"ws/sdk:plug", ":mount"})
 	c.Assert(err, check.IsNil)
 
 	n = 0

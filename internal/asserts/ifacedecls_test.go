@@ -586,14 +586,14 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleDefaults(c *check.C) {
 func (s *plugSlotRulesSuite) TestCompilePlugRuleInstalationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"plug-sdk-type": []interface{}{"host", "regular"},
+			"plug-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rule.AllowInstallation, check.HasLen, 1)
 	cstrs := rule.AllowInstallation[0]
-	c.Check(cstrs.PlugSdkTypes, check.DeepEquals, []string{"host", "regular"})
+	c.Check(cstrs.PlugSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
 }
 
 func (s *plugSlotRulesSuite) TestCompilePlugRuleInstallationConstraintsPlugNames(c *check.C) {
@@ -645,14 +645,14 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleInstallationConstraintsPlugNames
 func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]interface{}{
 		"allow-connection": map[string]interface{}{
-			"slot-sdk-type": []interface{}{"host", "regular"},
+			"slot-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rule.AllowConnection, check.HasLen, 1)
 	cstrs := rule.AllowConnection[0]
-	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{"host", "regular"})
+	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
 }
 
 func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsPlugNamesSlotNames(c *check.C) {
@@ -1055,14 +1055,14 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleConnectionConstraintsPlugNamesSl
 func (s *plugSlotRulesSuite) TestCompileSlotRuleInstallationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompileSlotRule("iface", map[string]interface{}{
 		"allow-installation": map[string]interface{}{
-			"slot-sdk-type": []interface{}{"host", "regular"},
+			"slot-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rule.AllowInstallation, check.HasLen, 1)
 	cstrs := rule.AllowInstallation[0]
-	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{"host", "regular"})
+	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
 }
 
 func checkBoolSlotConnConstraints(c *check.C, subrule string, cstrs []*asserts.SlotConnectionConstraints, always bool) {

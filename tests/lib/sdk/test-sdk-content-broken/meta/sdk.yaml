@@ -7,4 +7,5 @@ description: |
   test-sdk-content-broken SDK
 slots:
   one:
-    interface: content
+    interface: mount
+    host-source: /root

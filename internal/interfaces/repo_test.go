@@ -1398,14 +1398,14 @@ func contentPolicyCheck(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) 
 }
 
 func contentAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
-	return plug.Attrs["content"] == slot.Attrs["content"]
+	return plug.Attrs["mount"] == slot.Attrs["mount"]
 }
 
 // internal helper that creates a new repository with two snaps, one
 // is a content plug and one a content slot
 func makeContentConnectionTestSdks(c *C, projectId, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
 	repo := NewRepository()
-	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "content", AutoConnectCallback: contentAutoConnect})
+	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "mount", AutoConnectCallback: contentAutoConnect})
 	c.Assert(err, IsNil)
 
 	plugSdk := sdk.MockInfo(c, fmt.Sprintf(`
@@ -1413,16 +1413,16 @@ name: content-plug-sdk
 base: ubuntu@22.04
 plugs:
   imported-content:
-    interface: content
-    content: %s
+    interface: mount
+    mount: %s
 `, plugContentToken), projectId, "ws-importer")
 	slotSdk := sdk.MockInfo(c, fmt.Sprintf(`
 name: content-slot-sdk
 base: ubuntu@22.04
 slots:
   exported-content:
-    interface: content
-    content: %s
+    interface: mount
+    mount: %s
 `, slotContentToken), projectId, "ws-exporter")
 
 	err = repo.AddSdk(plugSdk)
@@ -1664,7 +1664,7 @@ slots:
 	s3 := sdk.MockInfo(c, `
 name: s3
 base: ubuntu@22.04
-type: host
+type: system
 slots:
   i2:
 `, s.projectId, "ws")

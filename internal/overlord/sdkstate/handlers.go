@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 func SdkSetup(task *state.Task) (sdk.Setup, error) {
@@ -82,7 +81,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return store.DownloadSdk(ctx, rec, reporter)
 }
 
-func (m *SdkManager) doInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -96,10 +95,10 @@ func (m *SdkManager) doInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return wp.InstallHostSdk(ctx)
+	return wp.InstallSystemSdk(ctx)
 }
 
-func (m *SdkManager) undoInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) undoInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -114,7 +113,7 @@ func (m *SdkManager) undoInstallHostSdk(task *state.Task, tomb *tomb.Tomb) error
 	}
 	defer wfs.Close()
 
-	return wfs.RemoveAll(sdk.SdkRootPath("host"))
+	return wfs.RemoveAll(sdk.SdkRootPath(sdk.System.String()))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -145,14 +144,14 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := lxdbackend.Mount(sdkSetup.Name, sdkSetup.Filename(), target)
-	if err = m.backend.AddWorkshopDevice(ctx, w, sdkMount); err != nil {
+	sdkMount := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
+	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
 		return err
 	}
 
 	cleanup := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopDevice(ctx, w, sdkMount.Name); err != nil {
+		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}
@@ -169,6 +168,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
@@ -285,13 +285,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err := m.repo.AddSdk(info); err != nil {
 		return err
 	}
-	rev.Add(func() {
-		if err := m.repo.RemoveSdk(project.ProjectId, w, setup.Name); err != nil {
-			st.Lock()
-			task.Logf("Link SDK cleanup: could not remove %q SDK: %v", setup.Name, err)
-			st.Unlock()
-		}
-	})
 
 	rev.Success()
 	return nil

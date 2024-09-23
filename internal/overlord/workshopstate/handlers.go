@@ -16,7 +16,6 @@ import (
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 var StopLogInterval = 30 * time.Second
@@ -98,11 +97,11 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	// Configure workshop core properties: project directory
-	var prjMount = lxdbackend.Mount(workshop.ConfigProjectPathDevice, prj.Path, workshop.WorkshopProjectPath)
+	var prjMount = workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: prj.Path, Where: workshop.WorkshopProjectPath}
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.AddWorkshopDevice(ctx, w, prjMount)
+	return m.backend.AddWorkshopMount(ctx, w, prjMount)
 }
 
 func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {

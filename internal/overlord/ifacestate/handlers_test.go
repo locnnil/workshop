@@ -80,16 +80,16 @@ var conflictingTarget1 = `name: conflict-1
 base: ubuntu@22.04
 plugs:
   plug:
-    interface: content
-    target: /home/workshop  
+    interface: mount
+    workshop-target: /home/workshop  
 `
 
 var conflictingTarget2 = `name: conflict-2
 base: ubuntu@22.04
 plugs:
   plug:
-    interface: content
-    target: /home/workshop  
+    interface: mount
+    workshop-target: /home/workshop  
 `
 
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable"}
@@ -469,7 +469,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 			"interface":    "mock-network",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"slot-dynamic": map[string]interface{}{"source": "/old/source"},
+			"slot-dynamic": map[string]interface{}{"host-source": "/old/source"},
 		},
 	})
 
@@ -483,7 +483,7 @@ func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Chang
 	defer s.state.Unlock()
 
 	t1 := s.state.NewTask("remount", "remount")
-	t1.Set("source", newSource)
+	t1.Set("host-source", newSource)
 	t1.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
 	setWorkshopProject("ws-consumer", s.prj, t1)
 
@@ -502,30 +502,30 @@ name: consumer
 base: ubuntu@22.04
 plugs:
     plug:
-        interface: content
-        target: /home/workshop
+        interface: mount
+        workshop-target: /home/workshop
 `
-	var hostYaml = `
-name: host
+	var systemYaml = `
+name: system
 base: ubuntu@22.04
-type: host
+type: system
 slots:
     slot:
-        interface: content        
+        interface: mount        
 `
 	wm, err := s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
 	c.Assert(err, check.IsNil)
 	wm.Running = true
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
-	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, hostYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
+	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, systemYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/host:slot": map[string]interface{}{
-			"interface":    "content",
+		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot": map[string]interface{}{
+			"interface":    "mount",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"target": "/opt"},
-			"slot-dynamic": map[string]interface{}{"source": source},
+			"slot-dynamic": map[string]interface{}{"host-source": source},
 		},
 	})
 	_, err = ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
@@ -560,7 +560,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -571,12 +571,12 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(err, check.IsNil)
 	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
 		Auto:             true,
-		Interface:        "content",
+		Interface:        "mount",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
+		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -604,7 +604,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var remountSource string
-	c.Assert(connection.Slot.Attr("source", &remountSource), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
@@ -617,12 +617,12 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(err, check.IsNil)
 	c.Assert(conns[ref[0].ID()], check.DeepEquals, &schema.ConnState{
 		Auto:             true,
-		Interface:        "content",
+		Interface:        "mount",
 		Undesired:        false,
 		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{"source": newSource}})
+		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -652,7 +652,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -690,7 +690,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -728,7 +728,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(err, check.IsNil)
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
@@ -760,7 +760,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	var src string
-	c.Assert(connection.Slot.Attr("source", &src), check.IsNil)
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
 	c.Assert(osutil.FileExists(newSource), check.Equals, true)
@@ -861,7 +861,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	var attrs map[string]interface{}
 	c.Assert(chg.Get("remounts", &attrs), check.IsNil)
 	c.Assert(attrs, check.HasLen, 1)
-	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/host:slot"],
+	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot"],
 		check.DeepEquals, source)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)

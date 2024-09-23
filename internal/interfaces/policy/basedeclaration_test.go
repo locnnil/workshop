@@ -116,7 +116,7 @@ func (s *baseDeclSuite) TestAutoConnection(c *C) {
 	// these have more complex or in flux policies and have their
 	// own separate tests
 	snowflakes := map[string]bool{
-		"content":   true,
+		"mount":     true,
 		"ssh-agent": true,
 	}
 
@@ -149,9 +149,9 @@ func (s *baseDeclSuite) TestContentAutoConnection(c *check.C) {
 base: ubuntu@22.04
 slots:
     %s:
-`, "content")
+`, "mount")
 
-	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
+	cand := s.connectCand(c, "mount", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
 	arity, err := cand.CheckAutoConnect()
 	c.Check(err, check.IsNil)
 	c.Check(arity.SlotsPerPlugAny(), check.Equals, false)
@@ -167,12 +167,11 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *check.C) {
 
 func (s *baseDeclSuite) TestContentSlotInstallation(c *check.C) {
 	// test content specially
-	ic := s.installSlotCand(c, "content", sdk.Regular, ``)
+	ic := s.installSlotCand(c, "mount", sdk.Regular, ``)
 	err := ic.Check()
-	c.Assert(err, Not(IsNil))
-	c.Assert(err, ErrorMatches, "installation not allowed by \"content\" slot rule of interface \"content\"")
+	c.Assert(err, IsNil)
 
-	ic = s.installSlotCand(c, "content", sdk.Host, ``)
+	ic = s.installSlotCand(c, "mount", sdk.System, ``)
 	err = ic.Check()
 	c.Assert(err, IsNil)
 }
@@ -198,11 +197,11 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
-    content:
+    mount:
 `
-	cand := s.connectCand(c, "content", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
+	cand := s.connectCand(c, "mount", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
 	_, err := cand.Check()
 	c.Check(err, check.IsNil)
 	_, err = cand.CheckAutoConnect()
@@ -212,39 +211,39 @@ slots:
 func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
-    content:
+    mount:
 `
 	plugYaml := `name: plug-sdk
 base: ubuntu@22.04
 type: regular
 plugs:
-    content:      
+    mount:      
 `
-	cand := s.connectCand(c, "content", slotYaml, plugYaml, "slot-project", "mock424242", "ws", "ws")
+	cand := s.connectCand(c, "mount", slotYaml, plugYaml, "slot-project", "mock424242", "ws", "ws")
 	_, err := cand.Check()
-	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "mount"`)
 	_, err = cand.CheckAutoConnect()
-	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "mount"`)
 }
 
 func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *check.C) {
 	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
-type: host
+type: system
 slots:
-    content:
+    mount:
 `
 	plugYaml := `name: plug-sdk
 base: ubuntu@22.04
 type: regular
 plugs:
-    content:
+    mount:
 `
-	cand := s.connectCand(c, "content", slotYaml, plugYaml, "mock424242", "mock424242", "ws", "ws-1")
+	cand := s.connectCand(c, "mount", slotYaml, plugYaml, "mock424242", "mock424242", "ws", "ws-1")
 	_, err := cand.Check()
-	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `connection not allowed by plug rule of interface "mount"`)
 	_, err = cand.CheckAutoConnect()
-	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "content"`)
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "mount"`)
 }

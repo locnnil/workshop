@@ -84,10 +84,12 @@ plugs:
     attr2: value2
 slots:
   slot:
-    interface: content	
+    interface: mount
+    host-source: /root
 `
 
 func (s *sdkStateSuite) SetUpTest(c *check.C) {
+	var err error
 	dirs.SetRootDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
@@ -95,8 +97,8 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
-	be, _ := fakebackend.New()
-	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	s.backend, err = fakebackend.New()
+	c.Check(err, check.IsNil)
 
 	s.project = &workshop.Project{
 		Path:      c.MkDir(),
@@ -135,7 +137,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err = s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
 	s.mockTestSdk(c, "test", sdkYaml)
@@ -301,13 +303,13 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	c.Check(exist, check.Equals, false)
 }
 
-func (s *sdkStateSuite) TestDoInstallHostSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "host"}
+	newSdk := sdk.Setup{Name: sdk.System.String()}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-host-sdk", "test")
+	t1 := s.state.NewTask("install-system-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
@@ -324,18 +326,18 @@ func (s *sdkStateSuite) TestDoInstallHostSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info, err := wfs.Stat("/var/lib/workshop/sdk/host/current/meta/sdk.yaml")
+	info, err := wfs.Stat("/var/lib/workshop/sdk/system/current/meta/sdk.yaml")
 	c.Assert(err, check.IsNil)
 	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
 }
 
-func (s *sdkStateSuite) TestUndoInstallHostSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "host"}
+	newSdk := sdk.Setup{Name: sdk.System.String()}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-host-sdk", "test")
+	t1 := s.state.NewTask("install-system-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
@@ -358,7 +360,7 @@ func (s *sdkStateSuite) TestUndoInstallHostSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.NotNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, err = wfs.Stat("/var/lib/workshop/sdk/host")
+	_, err = wfs.Stat("/var/lib/workshop/sdk/system")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
 
@@ -429,7 +431,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	}
 	s.state.Lock()
 
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "content".*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation denied by "slot" slot rule of interface "mount".*`)
 
 	// not in the fs (removed)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")

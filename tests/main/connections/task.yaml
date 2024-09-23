@@ -1,19 +1,19 @@
 summary: Check that "workshop connections" works as expected
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-conns-1 ws-conns-2  
+  workshop_exec launch ws-conns-1 ws-conns-2
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-conns-1 ws-conns-2
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
   echo "Check connections for a workshop name provided"
-  workshop_exec connections ws-conns-1 | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections ws-conns-1 | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-two.+:content.+\-$"  
-  
+  workshop_exec connections ws-conns-1 | MATCH "^mount.+ws-conns-1/test-sdk-mount:one.+:mount.+\-$"
+  workshop_exec connections ws-conns-1 | MATCH "^mount.+ws-conns-1/test-sdk-mount:two.+:mount.+\-$"  
+
   echo "Check connections for all workshops of the project"
-  workshop_exec connections | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections | MATCH "^content.+ws-conns-1/test-sdk-content:content-plug-two.+:content.+\-$"  
-  workshop_exec connections | MATCH "^content.+ws-conns-2/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections | MATCH "^content.+ws-conns-2/test-sdk-content:content-plug-two.+:content.+\-$"  
+  workshop_exec connections | MATCH "^mount.+ws-conns-1/test-sdk-mount:one.+:mount.+\-$"
+  workshop_exec connections | MATCH "^mount.+ws-conns-1/test-sdk-mount:two.+:mount.+\-$"  
+  workshop_exec connections | MATCH "^mount.+ws-conns-2/test-sdk-mount:one.+:mount.+\-$"
+  workshop_exec connections | MATCH "^mount.+ws-conns-2/test-sdk-mount:two.+:mount.+\-$"

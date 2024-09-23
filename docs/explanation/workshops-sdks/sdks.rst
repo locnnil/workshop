@@ -57,7 +57,7 @@ the definition may look like this:
 
    plugs:
      mod-cache:
-       interface: content
+       interface: mount
        target: /home/workshop/go/pkg/mod
 
 

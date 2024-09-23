@@ -796,7 +796,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	spec := backend.NewSpecification(user, projectId)
+	spec := backend.NewSpecification(user, projectId, sdkInfo.Sdk)
 
 	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
 
@@ -1074,7 +1074,7 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 		// Use the host SDK if the slot-side snap name is empty
 		slotProjectId = plugProjectId
 		slotWorkshop = plugWorkshop
-		slotSdkName = sdk.Host.String()
+		slotSdkName = sdk.System.String()
 	}
 
 	slotKey := plugOrSlotKey(slotProjectId, slotWorkshop, slotSdkName)

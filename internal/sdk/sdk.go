@@ -38,7 +38,7 @@ type Type string
 
 const (
 	Regular Type = "regular"
-	Host    Type = "host"
+	System  Type = "system"
 )
 
 func (t Type) String() string {
@@ -70,7 +70,7 @@ func (i *Info) Ref() Ref {
 }
 
 func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
-	if i.Type == Host {
+	if i.Type == System {
 		return nil
 	}
 
@@ -374,10 +374,10 @@ func SdkHookPath(sdkName, hookName string) string {
 }
 
 func ProjectContentDir(homedir, pid string) string {
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "content")
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "mount")
 }
 
-func SdkContentSource(homedir, pid, wp, sdk, plug string) string {
+func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {
 	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
 	return filepath.Join(ProjectContentDir(homedir, pid), dir)
 }

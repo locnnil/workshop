@@ -13,9 +13,10 @@ type HealthCheck struct {
 }
 
 type Mount struct {
-	Plug   PlugRef `json:"plug"`
-	Source string  `json:"source"`
-	Target string  `json:"target"`
+	Plug           PlugRef `json:"plug"`
+	HostSource     string  `json:"host-source,omitempty"`
+	WorkshopSource string  `json:"workshop-source,omitempty"`
+	WorkshopTarget string  `json:"workshop-target"`
 }
 
 type Sdk struct {
@@ -41,9 +42,9 @@ type ListOptions struct {
 }
 
 type Remount struct {
-	Action string   `json:"action"`
-	Plug   *PlugRef `json:"plug"`
-	Source string   `json:"source"`
+	Action     string   `json:"action"`
+	Plug       *PlugRef `json:"plug"`
+	HostSource string   `json:"host-source"`
 }
 
 func (client *Client) ListWorkshops(opts *ListOptions) ([]*Workshop, error) {
@@ -67,9 +68,9 @@ func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {
 	var body bytes.Buffer
 	var remoutReq = Remount{
-		Action: "remount",
-		Plug:   plug,
-		Source: source,
+		Action:     "remount",
+		Plug:       plug,
+		HostSource: source,
 	}
 	if err := json.NewEncoder(&body).Encode(remoutReq); err != nil {
 		return "", err

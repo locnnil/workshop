@@ -1,5 +1,0 @@
-#!/usr/bin/bash
-
-state=$(cat ~/state)
-echo "latest/stable save-state from ~/state: $state"
-cp ~/state $SDK_STATE_DIR 2>/dev/null || true

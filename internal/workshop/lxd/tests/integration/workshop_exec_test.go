@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package workshopbackend_test
+package lxdbackend_integration_test
 
 import (
 	"bytes"
@@ -17,15 +17,13 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
 	"gopkg.in/check.v1"
 )
 
 type wsExec struct {
-	// per suite
-	lxdClient lxd.InstanceServer
-	be        workshop.Backend
-
-	// per test
+	lxdClient           lxd.InstanceServer
+	be                  workshop.Backend
 	ctx                 context.Context
 	username            string
 	client              *client.Client
@@ -41,7 +39,7 @@ type wsExec struct {
 var _ = check.Suite(&wsExec{})
 
 func (f *wsExec) SetUpSuite(c *check.C) {
-	f.restoreImageServer = lxdbackend.FakeImageServer(minimalImageServer)
+	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 
 	socketPath := c.MkDir() + ".workshop.socket"
 	var err error
@@ -69,7 +67,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		Path:      c.MkDir(),
 	}
 	f.username = "testuser"
-	f.ctx = createTestContext(f.username, f.project.ProjectId)
+	f.ctx = helper.CreateTestContext(f.username, f.project.ProjectId)
 
 	f.lxdClient, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
 	err = lxdbackend.InitLxdProject(f.lxdClient, f.username)
@@ -95,13 +93,13 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return u, nil
 	}, &daemon.LookupUserId)
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(defaultTestDevices)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
 
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshop.NewProjectId)
 
-	launchTestWorkshop(c, f.ctx, f.be, f.project.Path)
+	helper.LaunchTestWorkshop(c, f.ctx, f.be, f.project.Path)
 }
 
 func (f *wsExec) TearDownSuite(c *check.C) {
@@ -114,8 +112,8 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.newProjectidRestore()
 	f.restoreImageServer()
 	f.restoreDevices()
-	cleanUpLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.username))
-	cleanUpLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.username))
+	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.username))
 }
 
 func (f *wsExec) exec(c *check.C, stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {

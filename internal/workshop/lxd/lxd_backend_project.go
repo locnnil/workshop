@@ -182,8 +182,8 @@ func (s *Backend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx contex
 	}
 
 	for _, i := range workshops {
-		project := Mount(workshop.ConfigProjectPathDevice, existingProject.Path, workshop.WorkshopProjectPath)
-		err = s.AddWorkshopDevice(ctx, workshop.WorkshopName(i.Name), project)
+		project := workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: existingProject.Path, Where: workshop.WorkshopProjectPath}
+		err = s.AddWorkshopMount(ctx, workshop.WorkshopName(i.Name), project)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
 		}

@@ -11,23 +11,23 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check connections"
-  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-one.+:user-slot.+\-$"
-  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-two.+:user-slot-2.+\-$"
-  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:wp-plug.+:user-slot-2.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:one.+:user-slot.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:two.+:user-slot-2.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:wp-plug.+:user-slot-2.+\-$"
 
   echo "Check mounts"
   workshop_exec info ws-user-conns | grep -v notes > mounts.log
-  yq '.content["test-sdk-content"].mounts["content-plug-one"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data" 
-  yq '.content["test-sdk-content"].mounts["content-plug-two"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data-2"
-  yq '.content["test-sdk-content"].mounts["wp-plug"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data-2"
+  yq '.content["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*mount/ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.content["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
+  yq '.content["test-sdk-mount"].mounts["wp-plug"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
 
   echo "Check refresh that removes a connection"
   mv -f .workshop.ws-user-conns.yaml.new .workshop.ws-user-conns.yaml
   workshop_exec refresh ws-user-conns
-  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-one.+:content.+\-$"
-  workshop_exec connections ws-user-conns | MATCH "^content.+ws-user-conns/test-sdk-content:content-plug-two.+:user-slot-2.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:one.+:mount.+\-$"
+  workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:two.+:user-slot-2.+\-$"
 
   echo "Check mounts"
   workshop_exec info ws-user-conns | grep -v notes > mounts.log
-  yq '.content["test-sdk-content"].mounts["content-plug-one"]' < mounts.log | MATCH "^host:.*ws-user-conns_test-sdk-content_content-plug-one.sdk" 
-  yq '.content["test-sdk-content"].mounts["content-plug-two"]' < mounts.log | MATCH "^host:.*$(pwd)/user-data-2"
+  yq '.content["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.content["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"

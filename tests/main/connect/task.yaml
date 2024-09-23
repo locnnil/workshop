@@ -1,5 +1,5 @@
 summary: Check that "workshop connect" works as expected
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch ws-conn
 restore: |
@@ -7,29 +7,27 @@ restore: |
   workshop_exec remove ws-conn
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot> form"  
-  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-one ws-conn/host:content  
-  workshop_exec connect ws-conn/test-sdk-content:content-plug-one ws-conn/host:content
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+manual$"  
-  
+  workshop_exec disconnect ws-conn/test-sdk-mount:one ws-conn/system:mount  
+  workshop_exec connect ws-conn/test-sdk-mount:one ws-conn/system:mount
+  workshop_exec connections ws-conn | MATCH "^mount.+ws-conn/test-sdk-mount:one.+:mount.+manual$"  
+
   echo "Check connect <workshop>/<sdk>:<plug> <workshop>/<sdk> form"
-  workshop_exec disconnect ws-conn/test-sdk-content:content-plug-two :content
-  workshop_exec connect ws-conn/test-sdk-content:content-plug-two ws-conn/host
-  workshop_exec connections ws-conn | MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+manual$"
-  
+  workshop_exec disconnect ws-conn/test-sdk-mount:two :mount
+  workshop_exec connect ws-conn/test-sdk-mount:two ws-conn/system
+  workshop_exec connections ws-conn | MATCH "^mount.+ws-conn/test-sdk-mount:two.+:mount.+manual$"
+
   echo "Check connect <workshop>/<sdk>:<plug> form"
   workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
   workshop_exec connect ws-conn/test-sdk-gpu:gpu
   workshop_exec connections ws-conn | MATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+manual$"
-  
+
   echo "Check workshop refresh does not reconnect undesired connections"
   workshop_exec refresh ws-conn
   workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
   workshop_exec refresh ws-conn
   workshop_exec connections ws-conn > output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-one.+:content.+$" < output.log
-  MATCH "^content.+ws-conn/test-sdk-content:content-plug-two.+:content.+$" < output.log
+  MATCH "^mount.+ws-conn/test-sdk-mount:one.+:mount.+$" < output.log
+  MATCH "^mount.+ws-conn/test-sdk-mount:two.+:mount.+$" < output.log
   NOMATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+$" < output.log
-
-  

@@ -12,6 +12,7 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -307,10 +308,10 @@ func (f *workshopFile) TestHostSdkSlot(c *check.C) {
 	buf := []byte(`name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  host:    
+  system:   
     slots:
       training-data:
-        source: relative/path
+        workshop-source: relative/path
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
@@ -318,7 +319,7 @@ sdks:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
-		{Name: "host", Slots: map[string]interface{}{"training-data": map[string]interface{}{"source": "relative/path"}}}})
+		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
 }
 
 func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {
@@ -331,7 +332,7 @@ sdks:
     channel: latest/stable
 connections:
   - plug: data-sdk:data
-    slot: host:content
+    slot: system:mount
   - plug: etl-sdk:data
     slot: data-sdk:data-slot
 `)
@@ -341,7 +342,7 @@ connections:
 	file, err := p.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Connections, testutil.DeepUnsortedMatches, []workshop.Connection{
-		{PlugRef: workshop.PlugRef{Sdk: "data-sdk", Name: "data"}, SlotRef: workshop.SlotRef{Sdk: "host", Name: "content"}},
+		{PlugRef: workshop.PlugRef{Sdk: "data-sdk", Name: "data"}, SlotRef: workshop.SlotRef{Sdk: sdk.System.String(), Name: "mount"}},
 		{PlugRef: workshop.PlugRef{Sdk: "etl-sdk", Name: "data"}, SlotRef: workshop.SlotRef{Sdk: "data-sdk", Name: "data-slot"}},
 	})
 }
@@ -356,7 +357,7 @@ sdks:
     channel: latest/stable
 connections:
   - plug: data-sdk
-    slot: host:content
+    slot: system:mount
   - plug: etl-sdk:data
     slot: data-sdk:data-slot
 `)
@@ -377,13 +378,13 @@ sdks:
     channel: latest/stable
 connections:
   - plug: data-sdk:data
-    slot: lost-sdk:content
+    slot: lost-sdk:mount
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "lost-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "lost-sdk:mount": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
 }
 
 func (f *workshopFile) TestWorkshopConnectionsPlugSdkNotInTheList(c *check.C) {
@@ -396,13 +397,13 @@ sdks:
     channel: latest/stable
 connections:
   - plug: lost-sdk:data
-    slot: data-sdk:content
+    slot: data-sdk:mount
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot connect plug "lost-sdk:data" to slot "data-sdk:content": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "lost-sdk:data" to slot "data-sdk:mount": "lost-sdk" SDK is not found in "xbert-gpu" workshop`)
 }
 
 func (f *workshopFile) TestWorkshopConnectionsImplicitHostSdkPlugSlot(c *check.C) {
@@ -414,8 +415,8 @@ sdks:
   etl-sdk:
     channel: latest/stable
 connections:
-  - plug: host:data
-    slot: host:content
+  - plug: system:data
+    slot: system:mount
 `)
 	dir := c.MkDir()
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
@@ -437,7 +438,7 @@ sdks:
     channel: latest/stable
 connections:
   - plug: data-sdk:data
-    slot: host:content
+    slot: system:mount
   - plug: etl-sdk:data
     slot: data-sdk:data-slot
 `)
@@ -445,5 +446,5 @@ connections:
 	p := workshop.Project{Path: dir, ProjectId: "42424242"}
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert-gpu.yaml"), buf, 0644), check.IsNil)
 	_, err := p.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "host:content": plug is bound`)
+	c.Assert(err, check.ErrorMatches, `cannot connect plug "data-sdk:data" to slot "system:mount": plug is bound`)
 }

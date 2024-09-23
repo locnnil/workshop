@@ -52,13 +52,13 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 var ErrTrigger = errors.New("error out")
 
 func (s *workshopHandlers) SetUpTest(c *check.C) {
+	var err error
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	be, _ := fakebackend.New()
-	s.backend = be.(*fakebackend.FakeWorkshopBackend)
+	s.backend, err = fakebackend.New()
+	c.Assert(err, check.IsNil)
 
-	var err error
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
@@ -186,7 +186,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	c.Check(err, check.IsNil)
 
 	// create content plugs directories
-	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "content")
+	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "mount")
 	var plugs = []string{"ws_test_plug1.sdk", "ws_test_plug2.sdk", "another-ws_test_plug3.sdk"}
 	for _, p := range plugs {
 		err = os.MkdirAll(filepath.Join(projectContent, p), 0744)
@@ -249,7 +249,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration is not found.*`)
 }
 
-func (s *workshopHandlers) TestCreateWorkshopWithHostSdk(c *check.C) {
+func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws

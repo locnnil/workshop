@@ -15,7 +15,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
-	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type InterfaceManager struct {
@@ -118,7 +117,7 @@ func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
 	defer m.state.Unlock()
 	for _, backend := range allSecurityBackends() {
-		if err := backend.Initialize(m.backend.(workshop.Profile)); err != nil {
+		if err := backend.Initialize(); err != nil {
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
@@ -154,11 +153,11 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
-				host, err := workshop.SdkInfo(pctx, sdk.Host.String())
+				system, err := workshop.SdkInfo(pctx, sdk.System.String())
 				if err != nil {
 					continue
 				}
-				if err = m.repo.AddSdk(host); err != nil {
+				if err = m.repo.AddSdk(system); err != nil {
 					continue
 				}
 
@@ -248,13 +247,13 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// 1: <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot>
 	// Return exactly one plug/slot or an error if it doesn't exist.
 	case plugName != "" && slotName != "":
-		// The SDK name can be omitted to implicitly refer to the host SDK.
+		// The SDK name can be omitted to implicitly refer to the system SDK.
 		if plugSdk == "" {
-			plugSdk = sdk.Host.String()
+			plugSdk = sdk.System.String()
 		}
-		// The SDK name can be omitted to implicitly refer to the host SDK.
+		// The SDK name can be omitted to implicitly refer to the system SDK.
 		if slotSdk == "" {
-			slotSdk = sdk.Host.String()
+			slotSdk = sdk.System.String()
 		}
 		// Ensure that slot and plug are connected
 		isConnected, err := connected(plugProject, plugWorkshop, plugSdk, plugName, slotProject, slotWorkshop, slotSdk, slotName)
@@ -278,14 +277,14 @@ func (m *InterfaceManager) ResolveDisconnect(
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop != "" && plugName != "" && slotWorkshop == "" && slotName == "":
 		if plugSdk == "" {
-			plugSdk = sdk.Host.String()
+			plugSdk = sdk.System.String()
 		}
 		return connectedPlugOrSlot(plugProject, plugWorkshop, plugSdk, plugName)
 	// 2: <workshop>/<sdk>:<plug or slot> (through 2nd pair)
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop == "" && plugName == "" && slotWorkshop != "" && slotName != "":
 		if slotSdk == "" {
-			slotSdk = sdk.Host.String()
+			slotSdk = sdk.System.String()
 		}
 		return connectedPlugOrSlot(slotProject, slotWorkshop, slotSdk, slotName)
 	default:
@@ -301,22 +300,22 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	hostpath := dirs.SocketPath + ".untrusted"
 	sname := filepath.Base(hostpath)
 	wspath := filepath.Join(dirs.WorkshopRunDir, sname)
-	socket := lxdbackend.Mount("workshop.socket", hostpath, wspath)
+	socket := workshop.Mount{Name: "workshop.socket", What: hostpath, Where: wspath}
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, socket.Name)
-	if err := m.backend.AddWorkshopDevice(pctx, w, socket); err != nil {
+	_ = m.backend.RemoveWorkshopMount(pctx, w, socket.Name)
+	if err := m.backend.AddWorkshopMount(pctx, w, socket); err != nil {
 		return err
 	}
 
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := lxdbackend.Mount("workshop.workshopctl", filepath.Join(dirs.ExecDir, "workshopctl"),
-		"/usr/bin/workshopctl")
+	workshopctl := workshop.Mount{Name: "workshop.workshopctl", What: filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where: "/usr/bin/workshopctl"}
 
-	_ = m.backend.RemoveWorkshopDevice(pctx, w, workshopctl.Name)
+	_ = m.backend.RemoveWorkshopMount(pctx, w, workshopctl.Name)
 
-	if err := m.backend.AddWorkshopDevice(pctx, w, workshopctl); err != nil {
+	if err := m.backend.AddWorkshopMount(pctx, w, workshopctl); err != nil {
 		return err
 	}
 
@@ -427,13 +426,13 @@ func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) erro
 }
 
 func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
-	allPlugs := m.repo.AllPlugs("content")
+	allPlugs := m.repo.AllPlugs("mount")
 
 	for _, plug := range sdkInfo.Plugs {
-		if plug.Interface != "content" {
+		if plug.Interface != "mount" {
 			continue
 		}
-		candidateTarget, _ := plug.Lookup("target")
+		candidateTarget, _ := plug.Lookup("workshop-target")
 
 		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
 			// only plugs from the same workshop will be considered
@@ -444,7 +443,7 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
 				return false
 			}
-			target, _ := pi.Lookup("target")
+			target, _ := pi.Lookup("workshop-target")
 			return target == candidateTarget
 		})
 		if idx != -1 {

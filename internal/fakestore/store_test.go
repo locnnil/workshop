@@ -28,8 +28,8 @@ description: |
   the production of simple, efficient and reliable software at scale.
 plugs:
   data:
-    interface: content
-    target: /test
+    interface: mount
+    workshop-target: /test
   gpu:
     interface: gpu
 `

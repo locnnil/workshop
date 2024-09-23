@@ -31,7 +31,7 @@ func (m *remountSuite) TestRemountSuccess(c *check.C) {
 			"sdk":        "sdk",
 			"plug":       "plug",
 		},
-		"source": "/new/source",
+		"host-source": "/new/source",
 	}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {

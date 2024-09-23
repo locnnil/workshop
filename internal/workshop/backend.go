@@ -102,9 +102,9 @@ type ExecArgs struct {
 }
 
 type ExecControls struct {
-	Stdin   io.ReadCloser
-	Stdout  io.WriteCloser
-	Stderr  io.WriteCloser
+	Stdin   io.Reader
+	Stdout  io.Writer
+	Stderr  io.Writer
 	Control func(conn *websocket.Conn)
 }
 
@@ -121,7 +121,6 @@ type ExecContext struct {
 type Backend interface {
 	Stash
 	StateStorage
-	Profile
 	BaseImageManager
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
@@ -157,11 +156,11 @@ type Backend interface {
 	// its running services termination) unless force is used.
 	StopWorkshop(ctx context.Context, name string, force bool) error
 
-	// Adds a workshop device described by the properties.
-	AddWorkshopDevice(ctx context.Context, name string, device Device) error
+	// Adds a workshop mount described by the properties.
+	AddWorkshopMount(ctx context.Context, name string, device Mount) error
 
-	// Removes a workshop device.
-	RemoveWorkshopDevice(ctx context.Context, name string, device string) error
+	// Removes a workshop mount.
+	RemoveWorkshopMount(ctx context.Context, name string, device string) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change

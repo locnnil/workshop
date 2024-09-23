@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
@@ -47,7 +48,7 @@ type overlordSuite struct {
 	dir       string
 	statePath string
 
-	restoreBackendNew func()
+	restorebackend func()
 }
 
 var _ = Suite(&overlordSuite{})
@@ -76,11 +77,14 @@ func (ovs *overlordSuite) SetUpTest(c *C) {
 	ovs.dir = c.MkDir()
 	dirs.SetRootDir(ovs.dir)
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
-	ovs.restoreBackendNew = overlord.MockBackendNew(fakebackend.New)
+
+	b, err := fakebackend.New()
+	c.Assert(err, check.IsNil)
+	ovs.restorebackend = overlord.MockWorkshopBackend(b)
 }
 
 func (ovs *overlordSuite) TearDownTest(c *C) {
-	ovs.restoreBackendNew()
+	ovs.restorebackend()
 }
 
 func (ovs *overlordSuite) TestNew(c *C) {

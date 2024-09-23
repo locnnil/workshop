@@ -26,7 +26,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   with two arguments, the first one is the plug, and the second one is the slot
 
 - If the second argument only names the slot itself, the target is
-  <WORKSHOP>/host:<SLOT>; <WORKSHOP> comes from the first argument
+  <WORKSHOP>/system:<SLOT>; <WORKSHOP> comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
   <WORKSHOP>/<SDK>:<INTERFACE>;
@@ -80,7 +80,7 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 		// check if the second arg is a short version of the host-provided slot reference
 		if strings.HasPrefix(av[1], ":") {
 			slotRef.Workshop = plugRef.Workshop
-			slotRef.Sdk = "host"
+			slotRef.Sdk = "system"
 			slotRef.Name = av[1][1:]
 		} else {
 			slotRef, err = client.ParseShortSlotRef(av[1])

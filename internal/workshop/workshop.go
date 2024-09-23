@@ -38,13 +38,15 @@ type Workshop struct {
 	Running bool
 	// Installed SDKs.
 	Content map[string]sdk.Setup
+	// Workshop devices installed.
+	Profiles map[string]SdkProfile
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
 // the SDK to the workshop content. This method is idempotent, so if an SDK
 // existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	if s.Name == sdk.Host.String() {
+	if s.Name == sdk.System.String() {
 		return nil
 	}
 
@@ -91,7 +93,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK to the workshop content. This method is idempotent, so if an
 // SDK did not exist, the result will be a no-op
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	if name == sdk.Host.String() {
+	if name == sdk.System.String() {
 		return nil
 	}
 
@@ -138,7 +140,7 @@ func WorkshopStateVolumeName(ws, pid string) string {
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
 	setup, ok := w.Content[sdkName]
-	if sdkName != sdk.Host.String() && !ok {
+	if sdkName != sdk.System.String() && !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
 	}
 
@@ -171,13 +173,13 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	// Now add changes defined for this SDK in the workshop file (e.g. plug
 	// binds, slots).
 	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
-	if idx == -1 && sdkName != sdk.Host.String() {
+	if idx == -1 && sdkName != sdk.System.String() {
 		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
 	}
 
-	// host SDK is an optional entry in a workshop file, so it's not an error
+	// system SDK is an optional entry in a workshop file, so it's not an error
 	// scenario.
-	if idx == -1 && sdkName == sdk.Host.String() {
+	if idx == -1 && sdkName == sdk.System.String() {
 		return info, nil
 	}
 
@@ -220,26 +222,26 @@ func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	return infos, nil
 }
 
-func (w *Workshop) InstallHostSdk(ctx context.Context) error {
+func (w *Workshop) InstallSystemSdk(ctx context.Context) error {
 	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
 	defer wfs.Close()
 
-	hostMetaDir := filepath.Join(sdk.SdkCurrentPath("host"), "meta")
-	if err := wfs.MkdirAll(hostMetaDir, 0655); err != nil {
+	systemMetaDir := filepath.Join(sdk.SdkCurrentPath(sdk.System.String()), "meta")
+	if err := wfs.MkdirAll(systemMetaDir, 0655); err != nil {
 		return err
 	}
 
-	// /var/lib/workshop/sdk/host/current/meta
-	file, err := wfs.OpenFile(filepath.Join(hostMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	// /var/lib/workshop/sdk/system/current/meta
+	file, err := wfs.OpenFile(filepath.Join(systemMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	if _, err = file.Write([]byte(sdk.HostSdkMeta(w.Base))); err != nil {
+	if _, err = file.Write([]byte(sdk.SystemSdkMeta(w.Base))); err != nil {
 		return err
 	}
 	return nil

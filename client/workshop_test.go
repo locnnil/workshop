@@ -50,7 +50,7 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 		"revision":"453",
 		"install-time":"2023-04-25T01:02:03Z", 
 		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"},
-		"mounts":[{"source":"/home/user/src","target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}}]
+		"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},{"workshop-source":"/home","workshop-target":"/mnt", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name-2"}}]
 	}]}}`
 	prj, err := cs.cli.Workshop("42ws42ws", "workshop")
 	c.Assert(err, check.IsNil)
@@ -71,7 +71,8 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 					Code:      "check-waiting",
 				},
 				Mounts: []*client.Mount{
-					{Source: "/home/user/src", Target: "/home/workshop/target", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name"}},
+					{HostSource: "/home/user/src", WorkshopTarget: "/home/workshop/target", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name"}},
+					{WorkshopSource: "/home", WorkshopTarget: "/mnt", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name-2"}},
 				},
 			},
 		},
@@ -92,5 +93,5 @@ func (cs *clientSuite) TestRemountRequest(c *check.C) {
 	body, err := io.ReadAll(cs.req.Body)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(string(body), check.Matches, fmt.Sprintf(`{"action":"remount","plug":{"project-id":"4242","workshop":"ws","sdk":"sdk","plug":"plug"},"source":%q}\n`, source))
+	c.Assert(string(body), check.Matches, fmt.Sprintf(`{"action":"remount","plug":{"project-id":"4242","workshop":"ws","sdk":"sdk","plug":"plug"},"host-source":%q}\n`, source))
 }
