@@ -123,13 +123,29 @@ to connect to a slot of a certain interface type.
 In our :ref:`definition example <exp_sdk_definition>`,
 it's the *content interface* mentioned above.
 
+Also, you can define custom SDK slots in the :ref:`workshop definition
+<exp_workshop_def_connections>`.
+
 You can think of the plug as the recipient of the resources exposed by the slot;
 note that a slot can handle connections with multiple plugs.
 
-This mechanism comes into play when you
-:command:`workshop launch` or :command:`workshop start` the workshop;
+This mechanism comes into play when you attempt connecting a plug to a slot;
 the plugs defined by its SDKs are automatically connected to the slots,
 provided that the definition has all |project_markup| needs to make a match.
+
+Connections can be established:
+
+- Automatically:
+  Use :command:`workshop launch`, :command:`workshop refresh`,
+  or :command:`workshop start` if the workshop is stopped.
+
+- Manually:
+  Use :command:`workshop connect` after the workshop has started.
+
+- Declaratively:
+  Define connections with :samp:`connections` in the :ref:`workshop definition
+  <exp_workshop_def>`;
+  like any other definition update, this requires :command:`workshop refresh`.
 
 
 .. _exp_interfaces_validation:
@@ -138,8 +154,8 @@ Validation
 ~~~~~~~~~~
 
 To ensure plugs can be installed and connected,
-|project_markup| uses a set of rules,
-with each interface having its own.
+|project_markup| uses a set of internal rules,
+with each interface that |project_markup| implements having its own rule set.
 For example, the content interface plug can be installed and auto-connected
 based on its rules alone.
 However, other interfaces may have different rules,
@@ -198,8 +214,6 @@ Explanation:
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 
-
-Reference:
 
 Reference:
 

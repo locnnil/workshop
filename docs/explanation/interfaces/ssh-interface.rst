@@ -20,7 +20,7 @@ Connection
 The interface isn't connected automatically at launch and refresh
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually:
+can be invoked manually after the workshop has started:
 
 .. code-block:: console
 

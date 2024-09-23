@@ -21,10 +21,11 @@ when the :command:`workshop launch` or :command:`workshop refresh` commands ru
 Connection
 ----------
 
-The interface is connected automatically at launch and refresh;
-also,
-the :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually.
+The interface is connected automatically at launch or refresh,
+provided that the plug can be matched to the slot by its name
+or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
+both subject to |project_markup|'s
+:ref:`validation rules <exp_interfaces_validation>`.
 
 Establishing a connection means
 a directory created by |project_markup| on the host file system

@@ -32,6 +32,9 @@ while still allowing controlled interactions with system resources.
 
 Here's how it works from the outside:
 
+- The :samp:`connections` section of the workshop definition
+  can be used to link plugs to slots within a workshop.
+
 - The :command:`workshop connect` command establishes a connection
   between a workshop and a system interface,
   allowing the workshop to securely access system resources.

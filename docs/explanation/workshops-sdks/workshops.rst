@@ -96,6 +96,8 @@ The base is a supported OS image
 that is used as the basis for the workshop.
 
 
+.. _exp_bindings:
+
 Plug bindings
 -------------
 
@@ -196,6 +198,48 @@ Here, both plugs are listed as :samp:`bind.2`,
 pointing to :samp:`tensorflow:datasets` in the second line.
 
 
+.. _exp_workshop_def_connections:
+
+Slots and connections
+---------------------
+
+You can declare additional connections and slots in the workshop definition,
+subject to the usual :ref:`validation rules <exp_interfaces_validation>`.
+This reduces the need to run manual commands after starting the workshop.
+
+For example, this creates an additional SDK slot and two connections:
+
+.. code-block:: yaml
+   :caption: .workshop.go-tunnel.yaml
+   :emphasize-lines: 5-8, 15-19
+
+   base: ubuntu@22.04
+   name: go-tunnel
+   sdks:
+     host:
+       slots:
+         training:
+           interface: content
+           source: my-training-data/images
+
+     go:
+       channel: latest/candidate
+     dev-tunnel:
+       channel: latest/edge
+
+   connections:
+     - plug: go:images
+       slot: host:training
+     - plug: go:gpu
+       slot: host:gpu
+
+The custom :samp:`host:training` slot is no different from pre-existing slots;
+it's a :ref:`content interface <exp_content_interface>` slot,
+so its source points to a directory on the host file system.
+Finally, the connections established this way
+are no different from those created via the command line.
+
+
 See also
 --------
 
@@ -208,5 +252,5 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_connections`
-- :ref:`ref_workshop_def_yaml`
+- :ref:`ref_workshop_def`
 - :ref:`ref_workshop_status`

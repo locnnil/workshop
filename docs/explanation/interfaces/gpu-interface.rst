@@ -17,10 +17,15 @@ which may be required for various GPU-intensive workloads.
 Connection
 ----------
 
-The interface is connected automatically at launch and refresh;
-also,
+The interface is connected automatically at launch or refresh,
+provided that the plug can be matched to the slot by its name
+or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
+both subject to |project_markup|'s
+:ref:`validation rules <exp_interfaces_validation>`.
+
+Also,
 the :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually.
+can be invoked manually after the workshop has started.
 
 Establishing a connection means
 the host's GPUs are directly available inside the workshop

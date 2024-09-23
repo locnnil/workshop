@@ -1,4 +1,4 @@
-.. _ref_workshop_def_yaml:
+.. _ref_workshop_def:
 
 Workshop definition
 ===================
@@ -10,6 +10,7 @@ The name of the workshop definition
 file must have the following format: :file:`.workshop.<NAME>.yaml`.
 
 .. tip:: Note the dot at the start.
+
 
 Here, :samp:`<NAME>` is a placeholder that stands for the actual name
 of the workshop itself;
