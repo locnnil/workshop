@@ -3,7 +3,7 @@
 workshop remount
 ================
 
-Mount a new source location to the content interface plug's target.
+Mount a new source location to the mount interface plug's target.
 
 .. code-block:: console
 
@@ -13,7 +13,7 @@ Mount a new source location to the content interface plug's target.
 Examples
 --------
 
-Remount the :samp:`mod-cache` content interface plug
+Remount the :samp:`mod-cache` mount interface plug
 of the :samp:`go` SDK under the :samp:`nimble` workshop
 in the current project directory
 to :file:`~/new-cache-mount/` on the host:
@@ -27,7 +27,7 @@ Synopsis
 --------
 
 This command mounts a new source location on the host to the target directory
-of the specified content interface plug, qualified by the SDK name.
+of the specified mount interface plug, qualified by the SDK name.
 Specifically, it does the following:
 
 - Attempts the mount operation atomically;
@@ -43,7 +43,7 @@ Notes
 
 - To stop the workshop, use :ref:`ref_workshop_stop`
 
-- :ref:`ref_workshop_info` lists any mounted content interface plugs
+- :ref:`ref_workshop_info` lists any mounted mount interface plugs
   for the workshop
 
 - :ref:`ref_workshop_refresh` mounts the last source
@@ -78,7 +78,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_content_interface`
+- :ref:`exp_mount_interface`
 - :ref:`exp_sdk`
 
 

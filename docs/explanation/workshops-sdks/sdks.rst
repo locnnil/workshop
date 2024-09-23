@@ -102,7 +102,7 @@ so the user doesn't have direct control over them in the workshop definition.
 
 Currently, |project_markup| supports the following interfaces:
 
-- :ref:`content interface <exp_content_interface>` (auto-connected)
+- :ref:`mount interface <exp_mount_interface>` (auto-connected)
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
 - :ref:`SSH interface <exp_ssh_interface>` (manually connected)
 
@@ -114,14 +114,14 @@ Plugs and slots
 
 To provide access to these resource types,
 |project_markup| exposes *interface slots*.
-For example, a :ref:`content interface <exp_content_interface>` slot
+For example, a :ref:`mount interface <exp_mount_interface>` slot
 creates an internal host directory to be mounted inside the workshop;
 think of the slot as the provider of the resource.
 
 Further, individual SDKs define *plugs*
 to connect to a slot of a certain interface type.
 In our :ref:`definition example <exp_sdk_definition>`,
-it's the *content interface* mentioned above.
+it's the *mount interface* mentioned above.
 
 Also, you can define custom SDK slots in the :ref:`workshop definition
 <exp_workshop_def_connections>`.
@@ -156,7 +156,7 @@ Validation
 To ensure plugs can be installed and connected,
 |project_markup| uses a set of internal rules,
 with each interface that |project_markup| implements having its own rule set.
-For example, the content interface plug can be installed and auto-connected
+For example, the mount interface plug can be installed and auto-connected
 based on its rules alone.
 However, other interfaces may have different rules,
 such as allowing installation but not auto-connection for :samp:`ssh-agent`.
@@ -188,7 +188,7 @@ but the host-based content remains.
 
 On :command:`workshop remove`,
 both the interface connections and the default host directories
-(if any have been created, for example, to accommodate content interface slots)
+(if any have been created, for example, to accommodate mount interface slots)
 are removed.
 
 .. note::

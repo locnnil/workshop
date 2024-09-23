@@ -39,7 +39,7 @@ Notes
 
 - To rebuild a removed workshop from scratch, use :ref:`ref_workshop_launch`
 
-- For content interface plugs,
+- For mount interface plugs,
   non-default sources set by :ref:`ref_workshop_remount` aren't removed
 
 
@@ -60,7 +60,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_content_interface`
+- :ref:`exp_mount_interface`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 - :ref:`exp_workshop_def`

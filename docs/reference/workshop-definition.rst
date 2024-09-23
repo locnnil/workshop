@@ -104,14 +104,14 @@ Each SDK is described with the following keys:
        each entry must specify the interface type
        and the relevant attributes.
 
-       The only interface with additional attributes is :samp:`content`;
-       it requires the :samp:`source` property
+       The only interface with additional attributes is :samp:`mount`;
+       it requires the :samp:`workshop-source` property
        to specify a relative path within the project directory
        to be used as the slot's source directory.
 
 Any entry in :samp:`connections` must include a :samp:`plug` and a :samp:`slot`
 from the SDKs listed under :samp:`sdks`
-(the host SDK is always implicitly included).
+(the system SDK is always implicitly included).
 Both must be strings that reference a plug and a slot
 with the same interface in different SDKs,
 using the :samp:`<SDK>/<PLUG>` format.
@@ -168,13 +168,13 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
 
 
 This YAML file, besides using the :samp:`go` and :samp:`dev-tunnel` SDKs,
-defines an additional slot under the host SDK and two connections:
+defines an additional slot under the system SDK and two connections:
 
 - One that connects the :samp:`go:images` plug
-  to the newly defined :samp:`host:training` slot.
+  to the newly defined :samp:`system:training` slot.
 
 - Another that connects the :samp:`go:gpu` plug
-  to the pre-existing :samp:`host:gpu`.
+  to the pre-existing :samp:`system:gpu`.
 
 .. code-block:: yaml
    :caption: .workshop.go-tunnel.yaml
@@ -182,11 +182,11 @@ defines an additional slot under the host SDK and two connections:
    base: ubuntu@22.04
    name: go-tunnel
    sdks:
-     host:
+     system:
        slots:
          training:
-           interface: content
-           source: my-training-data/images
+           interface: mount
+           workshop-source: my-training-data/images
 
      go:
        channel: latest/candidate
@@ -195,9 +195,9 @@ defines an additional slot under the host SDK and two connections:
 
    connections:
      - plug: go:images
-       slot: host:training
+       slot: system:training
      - plug: go:gpu
-       slot: host:gpu
+       slot: system:gpu
 
 
 See also
@@ -207,7 +207,7 @@ Explanation:
 
 - :ref:`exp_sdk`
 - :ref:`exp_base`
-- :ref:`exp_host_sdk`
+- :ref:`exp_system_sdk`
 - :ref:`exp_workshop_def`
 
 

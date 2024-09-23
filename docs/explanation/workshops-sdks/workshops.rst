@@ -124,7 +124,7 @@ that store their training data in the workshop under
 :file:`~/.cache/torchvision/datasets/` and :file:`~/.keras/datasets/`,
 respectively.
 The data should be persisted,
-so each SDK has a corresponding content interface plug, :samp:`datasets`.
+so each SDK has a corresponding mount interface plug, :samp:`datasets`.
 
 Now, what if our workshop includes both SDKs;
 can we leverage bindings to reuse the data?
@@ -168,14 +168,14 @@ because they reference the same entity:
          channel: latest/stable
          mounts:
            datasets:
-             host:      /new-mount
-             workshop:  /home/workshop/.cache/torchvision/datasets
+             host-source:      /new-mount
+             workshop-target:  /home/workshop/.cache/torchvision/datasets
        tensorflow:
          channel: latest/stable
          mounts:
            data:
-             host:      /new-mount
-             workshop:  /home/workshop/.keras/datasets
+             host-source:      /new-mount
+             workshop-target:  /home/workshop/.keras/datasets
 
 
 This avoids the need to reconfigure each mount manually,
@@ -190,8 +190,8 @@ along with the line number of the target plug:
    $ workshop connections digits
 
      Interface  Plug                        Slot      Notes
-     content    digits/pytorch:datasets     :content  bind.2
-     content    digits/tensorflow:datasets  :content  bind.2
+     mount      digits/pytorch:datasets     :mount    bind.2
+     mount      digits/tensorflow:datasets  :mount    bind.2
 
 
 Here, both plugs are listed as :samp:`bind.2`,
@@ -211,16 +211,15 @@ For example, this creates an additional SDK slot and two connections:
 
 .. code-block:: yaml
    :caption: .workshop.go-tunnel.yaml
-   :emphasize-lines: 5-8, 15-19
+   :emphasize-lines: 5-7, 14-18
 
    base: ubuntu@22.04
    name: go-tunnel
    sdks:
-     host:
+     system:
        slots:
          training:
-           interface: content
-           source: my-training-data/images
+           interface: mount
 
      go:
        channel: latest/candidate
@@ -229,12 +228,13 @@ For example, this creates an additional SDK slot and two connections:
 
    connections:
      - plug: go:images
-       slot: host:training
+       slot: system:training
      - plug: go:gpu
-       slot: host:gpu
+       slot: system:gpu
 
-The custom :samp:`host:training` slot is no different from pre-existing slots;
-it's a :ref:`content interface <exp_content_interface>` slot,
+
+The custom :samp:`system:training` slot is no different from pre-existing slots;
+it's a :ref:`mount interface <exp_mount_interface>` slot,
 so its source points to a directory on the host file system.
 Finally, the connections established this way
 are no different from those created via the command line.

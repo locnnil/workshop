@@ -1,15 +1,15 @@
-.. _exp_content_interface:
+.. _exp_mount_interface:
 
-Content interface
-=================
+Mount interface
+===============
 
-The content interface
+The mount interface
 exposes host file system locations
 to individual SDKs
 by mounting them inside the workshop
 that references those SDKs.
 
-By using the content interface,
+By using the mount interface,
 the SDK publisher allows to persist data outside the workshop.
 The interface defines a target directory inside the workshop,
 to which a source directory from the host file system is mounted at run-time.
@@ -63,8 +63,8 @@ So the target directory is available on the host:
          channel:  latest/edge
          mounts:
            content-cache:
-             host:      .../8584e571/content/ws_content-sdk_content-cache.sdk
-             workshop:  /home/workshop/target
+             host-source:      .../8584e571/mount/ws_content-sdk_content-cache.sdk
+             workshop-target:  /home/workshop/target
 
 
 By default, the source directory on the host

@@ -21,7 +21,7 @@ the plugs defined by the SDKs listed in the workshop definition
 must at some point *connect* to the appropriate interface slots.
 
 Such connections are uniformly established via the
-:ref:`host SDK <exp_host_sdk>`
+:ref:`system SDK <exp_system_sdk>`
 that is quietly present in every workshop,
 but not immediately visible to its users.
 
@@ -50,16 +50,16 @@ Here's how it works from the outside:
 Some plugs can be auto-connected to their slots at launch or refresh.
 This behaviour varies by interface,
 but the overall aim is to provide a reasonably seamless, logical experience.
-For example, content interface plugs are auto-connected,
+For example, mount interface plugs are auto-connected,
 whereas an SSH interface plug requires manual connection.
 
 
-.. _exp_host_sdk:
+.. _exp_system_sdk:
 
-Host SDK
-~~~~~~~~
+System SDK
+~~~~~~~~~~
 
-Every workshop contains a *host SDK*
+Every workshop contains a *system SDK*
 that exposes system resources through interface slots.
 It's essentially a special SDK type,
 which is not available from the SDK Store but is auto-added to each workshop.
@@ -67,7 +67,7 @@ It's installed first at :command:`workshop launch`
 and removed last at :command:`workshop remove`,
 ensuring internal consistency.
 
-The purpose of the host SDK isn't to add hooks or additional content;
+The purpose of the system SDK isn't to add hooks or additional content;
 it's only there to expose host system resources to other SDKs consistently.
 As such, it can't be removed by the user
 and isn't listed in the :command:`workshop info` output.
