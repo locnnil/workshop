@@ -17,22 +17,21 @@
    Contribution <contributing>
 
 
-**A tool for defining and managing ephemeral development environments**.
+**A tool for defining ephemeral developer environments and iterating on them**.
 
-**Define your prerequisites and dependencies in simple YAML**.
-|project_markup| consumes the definition to create a contained workshop,
-installs the components as a set of SDKs
-and attaches custom actions for run-time control.
-IDEs such as Visual Studio Code or JupyterLab can discover workshops
-and use them in day-to-day operations,
-tidying up your system and streamlining your work.
+**It creates your environments from YAML and automatically manages them**.
+The key components of an environment are SDKs—
+independent but connectable pieces of functionality
+created by software publishers and available on the SDK Store.
+|project_markup| encourages experimentation with your project's structure,
+reducing the need to battle with your tooling and dependencies every day.
 
-**Focus on your project, not your setup**.
-An environment that could take hours to configure
-can now be launched with a single command.
-|project_markup| improves cross-platform issue reproduction,
+**It allows you to focus on adding value to your project**.
+With |project_markup|, you can launch and update a setup
+that previously took hours to configure in a few commands.
+It assists in issue reproduction,
 preserves context in discussions or reviews
-and confines bold experiments to transparent sandboxes.
+and organises project iterations into manageable chunks.
 
 **For those who build and maintain complex, error-prone workspaces**.
 AI/ML, robotics, IoT, EdTech and similar domains
