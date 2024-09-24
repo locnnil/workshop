@@ -365,6 +365,14 @@ func SdkCurrentPath(sdkName string) string {
 	return filepath.Join(SdkRootPath(sdkName), "current")
 }
 
+func SdkMetaDir(sdkName string) string {
+	return filepath.Join(SdkCurrentPath(sdkName), "meta")
+}
+
+func SdkMetaPath(sdkName string) string {
+	return filepath.Join(SdkMetaDir(sdkName), "sdk.yaml")
+}
+
 func SdkHooksDir(sdkName string) string {
 	return filepath.Join(SdkCurrentPath(sdkName), "sdk", "hooks")
 }

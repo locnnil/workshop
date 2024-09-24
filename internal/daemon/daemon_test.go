@@ -29,6 +29,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/check.v1"
+
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 
@@ -77,7 +78,7 @@ func (s *daemonSuite) TearDownTest(c *check.C) {
 }
 
 func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
-	b, err := fakebackend.New()
+	b, err := fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 	undo := overlord.MockWorkshopBackend(b)
 	defer undo()

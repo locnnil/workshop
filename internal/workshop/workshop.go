@@ -46,27 +46,25 @@ type Workshop struct {
 // the SDK to the workshop content. This method is idempotent, so if an SDK
 // existed, the result will be a no-op
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	if s.Name == sdk.System.String() {
-		return nil
-	}
+	if s.Name != sdk.System.String() {
+		now := InstallTimeNow()
+		s.InstallTime = &now
+		w.Content[s.Name] = s
 
-	now := InstallTimeNow()
-	s.InstallTime = &now
-	w.Content[s.Name] = s
+		sequenceValue, err := json.Marshal(w.Content)
+		if err != nil {
+			return err
+		}
 
-	sequenceValue, err := json.Marshal(w.Content)
-	if err != nil {
-		return err
-	}
+		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+			&WorkshopConfigValue{
+				Name:  ConfigWorkshopContent,
+				Value: string(sequenceValue),
+			})
 
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopContent,
-			Value: string(sequenceValue),
-		})
-
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	// Update the current link to point out to the newly installed SDK
@@ -78,12 +76,13 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	defer fs.Close()
 
+	src := filepath.Join(sdkPath, strconv.FormatInt(s.Revision, 10))
 	current := filepath.Join(sdkPath, "current")
 
 	// the link could already be existing  (e.g. was created before and
 	// due to the refresh --continue the link task gets executed again)
-	if err = fs.Symlink(filepath.Join(sdkPath, strconv.Itoa(int(s.Revision))),
-		current); !errors.Is(err, os.ErrExist) {
+	err = fs.Symlink(src, current)
+	if !errors.Is(err, os.ErrExist) {
 		return err
 	}
 	return nil
@@ -93,24 +92,22 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK to the workshop content. This method is idempotent, so if an
 // SDK did not exist, the result will be a no-op
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	if name == sdk.System.String() {
-		return nil
-	}
+	if name != sdk.System.String() {
+		delete(w.Content, name)
+		newSequence, err := json.Marshal(w.Content)
+		if err != nil {
+			return err
+		}
 
-	delete(w.Content, name)
-	newSequence, err := json.Marshal(w.Content)
-	if err != nil {
-		return err
-	}
-
-	/* Update the workshop config */
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopContent,
-			Value: string(newSequence),
-		})
-	if err != nil {
-		return err
+		/* Update the workshop config */
+		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+			&WorkshopConfigValue{
+				Name:  ConfigWorkshopContent,
+				Value: string(newSequence),
+			})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Remove the 'current' link
@@ -155,8 +152,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	}
 	defer wsfs.Close()
 
-	sdkPath := sdk.SdkCurrentPath(sdkName)
-	yamlf, err := wsfs.Open(filepath.Join(sdkPath, "meta/sdk.yaml"))
+	yamlf, err := wsfs.Open(sdk.SdkMetaPath(sdkName))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %q SDK metadata (%v)", sdkName, err)
 	}
@@ -234,8 +230,8 @@ func (w *Workshop) InstallSystemSdk(ctx context.Context) error {
 	}
 	defer wfs.Close()
 
-	systemMetaDir := filepath.Join(sdk.SdkCurrentPath(sdk.System.String()), "meta")
-	if err := wfs.MkdirAll(systemMetaDir, 0655); err != nil {
+	systemMetaDir := filepath.Join(sdk.SdkRootPath(sdk.System.String()), "0", "meta")
+	if err := wfs.MkdirAll(systemMetaDir, 0755); err != nil {
 		return err
 	}
 

@@ -53,7 +53,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return "42424242", nil }, &workshop.NewProjectId)
 
-	s.wsbackend, err = fakebackend.New()
+	s.wsbackend, err = fakebackend.New(c.MkDir())
 	workshop.ReplaceBackend(s.state, s.wsbackend)
 
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
@@ -70,8 +70,10 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 }
 
 func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
-	c.Assert(afero.WriteFile(fs, sdkPath, []byte(yaml), 0644), check.IsNil)
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
+	metaPath := filepath.Join(sdkPath, "sdk.yaml")
+	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
 }
 
 func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdkYamls map[sdk.Setup]string) (*workshop.Workshop, error) {
@@ -102,13 +104,16 @@ slots:
     interface: mount
     attr: slot-value
 `
-	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "current", "meta", "sdk.yaml"), 0655), check.IsNil)
+	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "0", "meta"), 0755), check.IsNil)
 	s.writeSDKMetaFile(c, wsfs, sdk.System.String(), systemYaml)
 	for sdk, yaml := range sdkYamls {
 		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
+	c.Assert(err, check.IsNil)
+
+	err = w.LinkSdk(ctx, sdk.Setup{Name: sdk.System.String()})
 	c.Assert(err, check.IsNil)
 
 	for s := range sdkYamls {

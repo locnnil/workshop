@@ -32,8 +32,10 @@ type managerSuite struct {
 var _ = check.Suite(&managerSuite{})
 
 func (s *managerSuite) SetUpTest(c *check.C) {
+	var err error
 	s.state = state.New(nil)
-	s.backend, _ = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
+	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)

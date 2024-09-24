@@ -26,6 +26,10 @@ type InstanceFs struct {
 	client *sftp.Client
 }
 
+func (w *InstanceFs) RemoveAll(path string) error {
+	return w.client.RemoveAll(path)
+}
+
 func (w *InstanceFs) Symlink(source, target string) error {
 	if _, err := w.client.Stat(target); err == nil {
 		return os.ErrExist

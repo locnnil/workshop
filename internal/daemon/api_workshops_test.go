@@ -622,16 +622,20 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_0.sdk")
 		c.Check(found, check.Equals, true)
 		metadir := filepath.Join(sdk.SdkCurrentPath(sdkname), "meta")
-		err = fs.MkdirAll(metadir, 0655)
+		err = fs.MkdirAll(metadir, 755)
 		c.Check(err, check.IsNil)
 
-		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
+		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
 		c.Check(err, check.IsNil)
 		defer file.Close()
 
 		syaml, exists := sdks[sdkname]
 		c.Check(exists, check.Equals, true)
 		_, err = file.Write([]byte(syaml))
+		c.Check(err, check.IsNil)
+
+		hooksdir := sdk.SdkHooksDir(sdkname)
+		err = fs.MkdirAll(hooksdir, 0755)
 		c.Check(err, check.IsNil)
 
 		for _, hook := range []string{"setup-base", "save-state", "restore-state"} {

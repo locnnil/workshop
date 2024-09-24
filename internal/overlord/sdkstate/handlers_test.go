@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -97,7 +98,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
-	s.backend, err = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
 	s.project = &workshop.Project{
@@ -140,12 +141,14 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	err = s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 
-	s.mockTestSdk(c, "test", sdkYaml)
+	s.mockTestSdk(c, "test", sdkYaml, 0)
 }
 
-func (s *sdkStateSuite) mockTestSdk(c *check.C, name, sdkYaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "current", "meta", "sdk.yaml")
+func (s *sdkStateSuite) mockTestSdk(c *check.C, name, sdkYaml string, rev int64) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, strconv.FormatInt(rev, 10), "meta", "sdk.yaml")
 	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	err = fs.MkdirAll(filepath.Dir(sdkPath), 0755)
 	c.Assert(err, check.IsNil)
 	err = afero.WriteFile(fs, sdkPath, []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
@@ -326,9 +329,9 @@ func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info, err := wfs.Stat("/var/lib/workshop/sdk/system/current/meta/sdk.yaml")
+	info, err := wfs.Stat("/var/lib/workshop/sdk/system/0/meta/sdk.yaml")
 	c.Assert(err, check.IsNil)
-	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0666))
+	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0664))
 }
 
 func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
@@ -370,7 +373,7 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
+	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: 0, InstallTime: &s.installTime}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -409,7 +412,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	defer s.state.Unlock()
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	s.mockTestSdk(c, "test-broken", sdkYamlViolatesPolicy)
+	s.mockTestSdk(c, "test-broken", sdkYamlViolatesPolicy, 2)
 
 	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: 2, InstallTime: &s.installTime}
 

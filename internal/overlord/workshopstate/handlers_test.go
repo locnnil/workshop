@@ -73,7 +73,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend, err = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 
 	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
