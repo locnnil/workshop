@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
@@ -51,6 +53,29 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 	return projects[username][idx], nil
 }
 
+func maybeScratch(ctx context.Context, pid, wp string) (bool, error) {
+	username, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return false, fmt.Errorf("context key user not found")
+	}
+
+	usr, err := workshop.LookupUsername(username)
+	if err != nil {
+		return false, err
+	}
+	scratchdir := sdk.WorkshopScratchSdkDir(usr.HomeDir, pid, wp)
+
+	_, err = os.Stat(scratchdir)
+	// no scratch SDK exists for the workshop and it is not an error.
+	if osutil.IsDirNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
@@ -82,6 +107,13 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		for _, s := range sdks {
 			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
+		found, err := maybeScratch(ctx, projectId, name)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			sets = append(sets, sdk.Setup{Name: sdk.Scratch, Revision: -1})
+		}
 
 		tasks := launch(w.state, file, sets, project)
 		taskset = append(taskset, tasks)
@@ -111,8 +143,10 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	retrieve := state.NewTaskSet()
 	for _, s := range sdks {
-		r := sdkstate.Retrieve(st, s)
-		retrieve.AddTask(r)
+		if s.Channel != "" {
+			r := sdkstate.Retrieve(st, s)
+			retrieve.AddTask(r)
+		}
 	}
 	return retrieve
 }
@@ -128,27 +162,33 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	prevAuto.Set("sdk", sdk.System.String())
 	autoConnect := state.NewTaskSet(prevAuto)
 
-	for idx, sdk := range sdks {
+	for idx, setup := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
-		// guarantee safety of concurrent installations
-		installTaskSet := sdkstate.Install(st, sdk.Name, retrieveSet.Tasks()[idx].ID())
-		if prevInstall != nil {
-			installTaskSet.WaitAll(prevInstall)
+		// guarantee safety of concurrent installations.
+		var installTs *state.TaskSet
+		if setup.Channel != "" {
+			installTs = sdkstate.Install(st, setup.Name, retrieveSet.Tasks()[idx].ID())
+		} else {
+			installTs = sdkstate.InstallLocalSdk(st, setup)
 		}
-		prevInstall = installTaskSet
-		install.AddAll(installTaskSet)
+
+		if prevInstall != nil {
+			installTs.WaitAll(prevInstall)
+		}
+		prevInstall = installTs
+		install.AddAll(installTs)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.Hook(st, w, sdk.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, w, setup.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
 		prevSetup = setupHookTask
 		setupHook.AddTask(setupHookTask)
 
-		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", sdk.Name))
-		autoconnect.Set("sdk", sdk.Name)
+		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
+		autoconnect.Set("sdk", setup.Name)
 		autoConnect.AddTask(autoconnect)
 		if prevAuto != nil {
 			autoconnect.WaitFor(prevAuto)
@@ -247,7 +287,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 	}
 
 	files := make([]*workshop.File, 0)
-	installedContent, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
+	installed, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
 	for _, ws := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
 		if idx == -1 {
@@ -269,10 +309,10 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		}
 
 		toInstall = append(toInstall, newContent)
-		installedContent = append(installedContent, maps.Values(workshops[idx].Content))
+		installed = append(installed, maps.Values(workshops[idx].Content))
 	}
 
-	taskset, err := refreshMany(w.state, files, installedContent, toInstall, project)
+	taskset, err := refreshMany(w.state, files, installed, toInstall, project)
 	if err != nil {
 		return nil, err
 	}
@@ -324,14 +364,14 @@ func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setu
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newContent []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInstall []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
 	// 4. Launch the new workshop
 	// 5. Run restore state
 	// 6. Delete the old workshop
-	retrieve := retrieveSdks(st, newContent)
+	retrieve := retrieveSdks(st, toInstall)
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	createStateStorage.WaitAll(retrieve)
@@ -358,7 +398,7 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 
 	// install SDKs and run restore-state scripts. The restoreStateHooks can be
 	// empty if the old SDKs were all removed in the new version of the workshop
-	install := installSdks(st, file.Name, newContent, retrieve)
+	install := installSdks(st, file.Name, toInstall, retrieve)
 	install.WaitAll(launch)
 	launch.AddAll(install)
 

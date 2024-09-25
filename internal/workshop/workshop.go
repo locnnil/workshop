@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -67,7 +67,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 		}
 	}
 
-	// Update the current link to point out to the newly installed SDK
+	// Update the current link to point out to the newly installed SDK.
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, s.Name)
 
 	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
@@ -76,7 +76,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	defer fs.Close()
 
-	src := filepath.Join(sdkPath, strconv.FormatInt(s.Revision, 10))
+	src := filepath.Join(sdkPath, s.Rev())
 	current := filepath.Join(sdkPath, "current")
 
 	// the link could already be existing  (e.g. was created before and
@@ -168,20 +168,25 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, err
 	}
 
+	// system SDK will always have its workshop's base.
+	if info.Type == sdk.System {
+		info.Base = w.Base
+	}
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
 
 	// Now add changes defined for this SDK in the workshop file (e.g. plug
 	// binds, slots).
 	idx := slices.IndexFunc(w.File.Sdks, func(sr SdkRecord) bool { return sr.Name == info.Name })
-	if idx == -1 && sdkName != sdk.System.String() {
-		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
-	}
 
 	// system SDK is an optional entry in a workshop file, so it's not an error
 	// scenario.
-	if idx == -1 && sdkName == sdk.System.String() {
+	if idx == -1 && (sdkName == sdk.System.String() || sdkName == sdk.Scratch) {
 		return info, nil
+	}
+
+	if idx == -1 {
+		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
 	}
 
 	binds := map[string]*sdk.PlugBind{}
@@ -223,26 +228,31 @@ func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
 	return infos, nil
 }
 
-func (w *Workshop) InstallSystemSdk(ctx context.Context) error {
+func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string, src fs.FS) error {
 	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
 		return err
 	}
 	defer wfs.Close()
 
-	systemMetaDir := filepath.Join(sdk.SdkRootPath(sdk.System.String()), "0", "meta")
-	if err := wfs.MkdirAll(systemMetaDir, 0755); err != nil {
+	metadir := filepath.Join(sdk.SdkRootPath(name), rev, "meta")
+	if err := wfs.MkdirAll(metadir, 0755); err != nil {
 		return err
 	}
 
-	// /var/lib/workshop/sdk/system/current/meta
-	file, err := wfs.OpenFile(filepath.Join(systemMetaDir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	metasrc, err := src.Open(filepath.Join("meta", "sdk.yaml"))
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	if _, err = file.Write([]byte(sdk.SystemSdkMeta(w.Base))); err != nil {
+	// /var/lib/workshop/sdk/<name>/<rev>/meta
+	metadst, err := wfs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil {
+		return err
+	}
+	defer metadst.Close()
+
+	if _, err = io.Copy(metadst, metasrc); err != nil {
 		return err
 	}
 	return nil

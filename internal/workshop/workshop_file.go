@@ -80,6 +80,7 @@ type SdkRecord struct {
 	Channel string                 `yaml:"channel"`
 	Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
 	Slots   map[string]interface{} `yaml:"slots,omitempty"`
+	Hooks   map[string]string      `yaml:"hooks,omitempty"`
 }
 
 type Connection struct {
@@ -101,11 +102,12 @@ func (p SdkList) MarshalYAML() (interface{}, error) {
 		Channel string                 `yaml:"channel"`
 		Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
 		Slots   map[string]interface{} `yaml:"slots,omitempty"`
+		Hooks   map[string]string      `yaml:"hooks,omitempty"`
 	}
 	b := map[string]sdkDef{}
 
 	for _, v := range p {
-		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots}
+		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots, Hooks: v.Hooks}
 	}
 
 	node := &yaml.Node{}

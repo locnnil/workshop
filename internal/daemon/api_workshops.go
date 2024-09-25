@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -100,7 +99,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sdk.Name,
 			Channel:     sdk.Channel,
-			Revision:    strconv.FormatInt(sdk.Revision, 10),
+			Revision:    sdk.Rev(),
 			InstallTime: sdk.InstallTime,
 			Health:      healthInfo,
 			Mounts:      sdkMounts,

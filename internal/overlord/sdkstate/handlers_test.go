@@ -312,7 +312,7 @@ func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
 	newSdk := sdk.Setup{Name: sdk.System.String()}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-system-sdk", "test")
+	t1 := s.state.NewTask("install-local-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
@@ -340,7 +340,7 @@ func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
 	newSdk := sdk.Setup{Name: sdk.System.String()}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-system-sdk", "test")
+	t1 := s.state.NewTask("install-local-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
@@ -363,7 +363,7 @@ func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.NotNil)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, err = wfs.Stat("/var/lib/workshop/sdk/system")
+	_, err = wfs.Stat("/var/lib/workshop/sdk/system/0")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
 

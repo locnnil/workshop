@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,13 @@ type Setup struct {
 	Channel     string     `json:"channel"`
 	Revision    int64      `json:"revision"`
 	InstallTime *time.Time `json:"install-time"`
+}
+
+func (s *Setup) Rev() string {
+	if s.Revision >= 0 {
+		return strconv.FormatInt(s.Revision, 10)
+	}
+	return "x" + strconv.FormatInt(-s.Revision, 10)
 }
 
 func (s *Setup) Filename() string {
@@ -381,8 +389,20 @@ func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
 }
 
+func ProjectUserData(homedir, pid string) string {
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid)
+}
+
 func ProjectContentDir(homedir, pid string) string {
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "mount")
+	return filepath.Join(ProjectUserData(homedir, pid), "mount")
+}
+
+func ProjectScratchSdkDir(homedir, pid string) string {
+	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "scratch")
+}
+
+func WorkshopScratchSdkDir(homedir, pid, wp string) string {
+	return filepath.Join(ProjectScratchSdkDir(homedir, pid), wp)
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

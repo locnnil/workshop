@@ -168,7 +168,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	expected := []string{"download-base", "create-workshop",
 		"mount-project",
-		"start-workshop", "install-system-sdk", "link-sdk", "auto-connect"}
+		"start-workshop", "install-local-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
@@ -201,7 +201,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"auto-connect",    // "system" SDK
 		"auto-disconnect", // "system" SDK
@@ -246,7 +246,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -427,7 +427,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"auto-disconnect", // system SDK
 		"auto-connect",    // system SDK
@@ -445,7 +445,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -526,7 +526,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
