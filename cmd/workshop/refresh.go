@@ -124,7 +124,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 		if err == errWaitOnError {
-			return fmt.Errorf("cannot refresh; fix the errors reported by \"workshop info\",\n"+
+			return fmt.Errorf("cannot refresh; fix the errors reported,\n"+
 				"then run \"workshop refresh --continue %s\".\n"+
 				"To abort and revert, run \"workshop refresh --abort %s\"", av[0], av[0])
 		}

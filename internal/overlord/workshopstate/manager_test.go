@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
@@ -27,6 +28,8 @@ type managerSuite struct {
 	manager *workshopstate.WorkshopManager
 	ctx     context.Context
 	project *workshop.Project
+
+	lookupUserRestore func()
 }
 
 var _ = check.Suite(&managerSuite{})
@@ -40,9 +43,23 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
+	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     "testuser",
+			Username: "testuser",
+			Uid:      "1000",
+			Gid:      "1000",
+			HomeDir:  c.MkDir(),
+		}
+		return u, nil
+	}, &workshop.LookupUsername)
 	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+}
+
+func (s *managerSuite) TearDownTest(c *check.C) {
+	s.lookupUserRestore()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {

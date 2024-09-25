@@ -308,6 +308,14 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
+		found, err := maybeScratch(ctx, projectId, ws)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			newContent = append(newContent, sdk.Setup{Name: sdk.Scratch, Revision: -1})
+		}
+
 		toInstall = append(toInstall, newContent)
 		installed = append(installed, maps.Values(workshops[idx].Content))
 	}
