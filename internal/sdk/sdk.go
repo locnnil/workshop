@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,19 +18,12 @@ import (
 type Setup struct {
 	Name        string     `json:"name"`
 	Channel     string     `json:"channel"`
-	Revision    int64      `json:"revision"`
+	Revision    Revision   `json:"revision"`
 	InstallTime *time.Time `json:"install-time"`
 }
 
-func (s *Setup) Rev() string {
-	if s.Revision >= 0 {
-		return strconv.FormatInt(s.Revision, 10)
-	}
-	return "x" + strconv.FormatInt(-s.Revision, 10)
-}
-
 func (s *Setup) Filename() string {
-	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
+	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String()))
 }
 
 type sdkYaml struct {
@@ -43,6 +35,8 @@ type sdkYaml struct {
 }
 
 type Type string
+
+const Hack = "hack"
 
 const (
 	Regular Type = "regular"
@@ -59,7 +53,7 @@ type Info struct {
 	Name      string
 	Base      string
 	Type      Type
-	Revision  int64
+	Revision  Revision
 	Channel   string
 
 	Plugs     map[string]*PlugInfo
@@ -369,6 +363,10 @@ func SdkRootPath(sdkName string) string {
 	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
 }
 
+func SdkRevPath(sdkName string, rev string) string {
+	return filepath.Join(SdkRootPath(sdkName), rev)
+}
+
 func SdkCurrentPath(sdkName string) string {
 	return filepath.Join(SdkRootPath(sdkName), "current")
 }
@@ -397,12 +395,12 @@ func ProjectContentDir(homedir, pid string) string {
 	return filepath.Join(ProjectUserData(homedir, pid), "mount")
 }
 
-func ProjectScratchSdkDir(homedir, pid string) string {
-	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "scratch")
+func ProjectHackSdkDir(homedir, pid string) string {
+	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "hack")
 }
 
-func WorkshopScratchSdkDir(homedir, pid, wp string) string {
-	return filepath.Join(ProjectScratchSdkDir(homedir, pid), wp)
+func WorkshopHackSdkDir(homedir, pid, wp string) string {
+	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp)
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

@@ -22,7 +22,7 @@ func (m *WorkshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"hack","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -55,7 +55,9 @@ status:   error
 notes:    missing-file
 content:
   go:
-    channel:  latest/edge  2017-03-22  1
+    channel:  latest/edge  2017-03-22  \(1\)
+  hack:
+    channel:  -   2017-03-22  \(x1\)
 `, m.prjDir))
 }
 
@@ -92,7 +94,7 @@ status:   pending
 notes:    workshop-note,try-later
 content:
   go:
-    channel:  latest/edge  2017-03-22  1
+    channel:  latest/edge  2017-03-22  \(1\)
     message:  Waiting for all required modules to be installed
 `, m.prjDir))
 }
@@ -137,7 +139,7 @@ status:   ready
 notes:    -
 content:
   go:
-    channel:  latest/edge  2017-03-22  1
+    channel:  latest/edge  2017-03-22  \(1\)
     mounts:
       plug-default:
         host-source:      .../17942561/mount/ws_go_mod-cache.sdk

@@ -3,8 +3,6 @@ package workshop
 import (
 	"cmp"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -140,22 +138,12 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readWorkshop(pathname string) (*File, error) {
+func readWorkshop(buf []byte) (*File, error) {
 	var err error
 	var file File
 
-	buf, err := os.ReadFile(pathname)
-	if err != nil {
-		return nil, err
-	}
-
 	if err = yaml.Unmarshal(buf, &file); err != nil {
 		return nil, err
-	}
-
-	fname := filepath.Base(pathname)
-	if Filename(file.Name) != fname {
-		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
 	}
 
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {

@@ -309,13 +309,13 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 				{
 					Name:        "test-sdk",
 					Channel:     "latest/stable",
-					Revision:    "0",
+					Revision:    "1",
 					InstallTime: &t1,
 				},
 				{
 					Name:        "test-sdk-2",
 					Channel:     "latest/stable",
-					Revision:    "0",
+					Revision:    "1",
 					InstallTime: &t2,
 				},
 			},
@@ -387,7 +387,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
@@ -405,7 +405,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			{
 				Name:        "test-sdk-2",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
@@ -478,7 +478,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
@@ -496,7 +496,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			{
 				Name:        "test-sdk-2",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
@@ -602,6 +602,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 			return nil, err
 		}
 		info.Channel = act.Channel
+		info.Revision = sdk.Revision{N: 1}
 		result = append(result, sdk.SdkResult{Info: info})
 	}
 	return result, nil
@@ -617,32 +618,36 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		fs, err := s.b.WorkshopFs(s.ctx, ws)
 		c.Check(err, check.IsNil)
 		defer fs.Close()
+
 		// Get the SDK name from the exec command (we don't have a separate
 		// method to install an SDK now).
-		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_0.sdk")
+		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_1.sdk")
 		c.Check(found, check.Equals, true)
-		metadir := filepath.Join(sdk.SdkCurrentPath(sdkname), "meta")
-		err = fs.MkdirAll(metadir, 755)
-		c.Check(err, check.IsNil)
 
+		// Install meta.
+		metadir := filepath.Join(sdk.SdkRootPath(sdkname), "1", "meta")
+		err = fs.MkdirAll(metadir, 0755)
+		c.Check(err, check.IsNil)
+		err = fs.Symlink(filepath.Join(sdk.SdkRootPath(sdkname), "1"), filepath.Join(sdk.SdkRootPath(sdkname), "current"))
+		c.Check(err, check.IsNil)
 		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
 		c.Check(err, check.IsNil)
 		defer file.Close()
-
 		syaml, exists := sdks[sdkname]
 		c.Check(exists, check.Equals, true)
 		_, err = file.Write([]byte(syaml))
 		c.Check(err, check.IsNil)
 
+		// Install hooks.
 		hooksdir := sdk.SdkHooksDir(sdkname)
 		err = fs.MkdirAll(hooksdir, 0755)
 		c.Check(err, check.IsNil)
-
 		for _, hook := range []string{"setup-base", "save-state", "restore-state"} {
 			setuphook, err := fs.OpenFile(sdk.SdkHookPath(sdkname, hook), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
 			c.Check(err, check.IsNil)
 			defer setuphook.Close()
 		}
+
 		return workshop.ExecContext{WaitExecution: func(ctx context.Context) error { return nil }}, nil
 	}
 	return func() { s.b.ExecCallback = nil }

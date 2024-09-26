@@ -11,6 +11,7 @@ import (
 type WorkshopFs interface {
 	afero.Fs
 	Symlink(old, new string) error
+	ReadLink(p string) (string, error)
 	Close()
 }
 
@@ -35,6 +36,10 @@ func (w *InstanceFs) Symlink(source, target string) error {
 		return os.ErrExist
 	}
 	return w.client.Symlink(source, target)
+}
+
+func (w *InstanceFs) ReadLink(p string) (string, error) {
+	return w.client.ReadLink(p)
 }
 
 func (w *InstanceFs) Close() {

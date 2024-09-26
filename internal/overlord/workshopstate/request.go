@@ -13,7 +13,6 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -53,7 +52,7 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 	return projects[username][idx], nil
 }
 
-func maybeScratch(ctx context.Context, pid, wp string) (bool, error) {
+func maybeHack(ctx context.Context, pid, wp string) (bool, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return false, fmt.Errorf("context key user not found")
@@ -63,10 +62,10 @@ func maybeScratch(ctx context.Context, pid, wp string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	scratchdir := sdk.WorkshopScratchSdkDir(usr.HomeDir, pid, wp)
+	hackdir := sdk.WorkshopHackSdkDir(usr.HomeDir, pid, wp)
 
-	_, err = os.Stat(scratchdir)
-	// no scratch SDK exists for the workshop and it is not an error.
+	_, err = os.Stat(hackdir)
+	// no hack SDK exists for the workshop and it is not an error.
 	if osutil.IsDirNotExist(err) {
 		return false, nil
 	}
@@ -106,13 +105,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		sets := []sdk.Setup{}
 		for _, s := range sdks {
 			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
-		}
-		found, err := maybeScratch(ctx, projectId, name)
-		if err != nil {
-			return nil, err
-		}
-		if found {
-			sets = append(sets, sdk.Setup{Name: sdk.Scratch, Revision: -1})
 		}
 
 		tasks := launch(w.state, file, sets, project)
@@ -265,8 +257,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *wor
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(ctx context.Context,
-	names []string, projectId string, refreshMode conflict.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -286,8 +277,8 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	files := make([]*workshop.File, 0)
-	installed, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
+	var files []*workshop.File
+	var installed, toinstall [][]sdk.Setup
 	for _, ws := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
 		if idx == -1 {
@@ -303,33 +294,100 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		newContent := []sdk.Setup{}
+		var newContent []sdk.Setup
 		for _, s := range res {
 			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
-		found, err := maybeScratch(ctx, projectId, ws)
+		found, err := maybeHack(ctx, projectId, ws)
 		if err != nil {
 			return nil, err
 		}
 		if found {
-			newContent = append(newContent, sdk.Setup{Name: sdk.Scratch, Revision: -1})
+			newContent = append(newContent, sdk.Setup{Name: sdk.Hack, Revision: sdk.Revision{N: -1}})
 		}
 
-		toInstall = append(toInstall, newContent)
+		toinstall = append(toinstall, newContent)
 		installed = append(installed, maps.Values(workshops[idx].Content))
 	}
 
-	taskset, err := refreshMany(w.state, files, installed, toInstall, project)
+	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, project)
 	if err != nil {
 		return nil, err
 	}
+	return fullrefresh, nil
+}
 
-	change := w.state.Change(opChangeId)
-	var setup conflict.RefreshSetup
-	setup.Mode = refreshMode.String()
-	change.Set("refresh-setup", setup)
+func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
+	var taskset []*state.TaskSet
+	wp, err := w.Workshop(ctx, wpn, pid)
+	if err != nil {
+		return nil, err
+	}
+	ts, err := w.refreshLocalSdk(wp, sdkn)
+	if err != nil {
+		return nil, err
+	}
+	taskset = append(taskset, ts)
 	return taskset, nil
+}
+
+func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*state.TaskSet, error) {
+	st := w.state
+	cur, installed := wp.Content[sdkn]
+	setup := sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: cur.Revision.N - 1}}
+
+	ts := state.NewTaskSet()
+
+	if installed {
+		createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
+		ts.AddTask(createStateStorage)
+
+		saveStateHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SaveState)
+		saveStateHook.WaitFor(createStateStorage)
+
+		disconnect := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, setup.Name))
+		disconnect.Set("sdk", setup.Name)
+		disconnect.WaitFor(saveStateHook)
+		ts.AddTask(saveStateHook)
+		ts.AddTask(disconnect)
+	}
+
+	install := sdkstate.InstallLocalSdk(st, setup)
+	install.WaitAll(ts)
+	ts.AddAll(install)
+
+	setupHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SetupBase)
+	setupHook.WaitAll(install)
+	ts.AddTask(setupHook)
+
+	autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
+	autoconnect.Set("sdk", setup.Name)
+	autoconnect.WaitFor(setupHook)
+	ts.AddTask(autoconnect)
+
+	if installed {
+		restoreState := hookstate.Hook(st, wp.Name, setup.Name, hookstate.RestoreState)
+		restoreState.WaitFor(autoconnect)
+		ts.AddTask(restoreState)
+	}
+
+	checkHealth := hookstate.Hook(st, wp.Name, setup.Name, hookstate.CheckHealth)
+	checkHealth.WaitAll(ts)
+	ts.AddTask(checkHealth)
+
+	if installed {
+		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+		removeStateStorage.WaitFor(checkHealth)
+		ts.AddTask(removeStateStorage)
+	}
+
+	for _, task := range ts.Tasks() {
+		task.Set("workshop", wp.Name)
+		task.Set("project", wp.Project)
+	}
+
+	return ts, nil
 }
 
 func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,

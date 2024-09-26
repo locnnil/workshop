@@ -26,7 +26,7 @@ func InstallLocalSdk(st *state.State, setup sdk.Setup) *state.TaskSet {
 }
 
 func InstallSystemSdk(st *state.State) *state.TaskSet {
-	return InstallLocalSdk(st, sdk.Setup{Name: sdk.System.String()})
+	return InstallLocalSdk(st, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}})
 }
 
 func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {

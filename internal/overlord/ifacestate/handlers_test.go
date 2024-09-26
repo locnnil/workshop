@@ -42,7 +42,7 @@ base: ubuntu@22.04
 slots:
   slot:
     interface: mock-network`
-var psetup = sdk.Setup{Name: "producer", Channel: "latest/stable"}
+var psetup = sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 
 var consumer = `name: consumer
 base: ubuntu@22.04
@@ -92,8 +92,8 @@ plugs:
     workshop-target: /home/workshop  
 `
 
-var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable"}
-var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable"}
+var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
+var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 
 var consumerNoPlugs = `name: consumer
 base: ubuntu@22.04

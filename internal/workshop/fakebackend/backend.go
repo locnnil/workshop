@@ -29,7 +29,7 @@ type FakeWorkshop struct {
 	*workshop.Workshop
 	Config             map[string]string
 	Devices            map[string]map[string]string
-	WorkshopFilesystem workshop.WorkshopFs
+	WorkshopFilesystem *FakeInstanceFs
 }
 
 type ExecCall struct {
@@ -422,7 +422,7 @@ type FakeInstanceFs struct {
 	afero.Fs
 }
 
-func NewWorkshopFs(baseDir string) (workshop.WorkshopFs, error) {
+func NewWorkshopFs(baseDir string) (*FakeInstanceFs, error) {
 	var fs FakeInstanceFs
 	osfs := afero.NewOsFs()
 	rndstring := randutil.RandomString(10)
@@ -437,6 +437,10 @@ func NewWorkshopFs(baseDir string) (workshop.WorkshopFs, error) {
 
 func (w *FakeInstanceFs) Symlink(source, target string) error {
 	return w.Fs.(*afero.BasePathFs).SymlinkIfPossible(source, target)
+}
+
+func (w *FakeInstanceFs) ReadLink(p string) (string, error) {
+	return w.Fs.(*afero.BasePathFs).ReadlinkIfPossible(p)
 }
 
 func (w *FakeInstanceFs) Close() {

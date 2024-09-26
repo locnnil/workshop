@@ -102,19 +102,19 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 		return err
 	}
 
-	if sdkSetup.Name == sdk.System.String() {
-		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Rev(), system.SystemSdkFs())
-	}
-
-	if sdkSetup.Name == sdk.Scratch {
+	switch sdkSetup.Name {
+	case sdk.System.String():
+		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
+	case sdk.Hack:
 		usr, err := workshop.LookupUsername(user)
 		if err != nil {
 			return err
 		}
-		scratchdir := sdk.WorkshopScratchSdkDir(usr.HomeDir, project.ProjectId, w)
-		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Rev(), os.DirFS(scratchdir))
+		hackdir := sdk.WorkshopHackSdkDir(usr.HomeDir, project.ProjectId, w)
+		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(hackdir))
+	default:
+		return fmt.Errorf("unknown type of the local SDK")
 	}
-	return fmt.Errorf("unknown type of the local SDK")
 }
 
 func (m *SdkManager) undoInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -137,7 +137,7 @@ func (m *SdkManager) undoInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	defer wfs.Close()
 
-	sdkdir := filepath.Join(sdk.SdkRootPath(sdkSetup.Name), sdkSetup.Rev())
+	sdkdir := filepath.Join(sdk.SdkRootPath(sdkSetup.Name), sdkSetup.Revision.String())
 	return wfs.RemoveAll(sdkdir)
 }
 
@@ -169,22 +169,20 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
-	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
+	sdkmnt := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
+	if err = m.backend.AddWorkshopMount(ctx, w, sdkmnt); err != nil {
 		return err
 	}
-
-	cleanup := func() {
+	umount := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
+		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkmnt.Name); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkmnt.Name, w, err)
 		}
 	}
-
-	defer cleanup()
+	defer umount()
 
 	// example: /var/lib/workshop/sdk/cuda/712/
-	sdkdir := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Rev())
+	sdkdir := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
 
 	// create a memory out/err to log the hook output into the task's log
 	var out bytes.Buffer

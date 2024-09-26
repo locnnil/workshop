@@ -69,8 +69,8 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, setup sdk.Setup, yaml string) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, setup.Name, setup.Revision.String(), "meta")
 	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
 	metaPath := filepath.Join(sdkPath, "sdk.yaml")
 	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
@@ -104,16 +104,16 @@ slots:
     interface: mount
     attr: slot-value
 `
-	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "0", "meta"), 0755), check.IsNil)
-	s.writeSDKMetaFile(c, wsfs, sdk.System.String(), systemYaml)
+	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "x1", "meta"), 0755), check.IsNil)
+	s.writeSDKMetaFile(c, wsfs, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}, systemYaml)
 	for sdk, yaml := range sdkYamls {
-		s.writeSDKMetaFile(c, wsfs, sdk.Name, yaml)
+		s.writeSDKMetaFile(c, wsfs, sdk, yaml)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
 	c.Assert(err, check.IsNil)
 
-	err = w.LinkSdk(ctx, sdk.Setup{Name: sdk.System.String()})
+	err = w.LinkSdk(ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}})
 	c.Assert(err, check.IsNil)
 
 	for s := range sdkYamls {
@@ -136,7 +136,7 @@ plugs:
 `
 
 	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
+		{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}: consumerYaml,
 	})
 
 	s.state.Lock()

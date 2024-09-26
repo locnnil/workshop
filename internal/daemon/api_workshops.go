@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -99,7 +100,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sdk.Name,
 			Channel:     sdk.Channel,
-			Revision:    sdk.Rev(),
+			Revision:    sdk.Revision.String(),
 			InstallTime: sdk.InstallTime,
 			Health:      healthInfo,
 			Mounts:      sdkMounts,
@@ -224,6 +225,57 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	return SyncResponse(infoLst, http.StatusOK)
 }
 
+func maybePartialRefresh(names []string) (wp string, sk string, partial bool) {
+	if len(names) != 1 {
+		return "", "", false
+	}
+
+	parts := strings.FieldsFunc(names[0], func(r rune) bool { return r == '/' })
+	if len(parts) == 2 {
+		return parts[0], parts[1], true
+	}
+	return "", "", false
+}
+
+func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+	var refreshMode conflict.RefreshMode
+	var change *state.Change
+	var taskset []*state.TaskSet
+
+	refreshMode, err := conflict.ParseRefreshMode(reqData.Options.Mode)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot refresh: %v", err)
+	}
+
+	if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
+		return nil, nil, fmt.Errorf("wait-on-error is not supported for multiple workshops")
+	}
+
+	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
+		if wp, sk, ok := maybePartialRefresh(reqData.Names); ok {
+			change = newWorkshopChange(st, "refresh", user, pid, reqData)
+			if sk != sdk.Hack {
+				return change, taskset, fmt.Errorf(`partial refresh is supported only for "hack" SDK`)
+			}
+			taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
+		} else {
+			change = newWorkshopChange(st, "refresh", user, pid, reqData)
+			taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
+		}
+		var setup conflict.RefreshSetup
+		setup.Mode = refreshMode.String()
+		change.Set("refresh-setup", setup)
+	}
+
+	if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
+		change, err = conflict.ResumeRefresh(st, reqData.Names[0], pid, refreshMode)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return change, taskset, nil
+}
+
 func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	st := c.d.overlord.State()
@@ -257,27 +309,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		change = newWorkshopChange(st, "launch", user, projectId, &reqData)
 		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "refresh":
-		var refreshMode conflict.RefreshMode
-		refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
-		if err != nil {
-			return statusBadRequest("cannot refresh: %v", err)
-		}
-
-		if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
-			return statusBadRequest("wait-on-error is not supported for multiple workshops")
-		}
-
-		if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
-			change = newWorkshopChange(st, "refresh", user, projectId, &reqData)
-			taskset, err = wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
-		}
-
-		if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
-			change, err = conflict.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
-			if err != nil {
-				return statusBadRequest(err.Error())
-			}
-		}
+		change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
 	case "start":
 		change = newWorkshopChange(st, "start", user, projectId, &reqData)
 		taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
@@ -294,7 +326,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	for _, tset := range taskset {
 		change.AddAll(tset)
 	}
-	if len(change.Tasks()) == 0 {
+	if change != nil && len(change.Tasks()) == 0 {
 		change.SetStatus(state.DoneStatus)
 	}
 
