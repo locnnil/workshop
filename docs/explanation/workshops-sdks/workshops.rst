@@ -200,14 +200,14 @@ pointing to :samp:`tensorflow:datasets` in the second line.
 
 .. _exp_workshop_def_connections:
 
-Slots and connections
----------------------
+Defining slots, plugs, connections
+----------------------------------
 
-You can declare additional connections and slots in the workshop definition,
+You can declare slots, plugs and connections right in the workshop definition,
 subject to the usual :ref:`validation rules <exp_interfaces_validation>`.
 This reduces the need to run manual commands after starting the workshop.
 
-For example, this creates an additional SDK slot and two connections:
+For example, this creates an additional SDK slot, a plug and two connections:
 
 .. code-block:: yaml
    :caption: .workshop.go-tunnel.yaml
@@ -223,21 +223,33 @@ For example, this creates an additional SDK slot and two connections:
 
      go:
        channel: latest/candidate
+       plugs:
+       dot-files:
+          interface: mount
+          workshop-target: /home/workshop/dotfiles
+
      dev-tunnel:
        channel: latest/edge
 
    connections:
      - plug: go:images
        slot: system:training
-     - plug: go:gpu
-       slot: system:gpu
+     - plug: go:dot-files
+       slot: dev-tunnel:config
 
 
-The custom :samp:`system:training` slot is no different from pre-existing slots;
-it's a :ref:`mount interface <exp_mount_interface>` slot,
-so its source points to a directory on the host file system.
-Finally, the connections established this way
-are no different from those created via the command line.
+Here, the :samp:`go:dot-files` plug
+is a :ref:`mount interface <exp_mount_interface>` slot
+that sets its :samp:`workshop-source` to a directory in the workshop;
+at run-time, it is plugged to the :samp:`dev-tunnel:config` slot.
+
+The :samp:`system:training` slot is no different from other slots;
+it's a :ref:`mount interface <exp_mount_interface>` slot
+with no :samp:`workshop-source` set,
+so its source points to a directory on the *host* file system.
+
+Note that both connections established here
+are also no different from those created via the command line.
 
 
 See also

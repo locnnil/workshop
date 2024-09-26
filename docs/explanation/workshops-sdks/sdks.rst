@@ -123,7 +123,7 @@ to connect to a slot of a certain interface type.
 In our :ref:`definition example <exp_sdk_definition>`,
 it's the *mount interface* mentioned above.
 
-Also, you can define custom SDK slots in the :ref:`workshop definition
+Also, you can define SDK slots and plugs in the :ref:`workshop definition
 <exp_workshop_def_connections>`.
 
 You can think of the plug as the recipient of the resources exposed by the slot;
