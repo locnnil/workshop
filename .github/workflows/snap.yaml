@@ -3,7 +3,19 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, noble, X64, large]
+    strategy:
+      matrix:
+        runner:
+          - arch: ARM64
+            size: medium
+          - arch: X64
+            size: large
+    runs-on:
+      - self-hosted
+      - Linux
+      - noble
+      - ${{ matrix.runner.arch }}
+      - ${{ matrix.runner.size }}
     steps:
       - uses: actions/checkout@v4
 
