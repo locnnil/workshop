@@ -3,9 +3,21 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner:
+          - arch: ARM64
+            size: medium
+          - arch: X64
+            size: large
+    runs-on:
+      - self-hosted
+      - Linux
+      - noble
+      - ${{ matrix.runner.arch }}
+      - ${{ matrix.runner.size }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: canonical/action-build@v1
         id: snapcraft
