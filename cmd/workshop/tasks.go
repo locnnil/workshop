@@ -13,7 +13,7 @@ import (
 )
 
 type CmdTasks struct {
-	clientMixin
+	root *CmdRoot
 }
 
 func (c *CmdTasks) Command() *cobra.Command {
@@ -39,8 +39,7 @@ Notes:
 
 - To investigate recent changes in a project, use 'workshop changes' instead
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -49,22 +48,12 @@ Notes:
 const line = "......................................................................"
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
-	var clientOpts client.ChangesOptions
-	var err error
-
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
-	}
-	c.setClient(cli)
-
-	if cmd.Parent().Flag("project").Changed {
-		clientOpts.ProjectPath = cmd.Parent().Flag("project").Value.String()
+		return err
 	}
 
-	clientOpts.Selector = client.ChangesAll
-
-	change, err := c.cli.Change(av[0])
+	change, err := cli.Change(av[0])
 	if err != nil {
 		return err
 	}

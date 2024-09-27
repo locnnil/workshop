@@ -22,7 +22,7 @@ func (m *remountSuite) SetUpTest(c *check.C) {
 }
 
 func (m *remountSuite) TestRemountSuccess(c *check.C) {
-	cmd := &CmdRemount{}
+	cmd := &CmdRemount{root: &CmdRoot{}}
 	body := map[string]interface{}{
 		"action": "remount",
 		"plug": map[string]interface{}{
@@ -62,7 +62,7 @@ func (m *remountSuite) TestRemountSuccess(c *check.C) {
 }
 
 func (m *remountSuite) TestRemountBrokenReference(c *check.C) {
-	cmd := &CmdRemount{}
+	cmd := &CmdRemount{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"ws:sdk:plug", "/new/source"})
 	c.Assert(err, check.ErrorMatches, `unknown plug or slot reference "ws:sdk:plug"`)
 }

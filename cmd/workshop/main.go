@@ -12,23 +12,65 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 )
 
-type clientMixin struct {
-	cli *client.Client
+type CmdRoot struct {
+	cli     *client.Client
+	project string
 }
 
-func (ch *clientMixin) setClient(cli *client.Client) {
-	ch.cli = cli
+func (c *CmdRoot) Command(cwd string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "workshop",
+		// Avoid printing errors twice
+		SilenceErrors:    true,
+		SilenceUsage:     true,
+		TraverseChildren: true,
+
+		PersistentPostRun: c.postRun,
+	}
+
+	cmd.AddCommand((&CmdLaunch{root: c}).Command())
+	cmd.AddCommand((&CmdList{root: c}).Command())
+	cmd.AddCommand((&CmdChanges{root: c}).Command())
+	cmd.AddCommand((&CmdTasks{root: c}).Command())
+	cmd.AddCommand((&CmdRefresh{root: c}).Command())
+	cmd.AddCommand((&CmdStart{root: c}).Command())
+	cmd.AddCommand((&CmdStop{root: c}).Command())
+	cmd.AddCommand((&CmdInfo{root: c}).Command())
+	cmd.AddCommand((&CmdExec{root: c}).Command())
+	cmd.AddCommand((&CmdShellAlias{execCommand: &CmdExec{root: c}}).Command())
+	cmd.AddCommand((&CmdRemove{root: c}).Command())
+	cmd.AddCommand((&CmdRemount{root: c}).Command())
+	cmd.AddCommand((&CmdConnections{root: c}).Command())
+	cmd.AddCommand((&CmdConnect{root: c}).Command())
+	cmd.AddCommand((&CmdDisconnect{root: c}).Command())
+	cmd.AddCommand((&CmdWarnings{root: c}).Command())
+	cmd.AddCommand((&CmdOkay{root: c}).Command())
+
+	cmd.PersistentFlags().StringVarP(&c.project, "project", "p", cwd, "Specify the project's directory path.")
+	cmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
+
+	return cmd
 }
 
-func (ch *clientMixin) client() *client.Client {
-	return ch.cli
+func (c *CmdRoot) client() (*client.Client, error) {
+	if c.cli != nil {
+		return c.cli, nil
+	}
+
+	cli, err := client.New(&ClientConfig)
+	if err == nil {
+		c.cli = cli
+	} else {
+		err = fmt.Errorf("cannot create client: %v", err)
+	}
+
+	return cli, err
 }
 
-var rootCmd = &cobra.Command{
-	Use:              "workshop",
-	SilenceErrors:    false,
-	SilenceUsage:     true,
-	TraverseChildren: true,
+func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
+	if c.cli != nil {
+		maybePresentWarnings(c.cli.WarningsSummary())
+	}
 }
 
 var (
@@ -37,20 +79,11 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 )
-var Project string
 
 // ClientConfig is the configuration of the Client used by all commands.
 var ClientConfig = client.Config{
 	// we need the powerful socket
 	Socket: dirs.SocketPath,
-}
-
-func postRunWarnings(c *clientMixin) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		if c.client() != nil {
-			maybePresentWarnings(c.client().WarningsSummary())
-		}
-	}
 }
 
 func main() {
@@ -65,28 +98,7 @@ func main() {
 
 	logger.SetLogger(l)
 
-	rootCmd.PersistentFlags().StringVarP(&Project, "project", "p", cwd, "Specify the project's directory path.")
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
-
-	rootCmd.AddCommand((&CmdLaunch{}).Command())
-	rootCmd.AddCommand((&CmdList{}).Command())
-	rootCmd.AddCommand((&CmdChanges{}).Command())
-	rootCmd.AddCommand((&CmdTasks{}).Command())
-	rootCmd.AddCommand((&CmdRefresh{}).Command())
-	rootCmd.AddCommand((&CmdStart{}).Command())
-	rootCmd.AddCommand((&CmdStop{}).Command())
-	rootCmd.AddCommand((&CmdInfo{}).Command())
-	rootCmd.AddCommand((&CmdExec{}).Command())
-	rootCmd.AddCommand((&CmdShellAlias{}).Command())
-	rootCmd.AddCommand((&CmdRemove{}).Command())
-	rootCmd.AddCommand((&CmdRemount{}).Command())
-	rootCmd.AddCommand((&CmdConnections{}).Command())
-	rootCmd.AddCommand((&CmdConnect{}).Command())
-	rootCmd.AddCommand((&CmdDisconnect{}).Command())
-	rootCmd.AddCommand((&CmdWarnings{}).Command())
-	rootCmd.AddCommand((&CmdOkay{}).Command())
-
-	rootCmd.SilenceErrors = true
+	rootCmd := (&CmdRoot{}).Command(cwd)
 
 	if err = rootCmd.Execute(); err != nil {
 		fmt.Fprintf(Stderr, "error: %v\n", err)

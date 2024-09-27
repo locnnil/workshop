@@ -15,6 +15,7 @@ import (
 
 type CmdInfo struct {
 	waitMixin
+	root *CmdRoot
 }
 
 func (c *CmdInfo) Command() *cobra.Command {
@@ -40,8 +41,7 @@ Notes:
 - Avoid assumptions based on SDK channels: 'latest/stable' may be neither
 `,
 
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	return cmd
@@ -66,21 +66,17 @@ func shortenDefaulPath(source string) string {
 }
 
 func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
-	cli, err := client.New(&ClientConfig)
-	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
-	}
-
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	cli, err := c.root.client()
 	if err != nil {
 		return err
 	}
 
-	workshop, err := c.cli.Workshop(project.Id, av[0])
+	project, err := cli.Project(c.root.project)
+	if err != nil {
+		return err
+	}
+
+	workshop, err := cli.Workshop(project.Id, av[0])
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":
 var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}]}`
 
 func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
-	cmd := &CmdList{}
+	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -69,7 +69,7 @@ func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
 }
 
 func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
-	cmd := &CmdList{}
+	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -105,7 +105,7 @@ func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
 }
 
 func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
-	cmd := &CmdList{}
+	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++

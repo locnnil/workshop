@@ -13,8 +13,8 @@ import (
 )
 
 type CmdConnections struct {
-	clientMixin
-	all bool
+	root *CmdRoot
+	all  bool
 }
 
 func (c *CmdConnections) Command() *cobra.Command {
@@ -36,8 +36,7 @@ Notes:
 - The '--all' option needn't be used with an argument;
   if a workshop is supplied, disconnected plugs are also listed
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.Flags().BoolVar(&c.all, "all", false, "Include disconnected plugs in the output.")
@@ -130,16 +129,12 @@ func maybeBound(plug client.PlugRef, plugs []client.Plug) string {
 }
 
 func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
@@ -155,7 +150,7 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		c.all = true
 	}
 
-	connections, err := c.cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, Workshop: workshop, All: c.all})
+	connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, Workshop: workshop, All: c.all})
 	if err != nil {
 		return err
 	}

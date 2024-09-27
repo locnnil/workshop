@@ -11,6 +11,7 @@ import (
 
 type CmdConnect struct {
 	waitMixin
+	root *CmdRoot
 }
 
 func (c *CmdConnect) Command() *cobra.Command {
@@ -46,8 +47,7 @@ that is specified as the second argument or deduced from the context.
 
 - The 'workshop connections' output will list the connection as 'manual'
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -58,16 +58,12 @@ that is specified as the second argument or deduced from the context.
 }
 
 func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
@@ -114,13 +110,13 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot connect plugs and slots across different workshops")
 	}
 
-	changeId, err := c.cli.Connect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
+	changeId, err := cli.Connect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
 		slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name, nil)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}

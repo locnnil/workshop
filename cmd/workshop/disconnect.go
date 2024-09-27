@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -11,6 +10,7 @@ import (
 
 type CmdDisconnect struct {
 	waitMixin
+	root   *CmdRoot
 	forget bool
 }
 
@@ -39,8 +39,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   it is reconnected during 'workshop refresh'
   only if the '--forget' option was used with 'workshop disconnect'
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
@@ -55,16 +54,12 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
 }
 
 func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
@@ -92,13 +87,13 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	var opts = client.DisconnectOptions{Forget: c.forget}
-	changeId, err := c.cli.Disconnect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
+	changeId, err := cli.Disconnect(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name,
 		slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name, &opts)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}

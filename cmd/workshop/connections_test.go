@@ -71,7 +71,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnected(c *check.C) {
 		}
 	})
 
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{})
 
 	c.Check(err, check.IsNil)
@@ -118,7 +118,7 @@ func (s *connectionsSuite) TestConnectionsNotInstalled(c *C) {
 			fmt.Fprintln(w, `{"type": "error", "result": {"message": "not found"}, "status-code": 404}`)
 		}
 	})
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"foo"})
 	c.Check(err, ErrorMatches, `not found`)
 	c.Assert(s.Stdout(), Equals, "")
@@ -164,7 +164,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *C) {
 		}
 	})
 
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	command := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(command, []string{})
@@ -217,7 +217,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *C) {
 			})
 		}
 	})
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"foo"})
 	c.Check(err, IsNil)
 	c.Assert(s.Stdout(), check.Equals, "")
@@ -365,7 +365,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 			})
 		}
 	})
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{})
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
@@ -504,7 +504,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 			})
 		}
 	})
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{})
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
@@ -640,7 +640,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 		}
 	})
 
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
@@ -771,7 +771,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 		}
 	})
 
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
@@ -842,7 +842,7 @@ func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *C) {
 		}
 	})
 
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"leds-provider"})
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
@@ -887,7 +887,7 @@ func (s *connectionsSuite) TestConnectionsFiltering(c *C) {
 		"select":     []string{"all"},
 		"workshop":   []string{"mouse-buttons"},
 	}
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 
 	err := cmd.Run(cmd.Command(), []string{"mouse-buttons"})
 	c.Assert(err, IsNil)
@@ -1119,7 +1119,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 			})
 		}
 	})
-	cmd := &CmdConnections{}
+	cmd := &CmdConnections{root: &CmdRoot{}}
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
