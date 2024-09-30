@@ -17,21 +17,22 @@
    Contribution <contributing>
 
 
-**A tool for defining ephemeral developer environments and iterating on them**.
+**A tool for defining and handling ephemeral development environments**.
 
-**It creates your environments from YAML and automatically manages them**.
-The key components of an environment are SDKs—
-independent but connectable pieces of functionality
+**List your dependencies and components in YAML to define an environment**.
+The key pieces of a definition are SDKs,
+independent but connectable units of functionality
 created by software publishers and available on the SDK Store.
-|project_markup| encourages experimentation with your project's structure,
-reducing the need to battle with your tooling and dependencies every day.
+|project_markup| simplifies experiments with your environment layout.
 
 **It allows you to focus on adding value to your project**.
-With |project_markup|, you can launch and update a setup
-that previously took hours to configure in a few commands.
+With |project_markup|, you can launch a setup
+that previously took hours to configure in a few commands
+and be sure that it stays operational.
 It assists in issue reproduction,
-preserves context in discussions or reviews
-and organises project iterations into manageable chunks.
+enables hands-on code reviews
+and turns environment updates into manageable transactions,
+reducing the need to battle with your tooling every day.
 
 **For those who build and maintain complex, error-prone workspaces**.
 AI/ML, robotics, IoT, EdTech and similar domains
