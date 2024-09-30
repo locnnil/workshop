@@ -38,6 +38,19 @@ execute: |
   workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path"
   workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$otherfs_path"
 
+  echo "Remount: old source removed"
+  workshop_exec remount ws-remount/test-sdk-mount:two "${new_source}.1"
+  rmdir "${new_source}.1"
+  workshop_exec remount ws-remount/test-sdk-mount:two "${new_source}.2" | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  rmdir "${new_source}.2"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$new_source" | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
+  workshop_exec list | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
+  workshop_exec warnings | MATCH "\"${new_source}\\.1\" does not exist"
+  workshop_exec list | NOMATCH "new warning"
+  workshop_exec warnings | MATCH "\"${new_source}\\.2\" does not exist"
+  workshop_exec okay
+  workshop_exec warnings | MATCH '^No further warnings.$'
+
   echo "Remount: workshop remove does not delete remounted dirs"
   workshop_exec remove ws-remount
   test -d "/home/ubuntu/one"
