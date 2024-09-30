@@ -40,8 +40,8 @@ var _ = check.Suite(&warningSuite{})
 
 func (m *warningSuite) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
-	m.cmdW = &CmdWarnings{}
-	m.cmdO = &CmdOkay{}
+	m.cmdW = &CmdWarnings{root: &CmdRoot{}}
+	m.cmdO = &CmdOkay{root: m.cmdW.root}
 
 	os.Setenv("WORKSHOPD_LAST_WARNING_TIMESTAMP_FILENAME", filepath.Join(c.MkDir(), "warnings.json"))
 }
@@ -222,7 +222,7 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 		}
 
 	})
-	cmdList := &CmdList{}
+	cmdList := &CmdList{root: &CmdRoot{}}
 	err := cmdList.runList()
 	c.Assert(err, check.IsNil)
 
@@ -231,7 +231,9 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 		// call it from tests and not have to do this (whole
 		// block) by hand
 
-		count, stamp := cmdList.cli.WarningsSummary()
+		cli, err := cmdList.root.client()
+		c.Assert(err, check.IsNil)
+		count, stamp := cli.WarningsSummary()
 		c.Check(count, check.Equals, 2)
 		c.Check(stamp, check.Equals, time.Date(2018, 9, 19, 12, 44, 19, 680362867, time.UTC))
 		maybePresentWarnings(count, stamp)

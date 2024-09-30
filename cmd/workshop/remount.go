@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -11,6 +10,7 @@ import (
 
 type CmdRemount struct {
 	waitMixin
+	root *CmdRoot
 }
 
 func (c *CmdRemount) Command() *cobra.Command {
@@ -43,8 +43,7 @@ Notes:
   aren't removed
 `,
 
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -67,26 +66,24 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
 
 	plugRef.ProjectId = project.Id
 
-	changeId, err := c.cli.Remount(plugRef, source)
+	changeId, err := cli.Remount(plugRef, source)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}

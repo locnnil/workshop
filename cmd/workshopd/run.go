@@ -37,9 +37,9 @@ The run command workshop and starts accepting clients requests
 `
 
 type sharedRunEnterOpts struct {
-	CreateDirs bool   `long:"create-dirs"`
-	HTTP       string `long:"http"`
-	Verbose    bool   `short:"v" long:"verbose"`
+	CreateDirs bool
+	HTTP       string
+	Verbose    bool
 }
 
 var sharedRunEnterOptsHelp = map[string]string{

@@ -41,14 +41,16 @@ import (
 )
 
 type CmdWarnings struct {
-	clientMixin
 	timeMixin
 	unicodeMixin
-	All     bool `long:"all"`
-	Verbose bool `long:"verbose"`
+	root    *CmdRoot
+	All     bool
+	Verbose bool
 }
 
-type CmdOkay struct{ clientMixin }
+type CmdOkay struct {
+	root *CmdRoot
+}
 
 func (c *CmdWarnings) Command() *cobra.Command {
 	var cmd = &cobra.Command{
@@ -151,13 +153,12 @@ func printDescr(w io.Writer, descr string, termWidth int) error {
 func (c *CmdWarnings) Run(cmd *cobra.Command, av []string) error {
 	now := time.Now()
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
-	c.setClient(cli)
 
-	warnings, err := c.cli.Warnings(client.WarningsOptions{All: c.All})
+	warnings, err := cli.Warnings(client.WarningsOptions{All: c.All})
 	if err != nil {
 		return err
 	}
@@ -208,19 +209,18 @@ func (c *CmdWarnings) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func (cmd *CmdOkay) Run(c *cobra.Command, av []string) error {
+func (c *CmdOkay) Run(cmd *cobra.Command, av []string) error {
 	last, err := lastWarningTimestamp()
 	if err != nil {
 		return err
 	}
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
-	cmd.setClient(cli)
 
-	return cmd.cli.Okay(last)
+	return cli.Okay(last)
 }
 
 const warnFileEnvKey = "WORKSHOPD_LAST_WARNING_TIMESTAMP_FILENAME"

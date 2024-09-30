@@ -22,7 +22,7 @@ func (m *disconnectSuite) SetUpTest(c *check.C) {
 }
 
 func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
-	cmd := &CmdDisconnect{}
+	cmd := &CmdDisconnect{root: &CmdRoot{}}
 	body := map[string]interface{}{
 		"action": "disconnect",
 		"plugs": []interface{}{
@@ -96,7 +96,7 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 }
 
 func (m *disconnectSuite) TestDisconnectPlugOrSlotProvided(c *check.C) {
-	cmd := &CmdDisconnect{}
+	cmd := &CmdDisconnect{root: &CmdRoot{}}
 
 	n := 0
 	body := map[string]interface{}{

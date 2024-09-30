@@ -25,7 +25,7 @@ func (m *WorkshopInfo) SetUpTest(c *check.C) {
 var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
-	cmd := &CmdInfo{}
+	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,7 @@ content:
 var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
-	cmd := &CmdInfo{}
+	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
 }]}}`
 
 func (m *WorkshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
-	cmd := &CmdInfo{}
+	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
 	user, err := user.Current()

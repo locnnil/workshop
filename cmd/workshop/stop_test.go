@@ -22,7 +22,7 @@ func (m *WorkshopStop) SetUpTest(c *check.C) {
 }
 
 func (m *WorkshopStop) TestStopSuccess(c *check.C) {
-	cmd := &CmdStop{}
+	cmd := &CmdStop{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++

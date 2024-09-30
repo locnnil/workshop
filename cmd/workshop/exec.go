@@ -31,14 +31,14 @@ import (
 )
 
 type CmdExec struct {
-	clientMixin
-	WorkingDir     string        `short:"w"`
-	Env            []string      `long:"env"`
-	UserId         int           `long:"uid"`
-	GroupId        int           `long:"gid"`
-	Timeout        time.Duration `long:"timeout"`
-	Interactive    bool          `short:"i"`
-	NonInteractive bool          `short:"I"`
+	root           *CmdRoot
+	WorkingDir     string
+	Env            []string
+	UserId         int
+	GroupId        int
+	Timeout        time.Duration
+	Interactive    bool
+	NonInteractive bool
 }
 
 type CmdShellAlias struct {
@@ -99,12 +99,11 @@ Notes:
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "exec <WORKSHOP>",
-		Args:    cobra.MinimumNArgs(1),
-		Short:   shortExecHelp,
-		Long:    longExecHelp,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		Use:   "exec <WORKSHOP>",
+		Args:  cobra.MinimumNArgs(1),
+		Short: shortExecHelp,
+		Long:  longExecHelp,
+		RunE:  c.Run,
 	}
 
 	cmd.Flags().SortFlags = false
@@ -128,29 +127,24 @@ func (c *CmdShellAlias) Command() *cobra.Command {
 		RunE:  c.Run,
 	}
 
-	c.execCommand = &CmdExec{}
-	c.execCommand.UserId = 0
-	c.execCommand.GroupId = 0
 	return cmd
 }
 
-func (cmd *CmdShellAlias) Run(c *cobra.Command, av []string) error {
-	return cmd.execCommand.Run(c, []string{av[0], "su", "-l", "workshop"})
+func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
+	return c.execCommand.Run(cmd, []string{av[0], "su", "-l", "workshop"})
 }
 
-func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
-	if cmd.Interactive && cmd.NonInteractive {
+func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
+	if c.Interactive && c.NonInteractive {
 		return errors.New("'-i' incompatible with '-I'")
 	}
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	cmd.setClient(cli)
-
-	project, err := cmd.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
@@ -165,7 +159,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 		env["TERM"] = term
 	}
 
-	for _, kv := range cmd.Env {
+	for _, kv := range c.Env {
 		parts := strings.SplitN(kv, "=", 2)
 		key := parts[0]
 		value := ""
@@ -180,9 +174,9 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	// Specify Interactive=true if -i is given, or if stdin and stdout are TTYs.
 	stdinIsTerminal := ptyutil.IsTerminal(unix.Stdin)
 	var interactive bool
-	if cmd.Interactive {
+	if c.Interactive {
 		interactive = true
-	} else if cmd.NonInteractive {
+	} else if c.NonInteractive {
 		interactive = false
 	} else {
 		interactive = stdinIsTerminal && stdoutIsTerminal
@@ -216,11 +210,11 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	opts := &client.ExecOptions{
 		Command:     command,
 		Environment: env,
-		WorkingDir:  cmd.WorkingDir,
-		UserId:      &cmd.UserId,
-		GroupId:     &cmd.GroupId,
+		WorkingDir:  c.WorkingDir,
+		UserId:      &c.UserId,
+		GroupId:     &c.GroupId,
 		Interactive: interactive,
-		Timeout:     cmd.Timeout,
+		Timeout:     c.Timeout,
 		Width:       width,
 		Height:      height,
 		Stdin:       Stdin,
@@ -229,7 +223,7 @@ func (cmd *CmdExec) Run(c *cobra.Command, av []string) error {
 	}
 
 	// Start the command.
-	process, err := cmd.cli.Exec(opts, av[0], project.Id)
+	process, err := cli.Exec(opts, av[0], project.Id)
 	if err != nil {
 		return err
 	}

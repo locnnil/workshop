@@ -5,12 +5,11 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
-
-	"github.com/canonical/workshop/client"
 )
 
 type CmdRefresh struct {
 	waitMixin
+	root        *CmdRoot
 	WaitOnError bool
 	Continue    bool
 	Abort       bool
@@ -59,8 +58,7 @@ Notes:
   set by 'workshop remount', if any
 `,
 
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
@@ -77,8 +75,6 @@ Notes:
 }
 
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
 	av = strutil.Deduplicate(av)
 
 	if c.Abort && c.Continue {
@@ -97,14 +93,12 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with multiple workshops")
 	}
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
@@ -120,12 +114,12 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		mode = "abort"
 	}
 
-	changeId, err := c.cli.Refresh(project.Id, av, mode)
+	changeId, err := cli.Refresh(project.Id, av, mode)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, c.Abort); err != nil {
+	if _, err := c.wait(cli, changeId, c.Abort); err != nil {
 		if err == errNoWait {
 			return nil
 		}

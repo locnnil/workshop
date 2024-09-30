@@ -28,7 +28,7 @@ import (
 var timeutilHuman = timeutil.Human
 
 type timeMixin struct {
-	AbsTime bool `long:"abs-time"`
+	AbsTime bool
 }
 
 func (mx timeMixin) fmtTime(t time.Time) string {

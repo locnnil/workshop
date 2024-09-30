@@ -22,7 +22,7 @@ func (m *connectSuite) SetUpTest(c *check.C) {
 }
 
 func (m *connectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
-	cmd := &CmdConnect{}
+	cmd := &CmdConnect{root: &CmdRoot{}}
 	body := map[string]interface{}{
 		"action": "connect",
 		"plugs": []interface{}{
@@ -120,7 +120,7 @@ func (m *connectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 }
 
 func (m *connectSuite) TestDisconnectSlotNotProvided(c *check.C) {
-	cmd := &CmdConnect{}
+	cmd := &CmdConnect{root: &CmdRoot{}}
 	body := map[string]interface{}{
 		"action": "connect",
 		"plugs": []interface{}{

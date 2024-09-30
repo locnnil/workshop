@@ -16,7 +16,7 @@ import (
 )
 
 type CmdList struct {
-	clientMixin
+	root   *CmdRoot
 	global bool
 }
 
@@ -45,8 +45,7 @@ Notes:
 
 - For details of a single workshop, use 'workshop info' instead
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system")
@@ -63,22 +62,18 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 }
 
 func (c *CmdList) runList() error {
-	var err error
-
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
-
 	if !c.global {
-		project, err := c.cli.Project(Project)
+		project, err := cli.Project(c.root.project)
 		if err != nil {
 			return err
 		}
 
-		workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
+		workshops, err := cli.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
@@ -93,7 +88,7 @@ func (c *CmdList) runList() error {
 	} else {
 		w := tabWriter()
 
-		projects, err := c.cli.Projects()
+		projects, err := cli.Projects()
 		slices.SortFunc(projects, func(a, b *client.Project) int { return cmp.Compare(a.Path, b.Path) })
 
 		if err != nil {
@@ -104,7 +99,7 @@ func (c *CmdList) runList() error {
 			fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
 		}
 		for _, i := range projects {
-			workshops, err := c.cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
+			workshops, err := cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
 			if err != nil {
 				return err
 			}

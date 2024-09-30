@@ -22,7 +22,7 @@ func (m *WorkshopRemove) SetUpTest(c *check.C) {
 }
 
 func (m *WorkshopRemove) TestStartSuccess(c *check.C) {
-	cmd := &CmdRemove{}
+	cmd := &CmdRemove{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++

@@ -67,7 +67,7 @@ func (m *WorkshopRefresh) SetUpTest(c *check.C) {
 }
 
 func (m *WorkshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -97,7 +97,7 @@ func (m *WorkshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 }
 
 func (m *WorkshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -127,7 +127,7 @@ func (m *WorkshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 }
 
 func (m *WorkshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.WaitOnError = true
 
 	n := 0
@@ -161,7 +161,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 }
 
 func (m *WorkshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Abort = true
 
 	n := 0
@@ -195,7 +195,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) 
 }
 
 func (m *WorkshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Continue = true
 
 	n := 0
@@ -229,7 +229,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C
 }
 
 func (m *WorkshopRefresh) TestRefreshIncompatibleOptions(c *check.C) {
-	cmd := &CmdRefresh{}
+	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Abort = true
 	cmd.Continue = true
 

@@ -5,12 +5,11 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
-
-	"github.com/canonical/workshop/client"
 )
 
 type CmdStop struct {
 	waitMixin
+	root *CmdRoot
 }
 
 func (c *CmdStop) Command() *cobra.Command {
@@ -38,37 +37,33 @@ Notes:
 
 - To start a stopped workshop, use 'workshop start'
 `,
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	return cmd
 }
 
 func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
 	av = strutil.Deduplicate(av)
 
-	cli, err := client.New(&ClientConfig)
+	cli, err := c.root.client()
 	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
+		return err
 	}
 
-	c.setClient(cli)
 	c.skipAbort = true
 
-	project, err := c.cli.Project(Project)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
 
-	changeId, err := c.cli.Stop(project.Id, av)
+	changeId, err := cli.Stop(project.Id, av)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}

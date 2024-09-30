@@ -5,12 +5,11 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
-
-	"github.com/canonical/workshop/client"
 )
 
 type CmdLaunch struct {
 	waitMixin
+	root *CmdRoot
 }
 
 func (c *CmdLaunch) Command() *cobra.Command {
@@ -44,8 +43,7 @@ Notes:
 - SDKs are installed in alphabetical order
 `,
 
-		RunE:    c.Run,
-		PostRun: postRunWarnings(&c.clientMixin),
+		RunE: c.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -56,28 +54,24 @@ Notes:
 }
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
-	var err error
-
 	av = strutil.Deduplicate(av)
 
-	cli, err := client.New(&ClientConfig)
-	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
-	}
-
-	c.setClient(cli)
-
-	project, err := c.cli.Project(Project)
+	cli, err := c.root.client()
 	if err != nil {
 		return err
 	}
 
-	changeId, err := c.cli.Launch(project.Id, av)
+	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(changeId, false); err != nil {
+	changeId, err := cli.Launch(project.Id, av)
+	if err != nil {
+		return err
+	}
+
+	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}
