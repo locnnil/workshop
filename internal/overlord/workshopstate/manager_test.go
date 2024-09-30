@@ -119,6 +119,11 @@ func (s *managerSuite) TestWorkshopHealthMissingProject(c *check.C) {
 	c.Check(health.SdkHealth, check.HasLen, 0)
 	c.Check(health.Message, check.HasLen, 0)
 	c.Check(health.Code, check.Equals, "missing-project")
+
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	warning := fmt.Sprintf("%q project directory %q does not exist", workshop.Name, s.project.Path)
+	c.Check(warnings[0].String(), check.Equals, warning)
 }
 
 func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
@@ -126,13 +131,19 @@ func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
 	defer s.state.Unlock()
 
 	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
-	c.Assert(os.RemoveAll(filepath.Join(s.project.Path, ".workshop.test.yaml")), check.IsNil)
+	path := filepath.Join(s.project.Path, ".workshop.test.yaml")
+	c.Assert(os.RemoveAll(path), check.IsNil)
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
 	c.Check(health.SdkHealth, check.HasLen, 0)
 	c.Check(health.Message, check.HasLen, 0)
 	c.Check(health.Code, check.Equals, "missing-file")
+
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	warning := fmt.Sprintf("%q workshop definition %q does not exist", workshop.Name, path)
+	c.Check(warnings[0].String(), check.Equals, warning)
 }
 
 func (s *managerSuite) TestWorkshopHealthOperationInProgress(c *check.C) {

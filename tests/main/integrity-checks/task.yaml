@@ -1,6 +1,9 @@
 summary: Error states tracking and recovery for the .workshop.lock
 restore: |
   . "$TESTSLIB"/utils.sh
+
+  workshop_exec warnings
+  workshop_exec okay || true
   rm -rf ./new-project
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -13,6 +16,18 @@ execute: |
   rm -f "$PROJECT"/.workshop.lock
   workshop_exec --project "$PROJECT" list
   test -f "$PROJECT"/.workshop.lock
+
+  echo "Check for warnings if there is no workshop file"
+  mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
+  workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
+  # TODO: it might be better if the warning went away on its own
+  workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec warnings | 
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH '"ws" workshop definition ".*/project/.workshop.ws.yaml" does not exist'
+  workshop_exec --project "$PROJECT" list | NOMATCH 'new warning'
 
   echo "Check report a workshop state as Error if there is no workshop file"
   mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
