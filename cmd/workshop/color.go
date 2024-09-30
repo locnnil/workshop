@@ -43,7 +43,7 @@ func (mxd mixinDescs) also(m map[string]string) mixinDescs {
 }
 
 type unicodeMixin struct {
-	Unicode string `long:"unicode" default:"auto" choice:"auto" choice:"never" choice:"always"`
+	Unicode string
 }
 
 func (ux unicodeMixin) addUnicodeChars(esc *escapes) {
@@ -67,7 +67,7 @@ func (ux unicodeMixin) getEscapes() *escapes {
 }
 
 type colorMixin struct {
-	Color string `long:"color" default:"auto" choice:"auto" choice:"never" choice:"always"`
+	Color string
 	unicodeMixin
 }
 

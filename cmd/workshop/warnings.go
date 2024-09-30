@@ -44,8 +44,8 @@ type CmdWarnings struct {
 	clientMixin
 	timeMixin
 	unicodeMixin
-	All     bool `long:"all"`
-	Verbose bool `long:"verbose"`
+	All     bool
+	Verbose bool
 }
 
 type CmdOkay struct{ clientMixin }

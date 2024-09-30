@@ -41,7 +41,7 @@ var (
 
 type waitMixin struct {
 	clientMixin
-	NoWait    bool `long:"no-wait"`
+	NoWait    bool
 	skipAbort bool
 }
 

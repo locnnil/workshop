@@ -32,13 +32,13 @@ import (
 
 type CmdExec struct {
 	clientMixin
-	WorkingDir     string        `short:"w"`
-	Env            []string      `long:"env"`
-	UserId         int           `long:"uid"`
-	GroupId        int           `long:"gid"`
-	Timeout        time.Duration `long:"timeout"`
-	Interactive    bool          `short:"i"`
-	NonInteractive bool          `short:"I"`
+	WorkingDir     string
+	Env            []string
+	UserId         int
+	GroupId        int
+	Timeout        time.Duration
+	Interactive    bool
+	NonInteractive bool
 }
 
 type CmdShellAlias struct {
