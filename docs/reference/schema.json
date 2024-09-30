@@ -25,14 +25,32 @@
           "plugs": {
             "type": "object",
             "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "bind": {
-                  "type": "string"
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "bind": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "bind"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "interface": {
+                      "type": "string"
+                    },
+                    "workshop-target": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "interface"
+                  ]
                 }
-              },
-              "required": [
-                "bind"
               ]
             }
           },

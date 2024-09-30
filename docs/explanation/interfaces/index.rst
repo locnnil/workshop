@@ -71,6 +71,8 @@ The purpose of the system SDK isn't to add hooks or additional content;
 it's only there to expose host system resources to other SDKs consistently.
 As such, it can't be removed by the user
 and isn't listed in the :command:`workshop info` output.
+It's also the only SDK
+that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
 
 
 See also

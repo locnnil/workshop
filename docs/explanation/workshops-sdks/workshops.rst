@@ -189,9 +189,9 @@ along with the line number of the target plug:
 
    $ workshop connections digits
 
-     Interface  Plug                        Slot      Notes
-     mount      digits/pytorch:datasets     :mount    bind.2
-     mount      digits/tensorflow:datasets  :mount    bind.2
+     Interface  Plug                        Slot    Notes
+     mount      digits/pytorch:datasets     :mount  bind.2
+     mount      digits/tensorflow:datasets  :mount  bind.2
 
 
 Here, both plugs are listed as :samp:`bind.2`,
@@ -200,56 +200,57 @@ pointing to :samp:`tensorflow:datasets` in the second line.
 
 .. _exp_workshop_def_connections:
 
-Defining slots, plugs, connections
-----------------------------------
+Slots, plugs, connections
+-------------------------
 
-You can declare slots, plugs and connections right in the workshop definition,
+You can declare :ref:`slots or plugs <exp_plugs_slots>`
+and list connections in the workshop definition,
 subject to the usual :ref:`validation rules <exp_interfaces_validation>`.
 This reduces the need to run manual commands after starting the workshop.
 
-For example, this creates an additional SDK slot, a plug and two connections:
+This example adds a slot, a plug and two connections to its SDKs:
 
 .. code-block:: yaml
-   :caption: .workshop.go-tunnel.yaml
-   :emphasize-lines: 5-7, 14-18
+   :caption: .workshop.digits-cuda.yaml
+   :emphasize-lines: 5-8, 11-14, 17-21
 
    base: ubuntu@22.04
-   name: go-tunnel
+   name: digits-cuda
    sdks:
      system:
        slots:
-         training:
+         images:
            interface: mount
-
-     go:
-       channel: latest/candidate
+           workshop-source: /project/training-data/low-res
+     tensorflow:
+       channel: latest/stable
        plugs:
-       dot-files:
-          interface: mount
-          workshop-target: /home/workshop/dotfiles
-
-     dev-tunnel:
-       channel: latest/edge
-
+         cuda:
+           interface: mount
+           workshop-target: /usr/local/cuda/lib64
+     cuda:
+       channel: latest/stable
    connections:
-     - plug: go:images
-       slot: system:training
-     - plug: go:dot-files
-       slot: dev-tunnel:config
+     - plug: tensorflow:cuda
+       slot: cuda:libs
+     - plug: tensorflow:images
+       slot: system:images
 
 
-Here, the :samp:`go:dot-files` plug
-is a :ref:`mount interface <exp_mount_interface>` slot
-that sets its :samp:`workshop-source` to a directory in the workshop;
-at run-time, it is plugged to the :samp:`dev-tunnel:config` slot.
+Here, :samp:`system:images`
+is a :ref:`mount interface <exp_mount_interface>` slot,
+whose :samp:`workshop-source` attribute points to a directory in the workshop.
+At run-time, the :samp:`tensorflow:images` plug is connected to the slot
+to consume the data from it.
 
-The :samp:`system:training` slot is no different from other slots;
-it's a :ref:`mount interface <exp_mount_interface>` slot
-with no :samp:`workshop-source` set,
-so its source points to a directory on the *host* file system.
+In turn, :samp:`tensorflow:cuda`
+is a :ref:`mount interface <exp_mount_interface>` plug
+that sets its :samp:`workshop-target` to a directory in the workshop.
+At run-time, the plug is connected to the :samp:`cuda:libs` slot,
+so the libraries exposed by the slot are available at the plug's target path.
 
-Note that both connections established here
-are also no different from those created via the command line.
+Also, both connections established here
+are no different from those created via the command line.
 
 
 See also

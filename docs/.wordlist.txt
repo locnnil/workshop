@@ -4,6 +4,7 @@ APIs
 balancer
 Charmhub
 CLI
+cuda
 Declaratively
 Diátaxis
 dropdown

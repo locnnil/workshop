@@ -61,6 +61,12 @@ and includes a number of mandatory and optional keys:
      - List of connections made by the workshop;
        each links a plug to a slot.
 
+       Any entry in :samp:`connections` must include a :samp:`plug` and a
+       :samp:`slot` from the SDKs listed under :samp:`sdks` (the system SDK is
+       always implicitly included). Both must be strings that reference a plug
+       and a slot with the same interface in different SDKs, using the
+       :samp:`<SDK>/<PLUG>` format.
+
 
 Any entry in :samp:`sdks` must be named after an existing SDK
 that is available from the SDK store.
@@ -90,31 +96,31 @@ Each SDK is described with the following keys:
 
    * - :samp:`plugs`
      - object
-     - Defines plug bindings;
-       each entry must be named after a plug in this SDK
-       and contain a single :samp:`bind` key.
+     - Lists plug bindings or additional plug definitions under the SDK.
 
-       In turn, :samp:`bind` must be a string
-       that references a plug of the same interface in a different SDK
-       using the :samp:`<SDK>/<PLUG>` format.
+       - A plug binding must name an existing plug in the SDK
+         and set a single :samp:`bind` attribute
+         that references a plug of the same interface in a different SDK
+         using the :samp:`<SDK>/<PLUG>` format.
+
+       - A plug definition must specify the :samp:`interface`
+         and the relevant attributes.
+         The only interface with additional attributes is :samp:`mount`;
+         it requires the :samp:`workshop-target` property
+         to specify a path inside the workshop
+         to be used as the plug's target directory.
 
    * - :samp:`slots`
      - object
      - Defines additional slots under the SDK;
-       each entry must specify the interface type
+       each entry must specify the :samp:`interface`
        and the relevant attributes.
 
        The only interface with additional attributes is :samp:`mount`;
        it requires the :samp:`workshop-source` property
-       to specify a relative path within the project directory
-       to be used as the slot's source directory.
-
-Any entry in :samp:`connections` must include a :samp:`plug` and a :samp:`slot`
-from the SDKs listed under :samp:`sdks`
-(the system SDK is always implicitly included).
-Both must be strings that reference a plug and a slot
-with the same interface in different SDKs,
-using the :samp:`<SDK>/<PLUG>` format.
+       to specify a path inside the workshop
+       to be used as the slot's source directory;
+       :file:`/project` or :envvar:`$SDK` paths can be used.
 
 
 JSON Schema
@@ -167,37 +173,40 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
            bind: go:mod-cache
 
 
-This YAML file, besides using the :samp:`go` and :samp:`dev-tunnel` SDKs,
-defines an additional slot under the system SDK and two connections:
+This YAML file, besides using the :samp:`tensorflow` and :samp:`cuda` SDKs,
+defines an additional slot under the system SDK, a plug under :samp:`tensorflow`
+and two connections:
 
-- One that connects the :samp:`go:images` plug
-  to the newly defined :samp:`system:training` slot.
+- One that connects the :samp:`tensorflow:images` plug
+  to the newly defined :samp:`system:images` slot.
 
-- Another that connects the :samp:`go:gpu` plug
-  to the pre-existing :samp:`system:gpu`.
+- Another that connects the :samp:`tensorflow:cuda` plug
+  to the pre-existing :samp:`cuda:libs`.
 
 .. code-block:: yaml
-   :caption: .workshop.go-tunnel.yaml
+   :caption: .workshop.digits-cuda.yaml
 
    base: ubuntu@22.04
-   name: go-tunnel
+   name: digits-cuda
    sdks:
      system:
        slots:
-         training:
+         images:
            interface: mount
-           workshop-source: my-training-data/images
-
-     go:
-       channel: latest/candidate
-     dev-tunnel:
-       channel: latest/edge
-
+           workshop-source: /project/training-data/low-res
+     tensorflow:
+       channel: latest/stable
+       plugs:
+         cuda:
+           interface: mount
+           workshop-target: /usr/local/cuda/lib64
+     cuda:
+       channel: latest/stable
    connections:
-     - plug: go:images
-       slot: system:training
-     - plug: go:gpu
-       slot: system:gpu
+     - plug: tensorflow:cuda
+       slot: cuda:libs
+     - plug: tensorflow:images
+       slot: system:images
 
 
 See also

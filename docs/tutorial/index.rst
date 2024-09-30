@@ -468,8 +468,8 @@ use :ref:`connections <ref_workshop_connections>`:
 
    $ workshop connections
 
-     Interface  Plug                 Slot      Notes
-     mount      golang/go:mod-cache  :mount    -
+     Interface  Plug                 Slot    Notes
+     mount      golang/go:mod-cache  :mount  -
 
 
 This is the :ref:`mount interface <exp_mount_interface>`
