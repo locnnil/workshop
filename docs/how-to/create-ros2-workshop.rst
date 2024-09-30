@@ -126,7 +126,7 @@ the build artefacts can be found in the :file:`~/colcon/` directory:
      build  install  log
 
 
-The SDK maps this directory to the host using the content interface,
+The SDK maps this directory to the host using the mount interface,
 so the build cache can be persisted and reused
 after the workshop is stopped and restarted, or even refreshed.
 
@@ -152,11 +152,11 @@ in |project_markup|'s default content directory on the host
 .. code-block:: console
 
    workshop@ros2-humble-8584e57d$ exit
-   $ ls ~/.local/share/workshop/project/8584e57d/content/
+   $ ls ~/.local/share/workshop/project/8584e57d/mount/
 
      ros2-humble_ros2_apt-archives.sdk  ros2-humble_ros2_colcon-cache.sdk  ros2-humble_ros2_ros-cache.sdk
 
-   $ ls ~/.local/share/workshop/project/8584e57d/content/ros2-humble_ros2_colcon-cache.sdk/
+   $ ls ~/.local/share/workshop/project/8584e57d/mount/ros2-humble_ros2_colcon-cache.sdk/
 
      build  install  log
 
@@ -204,7 +204,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_content_interface`
+- :ref:`exp_mount_interface`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_projects`
 - :ref:`exp_sdk`

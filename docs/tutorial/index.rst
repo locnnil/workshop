@@ -234,13 +234,13 @@ After launching, you can see the run-time :ref:`info <ref_workshop_info>`:
          channel:  latest/stable
          mounts:
            mod-cache:
-             host:      .../6b79e889/content/golang_go_mod-cache.sdk
-             workshop:  /home/workshop/go/pkg/mod
+             host-source:      .../6b79e889/mount/golang_go_mod-cache.sdk
+             workshop-target:  /home/workshop/go/pkg/mod
 
 
 The output is similar to the :ref:`definition <tut_define>`
 but includes extra details
-such as the :ref:`content interface <tut_interfaces>` mounts.
+such as the :ref:`mount interface <tut_interfaces>` mounts.
 
 Note that |project_markup| tracks the project directory after launch.
 To see this for yourself,
@@ -468,11 +468,11 @@ use :ref:`connections <ref_workshop_connections>`:
 
    $ workshop connections
 
-     Interface  Plug                 Slot      Notes
-     content    golang/go:mod-cache  :content  -
+     Interface  Plug                 Slot    Notes
+     mount      golang/go:mod-cache  :mount  -
 
 
-This is the :ref:`content interface <exp_content_interface>`
+This is the :ref:`mount interface <exp_mount_interface>`
 you've seen at :ref:`launch <tut_launch>`
 in the output from :command:`workshop info`.
 
@@ -484,10 +484,10 @@ and :ref:`disconnect <ref_workshop_disconnect>` interfaces at will:
 .. code-block:: console
 
    $ workshop disconnect golang/go:mod-cache
-   $ workshop connect golang/go:mod-cache :content
+   $ workshop connect golang/go:mod-cache :mount
 
 
-You can :ref:`remount <ref_workshop_remount>` a content interface plug
+You can :ref:`remount <ref_workshop_remount>` a mount interface plug
 to a new location on the host:
 
 .. code-block:: console
@@ -526,7 +526,7 @@ If you're no longer using your workshop,
 This doesn't affect the files in the project directory,
 including the workshop definition,
 or any other content that was stored outside the workshop,
-e.g. via the :ref:`content interface <exp_content_interface>`.
+e.g. via the :ref:`mount interface <exp_mount_interface>`.
 
 .. important::
 

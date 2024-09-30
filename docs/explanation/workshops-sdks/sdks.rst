@@ -58,7 +58,7 @@ the definition may look like this:
    plugs:
      mod-cache:
        interface: mount
-       target: /home/workshop/go/pkg/mod
+       workshop-target: /home/workshop/go/pkg/mod
 
 
 .. _exp_sdk_hooks:
@@ -97,13 +97,13 @@ To make SDKs customisable and extensible,
 which controls whether an SDK can use resources beyond its confines.
 You can think of specific interfaces as resource *types*:
 file system, hardware, computing and so on.
-The interfaces are referenced by the SDKs,
-so the user doesn't have direct control over them in the workshop definition.
 
-Currently, |project_markup| supports the following interfaces:
+Specific interfaces are predefined and implemented by |project_markup|,
+so you can't create a custom interface type.
+Currently, |project_markup| supports the following:
 
-- :ref:`content interface <exp_content_interface>` (auto-connected)
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
+- :ref:`Mount interface <exp_mount_interface>` (auto-connected)
 - :ref:`SSH interface <exp_ssh_interface>` (manually connected)
 
 
@@ -112,24 +112,35 @@ Currently, |project_markup| supports the following interfaces:
 Plugs and slots
 ~~~~~~~~~~~~~~~
 
-To provide access to these resource types,
-|project_markup| exposes *interface slots*.
-For example, a :ref:`content interface <exp_content_interface>` slot
-creates an internal host directory to be mounted inside the workshop;
-think of the slot as the provider of the resource.
+To make use of these interfaces,
+SDKs and :ref:`workshops <exp_workshop_def_connections>` define *slots*.
+For example, a :ref:`mount interface <exp_mount_interface>` slot
+creates a source directory to be mounted inside the workshop via a plug.
 
-Further, individual SDKs define *plugs*
+Further, SDKs and :ref:`workshops <exp_workshop_def_connections>` define *plugs*
 to connect to a slot of a certain interface type.
-In our :ref:`definition example <exp_sdk_definition>`,
-it's the *content interface* mentioned above.
+For example, a :ref:`mount interface <exp_mount_interface>` plug
+mounts the slot to a target directory inside the workshop.
 
 You can think of the plug as the recipient of the resources exposed by the slot;
 note that a slot can handle connections with multiple plugs.
 
-This mechanism comes into play when you
-:command:`workshop launch` or :command:`workshop start` the workshop;
-the plugs defined by its SDKs are automatically connected to the slots,
-provided that the definition has all |project_markup| needs to make a match.
+Connections can be established:
+
+- Automatically:
+  By running :command:`workshop launch`, :command:`workshop refresh`,
+  or :command:`workshop start`.
+
+- Manually:
+  By running :command:`workshop connect` after the workshop has started,
+  or by listing connections in the
+  :ref:`workshop definition <exp_workshop_def_connections>`
+  and running :command:`workshop refresh`.
+
+
+All connections are subject to validation.
+Also, automatic connections require plugs and slots to have matching details
+and aren't allowed for some interfaces, such as :samp:`ssh-agent`.
 
 
 .. _exp_interfaces_validation:
@@ -137,16 +148,15 @@ provided that the definition has all |project_markup| needs to make a match.
 Validation
 ~~~~~~~~~~
 
-To ensure plugs can be installed and connected,
-|project_markup| uses a set of rules,
-with each interface having its own.
-For example, the content interface plug can be installed and auto-connected
+All plugs and slots defined for a workshop directly or via its SDKs are checked
+to make sure they can be installed as part of the workshop and then connected.
+For this, |project_markup| uses a set of internal rules.
+
+Each interface has its own rule set;
+for example, the mount interface plug can be installed and auto-connected
 based on its rules alone.
 However, other interfaces may have different rules,
 such as allowing installation but not auto-connection for :samp:`ssh-agent`.
-
-Finally, once all the checks are done,
-the SDKs are ready to use the external resources.
 
 
 .. _exp_interfaces_cli_operations:
@@ -172,7 +182,7 @@ but the host-based content remains.
 
 On :command:`workshop remove`,
 both the interface connections and the default host directories
-(if any have been created, for example, to accommodate content interface slots)
+(if any have been created, for example, to accommodate mount interface slots)
 are removed.
 
 .. note::
@@ -198,8 +208,6 @@ Explanation:
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 
-
-Reference:
 
 Reference:
 

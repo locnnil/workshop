@@ -1,4 +1,4 @@
-.. _ref_workshop_def_yaml:
+.. _ref_workshop_def:
 
 Workshop definition
 ===================
@@ -11,6 +11,7 @@ file must have the following format: :file:`.workshop.<NAME>.yaml`.
 
 .. tip:: Note the dot at the start.
 
+
 Here, :samp:`<NAME>` is a placeholder that stands for the actual name
 of the workshop itself;
 it must start with a lowercase letter
@@ -20,9 +21,8 @@ and may include only lowercase letters, digits, hyphens or underscores.
 Description
 -----------
 
-The definition in the file must be written in
-`YAML <https://yaml.org/>`__
-and include three required keys:
+The definition in the file is written in `YAML <https://yaml.org/>`__
+and includes a number of mandatory and optional keys:
 
 .. list-table::
    :header-rows: 1
@@ -33,30 +33,42 @@ and include three required keys:
      - Value
      - Description
 
-   * - :samp:`name`
+   * - :samp:`name` (required)
      - string
      - Workshop's name, used to reference the workshop itself.
 
        Must be the same as :samp:`<NAME>`
        in the workshop definition's filename.
 
-   * - :samp:`base`
+   * - :samp:`base` (required)
      - string
      - Workshop's base image
        that provides the underlying OS capabilities.
 
-       It can be :samp:`ubuntu@20.04` or :samp:`ubuntu@22.04`.
+       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
+       or :samp:`ubuntu@24.04`.
 
-   * - :samp:`sdks`
+   * - :samp:`sdks` (required)
      - object
      - List of individual SDKs
        from the SDK Store to include in the workshop.
 
-       Each entry here points to an existing SDK
+       Each entry points to an existing SDK
        and specifies its retrieval channel.
 
+   * - :samp:`connections`
+     - array
+     - List of connections made by the workshop;
+       each links a plug to a slot.
 
-In turn, any entry in :samp:`sdks` must be named after an existing SDK
+       Any entry in :samp:`connections` must include a :samp:`plug` and a
+       :samp:`slot` from the SDKs listed under :samp:`sdks` (the system SDK is
+       always implicitly included). Both must be strings that reference a plug
+       and a slot with the same interface in different SDKs, using the
+       :samp:`<SDK>/<PLUG>` format.
+
+
+Any entry in :samp:`sdks` must be named after an existing SDK
 that is available from the SDK store.
 Each SDK is described with the following keys:
 
@@ -84,13 +96,31 @@ Each SDK is described with the following keys:
 
    * - :samp:`plugs`
      - object
-     - Defines plug bindings;
-       each entry must be named after a plug in this SDK
-       and contain a single :samp:`bind` key.
+     - Lists plug bindings or additional plug definitions under the SDK.
 
-       In turn, :samp:`bind` must be a string
-       that references a plug of the same interface in a different SDK
-       using the :samp:`<SDK>/<PLUG>` format.
+       - A plug binding must name an existing plug in the SDK
+         and set a single :samp:`bind` attribute
+         that references a plug of the same interface in a different SDK
+         using the :samp:`<SDK>/<PLUG>` format.
+
+       - A plug definition must specify the :samp:`interface`
+         and the relevant attributes.
+         The only interface with additional attributes is :samp:`mount`;
+         it requires the :samp:`workshop-target` property
+         to specify a path inside the workshop
+         to be used as the plug's target directory.
+
+   * - :samp:`slots`
+     - object
+     - Defines additional slots under the SDK;
+       each entry must specify the :samp:`interface`
+       and the relevant attributes.
+
+       The only interface with additional attributes is :samp:`mount`;
+       it requires the :samp:`workshop-source` property
+       to specify a path inside the workshop
+       to be used as the slot's source directory;
+       :file:`/project` or :envvar:`$SDK` paths can be used.
 
 
 JSON Schema
@@ -100,8 +130,10 @@ The following
 `JSON Schema <https://json-schema.org/>`__
 formalises the description above:
 
-.. literalinclude:: schema.json
-   :language: json
+.. dropdown:: Workshop definition schema
+
+   .. literalinclude:: schema.json
+      :language: json
 
 
 Examples
@@ -141,6 +173,42 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
            bind: go:mod-cache
 
 
+This YAML file, besides using the :samp:`tensorflow` and :samp:`cuda` SDKs,
+defines an additional slot under the system SDK, a plug under :samp:`tensorflow`
+and two connections:
+
+- One that connects the :samp:`tensorflow:images` plug
+  to the newly defined :samp:`system:images` slot.
+
+- Another that connects the :samp:`tensorflow:cuda` plug
+  to the pre-existing :samp:`cuda:libs`.
+
+.. code-block:: yaml
+   :caption: .workshop.digits-cuda.yaml
+
+   base: ubuntu@22.04
+   name: digits-cuda
+   sdks:
+     system:
+       slots:
+         images:
+           interface: mount
+           workshop-source: /project/training-data/low-res
+     tensorflow:
+       channel: latest/stable
+       plugs:
+         cuda:
+           interface: mount
+           workshop-target: /usr/local/cuda/lib64
+     cuda:
+       channel: latest/stable
+   connections:
+     - plug: tensorflow:cuda
+       slot: cuda:libs
+     - plug: tensorflow:images
+       slot: system:images
+
+
 See also
 --------
 
@@ -148,6 +216,7 @@ Explanation:
 
 - :ref:`exp_sdk`
 - :ref:`exp_base`
+- :ref:`exp_system_sdk`
 - :ref:`exp_workshop_def`
 
 

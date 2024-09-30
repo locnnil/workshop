@@ -78,7 +78,7 @@ Notes
 
 - Updated and newly added SDKs are installed in alphabetical order
 
-- For content interface plugs, mounts the last source
+- For mount interface plugs, mounts the last source
   set by :ref:`ref_workshop_remount`, if any
 
 
@@ -116,7 +116,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_content_interface`
+- :ref:`exp_mount_interface`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 - :ref:`exp_workshop_def`

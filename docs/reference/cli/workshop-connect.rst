@@ -13,25 +13,25 @@ Connects a plug to a slot.
 Examples
 --------
 
-Connect the :samp:`mod-cache` content interface plug
+Connect the :samp:`mod-cache` mount interface plug
 of the :samp:`go` SDK under the :samp:`nimble` workshop
 in the current project directory:
 
 .. code-block:: console
 
-   $ workshop connect nimble/go:mod-cache :content
+   $ workshop connect nimble/go:mod-cache :mount
 
 
-The command needs to name the slot (:samp:`content`) explicitly
+The command needs to name the slot (:samp:`mount`) explicitly
 because the plug has a non-default name;
 otherwise, it could be omitted.
 
 
-A full version of the command that also lists the target SDK (:samp:`host`):
+A full version of the command that also lists the target SDK (:samp:`system`):
 
 .. code-block:: console
 
-   $ workshop connect nimble/go:mod-cache nimble/host:content
+   $ workshop connect nimble/go:mod-cache nimble/system:mount
 
 
 Synopsis
@@ -41,11 +41,11 @@ This command connects a plug to a target slot
 that is specified as the second argument or deduced from the context.
 
 - If the second argument is omitted entirely, the target is assumed to be
-  :samp:`<WORKSHOP>/host:<PLUG>`;
+  :samp:`<WORKSHOP>/system:<PLUG>`;
   :samp:`<WORKSHOP>` and :samp:`<PLUG>` come from the first argument
 
 - If the second argument only names the slot itself, the target is
-  :samp:`<WORKSHOP>/host:<SLOT>`;
+  :samp:`<WORKSHOP>/system:<SLOT>`;
   :samp:`<WORKSHOP>` comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is

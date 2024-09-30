@@ -9,7 +9,7 @@ enables GPU pass-through
 inside the workshop
 to improve the performance of GPU-intensive applications.
 
-By using the GPU interface,
+By using the interface,
 the SDK publisher allows the workshop to directly access the host's GPU devices,
 which may be required for various GPU-intensive workloads.
 
@@ -17,10 +17,15 @@ which may be required for various GPU-intensive workloads.
 Connection
 ----------
 
-The interface is connected automatically at launch and refresh;
-also,
+The interface is connected automatically at launch or refresh,
+provided that the plug can be matched to the slot by its name
+or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
+both subject to |project_markup|'s
+:ref:`validation rules <exp_interfaces_validation>`.
+
+After the workshop has started,
 the :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually.
+can be used to manage the connection manually.
 
 Establishing a connection means
 the host's GPUs are directly available inside the workshop
@@ -32,9 +37,9 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                   Slot      Notes
+     Interface  Plug            Slot  Notes
      ...
-     gpu        ws/gpu-sdk:gpu         :gpu      -
+     gpu        ws/gpu-sdk:gpu  :gpu  -
 
 
 This means the host's GPUs are directly available inside the workshop:

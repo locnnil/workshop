@@ -1,51 +1,104 @@
 {
-    "$schema":"https://json-schema.org/draft/2020-12/schema",
-    "$id":"https://canonical.com/.workshop.name.yaml",
-    "type":"object",
-    "properties":{
-        "name":{
-            "type":"string"
-        },
-        "base":{
-            "type":"string",
-            "enum":[
-                "ubuntu@20.04",
-                "ubuntu@22.04",
-                "ubuntu@24.04"
-            ]
-        },
-        "sdks":{
-            "type":"object",
-            "additionalProperties":{
-                "type":"object",
-                "properties":{
-                    "channel":{
-                        "type":"string"
-                    },
-                    "plugs":{
-                        "type":"object",
-                        "additionalProperties":{
-                            "type":"object",
-                            "properties":{
-                                "bind":{
-                                    "type":"string"
-                                }
-                            },
-                            "required":[
-                                "bind"
-                            ]
-                        }
-                    }
-                },
-                "required":[
-                    "channel"
-                ]
-            }
-        }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://canonical.com/.workshop.name.yaml",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
     },
-    "required":[
-        "name",
-        "base",
-        "sdks"
-    ]
+    "base": {
+      "type": "string",
+      "enum": [
+        "ubuntu@20.04",
+        "ubuntu@22.04",
+        "ubuntu@24.04"
+      ]
+    },
+    "sdks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "plugs": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "bind": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "bind"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "interface": {
+                      "type": "string"
+                    },
+                    "workshop-target": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "interface"
+                  ]
+                }
+              ]
+            }
+          },
+          "slots": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "interface": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "interface"
+              ]
+            }
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "plug": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plug",
+          "slot"
+        ]
+      }
+    }
+  },
+  "required": [
+    "name",
+    "base",
+    "sdks"
+  ]
 }

@@ -8,7 +8,7 @@ provides access to the host system's SSH agent
 from inside the workshop,
 allowing it to securely use the host's SSH keys and configuration.
 
-By using the SSH interface,
+By using the interface,
 the SDK publisher allows the workshop to connect to the host's SSH agent,
 which can be useful in various SDK-specific tasks
 such as cloning private repositories, accessing remote machines and so on.
@@ -20,7 +20,7 @@ Connection
 The interface isn't connected automatically at launch and refresh
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually:
+can be invoked manually after the workshop has started:
 
 .. code-block:: console
 
@@ -41,9 +41,9 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                   Slot        Notes
+     Interface  Plug                  Slot        Notes
      ...
-     ssh-agent  ws/ssh-sdk:ssh-agent   :ssh-agent  manual
+     ssh-agent  ws/ssh-sdk:ssh-agent  :ssh-agent  manual
 
 
 So the host's SSH identities and configuration

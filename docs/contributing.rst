@@ -25,7 +25,7 @@ Workshop's commit messages differ from conventional commits in capitalisation:
 
 .. code-block:: none
 
-   Ensure correct permissions and ownership for the content mounts
+   Ensure correct permissions and ownership for the mounts
     
     * Work around an LXD issue regarding empty dirs:
       https://github.com/canonical/lxd/issues/12648

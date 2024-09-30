@@ -13,7 +13,7 @@ Off
 
 Always the starting point,
 where the workshop exists solely as a
-:ref:`definition file <ref_workshop_def_yaml>`
+:ref:`definition file <ref_workshop_def>`
 in the project directory;
 there is no container yet.
 

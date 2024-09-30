@@ -94,9 +94,9 @@ Base image
 
 The base is a supported OS image
 that is used as the basis for the workshop.
-Currently, it can be
-:samp:`ubuntu@20.04`, :samp:`ubuntu@22.04` or :samp:`ubuntu@24.04`.
 
+
+.. _exp_bindings:
 
 Plug bindings
 -------------
@@ -124,7 +124,7 @@ that store their training data in the workshop under
 :file:`~/.cache/torchvision/datasets/` and :file:`~/.keras/datasets/`,
 respectively.
 The data should be persisted,
-so each SDK has a corresponding content interface plug, :samp:`datasets`.
+so each SDK has a corresponding mount interface plug, :samp:`datasets`.
 
 Now, what if our workshop includes both SDKs;
 can we leverage bindings to reuse the data?
@@ -168,14 +168,14 @@ because they reference the same entity:
          channel: latest/stable
          mounts:
            datasets:
-             host:      /new-mount
-             workshop:  /home/workshop/.cache/torchvision/datasets
+             host-source:      /new-mount
+             workshop-target:  /home/workshop/.cache/torchvision/datasets
        tensorflow:
          channel: latest/stable
          mounts:
            data:
-             host:      /new-mount
-             workshop:  /home/workshop/.keras/datasets
+             host-source:      /new-mount
+             workshop-target:  /home/workshop/.keras/datasets
 
 
 This avoids the need to reconfigure each mount manually,
@@ -189,13 +189,68 @@ along with the line number of the target plug:
 
    $ workshop connections digits
 
-     Interface  Plug                        Slot      Notes
-     content    digits/pytorch:datasets     :content  bind.2
-     content    digits/tensorflow:datasets  :content  bind.2
+     Interface  Plug                        Slot    Notes
+     mount      digits/pytorch:datasets     :mount  bind.2
+     mount      digits/tensorflow:datasets  :mount  bind.2
 
 
 Here, both plugs are listed as :samp:`bind.2`,
 pointing to :samp:`tensorflow:datasets` in the second line.
+
+
+.. _exp_workshop_def_connections:
+
+Slots, plugs, connections
+-------------------------
+
+You can declare :ref:`slots or plugs <exp_plugs_slots>`
+and list connections in the workshop definition,
+subject to the usual :ref:`validation rules <exp_interfaces_validation>`.
+This reduces the need to run manual commands after starting the workshop.
+
+This example adds a slot, a plug and two connections to its SDKs:
+
+.. code-block:: yaml
+   :caption: .workshop.digits-cuda.yaml
+   :emphasize-lines: 5-8, 11-14, 17-21
+
+   base: ubuntu@22.04
+   name: digits-cuda
+   sdks:
+     system:
+       slots:
+         images:
+           interface: mount
+           workshop-source: /project/training-data/low-res
+     tensorflow:
+       channel: latest/stable
+       plugs:
+         cuda:
+           interface: mount
+           workshop-target: /usr/local/cuda/lib64
+     cuda:
+       channel: latest/stable
+   connections:
+     - plug: tensorflow:cuda
+       slot: cuda:libs
+     - plug: tensorflow:images
+       slot: system:images
+
+
+Here, :samp:`system:images`
+is a :ref:`mount interface <exp_mount_interface>` slot,
+whose :samp:`workshop-source` attribute points to a directory in the workshop.
+At run-time, the :samp:`tensorflow:images` plug is connected to the slot
+to consume the data from it.
+
+In turn, :samp:`tensorflow:cuda`
+is a :ref:`mount interface <exp_mount_interface>` plug
+that sets its :samp:`workshop-target` to a directory in the workshop.
+At run-time, the plug is connected to the :samp:`cuda:libs` slot,
+so the libraries exposed by the slot are available at the plug's target path.
+
+Also, both connections established here
+are no different from those created via the command line.
 
 
 See also
@@ -210,5 +265,5 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_connections`
-- :ref:`ref_workshop_def_yaml`
+- :ref:`ref_workshop_def`
 - :ref:`ref_workshop_status`

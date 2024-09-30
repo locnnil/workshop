@@ -13,7 +13,7 @@ Disconnects a plug or a slot.
 Examples
 --------
 
-Disconnect the :samp:`mod-cache` content interface plug
+Disconnect the :samp:`mod-cache` mount interface plug
 of the :samp:`go` SDK under the :samp:`nimble` workshop
 in the current project directory:
 
@@ -23,20 +23,20 @@ in the current project directory:
 
 
 A full version of the same command
-that lists the target SDK (:samp:`host`) and slot (:samp:`content`):
+that lists the target SDK (:samp:`system`) and slot (:samp:`mount`):
 
 .. code-block:: console
 
-   $ workshop disconnect nimble/go:mod-cache nimble/host:content
+   $ workshop disconnect nimble/go:mod-cache nimble/system:mount
 
 
-Disconnect *all plugs* connected to the :samp:`:content` slot
-of the :samp:`host` SDK under the :samp:`nimble` workshop
+Disconnect *all plugs* connected to the :samp:`:mount` slot
+of the :samp:`system` SDK under the :samp:`nimble` workshop
 in the current project directory:
 
 .. code-block:: console
 
-   $ workshop disconnect nimble/host:content
+   $ workshop disconnect nimble/system:mount
 
 
 Synopsis
@@ -48,7 +48,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   with two arguments, the first one is the plug, and the second one is the slot
 
 - If the second argument only names the slot itself, the target is
-  :samp:`<WORKSHOP>/host:<SLOT>`;
+  :samp:`<WORKSHOP>/system:<SLOT>`;
   :samp:`<WORKSHOP>` comes from the first argument
 
 - If the second argument only names the workshop and SDK, the target is
