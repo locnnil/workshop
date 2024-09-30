@@ -8,7 +8,7 @@ This is a practical introduction
 that takes you on a tour
 of the essential |project_markup| activities.
 
-You will practice all the major steps
+You will practise all the major steps
 in the life cycle of a *workshop*,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
 and :ref:`refreshing <tut_refresh>` it

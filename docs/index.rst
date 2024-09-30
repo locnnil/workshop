@@ -17,22 +17,22 @@
    Contribution <contributing>
 
 
-**A tool for defining and managing ephemeral development environments**.
+**A tool for defining and handling ephemeral development environments**.
 
-**Define your prerequisites and dependencies in simple YAML**.
-|project_markup| consumes the definition to create a contained workshop,
-installs the components as a set of SDKs
-and attaches custom actions for run-time control.
-IDEs such as Visual Studio Code or JupyterLab can discover workshops
-and use them in day-to-day operations,
-tidying up your system and streamlining your work.
+**List your dependencies and components in YAML to define an environment**.
+The key pieces of a definition are SDKs,
+independent but connectable units of functionality
+created by software publishers and available on the SDK Store.
+|project_markup| simplifies experiments with your environment layout.
 
-**Focus on your project, not your setup**.
-An environment that could take hours to configure
-can now be launched with a single command.
-|project_markup| improves cross-platform issue reproduction,
-preserves context in discussions or reviews
-and confines bold experiments to transparent sandboxes.
+**It allows you to focus on adding value to your project**.
+With |project_markup|, you can launch a setup
+that previously took hours to configure in a few commands
+and be sure that it stays operational.
+It assists in issue reproduction,
+enables hands-on code reviews
+and turns environment updates into manageable transactions,
+reducing the need to battle with your tooling every day.
 
 **For those who build and maintain complex, error-prone workspaces**.
 AI/ML, robotics, IoT, EdTech and similar domains
@@ -81,11 +81,13 @@ within the Enterprise Engineering department here at Canonical;
 is a sibling project,
 aimed at publishers who create and distribute SDKs for |project_markup|.
 
-At its core, |project_markup| relies on
-`LXD <https://documentation.ubuntu.com/lxd/>`_
-to handle the low-level details that make the magic happen;
+At its core, |project_markup| builds upon Canonical's mature tech.
+It uses `LXD <https://documentation.ubuntu.com/lxd/>`_
+as the underlying container technology;
 it also follows the tooling paradigm exemplified by
-`Snap <https://snapcraft.io/docs/>`_.
+`Snap <https://snapcraft.io/docs/>`_
+and implemented with
+`Craft CLI <https://craft-cli.readthedocs.io/>`_.
 
 Talk to us if you have a project in AI/ML, robotics or any other field
 where setting up an environment is a daily or weekly activity
