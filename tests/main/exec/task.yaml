@@ -9,7 +9,12 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check an environment variable can be set"
-  workshop_exec exec --env 'Foo=bar'  ws-exec -- bash -c 'echo -n $Foo' | MATCH bar
+  workshop_exec exec --env 'Foo=bar'  ws-exec -- bash -c '[ "$Foo" = bar ]'
+
+  echo "Check that environment variables are inherited"
+  sudo -u ubuntu 2>&1 -- env Foo=bar workshop exec --env Foo ws-exec -- bash -c '[ "$Foo" = bar ]'
+  sudo -u ubuntu 2>&1 -- env Foo= workshop exec --env Foo ws-exec -- bash -c '[ -z "${Foo-x}" ]'
+  sudo -u ubuntu 2>&1 -- env --unset=Foo workshop exec --env Foo ws-exec -- bash -c '[ -z "${Foo+x}" ]'
 
   echo "Check default user and group"
   workshop_exec exec ws-exec -- bash -c 'id -u -n' | MATCH workshop
