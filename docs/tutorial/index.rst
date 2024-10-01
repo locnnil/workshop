@@ -187,8 +187,7 @@ named :file:`.workshop.golang.yaml`:
 
 This definition adds an :ref:`SDK <exp_sdk>`,
 the basic functionality unit of a workshop
-that is built with `SDKcraft
-<https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/>`__.
+that is built with :program:`SDKcraft`.
 
 To confirm that |project_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops

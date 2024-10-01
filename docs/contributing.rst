@@ -137,12 +137,15 @@ Workshop uses a ``go test``-compatible
 
 
 To run end-to-end tests and integration tests with
-`Spread <https://github.com/snapcore/spread>`_:
+`our custom fork <https://github.com/dmitry-lyfar/spread>`_
+of ``Spread``:
 
 .. code-block:: console
 
-   go install github.com/snapcore/spread/cmd/spread@latest
-   spread
+   git clone https://github.com/dmitry-lyfar/spread
+   cd spread
+   go install ./...
+
 
 .. note::
 
