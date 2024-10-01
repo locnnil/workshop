@@ -53,7 +53,8 @@ A workshop's life-cycle can see it switch between several statuses:
      - Can be non-operational
 
 
-Reference diagrams in `See also`_ provide more details of possible transitions.
+Status diagrams in the `See also`_ section below
+provide more details of valid transitions.
 
 
 .. _exp_workshop_def:
