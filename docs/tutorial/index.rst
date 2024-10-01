@@ -47,23 +47,6 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-.. note::
-
-   This means you can use regular :command:`lxc` commands
-   to monitor |project_markup| activity, for example:
-
-   .. code-block:: console
-
-      $ lxc list --all-projects
-
-
-   Also, this means you can use |project_markup| anywhere LXD runs, including
-   `Ubuntu WSL
-   <https://canonical-ubuntu-wsl.readthedocs-hosted.com/en/latest/>`_.
-
-   However, it's not recommended to rely on this implementation detail.
-
-
 First, install and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
