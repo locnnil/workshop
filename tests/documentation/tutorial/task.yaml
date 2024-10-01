@@ -55,7 +55,7 @@ execute: |
   workshop_exec connections
   workshop_exec disconnect nimble/test-sdk-go:mod-cache
   workshop_exec connect nimble/test-sdk-go:mod-cache :mount
-  workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod/
+  workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info nimble
 
   # Remove
