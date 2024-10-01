@@ -108,7 +108,7 @@ func (c *CmdExec) Command() *cobra.Command {
 
 	cmd.Flags().SortFlags = false
 	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
-	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'")
+	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
 	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "Run as a specific workshop user")
 	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
 	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "Set a timeout; valid units are 'ns', 'us'/'µs', 'ms', 's', 'm', 'h'")
@@ -162,10 +162,17 @@ func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 	for _, kv := range c.Env {
 		parts := strings.SplitN(kv, "=", 2)
 		key := parts[0]
-		value := ""
+
+		var value string
 		if len(parts) == 2 {
 			value = parts[1]
+		} else {
+			value, ok = os.LookupEnv(key)
+			if !ok {
+				continue
+			}
 		}
+
 		env[key] = value
 	}
 

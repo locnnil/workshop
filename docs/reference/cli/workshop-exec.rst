@@ -89,9 +89,10 @@ Options
 
   Set the working directory in the workshop (default: :file:`/project/`).
 
---env <KEY=VALUE>
+--env <KEY>[=<VALUE>]
 
-  Set an environment variable.
+  Set an environment variable, e.g. 'FOO=bar';
+  if only the name is provided, the value is inherited from the CLI environment.
 
 --uid <USER ID>
 
