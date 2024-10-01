@@ -107,6 +107,15 @@ or an empty directory on the same file system as the current source.
 Otherwise, the remount only occurs if the workshop has been stopped earlier,
 which prevents data corruption.
 
+To reset a remounted plug to its default source location,
+use :samp:`workshop disconnect` with the :option:`!--forget` option,
+then refresh the workshop:
+
+.. code-block:: console
+
+  $ workshop disconnect ws/mount-sdk:cache --forget
+  $ workshop refresh ws
+
 
 See also
 --------
