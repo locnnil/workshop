@@ -509,9 +509,13 @@ use :ref:`connections <ref_workshop_connections>`:
      mount      golang/go:mod-cache  :mount  -
 
 
-This is the :ref:`mount interface <exp_mount_interface>`;
-it was connected at :ref:`launch <tut_launch>`,
-as seen in the :command:`workshop info` output.
+This lists a :ref:`mount interface <exp_mount_interface>` plug
+named :samp:`golang/go:mod-cache`.
+As seen in the :command:`workshop info` output previously,
+it was automatically connected at :ref:`launch <tut_launch>`
+to the :samp:`golang/system:mount` slot,
+here contracted by convention as :samp:`:mount`.
+
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
 
