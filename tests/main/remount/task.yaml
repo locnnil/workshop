@@ -1,4 +1,9 @@
 summary: Check workshop remount scenarios
+restore: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec warnings
+  workshop_exec okay || true
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -45,9 +50,15 @@ execute: |
   rmdir "${new_source}.2"
   workshop_exec remount ws-remount/test-sdk-mount:two "$new_source" | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
   workshop_exec list | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
-  workshop_exec warnings | MATCH "\"${new_source}\\.1\" does not exist"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH "ws-remount/test-sdk-mount:two's source at \"${new_source}\\.1\" does not exist; will attempt to recreate"
   workshop_exec list | NOMATCH "new warning"
-  workshop_exec warnings | MATCH "\"${new_source}\\.2\" does not exist"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH "ws-remount/test-sdk-mount:two's source at \"${new_source}\\.2\" does not exist; will attempt to recreate"
   workshop_exec okay
   workshop_exec warnings | MATCH '^No further warnings.$'
 
