@@ -37,8 +37,8 @@ build and install |project_markup|,
 then ensure it runs.
 
 
-Check prerequisites
-~~~~~~~~~~~~~~~~~~~
+Prepare LXD
+~~~~~~~~~~~
 
 |project_markup| relies on
 `LXD 5.21+ <https://canonical.com/lxd>`_
@@ -89,6 +89,10 @@ is enabled and running:
       and your distribution's manuals for guidance.
 
 
+With LXD installed and initialised,
+proceed to installing |project_markup|.
+
+
 Install
 ~~~~~~~
 
@@ -106,10 +110,7 @@ for example:
    $ sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
 
 
-Run
-~~~
-
-The snap installs two main components:
+The command installs two main components:
 
 - The :program:`workshopd` daemon, which exposes a REST API
 
@@ -118,20 +119,31 @@ The snap installs two main components:
   which uses this API to command |project_markup|
 
 
-The daemon starts automatically after installation,
-but you run the CLI tool manually:
+After installation, the daemon starts automatically.
+Use the CLI tool to talk to it.
+
+
+Run
+~~~
+
+Before proceeding further, ensure the CLI tool works:
 
 .. code-block:: console
 
    $ workshop --help
 
 
+This should display available commands and usage information.
+Now, with |project_markup| operational,
+the next step is to create your first workshop.
+
+
 Launch a workshop
 -----------------
 
-Once you have installed |project_markup|,
-use it to define, launch, start and stop your first
-:ref:`workshop <exp_workshop>`.
+A :ref:`workshop <exp_workshop>` is an environment
+that maps your project to its contained dependencies;
+now you'll learn how to define, launch, start and stop it.
 
 
 .. _tut_define:
@@ -139,45 +151,59 @@ use it to define, launch, start and stop your first
 Define
 ~~~~~~
 
-#. Create a
-   :ref:`project directory <exp_projects>`
-   named :file:`hello-workshop`:
+First, you need to define the workshop.
+A :ref:`definition <exp_workshop_def>` lists the components of a workshop
+to be instantiated at launch
+and is stored in your project directory.
 
-   .. code-block:: console
+Create a
+:ref:`project directory <exp_projects>`
+named :file:`hello-workshop`:
 
-      $ mkdir ~/hello-workshop
-      $ cd ~/hello-workshop
+.. code-block:: console
 
-
-#. In the project directory,
-   create a
-   :ref:`workshop definition <exp_workshop_def>`
-   named :file:`.workshop.golang.yaml`:
-
-   .. code-block:: yaml
-      :caption: .workshop.golang.yaml
-
-      name: golang
-      base: ubuntu@22.04
-      sdks:
-        go:
-          channel: latest/stable
+   $ mkdir ~/hello-workshop
+   $ cd ~/hello-workshop
 
 
-#. To confirm |project_markup| sees the definition,
-   :ref:`list <ref_workshop_list>` the workshops
-   in the project directory:
+Everything you plan to build using your workshop goes here:
+your source code, custom assets, and so on.
+In this tutorial, we'll be building some Go code.
 
-   .. code-block:: console
+In the project directory,
+create a workshop definition
+named :file:`.workshop.golang.yaml`:
 
-      $ workshop list
+.. code-block:: yaml
+   :caption: .workshop.golang.yaml
+   :emphasize-lines: 4
 
-        Project                Workshop   Status  Notes
-        ~/hello-workshop       golang     Off     -
+   name: golang
+   base: ubuntu@22.04
+   sdks:
+     go:
+       channel: latest/stable
 
 
-   A newly defined workshop is *Off*,
-   so it needs to be initialised, or *launched*.
+This definition adds an :ref:`SDK <exp_sdk>`,
+the basic functionality unit of a workshop
+that is built with `SDKcraft
+<https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/>`__.
+
+To confirm that |project_markup| sees the definition,
+:ref:`list <ref_workshop_list>` the workshops
+in the project directory:
+
+.. code-block:: console
+
+   $ workshop list
+
+     Project                Workshop   Status  Notes
+     ~/hello-workshop       golang     Off     -
+
+
+As the output suggests, your newly defined workshop is *Off*,
+so it needs to be launched.
 
 
 .. _tut_launch:
@@ -185,23 +211,23 @@ Define
 Launch
 ~~~~~~
 
-To prepare a workshop for action,
-you :ref:`launch <ref_workshop_launch>` it:
+To get a workshop ready for use, you :ref:`launch <ref_workshop_launch>` it:
 
 .. code-block:: console
 
    $ workshop launch golang
 
 
-Now, the workshop is *Ready*
-to build, debug and run code.
+Now, the workshop is *Ready* to build, debug and run your code.
 
 .. note::
 
    If something goes wrong at this point, see the
    :ref:`debugging guide <how_debug_issues_workshops>`.
 
-After launching, you can see the run-time :ref:`info <ref_workshop_info>`:
+
+After launching, check the run-time :ref:`info <ref_workshop_info>`
+to see what went into your workshop:
 
 .. code-block:: console
 
@@ -221,13 +247,12 @@ After launching, you can see the run-time :ref:`info <ref_workshop_info>`:
              workshop-target:  /home/workshop/go/pkg/mod
 
 
-The output is similar to the :ref:`definition <tut_define>`
-but includes extra details
-such as the :ref:`mount interface <tut_interfaces>` mounts.
+The output looks like the :ref:`definition <tut_define>`
+with extra details such as the :ref:`mounts <tut_interfaces>`;
+skip these for now, though.
 
-Note that |project_markup| tracks the project directory after launch.
-To see this for yourself,
-you can move it temporarily and re-run :command:`workshop list`:
+After launch, |project_markup| starts tracking the project directory.
+To see how it works, move the directory:
 
 .. code-block:: console
 
@@ -242,17 +267,12 @@ you can move it temporarily and re-run :command:`workshop list`:
    $ cd hello-workshop
 
 
-This means that the workshop stays operational without extra steps on your part.
-
-.. note::
-
-   This is achieved with a hidden :file:`.lock` file,
-   which must remain in the project directory
-   and must not be copied or stored externally, e.g. in a repository.
-
+The workshop stays operational with no extra steps on your part
+by using a hidden :file:`.lock` file that must remain in the project directory
+and not be copied or stored externally, e.g. in a repository.
 
 Check out the recent :ref:`changes <ref_workshop_changes>`
-to see how |project_markup| keeps track of its environment:
+to see how |project_markup| keeps track of the project directory:
 
 .. code-block:: console
 
@@ -261,10 +281,9 @@ to see how |project_markup| keeps track of its environment:
      ID  Status  Spawn               Ready               Summary
      34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
 
-To find out what goes into launching a workshop,
-pass the ID of the change to the
-:ref:`tasks <ref_workshop_tasks>`
-command:
+
+To find out what launching a workshop implies,
+pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
 
 .. code-block:: console
 
@@ -281,23 +300,27 @@ command:
      140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
 
 
-Here, the project directory is mounted to the workshop as :file:`/project/`;
+Here, the :ref:`project directory <tut_define>`
+is mounted to the workshop as :file:`/project/`;
 the workshop is *started*, or brought online;
-then the :samp:`go` SDK,
-which was referenced in the :ref:`definition <tut_define>`,
+next, the :samp:`go` SDK from the definition
 is retrieved, installed and set up inside the workshop;
-then the SDK is connected to the host system
-via :ref:`interfaces <exp_interfaces>`.
+then the :ref:`interfaces <exp_interfaces>` of the SDK are connected.
 
-Finally, mind that you only need to launch a workshop once
-after defining it.
+You only need to launch a workshop once after defining it;
+any subsequent changes require a :ref:`refresh <tut_refresh>`.
+Otherwise, the workshop is just a fancy container
+that can be started and stopped.
 
 
 Start and stop
 ~~~~~~~~~~~~~~
 
-If you're finished with the workshop for now,
-:ref:`stop <ref_workshop_stop>` it to save resources:
+The workshop starts automatically at launch,
+but you can also stop and restart it at will.
+
+Suppose you want to free up some resources,
+so you :ref:`stop <ref_workshop_stop>` the workshop:
 
 .. code-block:: console
 
@@ -313,11 +336,16 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 
 Both commands work gracefully,
-waiting for the workshop to comply;
-:command:`workshop stop` doesn't destroy a workshop
-(unlike :ref:`remove <tut_remove>`),
-and :command:`workshop start` doesn't build it from scratch
-(unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`).
+waiting for the workshop to comply:
+
+- :command:`workshop stop` doesn't destroy the workshop,
+  unlike :ref:`remove <tut_remove>`
+
+- :command:`workshop start` doesn't build it from scratch,
+  unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`
+
+
+Speaking of the refresh operation, it's also our next step.
 
 
 .. _tut_refresh:
@@ -329,16 +357,16 @@ Sometimes the
 :ref:`base <exp_base>`
 or the
 :ref:`SDKs <exp_sdk>`
-in your workshop
+listed in your workshop definition
 are updated by their publishers.
 Alternatively,
 you may have changed the :ref:`definition <exp_workshop_def>`
 to switch bases, add and remove SDKs or toggle their channels.
 In either case,
-:ref:`refresh <ref_workshop_refresh>` the workshop
+you should :ref:`refresh <ref_workshop_refresh>` the workshop
 to apply the updates.
 
-Change the base in your :ref:`definition <tut_define>`
+Here, change the base in your :ref:`definition <tut_define>`
 and refresh the workshop:
 
 .. code-block:: yaml
@@ -364,15 +392,20 @@ For more details, see the
 :ref:`debugging guide <how_debug_issues_workshops>`.
 
 
+Now that you can launch, refresh, start and stop a workshop,
+let's move on to more practical purposes.
+
+
 .. _tut_exec:
 
 Execute commands
 ----------------
 
-When the workshop is *Ready* after the refresh,
-you can :ref:`execute <ref_workshop_exec>` arbitrary commands in it.
+When the workshop is *Ready*,
+you can run arbitrary commands in it.
+In this tutorial, we're building Go code, so let's write some.
 
-Save this Go code in the project directory to build it inside the workshop:
+In the project directory, save this code as :file:`main.go`:
 
 .. code-block:: go
    :caption: main.go
@@ -386,17 +419,30 @@ Save this Go code in the project directory to build it inside the workshop:
    }
 
 
+Next, build it *inside the workshop* using :ref:`exec <ref_workshop_exec>`:
+
 .. code-block:: console
 
    $ workshop exec golang go build main.go
 
 
-You can define environment variables for the command,
-or separate the command from :command:`workshop exec` options:
+This uses the Go version installed by the :samp:`go` SDK.
+
+You can define environment variables for the :command:`go build` command
+or separate it from :command:`workshop exec` options for clarity:
 
 .. code-block:: console
 
    $ workshop exec golang --env GO111MODULE=off -- go build -x
+
+The binary, built within the workshop environment,
+is now available in the project directory.
+
+**This is the single most important part of the tutorial**;
+your deliverables, however complex they are, end up on the host system,
+while the tool-chain is transparently confined and managed by |project_markup|.
+
+Next, we'll explore the remaining aspects of your daily workshop usage.
 
 
 .. _tut_shell:
@@ -404,7 +450,7 @@ or separate the command from :command:`workshop exec` options:
 Interactive shell
 ~~~~~~~~~~~~~~~~~
 
-Instead of running individual commands,
+Besides running individual commands,
 you can open an interactive :ref:`shell <ref_workshop_shell>`:
 
 .. code-block:: console
@@ -425,7 +471,9 @@ also named :samp:`workshop`.
 Project directory updates
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Any changes made in :file:`/project/` inside the workshop
+Remember that the project directory is mounted as :file:`/project/`
+when the workshop is launched;
+any changes to :file:`/project/` from inside the workshop
 are visible in the project directory, and vice versa:
 
 .. code-block:: console
@@ -436,6 +484,10 @@ are visible in the project directory, and vice versa:
    $ ls -l
 
 
+This isn't the only way the host interacts with the workshop;
+let's dive into how interfaces operate.
+
+
 .. _tut_interfaces:
 
 Work with interfaces
@@ -443,7 +495,9 @@ Work with interfaces
 
 For security and control,
 |project_markup| exposes various host system capabilities to the workshop
-by connecting it to the appropriate :ref:`interfaces <exp_interfaces>`.
+by connecting it to various :ref:`interfaces <exp_interfaces>`.
+SDKs can also use interfaces to interact in an organised fashion.
+
 To list the connected interfaces,
 use :ref:`connections <ref_workshop_connections>`:
 
@@ -455,12 +509,12 @@ use :ref:`connections <ref_workshop_connections>`:
      mount      golang/go:mod-cache  :mount  -
 
 
-This is the :ref:`mount interface <exp_mount_interface>`
-you've seen at :ref:`launch <tut_launch>`
-in the output from :command:`workshop info`.
-
+This is the :ref:`mount interface <exp_mount_interface>`;
+it was connected at :ref:`launch <tut_launch>`,
+as seen in the :command:`workshop info` output.
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
+
 In any case, you can :ref:`connect <ref_workshop_connect>`
 and :ref:`disconnect <ref_workshop_disconnect>` interfaces at will:
 
@@ -476,7 +530,7 @@ to a new location on the host:
 .. code-block:: console
    :emphasize-lines: 14
 
-   $ workshop remount golang/go:mod-cache ~/new-location/
+   $ workshop remount golang/go:mod-cache ~/mod/
    $ workshop info golang
 
      name:     golang
@@ -489,8 +543,15 @@ to a new location on the host:
          channel:  latest/stable
          mounts:
            mod-cache:
-             host:      /home/user/new-location
-             workshop:  /home/workshop/go/pkg/mod
+             host-source:      /home/user/mod
+             workshop-target:  /home/workshop/go/pkg/mod
+
+
+This makes :file:`/home/user/mod/` on the host
+serve as the Go modules cache for the workshop.
+
+We're nearing the end of our tour;
+the only thing left is the clean-up.
 
 
 .. _tut_remove:
@@ -498,7 +559,7 @@ to a new location on the host:
 Remove a workshop
 -----------------
 
-If you're no longer using your workshop,
+If you no longer need your workshop,
 :ref:`remove <ref_workshop_remove>` it:
 
 .. code-block:: console
@@ -509,7 +570,7 @@ If you're no longer using your workshop,
 This doesn't affect the files in the project directory,
 including the workshop definition,
 or any other content that was stored outside the workshop,
-e.g. via the :ref:`mount interface <exp_mount_interface>`.
+e.g. via the :ref:`mount interface <tut_interfaces>`.
 
 .. important::
 
