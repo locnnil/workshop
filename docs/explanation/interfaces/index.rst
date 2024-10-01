@@ -16,42 +16,42 @@ that are important for understanding |project_markup|'s interface mechanics.
 Summary
 -------
 
-For a workshop to be operational,
-the plugs defined by the SDKs listed in the workshop definition
-must at some point *connect* to the appropriate interface slots.
+In |project_markup|, SDKs can act as providers and consumers of resources
+such as the GPU or file directories.
+Host system resources
+are exposed via the :ref:`system SDK <exp_system_sdk>`
+that is present in every workshop by design.
 
-Such connections are uniformly established via the
-:ref:`system SDK <exp_system_sdk>`
-that is quietly present in every workshop,
-but not immediately visible to its users.
+For a workshop to be operational, the SDKs listed in its definition
+must *connect* to the resources they expect.
+Such connections are uniformly established via the interface system.
 
 Interface connections are a mechanism for communication and resource sharing.
 It is an integral part of workshop confinement,
 ensuring that each workshop operates in its own isolated environment,
-while still allowing controlled interactions with system resources.
+while still allowing controlled interactions among the SDKs and with the system.
 
 Here's how it works from the outside:
 
 - The :samp:`connections` section of the workshop definition
-  can be used to link plugs to slots within a workshop.
+  and the :command:`workshop connect` command
+  can be used to link interface plugs to respective slots,
+  allowing the SDKs to orderly access the resources.
 
-- The :command:`workshop connect` command establishes a connection
-  between a workshop and a system interface,
-  allowing the workshop to securely access system resources.
+- Conversely, the :command:`workshop disconnect` command
+  terminates existing interface connections,
+  revoking the access to the resources granted by the connection.
 
-- Conversely, the :command:`workshop disconnect` command
-  terminates existing connections between a workshop and a system interface,
-  revoking the access to system resources granted by the connection.
-
-- Finally, the :command:`workshop connections` command
+- Finally, the :command:`workshop connections` command
   lists all existing connections and their states,
-  providing an overview of how workshops are communicating with the system.
+  providing an overview of how workshop connections are laid out.
 
 Some plugs can be auto-connected to their slots at launch or refresh.
 This behaviour varies by interface,
-but the overall aim is to provide a reasonably seamless, logical experience.
-For example, mount interface plugs are auto-connected,
-whereas an SSH interface plug requires manual connection.
+but the overall aim is to provide a reasonably seamless, logical experience:
+the :ref:`mount <exp_mount_interface>`
+and the :ref:`GPU <exp_gpu_interface>` interfaces are auto-connected,
+whereas the :ref:`SSH interface <exp_ssh_interface>` requires manual connection.
 
 
 .. _exp_system_sdk:
@@ -59,18 +59,17 @@ whereas an SSH interface plug requires manual connection.
 System SDK
 ~~~~~~~~~~
 
-Every workshop contains a *system SDK*
-that exposes system resources through interface slots.
-It's essentially a special SDK type,
-which is not available from the SDK Store but is auto-added to each workshop.
-It's installed first at :command:`workshop launch`
-and removed last at :command:`workshop remove`,
-ensuring internal consistency.
+Every workshop contains a special *system SDK*
+that exposes system resources through its slots.
+It's unavailable from the SDK Store;
+installed first at :command:`workshop launch`
+and removed last during :command:`workshop remove`,
+it ensures internal consistency.
 
 The purpose of the system SDK isn't to add hooks or additional content;
-it's only there to expose host system resources to other SDKs consistently.
+it's only there to uniformly expose host system resources to other SDKs.
 As such, it can't be removed by the user
-and isn't listed in the :command:`workshop info` output.
+and isn't listed in the :command:`workshop info` output.
 It's also the only SDK
 that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
 
