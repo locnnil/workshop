@@ -62,6 +62,10 @@ SDK hooks
      - Configures the base image for the SDK to become operational.
 
 
+Hooks of the same type from multiple SDKs run in a non-deterministic sequence.
+You should not rely on any particular order of their execution.
+
+
 See also
 --------
 
