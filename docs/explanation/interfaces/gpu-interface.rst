@@ -13,10 +13,6 @@ By using the interface,
 the SDK publisher allows the workshop to directly access the host's GPU devices,
 which may be required for various GPU-intensive workloads.
 
-
-Connection
-----------
-
 The interface is connected automatically at launch or refresh,
 provided that the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,

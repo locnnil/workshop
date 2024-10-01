@@ -13,10 +13,6 @@ the SDK publisher allows the workshop to connect to the host's SSH agent,
 which can be useful in various SDK-specific tasks
 such as cloning private repositories, accessing remote machines and so on.
 
-
-Connection
-----------
-
 The interface isn't connected automatically at launch and refresh
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands

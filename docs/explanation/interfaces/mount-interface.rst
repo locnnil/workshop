@@ -26,9 +26,6 @@ when the :command:`workshop launch` or :command:`workshop refresh` commands run:
   where the SDK or the user presumably expects it.
 
 
-Connection
-----------
-
 The interface is connected automatically at launch or refresh
 if the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
