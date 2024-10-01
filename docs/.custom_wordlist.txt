@@ -18,6 +18,7 @@ basename
 cooldown
 customisable
 cwd
+deliverables
 dev
 distributions
 env

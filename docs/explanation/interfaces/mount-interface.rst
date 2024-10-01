@@ -26,9 +26,6 @@ when the :command:`workshop launch` or :command:`workshop refresh` commands run:
   where the SDK or the user presumably expects it.
 
 
-Connection
-----------
-
 The interface is connected automatically at launch or refresh
 if the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
@@ -109,6 +106,15 @@ this usually succeeds if the new source is either a non-existent directory
 or an empty directory on the same file system as the current source.
 Otherwise, the remount only occurs if the workshop has been stopped earlier,
 which prevents data corruption.
+
+To reset a remounted plug to its default source location,
+use :samp:`workshop disconnect` with the :option:`!--forget` option,
+then refresh the workshop:
+
+.. code-block:: console
+
+  $ workshop disconnect ws/mount-sdk:cache --forget
+  $ workshop refresh ws
 
 
 See also
