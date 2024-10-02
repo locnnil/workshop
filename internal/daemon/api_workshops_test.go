@@ -654,7 +654,7 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 }
 
 func (s *apiSuite) mockHackSdk(c *check.C, ws string, meta string) {
-	sdkpath := sdk.WorkshopHackSdkDir(s.userhome, s.project.ProjectId, ws)
+	sdkpath := sdk.WorkshopHackSdkCurrent(s.userhome, s.project.ProjectId, ws)
 	metadir := filepath.Join(sdkpath, "meta")
 	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
 	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)

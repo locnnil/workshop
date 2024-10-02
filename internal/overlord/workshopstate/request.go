@@ -62,11 +62,11 @@ func maybeHack(ctx context.Context, pid, wp string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	hackdir := sdk.WorkshopHackSdkDir(usr.HomeDir, pid, wp)
+	hackdir := sdk.WorkshopHackSdkCurrent(usr.HomeDir, pid, wp)
 
-	_, err = os.Stat(hackdir)
+	recs, err := os.ReadDir(hackdir)
 	// no hack SDK exists for the workshop and it is not an error.
-	if osutil.IsDirNotExist(err) {
+	if len(recs) == 0 || osutil.IsDirNotExist(err) {
 		return false, nil
 	}
 	if err != nil {

@@ -110,7 +110,7 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 		if err != nil {
 			return err
 		}
-		hackdir := sdk.WorkshopHackSdkDir(usr.HomeDir, project.ProjectId, w)
+		hackdir := sdk.WorkshopHackSdkCurrent(usr.HomeDir, project.ProjectId, w)
 		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(hackdir))
 	default:
 		return fmt.Errorf("unknown type of the local SDK")

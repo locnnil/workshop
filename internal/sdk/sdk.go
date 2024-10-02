@@ -400,8 +400,12 @@ func ProjectHackSdkDir(homedir, pid string) string {
 	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "hack")
 }
 
-func WorkshopHackSdkDir(homedir, pid, wp string) string {
-	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp)
+func WorkshopHackSdkCurrent(homedir, pid, wp string) string {
+	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "current")
+}
+
+func WorkshopHackSdkStored(homedir, pid, wp string) string {
+	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "stored")
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {
