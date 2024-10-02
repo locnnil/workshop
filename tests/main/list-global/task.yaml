@@ -5,6 +5,9 @@ restore: |
     rm -rf "$path"
   done
 
+  workshop_exec warnings
+  workshop_exec okay || true
+
 execute: |
   . "$TESTSLIB"/utils.sh
   

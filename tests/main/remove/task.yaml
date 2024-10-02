@@ -1,4 +1,9 @@
 summary: Check workshop remove
+restore: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec warnings
+  workshop_exec okay || true
 execute: |
   . "$TESTSLIB"/utils.sh
 
