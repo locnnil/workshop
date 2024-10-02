@@ -180,11 +180,11 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
 	// Launch another workshop with a candidate plug
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -226,10 +226,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
-	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
+	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
 	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
@@ -285,10 +285,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
-	wp, err := s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs})
+	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
 	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
@@ -319,10 +319,10 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	// Setup
 	// Create an already launched workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumerManyPlugs, csetup2: consumer2})
+	s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}, {csetup2, consumer2}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer2, s.prj.ProjectId, "ws")), check.IsNil)
 
@@ -366,9 +366,9 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		{Name: "conflict-1", Channel: "latest/stable"}: conflictingTarget1,
-		{Name: "conflict-2", Channel: "latest/stable"}: conflictingTarget2,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable"}, conflictingTarget1},
+		{sdk.Setup{Name: "conflict-2", Channel: "latest/stable"}, conflictingTarget2},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget1, s.prj.ProjectId, "ws")), check.IsNil)
@@ -400,7 +400,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumer}})
 
 	// Execute
 	s.state.Lock()
@@ -433,11 +433,11 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 	// Setup
 	// Create an already installed workshop with a candidate SDK/slot
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-producer", map[sdk.Setup]string{psetup: producer})
+	s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
 
 	// Launch another workshop with a candidate plug
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{csetup: consumer})
+	s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumer}})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -513,7 +513,7 @@ slots:
     slot:
         interface: mount        
 `
-	wm, err := s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{csetup: sdkYaml})
+	wm, err := s.launchWorkshop(c, "ws-consumer", []testSdkSetup{{csetup, sdkYaml}})
 	c.Assert(err, check.IsNil)
 	wm.Running = true
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
@@ -786,9 +786,9 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a connected plug
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws-consumer", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 
 	connRef := &interfaces.ConnRef{
@@ -871,9 +871,9 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectDisconnected(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a content plug
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -900,9 +900,9 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectDisconnected(c *check.C) {
 func (s *interfaceHandlersSuite) TestAutoDisconnectNoSdkProfile(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -939,9 +939,9 @@ func (s *interfaceHandlersSuite) newUndoDisconnectInterfacesChange(sdkName strin
 func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws-consumer", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
@@ -990,9 +990,9 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C)
 func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesManualRestored(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
-	s.launchWorkshop(c, "ws-consumer", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws-consumer", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
@@ -1059,9 +1059,9 @@ func (s *interfaceHandlersSuite) disconnectChange(c *check.C, workshop string, f
 
 func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1102,9 +1102,9 @@ func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestDisconnectAuto(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1151,9 +1151,9 @@ func (s *interfaceHandlersSuite) TestDisconnectAuto(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1199,9 +1199,9 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1251,9 +1251,9 @@ func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestundoDisconnectUndesiredSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1326,9 +1326,9 @@ func (s *interfaceHandlersSuite) connectChange(workshop string, auto bool, delay
 
 func (s *interfaceHandlersSuite) TestConnectSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1357,9 +1357,9 @@ func (s *interfaceHandlersSuite) TestConnectSuccess(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1388,9 +1388,9 @@ func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1419,9 +1419,9 @@ func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *ch
 
 func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1468,9 +1468,9 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestConnectAuto(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1509,9 +1509,9 @@ func (s *interfaceHandlersSuite) TestConnectAuto(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestUndoConnectUndesired(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1561,9 +1561,9 @@ func (s *interfaceHandlersSuite) TestUndoConnectUndesired(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestUndoConnectBackendSetup(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1595,9 +1595,9 @@ func (s *interfaceHandlersSuite) TestUndoConnectBackendSetup(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestDiscardConnsSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1668,9 +1668,9 @@ func (s *interfaceHandlersSuite) TestDiscardConnsSuccess(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestUndoDiscardConnsSuccess(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		csetup: consumer,
-		psetup: producer,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumer},
+		{psetup, producer},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)

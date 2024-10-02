@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/afero"
-	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
@@ -76,14 +75,19 @@ func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.Worksho
 	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
 }
 
-func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdkYamls map[sdk.Setup]string) (*workshop.Workshop, error) {
+type testSdkSetup struct {
+	sdk.Setup
+	yaml string
+}
+
+func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []testSdkSetup) (*workshop.Workshop, error) {
 	ctx := context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
 	var workshopFile = bytes.NewBuffer([]byte{})
-	t.Execute(workshopFile, maps.Keys(sdkYamls))
+	t.Execute(workshopFile, sdks)
 
 	var wf workshop.File
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
@@ -106,8 +110,8 @@ slots:
 `
 	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "x1", "meta"), 0755), check.IsNil)
 	s.writeSDKMetaFile(c, wsfs, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}, systemYaml)
-	for sdk, yaml := range sdkYamls {
-		s.writeSDKMetaFile(c, wsfs, sdk, yaml)
+	for _, setup := range sdks {
+		s.writeSDKMetaFile(c, wsfs, setup.Setup, setup.yaml)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
@@ -116,8 +120,8 @@ slots:
 	err = w.LinkSdk(ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}})
 	c.Assert(err, check.IsNil)
 
-	for s := range sdkYamls {
-		if err = w.LinkSdk(ctx, s); err != nil {
+	for _, s := range sdks {
+		if err = w.LinkSdk(ctx, s.Setup); err != nil {
 			c.Assert(err, check.IsNil)
 		}
 	}
@@ -135,8 +139,8 @@ plugs:
   attr: plug-value
 `
 
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}: consumerYaml,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}, consumerYaml},
 	})
 
 	s.state.Lock()
@@ -203,9 +207,9 @@ slots:
   interface: mount
   attr2: value2
 `
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
-		{Name: "producer", Channel: "latest/stable"}: producerYaml,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "consumer", Channel: "latest/stable"}, consumerYaml},
+		{sdk.Setup{Name: "producer", Channel: "latest/stable"}, producerYaml},
 	})
 
 	s.state.Lock()
@@ -246,9 +250,9 @@ slots:
   interface: mount
   attr2: value2
 `
-	s.launchWorkshop(c, "ws", map[sdk.Setup]string{
-		{Name: "consumer", Channel: "latest/stable"}: consumerYaml,
-		{Name: "producer", Channel: "latest/stable"}: producerYaml,
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "consumer", Channel: "latest/stable"}, consumerYaml},
+		{sdk.Setup{Name: "producer", Channel: "latest/stable"}, producerYaml},
 	})
 
 	s.state.Lock()

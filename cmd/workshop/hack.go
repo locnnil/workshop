@@ -98,7 +98,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
-	cmdrefresh := &CmdRefresh{}
+	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
 
 	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/hack", av[0])})

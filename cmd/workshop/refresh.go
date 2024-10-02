@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
@@ -74,6 +75,15 @@ Notes:
 	return cmd
 }
 
+func workshopName(name string) string {
+	// Check if the name contains an SDK reference.
+	parts := strings.FieldsFunc(name, func(r rune) bool { return r == '/' })
+	if len(parts) > 1 {
+		return parts[0]
+	}
+	return name
+}
+
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	av = strutil.Deduplicate(av)
 
@@ -126,7 +136,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		if err == errWaitOnError {
 			return fmt.Errorf("cannot refresh; fix the errors reported,\n"+
 				"then run \"workshop refresh --continue %s\".\n"+
-				"To abort and revert, run \"workshop refresh --abort %s\"", av[0], av[0])
+				"To abort and revert, run \"workshop refresh --abort %s\"", workshopName(av[0]), workshopName(av[0]))
 		}
 
 		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))

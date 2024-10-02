@@ -137,8 +137,7 @@ func (m *SdkManager) undoInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	defer wfs.Close()
 
-	sdkdir := filepath.Join(sdk.SdkRootPath(sdkSetup.Name), sdkSetup.Revision.String())
-	return wfs.RemoveAll(sdkdir)
+	return wfs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String()))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -242,8 +241,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name))
-	if err != nil {
+	if err = fs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String())); err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkSetup.Name, err)
 	}
 
@@ -330,5 +328,9 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return wp.UnlinkSdk(ctx, sdkSetup.Name)
+	if err = wp.UnlinkSdk(ctx, sdkSetup.Name); err != nil {
+		return err
+	}
+
+	return nil
 }

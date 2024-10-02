@@ -13,7 +13,6 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -44,8 +43,7 @@ type Workshop struct {
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
-// the SDK to the workshop content. This method is idempotent, so if an SDK
-// existed, the result will be a no-op
+// the SDK to the workshop content.
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
@@ -54,24 +52,45 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	defer fs.Close()
 
 	// Update the current link to point out to the newly installed SDK.
-	sdkpath := filepath.Join(dirs.WorkshopSdksDir, s.Name)
-	sdkrev := filepath.Join(sdkpath, s.Revision.String())
-	current := filepath.Join(sdkpath, "current")
+	sdkrev := sdk.SdkRevPath(s.Name, s.Revision.String())
+	current := sdk.SdkCurrentPath(s.Name)
 
-	// the link could already be existing  (e.g. was created before and
-	// due to the refresh --continue the link task gets executed again)
-	if err = fs.Remove(current); err != nil && !osutil.IsDirNotExist(err) {
+	rev := revert.New()
+	defer rev.Fail()
+
+	oldcur, err := fs.ReadLink(current)
+	if err != nil && !osutil.IsDirNotExist(err) {
 		return err
+	}
+	if err == nil {
+		// The link could already be existing (e.g. there is a previous
+		// revision).
+		if err = fs.Remove(current); err != nil {
+			return err
+		}
+		rev.Add(func() { _ = fs.Symlink(oldcur, current) })
 	}
 
 	if err = fs.Symlink(sdkrev, current); err != nil {
 		return err
 	}
+	rev.Add(func() { _ = fs.Remove(current) })
 
+	// We do not track the system SDK in the content field; this is only for the
+	// user-defined SDKs as the system SDK is a special case (e.g. cannot be
+	// removed from the workshop).
 	if s.Name != sdk.System.String() {
 		now := InstallTimeNow()
 		s.InstallTime = &now
-		w.Content[s.Name] = s
+
+		sdksetup, exist := w.Content[s.Name]
+		if exist {
+			sdksetup.RevisionSequence = append(sdksetup.RevisionSequence, sdksetup.Revision)
+			sdksetup.Revision = s.Revision
+			w.Content[s.Name] = sdksetup
+		} else {
+			w.Content[s.Name] = s
+		}
 
 		sequenceValue, err := json.Marshal(w.Content)
 		if err != nil {
@@ -89,6 +108,7 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 		}
 	}
 
+	rev.Success()
 	return nil
 }
 
@@ -96,13 +116,12 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK from the workshop "installed" content if there are no more
 // revisions left.
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	updateSymlink := false
 	if name != sdk.System.String() {
-		inst := w.Content[name]
-		if inst.Revision.N < -1 {
-			itime := time.Now()
-			w.Content[name] = sdk.Setup{Name: inst.Name, Revision: sdk.Revision{N: inst.Revision.N + 1}, InstallTime: &itime}
-			updateSymlink = true
+		setup := w.Content[name]
+		if len(setup.RevisionSequence) > 0 {
+			setup.Revision = setup.RevisionSequence[len(setup.RevisionSequence)-1]
+			setup.RevisionSequence = setup.RevisionSequence[:len(setup.RevisionSequence)-1]
+			w.Content[name] = setup
 		} else {
 			delete(w.Content, name)
 		}
@@ -128,16 +147,17 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	}
 	defer fs.Close()
 
-	if updateSymlink {
-		prev := w.Content[name]
+	if setup, exist := w.Content[name]; exist {
 		if err = fs.Remove(sdk.SdkCurrentPath(name)); err != nil {
 			return err
 		}
-		if err = fs.Symlink(sdk.SdkRevPath(name, prev.Revision.String()), sdk.SdkCurrentPath(name)); err != nil {
+		if err = fs.Symlink(sdk.SdkRevPath(name, setup.Revision.String()), sdk.SdkCurrentPath(name)); err != nil {
 			return err
 		}
 		return nil
 	}
+
+	// No revisions left in the sequence, remove the 'current' link.
 	return fs.Remove(sdk.SdkCurrentPath(name))
 }
 

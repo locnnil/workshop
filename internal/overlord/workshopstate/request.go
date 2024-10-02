@@ -319,6 +319,15 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 }
 
 func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
+	err := w.CheckStatus(
+		ctx,
+		[]string{wpn},
+		pid,
+		[]healthstate.Status{healthstate.ReadyStatus})
+	if err != nil {
+		return nil, fmt.Errorf("cannot refresh: %v", err)
+	}
+
 	var taskset []*state.TaskSet
 	wp, err := w.Workshop(ctx, wpn, pid)
 	if err != nil {
@@ -333,10 +342,15 @@ func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn s
 }
 
 func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*state.TaskSet, error) {
-	st := w.state
 	cur, installed := wp.Content[sdkn]
-	setup := sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: cur.Revision.N - 1}}
+	var setup sdk.Setup
+	if installed {
+		setup = sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: cur.Revision.N - 1}}
+	} else {
+		setup = sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: -1}}
+	}
 
+	st := w.state
 	ts := state.NewTaskSet()
 
 	if installed {
