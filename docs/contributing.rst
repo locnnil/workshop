@@ -3,41 +3,94 @@ How to contribute
 
 We believe everyone has something valuable to contribute,
 whether you're a coder, a writer or a tester.
-Here's how and why of your potential involvement:
+Here's how and why you could get involved:
 
-- **Why join us?** Work with fellow-minded people, grow your skills,
-  connect with diverse professionals, and make a difference.
+- **Why join us**:
+  Work with like-minded people, grow your skills,
+  connect with diverse professionals and make a difference.
 
-- **What do you get?** Personal growth, recognition for your contributions,
+- **What do you get**:
+  Personal growth, recognition for your contributions,
   early access to new features and the joy of seeing your work appreciated.
 
-- **Start early, start simple**: Dive into code contributions,
-  improve documentation, or be among the first testers.
-  Your presence matters regardless of experience or the scale of your input.
+- **Start early, start simple**:
+  Dive into code contributions,
+  improve documentation or be among the first testers.
+  Your presence matters, regardless of experience or the scale of your input.
 
 The guidelines below will keep your contributions effective and meaningful.
+
+
+Environment setup
+-----------------
+
+#. `Snapcraft <https://snapcraft.io/docs/snapcraft>`_
+   is used to build, package, and publish ``workshop`` snaps.
+   All these processes run in a self-launched
+   `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
+   Install ``snapcraft`` and ``lxd`` using ``snap``:
+
+   .. code-block:: console
+
+      sudo snap install snapcraft --classic
+      sudo snap install lxd
+
+
+   Add the current user to the ``lxd`` group
+   to give permission to access its resources:
+
+   .. code-block:: console
+
+      sudo usermod -a -G lxd $USER
+
+
+   Log out and re-open your user session for the new group to become active,
+   then initialise LXD:
+
+   .. code-block:: console
+
+      lxd init --minimal
+
+
+#. ``Spread`` is the end-to-end testing tool for ``workshop``.
+   Install it from `our custom fork <https://github.com/dmitry-lyfar/spread>`_:
+
+   .. code-block:: console
+
+      git clone https://github.com/dmitry-lyfar/spread
+      cd spread
+      go install ./...
+
+
+   Make sure the ``$GOPATH/bin`` directory is included in ``$PATH``.
+   After successful installation, you should see the help message by running:
+
+   .. code-block:: console
+
+      spread -h
 
 
 Coding
 ------
 
-Workshop's commit messages differ from conventional commits in capitalisation:
+In Workshop, commit messages differ from conventional commits in capitalisation:
 
 .. code-block:: none
 
-   Ensure correct permissions and ownership for the mounts
-    
+   Ensure correct permissions and ownership for the content mounts
+
     * Work around an LXD issue regarding empty dirs:
       https://github.com/canonical/lxd/issues/12648
-    
+
     * Ensure the source directory is owned by the user running a workshop.
 
    Links:
    - ...
    - ...
 
-The messages rarely if ever state the type of the commit,
-e.g. ``fix``, ``feat``, etc.;
+
+The messages rarely, if ever, state the type of the commit
+(e.g. ``fix``, ``feat``, etc.);
 these are used for branch naming, for example:
 
 - ``canonical/feat/workspace-start``
@@ -45,7 +98,7 @@ these are used for branch naming, for example:
 - ``canonical/chore/update-lxd``
 
 
-However, documentation-related commits use the ``Doc:`` type prefix
+Commits that focus on docs must use the ``Doc:`` type prefix
 with an optional scope in square brackets:
 
 .. code-block:: none
@@ -53,8 +106,8 @@ with an optional scope in square brackets:
    Doc[chore]: Align references
 
 
-PR descriptions should follow the PR template checklist
-that largely reiterates this section.
+PR descriptions should follow the PR template checklist,
+which largely reiterates this section.
 
 
 Reversibility
@@ -104,7 +157,7 @@ Code structure
 ~~~~~~~~~~~~~~
 
 - **Check coupled code elements**:
-  Verify that coupled code elements, files, and directories are adjacent.
+  Verify that coupled code elements, files and directories are adjacent.
   For instance, store test data close to the corresponding test code.
 
 - **Group variable declaration and initialisation**:
@@ -127,7 +180,7 @@ Testing
 -------
 
 Make sure to run unit and integration tests before submitting a PR.
-Workshop uses a ``go test``-compatible
+We use a ``go test``-compatible
 `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_:
 
 .. code-block:: console
@@ -142,16 +195,7 @@ of ``Spread``:
 
 .. code-block:: console
 
-   git clone https://github.com/dmitry-lyfar/spread
-   cd spread
-   go install ./...
-
-
-.. note::
-
-   Our tests require
-   `Multipass <https://multipass.run/docs>`_
-   to run.
+   spread tests/<TestPathName>
 
 
 Documentation
@@ -167,6 +211,5 @@ To build and run it at ``127.0.0.1:8000``:
 
 To suggest changes online, use the GitHub link in the footer of the page
 or submit a PR, limiting it to the ``docs/`` directory
-and following our internal
-`Sphinx and Read the Docs guide
+and following our internal `Sphinx and Read the Docs guide
 <https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/>`_.
