@@ -356,16 +356,16 @@ Sometimes the
 :ref:`base <exp_base>`
 or the
 :ref:`SDKs <exp_sdk>`
-listed in your workshop definition
+listed in your :ref:`workshop definition <tut_define>`
 are updated by their publishers.
 Alternatively,
-you may have changed the :ref:`definition <exp_workshop_def>`
-to switch bases, add and remove SDKs or toggle their channels.
+you may have changed the definition to switch bases,
+add and remove SDKs or toggle their channels.
 In either case,
 you should :ref:`refresh <ref_workshop_refresh>` the workshop
 to apply the updates.
 
-Here, change the base in your :ref:`definition <tut_define>`
+Here, change the base in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
