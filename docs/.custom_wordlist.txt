@@ -33,6 +33,7 @@ lxd
 onboarding
 pathname
 readme
+rebase
 repo
 roadmap
 ros

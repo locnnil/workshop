@@ -110,6 +110,12 @@ PR descriptions should follow the PR template checklist,
 which largely reiterates this section.
 
 
+After receiving review comments, please preserve the original commit history.
+Avoid using rebase or force push, since these can overwrite existing commits,
+making the discussion harder to follow.
+Review comments should be addressed by making additional commits.
+
+
 Reversibility
 ~~~~~~~~~~~~~
 
