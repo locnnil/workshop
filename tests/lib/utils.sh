@@ -4,10 +4,10 @@ function setup_lxd() {
   snap install --classic lxd
   snap refresh --channel=5.21/stable lxd
   lxd waitready --timeout=180
-  
+
   # can already be initialised if reused
   # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
-  if [ $(lxc storage list -f compact | grep -c default) -eq 0  ]; then   
+  if [ "$(lxc storage list -f compact | grep -c default)" -eq 0  ]; then
       lxd init --auto --storage-backend=zfs
   fi
 }
@@ -18,9 +18,9 @@ function prepare_environment() {
   snap wait system seed.loaded
   # The /snap directory does not exist in some environments
   [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
-  
+
   setup_lxd
-  
+
   snap install --classic --channel=1.21/stable go
   snap install yq
   # The unattended upgrades hold locks on reusable instances
@@ -28,7 +28,7 @@ function prepare_environment() {
   apt-get remove -y unattended-upgrades
   apt-get update
   apt-get install -y --no-install-recommends moreutils jq
-  
+
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/
   snap set workshop workshop.image.server.url="$IMAGE_SERVER"
@@ -36,7 +36,7 @@ function prepare_environment() {
 }
 
 function cleanup_environment() {
-  snap remove workshop --purge   
+  snap remove workshop --purge
   find /workshop -name .workshop.lock -delete
 }
 
@@ -44,10 +44,10 @@ function start_sdk_store() {
   # run fake GCS bucket storage to emulate SDK store
   publish_test_sdk_content "$SDKS" "$SDK_STORE_BUCKET_DIR"
   # a bug with fake-gcs-server that returns 404 if not owned by the user
-  chown -R ubuntu.ubuntu /data 
+  chown -R ubuntu.ubuntu /data
   mkdir -p /storage
   chown -R ubuntu.ubuntu /storage
-  
+
   /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
 
   echo "Waiting for the fake SDK store to start on port 8080..."
@@ -70,6 +70,8 @@ function publish_test_sdk_content() {
       SDK_PATH=$(readlink -f "$i")
       STORE_PATH="$2"/"$SDK_NAME"/latest/stable/
 
+      # we want word splitting when reading the output of `ls -A $SDK_PATH`
+      # shellcheck disable=SC2046
       tar czf "$SDK_FILE" -C "$SDK_PATH" $(ls -A "$SDK_PATH")
       mkdir -p "$STORE_PATH"
       mv "$SDK_FILE" "$STORE_PATH"

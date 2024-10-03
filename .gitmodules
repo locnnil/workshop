@@ -1,4 +1,3 @@
-[submodule "tools/external"]
-	path = tools/external
-	url = https://github.com/snapcore/snapd-testing-tools.git
-	branch = main
+[submodule "snapd-testing-tools"]
+	path = snapd-testing-tools
+	url = https://github.com/canonical/snapd-testing-tools.git

@@ -1,4 +1,4 @@
 summary: Run LXD integration tests for workshop operations (launch, delete, attach storage, etc.)
 
 execute: |
-  go test $SPREAD_PATH/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsOps
+  go test "$SPREAD_PATH"/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsOps

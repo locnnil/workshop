@@ -1,4 +1,4 @@
 summary: Run LXD integration tests for SDK profiles
 
 execute: |
-  go test $SPREAD_PATH/internal/interfaces/lxd_device/tests/integration -timeout=30m -tags=integration -check.v -check.f backendDeviceSuite
+  go test "$SPREAD_PATH"/internal/interfaces/lxd_device/tests/integration -timeout=30m -tags=integration -check.v -check.f backendDeviceSuite
