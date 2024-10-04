@@ -585,8 +585,11 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 }
 
 func (s *apiSuite) createWFile(c *check.C, name, yaml string) {
-	err := os.WriteFile(filepath.Join(s.project.Path, fmt.Sprintf(`.workshop.%s.yaml`, name)),
-		[]byte(yaml), 0644)
+	workshopDir := filepath.Join(s.project.Path, workshop.Directory)
+	err := os.MkdirAll(workshopDir, os.ModePerm)
+	c.Assert(err, check.IsNil)
+
+	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 

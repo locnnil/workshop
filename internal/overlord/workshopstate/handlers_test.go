@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
@@ -22,6 +21,14 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
+
+var wsFocal = `name: ws
+base: ubuntu@20.04
+`
+
+var wsJammy = `name: ws
+base: ubuntu@22.04
+`
 
 type workshopHandlers struct {
 	fs                afero.Fs
@@ -47,6 +54,15 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 		i.Set("workshop", w)
 		i.Set("project", *p)
 	}
+}
+
+func (s *workshopHandlers) createWFile(c *check.C, name string, yaml string) {
+	workshopDir := filepath.Join(s.project.Path, workshop.Directory)
+	err := os.MkdirAll(workshopDir, os.ModePerm)
+	c.Assert(err, check.IsNil)
+
+	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
+	c.Assert(err, check.IsNil)
 }
 
 var ErrTrigger = errors.New("error out")
@@ -102,12 +118,9 @@ func (s *workshopHandlers) TearDownTest(c *check.C) {
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
+	s.createWFile(c, "ws", wsFocal)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	wfbuf, err := yaml.Marshal(wf)
-	c.Check(err, check.IsNil)
-	err = os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), wfbuf, 0644)
-	c.Check(err, check.IsNil)
-	err = s.backend.LaunchWorkshop(s.ctx, wf)
+	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 
 	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId, "1")
@@ -252,10 +265,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@22.04
-`), 0644)
-	c.Check(err, check.IsNil)
+	s.createWFile(c, "ws", wsJammy)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	chg := s.state.NewChange("sample", "...")
@@ -287,10 +297,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 		s.backend.DownloadBaseCallback = nil
 	}()
 
-	err := os.WriteFile(filepath.Join(s.project.Path, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@22.04
-`), 0644)
-	c.Check(err, check.IsNil)
+	s.createWFile(c, "ws", wsJammy)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	chg := s.state.NewChange("sample", "...")

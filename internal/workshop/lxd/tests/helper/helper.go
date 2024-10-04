@@ -14,6 +14,10 @@ import (
 	"gopkg.in/check.v1"
 )
 
+var testYaml = `name: test
+base: ubuntu@22.04
+`
+
 var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
 
 func DefaultTestDevices() map[string]map[string]string {
@@ -85,8 +89,13 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.test.yaml"), []byte(`name: test
-base: ubuntu@22.04`), 0644), check.IsNil)
+
+	workshopDir := filepath.Join(dir, workshop.Directory)
+	err = os.MkdirAll(workshopDir, os.ModePerm)
+	c.Assert(err, check.IsNil)
+
+	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename("test")), []byte(testYaml), 0644)
+	c.Assert(err, check.IsNil)
 
 	_, _, err = bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)

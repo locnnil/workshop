@@ -49,6 +49,15 @@ func (f *wsProject) TearDownTest(c *check.C) {
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
 
+func createWFile(c *check.C, path, name, yaml string) {
+	workshopDir := filepath.Join(path, workshop.Directory)
+	err := os.MkdirAll(workshopDir, os.ModePerm)
+	c.Assert(err, check.IsNil)
+
+	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
+	c.Assert(err, check.IsNil)
+}
+
 func (f *wsProject) TestLxdBackendCreateProjectNoWorkshopFiles(c *check.C) {
 	// Setup
 	be := lxdbackend.Backend{}
@@ -75,8 +84,8 @@ func (f *wsProject) TestLxdBackendCreateProject(c *check.C) {
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
-	os.WriteFile(filepath.Join(projectDir2, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
+	createWFile(c, projectDir2, "test", workshopMock)
 
 	// Execute
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
@@ -110,7 +119,7 @@ func (f *wsProject) TestLxdBackendReconcileProjectIfNotRecovered(c *check.C) {
 	defer restore()
 	projectDir := c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
 
 	// Execute
 	_, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
@@ -133,7 +142,7 @@ func (f *wsProject) TestLxdBackendLoadProject(c *check.C) {
 	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	projectDir := c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(prj.Path, check.Equals, projectDir)
@@ -170,7 +179,7 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryMoved(c *check.C) {
 			},
 		}, "")
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
 	os.WriteFile(filepath.Join(projectDir, ".workshop.lock"), []byte("b8639dea"), 0644)
 	err := os.Rename(projectDir, newDir)
 	c.Assert(err, check.IsNil)
@@ -201,8 +210,8 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryCopied(c *check.C) {
 			},
 		}, "")
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
-	os.WriteFile(filepath.Join(newDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
+	createWFile(c, newDir, "test", workshopMock)
 	os.WriteFile(filepath.Join(projectDir, ".workshop.lock"), []byte("b8639dea"), 0644)
 	os.WriteFile(filepath.Join(newDir, ".workshop.lock"), []byte("b8639dea"), 0644)
 
@@ -225,8 +234,8 @@ func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 	defer restore()
 	projectDir, projectDir2 := c.MkDir(), c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
-	os.WriteFile(filepath.Join(projectDir2, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
+	createWFile(c, projectDir2, "test", workshopMock)
 
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
@@ -257,9 +266,8 @@ func (f *wsProject) TestLxdBackendLoadProjectDirectoryRemoved(c *check.C) {
 	be := lxdbackend.Backend{}
 	projectDir := c.MkDir()
 
-	err := os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
-	c.Assert(err, check.IsNil)
-	_, _, err = be.CreateOrLoadProject(f.ctx, projectDir)
+	createWFile(c, projectDir, "test", workshopMock)
+	_, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -289,7 +297,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 	projectDir := c.MkDir()
 
-	os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644)
+	createWFile(c, projectDir, "test", workshopMock)
 	prj, _, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(err, check.IsNil)
@@ -313,7 +321,7 @@ func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	restore := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	projectDir := c.MkDir()
 
-	c.Assert(os.WriteFile(filepath.Join(projectDir, ".workshop.test.yaml"), []byte(workshopMock), 0644), check.IsNil)
+	createWFile(c, projectDir, "test", workshopMock)
 	prj, created, err := be.CreateOrLoadProject(f.ctx, projectDir)
 	c.Assert(prj, check.NotNil)
 	c.Assert(prj.Path, check.Equals, projectDir)

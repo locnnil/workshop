@@ -3,8 +3,6 @@ package daemon
 import (
 	"bytes"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -14,13 +12,17 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+var wsYaml = `name: ws
+base: ubuntu@20.04
+`
+
 func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.daemon(c)
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}/exec")
 
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
-	os.WriteFile(filepath.Join(s.workshopDir, ".workshop.ws.yaml"), []byte(`name: ws
-base: ubuntu@20.04`), 0644)
+	s.createWFile(c, "ws", wsYaml)
+
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
 
 	err := s.b.LaunchWorkshop(s.ctx, wf)
