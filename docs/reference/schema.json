@@ -1,104 +1,142 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://canonical.com/.workshop.name.yaml",
+  "title": "Workshop",
+  "description": "Workshop definition.",
   "type": "object",
   "properties": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "description": "Name of the workshop.",
+      "pattern": "^[a-z_][a-z0-9_-]*$",
+      "errorMessage": "A workshop's name must start with a letter and can only include lowercase alphanumeric characters or underscores."
     },
     "base": {
       "type": "string",
+      "description": "Base system for the workshop.",
       "enum": [
         "ubuntu@20.04",
         "ubuntu@22.04",
         "ubuntu@24.04"
-      ]
+      ],
+      "errorMessage": "The base must be one of the supported values: ubuntu@20.04, ubuntu@22.04, ubuntu@24.04."
     },
     "sdks": {
       "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "channel": {
-            "type": "string"
-          },
-          "plugs": {
-            "type": "object",
-            "additionalProperties": {
-              "oneOf": [
-                {
+      "description": "List of SDKs used in the workshop.",
+      "patternProperties": {
+        "^[a-z_][a-z0-9_-]*$": {
+          "type": "object",
+          "properties": {
+            "channel": {
+              "type": "string",
+              "description": "Channel used for the SDK.",
+              "pattern": "^[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)$",
+              "errorMessage": "Channel must follow the pattern <track>/<risk> (e.g., 'latest/stable')."
+            },
+            "plugs": {
+              "type": "object",
+              "description": "Plugs for the SDK.",
+              "patternProperties": {
+                "^[a-z_][a-z0-9_-]*$": {
                   "type": "object",
                   "properties": {
                     "bind": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "bind"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "interface": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Reference to a plug in the form <sdk>:<plug>.",
+                      "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+                      "errorMessage": "Bind reference must follow the pattern <sdk>:<plug>."
                     },
-                    "workshop-target": {
-                      "type": "string"
+                    "attributes": {
+                      "type": "object",
+                      "description": "Dynamic attributes for the plug, must be empty if 'bind' is set.",
+                      "additionalProperties": true
                     }
                   },
-                  "required": [
-                    "interface"
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "bind": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "then": {
+                        "properties": {
+                          "attributes": {
+                            "type": "object",
+                            "maxProperties": 0
+                          }
+                        },
+                        "errorMessage": "If 'bind' is set, 'attributes' must be empty."
+                      }
+                    }
                   ]
                 }
-              ]
+              }
+            },
+            "slots": {
+              "type": "object",
+              "description": "Slots available for the SDK.",
+              "additionalProperties": true
             }
           },
-          "slots": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "interface": {
-                  "type": "string"
-                },
-                "source": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "interface"
-              ]
+          "required": [
+            "channel"
+          ],
+          "errorMessage": {
+            "required": {
+              "channel": "SDK must specify a channel unless it is installed from a local source."
             }
           }
-        },
-        "required": [
-          "channel"
-        ]
-      }
+        }
+      },
+      "additionalProperties": false,
+      "errorMessage": "SDK names must be unique and only appear once."
     },
     "connections": {
       "type": "array",
+      "description": "List of connections between plugs and slots.",
       "items": {
         "type": "object",
         "properties": {
           "plug": {
-            "type": "string"
+            "type": "string",
+            "description": "Reference to a plug in the form <sdk>:<plug>.",
+            "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+            "errorMessage": "Plug reference must follow the pattern <sdk>:<plug>."
           },
           "slot": {
-            "type": "string"
+            "type": "string",
+            "description": "Reference to a slot in the form <sdk>:<slot>.",
+            "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+            "errorMessage": "Slot reference must follow the pattern <sdk>:<slot>."
           }
         },
         "required": [
           "plug",
           "slot"
-        ]
-      }
+        ],
+        "errorMessage": {
+          "required": {
+            "plug": "Each connection must specify a plug.",
+            "slot": "Each connection must specify a slot."
+          }
+        }
+      },
+      "errorMessage": "Connections must define both plug and slot references."
     }
   },
   "required": [
     "name",
-    "base",
-    "sdks"
-  ]
+    "base"
+  ],
+  "additionalProperties": false,
+  "errorMessage": {
+    "required": {
+      "name": "The 'name' field is required.",
+      "base": "The 'base' field is required."
+    }
+  }
 }
