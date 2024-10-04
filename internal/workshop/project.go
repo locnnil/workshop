@@ -44,17 +44,30 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	return readWorkshop(filepath.Join(w.Path, Filename(workshop)))
+	path := filepath.Join(w.Path, Directory, Filename(workshop))
+	oldPath := filepath.Join(w.Path, OldFilename(workshop))
+
+	if !osutil.FileExists(path) && osutil.FileExists(oldPath) {
+		path = oldPath
+	}
+
+	return readWorkshop(path)
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
-	files, err := filepath.Glob(filepath.Join(w.Path, ".workshop.*.yaml"))
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "workshop.*.yaml"))
 	if err != nil {
 		return nil, err
 	}
+
+	oldFiles, err := filepath.Glob(filepath.Join(w.Path, ".workshop.*.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, oldFiles...)
 
 	var workshops = make([]string, 0, len(files))
 	for _, f := range files {
@@ -66,7 +79,8 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), ".workshop."), ".yaml")
+		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), "workshop."), ".yaml")
+		name = strings.TrimPrefix(name, ".workshop.")
 		workshops = append(workshops, name)
 	}
 	return workshops, nil

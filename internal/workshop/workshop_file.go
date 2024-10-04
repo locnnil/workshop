@@ -21,9 +21,15 @@ var (
 
 	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+
+	Directory = ".workshop"
 )
 
 func Filename(name string) string {
+	return fmt.Sprintf("workshop.%s.yaml", name)
+}
+
+func OldFilename(name string) string {
 	return fmt.Sprintf(".workshop.%s.yaml", name)
 }
 
@@ -146,7 +152,7 @@ func readWorkshop(pathname string) (*File, error) {
 	}
 
 	fname := filepath.Base(pathname)
-	if Filename(file.Name) != fname {
+	if Filename(file.Name) != fname && OldFilename(file.Name) != fname {
 		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
 	}
 

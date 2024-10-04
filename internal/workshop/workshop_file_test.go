@@ -30,7 +30,7 @@ func (f *workshopFile) SetUpTest(c *check.C) {
 }
 
 func workshopFilePath(dir, name string) string {
-	return filepath.Join(dir, workshop.Filename(name))
+	return filepath.Join(dir, workshop.OldFilename(name))
 }
 
 func (f *workshopFile) TestWorkshopFileParse(c *check.C) {
@@ -100,7 +100,7 @@ base: ubuntu@20.04
 	c.Assert(os.WriteFile(filepath.Join(dir, ".workshop.xbert.yaml"), buf, 0644), check.IsNil)
 	file, err := workshop.ReadWorkshop(workshopFilePath(dir, "xbert"))
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named as ".workshop.xbert-gpu.yaml" \(now: .workshop.xbert.yaml\)`)
+	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named as "workshop.xbert-gpu.yaml" \(now: .workshop.xbert.yaml\)`)
 }
 
 func (f *workshopFile) TestWorkshopFileDuplicateSdks(c *check.C) {
