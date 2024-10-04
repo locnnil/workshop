@@ -44,14 +44,7 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	path := filepath.Join(w.Path, Directory, Filename(workshop))
-	oldPath := filepath.Join(w.Path, OldFilename(workshop))
-
-	if !osutil.FileExists(path) && osutil.FileExists(oldPath) {
-		path = oldPath
-	}
-
-	return readWorkshop(path)
+	return readWorkshop(filepath.Join(w.Path, Directory, Filename(workshop)))
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
@@ -62,12 +55,6 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	oldFiles, err := filepath.Glob(filepath.Join(w.Path, ".workshop.*.yaml"))
-	if err != nil {
-		return nil, err
-	}
-	files = append(files, oldFiles...)
 
 	var workshops = make([]string, 0, len(files))
 	for _, f := range files {
@@ -80,7 +67,6 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 			continue
 		}
 		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), "workshop."), ".yaml")
-		name = strings.TrimPrefix(name, ".workshop.")
 		workshops = append(workshops, name)
 	}
 	return workshops, nil

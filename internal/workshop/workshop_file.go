@@ -29,10 +29,6 @@ func Filename(name string) string {
 	return fmt.Sprintf("workshop.%s.yaml", name)
 }
 
-func OldFilename(name string) string {
-	return fmt.Sprintf(".workshop.%s.yaml", name)
-}
-
 type Plug struct {
 	Bind       *PlugRef               `yaml:"bind,omitempty"`
 	Attributes map[string]interface{} `yaml:",inline"`
@@ -152,7 +148,7 @@ func readWorkshop(pathname string) (*File, error) {
 	}
 
 	fname := filepath.Base(pathname)
-	if Filename(file.Name) != fname && OldFilename(file.Name) != fname {
+	if Filename(file.Name) != fname {
 		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
 	}
 

@@ -135,9 +135,8 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 	// Check if the associated workshop file exists. We only check if that file
 	// exists in the .workshop directory here; its state (e.g. if it is in sync
 	// with the workshop instance or has any errors) is not checked.
-	oldPath := filepath.Join(ws.Project.Path, workshop.OldFilename(ws.Name))
 	path := filepath.Join(ws.Project.Path, workshop.Directory, workshop.Filename(ws.Name))
-	if !osutil.FileExists(path) && !osutil.FileExists(oldPath) {
+	if !osutil.FileExists(path) {
 		w.state.Warnf("%q workshop definition %q does not exist", ws.Name, path)
 
 		healthState.Status = healthstate.ErrorStatus
