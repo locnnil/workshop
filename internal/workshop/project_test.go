@@ -20,7 +20,7 @@ var w = `name: %s
 base: ubuntu@22.04
 `
 
-var wb = `name: %s
+var wb = `name: wb
 base: ubuntu@22.04
 connections:
   - plug:
