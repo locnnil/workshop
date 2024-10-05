@@ -8,6 +8,7 @@ JupyterLab
 LXD
 Multipass
 ROS
+RESTful
 SDK
 SDKcraft
 SDKs
