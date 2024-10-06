@@ -385,8 +385,9 @@ and refresh the workshop:
 
 
 Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
-However, its default priority is to keep the workshop operational;
-if problems arise, it rolls back.
+However, it ensures the workshop remains operational.
+If issues occur, a refresh rolls back to a previous stable condition,
+whereas a failed launch has no condition to revert to and just fails.
 For more details, see the
 :ref:`debugging guide <how_debug_issues_workshops>`.
 
