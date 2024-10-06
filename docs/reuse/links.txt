@@ -1,3 +1,5 @@
 .. _Canonical website: https://canonical.com/
 .. _GitHub: https://github.com/canonical/workshop
+.. _LXD: https://documentation.ubuntu.com/lxd/en/latest/
 .. _SDKcraft: https://canonical-sdkcraft.readthedocs-hosted.com/
+.. _Releases: https://github.com/canonical/workshop/releases/

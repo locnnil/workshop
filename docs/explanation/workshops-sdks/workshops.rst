@@ -7,8 +7,7 @@ A *workshop*
 (lowercase; not to be confused with |project_markup| itself)
 is a container that is described in a definition file,
 which is associated with a :ref:`project directory <exp_projects>`.
-Currently, these containers are hosted by
-`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`__,
+Currently, these containers are hosted by `LXD`_,
 but it's not recommended to rely on this implementation detail.
 
 
