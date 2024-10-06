@@ -479,7 +479,6 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch outside_workshop.txt
-   $ workshop exec golang -- bash -c "ls -l"
    $ workshop exec golang -- touch inside_workshop.txt
    $ ls -l
 
