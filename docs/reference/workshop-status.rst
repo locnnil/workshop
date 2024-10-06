@@ -18,6 +18,8 @@ in the project directory;
 there is no container yet.
 
 .. mermaid::
+   :alt: Off state
+   :caption: Off state
    :align: center
 
    stateDiagram-v2
@@ -33,6 +35,8 @@ its underlying container is linked to the project directory,
 up and ready to do some work.
 
 .. mermaid::
+   :alt: Ready state
+   :caption: Ready state
    :align: center
 
    stateDiagram-v2
@@ -51,6 +55,8 @@ The underlying container was stopped
 but is still linked to the project directory.
 
 .. mermaid::
+   :alt: Stopped state
+   :caption: Stopped state
    :align: center
 
    stateDiagram-v2
@@ -66,6 +72,8 @@ only a few commands will be accepted,
 and the container itself is non-operational.
 
 .. mermaid::
+   :alt: Pending state
+   :caption: Pending state
    :align: center
 
     stateDiagram-v2
@@ -80,6 +88,8 @@ The workshop failed at some stage,
 and its underlying container became non-operational.
 
 .. mermaid::
+   :alt: Error state
+   :caption: Error state
    :align: center
 
    stateDiagram-v2
