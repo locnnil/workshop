@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import warnings
 
 # Custom configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -147,7 +148,7 @@ custom_extensions = [
     "canonical.custom-rst-roles",
     "canonical.terminal-output",
     "discoursetopic",
-    "sphinxcontrib.mermaid"
+    "sphinxcontrib.mermaid",
 ]
 
 # Add custom required Python modules that must be added to the
@@ -211,3 +212,9 @@ custom_rst_epilog = """
 copybutton_prompt_text = "$ "
 copybutton_here_doc_delimiter = "EOF"
 copybutton_line_continuation_character = "\\"
+
+# workaround for https://github.com/executablebooks/sphinx-tabs/issues/197
+warnings.filterwarnings(
+    "ignore",
+    message="The str interface for _JavaScript objects is deprecated. Use js.filename instead.",
+)
