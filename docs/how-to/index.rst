@@ -13,4 +13,5 @@ that arise when you use |project_markup|.
    Create a ROS 2 workshop <create-ros2-workshop>
    Debug issues in workshops <debug-workshop-issues>
    Move projects around <moving-projects>
+   Troubleshoot the installation <troubleshoot>
    Use workshops with Git <git-workshop>
