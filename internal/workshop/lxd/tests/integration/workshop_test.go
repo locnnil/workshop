@@ -5,10 +5,12 @@ package lxdbackend_integration_test
 
 import (
 	"context"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/user"
+	"strings"
 	"sync"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
@@ -74,19 +76,22 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 func (f *wsOps) TestLxdBackendWorkshopUserData(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer f.bd.RemoveWorkshop(f.ctx, "test")
-	ws, err := f.bd.Workshop(f.ctx, "test")
+	lxdBd, ok := f.bd.(*lxdbackend.Backend)
+	if !ok {
+		return // skip user-data verification for non-LXD backend
+	}
+	wxCfg, err := lxdBd.GetWorkshopConfig(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	c.Assert(ws, check.NotNil)
+	c.Assert(wxCfg, check.NotNil)
 
-	userData := ws.UserData
+	userData := wxCfg["user.user-data"]
+	c.Assert(len(userData) > 0, check.Equals, true)
 
-	// Check YAML format
+	// Check YAML format and prefix
 	var data interface{}
 	err = yaml.Unmarshal([]byte(userData), &data)
 	c.Assert(err, check.IsNil)
-
-	// Check prefix #cloud-config
-	c.Assert(userData[0:14], check.Equals, "#cloud-config\n")
+	c.Assert(strings.HasPrefix(userData, "#cloud-config\n"), check.Equals, true)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
