@@ -759,10 +759,12 @@ write_files:
     WantedBy=multi-user.target
   path: /etc/systemd/system/xauth-copy.service
 - content: |
-    cd /project
-  path: /home/workshop/.profile
-  append: true
-  defer: true
+      if [ -n "${SHELL_CMD}" ]; then
+          cd /project
+      fi
+    path: /home/workshop/.profile
+    append: true
+    defer: true
 runcmd:
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
