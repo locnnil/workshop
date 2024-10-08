@@ -760,6 +760,8 @@ write_files:
   path: /etc/systemd/system/xauth-copy.service
 - content: |
       if [ -n "${SHELL_CMD}" ]; then
+  - content: |
+      if [ -n "${WORKSHOP_SHELL}" ]; then
           cd /project
       fi
     path: /home/workshop/.profile

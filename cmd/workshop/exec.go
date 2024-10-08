@@ -148,7 +148,7 @@ $ workshop shell nimble`,
 }
 
 func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
-	return c.execCommand.Run(cmd, []string{av[0], "su", "-l", "workshop", "-w", "SHELL_CMD"})
+	return c.execCommand.Run(cmd, []string{av[0], "su", "-l", "workshop", "-w", "WORKSHOP_SHELL"})
 }
 
 func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
