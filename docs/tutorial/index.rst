@@ -96,10 +96,8 @@ proceed to installing |project_markup|.
 Install
 ~~~~~~~
 
-Download the latest snap from |project_markup|'s
-`Releases <https://github.com/canonical/workshop/releases/>`_
-page on GitHub and install it,
-using the options
+Download the latest snap from |project_markup|'s `Releases`_ page on GitHub
+and install it, using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
 `--classic <https://snapcraft.io/docs/install-modes>`_,
@@ -107,7 +105,7 @@ for example:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.3_amd64.snap
 
 
 The command installs two main components:
@@ -136,6 +134,9 @@ Before proceeding further, ensure the CLI tool works:
 This should display available commands and usage information.
 Now, with |project_markup| operational,
 the next step is to create your first workshop.
+
+If anything went wrong in this section, see the how-to guide on
+:ref:`troubleshooting the installation <how_troubleshoot>`.
 
 
 Launch a workshop
@@ -385,8 +386,9 @@ and refresh the workshop:
 
 
 Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
-However, its default priority is to keep the workshop operational;
-if problems arise, it rolls back.
+However, it ensures the workshop remains operational.
+If issues occur, a refresh rolls back to a previous stable condition,
+whereas a failed launch has no condition to revert to and just fails.
 For more details, see the
 :ref:`debugging guide <how_debug_issues_workshops>`.
 
@@ -478,7 +480,6 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch outside_workshop.txt
-   $ workshop exec golang -- bash -c "ls -l"
    $ workshop exec golang -- touch inside_workshop.txt
    $ ls -l
 
@@ -578,6 +579,8 @@ e.g. via the :ref:`mount interface <tut_interfaces>`.
 .. important::
 
    Don't delete the project directory without first removing the workshop.
+   Otherwise, you'll need to :ref:`manually delete <how_troubleshoot_lxc>`
+   the orphaned workshops.
 
 
 This was the last step in the tutorial;

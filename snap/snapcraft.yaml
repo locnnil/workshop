@@ -2,17 +2,20 @@ name: workshop
 title: Workshop
 base: core22
 version: 0.1.4
-summary: A tool for defining and managing ephemeral development environments
+summary: A tool for defining and handling ephemeral development environments
 description: |
-  Define your prerequisites and dependencies in simple YAML.
+  List your dependencies and components in YAML to define an environment.
 
-  Workshop consumes the definition to create a contained workshop,
-  installs the components as a set of SDKs
-  and attaches custom actions for run-time control.
+  The key pieces of a definition are SDKs, independent but connectable units of
+  functionality created by software publishers and available on the SDK Store.
+  Workshop simplifies experiments with your environment layout.
 
-  IDEs such as Visual Studio Code or JupyterLab can discover workshops
-  and use them in day-to-day operations,
-  tidying up your system and streamlining your work.
+  With Workshop, you can launch a setup that previously took hours to configure
+  in a few commands and be sure that it stays operational. It assists in issue
+  reproduction, enables hands-on code reviews and turns environment updates into
+  manageable transactions, reducing the need to battle with your tooling every
+  day.
+
 confinement: classic
 grade: devel
 hooks:
