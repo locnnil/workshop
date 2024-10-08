@@ -21,7 +21,7 @@ import (
 )
 
 type wsOps struct {
-	bd                 workshop.Backend
+	bd                 *lxdbackend.Backend
 	ctx                context.Context
 	username           string
 	project            *workshop.Project
@@ -58,7 +58,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 }
 
 func (f *wsOps) TearDownSuite(c *check.C) {
-	lxdclient, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
+	lxdclient, err := f.bd.LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 
 	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.username))
@@ -73,14 +73,10 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendWorkshopUserData(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopCloudInitConfig(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer f.bd.RemoveWorkshop(f.ctx, "test")
-	lxdBd, ok := f.bd.(*lxdbackend.Backend)
-	if !ok {
-		return // skip user-data verification for non-LXD backend
-	}
-	wxCfg, err := lxdBd.GetWorkshopConfig(f.ctx, "test")
+	wxCfg, err := f.bd.GetWorkshopConfig(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	c.Assert(wxCfg, check.NotNil)
 
@@ -167,7 +163,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 }
 
 func (f *wsOps) image(c *check.C, alias string) (string, error) {
-	cli, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
+	cli, err := f.bd.LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 	entry, _, err := cli.GetImageAlias(lxdbackend.ImageAlias(alias))
 	if err != nil {
@@ -177,7 +173,7 @@ func (f *wsOps) image(c *check.C, alias string) (string, error) {
 }
 
 func (f *wsOps) deleteimage(c *check.C, fp string) error {
-	cli, err := f.bd.(*lxdbackend.Backend).LxdClient(f.ctx)
+	cli, err := f.bd.LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 	op, err := cli.DeleteImage(fp)
 	c.Check(err, check.IsNil)
