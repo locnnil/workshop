@@ -44,7 +44,7 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	return readWorkshop(filepath.Join(w.Path, Directory, Filename(workshop)))
+	return readWorkshop(Filepath(w.Path, workshop))
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {

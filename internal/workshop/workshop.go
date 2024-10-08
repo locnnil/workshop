@@ -137,6 +137,11 @@ func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }
 
+// Full path of workshop definition file
+func (w *Workshop) Filepath() string {
+	return Filepath(w.Project.Path, w.Name)
+}
+
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
 	setup, ok := w.Content[sdkName]

@@ -49,12 +49,13 @@ func (f *wsProject) TearDownTest(c *check.C) {
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
 
-func createWFile(c *check.C, path, name, yaml string) {
-	workshopDir := filepath.Join(path, workshop.Directory)
-	err := os.MkdirAll(workshopDir, os.ModePerm)
+func createWFile(c *check.C, projectDir, name, yaml string) {
+	path := workshop.Filepath(projectDir, name)
+
+	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
+	err = os.WriteFile(path, []byte(yaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 

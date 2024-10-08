@@ -90,11 +90,12 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
 
-	workshopDir := filepath.Join(dir, workshop.Directory)
-	err = os.MkdirAll(workshopDir, os.ModePerm)
+	path := workshop.Filepath(dir, "test")
+
+	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename("test")), []byte(testYaml), 0644)
+	err = os.WriteFile(path, []byte(testYaml), 0644)
 	c.Assert(err, check.IsNil)
 
 	_, _, err = bd.CreateOrLoadProject(ctx, dir)

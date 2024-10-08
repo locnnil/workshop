@@ -57,11 +57,12 @@ func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
 }
 
 func (s *workshopHandlers) createWFile(c *check.C, name string, yaml string) {
-	workshopDir := filepath.Join(s.project.Path, workshop.Directory)
-	err := os.MkdirAll(workshopDir, os.ModePerm)
+	path := workshop.Filepath(s.project.Path, name)
+
+	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
+	err = os.WriteFile(path, []byte(yaml), 0644)
 	c.Assert(err, check.IsNil)
 }
 

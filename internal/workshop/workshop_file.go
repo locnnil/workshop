@@ -29,6 +29,10 @@ func Filename(name string) string {
 	return fmt.Sprintf("workshop.%s.yaml", name)
 }
 
+func Filepath(project, name string) string {
+	return filepath.Join(project, Directory, Filename(name))
+}
+
 type Plug struct {
 	Bind       *PlugRef               `yaml:"bind,omitempty"`
 	Attributes map[string]interface{} `yaml:",inline"`

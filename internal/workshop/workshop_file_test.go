@@ -36,11 +36,12 @@ func (f *workshopFile) SetUpTest(c *check.C) {
 }
 
 func (f *workshopFile) createWFile(c *check.C, name, yaml string, checkArgs ...interface{}) {
-	workshopDir := filepath.Join(f.project.Path, workshop.Directory)
-	err := os.MkdirAll(workshopDir, os.ModePerm)
+	path := workshop.Filepath(f.project.Path, name)
+
+	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	c.Assert(err, check.IsNil, checkArgs...)
 
-	err = os.WriteFile(filepath.Join(workshopDir, workshop.Filename(name)), []byte(yaml), 0644)
+	err = os.WriteFile(path, []byte(yaml), 0644)
 	c.Assert(err, check.IsNil, checkArgs...)
 }
 
