@@ -269,3 +269,24 @@ func (f *wsExec) TestLxdBackendExecValidateUserData(c *check.C) {
 	c.Assert(strings.Contains(stdout, "Valid schema user-data"), check.Equals, true)
 	c.Assert(strings.Contains(stdout, "Error"), check.Equals, false)
 }
+
+func (f *wsExec) TestLxdBackendExecCheckProfile(c *check.C) {
+	// Setup
+	opts := &client.ExecOptions{
+		Command:    []string{"grep", "-C", "1", "cd /project", "/home/workshop/.profile"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stderr, check.Equals, "")
+	c.Assert(stdout, check.Equals, `if [ -n "${WORKSHOP_SHELL}" ]; then
+    cd /project
+fi
+`)
+}

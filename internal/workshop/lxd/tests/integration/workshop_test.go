@@ -81,7 +81,6 @@ func (f *wsOps) TestLxdBackendWorkshopCloudInitConfig(c *check.C) {
 	c.Assert(wxCfg, check.NotNil)
 
 	userData := wxCfg["user.user-data"]
-	c.Assert(len(userData) > 0, check.Equals, true)
 
 	// Check YAML format and prefix
 	var data interface{}

@@ -23,7 +23,6 @@ var (
 	ConfigWorkshopFile      = "user.workshop.file"
 	ConfigWorkshopContent   = "user.workshop.content"
 	ConfigProjectPathDevice = "workshop.project"
-	ConfigUserData          = "user.user-data"
 )
 
 var InstallTimeNow = time.Now
