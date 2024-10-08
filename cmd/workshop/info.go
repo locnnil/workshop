@@ -115,7 +115,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				installTime = ""
 			}
 			if sdk.Channel == "" {
-				sdk.Channel = "-"
+				sdk.Channel = "~"
 			}
 			fmt.Fprintf(w, "    channel:\t%s\t%s\t(%s)\n", sdk.Channel, installTime, sdk.Revision)
 			if sdk.Health != nil {

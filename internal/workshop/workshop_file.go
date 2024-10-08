@@ -3,6 +3,7 @@ package workshop
 import (
 	"cmp"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
