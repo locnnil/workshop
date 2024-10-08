@@ -21,10 +21,16 @@ var (
 
 	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+
+	Directory = ".workshop"
 )
 
 func Filename(name string) string {
-	return fmt.Sprintf(".workshop.%s.yaml", name)
+	return fmt.Sprintf("workshop.%s.yaml", name)
+}
+
+func Filepath(project, name string) string {
+	return filepath.Join(project, Directory, Filename(name))
 }
 
 type Plug struct {

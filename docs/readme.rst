@@ -55,15 +55,17 @@ for example:
 Launching workshops
 -------------------
 
-In the root directory of the project
+In the :file:`.workshop` directory of the project
 that you want to use with Workshop,
-create a workshop definition file named ``.workshop.<NAME>.yaml``
+create a workshop definition file named ``workshop.<NAME>.yaml``
 to list your project's prerequisites,
 then run ``workshop launch <NAME>``:
 
 .. code-block:: console
 
-   cat > .workshop.golang.yaml <<EOF -
+   mkdir -p .workshop
+
+   cat > .workshop/workshop.golang.yaml <<EOF -
    name: golang
    base: ubuntu@22.04
    sdks:

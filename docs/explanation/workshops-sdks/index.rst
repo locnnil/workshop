@@ -27,8 +27,9 @@ or in myriad other ways.
 
 Instead, they are packed and published as |project_markup|-ready,
 isolated *SDKs* that you list while you define a *workshop*.
-The workshop definition sits in a :file:`.yaml` file in the project directory,
-and the workshop itself is the container built according to this definition.
+The workshop definition is a :file:`.yaml` file in the :file:`.workshop`
+directory, and the workshop itself is the container built according to this
+definition.
 
 To clear up a few points of confusion straight away:
 

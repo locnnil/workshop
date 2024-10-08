@@ -18,33 +18,33 @@ execute: |
   test -f "$PROJECT"/.workshop.lock
 
   echo "Check for warnings if there is no workshop file"
-  mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
+  mv "$PROJECT"/.workshop/workshop.ws.yaml "$PROJECT"/.workshop/workshop.ws.yaml.bak
   workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
-  mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
+  mv "$PROJECT"/.workshop/workshop.ws.yaml.bak "$PROJECT"/.workshop/workshop.ws.yaml
   # TODO: it might be better if the warning went away on its own
   workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
-  workshop_exec warnings | 
+  workshop_exec warnings |
     tr -d '\n' | # remove newlines
     sed -e 's,\s\+, ,g' | # rename any extra spaces
-    MATCH '"ws" workshop definition ".*/project/.workshop.ws.yaml" does not exist'
+    MATCH '"ws" workshop definition ".*/project/.workshop/workshop.ws.yaml" does not exist'
   workshop_exec --project "$PROJECT" list | NOMATCH 'new warning'
 
   echo "Check report a workshop state as Error if there is no workshop file"
-  mv "$PROJECT"/.workshop.ws.yaml "$PROJECT"/.workshop.ws.yaml.bak
+  mv "$PROJECT"/.workshop/workshop.ws.yaml "$PROJECT"/.workshop/workshop.ws.yaml.bak
   workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
-  mv "$PROJECT"/.workshop.ws.yaml.bak "$PROJECT"/.workshop.ws.yaml
+  mv "$PROJECT"/.workshop/workshop.ws.yaml.bak "$PROJECT"/.workshop/workshop.ws.yaml
   workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   
   workshop_exec remove --project "$PROJECT" ws
   
   echo "Check recreating project dir with the same name does not cause conflicts"
   mkdir -p ./new-project
-  cp "$PROJECT"/.workshop.ws.yaml ./new-project/
+  cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project ws
   workshop_exec remove --project $(pwd)/new-project ws
   rm -rf ./new-project
   mkdir -p ./new-project
-  cp "$PROJECT"/.workshop.ws.yaml ./new-project/
+  cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project/  ws
   workshop_exec list --project $(pwd)/new-project | MATCH "^$(pwd)/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
   workshop_exec remove --project $(pwd)/new-project ws

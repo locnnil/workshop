@@ -44,14 +44,14 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	return readWorkshop(filepath.Join(w.Path, Filename(workshop)))
+	return readWorkshop(Filepath(w.Path, workshop))
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
-	files, err := filepath.Glob(filepath.Join(w.Path, ".workshop.*.yaml"))
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "workshop.*.yaml"))
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), ".workshop."), ".yaml")
+		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), "workshop."), ".yaml")
 		workshops = append(workshops, name)
 	}
 	return workshops, nil

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://canonical.com/.workshop.name.yaml",
+  "$id": "https://canonical.com/workshop.name.yaml",
   "title": "Workshop",
   "description": "Workshop definition.",
   "type": "object",

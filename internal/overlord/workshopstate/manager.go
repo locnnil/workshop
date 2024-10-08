@@ -3,7 +3,6 @@ package workshopstate
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/canonical/x-go/strutil"
@@ -133,9 +132,9 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 	}
 
 	// Check if the associated workshop file exists. We only check if that file
-	// exists in the project directory here; its state (e.g. if it is in sync
+	// exists in the .workshop directory here; its state (e.g. if it is in sync
 	// with the workshop instance or has any errors) is not checked.
-	path := filepath.Join(ws.Project.Path, workshop.Filename(ws.Name))
+	path := ws.Filepath()
 	if !osutil.FileExists(path) {
 		w.state.Warnf("%q workshop definition %q does not exist", ws.Name, path)
 

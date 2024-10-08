@@ -6,10 +6,10 @@ Workshop definition
 Filename convention
 -------------------
 
-The name of the workshop definition
-file must have the following format: :file:`.workshop.<NAME>.yaml`.
+The path of the workshop definition
+file must have the following format: :file:`workshop.<NAME>.yaml`.
 
-.. tip:: Note the dot at the start.
+.. tip:: Workshop definitions should be located in the :file:`.workshop` folder.
 
 
 Here, :samp:`<NAME>` is a placeholder that stands for the actual name
@@ -144,7 +144,7 @@ with a single :samp:`go` SDK
 from the :samp:`latest/stable` channel:
 
 .. code-block:: yaml
-   :caption: .workshop.golang.yaml
+   :caption: .workshop/workshop.golang.yaml
 
    name: golang
    base: ubuntu@22.04
@@ -159,7 +159,7 @@ the :samp:`data` plug defined by the :samp:`dev-tunnel` SDK
 is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
 
 .. code-block:: yaml
-   :caption: .workshop.go-dev.yaml
+   :caption: .workshop/workshop.go-dev.yaml
 
    name: go-dev
    base: ubuntu@22.04
@@ -184,7 +184,7 @@ and two connections:
   to the pre-existing :samp:`cuda:libs`.
 
 .. code-block:: yaml
-   :caption: .workshop.digits-cuda.yaml
+   :caption: .workshop/workshop.digits-cuda.yaml
 
    base: ubuntu@22.04
    name: digits-cuda

@@ -67,7 +67,12 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	var workshopFile = bytes.NewBuffer([]byte{})
 	t.Execute(workshopFile, sdks)
 
-	err = os.WriteFile(filepath.Join(s.project.Path, workshop.Filename(ws)), workshopFile.Bytes(), 0644)
+	path := workshop.Filepath(s.project.Path, ws)
+
+	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	c.Assert(err, check.IsNil)
+
+	err = os.WriteFile(path, workshopFile.Bytes(), 0644)
 	c.Assert(err, check.IsNil)
 
 	wf := workshop.File{Name: ws, Base: "ubuntu@22.04"}
@@ -130,10 +135,9 @@ func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
-	path := filepath.Join(s.project.Path, ".workshop.test.yaml")
-	c.Assert(os.RemoveAll(path), check.IsNil)
-	health := s.manager.WorkshopHealth(workshop)
+	testWorkshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	c.Assert(os.RemoveAll(testWorkshop.Filepath()), check.IsNil)
+	health := s.manager.WorkshopHealth(testWorkshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
 	c.Check(health.SdkHealth, check.HasLen, 0)
@@ -142,7 +146,7 @@ func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
 
 	warnings := s.state.AllWarnings()
 	c.Check(warnings, check.HasLen, 1)
-	warning := fmt.Sprintf("%q workshop definition %q does not exist", workshop.Name, path)
+	warning := fmt.Sprintf("%q workshop definition %q does not exist", testWorkshop.Name, testWorkshop.Filepath())
 	c.Check(warnings[0].String(), check.Equals, warning)
 }
 

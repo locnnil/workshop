@@ -46,11 +46,11 @@ Create the workshop
 -------------------
 
 To define a workshop enabled for ROS 2,
-put this file in the project directory
-next to the sources:
+put this file in the :file:`.workshop` directory
+in the project root:
 
 .. code-block:: yaml
-   :caption: .workshop.ros2-humble.yaml
+   :caption: .workshop/workshop.ros2-humble.yaml
 
    name: ros2-humble
    base: ubuntu@22.04
@@ -66,9 +66,13 @@ Your project directory should now look like this:
 
 .. code-block:: console
 
-   $ ls -a
+   $ ls -A
 
-     .  ..  examples  .workshop.ros2-humble.yaml
+     examples  .workshop
+
+   $ ls .workshop/
+
+     workshop.ros2-humble.yaml
 
 
 All set, so launch the workshop:
