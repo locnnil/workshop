@@ -1,17 +1,19 @@
 name: Lint
 on:
-    pull_request:
-    push:
-      branches: [main]
+  pull_request:
+  push:
+    branches: [main]
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: "1.21"
           cache: false
 
       - name: golangci-lint
@@ -19,8 +21,13 @@ jobs:
         id: lint
         with:
           version: latest
-          args: '-c .github/.golangci.yml --out-format=colored-line-number'
+          args: "-c .github/.golangci.yml --out-format=colored-line-number"
           skip-cache: true
+
+      - name: shellcheck
+        run: |
+          git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+          snapd-testing-tools/utils/spread-shellcheck tests/integration
 
       - name: Print error message
         if: always() && steps.lint.outcome == 'failure'
