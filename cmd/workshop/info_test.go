@@ -57,7 +57,7 @@ content:
   go:
     channel:  latest/edge  2017-03-22  \(1\)
   hack:
-    channel:  -   2017-03-22  \(x1\)
+    channel:  ~   2017-03-22  \(x1\)
 `, m.prjDir))
 }
 

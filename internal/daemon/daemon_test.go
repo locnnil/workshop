@@ -29,7 +29,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/check.v1"
-
 	// XXX Delete import above and make this file like the other ones.
 	. "gopkg.in/check.v1"
 

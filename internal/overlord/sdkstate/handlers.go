@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
-
 	"github.com/canonical/workshop/internal/workshop"
 )
 

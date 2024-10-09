@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/canonical/lxd/shared"
+	"github.com/spf13/cobra"
+
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/spf13/cobra"
 )
 
 type CmdHack struct {
@@ -21,7 +23,7 @@ type CmdHack struct {
 
 func (c *CmdHack) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "hack <WORKSHOP>",
+		Use:   "hack [--drop|--restore] <WORKSHOP> [hook-name]",
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "Edit hack SDK",
 		RunE:  c.Run,
@@ -36,6 +38,10 @@ func (c *CmdHack) Command() *cobra.Command {
 var hackTemplate = `name: hack
 base: %s
 `
+
+var (
+	runTextEditor = shared.TextEditor
+)
 
 func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 	if c.drop && c.restore {
@@ -97,6 +103,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		if err = os.RemoveAll(hackdir); err != nil {
 			return err
 		}
+		reverter.Add(func() { _ = os.MkdirAll(hackdir, 0755) })
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		if err = cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s", av[0])}); err != nil {
@@ -141,10 +148,14 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/hack", av[0])})
 	}
 
-	var sdkfile, content string
+	var sdkfile string
+	var boilerplate string
+
+	metafile := filepath.Join(hackdir, "meta", "sdk.yaml")
+	metaminimal := fmt.Sprintf(hackTemplate, workshop.Base)
 	if len(av) == 1 {
-		sdkfile = filepath.Join(hackdir, "meta", "sdk.yaml")
-		content = fmt.Sprintf(hackTemplate, workshop.Base)
+		sdkfile = metafile
+		boilerplate = metaminimal
 	} else {
 		switch av[1] {
 		case "setup-base", "save-state", "restore-state", "check-health":
@@ -160,7 +171,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 			return err
 		}
 
-		new, err := shared.TextEditor(sdkfile, []byte{})
+		new, err := runTextEditor(sdkfile, []byte{})
 		if err != nil {
 			return err
 		}
@@ -169,15 +180,22 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 			return nil
 		}
 	} else {
-		if err := osutil.MkdirAllChown(filepath.Dir(sdkfile), 0755, uid, gid); err != nil {
-			return err
-		}
-		content, err := shared.TextEditor("", []byte(content))
+		res, err := runTextEditor("", []byte(boilerplate))
 		if err != nil {
 			return err
 		}
 
-		if err = os.WriteFile(sdkfile, content, 0644); err != nil {
+		if err = writeSdkFile(sdkfile, res, uid, gid); err != nil {
+			return err
+		}
+	}
+
+	// If hack was called for a hook for the first time, create a simple meta
+	// file to ensure the refresh will run successfully as meta/sdk.yaml is a
+	// must for an SDK.
+	if !osutil.FileExists(metafile) {
+		err = writeSdkFile(metafile, []byte(metaminimal), uid, gid)
+		if err != nil {
 			return err
 		}
 	}
@@ -186,4 +204,15 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh.WaitOnError = true
 
 	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/hack", av[0])})
+}
+
+func writeSdkFile(meta string, content []byte, uid sys.UserID, gid sys.GroupID) error {
+	if err := osutil.MkdirAllChown(filepath.Dir(meta), 0755, uid, gid); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(meta, content, 0644); err != nil {
+		return err
+	}
+	return nil
 }

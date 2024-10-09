@@ -34,3 +34,11 @@ func ColorMixin(cmode, umode string) colorMixin {
 		unicodeMixin: unicodeMixin{Unicode: umode},
 	}
 }
+
+func MockTextEditor(f func(inPath string, inContent []byte) ([]byte, error)) (restore func()) {
+	old := runTextEditor
+	runTextEditor = f
+	return func() {
+		runTextEditor = old
+	}
+}

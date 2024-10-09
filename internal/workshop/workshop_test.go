@@ -7,11 +7,12 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
-	"gopkg.in/check.v1"
 )
 
 type workshopSuite struct {

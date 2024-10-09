@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
-	"github.com/spf13/afero"
 )
 
 type requestSuite struct {
