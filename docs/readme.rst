@@ -55,7 +55,7 @@ for example:
 Launching workshops
 -------------------
 
-In the :file:`.workshop` directory of the project
+In the ``.workshop`` directory of the project
 that you want to use with Workshop,
 create a workshop definition file named ``workshop.<NAME>.yaml``
 to list your project's prerequisites,
