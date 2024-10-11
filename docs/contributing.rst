@@ -206,56 +206,6 @@ of ``Spread``:
    spread tests/<TestPathName>
 
 
-How to run a local SDK store
-----------------------------
-
-To test SDKs locally without publishing we can run
-a local instance of the SDK store. This guide uses
-the open-source `fake-gcs-server <https://github.com/fsouza/fake-gcs-server>`_
-
-.. note::
-
-   This guide assumes that you are familiar with SDKcraft and have
-   a target SDK in mind.
-
-
-Create the directory structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The SDK store uses directory structure to determine
-SDK names and channels. Because of this, when running
-a store locally we must make sure our directory structure
-mirrors the real store.
-
-You can call the 'fake-store' directory whatever you
-wish, however the remaining structure and naming
-convention is required
-
-.. code-block:: console
-
-   $ mkdir -p fake-store/sdk-store/<sdk>/<release>/<channel>
-
-
-Where:
-- :samp:`<sdk>` is the SDK name (ie. :samp:`my-sdk`)
-- :samp:`<release>` is the sdk release (ie. :samp:`latest`)
-- :samp:`<channel>` is the sdk channel (ie. :samp:`edge`)
-
-
-Copying the SDK
-~~~~~~~~~~~~~~~
-Place the SDK in the deepest directory created at the previous step.
-(ie. :file:`fake-store/sdk-store/my-sdk/latest/edge/my-sdk/`) and the
-corresponding SDK definition (ie. my-sdk.yaml) should be renamed
-to sdk.yaml and placed in the same location.
-
-.. code-block:: console
-
-   $ ls fake-store/sdk-store/my-sdk/latest/edge
-
-     my-sdk.sdk  sdk.yaml
-
-
 How to run a local SDK Store
 ----------------------------
 
