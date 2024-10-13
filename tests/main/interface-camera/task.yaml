@@ -18,6 +18,40 @@ execute: |
   workshop_exec disconnect ws-camera/test-sdk-camera:camera
   workshop_exec connections ws-camera | MATCH "^camera.+ws-camera/test-sdk-camera:camera.+\-.+\-$"
 
+  echo "Ensure video devices are created when connected"
+  if ! modprobe v4l2loopback card_label=v4l2loopback; then
+    # old VM images use a custom kernel which lacks video4linux support
+    [ "$(lsb_release -rs)" = '22.04' ]
+  else
+    detect_device() {
+      device_name="$(grep -l '^v4l2loopback$' /sys/class/video4linux/*/name)"
+      read -r device_index < "$(dirname -- "$device_name")/index"
+      device_node="/dev/video$device_index"
+    }
+    detect_device
+
+    workshop_exec exec ws-camera -- test ! -e "$device_node"
+    workshop_exec connect ws-camera/test-sdk-camera:camera
+    workshop_exec exec ws-camera -- test -e "$device_node"
+
+    echo "Ensure video devices can be hotplugged"
+    rmmod v4l2loopback
+    # this check could fail if another device is immediately plugged in,
+    # but within a VM this should be unlikely/impossible
+    workshop_exec exec ws-camera -- test ! -e "$device_node"
+
+    modprobe v4l2loopback card_label=v4l2loopback
+    detect_device
+    workshop_exec exec ws-camera -- test -e "$device_node"
+
+    echo "Ensure workshop user can access video devices"
+    workshop_exec exec ws-camera -- test -r "$device_node"
+    workshop_exec exec ws-camera -- test -w "$device_node"
+
+    workshop_exec disconnect ws-camera/test-sdk-camera:camera
+    workshop_exec exec ws-camera -- test ! -e "$device_node"
+  fi
+
   echo "Check a user cannot install a camera slot (violates slot declaration)"
   workshop_exec launch ws-camera-fail > launch.log || true
   MATCH ".*installation not allowed by \"user-camera\" slot rule of interface \"camera\"" < launch.log

@@ -27,7 +27,7 @@ function prepare_environment() {
   # and can break a spread run.
   apt-get remove -y unattended-upgrades
   apt-get update
-  apt-get install -y --no-install-recommends moreutils jq
+  apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq
 
   snap install --dangerous --classic /workshop/tests/*.snap
   snap set workshop store.url=http://localhost:8080/storage/v1/
