@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -14,7 +13,6 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/lxd/shared/usbid"
 	"github.com/canonical/x-go/randutil"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -209,37 +207,6 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 	return nil
 }
 
-func detectCameras(conn lxd.InstanceServer, camera *workshop.Camera, sdk string) (map[string]map[string]string, map[string]string, error) {
-	resources, err := conn.GetServerResources()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	isWebcam := func(iface api.ResourcesUSBDeviceInterface) bool {
-		classID := usbid.ClassCode(iface.ClassID)
-		return classID == usbid.ClassVideo || classID == usbid.ClassAudioVideo
-	}
-
-	devices := map[string]map[string]string{}
-	config := map[string]string{}
-	for _, device := range resources.USB.Devices {
-		if slices.ContainsFunc(device.Interfaces, isWebcam) {
-			// This name is unique because '/' is not permitted in plug names.
-			name := fmt.Sprintf("%s/%s:%s", camera.Name, device.VendorID, device.ProductID)
-			devices[name] = map[string]string{
-				"type":      "unix-hotplug",
-				"vendorid":  device.VendorID,
-				"productid": device.ProductID,
-				"required":  "false",
-			}
-			config[lxdbackend.DeviceTypeConfigKey(sdk, name)] = "camera"
-		}
-	}
-
-	// TODO: warn if no devices were detected
-	return devices, config, nil
-}
-
 func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop string) error {
 	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 	if err != nil {
@@ -316,15 +283,6 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 	}
 
-	if spec.Profile.Camera != nil {
-		cameraDevices, cameraConfig, err := detectCameras(conn, spec.Profile.Camera, sdkInfo.Sdk)
-		if err != nil {
-			return err
-		}
-		maps.Copy(newp.Devices, cameraDevices)
-		maps.Copy(newp.Config, cameraConfig)
-	}
-
 	if spec.Profile.Agent != nil {
 		err = installSshAgent(fs, *spec.Profile.Agent, sdkInfo.Workshop)
 		if err != nil {
@@ -352,7 +310,6 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 				}
 			}
 		}
-		// TODO: re-add old cameras
 		return conn.UpdateProfile(name, newp, "")
 	}
 

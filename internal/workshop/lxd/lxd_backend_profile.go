@@ -48,10 +48,9 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
 			pr.Agent = &workshop.SshAgent{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
-		case "unix-hotplug":
+		case "unix-char":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			if devtype == "camera" {
-				// TODO: retain this device until the camera interface disconnects
 				continue
 			}
 
