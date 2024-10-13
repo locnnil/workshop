@@ -15,6 +15,8 @@ var _ = check.Suite(&ProfileSuite{})
 
 func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 	expected := []workshop.SdkProfile{
+		{Sdk: "sdk", Camera: &workshop.Camera{Name: "camera"}, Mounts: map[string]workshop.Mount{}},
+		{Sdk: "sdk", Camera: &workshop.Camera{Name: "camera"}, Mounts: map[string]workshop.Mount{}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Gpu: &workshop.Gpu{Name: "gpu"}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"userdisk": {Name: "userdisk", What: "/home", Where: "/opt", Type: workshop.HostWorkshop}}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Agent: &workshop.SshAgent{Name: "ssh-agent", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}},
@@ -26,6 +28,8 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		devs map[string]map[string]string
 		cfg  map[string]string
 	}{
+		{"sdk", map[string]map[string]string{"camera": {"type": "none"}}, map[string]string{"user.workshop.sdk.camera": `{"name": "camera"}`, "user.workshop.sdk.camera.type": "camera"}},
+		{"sdk", map[string]map[string]string{"camera": {"type": "none"}, "camera/1234:5678": {"type": "unix-hotplug", "vendorid": "1234", "productid": "5678", "required": "false"}}, map[string]string{"user.workshop.sdk.camera": `{"name": "camera"}`, "user.workshop.sdk.camera.type": "camera", "user.workshop.sdk.camera/1234:5678.type": "camera"}},
 		{"sdk", map[string]map[string]string{"gpu": {"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}}, map[string]string{}},
 		{"sdk", map[string]map[string]string{"userdisk": {"type": "disk", "source": "/home", "path": "/opt"}}, map[string]string{}},
 		{"sdk", map[string]map[string]string{"ssh-agent": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{}},
@@ -33,12 +37,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)
 		c.Assert(err, check.IsNil)
-		if res.Agent != nil {
-			c.Assert(*res.Agent, check.DeepEquals, *expected[i].Agent)
-		}
-		if res.Gpu != nil {
-			c.Assert(*res.Gpu, check.DeepEquals, *expected[i].Gpu)
-		}
+		c.Assert(res.Agent, check.DeepEquals, expected[i].Agent)
+		c.Assert(res.Camera, check.DeepEquals, expected[i].Camera)
+		c.Assert(res.Gpu, check.DeepEquals, expected[i].Gpu)
 		c.Assert(res.Mounts, testutil.DeepUnsortedMatches, expected[i].Mounts)
 	}
 }

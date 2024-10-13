@@ -123,3 +123,17 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 
 	return nil
 }
+
+func (s *Specification) SetCamera(camera workshop.Camera) error {
+	s.Profile.Camera = &camera
+
+	s.devices[camera.Name] = map[string]string{"type": "none"}
+	buf, err := json.Marshal(camera)
+	if err != nil {
+		return err
+	}
+	s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, camera.Name)] = string(buf)
+	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, camera.Name)] = "camera"
+
+	return nil
+}

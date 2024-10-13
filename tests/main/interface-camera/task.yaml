@@ -1,0 +1,23 @@
+summary: Check camera interface scenarios
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-camera
+restore: |
+  . "$TESTSLIB"/utils.sh
+  rmmod v4l2loopback || true
+  workshop_exec remove ws-camera
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check the camera interface plug cannot be auto-connected"
+  workshop_exec connections ws-camera | MATCH "^camera.+ws-camera/test-sdk-camera:camera.+\-.+\-$"
+
+  echo "Check the camera interface plug can be connected and disconnected manually"
+  workshop_exec connect ws-camera/test-sdk-camera:camera
+  workshop_exec connections ws-camera | MATCH "^camera.+ws-camera/test-sdk-camera:camera.+:camera.+manual$"
+  workshop_exec disconnect ws-camera/test-sdk-camera:camera
+  workshop_exec connections ws-camera | MATCH "^camera.+ws-camera/test-sdk-camera:camera.+\-.+\-$"
+
+  echo "Check a user cannot install a camera slot (violates slot declaration)"
+  workshop_exec launch ws-camera-fail > launch.log || true
+  MATCH ".*installation not allowed by \"user-camera\" slot rule of interface \"camera\"" < launch.log

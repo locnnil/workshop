@@ -683,7 +683,7 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 3)
+	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 4)
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {

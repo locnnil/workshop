@@ -8,6 +8,8 @@ var systemSdkYaml = `name: system
 base: %s
 type: system
 slots:
+  camera:
+    interface: camera
   mount:
     interface: mount
   gpu:

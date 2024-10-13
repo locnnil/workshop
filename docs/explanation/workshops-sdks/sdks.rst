@@ -105,6 +105,7 @@ Currently, |project_markup| supports the following:
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
 - :ref:`Mount interface <exp_mount_interface>` (auto-connected)
 - :ref:`SSH interface <exp_ssh_interface>` (manually connected)
+- :ref:`Camera interface <exp_camera_interface>` (manually connected)
 
 
 .. _exp_plugs_slots:
