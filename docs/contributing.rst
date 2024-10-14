@@ -25,34 +25,24 @@ The guidelines below will keep your contributions effective and meaningful.
 
 Environment setup
 -----------------
-
-#. `Snapcraft <https://snapcraft.io/docs/snapcraft>`_
-   is used to build, package, and publish ``workshop`` snaps.
-   All these processes run in a self-launched
-   `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
-   Install ``snapcraft`` and ``lxd`` using ``snap``:
+#. ``Workshop`` has a client-server architecture.
+   Its ``workshopd`` daemon exposes a RESTful API (see :file:`internal/daemon/api.go`) to the clients.
+   To run the daemon locally:
 
    .. code-block:: console
 
-      sudo snap install snapcraft --classic
-      sudo snap install lxd
+      go install ./...
+      export WORKSHOP=~/workshop
+      export WORKSHOP_DEBUG=1
+      workshopd run --create-dirs
 
-
-   Add the current user to the ``lxd`` group
-   to give permission to access its resources:
-
+   The client can connect using the daemon's Unix domain socket:
+   
    .. code-block:: console
 
-      sudo usermod -a -G lxd $USER
-
-
-   Log out and re-open your user session for the new group to become active,
-   then initialise LXD:
-
-   .. code-block:: console
-
-      lxd init --minimal
-
+      
+      export WORKSHOP=~/workshop
+      workshop list
 
 #. ``Spread`` is the end-to-end testing tool for ``workshop``.
    Install it from `our custom fork <https://github.com/dmitry-lyfar/spread>`_:
@@ -317,3 +307,34 @@ To suggest changes online, use the GitHub link in the footer of the page
 or submit a PR, limiting it to the ``docs/`` directory
 and following our internal `Sphinx and Read the Docs guide
 <https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/>`_.
+
+
+Releases
+--------
+
+#. `Snapcraft <https://snapcraft.io/docs/snapcraft>`_
+   is used to build, package, and publish ``workshop`` snaps.
+   All these processes run in a self-launched
+   `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
+   Install ``snapcraft`` and ``lxd`` using ``snap``:
+
+   .. code-block:: console
+
+      sudo snap install snapcraft --classic
+      sudo snap install lxd
+
+
+   Add the current user to the ``lxd`` group
+   to give permission to access its resources:
+
+   .. code-block:: console
+
+      sudo usermod -a -G lxd $USER
+
+
+   Log out and re-open your user session for the new group to become active,
+   then initialise LXD:
+
+   .. code-block:: console
+
+      lxd init --minimal
