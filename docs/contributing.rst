@@ -25,8 +25,9 @@ The guidelines below will keep your contributions effective and meaningful.
 
 Environment setup
 -----------------
-#. ``Workshop`` has a client-server architecture. ``workshopd`` is a daemon that
-   exposes REST API (see :file:`internal/daemon/api.go`) to its clients. To run the daemon locally:
+#. ``Workshop`` has a client-server architecture.
+   Its ``workshopd`` daemon exposes a RESTful API (see :file:`internal/daemon/api.go`) to the clients.
+   To run the daemon locally:
 
    .. code-block:: console
 
