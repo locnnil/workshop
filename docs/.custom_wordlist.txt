@@ -2,6 +2,7 @@ AUTH
 backend
 basename
 cooldown
+cuda
 customisable
 cwd
 deliverables
