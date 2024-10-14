@@ -183,9 +183,10 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
-				"bash", "-eu", "-c", "while " +
-					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"running\" ] && " +
-					"[ \"$(systemctl is-system-running 2>/dev/null)\" != \"degraded\" ]; do :; done",
+				"bash", "-euc", fmt.Sprintf(`while
+[ "$(systemctl is-system-running 2>/dev/null)" != running ] &&
+[ "$(systemctl is-system-running 2>/dev/null)" != degraded ]; do :; done &&
+loginctl enable-linger workshop`),
 			},
 			WorkDir: "/",
 		},

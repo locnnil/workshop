@@ -1,0 +1,11 @@
+summary: Check that linger is enabled for the workshop user
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-linger
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove ws-linger
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec exec ws-linger -- bash -c 'test -f /var/lib/systemd/linger/workshop'
