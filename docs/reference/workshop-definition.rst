@@ -127,7 +127,7 @@ JSON Schema
 -----------
 
 The following
-`JSON Schema <https://json-schema.org/>`__
+`JSON Schema`
 formalises the description above:
 
 .. dropdown:: Workshop definition schema
