@@ -219,6 +219,10 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	}
 	track, risk := sa[0], sa[1]
 	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
+
+	// Attrs transparently retries forever if it cannot connect to the store
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
 	atr, err := obj.Attrs(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
