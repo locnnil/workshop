@@ -2,6 +2,7 @@ package lxdbackend
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,6 +40,9 @@ var (
 	imageLock        sync.Mutex
 	currentDownloads map[string]*downloadOp
 )
+
+//go:embed start_command.sh
+var startCommand string
 
 func init() {
 	imageLock.Lock()
@@ -176,17 +180,12 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	// Wait until system is up an running before returning
-	// see: https://blog.simos.info/how-to-know-when-a-lxd-container-has-finished-starting-up/
 	args := workshop.Execution{
 		ExecArgs: workshop.ExecArgs{
 			UserId:  0,
 			GroupId: 0,
 			Command: []string{
-				"bash", "-euc", fmt.Sprintf(`while
-[ "$(systemctl is-system-running 2>/dev/null)" != running ] &&
-[ "$(systemctl is-system-running 2>/dev/null)" != degraded ]; do :; done &&
-loginctl enable-linger workshop`),
+				"bash", "-euc", startCommand,
 			},
 			WorkDir: "/",
 		},
