@@ -6,9 +6,10 @@ import (
 )
 
 var (
-	GetConns          = getConns
-	SetConns          = setConns
-	ReloadConnections = (*InterfaceManager).reloadConnections
+	AutoConnectChecker = autoConnectChecker
+	GetConns           = getConns
+	SetConns           = setConns
+	ReloadConnections  = (*InterfaceManager).reloadConnections
 )
 
 func UpdateConnectionInConnState(conns map[string]*schema.ConnState, conn *interfaces.Connection, autoConnect, undesired bool) {

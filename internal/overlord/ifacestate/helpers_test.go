@@ -24,9 +24,11 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type helpersSuite struct {
@@ -49,6 +51,52 @@ sdks:
       channel: {{.Channel}}
   {{ end }} 
 `
+
+var consumerYaml = `name: consumer
+base: ubuntu@22.04
+plugs:
+  plug-mount:
+    interface: mount
+    workshop-target: /project/mount
+`
+
+var producerYaml = `name: producer
+base: ubuntu@22.04
+slots:
+  mount:
+    interface: mount
+  slot-mount:
+    interface: mount
+`
+
+func (s *helpersSuite) TestAutoConnectChecker(c *check.C) {
+	consumer := sdk.MockInfo(c, consumerYaml, "42424242", "ws")
+	plugMount := interfaces.NewConnectedPlug(consumer.Plugs["plug-mount"], nil, nil)
+
+	producer := sdk.MockInfo(c, producerYaml, "42424242", "ws")
+	autoMount := interfaces.NewConnectedSlot(producer.Slots["mount"], nil, nil)
+	slotMount := interfaces.NewConnectedSlot(producer.Slots["slot-mount"], nil, nil)
+
+	workshopConns := []interfaces.ConnRef{}
+	policyCheck := ifacestate.AutoConnectChecker(workshopConns)
+
+	// slots named "mount" can be auto-connected
+	ok, err := policyCheck(plugMount, autoMount)
+	c.Assert(err, check.IsNil)
+	c.Assert(ok, check.Equals, true)
+
+	// other slots can be auto-connected via the workshop definition
+	_, err = policyCheck(plugMount, slotMount)
+	c.Assert(err, check.NotNil)
+
+	connRef := interfaces.ConnRef{PlugRef: *plugMount.Ref(), SlotRef: *slotMount.Ref()}
+	workshopConns = append(workshopConns, connRef)
+	policyCheck = ifacestate.AutoConnectChecker(workshopConns)
+
+	ok, err = policyCheck(plugMount, slotMount)
+	c.Assert(err, check.IsNil)
+	c.Assert(ok, check.Equals, true)
+}
 
 func (s *helpersSuite) TestGetConns(c *check.C) {
 	s.st.Lock()
