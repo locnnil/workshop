@@ -26,8 +26,8 @@ can be invoked manually after the workshop has started:
 Establishing a connection means
 that all currently connected USB-based cameras
 will be made available inside the workshop.
-New cameras can be added by disconnecting and then reconnecting
-the camera interface.
+New cameras can be added
+by disconnecting and then reconnecting the camera interface.
 
 To check if the interface is connected:
 
