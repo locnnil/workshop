@@ -13,7 +13,7 @@ repack: |
 backends:
   lxd:
     systems:
-      - ubuntu-22.04:
+      - ubuntu-24.04:
           workers: 2
 suites:
   tests/main/:

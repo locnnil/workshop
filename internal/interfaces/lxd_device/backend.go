@@ -242,6 +242,13 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 	spec := s.(*Specification)
 
+	name := lxdbackend.ProfileName(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
+	newp := api.ProfilePut{
+		Devices:     spec.devices,
+		Config:      spec.config,
+		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkInfo.Sdk, sdkInfo.Workshop),
+	}
+
 	conn, err := lxdClient(ctx)
 	if err != nil {
 		return err
@@ -281,13 +288,6 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		if err != nil {
 			return err
 		}
-	}
-
-	name := lxdbackend.ProfileName(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
-	newp := api.ProfilePut{
-		Devices:     spec.devices,
-		Config:      spec.config,
-		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkInfo.Sdk, sdkInfo.Workshop),
 	}
 
 	// Either create or update an existing LXD profile for the SDK so that later

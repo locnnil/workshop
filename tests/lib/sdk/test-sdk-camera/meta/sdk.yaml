@@ -1,0 +1,10 @@
+name: test-sdk-camera
+title: test-sdk-camera
+base: ubuntu@20.04
+
+summary: test-sdk-camera SDK
+description: |
+  test-sdk-camera SDK
+plugs:
+  camera:
+    interface: camera

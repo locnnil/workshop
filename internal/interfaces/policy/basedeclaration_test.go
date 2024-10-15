@@ -144,7 +144,22 @@ func (s *baseDeclSuite) TestAutoConnection(c *C) {
 	}
 }
 
-func (s *baseDeclSuite) TestContentAutoConnection(c *check.C) {
+func (s *baseDeclSuite) TestManualConnection(c *C) {
+	all := builtin.Interfaces()
+
+	for _, iface := range all {
+		comm := Commentf(iface.Name())
+
+		// check base declaration
+		cand := s.connectCand(c, iface.Name(), "", "", "", "", "", "")
+		arity, err := cand.Check()
+		c.Check(err, IsNil, comm)
+		// not currently used outside of tests
+		c.Check(arity.SlotsPerPlugAny(), Equals, true)
+	}
+}
+
+func (s *baseDeclSuite) TestMountAutoConnection(c *check.C) {
 	slotYaml := fmt.Sprintf(`name: slot-sdk
 base: ubuntu@22.04
 slots:
@@ -165,8 +180,8 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *check.C) {
 	}
 }
 
-func (s *baseDeclSuite) TestContentSlotInstallation(c *check.C) {
-	// test content specially
+func (s *baseDeclSuite) TestMountSlotInstallation(c *check.C) {
+	// test mount specially
 	ic := s.installSlotCand(c, "mount", sdk.Regular, ``)
 	err := ic.Check()
 	c.Assert(err, IsNil)

@@ -102,6 +102,7 @@ Specific interfaces are predefined and implemented by |project_markup|,
 so you can't create a custom interface type.
 Currently, |project_markup| supports the following:
 
+- :ref:`Camera interface <exp_camera_interface>` (manually connected)
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
 - :ref:`Mount interface <exp_mount_interface>` (auto-connected)
 - :ref:`SSH interface <exp_ssh_interface>` (manually connected)

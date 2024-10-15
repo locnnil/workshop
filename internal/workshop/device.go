@@ -8,6 +8,10 @@ const (
 	Volume
 )
 
+type Camera struct {
+	Name string `json:"name"`
+}
+
 type Mount struct {
 	Name  string    `json:"name"`
 	What  string    `json:"what"`
@@ -28,6 +32,7 @@ type Gpu struct {
 type SdkProfile struct {
 	Sdk string
 
+	Camera *Camera
 	Mounts map[string]Mount
 	Agent  *SshAgent
 	Gpu    *Gpu

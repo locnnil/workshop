@@ -2,6 +2,7 @@ package lxd_device
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
@@ -104,23 +105,59 @@ func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
 }
 
 func (s *Specification) SetGpu(gpu workshop.Gpu) error {
+	s.Profile.Gpu = &gpu
+
+	// The default workshop user must be able to acces the GPU device.
+	// Workshop assigns the GPU devices to workshop.workshop. A more
+	// traditional way here would be to add dri devices to the video/render
+	// groups, but it requires an additional workshop exec to find out the
+	// groups' ids at the LXD profile generation time. Given that we are
+	// solving the problem of access in a confined environment and workshop
+	// is a passwordless sudo user anyway, it was decided that it is OK if
+	// the workshop user owns GPU devices.
+
+	// On another note, the render and video groups are not assigned to the
+	// card*/render* dri devices by LXD properly. Both will be assigned to
+	// the group provided in "gid"; there is no way to assign video to card*
+	// and render to render* devices.
 	s.devices[gpu.Name] = map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}
 
-	s.Profile.Gpu = &workshop.Gpu{
-		Name: gpu.Name,
-		// The default workshop user must be able to acces the GPU device.
-		// Workshop assigns the GPU devices to workshop.workshop. A more
-		// traditional way here would be to add dri devices to the video/render
+	return nil
+}
+
+func (s *Specification) SetCamera(camera workshop.Camera) error {
+	s.Profile.Camera = &camera
+
+	s.devices[camera.Name] = map[string]string{"type": "none"}
+	buf, err := json.Marshal(camera)
+	if err != nil {
+		return err
+	}
+	s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, camera.Name)] = string(buf)
+	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, camera.Name)] = "camera"
+
+	for i := 0; i < 10; i++ {
+		// This name is unique because '/' is not permitted in plug names.
+		name := fmt.Sprintf("%s/video%d", camera.Name, i)
+		path := fmt.Sprintf("/dev/video%d", i)
+		// The default workshop user must be able to acces the video devices.
+		// Workshop assigns the devices to workshop.workshop. A more
+		// traditional way here would be to add them device to the video
 		// groups, but it requires an additional workshop exec to find out the
 		// groups' ids at the LXD profile generation time. Given that we are
 		// solving the problem of access in a confined environment and workshop
 		// is a passwordless sudo user anyway, it was decided that it is OK if
-		// the workshop user owns GPU devices.
-
-		// On another note, the render and video groups are not assigned to the
-		// card*/render* dri devices by LXD properly. Both will be assigned to
-		// the group provided in "gid"; there is no way to assign video to card*
-		// and render to render* devices.
+		// the workshop user owns video devices.
+		s.devices[name] = map[string]string{
+			"type":     "unix-char",
+			"source":   path,
+			"path":     path,
+			"required": "false",
+			"uid":      "1000",
+			"gid":      "1000",
+		}
+		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, name)] = "camera"
 	}
+
 	return nil
 }
