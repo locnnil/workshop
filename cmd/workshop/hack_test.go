@@ -28,9 +28,10 @@ base: ubuntu@22.04
 `
 
 func (m *workshopHack) SetUpTest(c *check.C) {
+	m.BaseWorkshopSuite.SetUpTest(c)
+
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
-	m.BaseWorkshopSuite.SetUpTest(c)
 	var err error
 	m.user, err = osutil.UserMaybeSudoUser()
 	c.Assert(err, check.IsNil)

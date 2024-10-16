@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -43,6 +42,56 @@ var (
 	runTextEditor = shared.TextEditor
 )
 
+func dropHack(hackdir, storedir string) (*revert.Reverter, error) {
+	reverter := revert.New()
+
+	recs, err := os.ReadDir(hackdir)
+	if err != nil && !osutil.IsDirNotExist(err) {
+		return nil, err
+	}
+	if len(recs) == 0 {
+		// Nothing to do.
+		return nil, fmt.Errorf(`cannot drop: "hack" SDK does not exist`)
+	}
+
+	if err := os.MkdirAll(storedir, 0755); err != nil {
+		return nil, err
+	}
+
+	if err := osutil.Exchange(hackdir, storedir); err != nil {
+		return nil, err
+	}
+	reverter.Add(func() { _ = osutil.Exchange(storedir, hackdir) })
+
+	if err := os.RemoveAll(hackdir); err != nil {
+		return nil, err
+	}
+	reverter.Add(func() { _ = os.MkdirAll(hackdir, 0755) })
+	return reverter, nil
+}
+
+func restoreHack(hackdir, storedir string) error {
+	recs, err := os.ReadDir(storedir)
+	if err != nil && !osutil.IsDirNotExist(err) {
+		return err
+	}
+	if len(recs) == 0 || osutil.IsDirNotExist(err) {
+		// Nothing in stored.
+		return fmt.Errorf(`cannot restore: no stored "hack" SDK found`)
+	}
+
+	// If hack does not exist (i.e. was dropped) - create it, we'll be
+	// exchanging an empty hackdir with the content from stored in this case.
+	if err := os.MkdirAll(hackdir, 0755); err != nil {
+		return err
+	}
+
+	if err = osutil.Exchange(hackdir, storedir); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 	if c.drop && c.restore {
 		return fmt.Errorf("cannot hack: '--drop' incompatible with '--replace'")
@@ -70,40 +119,15 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	uid, gid, err := osutil.UidGid(user)
-	if err != nil {
-		return err
-	}
-
 	hackdir := sdk.WorkshopHackSdkCurrent(user.HomeDir, project.Id, workshop.Name)
 
 	if c.drop {
-		recs, err := os.ReadDir(hackdir)
-		if err != nil && !osutil.IsDirNotExist(err) {
+		storedir := sdk.WorkshopHackSdkStored(user.HomeDir, project.Id, workshop.Name)
+		reverter, err := dropHack(hackdir, storedir)
+		if err != nil {
 			return err
 		}
-		if len(recs) == 0 {
-			// Nothing to do.
-			return fmt.Errorf(`cannot drop: "hack" SDK does not exist`)
-		}
-
-		reverter := revert.New()
 		defer reverter.Fail()
-
-		stored := sdk.WorkshopHackSdkStored(user.HomeDir, project.Id, workshop.Name)
-		if err := osutil.MkdirAllChown(stored, 0755, uid, gid); err != nil {
-			return err
-		}
-
-		if err = osutil.Exchange(hackdir, stored); err != nil {
-			return err
-		}
-		reverter.Add(func() { _ = osutil.Exchange(stored, hackdir) })
-
-		if err = os.RemoveAll(hackdir); err != nil {
-			return err
-		}
-		reverter.Add(func() { _ = os.MkdirAll(hackdir, 0755) })
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		if err = cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s", av[0])}); err != nil {
@@ -120,23 +144,9 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
 
-		stored := sdk.WorkshopHackSdkStored(user.HomeDir, project.Id, workshop.Name)
-		recs, err := os.ReadDir(stored)
-		if err != nil && !osutil.IsDirNotExist(err) {
-			return err
-		}
-		if len(recs) == 0 || osutil.IsDirNotExist(err) {
-			// Nothing in stored.
-			return fmt.Errorf(`cannot restore: no stored "hack" SDK found`)
-		}
+		storedir := sdk.WorkshopHackSdkStored(user.HomeDir, project.Id, workshop.Name)
 
-		// If hack does not exist (i.e. was dropped) - create it, we'll be
-		// exchanging an empty hackdir with the content from stored in this case.
-		if err := osutil.MkdirAllChown(hackdir, 0755, uid, gid); err != nil {
-			return err
-		}
-
-		if err = osutil.Exchange(hackdir, stored); err != nil {
+		if err = restoreHack(hackdir, storedir); err != nil {
 			return err
 		}
 
@@ -185,7 +195,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 			return err
 		}
 
-		if err = writeSdkFile(sdkfile, res, uid, gid); err != nil {
+		if err = writeSdkFile(sdkfile, res); err != nil {
 			return err
 		}
 	}
@@ -194,7 +204,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 	// file to ensure the refresh will run successfully as meta/sdk.yaml is a
 	// must for an SDK.
 	if !osutil.FileExists(metafile) {
-		err = writeSdkFile(metafile, []byte(metaminimal), uid, gid)
+		err = writeSdkFile(metafile, []byte(metaminimal))
 		if err != nil {
 			return err
 		}
@@ -206,8 +216,8 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/hack", av[0])})
 }
 
-func writeSdkFile(meta string, content []byte, uid sys.UserID, gid sys.GroupID) error {
-	if err := osutil.MkdirAllChown(filepath.Dir(meta), 0755, uid, gid); err != nil {
+func writeSdkFile(meta string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(meta), 0755); err != nil {
 		return err
 	}
 
