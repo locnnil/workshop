@@ -3,7 +3,7 @@ module github.com/canonical/workshop
 go 1.21
 
 require (
-	cloud.google.com/go/storage v1.36.0
+	cloud.google.com/go/storage v1.37.0
 	github.com/adrg/xdg v0.4.0
 	github.com/canonical/lxd v0.0.0-20240226153229-0ff71ae3cb84
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
