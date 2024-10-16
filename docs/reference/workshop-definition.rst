@@ -119,8 +119,9 @@ Each SDK is described with the following keys:
        The only interface with additional attributes is :samp:`mount`;
        it requires the :samp:`workshop-source` property
        to specify a path inside the workshop
-       to be used as the slot's source directory;
-       :file:`/project` or :envvar:`$SDK` paths can be used.
+       for the slot's source directory;
+       :file:`/project` or :envvar:`$SDK`-based paths can be used;
+       :envvar:`$SDK` expands into the SDK's installation path in the workshop.
 
 
 JSON Schema
