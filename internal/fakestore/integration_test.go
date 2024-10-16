@@ -152,3 +152,24 @@ func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {
 	c.Assert(res, check.HasLen, 0)
 	c.Assert(err, check.ErrorMatches, `(?s).*SDK not found in "latest/stable".*`)
 }
+
+func (f *storeIntegration) TestSdkActionTimeout(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	// Deliberately set to malformed address
+	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8181/storage/v1/"), check.IsNil)
+	s := store.New()
+	acts := []sdk.SdkAction{{
+		ProjectId: "24242424",
+		Workshop:  "test-workshop",
+		Action:    sdk.Install,
+		Name:      "test-sdk-unknown",
+		Channel:   "latest/stable",
+	}}
+	_, err := s.SdkAction(context.Background(), acts)
+
+	// Restore address for remaining tests
+	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
+
+	c.Assert(err, check.ErrorMatches, `(?s).*failed to connect to store.*`)
+}
