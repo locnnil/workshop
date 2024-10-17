@@ -167,20 +167,20 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 
 	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkmnt := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
-	if err = m.backend.AddWorkshopMount(ctx, w, sdkmnt); err != nil {
+	sdkMount := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
+	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
 		return err
 	}
 	umount := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkmnt.Name); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkmnt.Name, w, err)
+		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
+			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}
 	defer umount()
 
 	// example: /var/lib/workshop/sdk/cuda/712/
-	sdkdir := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
 
 	// create a memory out/err to log the hook output into the task's log
 	var out bytes.Buffer
@@ -196,7 +196,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 				"--extract",
 				"--file",
 				target,
-				"--one-top-level=" + sdkdir,
+				"--one-top-level=" + sdkPath,
 				"--no-same-owner",
 			},
 			WorkDir: "/",
@@ -327,9 +327,5 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	if err = wp.UnlinkSdk(ctx, sdkSetup.Name); err != nil {
-		return err
-	}
-
-	return nil
+	return wp.UnlinkSdk(ctx, sdkSetup.Name)
 }

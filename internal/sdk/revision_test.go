@@ -102,7 +102,7 @@ func (s revisionSuite) TestYAML(c *C) {
 	}
 }
 
-func (s revisionSuite) ParseRevision(c *C) {
+func (s revisionSuite) TestParseRevision(c *C) {
 	type testItem struct {
 		s string
 		n int

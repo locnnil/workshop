@@ -22,14 +22,14 @@ type CmdHack struct {
 
 func (c *CmdHack) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "hack [--drop|--restore] <WORKSHOP> [hook-name]",
+		Use:   "hack [--drop|--restore] <WORKSHOP> [setup-base|save-save|restore-state|check-health]",
 		Args:  cobra.RangeArgs(1, 2),
 		Short: "Edit hack SDK",
 		RunE:  c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.drop, "drop", false, "Put hack SDK away and refresh.")
-	cmd.Flags().BoolVar(&c.restore, "restore", false, "Restore hack SDK and refresh.")
+	cmd.Flags().BoolVar(&c.drop, "drop", false, "Drop hack SDK from the workshop.")
+	cmd.Flags().BoolVar(&c.restore, "restore", false, "Restore the dropped hack SDK for the workshop.")
 
 	return cmd
 }
@@ -130,7 +130,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		if err = cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s", av[0])}); err != nil {
+		if err = cmdrefresh.Run(cmd, av[0:1]); err != nil {
 			// Refresh failed, revert the drop operation so a possible subsequent
 			// "workshop refresh <WORKSHOP>/hack" won't fail due to the lack of
 			// hack SDK definition.

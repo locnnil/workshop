@@ -630,7 +630,7 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		c.Check(err, check.IsNil)
 		err = fs.Symlink(filepath.Join(sdk.SdkRootPath(sdkname), "1"), filepath.Join(sdk.SdkRootPath(sdkname), "current"))
 		c.Check(err, check.IsNil)
-		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
+		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 		c.Check(err, check.IsNil)
 		defer file.Close()
 		syaml, exists := sdks[sdkname]
