@@ -175,7 +175,7 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	if err = m.cleanUpWorkshopAfterRemoval(user, prj.ProjectId, w); err != nil {
+	if err = m.cleanupWorkshopData(user, prj.ProjectId, w); err != nil {
 		st := task.State()
 		st.Lock()
 		task.Logf("%v", err)
@@ -259,7 +259,7 @@ func (e *cleanupError) Error() string {
 	return fmt.Sprintf("workshop cleanup errors: %v", e.errs)
 }
 
-func (m *WorkshopManager) cleanUpWorkshopAfterRemoval(user, projectId, w string) error {
+func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
 	usr, err := workshop.LookupUsername(user)
 	if err != nil {
 		return err

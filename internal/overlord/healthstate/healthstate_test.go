@@ -58,7 +58,7 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 
-	s.backend, err = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 

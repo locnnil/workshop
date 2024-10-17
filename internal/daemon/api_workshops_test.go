@@ -311,13 +311,13 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 				{
 					Name:        "test-sdk",
 					Channel:     "latest/stable",
-					Revision:    "0",
+					Revision:    "1",
 					InstallTime: &t1,
 				},
 				{
 					Name:        "test-sdk-2",
 					Channel:     "latest/stable",
-					Revision:    "0",
+					Revision:    "1",
 					InstallTime: &t2,
 				},
 			},
@@ -389,7 +389,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
@@ -407,7 +407,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			{
 				Name:        "test-sdk-2",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
@@ -480,7 +480,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t1,
 				Mounts: []*Mount{
 					{
@@ -498,7 +498,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			{
 				Name:        "test-sdk-2",
 				Channel:     "latest/stable",
-				Revision:    "0",
+				Revision:    "1",
 				InstallTime: &t2,
 				Mounts: []*Mount{
 					{
@@ -604,6 +604,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 			return nil, err
 		}
 		info.Channel = act.Channel
+		info.Revision = sdk.Revision{N: 1}
 		result = append(result, sdk.SdkResult{Info: info})
 	}
 	return result, nil
@@ -619,31 +620,46 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		fs, err := s.b.WorkshopFs(s.ctx, ws)
 		c.Check(err, check.IsNil)
 		defer fs.Close()
+
 		// Get the SDK name from the exec command (we don't have a separate
 		// method to install an SDK now).
-		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_0.sdk")
+		sdkname, found := strings.CutSuffix(filepath.Base(args.Command[3]), "_1.sdk")
 		c.Check(found, check.Equals, true)
-		metadir := filepath.Join(sdk.SdkCurrentPath(sdkname), "meta")
-		err = fs.MkdirAll(metadir, 0655)
-		c.Check(err, check.IsNil)
 
+		// Install meta.
+		metadir := filepath.Join(sdk.SdkRootPath(sdkname), "1", "meta")
+		err = fs.MkdirAll(metadir, 0755)
+		c.Check(err, check.IsNil)
+		err = fs.Symlink(filepath.Join(sdk.SdkRootPath(sdkname), "1"), filepath.Join(sdk.SdkRootPath(sdkname), "current"))
+		c.Check(err, check.IsNil)
 		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 		c.Check(err, check.IsNil)
 		defer file.Close()
-
 		syaml, exists := sdks[sdkname]
 		c.Check(exists, check.Equals, true)
 		_, err = file.Write([]byte(syaml))
 		c.Check(err, check.IsNil)
 
+		// Install hooks.
+		hooksdir := sdk.SdkHooksDir(sdkname)
+		err = fs.MkdirAll(hooksdir, 0755)
+		c.Check(err, check.IsNil)
 		for _, hook := range []string{"setup-base", "save-state", "restore-state"} {
 			setuphook, err := fs.OpenFile(sdk.SdkHookPath(sdkname, hook), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0744)
 			c.Check(err, check.IsNil)
 			defer setuphook.Close()
 		}
+
 		return workshop.ExecContext{WaitExecution: func(ctx context.Context) error { return nil }}, nil
 	}
 	return func() { s.b.ExecCallback = nil }
+}
+
+func (s *apiSuite) mockHackSdk(c *check.C, ws string, meta string) {
+	sdkpath := sdk.WorkshopHackSdkCurrent(s.userhome, s.project.ProjectId, ws)
+	metadir := filepath.Join(sdkpath, "meta")
+	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
+	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
@@ -1206,6 +1222,9 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 
 		// non-transactional refresh is only supported for a single workshop
 		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+
+		// partial refresh is only supported for the hack SDK
+		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"refresh-mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1226,6 +1245,16 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: "wait-on-error is not supported for multiple workshops",
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `partial refresh is supported only for "hack" SDK`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `partial refresh is supported only for "hack" SDK`,
 		},
 	}
 
@@ -1369,6 +1398,127 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 	// no refresh in progress after continue was successful
 	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", "")
 	c.Assert(err, check.IsNil)
+}
+
+func (s *apiSuite) TestRefreshWorkshopPartialOK(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+	s.mockHackSdk(c, "manysdks", `name: hack
+base: ubuntu@22.04
+plugs:
+  hack-plug:
+    interface: mount
+    workshop-target: /etc
+`)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks/hack" SDK`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks/hack" SDK`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	wp, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+	c.Assert(wp.Running, check.Equals, true)
+
+	hacksetup := wp.Content["hack"]
+	c.Assert(hacksetup.RevisionSequence, check.HasLen, 1)
+	c.Assert(hacksetup.RevisionSequence[0].String(), check.Equals, "x1")
+	c.Assert(hacksetup.Revision.String(), check.Equals, "x2")
+
+	fs, err := s.b.WorkshopFs(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+
+	_, err = fs.Stat(sdk.SdkRevPath("hack", "x1"))
+	c.Assert(err, check.IsNil)
+
+	_, err = fs.Stat(sdk.SdkRevPath("hack", "x2"))
+	c.Assert(err, check.IsNil)
+
+	path, err := fs.ReadLink(sdk.SdkCurrentPath("hack"))
+	c.Assert(err, check.IsNil)
+	c.Assert(strings.HasSuffix(path, sdk.SdkRevPath("hack", "x2")), check.Equals, true)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "hack", "hack-plug"), check.NotNil)
+}
+
+func (s *apiSuite) TestRefreshWorkshopPartialConflictChange(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+	s.mockHackSdk(c, "manysdks", `name: illegal%
+base: ubuntu@22.04
+`)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks/hack" SDK`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot refresh: "manysdks" status is "Pending", must be one of: "Ready"`,
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
 }
 
 func (s *apiSuite) TestStartWorkshop(c *check.C) {

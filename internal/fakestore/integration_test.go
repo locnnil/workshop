@@ -66,7 +66,7 @@ func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 
 func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: 1}
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 	prev := filepath.Join(dirs.SdkDir, setup.Name) + "_5.sdk"
 	_, err := os.Create(prev)
 	c.Assert(err, check.IsNil)
@@ -93,7 +93,7 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 	defer r()
 
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 
 	// Lock the file to emulate a concurrent download is going on
 	target := setup.Filename()
@@ -106,7 +106,7 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 	go func() {
 		err := s.DownloadSdk(context.Background(), setup, nil)
 		c.Check(err, check.IsNil)
-		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_0.sdk.*`, dirs.SdkDir))
+		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_1.sdk.*`, dirs.SdkDir))
 		wg.Done()
 	}()
 
@@ -131,7 +131,7 @@ func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
 	defer r()
 
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: 55}
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 55}}
 	err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(setup.Filename(), check.Not(testutil.FilePresent))

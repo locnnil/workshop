@@ -5,6 +5,9 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdRemove struct {
@@ -57,11 +60,36 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	user, err := osutil.UserMaybeSudoUser()
+	if err != nil {
+		return err
+	}
+
 	if _, err := c.wait(cli, changeId, false); err != nil {
 		if err == errNoWait {
 			return nil
 		}
 		return err
+	}
+
+	// Drop all the workshops' hack directories if exist. Hack SDK content is
+	// controlled by the client code now, thus, we will not consider it to be a
+	// responsibility of workshopd to drop the hack directory on removal (see
+	// doRemoveWorkshop). Hack SDK is a type of a local SDK that will continue
+	// to exist in a stored directory for some time after the workshop removal
+	// so if recreated, it can be summoned back with 'workshop hack --restore
+	// <WORKSHOP>.
+	// workshopd will, however, be responsible for the final clean up of the
+	// hack SDK content (e.g. if Workshop is removed from the system or the hack
+	// SDK content was stored for over 90 days).
+	for _, wp := range av {
+		hackdir := sdk.WorkshopHackSdkCurrent(user.HomeDir, project.Id, wp)
+		if exists, dir, _ := osutil.ExistsIsDir(hackdir); exists && dir {
+			storedir := sdk.WorkshopHackSdkStored(user.HomeDir, project.Id, wp)
+			if _, err := dropHack(hackdir, storedir); err != nil {
+				fmt.Fprintf(Stderr, "cannot drop hack SDK for %q: %v\n", wp, err)
+			}
+		}
 	}
 
 	for _, name := range av {

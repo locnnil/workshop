@@ -8,8 +8,10 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/randutil"
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
@@ -27,7 +29,7 @@ type FakeWorkshop struct {
 	*workshop.Workshop
 	Config             map[string]string
 	Devices            map[string]map[string]string
-	WorkshopFilesystem workshop.WorkshopFs
+	WorkshopFilesystem *FakeInstanceFs
 }
 
 type ExecCall struct {
@@ -61,9 +63,11 @@ type FakeWorkshopBackend struct {
 
 	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
+
+	BaseDir string
 }
 
-func New() (*FakeWorkshopBackend, error) {
+func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
@@ -71,6 +75,7 @@ func New() (*FakeWorkshopBackend, error) {
 	be.projects = make(map[string][]*workshop.Project)
 
 	be.ExecCallback = DoExecDefault
+	be.BaseDir = baseDir
 
 	return &be, nil
 }
@@ -132,7 +137,10 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 	}
 
 	ws := &FakeWorkshop{}
-	ws.WorkshopFilesystem = NewWorkshopFs()
+	ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
+	if err != nil {
+		return err
+	}
 	ws.Workshop = &workshop.Workshop{Backend: f,
 		Name:    file.Name,
 		Running: false,
@@ -414,14 +422,25 @@ type FakeInstanceFs struct {
 	afero.Fs
 }
 
-func NewWorkshopFs() workshop.WorkshopFs {
+func NewWorkshopFs(baseDir string) (*FakeInstanceFs, error) {
 	var fs FakeInstanceFs
-	fs.Fs = afero.NewMemMapFs()
-	return &fs
+	osfs := afero.NewOsFs()
+	rndstring := randutil.RandomString(10)
+	wfspath := filepath.Join(baseDir, rndstring)
+	err := os.MkdirAll(wfspath, 0700)
+	if err != nil {
+		return nil, err
+	}
+	fs.Fs = afero.NewBasePathFs(osfs, wfspath)
+	return &fs, nil
 }
 
 func (w *FakeInstanceFs) Symlink(source, target string) error {
-	return w.Fs.Mkdir(target, os.ModeSymlink)
+	return w.Fs.(*afero.BasePathFs).SymlinkIfPossible(source, target)
+}
+
+func (w *FakeInstanceFs) ReadLink(p string) (string, error) {
+	return w.Fs.(*afero.BasePathFs).ReadlinkIfPossible(p)
 }
 
 func (w *FakeInstanceFs) Close() {

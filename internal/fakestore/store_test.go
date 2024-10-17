@@ -39,7 +39,7 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 		var s = store.StoreSdk{
 			Name:     "test-sdk",
 			Channel:  channel,
-			Revision: 123,
+			Revision: sdk.Revision{N: 123},
 			SdkYAML:  testSdk,
 		}
 		return s, nil
@@ -66,13 +66,13 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 			"test-sdk-broken": {
 				Name:     "test-sdk-broken",
 				Channel:  channel,
-				Revision: 123,
+				Revision: sdk.Revision{N: 123},
 				SdkYAML:  `incorrect yaml: -`,
 			},
 			"test-sdk-valid": {
 				Name:     "test-sdk",
 				Channel:  channel,
-				Revision: 123,
+				Revision: sdk.Revision{N: 123},
 				SdkYAML:  testSdk,
 			},
 		}

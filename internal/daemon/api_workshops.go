@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -100,7 +100,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sdk.Name,
 			Channel:     sdk.Channel,
-			Revision:    strconv.FormatInt(sdk.Revision, 10),
+			Revision:    sdk.Revision.String(),
 			InstallTime: sdk.InstallTime,
 			Health:      healthInfo,
 			Mounts:      sdkMounts,
@@ -169,15 +169,23 @@ func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, err
 	return mnts, nil
 }
 
-func newWorkshopChange(st *state.State, kind string, user, projectId string, reqData *workshopReq) *state.Change {
+func newWorkshopChange(st *state.State, kind string, user, projectId, action string, names []string) *state.Change {
 	var summary string
-	switch len(reqData.Names) {
+	switch len(names) {
 	case 1:
-		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(reqData.Action), reqData.Names[0])
+		summary = fmt.Sprintf("%s %q workshop", cases.Title(language.BritishEnglish).String(action), names[0])
 	default:
-		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(reqData.Action), strutil.Quoted(reqData.Names))
+		summary = fmt.Sprintf("%s %s workshops", cases.Title(language.BritishEnglish).String(action), strutil.Quoted(names))
 	}
 
+	change := st.NewChange(kind, summary)
+	change.Set("user", user)
+	change.Set("project-id", projectId)
+	return change
+}
+
+func newWorkshopSdkChange(st *state.State, kind string, user, projectId, action string, wp, sk string) *state.Change {
+	summary := fmt.Sprintf(`%s "%s/%s" SDK`, cases.Title(language.BritishEnglish).String(action), wp, sk)
 	change := st.NewChange(kind, summary)
 	change.Set("user", user)
 	change.Set("project-id", projectId)
@@ -225,6 +233,55 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	return SyncResponse(infoLst, http.StatusOK)
 }
 
+func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
+	if len(names) != 1 {
+		return "", "", false
+	}
+
+	parts := strings.FieldsFunc(names[0], func(r rune) bool { return r == '/' })
+	if len(parts) == 2 {
+		return parts[0], parts[1], true
+	}
+	return "", "", false
+}
+
+func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+	var refreshMode conflict.RefreshMode
+	var change *state.Change
+	var taskset []*state.TaskSet
+	var err error
+
+	refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot refresh: %v", err)
+	}
+
+	if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
+		return nil, nil, fmt.Errorf("wait-on-error is not supported for multiple workshops")
+	}
+
+	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
+		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
+			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
+			if sk != sdk.Hack {
+				return change, taskset, fmt.Errorf(`partial refresh is supported only for "hack" SDK`)
+			}
+			taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
+		} else {
+			change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
+			taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
+		}
+		var setup conflict.RefreshSetup
+		setup.Mode = refreshMode.String()
+		change.Set("refresh-setup", setup)
+	}
+
+	if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
+		change, err = conflict.ResumeRefresh(st, reqData.Names[0], pid, refreshMode)
+	}
+	return change, taskset, err
+}
+
 func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	st := c.d.overlord.State()
@@ -255,41 +312,25 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	switch reqData.Action {
 	case "launch":
-		change = newWorkshopChange(st, "launch", user, projectId, &reqData)
+		change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
 		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "refresh":
-		var refreshMode conflict.RefreshMode
-		refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
-		if err != nil {
-			return statusBadRequest("cannot refresh: %v", err)
-		}
-
-		if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
-			return statusBadRequest("wait-on-error is not supported for multiple workshops")
-		}
-
-		if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
-			change = newWorkshopChange(st, "refresh", user, projectId, &reqData)
-			taskset, err = wsmgr.RefreshMany(r.Context(), reqData.Names, projectId, refreshMode, change.ID())
-		}
-
-		if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
-			change, err = conflict.ResumeRefresh(st, reqData.Names[0], projectId, refreshMode)
-			if err != nil {
-				return statusBadRequest(err.Error())
-			}
-		}
+		change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
 	case "start":
-		change = newWorkshopChange(st, "start", user, projectId, &reqData)
+		change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
 		taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "stop":
-		change = newWorkshopChange(st, "stop", user, projectId, &reqData)
+		change = newWorkshopChange(st, "stop", user, projectId, reqData.Action, reqData.Names)
 		taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
 	case "remove":
-		change = newWorkshopChange(st, "remove", user, projectId, &reqData)
+		change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
 		taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 	default:
 		return statusBadRequest("unknown action")
+	}
+
+	if err != nil {
+		return statusBadRequest(err.Error())
 	}
 
 	for _, tset := range taskset {
@@ -297,10 +338,6 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 	if len(change.Tasks()) == 0 {
 		change.SetStatus(state.DoneStatus)
-	}
-
-	if err != nil {
-		return statusBadRequest(err.Error())
 	}
 
 	ensureStateSoon(st, 0)

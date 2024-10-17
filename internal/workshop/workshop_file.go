@@ -3,7 +3,6 @@ package workshop
 import (
 	"cmp"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -80,6 +79,7 @@ type SdkRecord struct {
 	Channel string                 `yaml:"channel"`
 	Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
 	Slots   map[string]interface{} `yaml:"slots,omitempty"`
+	Hooks   map[string]string      `yaml:"hooks,omitempty"`
 }
 
 type Connection struct {
@@ -101,11 +101,12 @@ func (p SdkList) MarshalYAML() (interface{}, error) {
 		Channel string                 `yaml:"channel"`
 		Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
 		Slots   map[string]interface{} `yaml:"slots,omitempty"`
+		Hooks   map[string]string      `yaml:"hooks,omitempty"`
 	}
 	b := map[string]sdkDef{}
 
 	for _, v := range p {
-		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots}
+		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots, Hooks: v.Hooks}
 	}
 
 	node := &yaml.Node{}
@@ -138,22 +139,12 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readWorkshop(pathname string) (*File, error) {
+func readWorkshop(buf []byte) (*File, error) {
 	var err error
 	var file File
 
-	buf, err := os.ReadFile(pathname)
-	if err != nil {
-		return nil, err
-	}
-
 	if err = yaml.Unmarshal(buf, &file); err != nil {
 		return nil, err
-	}
-
-	fname := filepath.Base(pathname)
-	if Filename(file.Name) != fname {
-		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
 	}
 
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {

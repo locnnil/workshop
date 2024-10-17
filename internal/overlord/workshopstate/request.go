@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
-	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -49,6 +50,29 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 		return nil, fmt.Errorf("no project found with \"id\" %v", id)
 	}
 	return projects[username][idx], nil
+}
+
+func maybeHack(ctx context.Context, pid, wp string) (bool, error) {
+	username, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return false, fmt.Errorf("context key user not found")
+	}
+
+	usr, err := workshop.LookupUsername(username)
+	if err != nil {
+		return false, err
+	}
+	hackdir := sdk.WorkshopHackSdkCurrent(usr.HomeDir, pid, wp)
+
+	recs, err := os.ReadDir(hackdir)
+	// no hack SDK exists for the workshop and it is not an error.
+	if len(recs) == 0 || osutil.IsDirNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
@@ -111,8 +135,10 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	retrieve := state.NewTaskSet()
 	for _, s := range sdks {
-		r := sdkstate.Retrieve(st, s)
-		retrieve.AddTask(r)
+		if s.Channel != "" {
+			r := sdkstate.Retrieve(st, s)
+			retrieve.AddTask(r)
+		}
 	}
 	return retrieve
 }
@@ -128,27 +154,33 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	prevAuto.Set("sdk", sdk.System.String())
 	autoConnect := state.NewTaskSet(prevAuto)
 
-	for idx, sdk := range sdks {
+	for idx, setup := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
-		// guarantee safety of concurrent installations
-		installTaskSet := sdkstate.Install(st, sdk.Name, retrieveSet.Tasks()[idx].ID())
-		if prevInstall != nil {
-			installTaskSet.WaitAll(prevInstall)
+		// guarantee safety of concurrent installations.
+		var installTs *state.TaskSet
+		if setup.Channel != "" {
+			installTs = sdkstate.Install(st, setup.Name, retrieveSet.Tasks()[idx].ID())
+		} else {
+			installTs = sdkstate.InstallLocalSdk(st, setup)
 		}
-		prevInstall = installTaskSet
-		install.AddAll(installTaskSet)
+
+		if prevInstall != nil {
+			installTs.WaitAll(prevInstall)
+		}
+		prevInstall = installTs
+		install.AddAll(installTs)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.Hook(st, w, sdk.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, w, setup.Name, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
 		prevSetup = setupHookTask
 		setupHook.AddTask(setupHookTask)
 
-		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", sdk.Name))
-		autoconnect.Set("sdk", sdk.Name)
+		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
+		autoconnect.Set("sdk", setup.Name)
 		autoConnect.AddTask(autoconnect)
 		if prevAuto != nil {
 			autoconnect.WaitFor(prevAuto)
@@ -225,8 +257,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *wor
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(ctx context.Context,
-	names []string, projectId string, refreshMode conflict.RefreshMode, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -246,8 +277,8 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		return nil, err
 	}
 
-	files := make([]*workshop.File, 0)
-	installedContent, toInstall := make([][]sdk.Setup, 0), make([][]sdk.Setup, 0)
+	var files []*workshop.File
+	var installed, toinstall [][]sdk.Setup
 	for _, ws := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
 		if idx == -1 {
@@ -263,25 +294,114 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		newContent := []sdk.Setup{}
+		var newContent []sdk.Setup
 		for _, s := range res {
 			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
-		toInstall = append(toInstall, newContent)
-		installedContent = append(installedContent, maps.Values(workshops[idx].Content))
+		found, err := maybeHack(ctx, projectId, ws)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			newContent = append(newContent, sdk.Setup{Name: sdk.Hack, Revision: sdk.Revision{N: -1}})
+		}
+
+		toinstall = append(toinstall, newContent)
+		installed = append(installed, maps.Values(workshops[idx].Content))
 	}
 
-	taskset, err := refreshMany(w.state, files, installedContent, toInstall, project)
+	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, project)
 	if err != nil {
 		return nil, err
 	}
+	return fullrefresh, nil
+}
 
-	change := w.state.Change(opChangeId)
-	var setup conflict.RefreshSetup
-	setup.Mode = refreshMode.String()
-	change.Set("refresh-setup", setup)
+func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
+	err := w.CheckStatus(
+		ctx,
+		[]string{wpn},
+		pid,
+		[]healthstate.Status{healthstate.ReadyStatus})
+	if err != nil {
+		return nil, fmt.Errorf("cannot refresh: %v", err)
+	}
+
+	var taskset []*state.TaskSet
+	wp, err := w.Workshop(ctx, wpn, pid)
+	if err != nil {
+		return nil, err
+	}
+	ts, err := w.refreshLocalSdk(wp, sdkn)
+	if err != nil {
+		return nil, err
+	}
+	taskset = append(taskset, ts)
 	return taskset, nil
+}
+
+func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*state.TaskSet, error) {
+	cur, installed := wp.Content[sdkn]
+	var setup sdk.Setup
+	if installed {
+		setup = sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: cur.Revision.N - 1}}
+	} else {
+		setup = sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: -1}}
+	}
+
+	st := w.state
+	ts := state.NewTaskSet()
+
+	if installed {
+		createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
+		ts.AddTask(createStateStorage)
+
+		saveStateHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SaveState)
+		saveStateHook.WaitFor(createStateStorage)
+
+		disconnect := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, setup.Name))
+		disconnect.Set("sdk", setup.Name)
+		disconnect.WaitFor(saveStateHook)
+		ts.AddTask(saveStateHook)
+		ts.AddTask(disconnect)
+	}
+
+	install := sdkstate.InstallLocalSdk(st, setup)
+	install.WaitAll(ts)
+	ts.AddAll(install)
+
+	setupHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SetupBase)
+	setupHook.WaitAll(install)
+	ts.AddTask(setupHook)
+
+	autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
+	autoconnect.Set("sdk", setup.Name)
+	autoconnect.WaitFor(setupHook)
+	ts.AddTask(autoconnect)
+
+	if installed {
+		restoreState := hookstate.Hook(st, wp.Name, setup.Name, hookstate.RestoreState)
+		restoreState.WaitFor(autoconnect)
+		ts.AddTask(restoreState)
+	}
+
+	checkHealth := hookstate.Hook(st, wp.Name, setup.Name, hookstate.CheckHealth)
+	checkHealth.WaitAll(ts)
+	ts.AddTask(checkHealth)
+
+	if installed {
+		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+		removeStateStorage.WaitFor(checkHealth)
+		ts.AddTask(removeStateStorage)
+	}
+
+	for _, task := range ts.Tasks() {
+		task.Set("workshop", wp.Name)
+		task.Set("project", wp.Project)
+	}
+
+	return ts, nil
 }
 
 func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,
@@ -324,14 +444,14 @@ func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setu
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newContent []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInstall []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
 	// 4. Launch the new workshop
 	// 5. Run restore state
 	// 6. Delete the old workshop
-	retrieve := retrieveSdks(st, newContent)
+	retrieve := retrieveSdks(st, toInstall)
 
 	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 	createStateStorage.WaitAll(retrieve)
@@ -358,7 +478,7 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, newCon
 
 	// install SDKs and run restore-state scripts. The restoreStateHooks can be
 	// empty if the old SDKs were all removed in the new version of the workshop
-	install := installSdks(st, file.Name, newContent, retrieve)
+	install := installSdks(st, file.Name, toInstall, retrieve)
 	install.WaitAll(launch)
 	launch.AddAll(install)
 

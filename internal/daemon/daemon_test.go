@@ -77,7 +77,7 @@ func (s *daemonSuite) TearDownTest(c *check.C) {
 }
 
 func (s *daemonSuite) newDaemon(c *check.C) *Daemon {
-	b, err := fakebackend.New()
+	b, err := fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 	undo := overlord.MockWorkshopBackend(b)
 	defer undo()

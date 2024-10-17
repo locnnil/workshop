@@ -25,11 +25,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 
 	"github.com/canonical/x-go/strutil"
+	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -85,6 +88,13 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 	return file
 }
 
+func (s *apiSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
+	metaPath := filepath.Join(sdkPath, "sdk.yaml")
+	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
+}
+
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
 
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
@@ -93,6 +103,9 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
+
+	wfs, err := s.b.WorkshopFs(s.ctx, w)
+	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
 	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
 	c.Assert(err, check.IsNil)

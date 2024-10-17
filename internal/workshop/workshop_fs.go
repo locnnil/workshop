@@ -11,6 +11,7 @@ import (
 type WorkshopFs interface {
 	afero.Fs
 	Symlink(old, new string) error
+	ReadLink(p string) (string, error)
 	Close()
 }
 
@@ -26,11 +27,19 @@ type InstanceFs struct {
 	client *sftp.Client
 }
 
+func (w *InstanceFs) RemoveAll(path string) error {
+	return w.client.RemoveAll(path)
+}
+
 func (w *InstanceFs) Symlink(source, target string) error {
 	if _, err := w.client.Stat(target); err == nil {
 		return os.ErrExist
 	}
 	return w.client.Symlink(source, target)
+}
+
+func (w *InstanceFs) ReadLink(p string) (string, error) {
+	return w.client.ReadLink(p)
 }
 
 func (w *InstanceFs) Close() {

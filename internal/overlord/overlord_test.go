@@ -78,7 +78,7 @@ func (ovs *overlordSuite) SetUpTest(c *C) {
 	dirs.SetRootDir(ovs.dir)
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
 
-	b, err := fakebackend.New()
+	b, err := fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 	ovs.restorebackend = overlord.MockWorkshopBackend(b)
 }

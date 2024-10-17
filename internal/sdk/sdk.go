@@ -16,14 +16,15 @@ import (
 )
 
 type Setup struct {
-	Name        string     `json:"name"`
-	Channel     string     `json:"channel"`
-	Revision    int64      `json:"revision"`
-	InstallTime *time.Time `json:"install-time"`
+	Name             string     `json:"name"`
+	Channel          string     `json:"channel"`
+	Revision         Revision   `json:"revision"`
+	RevisionSequence []Revision `json:"revision-sequence,omitempty"`
+	InstallTime      *time.Time `json:"install-time"`
 }
 
 func (s *Setup) Filename() string {
-	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%d.sdk", s.Name, s.Revision))
+	return filepath.Join(dirs.SdkDir, fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String()))
 }
 
 type sdkYaml struct {
@@ -35,6 +36,8 @@ type sdkYaml struct {
 }
 
 type Type string
+
+const Hack = "hack"
 
 const (
 	Regular Type = "regular"
@@ -51,7 +54,7 @@ type Info struct {
 	Name      string
 	Base      string
 	Type      Type
-	Revision  int64
+	Revision  Revision
 	Channel   string
 
 	Plugs     map[string]*PlugInfo
@@ -361,8 +364,20 @@ func SdkRootPath(sdkName string) string {
 	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
 }
 
+func SdkRevPath(sdkName string, rev string) string {
+	return filepath.Join(SdkRootPath(sdkName), rev)
+}
+
 func SdkCurrentPath(sdkName string) string {
 	return filepath.Join(SdkRootPath(sdkName), "current")
+}
+
+func SdkMetaDir(sdkName string) string {
+	return filepath.Join(SdkCurrentPath(sdkName), "meta")
+}
+
+func SdkMetaPath(sdkName string) string {
+	return filepath.Join(SdkMetaDir(sdkName), "sdk.yaml")
 }
 
 func SdkHooksDir(sdkName string) string {
@@ -373,8 +388,24 @@ func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
 }
 
+func ProjectUserData(homedir, pid string) string {
+	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid)
+}
+
 func ProjectContentDir(homedir, pid string) string {
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid, "mount")
+	return filepath.Join(ProjectUserData(homedir, pid), "mount")
+}
+
+func ProjectHackSdkDir(homedir, pid string) string {
+	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "hack")
+}
+
+func WorkshopHackSdkCurrent(homedir, pid, wp string) string {
+	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "current")
+}
+
+func WorkshopHackSdkStored(homedir, pid, wp string) string {
+	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "stored")
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

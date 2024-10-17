@@ -1,0 +1,11 @@
+name: system
+type: system
+slots:
+  mount:
+    interface: mount
+  gpu:
+    interface: gpu
+  ssh-agent:
+    interface: ssh-agent
+  camera:
+    interface: camera

@@ -81,7 +81,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.store = &sdk.FakeStore{}
 
-	s.b, err = fakebackend.New()
+	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
 	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)

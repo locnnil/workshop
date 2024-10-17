@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/afero"
 	"golang.org/x/exp/maps"
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -35,10 +37,12 @@ var _ = check.Suite(&requestSuite{})
 func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *requestSuite) SetUpTest(c *check.C) {
+	var err error
 	s.state = state.New(nil)
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	s.backend, _ = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
+	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state))
 	s.project, _, _ = s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
@@ -53,6 +57,17 @@ sdks:
       channel: {{.Channel}}
   {{ end }} 
 `
+
+var sdkTemplate = `name: %s
+base: ubuntu@20.04
+`
+
+func (s *requestSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
+	metaPath := filepath.Join(sdkPath, "sdk.yaml")
+	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
+}
 
 func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks workshop.SdkList) *workshop.Workshop {
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
@@ -76,7 +91,11 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks worksh
 	w, err := s.backend.Workshop(s.ctx, ws)
 	c.Assert(err, check.IsNil)
 
+	wfs, err := s.backend.WorkshopFs(s.ctx, w.Name)
+	c.Assert(err, check.IsNil)
+
 	for _, sd := range sdks {
+		s.writeSDKMetaFile(c, wfs, sd.Name, fmt.Sprintf(sdkTemplate, sd.Name))
 		c.Assert(w.LinkSdk(s.ctx, sdk.Setup{Name: sd.Name, Channel: sd.Channel}), check.IsNil)
 	}
 
@@ -149,7 +168,7 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 
 	expected := []string{"download-base", "create-workshop",
 		"mount-project",
-		"start-workshop", "install-system-sdk", "link-sdk", "auto-connect"}
+		"start-workshop", "install-local-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
@@ -182,7 +201,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"auto-connect",    // "system" SDK
 		"auto-disconnect", // "system" SDK
@@ -227,7 +246,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -408,7 +427,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"stash-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"auto-disconnect", // system SDK
 		"auto-connect",    // system SDK
@@ -426,7 +445,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",
@@ -507,7 +526,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"create-workshop",
 		"mount-project",
 		"start-workshop",
-		"install-system-sdk",
+		"install-local-sdk",
 		"link-sdk",
 		"install-sdk",
 		"link-sdk",

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +45,23 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	return readWorkshop(Filepath(w.Path, workshop))
+	path := Filepath(w.Path, workshop)
+
+	buf, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := readWorkshop(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	fname := filepath.Base(path)
+	if Filename(file.Name) != fname {
+		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
+	}
+	return file, nil
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {

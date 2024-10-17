@@ -1,12 +1,12 @@
 package sdkstate
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
-	"strconv"
 
-	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -18,6 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -81,8 +82,13 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return store.DownloadSdk(ctx, rec, reporter)
 }
 
-func (m *SdkManager) doInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	sdkSetup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
@@ -95,11 +101,28 @@ func (m *SdkManager) doInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error
 		return err
 	}
 
-	return wp.InstallSystemSdk(ctx)
+	switch sdkSetup.Name {
+	case sdk.System.String():
+		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
+	case sdk.Hack:
+		usr, err := workshop.LookupUsername(user)
+		if err != nil {
+			return err
+		}
+		hackdir := sdk.WorkshopHackSdkCurrent(usr.HomeDir, project.ProjectId, w)
+		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(hackdir))
+	default:
+		return fmt.Errorf("unknown type of the local SDK")
+	}
 }
 
-func (m *SdkManager) undoInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) undoInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	sdkSetup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
@@ -113,7 +136,7 @@ func (m *SdkManager) undoInstallSystemSdk(task *state.Task, tomb *tomb.Tomb) err
 	}
 	defer wfs.Close()
 
-	return wfs.RemoveAll(sdk.SdkRootPath(sdk.System.String()))
+	return wfs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String()))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -148,27 +171,19 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
 		return err
 	}
-
-	cleanup := func() {
+	umount := func() {
 		// Make sure the SDK file will be unmounted once installed into the workshop
 		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
 			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
 		}
 	}
-
-	defer cleanup()
+	defer umount()
 
 	// example: /var/lib/workshop/sdk/cuda/712/
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name,
-		strconv.Itoa(int(sdkSetup.Revision)))
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
 
 	// create a memory out/err to log the hook output into the task's log
-	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, project.ProjectId))
-	if err != nil {
-		return err
-	}
-	defer out.Close()
+	var out bytes.Buffer
 
 	// Unpack the SDK to the desired location in the workshop
 	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
@@ -189,7 +204,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		ExecControls: workshop.ExecControls{
 			Stdin:  nil,
 			Stdout: nil,
-			Stderr: out,
+			Stderr: &out,
 		},
 	}
 
@@ -199,8 +214,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if err = exectx.WaitExecution(ctx); err != nil {
-		hookLog, _ := afero.ReadFile(memFs, out.Name())
-		return fmt.Errorf("%w: %v", err, string(hookLog))
+		return fmt.Errorf("%w: %v", err, out.String())
 	}
 
 	return err
@@ -226,8 +240,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	defer fs.Close()
 
-	err = fs.RemoveAll(filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name))
-	if err != nil {
+	if err = fs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String())); err != nil {
 		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkSetup.Name, err)
 	}
 
@@ -235,8 +248,6 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	rev := revert.New()
-	defer rev.Fail()
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -258,6 +269,9 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err = wp.LinkSdk(ctx, setup); err != nil {
 		return err
 	}
+
+	rev := revert.New()
+	defer rev.Fail()
 
 	st := task.State()
 	rev.Add(func() {

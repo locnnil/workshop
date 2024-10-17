@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -27,20 +27,38 @@ type managerSuite struct {
 	manager *workshopstate.WorkshopManager
 	ctx     context.Context
 	project *workshop.Project
+
+	lookupUserRestore func()
 }
 
 var _ = check.Suite(&managerSuite{})
 
 func (s *managerSuite) SetUpTest(c *check.C) {
+	var err error
 	s.state = state.New(nil)
-	s.backend, _ = fakebackend.New()
+	s.backend, err = fakebackend.New(c.MkDir())
+	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
+	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     "testuser",
+			Username: "testuser",
+			Uid:      "1000",
+			Gid:      "1000",
+			HomeDir:  c.MkDir(),
+		}
+		return u, nil
+	}, &workshop.LookupUsername)
 	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+}
+
+func (s *managerSuite) TearDownTest(c *check.C) {
+	s.lookupUserRestore()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {
@@ -219,40 +237,30 @@ func (s *managerSuite) TestWorkshopHealthSdkHealth(c *check.C) {
 func (s *managerSuite) TestRefreshManyOK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
 	c.Assert(err, check.IsNil)
-
-	var setup conflict.RefreshSetup
-	err = chg.Get("refresh-setup", &setup)
-	c.Assert(err, check.IsNil)
-	md, err := conflict.ParseRefreshMode(setup.Mode)
-	c.Assert(err, check.IsNil)
-	c.Assert(md, check.Equals, conflict.RefreshTransactional)
 }
 
 func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
+	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
 	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-2" status is "Stopped", must be one of: "Ready"`)
 }
 
 func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	chg := s.state.NewChange("refresh", "test")
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId, conflict.RefreshTransactional, chg.ID())
+	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
 	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop not found\)`)
 }

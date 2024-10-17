@@ -44,11 +44,11 @@ type GcsStore struct {
 }
 
 type storeSdk struct {
-	Name     string `json:"name"`
-	Channel  string `json:"channel"`
-	Revision int64  `json:"revision"`
-	SdkYAML  string `json:"sdk-yaml"`
-	Size     int64  `json:"size"`
+	Name     string       `json:"name"`
+	Channel  string       `json:"channel"`
+	Revision sdk.Revision `json:"revision"`
+	SdkYAML  string       `json:"sdk-yaml"`
+	Size     int64        `json:"size"`
 }
 
 type SdkActionError struct {
@@ -243,7 +243,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Name = name
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
-	sSdk.Revision = atr.Generation % 1000
+	sSdk.Revision = sdk.Revision{N: int(atr.Generation % 1000)}
 	sSdk.Size = atr.Size
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {
