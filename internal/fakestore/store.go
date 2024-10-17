@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -219,10 +221,22 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	}
 	track, risk := sa[0], sa[1]
 	obj := bkt.Object(fmt.Sprintf("%s/%s/%s/%s.sdk", name, track, risk, name))
+	// Max attempts prevents workshop from trying to dial the store indefinitely.
+	// Behavior is only modified for this specific Object Handle, it is not
+	// passed on to SDK download behavior
+	obj = obj.Retryer(
+		storage.WithMaxAttempts(3),
+	)
 	atr, err := obj.Attrs(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return sSdk, fmt.Errorf("SDK not found in %q", channel)
+		}
+		if urlErr, ok := err.(*url.Error); ok {
+			opErr, ok := urlErr.Err.(*net.OpError)
+			if ok {
+				return sSdk, fmt.Errorf("cannot connect to store: %q", opErr)
+			}
 		}
 		return sSdk, err
 	}
