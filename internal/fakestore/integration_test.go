@@ -171,5 +171,5 @@ func (f *storeIntegration) TestSdkActionTimeout(c *check.C) {
 	// Restore address for remaining tests
 	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 
-	c.Assert(err, check.ErrorMatches, `(?s).*failed to connect to store.*`)
+	c.Assert(err, check.ErrorMatches, `(?s).*cannot connect to store.*`)
 }

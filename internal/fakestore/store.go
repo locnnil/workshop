@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -231,9 +232,11 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return sSdk, fmt.Errorf("SDK not found in %q", channel)
 		}
-		urlError := &url.Error{}
-		if errors.As(err, &urlError) {
-			return sSdk, fmt.Errorf("failed to connect to store")
+		if urlErr, ok := err.(*url.Error); ok {
+			opErr, ok := urlErr.Err.(*net.OpError)
+			if ok {
+				return sSdk, fmt.Errorf("cannot connect to store: %q", opErr)
+			}
 		}
 		return sSdk, err
 	}
