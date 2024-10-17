@@ -99,6 +99,7 @@ func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
 	// bind denotes where the port is open (can be: instance, host)
 	s.Profile.Agent = &agent
 
+	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, agent.Name)] = "ssh-agent"
 	s.devices[agent.Name] = map[string]string{"type": "proxy", "connect": "unix:" + agent.Connect, "listen": "unix:" + agent.Listen, "uid": "1000", "gid": "1000", "bind": "instance"}
 
 	return nil

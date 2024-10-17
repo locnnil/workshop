@@ -30,7 +30,7 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		{"sdk", map[string]map[string]string{"camera": {"type": "none"}, "camera/video0": {"type": "unix-char", "source": "/dev/video0", "path": "/dev/video0", "required": "false", "uid": "1000", "gid": "1000"}}, map[string]string{"user.workshop.sdk.camera": `{"name": "camera"}`, "user.workshop.sdk.camera.type": "camera", "user.workshop.sdk.camera/video0.type": "camera"}},
 		{"sdk", map[string]map[string]string{"gpu": {"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}}, map[string]string{}},
 		{"sdk", map[string]map[string]string{"userdisk": {"type": "disk", "source": "/home", "path": "/opt"}}, map[string]string{}},
-		{"sdk", map[string]map[string]string{"ssh-agent": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{}},
+		{"sdk", map[string]map[string]string{"ssh-agent": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{"user.workshop.sdk.ssh-agent.type": "ssh-agent"}},
 		{"sdk", map[string]map[string]string{"plug": {"type": "none"}}, map[string]string{"user.workshop.sdk.plug": `{"name": "plug", "what": "/var", "where": "/etc", "type": 1}`, "user.workshop.sdk.plug.type": "mount"}},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)
