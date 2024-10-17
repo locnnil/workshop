@@ -11,10 +11,9 @@ jobs:
     defaults:
         run:
             shell: bash
-            working-directory: 'sp-docs'
+            working-directory: 'docs'
     steps:
       - uses: actions/checkout@v4
       - name: Run vale
         run: |
           make vale
-
