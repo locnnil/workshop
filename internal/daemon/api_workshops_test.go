@@ -271,7 +271,9 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string
 	st.Unlock()
 	<-change.Ready()
 
+	st.Lock()
 	c.Assert(change.Err(), check.IsNil)
+	st.Unlock()
 }
 
 func (s *apiSuite) TestGetWorkshops(c *check.C) {
