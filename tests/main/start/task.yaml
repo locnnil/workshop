@@ -1,5 +1,5 @@
 summary: Check workshop start
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch ws-start
 restore: |
@@ -8,6 +8,13 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  function check_linger() {
+    echo "Check that linger is enabled for the workshop user"
+    workshop_exec exec ws-start -- test -f /var/lib/systemd/linger/workshop
+    workshop_exec exec ws-start -- test -d /run/user/1000
+  }
+
+  check_linger
   workshop_exec stop ws-start
 
   echo "Check the workshop is in Stopped state"
@@ -18,3 +25,5 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Ready[[:space:]]+-$"
+
+  check_linger
