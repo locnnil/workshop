@@ -22,11 +22,9 @@ base: ubuntu@22.04
 var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
 
 func DefaultTestDevices() map[string]map[string]string {
-	os.MkdirAll("/tmp/workshop/project", 0755)
 	return map[string]map[string]string{
 		"root":             {"type": "disk", "pool": "default", "path": "/"},
 		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-		"workshop.project": {"type": "disk", "source": "/tmp/workshop/project", "path": "/project"},
 	}
 }
 

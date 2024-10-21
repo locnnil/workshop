@@ -38,6 +38,14 @@ type wsExec struct {
 
 var _ = check.Suite(&wsExec{})
 
+func execTestDevices(projectDir string) func() map[string]map[string]string {
+	conf := helper.DefaultTestDevices()
+	conf["workshop.project"] = map[string]string{"type": "disk", "source": projectDir, "path": "/project"}
+	return func() map[string]map[string]string {
+		return conf
+	}
+}
+
 func (f *wsExec) SetUpSuite(c *check.C) {
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 
@@ -93,7 +101,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return u, nil
 	}, &daemon.LookupUserId)
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(execTestDevices(c.MkDir()))
 
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
@@ -302,3 +310,33 @@ func (f *wsExec) TestLxdBackendExecCheckLoginDir(c *check.C) {
 	c.Assert(stderr, check.Equals, "")
 	c.Assert(stdout, check.Equals, "/home/workshop\n")
 }
+
+// TODO(yan.jiang): to be removed
+
+// func (f *wsExec) TestLxdBackendExecCheckProjectOwner(c *check.C) {
+// 	// Setup
+// 	opts := &client.ExecOptions{
+// 		Command:    []string{"stat", "/project"},
+// 		WorkingDir: "/",
+// 		UserId:     new(int),
+// 		GroupId:    new(int),
+// 	}
+// 	// Exec
+// 	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+// 	// Verify that login dir without WORKSHOP_SHELL env var is /home/workshop
+// 	c.Assert(err, check.IsNil)
+// 	c.Assert(stderr, check.Equals, "")
+// 	c.Assert(stdout, check.Equals, "xxxxxx")
+// }
+
+// func (f *wsExec) TestLxdBackendExecCheckWorkshopConfigRawIdmap(c *check.C) {
+// 	wsCfg, err := f.be.(*lxdbackend.Backend).GetWorkshopConfig(f.ctx, "test")
+// 	c.Assert(err, check.IsNil)
+// 	c.Assert(wsCfg, check.Equals, nil) // check raw.idmap field
+
+// }
+
+// func (f *wsExec) TestLxdBackendCheckVMUid(c *check.C) {
+// 	c.Assert(os.Getuid(), check.Equals, 1000)
+// }

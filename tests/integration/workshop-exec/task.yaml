@@ -1,4 +1,6 @@
 summary: Run LXD integration tests for workshop exec
 
 execute: |
-  go test "$SPREAD_PATH"/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsExec
+  WORKSHOP=`mktemp -d`
+  sudo --preserve-env=WORKSHOP -u ubuntu 2>&1 -- go test "$SPREAD_PATH"/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsExec
+  rm -rf $WORKSHOP
