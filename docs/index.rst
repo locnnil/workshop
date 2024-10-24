@@ -106,6 +106,6 @@ we'll help you get it out there.
 
 - `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
 
-- :ref:`Contribution guide <contributing>`
+- :ref:`Contribution and participation <contributing>`
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
