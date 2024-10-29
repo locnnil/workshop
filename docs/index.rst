@@ -91,7 +91,7 @@ and implemented with
 Talk to us if you have a project in AI/ML, robotics or any other field
 where setting up an environment is a daily or weekly activity
 that can easily shave hours off your schedule.
-Tell us about the frustrating parts of your experience,
+Tell us about the frustrating parts of your journey,
 and we'll see what |project_markup| can do for you.
 Let us know if you have an SDK or framework to try with |project_markup|:
 we'll help you get it out there.

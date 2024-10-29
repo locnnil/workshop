@@ -56,7 +56,7 @@ Move the project directory and check the workshop:
      /home/user/new          golang    Ready   -
 
 
-|project_markup| handles the project's move seamlessly
+|project_markup| handles the project's move graciously
 so the workshop here remains as you would expect;
 there are no loose ends to pick up,
 no paths to update in your definition file.
