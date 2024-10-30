@@ -1,6 +1,7 @@
 package lxdbackend
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/spf13/afero"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -204,7 +204,7 @@ func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx contex
 			// If got here then there is no project directory for the projectId
 			// anymore. It can mean moving or deletion happened in the past. Try
 			// to recover the new project path
-			newPath, _ := s.findProjectPathFromBindMounts(client, ctx, prj)
+			newPath, _ := s.projectFsRoot(client, ctx, prj.ProjectId)
 			if newPath != "" {
 				// start tracking this project under a new path
 				prj.Path = newPath
@@ -228,67 +228,66 @@ func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx contex
 	})
 }
 
-func (s *Backend) findProjectPathFromBindMounts(conn lxd.InstanceServer, ctx context.Context, p *workshop.Project) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, p.ProjectId))
+func (s *Backend) projectFsRoot(conn lxd.InstanceServer, ctx context.Context, projectId string) (path string, err error) {
+	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, projectId))
 	if err != nil {
 		return "", err
 	}
 
-	/* memFs to story temporary results of the commands execution output */
-	memFs := afero.NewMemMapFs()
 	for _, i := range workshops {
 		// attempt to execute the command only in a running instance
 		if i.StatusCode != api.Ready && i.StatusCode != api.Running {
 			continue
 		}
 
-		/* Take the first instance from the group, we need any running
-		and ready to execute commands to validate the project directory */
-		out, err := memFs.Create(i.Name)
-		if err != nil {
-			return "", err
-		}
-		defer out.Close()
+		var outbuf bytes.Buffer
+		var errbuf strings.Builder
 
-		/* Get the mount point device/directory from findmnt and extract the path without a device
-		using awk */
+		/* Get the mount point directory from findmnt */
 		args := workshop.Execution{
 			ExecArgs: workshop.ExecArgs{
 				UserId:  0,
 				GroupId: 0,
-				Command: []string{"bash", "-c",
-					"findmnt --mountpoint /project -o source -n | awk -F\"[][]\" '{printf $2}'"},
+				Command: []string{"findmnt", "--json", "--mountpoint", "/project", "--output", "fsroot"},
 				WorkDir: "/",
 			},
 			ExecControls: workshop.ExecControls{
 				Stdin:  nil,
-				Stdout: out,
-				Stderr: out,
+				Stdout: &outbuf,
+				Stderr: &errbuf,
 			},
 		}
 
-		execCtx := context.WithValue(ctx, workshop.ContextProjectId, p.ProjectId)
+		execCtx := context.WithValue(ctx, workshop.ContextProjectId, projectId)
 		meta, err := s.execCommand(conn, execCtx, workshop.WorkshopName(i.Name), &args)
-		if err == nil {
-			err = meta.WaitExecution(ctx)
-			if err != nil {
-				outbuf, _ := afero.ReadFile(memFs, out.Name())
-				logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, string(outbuf))
-				continue
-			}
-		} else {
+		if err != nil {
 			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
 			continue
 		}
+		if err = meta.WaitExecution(ctx); err != nil {
+			logger.Debugf("cannot check %q bind-mounts: %v, findmnt output: %s", i.Name, err, errbuf.String())
+			continue
+		}
 
-		/* Process the findmnt results */
-		if currentPath, err := afero.ReadFile(memFs, i.Name); err == nil {
-			/* check if the path is not //deleted, i.e. the project directory still exists on the host */
-			if ok, isDir, err := osutil.ExistsIsDir(string(currentPath)); ok && isDir {
-				return string(currentPath), nil
-			} else if err != nil && !osutil.IsDirNotExist(err) {
-				return "", nil
-			}
+		output := struct {
+			Filesystems []struct {
+				Fsroot string `json:"fsroot"`
+			} `json:"filesystems"`
+		}{}
+		if err = json.Unmarshal(outbuf.Bytes(), &output); err != nil {
+			return "", err
+		}
+		if len(output.Filesystems) != 1 {
+			logger.Debugf("cannot check %q bind-mounts: exactly one source required", i.Name)
+			continue
+		}
+		currentPath := output.Filesystems[0].Fsroot
+
+		/* check if the path is not deleted, i.e. the project directory still exists on the host */
+		if ok, isDir, err := osutil.ExistsIsDir(currentPath); ok && isDir {
+			return currentPath, nil
+		} else if err != nil && !osutil.IsDirNotExist(err) {
+			return "", err
 		}
 	}
 	return "", nil
