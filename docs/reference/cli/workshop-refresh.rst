@@ -7,7 +7,7 @@ Updates workshops according to their definitions.
 
 .. code-block:: console
 
-   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [OPTIONS]
+   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>[/<SDK>]... [OPTIONS]
 
 
 Examples
@@ -42,6 +42,13 @@ continue the operation:
 .. code-block:: console
 
    $ workshop refresh nimble --continue
+
+
+Refresh the :samp:`hack` SDK in :samp:`nimble`:
+
+.. code-block:: console
+
+   $ workshop refresh nimble/hack
 
 
 Synopsis
@@ -80,6 +87,10 @@ Notes
 
 - For mount interface plugs, mounts the last source
   set by :ref:`ref_workshop_remount`, if any
+
+- If the optional :samp:`<SDK>` is supplied,
+  the operation is limited to this SDK;
+  currently, it can only be :samp:`hack`
 
 
 Options

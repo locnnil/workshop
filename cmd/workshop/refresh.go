@@ -18,7 +18,7 @@ type CmdRefresh struct {
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
+		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>[/<SDK>]...",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Update workshops according to their definitions",
 		Long: `
@@ -57,6 +57,10 @@ Notes:
 
 - For content interface plugs, mounts the last source
   set by 'workshop remount', if any
+
+- If the optional <SDK> is supplied,
+  the operation is limited to this SDK;
+  currently, it can only be 'hack'
 `,
 
 		RunE: c.Run,
