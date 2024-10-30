@@ -201,6 +201,54 @@ whereas :command:`workshop connections` can list all connections
 that have been established by any |project_markup| projects.
 
 
+
+.. _exp_system_sdk:
+
+System SDK
+~~~~~~~~~~
+
+Every workshop contains a special *system SDK*
+that exposes system resources through its slots.
+It's unavailable from the SDK Store;
+installed first at :command:`workshop launch`
+and removed last during :command:`workshop remove`,
+it ensures internal consistency.
+
+The purpose of the system SDK isn't to add hooks or additional content;
+it's only there to uniformly expose host system resources to other SDKs.
+As such, it can't be removed by the user
+and isn't listed in the :command:`workshop info` output.
+It's also the only SDK
+that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
+
+
+.. _exp_hack_sdk:
+
+Hack SDK
+--------
+
+The hack SDK is another special type of SDK.
+Again, it's unavailable from the SDK Store;
+instead, you define it inside the workshop
+using the :command:`workshop hack` command.
+Its purpose is to allow |project_markup| users
+to quickly make changes to a workshop
+beside the regular SDKs listed in the :ref:`definition <exp_sdk_definition>`.
+
+Unlike a regular SDK, the hack SDK:
+
+- doesn't carry any persistent data
+- doesn't appear on the definition
+- is unique to the workshop where it was created
+
+
+The hack SDK can have :ref:`hooks <exp_sdk_hooks>`
+and use :ref:`interfaces <exp_interfaces>`,
+which allows it to interact with other SDKs.
+Note that :samp:`hack` is a reserved name,
+and the hack SDK is always installed last.
+
+
 See also
 --------
 

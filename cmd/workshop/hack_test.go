@@ -209,7 +209,7 @@ func (m *workshopHack) TestHackEditHookUnknown(c *check.C) {
 	})
 
 	err := cmd.Run(cmd.Command(), []string{"ws", "unknown-hook"})
-	c.Assert(err, check.ErrorMatches, `cannot hack: unknown "unknown-hook" SDK hook, supported hooks: setup-base, save-state, restore-state, check-health`)
+	c.Assert(err, check.ErrorMatches, `cannot hack: unknown SDK hook "unknown-hook"; valid names are setup-base, save-state, restore-state, check-health`)
 }
 
 func (m *workshopHack) TestHackDropRestoreIncompatible(c *check.C) {
@@ -223,7 +223,7 @@ func (m *workshopHack) TestHackDropRestoreSingleWorkshop(c *check.C) {
 	cmd := &CmdHack{root: &CmdRoot{}, drop: true, restore: false}
 
 	err := cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, `cannot hack: --drop or --replace require a single workshop name`)
+	c.Assert(err, check.ErrorMatches, `cannot hack: '--drop' and '--replace' require a single workshop name`)
 }
 
 func (m *workshopHack) TestHackDrop(c *check.C) {
@@ -306,7 +306,7 @@ func (m *workshopHack) TestHackRestoreNoStoredHack(c *check.C) {
 	m.mockHackHappyRefreshPath(c, "ws/hack", "wait-on-error")
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot restore: no stored "hack" SDK found`)
+	c.Assert(err, check.ErrorMatches, `cannot restore: no stored 'hack' SDK found`)
 }
 
 func (m *workshopHack) TestHackRestoreSwaps(c *check.C) {
