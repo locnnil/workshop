@@ -46,6 +46,10 @@ type CmdShellAlias struct {
 	execCommand *CmdExec
 }
 
+type CmdRun struct {
+	execCommand *CmdExec
+}
+
 var shortExecHelp = "Run a command and wait for it to complete"
 var longExecHelp = `
 The 'exec' subcommand runs an arbitrary command in the specified workshop,
@@ -97,6 +101,43 @@ Notes:
 - The subcommand is a shorthand for 'workshop exec';
   it launches the login shell for 'workshop',
   the default non-privileged user in a workshop
+`
+
+var shortRunHelp = "Run a workshop script and wait for it to complete"
+var longRunHelp = `
+The 'run' subcommand runs a script specified in the workshop definition file,
+waiting for it to complete. If a timeout elapses before that, it's terminated.
+
+To accept a 'run' command, the workshop must be 'Ready' or 'Pending'.
+A command can run in two modes that determine how it handles standard streams:
+
+- Interactively (for shell sessions)
+
+- Non-interactively (for scripts)
+
+
+To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
+'run' deduces the mode based on the nature of its own streams:
+
+- If stdin and stdout are terminals, the mode is interactive
+
+- Otherwise, it's non-interactive
+
+
+To separate the 'run' subcommand from the script and its arguments,
+use shell syntax such as *--*:
+
+$ workshop run nimble -- test --verbose
+
+This syntax is required if the workshop name is omitted
+and the script takes one or more arguments.
+
+Notes:
+
+- To start a workshop before running scripts in it, use 'workshop start'
+
+- You can set the working directory, environment variables, user and group ID
+  for running the script in the workshop; reasonable defaults are provided
 `
 
 func (c *CmdExec) Command() *cobra.Command {
@@ -158,7 +199,7 @@ func maybeNameAndCommand(cmd *cobra.Command, av []string) error {
 func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 	// Infer workshop name if first positional argument is --
 	if cmd.ArgsLenAtDash() == 0 {
-		return c.runExec("", true, av)
+		return c.runExec("", true, av, false)
 	}
 
 	// Remove first -- if cobra didn't see it
@@ -168,7 +209,7 @@ func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
-	return c.runExec(av[0], false, av[1:])
+	return c.runExec(av[0], false, av[1:], false)
 }
 
 func (c *CmdShellAlias) Command() *cobra.Command {
@@ -196,10 +237,91 @@ func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
 		workshop = av[0]
 	}
 	command := []string{"sudo", "-i", "-u", "workshop", "bash", "-c", "cd /project; exec bash"}
-	return c.execCommand.runExec(workshop, len(av) == 0, command)
+	return c.execCommand.runExec(workshop, len(av) == 0, command, false)
 }
 
-func (c *CmdExec) runExec(workshop string, inferName bool, command []string) error {
+func (c *CmdRun) Command() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "run [flags] [<WORKSHOP>] [--] <SCRIPT> <ARGUMENTS>...",
+		Args:  maybeNameAndScript,
+		Short: shortRunHelp,
+		Long:  longRunHelp,
+		Example: `
+Run the 'build' script under the 'nimble' workshop
+in the current project directory:
+$ workshop run nimble build
+
+A similar command that sets an environment variable and the working directory:
+$ workshop run --env GO111MODULE=off -w /project nimble build
+
+The workshop name is optional if the project only has one workshop:
+$ workshop run build
+
+Scripts can accept arguments,
+if a separator or a workshop name is provided:
+$ workshop run -- build --debug
+`,
+		RunE: c.Run,
+	}
+
+	cmd.Flags().SortFlags = false
+	cmd.Flags().SetInterspersed(false)
+	cmd.Flags().StringVarP(&c.execCommand.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
+	cmd.Flags().StringArrayVar(&c.execCommand.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
+	cmd.Flags().IntVar(&c.execCommand.UserId, "uid", 1000, "Run as a specific workshop user")
+	cmd.Flags().IntVar(&c.execCommand.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
+	cmd.Flags().DurationVar(&c.execCommand.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h")
+	cmd.Flags().BoolVarP(&c.execCommand.Interactive, "interactive", "i", false, "Force interactive mode")
+	cmd.Flags().BoolVarP(&c.execCommand.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
+
+	return cmd
+}
+
+func maybeNameAndScript(cmd *cobra.Command, av []string) error {
+	if cmd.ArgsLenAtDash() == 0 {
+		// Workshop name is implicit if -- precedes all positional arguments
+		return cobra.MinimumNArgs(1)(cmd, av)
+	}
+
+	argCount := len(av)
+	if cmd.ArgsLenAtDash() < 0 && slices.Contains(av, "--") {
+		argCount--
+	}
+
+	if argCount < 1 {
+		return fmt.Errorf("requires at least 1 arg(s), only received %d", argCount)
+	}
+	return nil
+}
+
+func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
+	var workshop string
+	var inferName bool
+
+	// Infer workshop name if first positional argument is --
+	if cmd.ArgsLenAtDash() == 0 {
+		inferName = true
+	} else {
+		// Remove first -- if cobra didn't see it
+		if cmd.ArgsLenAtDash() < 0 {
+			if i := slices.Index(av, "--"); i >= 0 {
+				av = slices.Delete(slices.Clone(av), i, i+1)
+			}
+		}
+
+		// Allow `workshop run script`. Passing arguments requires -- though.
+		if len(av) <= 1 {
+			inferName = true
+		} else {
+			workshop = av[0]
+			av = av[1:]
+		}
+	}
+
+	return c.execCommand.runExec(workshop, inferName, av, true)
+}
+
+func (c *CmdExec) runExec(workshop string, inferName bool, command []string, script bool) error {
 	if c.Interactive && c.NonInteractive {
 		return errors.New("'-i' incompatible with '-I'")
 	}
@@ -221,7 +343,11 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string) err
 		}
 	}
 
-	logger.Debugf("Running %q", command)
+	if script {
+		logger.Debugf("Running script %q", command)
+	} else {
+		logger.Debugf("Running %q", command)
+	}
 
 	// Set up environment variables.
 	env := make(map[string]string)
@@ -287,6 +413,7 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string) err
 	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
 		Command:     command,
+		Script:      script,
 		Environment: env,
 		WorkingDir:  c.WorkingDir,
 		UserId:      &c.UserId,

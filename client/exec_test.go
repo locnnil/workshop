@@ -179,7 +179,7 @@ func (s *execSuite) TestWaitChangeError(c *C) {
 			"id": "123",
 			"kind": "exec",
 			"ready": true,
-            "err": "change error!"
+			"err": "change error!"
 		},
 		"status": "OK",
 		"status-code": 200,
@@ -210,7 +210,7 @@ func (s *execSuite) TestWaitTasksError(c *C) {
 		"type": "sync"
 	}`
 	err := s.wait(c, process)
-	c.Assert(err, ErrorMatches, "expected exec change to contain at least one task")
+	c.Assert(err, ErrorMatches, "expected exec change to contain an exec task")
 }
 
 func (s *execSuite) TestWaitExitCodeError(c *C) {
@@ -349,6 +349,20 @@ func (s *execSuite) TestStdinAndStdout(c *C) {
 	})
 }
 
+func (s *execSuite) TestScript(c *C) {
+	opts := &client.ExecOptions{
+		Command: []string{"tests"},
+		Script:  true,
+	}
+	process, reqBody := s.exec(c, opts, 0)
+	c.Assert(reqBody, DeepEquals, map[string]interface{}{
+		"command": []interface{}{"tests"},
+		"script":  true,
+	})
+	err := s.wait(c, process)
+	c.Assert(err, IsNil)
+}
+
 type testWebsocket struct {
 	reads  []read
 	writes []write
@@ -392,7 +406,11 @@ func (w *testWebsocket) WriteJSON(v interface{}) error {
 }
 
 func (s *execSuite) exec(c *C, opts *client.ExecOptions, exitCode int) (process *client.ExecProcess, requestBody map[string]interface{}) {
-	s.addResponses("123", exitCode)
+	if opts.Script {
+		s.addRunResponses("123", exitCode)
+	} else {
+		s.addResponses("123", exitCode)
+	}
 	process, err := s.cli.Exec(opts, "workshop", "42424242")
 	c.Assert(err, IsNil)
 	c.Assert(s.req.Method, Equals, "POST")
@@ -439,4 +457,37 @@ func (s *execSuite) addResponses(changeID string, exitCode int) {
 		"status-code": 200,
 		"type": "sync"
 	}`, changeID, exitCode, taskID))
+}
+
+func (s *execSuite) addRunResponses(changeID string, exitCode int) {
+	// Add /v1/exec response
+	taskID := "T" + changeID
+	s.rsps = append(s.rsps, fmt.Sprintf(`{
+		"change": "%s",
+		"result": {"task-id": "%s"},
+		"status": "Accepted",
+		"status-code": 202,
+		"type": "async"
+	}`, changeID, taskID))
+
+	// Add /v1/changes/{id}/wait response
+	copyID := "C" + changeID
+	s.rsps = append(s.rsps, fmt.Sprintf(`{
+		"result": {
+			"id": "%s",
+			"kind": "exec",
+			"ready": true,
+			"tasks": [{
+				"id": "%s",
+				"kind": "copy-script"
+			}, {
+				"data": {"exit-code": %d},
+				"id": "%s",
+				"kind": "exec"
+			}]
+		},
+		"status": "OK",
+		"status-code": 200,
+		"type": "sync"
+	}`, changeID, copyID, exitCode, taskID))
 }

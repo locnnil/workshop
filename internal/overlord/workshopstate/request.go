@@ -668,14 +668,14 @@ func stopMany(st *state.State, names []string, project workshop.Project) ([]*sta
 	return taskset, nil
 }
 
-func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs) (*state.Task, error) {
+func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs, script bool) (*state.TaskSet, error) {
 	err := w.CheckStatus(
 		ctx,
 		name,
 		projectId,
 		[]healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot exec command in %q: %w", name, err)
+		return nil, err
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -692,19 +692,58 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 
 	info, err := wrkspc.Stat(args.WorkDir)
 	if err != nil {
-		return nil, fmt.Errorf("cannot exec command in %q: working directory %q not found", name, args.WorkDir)
+		return nil, fmt.Errorf("working directory %q not found", args.WorkDir)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("cannot exec command in %q: %q is not a directory", name, args.WorkDir)
+		return nil, fmt.Errorf("%q is not a directory", args.WorkDir)
 	}
 
-	exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
+	var execSet *state.TaskSet
+	if script {
+		file, err := project.Workshop(name)
+		if err != nil {
+			return nil, fmt.Errorf("script %q: %w", args.Command[0], err)
+		}
 
-	exec.Set("exec-setup", args)
-	exec.Set("project", project)
-	exec.Set("workshop", name)
+		execSet, err = w.run(file, args)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
+		exec.Set("exec-setup", args)
+		execSet = state.NewTaskSet(exec)
+	}
 
-	return exec, nil
+	for _, task := range execSet.Tasks() {
+		task.Set("workshop", name)
+		task.Set("project", project)
+	}
+	return execSet, nil
+}
+
+func (w *WorkshopManager) run(file *workshop.File, args *workshop.ExecArgs) (*state.TaskSet, error) {
+	name := args.Command[0]
+	script, ok := file.Scripts[name]
+	if !ok {
+		return nil, fmt.Errorf("script %q not found", name)
+	}
+
+	cp := w.state.NewTask("copy-script", fmt.Sprintf("Copy script %q", name))
+	cp.Set("name", name)
+	cp.Set("script", script)
+
+	path := filepath.Join(dirs.WorkshopScriptsDir, name)
+	command := []string{"bash", "-ue", "-o", "pipefail", path}
+	command = append(command, args.Command[1:]...)
+	setup := *args
+	setup.Command = command
+
+	exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
+	exec.Set("exec-setup", &setup)
+	exec.WaitFor(cp)
+
+	return state.NewTaskSet(cp, exec), nil
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {

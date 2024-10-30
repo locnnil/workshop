@@ -124,7 +124,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.username))
 }
 
-func (f *wsExec) exec(c *check.C, stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {
+func (f *wsExec) exec(stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {
 	outBuf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
 	opts.Stdin = strings.NewReader(stdin)
@@ -144,8 +144,20 @@ func (f *wsExec) TestLxdBackendExecTrivial(c *check.C) {
 		Command:    []string{"ls"},
 		WorkingDir: "/",
 	}
-	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	_, _, err := f.exec("", "test", f.project.ProjectId, opts)
 	c.Assert(err, check.IsNil)
+}
+
+func (f *wsExec) TestLxdBackendExecScript(c *check.C) {
+	// Setup
+	opts := &client.ExecOptions{
+		Command:    []string{"info", "-arg"},
+		Script:     true,
+		WorkingDir: "/",
+	}
+	stdout, _, err := f.exec("", "test", f.project.ProjectId, opts)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout, check.Equals, "/\nworkshop\n-arg\n")
 }
 
 func (f *wsExec) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
@@ -156,7 +168,7 @@ func (f *wsExec) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
 	}
 
 	// Exec
-	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	_, _, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.ErrorMatches, `cannot exec command in "test": working directory "/no/such/dir" not found`)
@@ -170,7 +182,7 @@ func (f *wsExec) TestLxdBackendExecDefaultUserGroup(c *check.C) {
 	}
 
 	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	stdout, stderr, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -188,7 +200,7 @@ func (f *wsExec) TestLxdBackendExecCustomUserGroup(c *check.C) {
 	}
 
 	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	stdout, stderr, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -205,7 +217,7 @@ func (f *wsExec) TestLxdBackendExecAddEnvVar(c *check.C) {
 	}
 
 	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	stdout, stderr, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -231,7 +243,7 @@ func (f *wsExec) TestLxdBackendExecNoninteractive(c *check.C) {
 	}
 
 	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	stdout, stderr, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	var exitCode int
@@ -254,7 +266,7 @@ func (f *wsExec) TestLxdBackendExecTimeout(c *check.C) {
 	}
 
 	// Exec
-	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	_, _, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.ErrorMatches, "(?s).*timed out after 100ms.*")
@@ -270,7 +282,7 @@ func (f *wsExec) TestLxdBackendExecValidateCloudInitConfig(c *check.C) {
 	}
 
 	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+	stdout, stderr, err := f.exec("", "test", f.project.ProjectId, opts)
 
 	// Validate
 	c.Assert(err, check.IsNil)

@@ -45,6 +45,9 @@ such as :option:`!--help` or :option:`!-h`.
 .. include:: workshop-remove.rst
 
 
+.. include:: workshop-run.rst
+
+
 .. include:: workshop-shell.rst
 
 

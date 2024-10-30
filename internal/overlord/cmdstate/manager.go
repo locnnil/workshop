@@ -40,6 +40,7 @@ func New(st *state.State, runner *state.TaskRunner) *CommandManager {
 	st.Unlock()
 
 	runner.AddHandler("exec", manager.doExec, nil)
+	runner.AddHandler("copy-script", manager.doCopyScript, nil)
 	return manager
 }
 

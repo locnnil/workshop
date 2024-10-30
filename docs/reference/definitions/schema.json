@@ -126,6 +126,18 @@
         }
       },
       "errorMessage": "Connections must define both plug and slot references."
+    },
+    "scripts": {
+      "type": "object",
+      "description": "List of scripts to be run in the workshop.",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "string",
+          "description": "Shell script."
+        }
+      },
+      "additionalProperties": false,
+      "errorMessage": "Script names must be unique and only appear once."
     }
   },
   "required": [

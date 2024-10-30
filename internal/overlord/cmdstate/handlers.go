@@ -22,6 +22,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/gorilla/websocket"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -72,7 +75,7 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	err = task.Get("exec-setup", &setup)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("cannot get exec setup object for task %q: %v", task.ID(), err)
+		return fmt.Errorf("cannot get exec setup object for task %q: %w", task.ID(), err)
 	}
 
 	// Set up the object that will track the execution.
@@ -345,4 +348,43 @@ func (e *execution) controlLoop(execId string, conn *websocket.Conn, stop <-chan
 			logger.Noticef("Exec %s: cannot send control websocket command: %v", execId, err)
 		}
 	}
+}
+
+func (m *CommandManager) doCopyScript(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	var name string
+	var script string
+	st := task.State()
+	st.Lock()
+	err = task.Get("name", &name)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("cannot get script name for task %q: %w", task.ID(), err)
+	}
+	st.Lock()
+	err = task.Get("script", &script)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("cannot get script for task %q: %w", task.ID(), err)
+	}
+
+	wfs, err := m.backend.WorkshopFs(ctx, w)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	if err := wfs.MkdirAll(dirs.WorkshopScriptsDir, 0755); err != nil {
+		return err
+	}
+
+	path := filepath.Join(dirs.WorkshopScriptsDir, name)
+	return workshop.AtomicWrite(wfs, path, strings.NewReader(script), 0644)
 }

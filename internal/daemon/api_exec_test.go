@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"net/http"
+	"os"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -14,6 +15,8 @@ import (
 
 var wsYaml = `name: ws
 base: ubuntu@20.04
+scripts:
+  lint: golangci-lint run
 `
 
 func (s *apiSuite) setupExec(c *check.C) *Command {
@@ -23,7 +26,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
 	s.createWFile(c, "ws", wsYaml)
 
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Scripts: map[string]workshop.Script{"lint": "\n\n\ngolangci-lint run\n"}}
 
 	err := s.b.LaunchWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
@@ -52,6 +55,23 @@ func (s *apiSuite) TestExecNoCommand(c *check.C) {
 	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, ".*must specify command")
 }
 
+func (s *apiSuite) TestExecNoScript(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":[],"script":true}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": must specify script`)
+}
+
 func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)
@@ -69,11 +89,11 @@ func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot exec: terminal mode is not supported",
+			Message: `cannot exec command in "ws": terminal mode is not supported`,
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot exec: splitting stderr is not supported",
+			Message: `cannot exec command in "ws": splitting stderr is not supported`,
 		},
 	}
 
@@ -126,6 +146,69 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
 	c.Assert(soon, check.Equals, 1)
+}
+
+func (s *apiSuite) TestExecScriptSuccess(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":["lint", "--verbose"],"script":true,"working-dir":"/"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
+
+	// Execute
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
+}
+
+func (s *apiSuite) TestExecBrokenFile(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	path := workshop.Filepath(s.project.Path, "ws")
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	c.Assert(err, check.IsNil)
+	_, err = file.Write([]byte("{\n"))
+	c.Assert(err, check.IsNil)
+	c.Assert(file.Close(), check.IsNil)
+
+	body := bytes.NewBufferString(`{"command":["lint"],"script":true,"working-dir":"/"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": script "lint": yaml: .*`)
+}
+
+func (s *apiSuite) TestExecMissingScript(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":["missing"],"script":true,"working-dir":"/"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": script "missing" not found`)
 }
 
 func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {

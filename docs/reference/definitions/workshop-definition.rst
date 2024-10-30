@@ -69,6 +69,15 @@ and includes a number of mandatory and optional keys:
        and a slot with the same interface in different SDKs, using the
        :samp:`<SDK>:<PLUG>` format.
 
+   * - :samp:`scripts`
+     - object
+     - List of shell scripts to be used with :ref:`workshop run <ref_workshop_run>`.
+
+       These are copied into the workshop
+       before being executed by :command:`bash`.
+       The options :samp:`errexit`, :samp:`pipefail` and :samp:`nounset`
+       are set by default.
+
 
 Any entry in :samp:`sdks` must be named after an existing SDK
 that is available from the SDK store.
@@ -144,7 +153,8 @@ Examples
 
 This YAML file defines a :samp:`golang` workshop
 with a single :samp:`go` SDK
-from the :samp:`latest/stable` channel:
+from the :samp:`latest/stable` channel,
+and some useful scripts:
 
 .. code-block:: yaml
    :caption: .workshop/golang.yaml
@@ -154,6 +164,11 @@ from the :samp:`latest/stable` channel:
    sdks:
      go:
        channel: latest/stable
+   scripts:
+     lint: |
+       go vet
+       golangci-lint run
+     tests: go test "$@"
 
 
 This YAML file defines a :samp:`go-dev` workshop
