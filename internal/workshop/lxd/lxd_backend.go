@@ -764,8 +764,7 @@ write_files:
       if [ -n "${WORKSHOP_SHELL}" ]; then
           cd /project
       fi
-    path: /home/workshop/.profile
-    append: true
+    path: /etc/profile.d/workshop_project_dir.sh
     defer: true
 runcmd:
   - systemctl daemon-reload

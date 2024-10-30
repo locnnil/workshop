@@ -259,7 +259,7 @@ func (f *wsExec) TestLxdBackendExecTimeout(c *check.C) {
 	c.Assert(err, check.ErrorMatches, "(?s).*timed out after 100ms.*")
 }
 
-func (f *wsExec) TestLxdBackendExecValidateUserData(c *check.C) {
+func (f *wsExec) TestLxdBackendExecValidateCloudInitConfig(c *check.C) {
 	// Setup
 	opts := &client.ExecOptions{
 		Command:    []string{"cloud-init", "schema", "--system", "--annotate"},
@@ -278,7 +278,7 @@ func (f *wsExec) TestLxdBackendExecValidateUserData(c *check.C) {
 	c.Assert(strings.Contains(stdout, "Error"), check.Equals, false)
 }
 
-func (f *wsExec) TestLxdBackendExecCheckLoginDir(c *check.C) {
+func (f *wsExec) TestLxdBackendExecCheckLoginCwd(c *check.C) {
 	// Setup
 	opts_shell := &client.ExecOptions{
 		Command:     []string{"su", "-l", "workshop", "-w", "WORKSHOP_SHELL", "-c", "pwd"},

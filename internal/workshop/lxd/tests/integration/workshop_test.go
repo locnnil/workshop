@@ -7,10 +7,7 @@ import (
 	"context"
 	"os"
 	"os/user"
-	"strings"
 	"sync"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
@@ -71,22 +68,6 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 	err = os.RemoveAll(f.project.Path)
 	c.Check(err, check.IsNil)
-}
-
-func (f *wsOps) TestLxdBackendWorkshopCloudInitConfig(c *check.C) {
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer f.bd.RemoveWorkshop(f.ctx, "test")
-	wxCfg, err := f.bd.GetWorkshopConfig(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-	c.Assert(wxCfg, check.NotNil)
-
-	userData := wxCfg["user.user-data"]
-
-	// Check YAML format and prefix
-	var data interface{}
-	err = yaml.Unmarshal([]byte(userData), &data)
-	c.Assert(err, check.IsNil)
-	c.Assert(strings.HasPrefix(userData, "#cloud-config\n"), check.Equals, true)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
