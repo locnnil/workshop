@@ -1,3 +1,9 @@
 .program {
     font-weight: normal;
 }
+
+.command {
+    font-family: monospace;
+    font-size: large;
+    font-weight: normal;
+}
