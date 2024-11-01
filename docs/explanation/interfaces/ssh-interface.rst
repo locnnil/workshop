@@ -26,7 +26,7 @@ can be invoked manually after the workshop has started:
 
 Establishing a connection means
 a proxy Unix domain socket has been created
-and a corresponding :envvar:`SSH_AUTH_SOCK` value
+and a corresponding :envvar:`$SSH_AUTH_SOCK` value
 has been set for the :samp:`workshop` user,
 so the host's SSH identities and configuration
 are available inside the workshop.

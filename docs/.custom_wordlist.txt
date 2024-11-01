@@ -42,6 +42,7 @@ SDK
 sdkcraft
 SDKcraft
 SDKs
+SDK's
 snapcraft
 snapd
 stateDiagram

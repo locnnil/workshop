@@ -207,6 +207,7 @@ exclude_patterns = ["readme.rst"]
 
 html_css_files = [
     "css/pdf.css",
+    "css/workshop.css",
 ]
 
 

@@ -48,7 +48,7 @@ Here's how it works from the outside:
 
 Some plugs can be auto-connected to their slots at launch or refresh.
 This behaviour varies by interface,
-but the overall aim is to provide a reasonably seamless, logical experience:
+but the overall aim is to conduct reasonably in each case:
 the :ref:`mount <exp_mount_interface>`
 and the :ref:`GPU <exp_gpu_interface>` interfaces are auto-connected,
 whereas the :ref:`camera <exp_camera_interface>`

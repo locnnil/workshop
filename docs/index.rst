@@ -15,7 +15,6 @@
    explanation/index
    reference/index
    Contribution <contributing>
-   security
 
 
 **A tool for defining and handling ephemeral development environments**.
@@ -92,7 +91,7 @@ and implemented with
 Talk to us if you have a project in AI/ML, robotics or any other field
 where setting up an environment is a daily or weekly activity
 that can easily shave hours off your schedule.
-Tell us about the frustrating parts of your experience,
+Tell us about the frustrating parts of your journey,
 and we'll see what |project_markup| can do for you.
 Let us know if you have an SDK or framework to try with |project_markup|:
 we'll help you get it out there.
@@ -106,6 +105,6 @@ we'll help you get it out there.
 
 - `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
 
-- :ref:`Contribution guide <contributing>`
+- :ref:`Contribution and participation <contributing>`
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
