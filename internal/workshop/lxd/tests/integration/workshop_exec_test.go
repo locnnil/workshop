@@ -281,14 +281,7 @@ func (f *wsExec) TestLxdBackendExecValidateCloudInitConfig(c *check.C) {
 func (f *wsExec) TestLxdBackendExecCheckLoginCwd(c *check.C) {
 	// Setup
 	opts_shell := &client.ExecOptions{
-		Command:     []string{"su", "-l", "workshop", "-w", "WORKSHOP_SHELL", "-c", "pwd"},
-		WorkingDir:  "/",
-		UserId:      new(int),
-		GroupId:     new(int),
-		Environment: map[string]string{"WORKSHOP_SHELL": "1"},
-	}
-	opts := &client.ExecOptions{
-		Command:    []string{"su", "-l", "workshop", "-w", "WORKSHOP_SHELL", "-c", "pwd"},
+		Command:    []string{"sudo", "-u", "workshop", "-D", "/project/", "-s", "pwd"},
 		WorkingDir: "/",
 		UserId:     new(int),
 		GroupId:    new(int),
@@ -301,12 +294,4 @@ func (f *wsExec) TestLxdBackendExecCheckLoginCwd(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(stderr, check.Equals, "")
 	c.Assert(stdout, check.Equals, "/project\n")
-
-	// Exec
-	stdout, stderr, err = f.exec(c, "", "test", f.project.ProjectId, opts)
-
-	// Verify that login dir without WORKSHOP_SHELL env var is /home/workshop
-	c.Assert(err, check.IsNil)
-	c.Assert(stderr, check.Equals, "")
-	c.Assert(stdout, check.Equals, "/home/workshop\n")
 }

@@ -761,10 +761,8 @@ write_files:
 - content: |
       if [ -n "${SHELL_CMD}" ]; then
   - content: |
-      if [ -n "${WORKSHOP_SHELL}" ]; then
-          cd /project
-      fi
-    path: /etc/profile.d/workshop_project_dir.sh
+      Defaults: root   runcwd=*
+    path: /etc/sudoers.d/allow_root_chdir
     defer: true
 runcmd:
   - systemctl daemon-reload
