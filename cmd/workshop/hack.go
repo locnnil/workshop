@@ -24,12 +24,44 @@ func (c *CmdHack) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "hack [--drop|--restore] <WORKSHOP> [setup-base|save-save|restore-state|check-health]",
 		Args:  cobra.RangeArgs(1, 2),
-		Short: "Edit hack SDK",
-		RunE:  c.Run,
+		Short: "Edit the hack SDK and graft it onto the workshop",
+		Long: `
+This command opens the default text editor to configure the 'hack' SDK
+and immediately installs it in the specified workshop,
+enabling rapid experiments and tweaks at the SDK level.
+
+If <HOOK> isn't specified, the command opens the SDK definition file.
+Setting the <HOOK> value opens the respective hook file:
+
+- 'check-health'
+- 'restore-state'
+- 'save-state'
+- 'setup-base'
+
+
+Saving and exiting causes a refresh,
+which installs the updated 'hack' SDK in the workshop.
+
+The '--drop' and '--restore' options stash the 'hack' SDK,
+reversing the changes, and quickly restore it to the workshop.
+
+
+Notes:
+
+- The 'hack' SDK doesn't appear in the workshop definition
+  and cannot include build-time data such as parts
+
+- In addition to hooks, the 'hack' SDK can use interfaces,
+  define plugs, slots, connections and bindings
+
+- You can partially refresh the workshop, targeting the 'hack' SDK
+  with the 'workshop refresh <WORKSHOP>/hack' command
+`,
+		RunE: c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.drop, "drop", false, "Drop hack SDK from the workshop.")
-	cmd.Flags().BoolVar(&c.restore, "restore", false, "Restore the dropped hack SDK for the workshop.")
+	cmd.Flags().BoolVar(&c.drop, "drop", false, "Drop the hack SDK from the workshop.")
+	cmd.Flags().BoolVar(&c.restore, "restore", false, "Return the previously dropped SDK to the workshop.")
 
 	return cmd
 }
@@ -51,7 +83,7 @@ func dropHack(hackdir, storedir string) (*revert.Reverter, error) {
 	}
 	if len(recs) == 0 {
 		// Nothing to do.
-		return nil, fmt.Errorf(`cannot drop: "hack" SDK does not exist`)
+		return nil, fmt.Errorf(`cannot drop: the 'hack' SDK doesn't exist`)
 	}
 
 	if err := os.MkdirAll(storedir, 0755); err != nil {
@@ -77,7 +109,7 @@ func restoreHack(hackdir, storedir string) error {
 	}
 	if len(recs) == 0 || osutil.IsDirNotExist(err) {
 		// Nothing in stored.
-		return fmt.Errorf(`cannot restore: no stored "hack" SDK found`)
+		return fmt.Errorf(`cannot restore: no stored 'hack' SDK found`)
 	}
 
 	// If hack does not exist (i.e. was dropped) - create it, we'll be
@@ -97,7 +129,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot hack: '--drop' incompatible with '--replace'")
 	}
 	if (c.drop || c.restore) && len(av) != 1 {
-		return fmt.Errorf("cannot hack: --drop or --replace require a single workshop name")
+		return fmt.Errorf("cannot hack: '--drop' and '--replace' require a single workshop name")
 	}
 
 	cli, err := c.root.client()
@@ -171,7 +203,7 @@ func (c *CmdHack) Run(cmd *cobra.Command, av []string) error {
 		case "setup-base", "save-state", "restore-state", "check-health":
 			sdkfile = filepath.Join(hackdir, "hooks", av[1])
 		default:
-			return fmt.Errorf("cannot hack: unknown %q SDK hook, supported hooks: setup-base, save-state, restore-state, check-health", av[1])
+			return fmt.Errorf("cannot hack: unknown SDK hook %q; valid names are setup-base, save-state, restore-state, check-health", av[1])
 		}
 	}
 

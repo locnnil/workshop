@@ -1,5 +1,7 @@
-Interfaces
-==========
+.. _exp_interface_connections:
+
+Interface connections
+=====================
 
 These articles explain concepts
 that are important for understanding |project_markup|'s interface mechanics.
@@ -10,8 +12,6 @@ that are important for understanding |project_markup|'s interface mechanics.
 
    *
 
-
-.. _exp_interface_connections:
 
 Summary
 -------
@@ -55,33 +55,14 @@ whereas the :ref:`camera <exp_camera_interface>`
 and :ref:`SSH <exp_ssh_interface>` interfaces require manual connection.
 
 
-.. _exp_system_sdk:
-
-System SDK
-~~~~~~~~~~
-
-Every workshop contains a special *system SDK*
-that exposes system resources through its slots.
-It's unavailable from the SDK Store;
-installed first at :command:`workshop launch`
-and removed last during :command:`workshop remove`,
-it ensures internal consistency.
-
-The purpose of the system SDK isn't to add hooks or additional content;
-it's only there to uniformly expose host system resources to other SDKs.
-As such, it can't be removed by the user
-and isn't listed in the :command:`workshop info` output.
-It's also the only SDK
-that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
-
-
 See also
 --------
 
 Explanation:
 
-- :ref:`exp_sdk_definition`
 - :ref:`exp_plugs_slots`
+- :ref:`exp_sdk_definition`
+- :ref:`exp_system_sdk`
 - :ref:`exp_workshop_def`
 
 

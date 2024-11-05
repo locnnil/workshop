@@ -96,7 +96,7 @@ The base is a supported OS image
 that is used as the basis for the workshop.
 
 
-.. _exp_bindings:
+.. _exp_plug_bindings:
 
 Plug bindings
 -------------
