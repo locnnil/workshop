@@ -20,9 +20,9 @@ Topics important for understanding how interfaces work:
 .. toctree::
    :glob:
    :maxdepth: 1
+   :titlesonly:
 
-   interfaces/index
-   interfaces/*-interface
+   interfaces/*
 
 
 Important aspects of |project_markup|:
