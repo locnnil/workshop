@@ -8,6 +8,9 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  echo "Modify apt cache for later"
+  workshop_exec exec ws-refresh -- sudo touch /var/cache/apt/archives/sentinel
+
   workshop_exec refresh ws-refresh
 
   echo "Check refresh change is Done"
@@ -15,6 +18,10 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check apt cache is preserved across refreshes"
+  workshop_exec exec ws-refresh -- mountpoint /var/cache/apt/archives
+  workshop_exec exec ws-refresh -- sudo test -f /var/cache/apt/archives/sentinel
 
   workshop_exec refresh ws-refresh-sdk
 

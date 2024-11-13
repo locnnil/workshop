@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -90,6 +91,31 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	return nil
 }
 
+func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	// TODO: ideally the root of the volume should have 0755 permissions
+	return m.backend.CreateStorage(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
+}
+
+func (m *WorkshopManager) doRemoveAptCache(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	return m.backend.DeleteStorage(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
+}
+
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -105,6 +131,23 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 }
 
 func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
+	return nil
+}
+
+func (m *WorkshopManager) doMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
+	return m.backend.AttachStorage(ctx, w, volume, dirs.AptCachePath)
+}
+
+func (m *WorkshopManager) undoMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 

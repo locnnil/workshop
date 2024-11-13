@@ -167,14 +167,14 @@ func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
 	ts := workshopstate.Launch(s.state, file, nil, s.project)
 
 	expected := []string{"download-base", "create-workshop",
-		"mount-project",
+		"mount-project", "create-apt-cache", "mount-apt-cache",
 		"start-workshop", "install-local-sdk", "link-sdk", "auto-connect"}
 	tasks := ts.Tasks()
 
 	verifyExpectedTasks(c, tasks, expected)
 
 	var wf workshop.File
-	err := tasks[1].Get("workshop-file", &wf)
+	err := tasks[2].Get("workshop-file", &wf)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(&wf, check.DeepEquals, file)
 	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
@@ -200,6 +200,7 @@ func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 		"remove-workshop-stash",
 		"stash-workshop",
 		"mount-project",
+		"mount-apt-cache",
 		"start-workshop",
 		"install-local-sdk",
 		"link-sdk",
@@ -245,6 +246,7 @@ func (s *requestSuite) TestRefreshWorkshopWithSdks(c *check.C) {
 		"download-base",
 		"create-workshop",
 		"mount-project",
+		"mount-apt-cache",
 		"start-workshop",
 		"install-local-sdk",
 		"link-sdk",
@@ -426,6 +428,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"create-workshop",
 		"stash-workshop",
 		"mount-project",
+		"mount-apt-cache",
 		"start-workshop",
 		"install-local-sdk",
 		"link-sdk",
@@ -444,6 +447,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		"download-base",
 		"create-workshop",
 		"mount-project",
+		"mount-apt-cache",
 		"start-workshop",
 		"install-local-sdk",
 		"link-sdk",
@@ -525,6 +529,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		"download-base",
 		"create-workshop",
 		"mount-project",
+		"mount-apt-cache",
 		"start-workshop",
 		"install-local-sdk",
 		"link-sdk",
