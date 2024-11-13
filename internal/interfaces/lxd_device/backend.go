@@ -117,7 +117,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 				return false, err
 			}
 
-			if err = osutil.MkdirAllChown(dev.What, 0744, uid, gid); err != nil {
+			if err = osutil.MkdirAllChown(dev.What, 0755, uid, gid); err != nil {
 				return false, err
 			}
 		}
