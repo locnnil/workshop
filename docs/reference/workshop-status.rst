@@ -106,4 +106,4 @@ Explanation:
 
 Reference:
 
-- :ref:`ref_workshop_cli`
+- :ref:`ref_cli`

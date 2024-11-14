@@ -1,6 +1,6 @@
 :slug: ref-workshop-cli
 
-.. _ref_workshop_cli:
+.. _ref_cli:
 
 CLI commands
 ============
@@ -41,4 +41,4 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshop_cli`
+- :ref:`exp_cli`

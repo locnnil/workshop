@@ -15,7 +15,7 @@ The interface defines a target directory inside the workshop,
 to which a source directory is mounted at run-time.
 Typically, it would provide resources to be consumed by the SDK,
 accumulated over time or created
-when the :command:`workshop launch` or :command:`workshop refresh` commands run:
+when the :command:`workshop launch` or :command:`workshop refresh` commands run:
 
 - The slot is the provider,
   indicating that any data placed in its source directory
@@ -45,8 +45,8 @@ The source directory can be created:
 
 If the directory is created on the host,
 its contents are preserved between operations such as
-:command:`workshop refresh`, :command:`workshop start`,
-and :command:`workshop stop`.
+:command:`workshop refresh`, :command:`workshop start`,
+and :command:`workshop stop`.
 
 After the workshop has started,
 the :command:`workshop connect` and :command:`workshop disconnect` commands

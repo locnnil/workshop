@@ -62,3 +62,13 @@ Better still, it's done without any manual, high-maintenance image definitions
 or configurations;
 all the work of keeping the SDKs in your workshop operational is done
 by the people who are actually responsible for them: the publishers.
+
+
+See also
+--------
+
+Reference:
+
+- :ref:`ref_cli`
+- :ref:`ref_workshop_def`
+- :ref:`ref_workshop_status`

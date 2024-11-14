@@ -129,14 +129,14 @@ note that a slot can handle connections with multiple plugs.
 Connections can be established:
 
 - Automatically:
-  By running :command:`workshop launch`, :command:`workshop refresh`,
-  or :command:`workshop start`.
+  By running :command:`workshop launch`, :command:`workshop refresh`,
+  or :command:`workshop start`.
 
 - Manually:
-  By running :command:`workshop connect` after the workshop has started,
+  By running :command:`workshop connect` after the workshop has started,
   or by listing connections in the
   :ref:`workshop definition <exp_workshop_def_connections>`
-  and running :command:`workshop refresh`.
+  and running :command:`workshop refresh`.
 
 
 All connections are subject to validation.
@@ -210,14 +210,14 @@ System SDK
 Every workshop contains a special *system SDK*
 that exposes system resources through its slots.
 It's unavailable from the SDK Store;
-installed first at :command:`workshop launch`
-and removed last during :command:`workshop remove`,
+installed first at :command:`workshop launch`
+and removed last during :command:`workshop remove`,
 it ensures internal consistency.
 
 The purpose of the system SDK isn't to add hooks or additional content;
 it's only there to uniformly expose host system resources to other SDKs.
 As such, it can't be removed by the user
-and isn't listed in the :command:`workshop info` output.
+and isn't listed in the :command:`workshop info` output.
 It's also the only SDK
 that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
 
@@ -254,6 +254,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_interface_connections`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 
