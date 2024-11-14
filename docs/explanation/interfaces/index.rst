@@ -34,15 +34,15 @@ while still allowing controlled interactions among the SDKs and with the system.
 Here's how it works from the outside:
 
 - The :samp:`connections` section of the workshop definition
-  and the :command:`workshop connect` command
+  and the :command:`workshop connect` command
   can be used to link interface plugs to respective slots,
   allowing the SDKs to orderly access the resources.
 
-- Conversely, the :command:`workshop disconnect` command
+- Conversely, the :command:`workshop disconnect` command
   terminates existing interface connections,
   revoking the access to the resources granted by the connection.
 
-- Finally, the :command:`workshop connections` command
+- Finally, the :command:`workshop connections` command
   lists all existing connections and their states,
   providing an overview of how workshop connections are laid out.
 
