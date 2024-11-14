@@ -1,0 +1,50 @@
+summary: Check workshop sketch-sdk
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-sketch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec sketch-sdk --drop ws-sketch
+  workshop_exec remove ws-sketch
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Install empty sketch SDK"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF  
+  wq
+  EOF
+
+  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
+
+  workshop_exec sketch-sdk --drop ws-sketch
+  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | NOMATCH ".*(x1)"
+
+  workshop_exec sketch-sdk --restore ws-sketch
+  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
+
+  echo "Add setup-base"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
+  10
+  i
+    setup-base: |
+      mkdir -p /home/workshop/ws-sketch-test
+  .
+  wq
+  EOF
+
+  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x2)"
+
+  echo "Add a new mount"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
+  $
+  a
+    sketch-plug:
+      interface: mount
+      workshop-target: /home/workshop/ws-sketch-test
+  .
+  wq
+  EOF
+
+  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x3)"
+  workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
+  workshop_exec exec ws-sketch -- bash -c "test -d /home/workshop/ws-sketch-test"

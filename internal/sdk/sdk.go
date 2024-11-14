@@ -37,7 +37,7 @@ type sdkYaml struct {
 
 type Type string
 
-const Hack = "hack"
+const Sketch = "sketch"
 
 const (
 	Regular Type = "regular"
@@ -400,16 +400,16 @@ func ProjectContentDir(homedir, pid string) string {
 	return filepath.Join(ProjectUserData(homedir, pid), "mount")
 }
 
-func ProjectHackSdkDir(homedir, pid string) string {
-	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "hack")
+func ProjectSketchSdkDir(homedir, pid string) string {
+	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "sketch")
 }
 
-func WorkshopHackSdkCurrent(homedir, pid, wp string) string {
-	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "current")
+func WorkshopSketchSdkCurrent(homedir, pid, wp string) string {
+	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "current")
 }
 
-func WorkshopHackSdkStored(homedir, pid, wp string) string {
-	return filepath.Join(ProjectHackSdkDir(homedir, pid), wp, "stored")
+func WorkshopSketchSdkStored(homedir, pid, wp string) string {
+	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "stored")
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

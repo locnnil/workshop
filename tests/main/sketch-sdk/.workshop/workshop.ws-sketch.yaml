@@ -1,0 +1,5 @@
+name: ws-sketch
+base: ubuntu@22.04
+sdks:
+  test-sdk-basic:
+    channel: latest/stable

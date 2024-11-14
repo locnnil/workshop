@@ -279,8 +279,8 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
 		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
 			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
-			if sk != sdk.Hack {
-				return change, taskset, fmt.Errorf(`partial refresh is supported only for "hack" SDK`)
+			if sk != sdk.Sketch {
+				return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 			}
 			taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
 		} else {

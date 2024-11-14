@@ -22,7 +22,7 @@ func (m *workshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"hack","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -56,7 +56,7 @@ notes:    missing-project
 content:
   go:
     channel:  latest/edge  2017-03-22  \(1\)
-  hack:
+  sketch:
     channel:  ~   2017-03-22  \(x1\)
 `, m.prjDir))
 	c.Check(n, check.Equals, 2)

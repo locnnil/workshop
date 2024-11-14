@@ -226,7 +226,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 	// system SDK is an optional entry in a workshop file, so it's not an error
 	// scenario.
-	if idx == -1 && (sdkName == sdk.System.String() || sdkName == sdk.Hack) {
+	if idx == -1 && (sdkName == sdk.System.String() || sdkName == sdk.Sketch) {
 		return info, nil
 	}
 
