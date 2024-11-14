@@ -113,7 +113,7 @@ The command installs two main components:
 - The :program:`workshopd` daemon, which exposes a REST API
 
 - The :program:`workshop`
-  :ref:`CLI tool <exp_workshop_cli>`,
+  :ref:`CLI tool <exp_cli>`,
   which uses this API to command |project_markup|
 
 

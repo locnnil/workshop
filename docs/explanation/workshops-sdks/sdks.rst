@@ -254,6 +254,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_interface_connections`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 

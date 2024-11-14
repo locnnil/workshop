@@ -60,7 +60,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_plugs_slots`
+- :ref:`exp_interfaces`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_system_sdk`
 - :ref:`exp_workshop_def`

@@ -1,9 +1,9 @@
 :hide-toc:
 
-.. _exp_workshop_cli:
+.. _exp_cli:
 
-workshop (CLI)
-==============
+CLI
+===
 
 |project_markup| includes an eponymous command-line utility,
 :program:`workshop`;
@@ -68,4 +68,4 @@ See also
 
 Reference:
 
-- :ref:`ref_workshop_cli`
+- :ref:`ref_cli`

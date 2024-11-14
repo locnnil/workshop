@@ -6,26 +6,26 @@ Explanation
 These in-depth articles explain various |project_markup| concepts
 and how they fit together.
 
-These articles iterate over the core set of |project_markup|-related concepts:
+The core set of |project_markup|-related concepts
+such as projects, workshops, SDKs and interfaces:
 
 .. toctree::
-   :glob:
-   :maxdepth: 1
-
-   workshops-sdks/*
-
-
-Topics important for understanding how interfaces work:
-
-.. toctree::
-   :glob:
-   :maxdepth: 1
+   :maxdepth: 2
    :titlesonly:
 
-   interfaces/*
+   workshops-sdks/index
 
 
-Important aspects of |project_markup|:
+Connection details for different interface types:
+
+.. toctree::
+   :maxdepth: 2
+   :titlesonly:
+
+   interfaces/index
+
+
+Important security aspects of |project_markup|:
 
 .. toctree::
    :maxdepth: 1
