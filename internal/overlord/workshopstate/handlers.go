@@ -236,7 +236,7 @@ func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.CreateStateStorage(ctx, w)
+	return m.backend.CreateStorage(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
 
 func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
@@ -248,7 +248,7 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.DeleteStateStorage(ctx, w)
+	return m.backend.DeleteStorage(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
 
 type cleanupError struct {

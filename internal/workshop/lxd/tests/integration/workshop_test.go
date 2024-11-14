@@ -112,18 +112,18 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	c.Assert(err, check.ErrorMatches, "workshop not found")
 }
 
-func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
+func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer f.bd.RemoveWorkshop(f.ctx, "test")
 
 	// Execute
-	err := f.bd.CreateStateStorage(f.ctx, "test")
+	err := f.bd.CreateStorage(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.bd.DeleteStateStorage(f.ctx, "test")
+	err = f.bd.DeleteStorage(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)

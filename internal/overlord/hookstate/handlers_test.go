@@ -10,6 +10,7 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
@@ -129,7 +130,8 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	defer ws.Close()
-	err = s.backend.AttachStateStorage(s.ctx, "ws", workshop.WorkshopStateVolumeName("ws", s.project.ProjectId))
+	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
+	err = s.backend.AttachStorage(s.ctx, "ws", volume, dirs.WorkshopStateDir)
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)

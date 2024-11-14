@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -50,8 +49,10 @@ type FakeWorkshopBackend struct {
 	Workshops map[string]map[string]*FakeWorkshop
 	// workshops put to stash (e.g. during refresh)
 	StashedWorkshops map[string]map[string]*FakeWorkshop
-	// state storages, the key is a volume name
-	WorkshopStateStorages map[string]map[string]bool
+	// storages, the key is a volume name
+	WorkshopStorages       map[string]bool
+	WorkshopStoragePaths   map[string]map[string]bool
+	WorkshopStorageTargets map[string]string
 	// the key is a username
 	projects map[string][]*workshop.Project
 
@@ -71,7 +72,9 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.WorkshopStateStorages = make(map[string]map[string]bool)
+	be.WorkshopStorages = make(map[string]bool)
+	be.WorkshopStoragePaths = make(map[string]map[string]bool)
+	be.WorkshopStorageTargets = make(map[string]string)
 	be.projects = make(map[string][]*workshop.Project)
 
 	be.ExecCallback = DoExecDefault
@@ -353,10 +356,12 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *FakeWorkshopBackend) AttachStateStorage(ctx context.Context, wp, name string) error {
-	paths := s.WorkshopStateStorages[name]
+func (s *FakeWorkshopBackend) AttachStorage(ctx context.Context, wp, name, what string) error {
+	s.WorkshopStorageTargets[name] = what
+
+	paths := s.WorkshopStoragePaths[name]
 	if paths == nil {
-		s.WorkshopStateStorages[name] = map[string]bool{}
+		s.WorkshopStoragePaths[name] = map[string]bool{}
 		return nil
 	}
 	wfs, err := s.WorkshopFs(ctx, wp)
@@ -372,27 +377,31 @@ func (s *FakeWorkshopBackend) AttachStateStorage(ctx context.Context, wp, name s
 	return nil
 }
 
-func (s *FakeWorkshopBackend) DetachStateStorage(ctx context.Context, wp, name string) error {
+func (s *FakeWorkshopBackend) DetachStorage(ctx context.Context, wp, name string) error {
+	target := s.WorkshopStorageTargets[name]
+
 	wfs, err := s.WorkshopFs(ctx, wp)
 	if err != nil {
 		return err
 	}
 	defer wfs.Close()
 
-	afero.Walk(wfs, dirs.WorkshopStateDir, func(path string, info fs.FileInfo, err error) error {
-		s.WorkshopStateStorages[name][path] = true
+	afero.Walk(wfs, target, func(path string, info fs.FileInfo, err error) error {
+		s.WorkshopStoragePaths[name][path] = true
 		return nil
 	})
 
-	err = wfs.RemoveAll(dirs.WorkshopStateDir)
+	err = wfs.RemoveAll(target)
 	return err
 }
 
-func (s *FakeWorkshopBackend) CreateStateStorage(ctx context.Context, name string) error {
+func (s *FakeWorkshopBackend) CreateStorage(ctx context.Context, name string) error {
+	s.WorkshopStorages[name] = true
 	return nil
 }
 
-func (s *FakeWorkshopBackend) DeleteStateStorage(ctx context.Context, name string) error {
+func (s *FakeWorkshopBackend) DeleteStorage(ctx context.Context, name string) error {
+	delete(s.WorkshopStorages, name)
 	return nil
 }
 
