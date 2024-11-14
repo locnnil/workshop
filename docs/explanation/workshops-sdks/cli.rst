@@ -6,7 +6,7 @@ CLI
 ===
 
 |project_markup| includes an eponymous command-line utility,
-:program:`workshop`;
+:command:`workshop`;
 it is the daily go-to instrument for regular users,
 with a set of commands that govern the entire life cycle of a
 :ref:`workshop <exp_workshop>`.
