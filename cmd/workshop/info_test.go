@@ -8,15 +8,15 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WorkshopInfo struct {
+type workshopInfo struct {
 	BaseWorkshopSuite
 	prjDir string
 	prjId  string
 }
 
-var _ = check.Suite(&WorkshopInfo{})
+var _ = check.Suite(&workshopInfo{})
 
-func (m *WorkshopInfo) SetUpTest(c *check.C) {
+func (m *workshopInfo) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
@@ -24,7 +24,7 @@ func (m *WorkshopInfo) SetUpTest(c *check.C) {
 
 var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"hack","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
-func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
+func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
@@ -64,7 +64,7 @@ content:
 
 var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
 
-func (m *WorkshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
+func (m *workshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
@@ -108,7 +108,7 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
 	{"host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
 }]}}`
 
-func (m *WorkshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
+func (m *workshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0

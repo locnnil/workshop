@@ -7,13 +7,13 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WorkshopRefresh struct {
+type workshopRefresh struct {
 	BaseWorkshopSuite
 	prjDir string
 	prjId  string
 }
 
-var _ = check.Suite(&WorkshopRefresh{})
+var _ = check.Suite(&workshopRefresh{})
 
 var mockReadyChangeJSON = `{"type": "sync", "result":{
     "id":   "four",
@@ -60,13 +60,13 @@ var mockChangeWithError = `{"type": "sync", "result":{
     "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z ERROR No answer found"], "data":{"workshop":["ws","ws-1"]}}]
 }}`
 
-func (m *WorkshopRefresh) SetUpTest(c *check.C) {
+func (m *workshopRefresh) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-func (m *WorkshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
+func (m *workshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ func (m *WorkshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 }
 
-func (m *WorkshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
+func (m *workshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +126,7 @@ func (m *WorkshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `(?s).*"ws", "ws-1" refresh aborted`)
 }
 
-func (m *WorkshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
+func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.WaitOnError = true
 
@@ -160,7 +160,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `cannot refresh; fix the errors reported,\nthen run "workshop refresh --continue ws".\nTo abort and revert, run "workshop refresh --abort ws"`)
 }
 
-func (m *WorkshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
+func (m *workshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Abort = true
 
@@ -194,7 +194,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) 
 	c.Assert(m.stdout.String(), check.Matches, `"ws" refresh aborted\n`)
 }
 
-func (m *WorkshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
+func (m *workshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Continue = true
 
@@ -228,7 +228,7 @@ func (m *WorkshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C
 	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 }
 
-func (m *WorkshopRefresh) TestRefreshIncompatibleOptions(c *check.C) {
+func (m *workshopRefresh) TestRefreshIncompatibleOptions(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Abort = true
 	cmd.Continue = true

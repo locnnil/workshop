@@ -5,20 +5,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"testing"
 
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 )
 
-type WorkshopList struct {
+type workshopList struct {
 }
 
-var _ = Suite(&WorkshopList{})
+var _ = Suite(&workshopList{})
 
-func TestMain(t *testing.T) { TestingT(t) }
-
-func (m *WorkshopList) TestHomeDirectoryPathContraction(c *C) {
+func (m *workshopList) TestHomeDirectoryPathContraction(c *C) {
 	home, _ := os.UserHomeDir()
 	r := contractHomeDirectory(filepath.Join(home, "test"))
 	c.Assert(r, Equals, "~/test")
@@ -39,7 +36,7 @@ var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":
 
 var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}],"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
 
-func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
+func (m *workshopInfo) TestWorkshopList(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +66,7 @@ func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
 	c.Check(n, check.Equals, 2)
 }
 
-func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
+func (m *workshopInfo) TestWorkshopListGlobal(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +103,7 @@ func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
 	c.Check(n, check.Equals, 3)
 }
 
-func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
+func (m *workshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {

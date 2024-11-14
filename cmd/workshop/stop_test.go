@@ -7,21 +7,21 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type WorkshopStop struct {
+type workshopStop struct {
 	BaseWorkshopSuite
 	prjDir string
 	prjId  string
 }
 
-var _ = check.Suite(&WorkshopStop{})
+var _ = check.Suite(&workshopStop{})
 
-func (m *WorkshopStop) SetUpTest(c *check.C) {
+func (m *workshopStop) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-func (m *WorkshopStop) TestStopSuccess(c *check.C) {
+func (m *workshopStop) TestStopSuccess(c *check.C) {
 	cmd := &CmdStop{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {

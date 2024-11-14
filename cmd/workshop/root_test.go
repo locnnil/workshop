@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"testing"
 
 	"gopkg.in/check.v1"
 
@@ -19,6 +20,8 @@ type BaseWorkshopSuite struct {
 	stdout *bytes.Buffer
 	stderr *bytes.Buffer
 }
+
+func TestMain(t *testing.T) { check.TestingT(t) }
 
 func (s *BaseWorkshopSuite) SetUpTest(c *check.C) {
 	dirs.SetRootDir(c.MkDir())
