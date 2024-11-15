@@ -101,7 +101,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	// Validate
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, check.NotNil)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
 
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
@@ -126,23 +126,6 @@ func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
 	err = f.bd.DeleteStateStorage(f.ctx, "test")
 
 	// Validate
-	c.Assert(err, check.IsNil)
-}
-
-func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
-	// Setup
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-
-	// Execute
-	err := f.bd.StashWorkshop(f.ctx, "test")
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
-
-	// Execute
-	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
