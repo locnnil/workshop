@@ -103,9 +103,8 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 }
 
 func (f *wsExec) TearDownSuite(c *check.C) {
-	err := f.be.RemoveWorkshop(f.ctx, "test")
-	c.Check(err, check.IsNil)
-	err = f.daemon.Stop(nil)
+	helper.RemoveTestWorkshop(c, f.ctx, f.be)
+	err := f.daemon.Stop(nil)
 	c.Check(err, check.IsNil)
 	f.lookupUserRestore()
 	f.lookupUserIdRestore()

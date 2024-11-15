@@ -72,7 +72,7 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer f.bd.RemoveWorkshop(f.ctx, "test")
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -94,6 +94,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -114,7 +115,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer f.bd.RemoveWorkshop(f.ctx, "test")
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.CreateStorage(f.ctx, "test")
@@ -132,6 +133,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
 
 	// Validate
 	err := f.bd.RemoveWorkshop(f.ctx, "test")
