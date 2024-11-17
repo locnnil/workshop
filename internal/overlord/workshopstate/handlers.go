@@ -2,6 +2,7 @@ package workshopstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -101,7 +103,13 @@ func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) er
 	defer cancel()
 
 	// TODO: ideally the root of the volume should have 0755 permissions
-	return m.backend.CreateStorage(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
+	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
+	err = m.backend.CreateStorage(ctx, volume)
+	if errors.Is(err, workshop.ErrStorageAlreadyExists) {
+		logger.Debugf("reusing existing storage %q", volume)
+		return nil
+	}
+	return err
 }
 
 func (m *WorkshopManager) doRemoveAptCache(task *state.Task, tomb *tomb.Tomb) error {
@@ -131,6 +139,7 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 }
 
 func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) error {
+	// No need to undo because the mount will be removed with the workshop
 	return nil
 }
 
@@ -148,6 +157,7 @@ func (m *WorkshopManager) doMountAptCache(task *state.Task, tomb *tomb.Tomb) err
 }
 
 func (m *WorkshopManager) undoMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
+	// No need to undo because the mount will be removed with the workshop
 	return nil
 }
 

@@ -622,7 +622,11 @@ func (s *Backend) CreateStorage(ctx context.Context, name string) error {
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
 
-	return conn.CreateStoragePoolVolume(storagePool, vol)
+	err = conn.CreateStoragePoolVolume(storagePool, vol)
+	if api.StatusErrorCheck(err, http.StatusConflict) {
+		return workshop.ErrStorageAlreadyExists
+	}
+	return err
 }
 
 func (s *Backend) AttachStorage(ctx context.Context, wp, name, what string) error {

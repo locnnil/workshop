@@ -53,9 +53,8 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	}
 
 	rev.Add(func() {
-		err := s.AttachStorage(ctx, name, volume, dirs.AptCachePath)
-		if err != nil {
-			logger.Debugf("Cannot mount apt cache for %q after failed stash operation", name)
+		if err := s.AttachStorage(ctx, name, volume, dirs.AptCachePath); err != nil {
+			logger.Debugf("Cannot attach apt cache for %q after failed stash: %s", name, err.Error())
 		}
 	})
 
@@ -92,7 +91,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 
 	volume := workshop.AptCacheVolumeName(name, projectId)
 	if err = s.AttachStorage(ctx, name, volume, dirs.AptCachePath); err != nil {
-		return err
+		logger.Debugf("Cannot reattach apt cache for %q after stash: %s", name, err.Error())
 	}
 
 	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {

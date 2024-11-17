@@ -25,8 +25,9 @@ const (
 )
 
 var (
-	ErrWorkshopNotFound   = errors.New("workshop not found")
-	ErrSdkProfileNotFound = errors.New("sdk profile not found")
+	ErrWorkshopNotFound     = errors.New("workshop not found")
+	ErrStorageAlreadyExists = errors.New("storage already exists")
+	ErrSdkProfileNotFound   = errors.New("sdk profile not found")
 
 	LookupUsername = user.Lookup
 )
