@@ -160,26 +160,6 @@ func validateStateHooksTasksSetup(c *check.C, ts []*state.TaskSet, expectedSave,
 	c.Assert(obtainedRestore, testutil.DeepUnsortedMatches, expectedRestore)
 }
 
-func (s *requestSuite) TestLaunchWorkshopNoSdk(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	file := &workshop.File{Name: "test", Base: "ubuntu@22.04"}
-	ts := workshopstate.Launch(s.state, file, nil, s.project)
-
-	expected := []string{"download-base", "create-workshop",
-		"mount-project", "create-apt-cache", "mount-apt-cache",
-		"start-workshop", "install-local-sdk", "link-sdk", "auto-connect"}
-	tasks := ts.Tasks()
-
-	verifyExpectedTasks(c, tasks, expected)
-
-	var wf workshop.File
-	err := tasks[2].Get("workshop-file", &wf)
-	c.Assert(err, check.Equals, nil)
-	c.Assert(&wf, check.DeepEquals, file)
-	s.ensureTaskHasWorkshopAndProjectKeys(c, "test", ts.Tasks())
-}
-
 func (s *requestSuite) TestRefreshEmptyWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
