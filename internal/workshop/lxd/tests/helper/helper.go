@@ -106,9 +106,9 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 	c.Assert(err, check.IsNil)
 
 	volume := workshop.AptCacheVolumeName(wf.Name, prj.ProjectId)
-	err = bd.CreateStorage(ctx, volume)
+	err = bd.CreateVolume(ctx, volume)
 	c.Assert(err, check.IsNil)
-	err = bd.AttachStorage(ctx, wf.Name, volume, dirs.AptCachePath)
+	err = bd.AttachVolume(ctx, wf.Name, volume, dirs.AptCachePath)
 	c.Assert(err, check.IsNil)
 
 	err = bd.StartWorkshop(ctx, "test")
@@ -127,6 +127,6 @@ func RemoveTestVolume(c *check.C, ctx context.Context, bd workshop.Backend) {
 	c.Assert(ok, check.Equals, true)
 
 	volume := workshop.AptCacheVolumeName("test", projectId)
-	err := bd.DeleteStorage(ctx, volume)
+	err := bd.DeleteVolume(ctx, volume)
 	c.Assert(err, check.IsNil)
 }

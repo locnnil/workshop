@@ -126,12 +126,12 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/current/sdk/hooks/save-state"})
 
 	// ensure that the save-state handler has created the required state
-	// directory (reattach the storage to the workshop to check).
+	// directory (reattach the volume to the workshop to check).
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	defer ws.Close()
 	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
-	err = s.backend.AttachStorage(s.ctx, "ws", volume, dirs.WorkshopStateDir)
+	err = s.backend.AttachVolume(s.ctx, "ws", volume, dirs.WorkshopStateDir)
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)

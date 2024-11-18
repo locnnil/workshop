@@ -49,10 +49,10 @@ type FakeWorkshopBackend struct {
 	Workshops map[string]map[string]*FakeWorkshop
 	// workshops put to stash (e.g. during refresh)
 	StashedWorkshops map[string]map[string]*FakeWorkshop
-	// storages, the key is a volume name
-	WorkshopStorages       map[string]bool
-	WorkshopStoragePaths   map[string]map[string]bool
-	WorkshopStorageTargets map[string]string
+	// storage volumes, the key is a volume name
+	WorkshopVolumes           map[string]bool
+	WorkshopVolumeContents    map[string]map[string]bool
+	WorkshopVolumeMountPoints map[string]string
 	// the key is a username
 	projects map[string][]*workshop.Project
 
@@ -72,9 +72,9 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.WorkshopStorages = make(map[string]bool)
-	be.WorkshopStoragePaths = make(map[string]map[string]bool)
-	be.WorkshopStorageTargets = make(map[string]string)
+	be.WorkshopVolumes = make(map[string]bool)
+	be.WorkshopVolumeContents = make(map[string]map[string]bool)
+	be.WorkshopVolumeMountPoints = make(map[string]string)
 	be.projects = make(map[string][]*workshop.Project)
 
 	be.ExecCallback = DoExecDefault
@@ -356,12 +356,12 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *FakeWorkshopBackend) AttachStorage(ctx context.Context, wp, name, what string) error {
-	s.WorkshopStorageTargets[name] = what
+func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, what string) error {
+	s.WorkshopVolumeMountPoints[name] = what
 
-	paths := s.WorkshopStoragePaths[name]
+	paths := s.WorkshopVolumeContents[name]
 	if paths == nil {
-		s.WorkshopStoragePaths[name] = map[string]bool{}
+		s.WorkshopVolumeContents[name] = map[string]bool{}
 		return nil
 	}
 	wfs, err := s.WorkshopFs(ctx, wp)
@@ -377,8 +377,8 @@ func (s *FakeWorkshopBackend) AttachStorage(ctx context.Context, wp, name, what 
 	return nil
 }
 
-func (s *FakeWorkshopBackend) DetachStorage(ctx context.Context, wp, name string) error {
-	target := s.WorkshopStorageTargets[name]
+func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string) error {
+	target := s.WorkshopVolumeMountPoints[name]
 
 	wfs, err := s.WorkshopFs(ctx, wp)
 	if err != nil {
@@ -387,7 +387,7 @@ func (s *FakeWorkshopBackend) DetachStorage(ctx context.Context, wp, name string
 	defer wfs.Close()
 
 	afero.Walk(wfs, target, func(path string, info fs.FileInfo, err error) error {
-		s.WorkshopStoragePaths[name][path] = true
+		s.WorkshopVolumeContents[name][path] = true
 		return nil
 	})
 
@@ -395,13 +395,13 @@ func (s *FakeWorkshopBackend) DetachStorage(ctx context.Context, wp, name string
 	return err
 }
 
-func (s *FakeWorkshopBackend) CreateStorage(ctx context.Context, name string) error {
-	s.WorkshopStorages[name] = true
+func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, name string) error {
+	s.WorkshopVolumes[name] = true
 	return nil
 }
 
-func (s *FakeWorkshopBackend) DeleteStorage(ctx context.Context, name string) error {
-	delete(s.WorkshopStorages, name)
+func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) error {
+	delete(s.WorkshopVolumes, name)
 	return nil
 }
 

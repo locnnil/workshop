@@ -710,8 +710,8 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	c.Assert(fw.Devices[workshop.ConfigProjectPathDevice]["path"], check.Equals, workshop.WorkshopProjectPath)
 
 	volume := workshop.AptCacheVolumeName("basic", wp.Project.ProjectId)
-	c.Assert(s.b.WorkshopStorages[volume], check.Equals, true)
-	c.Assert(s.b.WorkshopStorageTargets[volume], check.Equals, dirs.AptCachePath)
+	c.Assert(s.b.WorkshopVolumes[volume], check.Equals, true)
+	c.Assert(s.b.WorkshopVolumeMountPoints[volume], check.Equals, dirs.AptCachePath)
 
 	c.Assert(wp.Running, check.Equals, true)
 

@@ -36,12 +36,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
-		if err := h.backend.AttachStorage(ctx, w, volume, dirs.WorkshopStateDir); err != nil {
+		if err := h.backend.AttachVolume(ctx, w, volume, dirs.WorkshopStateDir); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
 		defer func() {
-			if err := h.backend.DetachStorage(ctx, w, volume); err != nil {
+			if err := h.backend.DetachVolume(ctx, w, volume); err != nil {
 				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %s", volume)
 			}
 		}()

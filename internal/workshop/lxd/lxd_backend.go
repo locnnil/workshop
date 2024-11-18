@@ -608,7 +608,7 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.Worksho
 	return workshop.NewWorkshopFs(sftp), nil
 }
 
-func (s *Backend) CreateStorage(ctx context.Context, name string) error {
+func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -624,20 +624,20 @@ func (s *Backend) CreateStorage(ctx context.Context, name string) error {
 
 	err = conn.CreateStoragePoolVolume(storagePool, vol)
 	if api.StatusErrorCheck(err, http.StatusConflict) {
-		return workshop.ErrStorageAlreadyExists
+		return workshop.ErrVolumeAlreadyExists
 	}
 	return err
 }
 
-func (s *Backend) AttachStorage(ctx context.Context, wp, name, what string) error {
+func (s *Backend) AttachVolume(ctx context.Context, wp, name, what string) error {
 	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: what, Where: name, Type: workshop.Volume})
 }
 
-func (s *Backend) DetachStorage(ctx context.Context, wp, name string) error {
+func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {
 	return s.RemoveWorkshopMount(ctx, wp, name)
 }
 
-func (s *Backend) DeleteStorage(ctx context.Context, name string) error {
+func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err

@@ -344,7 +344,7 @@ func (s *workshopHandlers) TestAptCache(c *check.C) {
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 
 	volume := workshop.AptCacheVolumeName("ws", s.project.ProjectId)
-	c.Assert(s.backend.WorkshopStorages[volume], check.Equals, true)
+	c.Assert(s.backend.WorkshopVolumes[volume], check.Equals, true)
 
 	// Mount apt cache
 	chg = s.state.NewChange("sample", "...")
@@ -362,7 +362,7 @@ func (s *workshopHandlers) TestAptCache(c *check.C) {
 
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 
-	c.Assert(s.backend.WorkshopStorageTargets[volume], check.Equals, dirs.AptCachePath)
+	c.Assert(s.backend.WorkshopVolumeMountPoints[volume], check.Equals, dirs.AptCachePath)
 
 	// Remove volume for apt cache
 	chg = s.state.NewChange("sample", "...")
@@ -380,5 +380,5 @@ func (s *workshopHandlers) TestAptCache(c *check.C) {
 
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 
-	c.Assert(s.backend.WorkshopStorages[volume], check.Equals, false)
+	c.Assert(s.backend.WorkshopVolumes[volume], check.Equals, false)
 }

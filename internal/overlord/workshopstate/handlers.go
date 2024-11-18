@@ -104,9 +104,9 @@ func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) er
 
 	// TODO: ideally the root of the volume should have 0755 permissions
 	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
-	err = m.backend.CreateStorage(ctx, volume)
-	if errors.Is(err, workshop.ErrStorageAlreadyExists) {
-		logger.Debugf("reusing existing storage %q", volume)
+	err = m.backend.CreateVolume(ctx, volume)
+	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
+		logger.Debugf("reusing existing storage volume %q", volume)
 		return nil
 	}
 	return err
@@ -121,7 +121,7 @@ func (m *WorkshopManager) doRemoveAptCache(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.DeleteStorage(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
+	return m.backend.DeleteVolume(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
 }
 
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
@@ -153,7 +153,7 @@ func (m *WorkshopManager) doMountAptCache(task *state.Task, tomb *tomb.Tomb) err
 	defer cancel()
 
 	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
-	return m.backend.AttachStorage(ctx, w, volume, dirs.AptCachePath)
+	return m.backend.AttachVolume(ctx, w, volume, dirs.AptCachePath)
 }
 
 func (m *WorkshopManager) undoMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
@@ -289,7 +289,7 @@ func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.CreateStorage(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
+	return m.backend.CreateVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
 
 func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
@@ -301,7 +301,7 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.DeleteStorage(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
+	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
 
 type cleanupError struct {

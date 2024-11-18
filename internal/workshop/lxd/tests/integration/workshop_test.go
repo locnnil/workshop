@@ -118,13 +118,13 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
-	err := f.bd.CreateStorage(f.ctx, "test")
+	err := f.bd.CreateVolume(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.bd.DeleteStorage(f.ctx, "test")
+	err = f.bd.DeleteVolume(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
