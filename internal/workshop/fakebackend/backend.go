@@ -392,6 +392,7 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	})
 
 	err = wfs.RemoveAll(target)
+	delete(s.WorkshopVolumeMountPoints, name)
 	return err
 }
 
