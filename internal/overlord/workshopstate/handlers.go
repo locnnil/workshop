@@ -102,7 +102,15 @@ func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	// TODO: ideally the root of the volume should have 0755 permissions
+	// TODO: The apt cache directory usually has mode 0755.
+	// At present CreateVolume doesn't provide a way to specify this,
+	// and the LXD backend will default to mode 0711 for new volumes.
+	//
+	// It seems possible to override the LXD default by restoring a "backup",
+	// which is a tarball containing the volume contents and a YAML metadata file.
+	//
+	// Currently the difference in modes doesn't seem to cause any issues,
+	// so the effort required to remedy this probably isn't worth it.
 	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
 	err = m.backend.CreateVolume(ctx, volume)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
