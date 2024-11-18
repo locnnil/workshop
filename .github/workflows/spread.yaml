@@ -45,14 +45,15 @@ jobs:
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: false
       - uses: actions/download-artifact@master
         with:
           name: snap
