@@ -153,7 +153,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	var checkTicker <-chan time.Time
 	var tic *time.Ticker
 	if err := sanityCheck(); err != nil {
-		degradedErr := fmt.Errorf("system is not healthy: %s", err)
+		degradedErr := fmt.Errorf("system is not healthy: %w", err)
 		logger.Noticef("%s", degradedErr)
 		d.SetDegradedMode(degradedErr)
 		tic = time.NewTicker(checkRunningConditionsRetryDelay)

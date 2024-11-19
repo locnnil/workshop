@@ -84,12 +84,12 @@ func getConns(st *state.State) (conns map[string]*schema.ConnState, err error) {
 	var raw *json.RawMessage
 	err = st.Get("conns", &raw)
 	if err != nil && !errors.Is(err, state.ErrNoState) {
-		return nil, fmt.Errorf("cannot obtain raw data about existing connections: %s", err)
+		return nil, fmt.Errorf("cannot obtain raw data about existing connections: %w", err)
 	}
 	if raw != nil {
 		err = jsonutil.DecodeWithNumber(bytes.NewReader(*raw), &conns)
 		if err != nil {
-			return nil, fmt.Errorf("cannot decode data about existing connections: %s", err)
+			return nil, fmt.Errorf("cannot decode data about existing connections: %w", err)
 		}
 	}
 	if conns == nil {

@@ -72,11 +72,11 @@ func UidGid(u *user.User) (sys.UserID, sys.GroupID, error) {
 	// XXX this will be wrong for high uids on 32-bit arches (for now)
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {
-		return sys.FlagID, sys.FlagID, fmt.Errorf("cannot parse user id %s: %s", u.Uid, err)
+		return sys.FlagID, sys.FlagID, fmt.Errorf("cannot parse user id %q: %w", u.Uid, err)
 	}
 	gid, err := strconv.Atoi(u.Gid)
 	if err != nil {
-		return sys.FlagID, sys.FlagID, fmt.Errorf("cannot parse group id %s: %s", u.Gid, err)
+		return sys.FlagID, sys.FlagID, fmt.Errorf("cannot parse group id %q: %w", u.Gid, err)
 	}
 
 	return sys.UserID(uid), sys.GroupID(gid), nil

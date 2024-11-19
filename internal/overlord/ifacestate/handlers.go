@@ -619,7 +619,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 
 	var forget bool
 	if err := task.Get("forget", &forget); err != nil && !errors.Is(err, state.ErrNoState) {
-		return fmt.Errorf("internal error: cannot read 'forget' flag: %s", err)
+		return fmt.Errorf("internal error: cannot read 'forget' flag: %w", err)
 	}
 
 	conn, ok := conns[cref.ID()]
@@ -705,7 +705,7 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 
 	var forget bool
 	if err := task.Get("forget", &forget); err != nil && !errors.Is(err, state.ErrNoState) {
-		return fmt.Errorf("internal error: cannot read 'forget' flag: %s", err)
+		return fmt.Errorf("internal error: cannot read 'forget' flag: %w", err)
 	}
 	var oldconn schema.ConnState
 	if err = task.Get("old-conn", &oldconn); err != nil {

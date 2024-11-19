@@ -181,7 +181,7 @@ func (se *Overlord) StartUp() error {
 	se.startOfOperationTime, err = se.StartOfOperationTime()
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("cannot get start of operation time: %s", err)
+		return fmt.Errorf("cannot get start of operation time: %w", err)
 	}
 	return se.stateEng.StartUp()
 }
@@ -290,7 +290,7 @@ func (o *Overlord) loadState(statePath string, restartHandler restart.Handler, b
 
 	r, err := os.Open(statePath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read the state file: %s", err)
+		return nil, fmt.Errorf("cannot read the state file: %w", err)
 	}
 	defer r.Close()
 
