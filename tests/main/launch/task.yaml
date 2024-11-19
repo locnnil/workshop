@@ -9,6 +9,8 @@ execute: |
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
     # ensure the workshop has a socket for workshopctl
     workshop_exec exec "$1" -- test -S /var/lib/workshop/run/workshop.socket.untrusted
+    # ensure the apt cache is mounted
+    workshop_exec exec "$1" -- mountpoint /var/cache/apt/archives
     workshop_exec remove "$1"
   }
   

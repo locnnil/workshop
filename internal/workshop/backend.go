@@ -25,8 +25,9 @@ const (
 )
 
 var (
-	ErrWorkshopNotFound   = errors.New("workshop not found")
-	ErrSdkProfileNotFound = errors.New("sdk profile not found")
+	ErrWorkshopNotFound    = errors.New("workshop not found")
+	ErrVolumeAlreadyExists = errors.New("storage volume already exists")
+	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
 	LookupUsername = user.Lookup
 )
@@ -68,19 +69,19 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
-type StateStorage interface {
-	// Create a temporary state storage volume for the workshop. It does not
+type VolumeManager interface {
+	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
-	CreateStateStorage(ctx context.Context, name string) error
+	CreateVolume(ctx context.Context, name string) error
 
-	AttachStateStorage(ctx context.Context, wp, name string) error
+	AttachVolume(ctx context.Context, wp, name, what string) error
 
-	DetachStateStorage(ctx context.Context, wp, name string) error
+	DetachVolume(ctx context.Context, wp, name string) error
 
-	// Delete a temporary state storage volume for the workshop. It does not
+	// Delete a temporary storage volume for the workshop. It does not
 	// unmount the volume from the workshop if mounted.
-	DeleteStateStorage(ctx context.Context, name string) error
+	DeleteVolume(ctx context.Context, name string) error
 }
 
 type BaseImageManager interface {
@@ -120,7 +121,7 @@ type ExecContext struct {
 
 type Backend interface {
 	Stash
-	StateStorage
+	VolumeManager
 	BaseImageManager
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project

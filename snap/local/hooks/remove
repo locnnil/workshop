@@ -23,6 +23,12 @@ for p in $(echo "$projects" | xargs -L1 echo); do
     fi
   done
   
+  volumes=$(lxc storage volume list default -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
+  echo "Removing storage volumes: $volumes"
+  for volume in $(echo "$volumes" | xargs -L1 echo); do
+    lxc storage volume delete default "$volume" --project "$p"
+  done
+  
   images=$(lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
   if [ -n "$images" ]; then
     echo "Removing images: $images"

@@ -10,12 +10,18 @@ execute: |
   echo "Launch a workshop"
   workshop_exec launch ws-remove
 
+  echo "Modify apt cache for later"
+  workshop_exec exec ws-remove -- sudo touch /var/cache/apt/archives/sentinel
+
   echo "Check the workshop can be removed if in Ready"
   workshop_exec remove ws-remove
   workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"
 
-  echo "Check the workshop can be removed if in Stopped"
+  echo "Check the apt cache was removed"
   workshop_exec launch ws-remove
+  workshop_exec exec ws-remove -- sudo test ! -f /var/cache/apt/archives/sentinel
+
+  echo "Check the workshop can be removed if in Stopped"
   workshop_exec stop  ws-remove
   workshop_exec remove ws-remove
   workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"

@@ -10,6 +10,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
@@ -98,10 +99,34 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 	err = os.WriteFile(path, []byte(testYaml), 0644)
 	c.Assert(err, check.IsNil)
 
-	_, _, err = bd.CreateOrLoadProject(ctx, dir)
+	prj, _, err := bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
+
 	err = bd.LaunchWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
+
+	volume := workshop.AptCacheVolumeName(wf.Name, prj.ProjectId)
+	err = bd.CreateVolume(ctx, volume)
+	c.Assert(err, check.IsNil)
+	err = bd.AttachVolume(ctx, wf.Name, volume, dirs.AptCachePath)
+	c.Assert(err, check.IsNil)
+
 	err = bd.StartWorkshop(ctx, "test")
+	c.Assert(err, check.IsNil)
+}
+
+func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
+	err := bd.RemoveWorkshop(ctx, "test")
+	c.Assert(err, check.IsNil)
+
+	RemoveTestVolume(c, ctx, bd)
+}
+
+func RemoveTestVolume(c *check.C, ctx context.Context, bd workshop.Backend) {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	c.Assert(ok, check.Equals, true)
+
+	volume := workshop.AptCacheVolumeName("test", projectId)
+	err := bd.DeleteVolume(ctx, volume)
 	c.Assert(err, check.IsNil)
 }

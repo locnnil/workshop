@@ -11,6 +11,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -222,18 +223,25 @@ func constructWorkshop(st *state.State, file *workshop.File, project *workshop.P
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	mountProject.WaitFor(create)
 
+	mountAptCache := st.NewTask("mount-apt-cache", fmt.Sprintf("Mount apt cache directory %q", dirs.AptCachePath))
+	mountAptCache.WaitFor(mountProject)
+
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
-	start.WaitFor(mountProject)
-	return state.NewTaskSet(base, create, mountProject, start)
+	start.WaitFor(mountAptCache)
+	return state.NewTaskSet(base, create, mountProject, mountAptCache, start)
 }
 
 func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
 	// check and download all the required SDKs
 	retrieve := retrieveSdks(st, sdks)
 
+	// create volume to store deb packages
+	createAptCache := st.NewTask("create-apt-cache", fmt.Sprintf("Create apt cache for %q", file.Name))
+
 	// create a basic workshop
 	create := constructWorkshop(st, file, project)
 	create.WaitAll(retrieve)
+	create.WaitFor(createAptCache)
 
 	// install the downloaded sdks
 	launch := installSdks(st, file.Name, sdks, retrieve)
@@ -246,6 +254,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *wor
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
 	all.AddAll(retrieve)
+	all.AddTask(createAptCache)
 	all.AddAll(create)
 	all.AddAll(launch)
 
@@ -752,9 +761,14 @@ func remove(st *state.State, w *workshop.Workshop, project *workshop.Project) (*
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	remove.WaitAll(disconnectSet)
 	remove.WaitFor(discard)
+
+	removeAptCache := st.NewTask("remove-apt-cache", fmt.Sprintf("Remove apt cache for %q", w.Name))
+	removeAptCache.WaitFor(remove)
+
 	removeSet.AddAll(disconnectSet)
 	removeSet.AddTask(discard)
 	removeSet.AddTask(remove)
+	removeSet.AddTask(removeAptCache)
 
 	for _, task := range removeSet.Tasks() {
 		task.Set("workshop", w.Name)

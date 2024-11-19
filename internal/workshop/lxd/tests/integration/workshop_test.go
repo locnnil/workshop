@@ -72,7 +72,7 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer f.bd.RemoveWorkshop(f.ctx, "test")
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -94,44 +94,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-
-	// Execute
-	err := f.bd.StashWorkshop(f.ctx, "test")
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, check.NotNil)
-
-	// Execute
-	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	// Validate
-	err = f.bd.UnstashWorkshop(f.ctx, "test")
-	c.Assert(err, check.ErrorMatches, "workshop not found")
-}
-
-func (f *wsOps) TestLxdBackendStateStorageVolumeAddRemove(c *check.C) {
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer f.bd.RemoveWorkshop(f.ctx, "test")
-
-	// Execute
-	err := f.bd.CreateStateStorage(f.ctx, "test")
-
-	// Validate
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	err = f.bd.DeleteStateStorage(f.ctx, "test")
-
-	// Validate
-	c.Assert(err, check.IsNil)
-}
-
-func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
-	// Setup
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -144,11 +107,33 @@ func (f *wsOps) TestLxdBackendRemoveWorkshopStash(c *check.C) {
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+
+	// Validate
+	err = f.bd.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.ErrorMatches, "workshop not found")
+}
+
+func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	// Execute
+	err := f.bd.CreateVolume(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = f.bd.DeleteVolume(f.ctx, "test")
+
+	// Validate
+	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
 
 	// Validate
 	err := f.bd.RemoveWorkshop(f.ctx, "test")

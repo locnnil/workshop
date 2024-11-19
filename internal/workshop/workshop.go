@@ -175,6 +175,10 @@ func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }
 
+func AptCacheVolumeName(ws, pid string) string {
+	return fmt.Sprintf("%s-%s-cache-apt", ws, pid)
+}
+
 // Full path of workshop definition file
 func (w *Workshop) Filepath() string {
 	return Filepath(w.Project.Path, w.Name)

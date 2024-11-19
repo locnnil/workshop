@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -35,12 +36,12 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
 		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
-		if err := h.backend.AttachStateStorage(ctx, w, volume); err != nil {
+		if err := h.backend.AttachVolume(ctx, w, volume, dirs.WorkshopStateDir); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
 		}
 
 		defer func() {
-			if err := h.backend.DetachStateStorage(ctx, w, volume); err != nil {
+			if err := h.backend.DetachVolume(ctx, w, volume); err != nil {
 				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %s", volume)
 			}
 		}()
@@ -73,7 +74,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			}
 
 			if !info.IsDir() {
-				return fmt.Errorf("cannot run hook \"restore-sate\" for %q SDK: state storage path is not a directory", hook.Sdk)
+				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
 			}
 		}
 		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)

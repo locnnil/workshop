@@ -608,49 +608,43 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.Worksho
 	return workshop.NewWorkshopFs(sftp), nil
 }
 
-func (s *Backend) CreateStateStorage(ctx context.Context, name string) error {
+func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	pid, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextProjectId)
-	}
-
 	// Create the storage volume entry
 	vol := api.StorageVolumesPost{}
-	vol.Name = workshop.WorkshopStateVolumeName(name, pid)
+	vol.Name = name
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
 	vol.Config = map[string]string{}
 
-	return conn.CreateStoragePoolVolume(storagePool, vol)
+	err = conn.CreateStoragePoolVolume(storagePool, vol)
+	if api.StatusErrorCheck(err, http.StatusConflict) {
+		return workshop.ErrVolumeAlreadyExists
+	}
+	return err
 }
 
-func (s *Backend) AttachStateStorage(ctx context.Context, wp, name string) error {
-	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: dirs.WorkshopStateDir, Where: name, Type: workshop.Volume})
+func (s *Backend) AttachVolume(ctx context.Context, wp, name, what string) error {
+	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: what, Where: name, Type: workshop.Volume})
 }
 
-func (s *Backend) DetachStateStorage(ctx context.Context, wp, name string) error {
+func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {
 	return s.RemoveWorkshopMount(ctx, wp, name)
 }
 
-func (s *Backend) DeleteStateStorage(ctx context.Context, name string) error {
+func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	pid, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextProjectId)
-	}
-
-	return conn.DeleteStoragePoolVolume(storagePool, "custom", workshop.WorkshopStateVolumeName(name, pid))
+	return conn.DeleteStoragePoolVolume(storagePool, "custom", name)
 }
 
 func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {

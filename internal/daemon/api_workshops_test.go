@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -697,11 +698,28 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	_, err := s.b.Workshop(s.ctx, "basic")
+	wp, err := s.b.Workshop(s.ctx, "basic")
 	c.Assert(err, check.IsNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
 	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 4)
+
+	c.Assert(s.b.DownloadBaseCalls, check.HasLen, 1)
+
+	fw := s.b.Workshops[wp.Project.ProjectId]["basic"]
+	c.Assert(fw.Devices[workshop.ConfigProjectPathDevice]["path"], check.Equals, workshop.WorkshopProjectPath)
+
+	volume := workshop.AptCacheVolumeName("basic", wp.Project.ProjectId)
+	c.Assert(s.b.WorkshopVolumes[volume], check.Equals, true)
+	c.Assert(s.b.WorkshopVolumeMountPoints[volume], check.Equals, dirs.AptCachePath)
+
+	c.Assert(wp.Running, check.Equals, true)
+
+	sdkInfo, err := wp.SdkInfo(s.ctx, "system")
+	c.Assert(err, check.IsNil)
+	c.Assert(sdkInfo.Workshop, check.Equals, "basic")
+	c.Assert(sdkInfo.Name, check.Equals, sdk.System.String())
+	c.Assert(sdkInfo.Type, check.Equals, sdk.System)
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {

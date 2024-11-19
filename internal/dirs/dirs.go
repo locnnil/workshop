@@ -30,6 +30,9 @@ var (
 
 	// Run directory inside workshop
 	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "/run")
+
+	// Cache directory for deb packages
+	AptCachePath = "/var/cache/apt/archives"
 )
 
 // Variables for workshopd (host paths)
