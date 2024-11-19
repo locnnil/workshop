@@ -259,11 +259,11 @@ func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `cannot refresh: "test-2" status is "Stopped", must be one of: "Ready"`)
 }
 
-func (s *managerSuite) TestRefreshRequireWorkshopExistance(c *check.C) {
+func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
 	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
-	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop not found\)`)
+	c.Assert(err, check.ErrorMatches, `cannot refresh: status check for "test-2" failed \(workshop has not been launched\)`)
 }

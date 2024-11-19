@@ -236,7 +236,7 @@ func (s *apiSuite) TestConnectionsNotFound(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": `cannot access workshop: workshop not found`,
+			"message": `cannot access workshop "not-found": workshop has not been launched`,
 		},
 		"status":      "Not Found",
 		"status-code": 404.0,
@@ -1682,7 +1682,7 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 	if producer {
 		c.Check(body, check.DeepEquals, map[string]interface{}{
 			"result": map[string]interface{}{
-				"message": `cannot access workshop "consumer-ws": workshop not found`,
+				"message": `cannot access workshop "consumer-ws": workshop has not been launched`,
 			},
 			"status":      "Not Found",
 			"status-code": 404.0,
@@ -1691,7 +1691,7 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 	} else {
 		c.Check(body, check.DeepEquals, map[string]interface{}{
 			"result": map[string]interface{}{
-				"message": `cannot access workshop "producer-ws": workshop not found`,
+				"message": `cannot access workshop "producer-ws": workshop has not been launched`,
 			},
 			"status":      "Not Found",
 			"status-code": 404.0,

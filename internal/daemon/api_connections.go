@@ -261,7 +261,7 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 
 	if workshop != "" {
 		if err := checkWorkshopExists(r.Context(), c.d.overlord.WorkshopManager(), projectId, workshop); err != nil {
-			return statusNotFound("cannot access workshop: %v", err)
+			return statusNotFound("cannot access workshop %q: %v", workshop, err)
 		}
 	}
 

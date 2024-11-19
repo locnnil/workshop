@@ -94,7 +94,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch: %q already exists", name)
 		}
-		if !errors.Is(err, workshop.ErrWorkshopNotFound) {
+		if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
 			return nil, err
 		}
 
@@ -291,11 +291,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 	for _, ws := range names {
 		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
 		if idx == -1 {
-			return nil, fmt.Errorf("cannot refresh: workshop %q not found", ws)
+			return nil, fmt.Errorf("cannot refresh %q: %w", ws, workshop.ErrWorkshopNotLaunched)
 		}
-		file, err := project.Workshop(workshops[idx].Name)
+		file, err := project.Workshop(ws)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot refresh %q: %w", ws, err)
 		}
 		files = append(files, file)
 
@@ -420,7 +420,7 @@ func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setu
 	for i, file := range files {
 		tasks, err := refresh(st, file, installed[i], toInstall[i], project)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh \"%s\" workshop: %w", file, err)
+			return nil, fmt.Errorf("cannot refresh %q: %w", file.Name, err)
 		}
 		taskset = append(taskset, tasks)
 	}

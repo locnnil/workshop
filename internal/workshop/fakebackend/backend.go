@@ -172,7 +172,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) e
 	prj := f.project(user, projectId)
 
 	if _, ok := f.Workshops[prj.ProjectId][name]; !ok {
-		return workshop.ErrWorkshopNotFound
+		return workshop.ErrWorkshopNotLaunched
 	}
 
 	delete(f.Workshops[prj.ProjectId], name)
@@ -249,7 +249,7 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 	}
 	wp := f.Workshops[projectId][name]
 	if wp == nil {
-		return nil, workshop.ErrWorkshopNotFound
+		return nil, workshop.ErrWorkshopNotLaunched
 	}
 
 	var c map[string]sdk.Setup
@@ -328,7 +328,7 @@ func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) 
 
 	wp := s.StashedWorkshops[projectId][workshop.StashNamePrefix+name]
 	if wp == nil {
-		return workshop.ErrWorkshopNotFound
+		return fmt.Errorf("stashed workshop %q not found", name)
 	}
 	delete(s.StashedWorkshops[projectId], workshop.StashNamePrefix+name)
 	wp.Name = name
@@ -344,7 +344,7 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 
 	wp := s.Workshops[projectId][name]
 	if wp == nil {
-		return workshop.ErrWorkshopNotFound
+		return workshop.ErrWorkshopNotLaunched
 	}
 
 	if s.StashedWorkshops[projectId] == nil {

@@ -772,7 +772,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	_, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
@@ -1647,6 +1647,6 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	_, err := s.b.Workshop(s.ctx, "workshopconns")
-	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 	c.Check(s.secBackend.RemoveCalls, check.HasLen, 3)
 }

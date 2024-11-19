@@ -227,7 +227,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(ws, check.IsNil)
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 
 	exist, _, _ := osutil.ExistsIsDir(filepath.Join(projectContent, plugs[0]))
 	c.Assert(exist, check.Equals, false)
