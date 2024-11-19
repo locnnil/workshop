@@ -21,7 +21,7 @@ execute: |
   workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*$new_source"
 
   echo "Remount: the new source is not empty"  
-  workshop_exec remount ws-remount/test-sdk-mount:one /home/ubuntu  | MATCH ".*(new source is not empty; workshop must be stopped to remount safely)"
+  workshop_exec remount ws-remount/test-sdk-mount:one /home/ubuntu  | MATCH '.*(source "/home/ubuntu" is not empty; workshop must be stopped to remount safely)'
 
   echo "Remount: workshop stopped"
   new_source="/home/ubuntu/two"
@@ -38,7 +38,7 @@ execute: |
   mkdir -p /home/ubuntu/other-fs
   mount --bind "$otherfs" /home/ubuntu/other-fs
   mkdir "$otherfs_path"
-  workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path" | MATCH ".*(current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely)"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path" | MATCH '.*(sources "/home/ubuntu/two" and "/home/ubuntu/other-fs/new" are not on the same mounted filesystem; workshop must be stopped to remount safely)'
   workshop_exec stop ws-remount
   workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path"
   workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$otherfs_path"
@@ -53,12 +53,12 @@ execute: |
   workshop_exec warnings |
     tr -d '\n' | # remove newlines
     sed -e 's,\s\+, ,g' | # rename any extra spaces
-    MATCH "ws-remount/test-sdk-mount:two's source at \"${new_source}\\.1\" does not exist; will attempt to recreate"
+    MATCH 'cannot find source "/home/ubuntu/two\.1" for "ws-remount/test-sdk-mount:two"; will attempt to recreate'
   workshop_exec list | NOMATCH "new warning"
   workshop_exec warnings |
     tr -d '\n' | # remove newlines
     sed -e 's,\s\+, ,g' | # rename any extra spaces
-    MATCH "ws-remount/test-sdk-mount:two's source at \"${new_source}\\.2\" does not exist; will attempt to recreate"
+    MATCH 'cannot find source "/home/ubuntu/two\.2" for "ws-remount/test-sdk-mount:two"; will attempt to recreate'
   workshop_exec okay
   workshop_exec warnings | MATCH '^No further warnings.$'
 

@@ -3,6 +3,7 @@ package ifacestate_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -303,7 +304,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "consumer" has no "no-such-plug2" plug.*`)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "ws/consumer" has no plug named "no-such-plug2".*`)
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
@@ -394,7 +395,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target /home/workshop is also mounted by.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/home/workshop" is also mounted by.*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
@@ -641,7 +642,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	// Validate
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(new source is not empty; workshop must be stopped to remount safely\\)")
+	c.Check(change.Err(), check.ErrorMatches, fmt.Sprintf(`(?s).*\(source %q is not empty; workshop must be stopped to remount safely\)`, newSource))
 	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
 
 	repo := s.mgr.Repository()
@@ -751,6 +752,10 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	c.Check(warnings[0].String(), check.Equals, `cannot find source "/does/not/exist" for "ws-consumer/consumer:plug"; will attempt to recreate`)
 
 	repo := s.mgr.Repository()
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")

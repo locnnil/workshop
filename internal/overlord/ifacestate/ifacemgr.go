@@ -260,19 +260,13 @@ func (m *InterfaceManager) ResolveDisconnect(
 		if err != nil {
 			return nil, err
 		}
+		plugRef := interfaces.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}
+		slotRef := interfaces.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}
 		if !isConnected {
-			if forget {
-				return nil, fmt.Errorf("cannot forget connection %s/%s:%s from %s/%s:%s, it was not connected",
-					plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
-			}
-			return nil, fmt.Errorf("cannot disconnect %s/%s:%s from %s/%s:%s, it is not connected",
-				plugWorkshop, plugSdk, plugName, slotWorkshop, slotSdk, slotName)
+			return nil, fmt.Errorf("cannot disconnect %q from %q: they are not connected",
+				plugRef.ShortRef(), slotRef.ShortRef())
 		}
-		return []*interfaces.ConnRef{
-			{
-				PlugRef: interfaces.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName},
-				SlotRef: interfaces.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName},
-			}}, nil
+		return []*interfaces.ConnRef{{PlugRef: plugRef, SlotRef: slotRef}}, nil
 	// 2: <workshop>/<sdk>:<plug or slot> (through 1st pair)
 	// Return a list of connections involving specified plug or slot.
 	case plugWorkshop != "" && plugName != "" && slotWorkshop == "" && slotName == "":
@@ -406,7 +400,8 @@ func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
 			if plug.Bind != nil {
 				master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
 				if master == nil {
-					return fmt.Errorf("SDK %q has no %q plug", plug.Bind.Sdk, plug.Bind.Name)
+					sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
+					return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
 				}
 			}
 		}
@@ -447,8 +442,9 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 			return target == candidateTarget
 		})
 		if idx != -1 {
-			return fmt.Errorf(`cannot connect "%s/%s:%s": target %s is also mounted by %s/%s:%s`, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name, candidateTarget,
-				allPlugs[idx].Sdk.Workshop, allPlugs[idx].Sdk.Name, allPlugs[idx].Name)
+			return fmt.Errorf(`cannot connect %q: target %q is also mounted by %q`,
+				interfaces.NewPlugRef(plug).ShortRef(), candidateTarget,
+				interfaces.NewPlugRef(allPlugs[idx]).ShortRef())
 		}
 	}
 	return nil

@@ -185,7 +185,8 @@ func newWorkshopChange(st *state.State, kind string, user, projectId, action str
 }
 
 func newWorkshopSdkChange(st *state.State, kind string, user, projectId, action string, wp, sk string) *state.Change {
-	summary := fmt.Sprintf(`%s "%s/%s" SDK`, cases.Title(language.BritishEnglish).String(action), wp, sk)
+	sdkRef := sdk.Ref{ProjectId: projectId, Workshop: wp, Sdk: sk}
+	summary := fmt.Sprintf(`%s %q SDK`, cases.Title(language.BritishEnglish).String(action), sdkRef.ShortRef())
 	change := st.NewChange(kind, summary)
 	change.Set("user", user)
 	change.Set("project-id", projectId)

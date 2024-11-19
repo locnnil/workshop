@@ -70,14 +70,18 @@ func NewPlugRef(info *sdk.PlugInfo) PlugRef {
 	return PlugRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
 }
 
-// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
-func (ref PlugRef) String() string {
-	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+func (ref PlugRef) SdkRef() sdk.Ref {
+	return sdk.Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
 }
 
-// String returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
+// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
+func (ref PlugRef) String() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
+}
+
+// ShortRef returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
 func (ref PlugRef) ShortRef() string {
-	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
+	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
 }
 
 // SortsBefore returns true when plug should be sorted before the other
@@ -116,14 +120,18 @@ func NewSlotRef(info *sdk.SlotInfo) SlotRef {
 	return SlotRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
 }
 
-// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
-func (ref SlotRef) String() string {
-	return fmt.Sprintf("%s/%s/%s:%s", ref.ProjectId, ref.Workshop, ref.Sdk, ref.Name)
+func (ref SlotRef) SdkRef() sdk.Ref {
+	return sdk.Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
 }
 
-// String returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
+// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
+func (ref SlotRef) String() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
+}
+
+// ShortRef returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
 func (ref SlotRef) ShortRef() string {
-	return fmt.Sprintf("%s/%s:%s", ref.Workshop, ref.Sdk, ref.Name)
+	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
 }
 
 // SortsBefore returns true when slot should be sorted before the other

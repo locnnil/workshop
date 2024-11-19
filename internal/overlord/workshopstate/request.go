@@ -805,7 +805,7 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 
 	master, _ := ifacestate.MaybeBound(wp, plug)
 
-	remount := st.NewTask("remount", fmt.Sprintf(`Remount %s`, plug.ShortRef()))
+	remount := st.NewTask("remount", fmt.Sprintf(`Remount %q`, plug.ShortRef()))
 	remount.Set("workshop", plug.Workshop)
 	remount.Set("project", project)
 	remount.Set("plug", master)

@@ -839,7 +839,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "masterunknown" workshop`,
-			ChangeErr: `(?s).*SDK masterunknown/test-sdk has no "unknown-data" plug.*`,
+			ChangeErr: `(?s).*SDK "masterunknown/test-sdk" has no plug named "unknown-data".*`,
 		},
 	}
 
@@ -864,7 +864,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "slaveunknown" workshop`,
-			ChangeErr: `(?s).*SDK slaveunknown/test-sdk has no "unknown" plug.*`,
+			ChangeErr: `(?s).*SDK "slaveunknown/test-sdk" has no plug named "unknown".*`,
 		},
 	}
 
@@ -889,7 +889,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "bindincompatible" workshop`,
-			ChangeErr: `(?s).*cannot bind bindincompatible/test-sdk:data \("mount" interface\) to bindincompatible/test-sdk-2:gpu \("gpu" interface\).*`,
+			ChangeErr: `(?s).*cannot bind "bindincompatible/test-sdk:data" \("mount" interface\) to "bindincompatible/test-sdk-2:gpu" \("gpu" interface\).*`,
 		},
 	}
 

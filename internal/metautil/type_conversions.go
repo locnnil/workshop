@@ -80,7 +80,7 @@ type AttributeNotCompatibleError struct {
 }
 
 func (e AttributeNotCompatibleError) Error() string {
-	return fmt.Sprintf("sdk %q has interface %q with invalid value type %s for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
+	return fmt.Sprintf("SDK %q has interface %q with invalid value type %q for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
 }
 
 func (e AttributeNotCompatibleError) Is(target error) bool {

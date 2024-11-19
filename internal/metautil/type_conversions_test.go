@@ -133,7 +133,7 @@ func (s *conversionssSuite) TestSetValueFromAttributeUnhappy(c *C) {
 			"attr2",
 			"input value",
 			&outputBool,
-			`sdk "sdk2" has interface "iface2" with invalid value type string for "attr2" attribute: \*bool`,
+			`SDK "sdk2" has interface "iface2" with invalid value type "string" for "attr2" attribute: \*bool`,
 		},
 	}
 

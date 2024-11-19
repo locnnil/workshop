@@ -117,7 +117,7 @@ func (m *InterfaceManager) batchAutoConnectTasks(wp *workshop.Workshop, info *sd
 	connectTs := state.NewTaskSet()
 	var affected = map[sdk.Ref]bool{}
 	for _, ref := range refs {
-		connect := m.state.NewTask("connect", fmt.Sprintf("Connect %s to %s", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
+		connect := m.state.NewTask("connect", fmt.Sprintf("Connect %q to %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 
 		connect.Set("plug", ref.PlugRef)
 		connect.Set("slot", ref.SlotRef)
@@ -247,12 +247,12 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 
 				slaveInfo := m.repo.Plug(slave.ProjectId, slave.Workshop, slave.Sdk, slave.Name)
 				if slaveInfo == nil {
-					return fmt.Errorf("SDK %s/%s has no %q plug", slave.Workshop, slave.Sdk, slave.Name)
+					return fmt.Errorf("SDK %q has no plug named %q", slave.SdkRef().ShortRef(), slave.Name)
 				}
 
 				if slaveInfo.Interface != plug.Interface {
-					return fmt.Errorf("cannot bind %s/%s:%s (%q interface) to %s/%s:%s (%q interface)",
-						slave.Workshop, slave.Sdk, slave.Name, slaveInfo.Interface, master.Workshop, master.Sdk, master.Name, plug.Interface)
+					return fmt.Errorf("cannot bind %q (%q interface) to %q (%q interface)",
+						slave.ShortRef(), slaveInfo.Interface, master.ShortRef(), plug.Interface)
 				}
 
 				if _, ok := conns[slref.ID()]; !ok {
@@ -294,7 +294,7 @@ func (m *InterfaceManager) batchDisconnectTasks(p *workshop.Project, workshop, s
 	var prev *state.Task
 	for _, ref := range refs {
 		task := m.state.NewTask("disconnect",
-			fmt.Sprintf("Disconnnect %s from %s", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
+			fmt.Sprintf("Disconnnect %q from %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 		task.Set("plug", ref.PlugRef)
 		task.Set("slot", ref.SlotRef)
 		if conn := conns[ref.ID()]; conn != nil && conn.Undesired {
@@ -448,12 +448,12 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 
 	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no %q plug", plugRef.Sdk, plugRef.Name)
+		return fmt.Errorf("SDK %q has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
 	}
 
 	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no %q slot", slotRef.Sdk, slotRef.Name)
+		return fmt.Errorf("SDK %q has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
 	}
 
 	var plugDynamicAttrs, slotDynamicAttrs map[string]interface{}
@@ -562,12 +562,12 @@ func (m *InterfaceManager) undoConnect(task *state.Task, tomb *tomb.Tomb) error 
 
 	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no %q plug", plugRef.Sdk, plugRef.Name)
+		return fmt.Errorf("SDK %q has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
 	}
 
 	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no %q slot", slotRef.Sdk, slotRef.Name)
+		return fmt.Errorf("SDK %q has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
 	}
 
 	if err = m.repo.Disconnect(plugRef.ProjectId, plugRef.Workshop,
@@ -729,10 +729,10 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 		return nil
 	}
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no %q plug", cref.PlugRef.Sdk, cref.PlugRef.Name)
+		return fmt.Errorf("SDK %q has no plug named %q", cref.PlugRef.SdkRef().ShortRef(), cref.PlugRef.Name)
 	}
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no %q slot", cref.SlotRef.Sdk, cref.SlotRef.Name)
+		return fmt.Errorf("SDK %q has no slot named %q", cref.SlotRef.SdkRef().ShortRef(), cref.SlotRef.Name)
 	}
 
 	c, err := m.repo.Connect(&cref, oldconn.StaticPlugAttrs, oldconn.DynamicPlugAttrs,
@@ -844,7 +844,7 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 			backend := backend
 			rev.Add(func() {
 				if err1 := backend.Remove(ctx, ref.Workshop, ref.Sdk); err1 != nil {
-					logger.Noticef(`On doSetupProfiles: Failed to clean up "%s/%s" SDK backend setup`, ref.Workshop, ref.Sdk)
+					logger.Noticef(`On doSetupProfiles: Failed to clean up %q SDK backend setup`, ref.ShortRef())
 				}
 			})
 		}
@@ -1045,7 +1045,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 
 	_, err = os.Stat(oldSource)
 	if osutil.IsDirNotExist(err) {
-		task.State().Warnf("%s/%s:%s's source at %q does not exist; will attempt to recreate", plug.Workshop, plug.Sdk, plug.Name, oldSource)
+		task.State().Warnf("cannot find source %q for %q; will attempt to recreate", oldSource, plug.ShortRef())
 	} else if err != nil {
 		return err
 	} else {
@@ -1053,10 +1053,10 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 			if errno, ok := err.(syscall.Errno); ok {
 				if workshopRunning {
 					if errno == syscall.ENOTEMPTY {
-						return fmt.Errorf("new source is not empty; workshop must be stopped to remount safely")
+						return fmt.Errorf("source %q is not empty; workshop must be stopped to remount safely", source)
 					}
 					if errno == syscall.EXDEV {
-						return fmt.Errorf("current and new sources are not on the same mounted filesystem; workshop must be stopped to remount safely")
+						return fmt.Errorf("sources %q and %q are not on the same mounted filesystem; workshop must be stopped to remount safely", oldSource, source)
 					}
 					return err
 				} else {

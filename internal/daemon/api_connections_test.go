@@ -1237,7 +1237,7 @@ slots:
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": "cannot connect consumer-ws/consumer:plug (\"test\" interface) to producer-ws/producer:slot (\"different\" interface)",
+			"message": `cannot connect "consumer-ws/consumer:plug" ("test" interface) to "producer-ws/producer:slot" ("different" interface)`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1276,7 +1276,7 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchPlug(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": "SDK \"consumer-ws/consumer\" has no plug named \"missingplug\"",
+			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1315,7 +1315,7 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchSlot(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": "SDK producer-ws/producer has no slot named \"missingslot\"",
+			"message": `SDK "producer-ws/producer" has no slot named "missingslot"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1635,7 +1635,7 @@ func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": `sdk "consumer" has no plug named "missingplug"`,
+			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1772,7 +1772,7 @@ func (s *apiSuite) TestDisconnectPlugFailureNotConnected(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": "cannot disconnect consumer-ws/consumer:plug from producer-ws/producer:slot, it is not connected",
+			"message": `cannot disconnect "consumer-ws/consumer:plug" from "producer-ws/producer:slot": they are not connected`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1809,7 +1809,7 @@ func (s *apiSuite) TestDisconnectForgetPlugFailureNotConnected(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": "cannot forget connection consumer-ws/consumer:plug from producer-ws/producer:slot, it was not connected",
+			"message": `cannot disconnect "consumer-ws/consumer:plug" from "producer-ws/producer:slot": they are not connected`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
