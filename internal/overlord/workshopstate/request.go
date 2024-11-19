@@ -272,13 +272,15 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		return nil, err
 	}
 
-	err = w.CheckStatus(
-		ctx,
-		names,
-		projectId,
-		[]healthstate.Status{healthstate.ReadyStatus})
-	if err != nil {
-		return nil, fmt.Errorf("cannot refresh: %v", err)
+	for _, name := range names {
+		err = w.CheckStatus(
+			ctx,
+			name,
+			projectId,
+			[]healthstate.Status{healthstate.ReadyStatus})
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+		}
 	}
 
 	_, workshops, err := w.Workshops(ctx, projectId)
@@ -330,11 +332,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
 	err := w.CheckStatus(
 		ctx,
-		[]string{wpn},
+		wpn,
 		pid,
 		[]healthstate.Status{healthstate.ReadyStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot refresh: %v", err)
+		return nil, fmt.Errorf("cannot refresh %q: %w", wpn, err)
 	}
 
 	var taskset []*state.TaskSet
@@ -592,13 +594,15 @@ func createStateHooks(st *state.State, w string, content []sdk.Setup, newContent
 
 func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
 	// check if all the workshops are stopped
-	err := w.CheckStatus(
-		ctx,
-		names,
-		projectId,
-		[]healthstate.Status{healthstate.StoppedStatus})
-	if err != nil {
-		return nil, fmt.Errorf("cannot start: %w", err)
+	for _, name := range names {
+		err := w.CheckStatus(
+			ctx,
+			name,
+			projectId,
+			[]healthstate.Status{healthstate.StoppedStatus})
+		if err != nil {
+			return nil, fmt.Errorf("cannot start %q: %w", name, err)
+		}
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -627,13 +631,15 @@ func startMany(st *state.State, names []string, project *workshop.Project) ([]*s
 }
 
 func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
-	err := w.CheckStatus(
-		ctx,
-		names,
-		projectId,
-		[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
-	if err != nil {
-		return nil, fmt.Errorf("cannot stop: %w", err)
+	for _, name := range names {
+		err := w.CheckStatus(
+			ctx,
+			name,
+			projectId,
+			[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
+		if err != nil {
+			return nil, fmt.Errorf("cannot stop %q: %w", name, err)
+		}
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -670,11 +676,11 @@ type ExecMeta struct {
 func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs) (*state.Task, error) {
 	err := w.CheckStatus(
 		ctx,
-		[]string{name},
+		name,
 		projectId,
 		[]healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot exec: %w", err)
+		return nil, fmt.Errorf("cannot exec command in %q: %w", name, err)
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -707,13 +713,15 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
-	err := w.CheckStatus(
-		ctx,
-		names,
-		projectId,
-		[]healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus})
-	if err != nil {
-		return nil, fmt.Errorf("cannot remove: %w", err)
+	for _, name := range names {
+		err := w.CheckStatus(
+			ctx,
+			name,
+			projectId,
+			[]healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus})
+		if err != nil {
+			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -786,11 +794,11 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug int
 
 	err := w.CheckStatus(
 		ctx,
-		[]string{plug.Workshop},
+		plug.Workshop,
 		projectId,
 		[]healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot remount: %w", err)
+		return nil, fmt.Errorf("cannot remount %q: %w", plug.ShortRef(), err)
 	}
 
 	project, err := w.loadProject(ctx, projectId)

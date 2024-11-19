@@ -1541,7 +1541,7 @@ base: ubuntu@22.04
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh: "manysdks" status is "Pending", must be one of: "Ready"`,
+			Message: `cannot refresh "manysdks": refresh waiting on error`,
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}
@@ -1588,7 +1588,7 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot start: "basic" status is "Ready", must be one of: "Stopped"`,
+			Message: `cannot start "basic": workshop already running`,
 		},
 	}
 
