@@ -100,27 +100,6 @@ type DisconnectOptions struct {
 	Forget bool
 }
 
-func ParseFullPlugRef(plug string) (*PlugRef, error) {
-	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
-	var plugRef PlugRef
-
-	parts := strings.Split(plug, ":")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
-	}
-
-	wssdk := strings.Split(parts[0], "/")
-	if len(wssdk) != 3 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
-	}
-
-	plugRef.ProjectId = wssdk[0]
-	plugRef.Workshop = wssdk[1]
-	plugRef.Sdk = wssdk[2]
-	plugRef.Name = parts[1]
-	return &plugRef, nil
-}
-
 func ParseShortPlugRef(plug string) (*PlugRef, error) {
 	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
 	var plugRef PlugRef
