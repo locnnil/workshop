@@ -137,7 +137,7 @@ func (s *conflictSuite) TestResumeRefreshWrongChangeKindInProgress(c *check.C) {
 	_ = s.newChange("launch")
 
 	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshContinue)
-	c.Check(err, check.ErrorMatches, `.* no refresh in progress \("launch" is in progress\)`)
+	c.Check(err, check.ErrorMatches, `.* no refresh in progress \(launch is in progress\)`)
 }
 
 func (s *conflictSuite) TestResumeRefreshNoWaitingOnError(c *check.C) {

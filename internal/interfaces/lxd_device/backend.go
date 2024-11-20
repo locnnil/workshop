@@ -99,7 +99,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 				return false, err
 			}
 		} else if !info.IsDir() {
-			return false, fmt.Errorf(`%s is not a directory`, dev.Where)
+			return false, fmt.Errorf(`%q is not a directory`, dev.Where)
 		}
 
 		// Ensure that the source path exists here. LXD allows to

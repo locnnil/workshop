@@ -1072,7 +1072,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 		} else {
 			revert.Add(func() {
 				if err := os.Rename(source, oldSource); err != nil {
-					logger.Debugf("On doRemount: Cannot rename %s to %s on a failed remount", source, oldSource)
+					logger.Debugf("On doRemount: Cannot rename %q to %q on a failed remount", source, oldSource)
 				}
 			})
 		}

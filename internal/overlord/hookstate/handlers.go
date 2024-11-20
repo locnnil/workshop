@@ -42,7 +42,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 		defer func() {
 			if err := h.backend.DetachVolume(ctx, w, volume); err != nil {
-				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %s", volume)
+				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %q", volume)
 			}
 		}()
 	}

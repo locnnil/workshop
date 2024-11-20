@@ -148,7 +148,7 @@ func (s *managerSuite) TestWorkshopHealthMissingProject(c *check.C) {
 
 	warnings := s.state.AllWarnings()
 	c.Check(warnings, check.HasLen, 1)
-	warning := fmt.Sprintf("%q project directory %q does not exist", workshop.Name, s.project.Path)
+	warning := fmt.Sprintf(`cannot find project directory %q for workshop "test"`, s.project.Path)
 	c.Check(warnings[0].String(), check.Equals, warning)
 }
 
@@ -167,7 +167,7 @@ func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
 
 	warnings := s.state.AllWarnings()
 	c.Check(warnings, check.HasLen, 1)
-	warning := fmt.Sprintf("%q workshop definition %q does not exist", testWorkshop.Name, testWorkshop.Filepath())
+	warning := fmt.Sprintf(`cannot find definition %q for workshop "test"`, testWorkshop.Filepath())
 	c.Check(warnings[0].String(), check.Equals, warning)
 }
 

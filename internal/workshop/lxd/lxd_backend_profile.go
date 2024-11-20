@@ -53,18 +53,18 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 				continue
 			}
 
-			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, devtype)
+			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "unix-char":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			if devtype == "camera" {
 				continue
 			}
 
-			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, devtype)
+			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "none":
 			cfg, exist := config[DeviceConfigKey(profile, name)]
 			if !exist {
-				logger.Noticef("On reading %q SDK profile: unknown device: %s", profile, name)
+				logger.Noticef("On reading %q SDK profile: unknown device %q", profile, name)
 				continue
 			}
 
@@ -83,10 +83,10 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 				}
 				pr.Mounts[name] = mnt
 			default:
-				logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, devtype)
+				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 			}
 		default:
-			logger.Noticef("On reading %q SDK profile: unknown device type: %s", profile, dev["type"])
+			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, dev["type"])
 		}
 	}
 	return pr, nil

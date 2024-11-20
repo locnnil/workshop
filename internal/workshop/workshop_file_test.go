@@ -110,7 +110,17 @@ base: ubuntu@20.04
 	f.createWFile(c, "xbert", yaml)
 	file, err := f.project.Workshop("xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named as "workshop.xbert-gpu.yaml" \(now: workshop.xbert.yaml\)`)
+	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named "workshop.xbert-gpu.yaml" \(now: "workshop.xbert.yaml"\)`)
+}
+
+func (f *workshopFile) TestWorkshopInvalidName(c *check.C) {
+	yaml := `name: 99-xbert
+base: ubuntu@20.04
+`
+	f.createWFile(c, "99-xbert", yaml)
+	file, err := f.project.Workshop("99-xbert")
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) include only lower case alpha-numeric or an underscore symbol\(s\)`)
 }
 
 func (f *workshopFile) TestWorkshopUnsupportedBase(c *check.C) {

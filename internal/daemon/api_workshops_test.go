@@ -28,6 +28,10 @@ var (
 base: ubuntu@22.04
 `
 
+	basic_invalid = `name: [basic]
+base: ubuntu@22.04
+`
+
 	basic_refreshed = `name: basic
 base: ubuntu@22.04
 sdks:
@@ -661,13 +665,17 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "basic", basic)
+	s.createWFile(c, "basic-invalid", basic_invalid)
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic", "basic", "basic"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["missing"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic-invalid"],"action":"launch"}`),
 	}
 
+	missingFile := workshop.Filepath(s.project.Path, "missing")
 	expected := []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
@@ -682,8 +690,19 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 		},
 		{
 			Type:    ResponseTypeError,
-			Message: `cannot launch: "basic" already exists`,
 			Status:  http.StatusBadRequest,
+			Message: `cannot launch "basic": workshop already exists`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: fmt.Sprintf(`cannot launch "missing": workshop definition %q not found`, missingFile),
+		},
+		{
+			Type:   ResponseTypeError,
+			Status: http.StatusBadRequest,
+			Message: `cannot launch "basic-invalid": workshop definition YAML:
+line 1: cannot unmarshal !!seq into string`,
 		},
 	}
 
@@ -1240,7 +1259,7 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, no refresh in progress",
+			Message: "cannot continue: no refresh in progress",
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
@@ -1344,12 +1363,12 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, no refresh in progress",
+			Message: "cannot continue: no refresh in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort, no refresh in progress",
+			Message: "cannot abort: no refresh in progress",
 		},
 	}
 

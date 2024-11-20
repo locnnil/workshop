@@ -150,7 +150,7 @@ func (f *wsExec) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {
 	_, _, err := f.exec(c, "", "test", f.project.ProjectId, opts)
 
 	// Validate
-	c.Assert(err, check.ErrorMatches, ".*/no/such/dir does not exist")
+	c.Assert(err, check.ErrorMatches, `cannot exec command in "test": working directory "/no/such/dir" not found`)
 }
 
 func (f *wsExec) TestLxdBackendExecDefaultUserGroup(c *check.C) {

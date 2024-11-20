@@ -92,7 +92,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 
 		_, err = w.Workshop(ctx, name, projectId)
 		if err == nil {
-			return nil, fmt.Errorf("cannot launch: %q already exists", name)
+			return nil, fmt.Errorf("cannot launch %q: workshop already exists", name)
 		}
 		if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
 			return nil, err
@@ -691,10 +691,10 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 
 	info, err := wrkspc.Stat(args.WorkDir)
 	if err != nil {
-		return nil, fmt.Errorf("%s does not exist", args.WorkDir)
+		return nil, fmt.Errorf("cannot exec command in %q: working directory %q not found", name, args.WorkDir)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory", args.WorkDir)
+		return nil, fmt.Errorf("cannot exec command in %q: %q is not a directory", name, args.WorkDir)
 	}
 
 	exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))

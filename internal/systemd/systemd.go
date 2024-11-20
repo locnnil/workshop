@@ -707,7 +707,7 @@ func (s *systemd) RemoveMountUnitFile(mountedDir string) error {
 	if s.rootDir != "" {
 		rel, err := filepath.Rel(s.rootDir, mountedDir)
 		if err != nil || strings.HasPrefix(rel, "..") {
-			return fmt.Errorf("mount unit file not inside root dir: %s", mountedDir)
+			return fmt.Errorf("mount unit file not inside root dir %q", mountedDir)
 		}
 		unitNamePath = "/" + rel
 	}
