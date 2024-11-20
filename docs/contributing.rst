@@ -151,6 +151,26 @@ follow a consistent pattern:
    }
 
 
+Error messages
+~~~~~~~~~~~~~~
+
+- **Be consistent**:
+  Try to match the style of existing error messages.
+  Most of these can be found by searching for ``fmt.Errorf`` and ``errors.New``.
+  Paths and other identifiers should be quoted if possible.
+
+- **Consider the user experience**:
+  Error messages should be clear, and when possible, actionable.
+
+- **Be specific**:
+  For example, if a file was not found, the error message should include the path.
+
+- **Think about nesting**:
+  Start with lowercase letters and avoid trailing punctuation.
+  Try to avoid excessively long or repetitive error chains.
+  A common template is ``what was attempted: why it went wrong``.
+
+
 Code structure
 ~~~~~~~~~~~~~~
 
