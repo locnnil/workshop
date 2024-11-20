@@ -7,8 +7,9 @@ __debug_bin*
 workshop
 workshopctl
 !workshop/
-.spread-reuse.*.yaml
+.spread-reuse.*
 .workshop.lock
+.workshop/
 *.snap
 cover.out
 

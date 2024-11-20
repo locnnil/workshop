@@ -325,8 +325,8 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 
 		// Assigning the profile for the first time.
-		inst.InstancePut.Profiles = append(inst.InstancePut.Profiles, name)
-		op, err := conn.UpdateInstance(iname, inst.InstancePut, etag)
+		inst.Profiles = append(inst.Profiles, name)
+		op, err := conn.UpdateInstance(iname, inst.Writable(), etag)
 		if err != nil {
 			return err
 		}

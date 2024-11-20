@@ -170,9 +170,9 @@ func (s *Backend) trackProject(client lxd.InstanceServer, ctx context.Context, p
 	if err != nil {
 		return err
 	}
-	lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
+	lxdPrj.Config["user.workshop.projects"] = projectsJson
 
-	return client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag)
+	return client.UpdateProject(LxdProjectName(user), lxdPrj.Writable(), etag)
 }
 
 func (s *Backend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *workshop.Project) error {
@@ -465,8 +465,8 @@ func (s *Backend) loadUserProjects(ctx context.Context, user string) ([]*worksho
 		if err != nil {
 			return nil, err
 		}
-		lxdPrj.ProjectPut.Config["user.workshop.projects"] = projectsJson
-		if err = client.UpdateProject(LxdProjectName(user), lxdPrj.ProjectPut, etag); err != nil {
+		lxdPrj.Config["user.workshop.projects"] = projectsJson
+		if err = client.UpdateProject(LxdProjectName(user), lxdPrj.Writable(), etag); err != nil {
 			return nil, err
 		}
 	}

@@ -35,7 +35,7 @@ suites:
     prepare: |
       . "$TESTSLIB"/utils.sh
       setup_lxd
-      snap install go --classic --channel=1.21/stable
+      snap install go --classic --channel=1.23/stable
     kill-timeout: 30m
   tests/documentation/:
     summary: Documentation tests
