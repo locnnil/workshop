@@ -21,7 +21,7 @@ function prepare_environment() {
 
   setup_lxd
 
-  snap install --classic --channel=1.21/stable go
+  snap install --classic --channel=1.23/stable go
   snap install yq
   # The unattended upgrades hold locks on reusable instances
   # and can break a spread run.

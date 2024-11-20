@@ -226,7 +226,7 @@ func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *work
 		return err
 	}
 	inst.Config[item.Name] = item.Value
-	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key str
 	}
 
 	delete(inst.Config, key)
-	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device work
 		inst.Devices[device.Name] = map[string]string{"type": "disk", "source": device.What,
 			"path": device.Where}
 	}
-	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (s *Backend) RemoveWorkshopMount(ctx context.Context, name string, device s
 	}
 
 	delete(inst.Devices, device)
-	op, err := conn.UpdateInstance(inst.Name, inst.InstancePut, etag)
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
