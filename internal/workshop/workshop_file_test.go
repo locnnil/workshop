@@ -130,7 +130,7 @@ base: foo@20.04
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `unsupported base "foo@20.04"`)
+	c.Assert(err, check.ErrorMatches, `base "foo@20.04" not supported`)
 }
 
 func (f *workshopFile) TestWorkshopFileDuplicateSdks(c *check.C) {

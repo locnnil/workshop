@@ -161,7 +161,7 @@ func readWorkshop(buf []byte) (*File, error) {
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {
-		return nil, fmt.Errorf("unsupported base %q", file.Base)
+		return nil, fmt.Errorf("base %q not supported", file.Base)
 	}
 
 	if err = validateSdks(file.Sdks); err != nil {
