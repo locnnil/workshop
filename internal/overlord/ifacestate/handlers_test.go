@@ -699,6 +699,40 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
 
+func (s *interfaceHandlersSuite) TestRemountRenameUnexpectedError(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := filepath.Join(c.MkDir(), "new-source")
+	_, err := os.Create(newSource)
+	c.Check(err, check.IsNil)
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.settle(c)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.ErrorMatches, `(?s).*\(not a directory\)`)
+	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
+	c.Assert(src, check.Equals, oldSource)
+
+	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
+	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
+}
+
 func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.C) {
 	// Setup
 	oldSource := c.MkDir()
