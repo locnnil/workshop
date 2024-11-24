@@ -157,7 +157,7 @@ func readWorkshop(buf []byte) (*File, error) {
 	})
 
 	if !workshopName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
+		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lowercase alphanumeric characters or underscore(s)")
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {
