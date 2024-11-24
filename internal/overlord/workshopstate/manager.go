@@ -62,7 +62,7 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 	}
 
 	health := w.WorkshopHealth(wp)
-	if slices.Index(allowedStatuses, health.Status) == -1 {
+	if !slices.Contains(allowedStatuses, health.Status) {
 		switch health.Status {
 		case healthstate.ReadyStatus:
 			return fmt.Errorf("workshop already running")
