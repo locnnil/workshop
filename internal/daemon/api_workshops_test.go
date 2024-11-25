@@ -28,6 +28,10 @@ var (
 base: ubuntu@22.04
 `
 
+	basic_invalid = `name: [basic]
+base: ubuntu@22.04
+`
+
 	basic_refreshed = `name: basic
 base: ubuntu@22.04
 sdks:
@@ -175,15 +179,6 @@ sdks:
 connections:
   - plug: test-sdk:data
     slot: system:training
-`
-
-	workshopconns_refreshed = `name: workshopconns
-base: ubuntu@22.04
-sdks:
-  test-sdk:
-    channel: latest/stable
-  test-sdk-2:
-    channel: latest/stable
 `
 
 	workshopbrokenconn = `name: workshopbrokenconn
@@ -670,13 +665,17 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "basic", basic)
+	s.createWFile(c, "basic-invalid", basic_invalid)
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic", "basic", "basic"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":[],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["missing"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic-invalid"],"action":"launch"}`),
 	}
 
+	missingFile := workshop.Filepath(s.project.Path, "missing")
 	expected := []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
@@ -691,8 +690,19 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 		},
 		{
 			Type:    ResponseTypeError,
-			Message: `cannot launch: "basic" already exists`,
 			Status:  http.StatusBadRequest,
+			Message: `cannot launch "basic": workshop already exists`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: fmt.Sprintf(`cannot launch "missing": workshop definition %q not found`, missingFile),
+		},
+		{
+			Type:   ResponseTypeError,
+			Status: http.StatusBadRequest,
+			Message: `cannot launch "basic-invalid": workshop definition YAML:
+line 1: cannot unmarshal !!seq into string`,
 		},
 	}
 
@@ -781,7 +791,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	_, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
@@ -848,7 +858,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "masterunknown" workshop`,
-			ChangeErr: `(?s).*SDK masterunknown/test-sdk has no "unknown-data" plug.*`,
+			ChangeErr: `(?s).*SDK "masterunknown/test-sdk" has no plug named "unknown-data".*`,
 		},
 	}
 
@@ -873,7 +883,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "slaveunknown" workshop`,
-			ChangeErr: `(?s).*SDK slaveunknown/test-sdk has no "unknown" plug.*`,
+			ChangeErr: `(?s).*SDK "slaveunknown/test-sdk" has no plug named "unknown".*`,
 		},
 	}
 
@@ -898,7 +908,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "bindincompatible" workshop`,
-			ChangeErr: `(?s).*cannot bind bindincompatible/test-sdk:data \("mount" interface\) to bindincompatible/test-sdk-2:gpu \("gpu" interface\).*`,
+			ChangeErr: `(?s).*cannot bind "bindincompatible/test-sdk:data" \("mount" interface\) to "bindincompatible/test-sdk-2:gpu" \("gpu" interface\).*`,
 		},
 	}
 
@@ -1249,7 +1259,7 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, no refresh in progress",
+			Message: "cannot continue: no refresh in progress",
 		}, {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
@@ -1353,12 +1363,12 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue, no refresh in progress",
+			Message: "cannot continue: no refresh in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort, no refresh in progress",
+			Message: "cannot abort: no refresh in progress",
 		},
 	}
 
@@ -1531,7 +1541,7 @@ base: ubuntu@22.04
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh: "manysdks" status is "Pending", must be one of: "Ready"`,
+			Message: `cannot refresh "manysdks": refresh waiting on error`,
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}
@@ -1578,7 +1588,7 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot start: "basic" status is "Ready", must be one of: "Stopped"`,
+			Message: `cannot start "basic": workshop already running`,
 		},
 	}
 
@@ -1656,6 +1666,6 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	_, err := s.b.Workshop(s.ctx, "workshopconns")
-	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 	c.Check(s.secBackend.RemoveCalls, check.HasLen, 3)
 }

@@ -279,23 +279,22 @@ func (r *Repository) Connection(connRef *ConnRef) (*Connection, error) {
 	plug := r.plugs[plugkey][connRef.PlugRef.Name]
 	if plug == nil {
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("sdk %q has no plug named %q",
-				connRef.PlugRef.Sdk, connRef.PlugRef.Name)}
+			message: fmt.Sprintf("SDK %q has no plug named %q",
+				connRef.PlugRef.SdkRef().ShortRef(), connRef.PlugRef.Name)}
 	}
 	// Ensure that such slot exists
 	slot := r.slots[slotkey][connRef.SlotRef.Name]
 	if slot == nil {
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("sdk %q has no slot named %q",
-				connRef.SlotRef.Sdk, connRef.SlotRef.Name)}
+			message: fmt.Sprintf("SDK %q has no slot named %q",
+				connRef.SlotRef.SdkRef().ShortRef(), connRef.SlotRef.Name)}
 	}
 	// Ensure that slot and plug are connected
 	conn, ok := r.slotPlugs[slot][plug]
 	if !ok {
 		return nil, &NotConnectedError{
-			message: fmt.Sprintf("no connection from %s:%s to %s:%s",
-				connRef.PlugRef.Sdk, connRef.PlugRef.Name,
-				connRef.SlotRef.Sdk, connRef.SlotRef.Name)}
+			message: fmt.Sprintf("no connection from %q to %q",
+				connRef.PlugRef.ShortRef(), connRef.SlotRef.ShortRef())}
 	}
 
 	return conn, nil
@@ -485,20 +484,18 @@ func (r *Repository) Connect(ref *ConnRef, plugStaticAttrs, plugDynamicAttrs, sl
 	plug := r.plugs[plugKey][plugName]
 	if plug == nil {
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("cannot connect plug %q from sdk %q: no such plug",
-				plugName, plugSdkName)}
+			message: fmt.Sprintf("cannot connect plug %q: plug not found", ref.PlugRef.ShortRef())}
 	}
 	// Ensure that such slot exists
 	slot := r.slots[slotKey][slotName]
 	if slot == nil {
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("cannot connect slot %q from sdk %q: no such slot",
-				slotName, slotSdkName)}
+			message: fmt.Sprintf("cannot connect slot %q: slot not found", ref.SlotRef.ShortRef())}
 	}
 	// Ensure that plug and slot are compatible
 	if slot.Interface != plug.Interface {
-		return nil, fmt.Errorf(`cannot connect plug "%s:%s" (interface %q) to "%s:%s" (interface %q)`,
-			plugSdkName, plugName, plug.Interface, slotSdkName, slotName, slot.Interface)
+		return nil, fmt.Errorf(`cannot connect plug %q (%q interface) to %q (%q interface)`,
+			ref.PlugRef.ShortRef(), plug.Interface, ref.SlotRef.ShortRef(), slot.Interface)
 	}
 
 	iface, ok := r.ifaces[plug.Interface]
@@ -513,12 +510,12 @@ func (r *Repository) Connect(ref *ConnRef, plugStaticAttrs, plugDynamicAttrs, sl
 	if policyCheck != nil {
 		if i, ok := iface.(plugValidator); ok {
 			if err := i.BeforeConnectPlug(cplug); err != nil {
-				return nil, fmt.Errorf("cannot connect plug %q of sdk %q: %s", plug.Name, plug.Sdk.Name, err)
+				return nil, fmt.Errorf("cannot connect plug %q: %w", ref.PlugRef.ShortRef(), err)
 			}
 		}
 		if i, ok := iface.(slotValidator); ok {
 			if err := i.BeforeConnectSlot(cslot); err != nil {
-				return nil, fmt.Errorf("cannot connect slot %q of sdk %q: %s", slot.Name, slot.Sdk.Name, err)
+				return nil, fmt.Errorf("cannot connect slot %q: %w", ref.SlotRef.ShortRef(), err)
 			}
 		}
 
@@ -574,13 +571,13 @@ func (r *Repository) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugNa
 
 	// Validity check
 	if plugSdkName == "" {
-		return fmt.Errorf("cannot disconnect, plug sdk name is empty")
+		return fmt.Errorf("cannot disconnect, plug SDK name is empty")
 	}
 	if plugName == "" {
 		return fmt.Errorf("cannot disconnect, plug name is empty")
 	}
 	if slotSdkName == "" {
-		return fmt.Errorf("cannot disconnect, slot sdk name is empty")
+		return fmt.Errorf("cannot disconnect, slot SDK name is empty")
 	}
 	if slotName == "" {
 		return fmt.Errorf("cannot disconnect, slot name is empty")
@@ -592,24 +589,24 @@ func (r *Repository) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugNa
 	// Ensure that such plug exists
 	plug := r.plugs[plugKey][plugName]
 	if plug == nil {
+		sdkRef := sdk.Ref{ProjectId: plugProjectId, Workshop: plugWorkshop, Sdk: plugSdkName}
 		return &NoPlugOrSlotError{
-			message: fmt.Sprintf("sdk %q has no plug named %q",
-				plugSdkName, plugName),
+			message: fmt.Sprintf("SDK %q has no plug named %q", sdkRef.ShortRef(), plugName),
 		}
 	}
 	// Ensure that such slot exists
 	slot := r.slots[slotKey][slotName]
 	if slot == nil {
+		sdkRef := sdk.Ref{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName}
 		return &NoPlugOrSlotError{
-			message: fmt.Sprintf("sdk %q has no slot named %q",
-				slotSdkName, slotName),
+			message: fmt.Sprintf("SDK %q has no slot named %q", sdkRef.ShortRef(), slotName),
 		}
 	}
 	// Ensure that slot and plug are connected
 	if r.slotPlugs[slot][plug] == nil {
 		return &NotConnectedError{
-			message: fmt.Sprintf("cannot disconnect %s:%s from %s:%s, it is not connected",
-				plugSdkName, plugName, slotSdkName, slotName),
+			message: fmt.Sprintf("cannot disconnect %q from %q: they are not connected",
+				NewPlugRef(plug).ShortRef(), NewSlotRef(slot).ShortRef()),
 		}
 	}
 	r.disconnect(plug, slot)
@@ -654,16 +651,16 @@ func (r *Repository) Connected(projectId, workshop, sdkName, plugOrSlotName stri
 	return r.connected(projectId, workshop, sdkName, plugOrSlotName)
 }
 
-func (r *Repository) connected(projectId, workshop, sdk, plugOrSlotName string) ([]*ConnRef, error) {
+func (r *Repository) connected(projectId, workshop, sk, plugOrSlotName string) ([]*ConnRef, error) {
 	if workshop == "" {
 		return nil, fmt.Errorf("internal error: cannot obtain workshop name while computing connections")
 	}
 
-	if sdk == "" {
-		return nil, fmt.Errorf("internal error: cannot obtain sdk name while computing connections")
+	if sk == "" {
+		return nil, fmt.Errorf("internal error: cannot obtain SDK name while computing connections")
 	}
 
-	key := plugOrSlotKey(projectId, workshop, sdk)
+	key := plugOrSlotKey(projectId, workshop, sk)
 
 	var conns []*ConnRef
 	if plugOrSlotName == "" {
@@ -671,9 +668,10 @@ func (r *Repository) connected(projectId, workshop, sdk, plugOrSlotName string) 
 	}
 	// Check if plugOrSlotName actually maps to anything
 	if r.plugs[key][plugOrSlotName] == nil && r.slots[key][plugOrSlotName] == nil {
+		sdkRef := sdk.Ref{ProjectId: projectId, Workshop: workshop, Sdk: sk}
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("sdk %q has no plug or slot named %q",
-				sdk, plugOrSlotName)}
+			message: fmt.Sprintf("SDK %q has no plug or slot named %q",
+				sdkRef.ShortRef(), plugOrSlotName)}
 	}
 	// Collect all the relevant connections
 
@@ -909,14 +907,14 @@ func (r *Repository) RemoveSdk(projectId, workshop, sdkName string) error {
 
 	key := plugOrSlotKey(projectId, workshop, sdkName)
 
-	for plugName, plug := range r.plugs[key] {
+	for _, plug := range r.plugs[key] {
 		if len(r.plugSlots[plug]) > 0 {
-			return fmt.Errorf("cannot remove connected plug %s.%s", sdkName, plugName)
+			return fmt.Errorf("cannot remove connected plug %q", NewPlugRef(plug).ShortRef())
 		}
 	}
-	for slotName, slot := range r.slots[key] {
+	for _, slot := range r.slots[key] {
 		if len(r.slotPlugs[slot]) > 0 {
-			return fmt.Errorf("cannot remove connected slot %s.%s", sdkName, slotName)
+			return fmt.Errorf("cannot remove connected slot %q", NewSlotRef(slot).ShortRef())
 		}
 	}
 
@@ -1064,9 +1062,10 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 	// Ensure that such plug exists
 	plug := r.plugs[plugKey][plugName]
 	if plug == nil {
+		sdkRef := sdk.Ref{ProjectId: plugProjectId, Workshop: plugWorkshop, Sdk: plugSdkName}
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf(`SDK "%s/%s" has no plug named %q`,
-				plugWorkshop, plugSdkName, plugName),
+			message: fmt.Sprintf(`SDK %q has no plug named %q`,
+				sdkRef.ShortRef(), plugName),
 		}
 	}
 
@@ -1090,26 +1089,30 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 		}
 		switch len(candidates) {
 		case 0:
-			return nil, fmt.Errorf(`SDK %s/%s has no %q interface slots`, slotWorkshop, slotSdkName, plug.Interface)
+			sdkRef := sdk.Ref{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName}
+			return nil, fmt.Errorf(`SDK %q has no %q interface slots`, sdkRef.ShortRef(), plug.Interface)
 		case 1:
 			slotName = candidates[0]
 		default:
 			sort.Strings(candidates)
-			return nil, fmt.Errorf("SDK %s/%s has multiple %q interface slots: %s", slotWorkshop, slotSdkName, plug.Interface, strings.Join(candidates, ", "))
+			sdkRef := sdk.Ref{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName}
+			return nil, fmt.Errorf("SDK %q has multiple %q interface slots: %s",
+				sdkRef.ShortRef(), plug.Interface, strings.Join(candidates, ", "))
 		}
 	}
 
 	// Ensure that such slot exists
 	slot := r.slots[slotKey][slotName]
 	if slot == nil {
+		sdkRef := sdk.Ref{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName}
 		return nil, &NoPlugOrSlotError{
-			message: fmt.Sprintf("SDK %s/%s has no slot named %q", slotWorkshop, slotSdkName, slotName),
+			message: fmt.Sprintf("SDK %q has no slot named %q", sdkRef.ShortRef(), slotName),
 		}
 	}
 	// Ensure that plug and slot are compatible
 	if slot.Interface != plug.Interface {
-		return nil, fmt.Errorf("cannot connect %s/%s:%s (%q interface) to %s/%s:%s (%q interface)",
-			plugWorkshop, plugSdkName, plugName, plug.Interface, slotWorkshop, slotSdkName, slotName, slot.Interface)
+		return nil, fmt.Errorf("cannot connect %q (%q interface) to %q (%q interface)",
+			NewPlugRef(plug).ShortRef(), plug.Interface, NewSlotRef(slot).ShortRef(), slot.Interface)
 	}
 	return NewConnRef(plug, slot), nil
 }

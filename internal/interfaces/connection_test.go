@@ -84,7 +84,7 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 
 	var val string
 	var intVal int
-	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `sdk "producer" does not have attribute "unknown" for interface "interface"`)
+	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
 
 	attrs := slot.StaticAttrs()
 	c.Assert(attrs, check.DeepEquals, map[string]interface{}{
@@ -95,8 +95,8 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 	slot.StaticAttr("attr", &val)
 	c.Assert(val, check.Equals, "value")
 
-	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `sdk "producer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(slot.StaticAttr("attr", &intVal), check.ErrorMatches, `sdk "producer" has interface "interface" with invalid value type string for "attr" attribute: \*int`)
+	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
+	c.Check(slot.StaticAttr("attr", &intVal), check.ErrorMatches, `SDK "producer" has interface "interface" with invalid value type "string" for "attr" attribute: \*int`)
 	c.Check(slot.StaticAttr("attr", val), check.ErrorMatches, `internal error: cannot get "attr" attribute of interface "interface" with non-pointer value`)
 
 	// static attributes passed via args take precedence over slot.Attrs
@@ -123,7 +123,7 @@ func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
 
 	var val string
 	var intVal int
-	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `sdk "consumer" does not have attribute "unknown" for interface "interface"`)
+	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
 
 	attrs := plug.StaticAttrs()
 	c.Assert(attrs, check.DeepEquals, map[string]interface{}{
@@ -133,8 +133,8 @@ func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
 	plug.StaticAttr("attr", &val)
 	c.Assert(val, check.Equals, "value")
 
-	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `sdk "consumer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(plug.StaticAttr("attr", &intVal), check.ErrorMatches, `sdk "consumer" has interface "interface" with invalid value type string for "attr" attribute: \*int`)
+	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
+	c.Check(plug.StaticAttr("attr", &intVal), check.ErrorMatches, `SDK "consumer" has interface "interface" with invalid value type "string" for "attr" attribute: \*int`)
 	c.Check(plug.StaticAttr("attr", val), check.ErrorMatches, `internal error: cannot get "attr" attribute of interface "interface" with non-pointer value`)
 
 	// static attributes passed via args take precedence over plug.Attrs
@@ -170,8 +170,8 @@ func (s *connSuite) TestDynamicSlotAttrs(c *check.C) {
 	num := mapVal["number-two"]
 	c.Assert(num, check.Equals, int64(222))
 
-	c.Check(slot.Attr("unknown", &strVal), check.ErrorMatches, `sdk "producer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(slot.Attr("foo", &intVal), check.ErrorMatches, `sdk "producer" has interface "interface" with invalid value type string for "foo" attribute: \*int64`)
+	c.Check(slot.Attr("unknown", &strVal), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
+	c.Check(slot.Attr("foo", &intVal), check.ErrorMatches, `SDK "producer" has interface "interface" with invalid value type "string" for "foo" attribute: \*int64`)
 	c.Check(slot.Attr("number", intVal), check.ErrorMatches, `internal error: cannot get "number" attribute of interface "interface" with non-pointer value`)
 }
 
@@ -292,8 +292,8 @@ func (s *connSuite) TestDynamicPlugAttrs(c *check.C) {
 	num := mapVal["number-two"]
 	c.Assert(num, check.Equals, int64(222))
 
-	c.Check(plug.Attr("unknown", &strVal), check.ErrorMatches, `sdk "consumer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(plug.Attr("foo", &intVal), check.ErrorMatches, `sdk "consumer" has interface "interface" with invalid value type string for "foo" attribute: \*int64`)
+	c.Check(plug.Attr("unknown", &strVal), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
+	c.Check(plug.Attr("foo", &intVal), check.ErrorMatches, `SDK "consumer" has interface "interface" with invalid value type "string" for "foo" attribute: \*int64`)
 	c.Check(plug.Attr("number", intVal), check.ErrorMatches, `internal error: cannot get "number" attribute of interface "interface" with non-pointer value`)
 }
 
@@ -307,11 +307,11 @@ func (s *connSuite) TestOverwriteStaticAttrError(c *check.C) {
 
 	err := plug.SetAttr("attr", "overwrite")
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "consumer" sdk details`)
+	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "consumer" SDK details`)
 
 	err = slot.SetAttr("attr", "overwrite")
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "producer" sdk details`)
+	c.Assert(err, check.ErrorMatches, `cannot change attribute "attr" as it was statically specified in the "producer" SDK details`)
 }
 
 func (s *connSuite) TestCopyAttributes(c *check.C) {
@@ -363,7 +363,7 @@ func (s *connSuite) TestGetAttributeUnhappy(c *check.C) {
 	var stringVal string
 	err := interfaces.GetAttribute("sdk0", "iface0", attrs, attrs, "non-existent", &stringVal)
 	c.Check(stringVal, check.Equals, "")
-	c.Check(err, check.ErrorMatches, `sdk "sdk0" does not have attribute "non-existent" for interface "iface0"`)
+	c.Check(err, check.ErrorMatches, `SDK "sdk0" does not have attribute "non-existent" for interface "iface0"`)
 	c.Check(errors.Is(err, sdk.AttributeNotFoundError{}), check.Equals, true)
 }
 

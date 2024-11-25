@@ -62,6 +62,10 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	reqData.Plug.Workshop = w
 	reqData.Plug.ProjectId = projectId
 
+	if err := checkWorkshopExists(r.Context(), o.WorkshopManager(), projectId, w); err != nil {
+		return statusNotFound("cannot access workshop %q: %v", w, err)
+	}
+
 	change := newMountChange(st, user, &reqData)
 	defer func() {
 		if len(change.Tasks()) == 0 {
@@ -76,7 +80,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if len(connRef) == 0 {
-		return statusBadRequest(`"%s/%s:%s" must be connected for remount`, reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name)
+		return statusBadRequest("cannot remount %q: plug is disconnected", reqData.Plug.ShortRef())
 	}
 
 	conn, err := repo.Connection(connRef[0])
@@ -85,7 +89,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if conn.Plug.Interface() != "mount" {
-		return statusBadRequest("remount requires a content interface plug (provided plug is of %q interface)", conn.Plug.Interface())
+		return statusBadRequest(`cannot remount %q: interface type should be "mount" (now: %q)`, reqData.Plug.ShortRef(), conn.Plug.Interface())
 	}
 
 	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.HostSource, projectId)

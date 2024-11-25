@@ -3,6 +3,7 @@ package ifacestate_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -303,7 +303,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "consumer" has no "no-such-plug2" plug.*`)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "ws/consumer" has no plug named "no-such-plug2".*`)
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
@@ -394,7 +394,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target /home/workshop is also mounted by.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/home/workshop" is also mounted by.*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
@@ -563,7 +563,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 
 	// ensure the global conns state was updated correctly
@@ -607,7 +607,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Sdk, check.Equals, "consumer")
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Workshop, check.Equals, "ws-consumer")
@@ -641,7 +641,7 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	// Validate
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(change.Err(), check.ErrorMatches, "(?s).*\\(new source is not empty; workshop must be stopped to remount safely\\)")
+	c.Check(change.Err(), check.ErrorMatches, fmt.Sprintf(`(?s).*\(source %q is not empty; workshop must be stopped to remount safely\)`, newSource))
 	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
 
 	repo := s.mgr.Repository()
@@ -655,8 +655,8 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 }
 
@@ -693,9 +693,43 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
+}
+
+func (s *interfaceHandlersSuite) TestRemountRenameUnexpectedError(c *check.C) {
+	// Setup
+	oldSource := c.MkDir()
+	newSource := filepath.Join(c.MkDir(), "new-source")
+	_, err := os.Create(newSource)
+	c.Check(err, check.IsNil)
+	s.launchRemountWorkshop(c, oldSource)
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.settle(c)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(change.Err(), check.ErrorMatches, `(?s).*\(not a directory\)`)
+	c.Assert(change.Status(), check.Equals, state.ErrorStatus)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
+	c.Assert(src, check.Equals, oldSource)
+
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 }
 
 func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.C) {
@@ -731,8 +765,8 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, false)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FileAbsent)
 	// 2 calls for the autoconnect, no calls for the remount
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
@@ -752,6 +786,10 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	defer s.state.Unlock()
 	c.Assert(change.Status(), check.Equals, state.DoneStatus)
 
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	c.Check(warnings[0].String(), check.Equals, `cannot find source "/does/not/exist" for "ws-consumer/consumer:plug"; will attempt to recreate`)
+
 	repo := s.mgr.Repository()
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
 	c.Assert(ref, check.HasLen, 1)
@@ -763,7 +801,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
 

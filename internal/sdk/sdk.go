@@ -84,7 +84,7 @@ func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
 			// all plugs from all SDKs are in the repository already.
 			i.PlugBinds[name] = plug
 		} else {
-			return fmt.Errorf("plug binding failed: SDK %s/%s has no %q plug", i.Workshop, i.Name, name)
+			return fmt.Errorf("plug binding failed: SDK %q has no plug named %q", i.Ref().ShortRef(), name)
 		}
 	}
 	return nil
@@ -142,8 +142,12 @@ type Ref struct {
 	Sdk       string
 }
 
-func (r *Ref) ID() string {
-	return fmt.Sprintf("%s/%s:%s", r.ProjectId, r.Workshop, r.Sdk)
+func (r Ref) String() string {
+	return fmt.Sprintf("%s/%s/%s", r.ProjectId, r.Workshop, r.Sdk)
+}
+
+func (r Ref) ShortRef() string {
+	return fmt.Sprintf("%s/%s", r.Workshop, r.Sdk)
 }
 
 var SanitizePlugsSlots = func(snapInfo *Info) {
@@ -316,7 +320,7 @@ func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
 func getAttribute(sdkName string, ifaceName string, attrs map[string]interface{}, key string, val interface{}) error {
 	v, ok := lookupAttr(attrs, key)
 	if !ok {
-		return AttributeNotFoundError{fmt.Errorf("sdk %q does not have attribute %q for interface %q", sdkName, key, ifaceName)}
+		return AttributeNotFoundError{fmt.Errorf("SDK %q does not have attribute %q for interface %q", sdkName, key, ifaceName)}
 	}
 
 	return metautil.SetValueFromAttribute(sdkName, ifaceName, key, v, val)

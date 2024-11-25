@@ -102,7 +102,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	// Validate
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
@@ -110,7 +110,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 
 	// Validate
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
-	c.Assert(err, check.ErrorMatches, "workshop not found")
+	c.Assert(err, check.ErrorMatches, "workshop has not been launched")
 }
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
@@ -139,7 +139,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	err := f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotFound)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 }
 
 func (f *wsOps) image(c *check.C, alias string) (string, error) {

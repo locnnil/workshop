@@ -42,7 +42,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 		defer func() {
 			if err := h.backend.DetachVolume(ctx, w, volume); err != nil {
-				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %s", volume)
+				logger.Noticef("RunHook on Do: Cannot detach SDK state storage volume %q", volume)
 			}
 		}()
 	}
@@ -161,7 +161,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 	hookLog, _ := afero.ReadFile(memFs, out.Name())
 	if len(hookLog) > 0 {
 		st.Lock()
-		task.Logf(string(hookLog))
+		task.Logf("%s", string(hookLog))
 		st.Unlock()
 	}
 

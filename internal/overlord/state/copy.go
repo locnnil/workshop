@@ -109,7 +109,7 @@ func CopyState(srcStatePath, dstStatePath string, dataEntries []string) error {
 
 	f, err := os.Open(srcStatePath)
 	if err != nil {
-		return fmt.Errorf("cannot open state: %s", err)
+		return fmt.Errorf("cannot open state: %w", err)
 	}
 	defer f.Close()
 

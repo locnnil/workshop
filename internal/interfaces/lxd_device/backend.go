@@ -99,7 +99,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 				return false, err
 			}
 		} else if !info.IsDir() {
-			return false, fmt.Errorf(`%s is not a directory`, dev.Where)
+			return false, fmt.Errorf(`%q is not a directory`, dev.Where)
 		}
 
 		// Ensure that the source path exists here. LXD allows to
@@ -238,7 +238,7 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkInfo)
 	if err != nil {
-		return fmt.Errorf("cannot obtain device snippets for workshop %q: %s", sdkInfo.Workshop, err)
+		return fmt.Errorf("cannot obtain device snippets for workshop %q: %w", sdkInfo.Workshop, err)
 	}
 	spec := s.(*Specification)
 

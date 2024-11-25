@@ -109,7 +109,7 @@ func RunAndWait(argv []string, env []string, timeout time.Duration, tomb *tomb.T
 	// was reached. Kill the command and wait for command.Wait()
 	// to clean it up (but limit the wait with the cmdWaitTimer)
 	if err := KillProcessGroup(command); err != nil {
-		return nil, fmt.Errorf("cannot abort: %s", err)
+		return nil, fmt.Errorf("cannot abort: %w", err)
 	}
 	select {
 	case <-time.After(cmdWaitTimeout):

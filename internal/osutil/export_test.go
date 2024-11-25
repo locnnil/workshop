@@ -78,10 +78,10 @@ func FakeMountInfo(text string) (restore func()) {
 	old := procSelfMountInfo
 	f, err := os.CreateTemp("", "mountinfo")
 	if err != nil {
-		panic(fmt.Errorf("cannot open temporary file: %s", err))
+		panic(fmt.Errorf("cannot open temporary file: %w", err))
 	}
 	if err := os.WriteFile(f.Name(), []byte(text), 0644); err != nil {
-		panic(fmt.Errorf("cannot write mock mountinfo file: %s", err))
+		panic(fmt.Errorf("cannot write mock mountinfo file: %w", err))
 	}
 	procSelfMountInfo = f.Name()
 	return func() {

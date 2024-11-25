@@ -151,15 +151,15 @@ func ResumeRefresh(st *state.State,
 		}
 	}
 	if chg == nil {
-		return nil, fmt.Errorf("cannot %s, no refresh in progress", mode)
+		return nil, fmt.Errorf("cannot %s: no refresh in progress", mode)
 	}
 
 	if chg.Kind() != "refresh" {
-		return nil, fmt.Errorf("cannot resume, no refresh in progress (%q is in progress)", chg.Kind())
+		return nil, fmt.Errorf("cannot resume: no refresh in progress (%s is in progress)", chg.Kind())
 	}
 
 	if chg.Status() != state.WaitStatus {
-		return nil, fmt.Errorf("cannot resume, no refresh is waiting on error")
+		return nil, fmt.Errorf("cannot resume: no refresh is waiting on error")
 	}
 
 	for _, tsk := range chg.Tasks() {

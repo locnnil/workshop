@@ -42,7 +42,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 	}
 
 	master, affected := MaybeBound(plugW, connRef.PlugRef)
-	masterTask := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", master.ShortRef(), connRef.SlotRef.ShortRef()))
+	masterTask := st.NewTask("connect", fmt.Sprintf("Connect %q to %q", master.ShortRef(), connRef.SlotRef.ShortRef()))
 
 	masterTask.Set("slot", connRef.SlotRef)
 	masterTask.Set("plug", master)
@@ -55,7 +55,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.Conn
 	ts := state.NewTaskSet(masterTask)
 	prev := masterTask
 	for _, p := range affected {
-		slave := st.NewTask("connect", fmt.Sprintf("Connect %s to %s", p.ShortRef(), connRef.SlotRef.ShortRef()))
+		slave := st.NewTask("connect", fmt.Sprintf("Connect %q to %q", p.ShortRef(), connRef.SlotRef.ShortRef()))
 		slave.Set("slot", connRef.SlotRef)
 		slave.Set("plug", p)
 		slave.Set("delayed-setup-profile", true)
@@ -75,7 +75,7 @@ func maybeAddDisconnect(st *state.State, ts *state.TaskSet, conn interfaces.Conn
 		return nil
 	}
 
-	dtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %s from %s", conn.PlugRef.ShortRef(), conn.SlotRef.ShortRef()))
+	dtask := st.NewTask("disconnect", fmt.Sprintf("Disconnect %q from %q", conn.PlugRef.ShortRef(), conn.SlotRef.ShortRef()))
 	dtask.Set("plug", conn.PlugRef)
 	dtask.Set("slot", conn.SlotRef)
 	dtask.Set("forget", forget)

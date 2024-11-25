@@ -121,6 +121,27 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
 }
 
+func (s *apiSuite) TestWorkshopRemountNoWorkshop(c *check.C) {
+	// Setup
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":"/srv/data"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusNotFound,
+			Message: `cannot access workshop "missing": workshop has not been launched`,
+		},
+	}
+
+	s.runMountTest(c, "missing", requests, expected)
+}
+
 func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 	// Setup
 	s.daemon(c)
@@ -140,7 +161,7 @@ func (s *apiSuite) TestWorkshopRemountPlugDisconnected(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `"manysdks/test-sdk:data" must be connected for remount`,
+			Message: `cannot remount "manysdks/test-sdk:data": plug is disconnected`,
 		},
 	}
 
@@ -192,7 +213,7 @@ func (s *apiSuite) TestWorkshopRemountInvalidInterface(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `remount requires a content interface plug (provided plug is of "gpu" interface)`,
+			Message: `cannot remount "manysdks/test-sdk-2:gpu": interface type should be "mount" (now: "gpu")`,
 		},
 	}
 
@@ -217,7 +238,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*sdk "system" does not have attribute "host-source" for interface "mount".*`,
+			ChangeErr: `(?s).*SDK "system" does not have attribute "host-source" for interface "mount".*`,
 		},
 	}
 

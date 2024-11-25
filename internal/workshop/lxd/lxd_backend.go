@@ -421,7 +421,7 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil, workshop.ErrWorkshopNotFound
+			return nil, workshop.ErrWorkshopNotLaunched
 		}
 		return nil, err
 	}

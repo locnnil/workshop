@@ -73,7 +73,7 @@ func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
 	err = s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(setup.Filename(), testutil.FilePresent)
-	c.Assert(prev, check.Not(testutil.FilePresent))
+	c.Assert(prev, testutil.FileAbsent)
 	c.Assert(os.Remove(setup.Filename()), check.IsNil)
 }
 
@@ -82,7 +82,7 @@ func (f *storeIntegration) TestStoreDownloadNotfound(c *check.C) {
 	setup := sdk.Setup{Name: "test-sdk-unknown", Channel: "latest/stable"}
 	err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.ErrorMatches, `SDK not found in "latest/stable"`)
-	c.Assert(setup.Filename(), check.Not(testutil.FilePresent))
+	c.Assert(setup.Filename(), testutil.FileAbsent)
 }
 
 func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.C) {
@@ -134,7 +134,7 @@ func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 55}}
 	err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.NotNil)
-	c.Assert(setup.Filename(), check.Not(testutil.FilePresent))
+	c.Assert(setup.Filename(), testutil.FileAbsent)
 }
 
 func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {

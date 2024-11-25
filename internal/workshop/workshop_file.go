@@ -16,7 +16,7 @@ import (
 
 var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	sdkBlacklist   = []string{"agent"}
+	sdkBlocklist   = []string{"agent"}
 
 	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
@@ -144,6 +144,11 @@ func readWorkshop(buf []byte) (*File, error) {
 	var file File
 
 	if err = yaml.Unmarshal(buf, &file); err != nil {
+		te, ok := err.(*yaml.TypeError)
+		if ok {
+			errs := strings.Join(te.Errors, "\n")
+			return nil, fmt.Errorf("workshop definition YAML:\n%s", errs)
+		}
 		return nil, err
 	}
 
@@ -152,11 +157,11 @@ func readWorkshop(buf []byte) (*File, error) {
 	})
 
 	if !workshopName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lower case alpha-numeric or an underscore symbol(s)")
+		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lowercase alphanumeric characters or underscore(s)")
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {
-		return nil, fmt.Errorf("unsupported base: %s", file.Base)
+		return nil, fmt.Errorf("base %q not supported", file.Base)
 	}
 
 	if err = validateSdks(file.Sdks); err != nil {
@@ -176,7 +181,7 @@ func readWorkshop(buf []byte) (*File, error) {
 
 func validateSdks(sdks SdkList) error {
 	for _, s := range sdks {
-		if slices.Contains(sdkBlacklist, s.Name) {
+		if slices.Contains(sdkBlocklist, s.Name) {
 			return fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
 
@@ -186,7 +191,7 @@ func validateSdks(sdks SdkList) error {
 			continue
 		}
 		if matches := channel.FindStringSubmatch(s.Channel); matches == nil {
-			return fmt.Errorf("unsupported channel %s for \"%s\"", s.Channel, s.Name)
+			return fmt.Errorf("unsupported channel %q for %q SDK", s.Channel, s.Name)
 		}
 		// A plug must either be bound or declared/extended with dynamic
 		// attributes.
@@ -216,10 +221,10 @@ func validateBinding(sdks SdkList) error {
 			slaves[sl] = mr
 
 			if p.Bind.Sdk != sdk.System.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
-				return fmt.Errorf("%q tries to bind to a plug from a non-existing SDK", fmt.Sprintf("%s:%s", p.Bind.Sdk, p.Bind.Name))
+				return fmt.Errorf("cannot bind plug %q: SDK %q not found", p.Bind.String(), p.Bind.Sdk)
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
-				return fmt.Errorf(`cannot bind plug "%s:%s" to itself`, s.Name, name)
+				return fmt.Errorf(`cannot bind plug %q to itself`, p.Bind.String())
 			}
 		}
 	}
@@ -236,7 +241,7 @@ func validateBinding(sdks SdkList) error {
 	for _, sl := range slaveKeysOrdered {
 		m := slaves[sl]
 		if _, ok := masters[sl]; ok {
-			return fmt.Errorf(`invalid binding %s:%s to %s:%s; plug "%s:%s" must not be bound to`, sl.Sdk, sl.Name, m.Sdk, m.Name, sl.Sdk, sl.Name)
+			return fmt.Errorf(`cannot bind %q to %q: plug %q is already bound`, sl.String(), m.String(), sl.String())
 		}
 	}
 	return nil
@@ -260,20 +265,17 @@ func isBound(plug PlugRef, wf *File) bool {
 func validateConnections(wfile *File) error {
 	for _, conn := range wfile.Connections {
 		if isBound(conn.PlugRef, wfile) {
-			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": plug is bound`,
-				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
-				conn.SlotRef.Name)
+			return fmt.Errorf(`cannot connect plug %q to slot %q: plug is bound`,
+				conn.PlugRef.String(), conn.SlotRef.String())
 		}
 
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.System.String() }) {
-			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
-				conn.PlugRef.Sdk, conn.PlugRef.Name, conn.SlotRef.Sdk,
-				conn.SlotRef.Name, conn.PlugRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
+				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.PlugRef.Sdk)
 		}
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.System.String() }) {
-			return fmt.Errorf(`cannot connect plug "%s:%s" to slot "%s:%s": %q SDK is not found in %q workshop`,
-				conn.PlugRef.Sdk, conn.PlugRef.Name,
-				conn.SlotRef.Sdk, conn.SlotRef.Name, conn.SlotRef.Sdk, wfile.Name)
+			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
+				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.SlotRef.Sdk)
 		}
 	}
 	return nil

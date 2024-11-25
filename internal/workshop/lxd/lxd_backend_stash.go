@@ -110,7 +110,7 @@ func (s *Backend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom,
 	_, _, err := conn.GetInstance(instanceFrom)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return workshop.ErrWorkshopNotFound
+			return workshop.ErrWorkshopNotLaunched
 		}
 		return err
 	}

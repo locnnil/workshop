@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/canonical/x-go/strutil"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/osutil"
@@ -55,21 +54,31 @@ func (w *WorkshopManager) Ensure() error {
 	return nil
 }
 
-// Checks all of the provided list of workshops are in the required health status.
-func (w *WorkshopManager) CheckStatus(ctx context.Context, names []string, pId string, allowedStatuses []healthstate.Status) error {
-	for _, name := range names {
-		workshop, err := w.Workshop(ctx, name, pId)
-		if err != nil {
-			return fmt.Errorf("status check for %q failed (%v)", name, err)
-		}
+// Checks the provided workshop has one of the allowed health statuses.
+func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, allowedStatuses []healthstate.Status) error {
+	wp, err := w.Workshop(ctx, name, pId)
+	if err != nil {
+		return err
+	}
 
-		health := w.WorkshopHealth(workshop)
-		allowed := []string{}
-		for _, s := range allowedStatuses {
-			allowed = append(allowed, s.String())
-		}
-		if slices.Index(allowedStatuses, health.Status) == -1 {
-			return fmt.Errorf("%q status is %q, must be one of: %s", name, health.Status.String(), strutil.Quoted(allowed))
+	health := w.WorkshopHealth(wp)
+	if !slices.Contains(allowedStatuses, health.Status) {
+		switch health.Status {
+		case healthstate.ReadyStatus:
+			return fmt.Errorf("workshop already running")
+		case healthstate.PendingStatus:
+			if health.Code == "wait-on-error" {
+				return fmt.Errorf("refresh waiting on error")
+			}
+			return fmt.Errorf("other changes in progress")
+		case healthstate.ErrorStatus:
+			return fmt.Errorf("workshop is unhealthy")
+		case healthstate.StoppedStatus:
+			return fmt.Errorf("workshop is not running")
+		case healthstate.OffStatus:
+			return workshop.ErrWorkshopNotLaunched
+		default:
+			return fmt.Errorf("workshop health is unknown")
 		}
 	}
 	return nil
@@ -127,7 +136,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 
 	// Check the project directory exists.
 	if !ws.Project.Exists() {
-		w.state.Warnf("%q project directory %q does not exist", ws.Name, ws.Project.Path)
+		w.state.Warnf("cannot find project directory %q for workshop %q", ws.Project.Path, ws.Name)
 
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-project"
@@ -139,7 +148,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 	// with the workshop instance or has any errors) is not checked.
 	path := ws.Filepath()
 	if !osutil.FileExists(path) {
-		w.state.Warnf("%q workshop definition %q does not exist", ws.Name, path)
+		w.state.Warnf("cannot find definition %q for workshop %q", path, ws.Name)
 
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-file"

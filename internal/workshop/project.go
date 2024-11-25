@@ -49,6 +49,9 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 
 	buf, err := os.ReadFile(path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("workshop definition %q not found", path)
+		}
 		return nil, err
 	}
 
@@ -59,7 +62,7 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 
 	fname := filepath.Base(path)
 	if Filename(file.Name) != fname {
-		return nil, fmt.Errorf("%q workshop file must be named as %q (now: %s)", file.Name, Filename(file.Name), fname)
+		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)", file.Name, Filename(file.Name), fname)
 	}
 	return file, nil
 }

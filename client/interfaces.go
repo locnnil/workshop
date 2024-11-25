@@ -100,39 +100,18 @@ type DisconnectOptions struct {
 	Forget bool
 }
 
-func ParseFullPlugRef(plug string) (*PlugRef, error) {
-	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
-	var plugRef PlugRef
-
-	parts := strings.Split(plug, ":")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
-	}
-
-	wssdk := strings.Split(parts[0], "/")
-	if len(wssdk) != 3 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
-	}
-
-	plugRef.ProjectId = wssdk[0]
-	plugRef.Workshop = wssdk[1]
-	plugRef.Sdk = wssdk[2]
-	plugRef.Name = parts[1]
-	return &plugRef, nil
-}
-
 func ParseShortPlugRef(plug string) (*PlugRef, error) {
-	// the expected format of the plug ref is <workshop>[/<sdk>]:<plug>
+	// the expected format of the plug ref is <workshop>/<sdk>:<plug>
 	var plugRef PlugRef
 
 	parts := strings.Split(plug, ":")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+		return nil, fmt.Errorf("invalid plug or slot reference %q (expected <WORKSHOP>/<SDK>:<PLUG>)", plug)
 	}
 
 	wssdk := strings.Split(parts[0], "/")
 	if len(wssdk) != 2 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", plug)
+		return nil, fmt.Errorf("invalid SDK reference %q (expected <WORKSHOP>/<SDK>)", parts[0])
 	}
 
 	plugRef.Workshop = wssdk[0]
@@ -158,7 +137,7 @@ func ParseSlotSdkRef(slot string) (*SlotRef, error) {
 	var slotRef SlotRef
 	parts := strings.Split(slot, "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("unknown plug or slot reference %q", slot)
+		return nil, fmt.Errorf("invalid SDK reference %q (expected <WORKSHOP>/<SDK>)", slot)
 	}
 	slotRef.Workshop = parts[0]
 	slotRef.Sdk = parts[1]

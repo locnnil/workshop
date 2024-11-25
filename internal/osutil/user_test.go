@@ -84,8 +84,8 @@ func (s *userSuite) TestUidGid(c *check.C) {
 		Err  string
 	}{
 		"happy":   {&user.User{Uid: "10", Gid: "10"}, 10, 10, ""},
-		"bad uid": {&user.User{Uid: "x", Gid: "10"}, sys.FlagID, sys.FlagID, "cannot parse user id x"},
-		"bad gid": {&user.User{Uid: "10", Gid: "x"}, sys.FlagID, sys.FlagID, "cannot parse group id x"},
+		"bad uid": {&user.User{Uid: "x", Gid: "10"}, sys.FlagID, sys.FlagID, `cannot parse user id "x"`},
+		"bad gid": {&user.User{Uid: "10", Gid: "x"}, sys.FlagID, sys.FlagID, `cannot parse group id "x"`},
 	} {
 		uid, gid, err := osutil.UidGid(t.User)
 		c.Check(uid, check.Equals, t.Uid, check.Commentf(k))
