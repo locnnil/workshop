@@ -563,7 +563,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(oldSource, check.Not(testutil.FilePresent))
+	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 
 	// ensure the global conns state was updated correctly
@@ -607,7 +607,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(oldSource, check.Not(testutil.FilePresent))
+	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Sdk, check.Equals, "consumer")
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Workshop, check.Equals, "ws-consumer")
@@ -766,7 +766,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(src, check.Equals, oldSource)
 
 	c.Assert(oldSource, testutil.FilePresent)
-	c.Assert(newSource, check.Not(testutil.FilePresent))
+	c.Assert(newSource, testutil.FileAbsent)
 	// 2 calls for the autoconnect, no calls for the remount
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
