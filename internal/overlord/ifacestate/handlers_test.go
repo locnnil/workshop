@@ -14,7 +14,6 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -564,7 +563,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	c.Assert(oldSource, check.Not(testutil.FilePresent))
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 
 	// ensure the global conns state was updated correctly
@@ -608,7 +607,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 	c.Assert(connection.Slot.Attr("host-source", &remountSource), check.IsNil)
 	c.Assert(remountSource, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, false)
+	c.Assert(oldSource, check.Not(testutil.FilePresent))
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Sdk, check.Equals, "consumer")
 	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Workshop, check.Equals, "ws-consumer")
@@ -656,8 +655,8 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptyFails(c *chec
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 }
 
@@ -694,8 +693,8 @@ func (s *interfaceHandlersSuite) TestRemountRenameNewSourceNotEmptySucceeds(c *c
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
 
@@ -728,8 +727,8 @@ func (s *interfaceHandlersSuite) TestRemountRenameUnexpectedError(c *check.C) {
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 }
 
@@ -766,8 +765,8 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
 
-	c.Assert(osutil.FileExists(oldSource), check.Equals, true)
-	c.Assert(osutil.FileExists(newSource), check.Equals, false)
+	c.Assert(oldSource, testutil.FilePresent)
+	c.Assert(newSource, check.Not(testutil.FilePresent))
 	// 2 calls for the autoconnect, no calls for the remount
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
@@ -802,7 +801,7 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, newSource)
 
-	c.Assert(osutil.FileExists(newSource), check.Equals, true)
+	c.Assert(newSource, testutil.FilePresent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 }
 
