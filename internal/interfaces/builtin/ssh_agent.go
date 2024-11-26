@@ -108,7 +108,7 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specificatio
 
 	sock, ok := env["SSH_AUTH_SOCK"]
 	if !ok {
-		return fmt.Errorf("user %q does not have SSH_AUTH_SOCK set. ssh-agent is not running?", user.Username)
+		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, user.Username)
 	}
 
 	name := plug.Sdk().Name + "-" + plug.Name()
