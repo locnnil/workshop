@@ -110,7 +110,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 
 	// Validate
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
-	c.Assert(err, check.ErrorMatches, "workshop has not been launched")
+	c.Assert(err, check.ErrorMatches, "workshop not launched")
 }
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {

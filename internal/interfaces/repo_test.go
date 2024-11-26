@@ -794,7 +794,7 @@ func (s *RepositorySuite) TestDisconnectFailsWhenNotConnected(c *C) {
 	c.Assert(s.testRepo.AddPlug(s.plug), IsNil)
 	c.Assert(s.testRepo.AddSlot(s.slot), IsNil)
 	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `cannot disconnect "ws/consumer:plug" from "ws/producer:slot": they are not connected`)
+	c.Assert(err, ErrorMatches, `cannot disconnect "ws/consumer:plug" from "ws/producer:slot": not connected`)
 	e, _ := err.(*NotConnectedError)
 	c.Check(e, NotNil)
 }

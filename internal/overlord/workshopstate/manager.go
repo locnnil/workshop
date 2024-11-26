@@ -74,7 +74,7 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 		case healthstate.ErrorStatus:
 			return fmt.Errorf("workshop is unhealthy")
 		case healthstate.StoppedStatus:
-			return fmt.Errorf("workshop is not running")
+			return fmt.Errorf("workshop not running")
 		case healthstate.OffStatus:
 			return workshop.ErrWorkshopNotLaunched
 		default:

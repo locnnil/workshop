@@ -135,7 +135,7 @@ func (s *apiSuite) TestWorkshopRemountNoWorkshop(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusNotFound,
-			Message: `cannot access workshop "missing": workshop has not been launched`,
+			Message: `cannot access workshop "missing": workshop not launched`,
 		},
 	}
 

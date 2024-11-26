@@ -263,7 +263,11 @@ func (m *InterfaceManager) ResolveDisconnect(
 		plugRef := interfaces.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}
 		slotRef := interfaces.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}
 		if !isConnected {
-			return nil, fmt.Errorf("cannot disconnect %q from %q: they are not connected",
+			if forget {
+				return nil, fmt.Errorf("cannot forget connection between %q and %q: not connected",
+					plugRef.ShortRef(), slotRef.ShortRef())
+			}
+			return nil, fmt.Errorf("cannot disconnect %q from %q: not connected",
 				plugRef.ShortRef(), slotRef.ShortRef())
 		}
 		return []*interfaces.ConnRef{{PlugRef: plugRef, SlotRef: slotRef}}, nil
