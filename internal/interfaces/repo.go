@@ -605,7 +605,7 @@ func (r *Repository) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugNa
 	// Ensure that slot and plug are connected
 	if r.slotPlugs[slot][plug] == nil {
 		return &NotConnectedError{
-			message: fmt.Sprintf("cannot disconnect %q from %q: they are not connected",
+			message: fmt.Sprintf("cannot disconnect %q from %q: not connected",
 				NewPlugRef(plug).ShortRef(), NewSlotRef(slot).ShortRef()),
 		}
 	}

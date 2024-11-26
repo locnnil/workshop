@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	ErrWorkshopNotLaunched = errors.New("workshop has not been launched")
+	ErrWorkshopNotLaunched = errors.New("workshop not launched")
 	ErrVolumeAlreadyExists = errors.New("storage volume already exists")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
