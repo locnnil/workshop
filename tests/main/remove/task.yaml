@@ -33,5 +33,5 @@ execute: |
 
   echo "Check the workshop can be removed if in Error"
   workshop_exec launch ws-remove
-  rm -f .workshop/workshop.ws-remove.yaml
+  rm -f .workshop/ws-remove.yaml
   workshop_exec remove ws-remove

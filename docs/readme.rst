@@ -57,7 +57,7 @@ Launching workshops
 
 In the ``.workshop`` directory of the project
 that you want to use with Workshop,
-create a workshop definition file named ``workshop.<NAME>.yaml``
+create a workshop definition file named ``<NAME>.yaml``
 to list your project's prerequisites,
 then run ``workshop launch <NAME>``:
 
@@ -65,7 +65,7 @@ then run ``workshop launch <NAME>``:
 
    mkdir -p .workshop
 
-   cat > .workshop/workshop.golang.yaml <<EOF -
+   cat > .workshop/golang.yaml <<EOF -
    name: golang
    base: ubuntu@22.04
    sdks:

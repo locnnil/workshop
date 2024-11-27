@@ -61,7 +61,7 @@ provide more details of valid transitions.
 Workshop definition
 -------------------
 
-This is a file named :file:`workshop.<NAME>.yaml`
+This is a YAML file
 that lists the base image of the workshop
 and the specific components installed on top of it.
 The definition acts as a single source of truth about the workshop.
@@ -72,7 +72,7 @@ so you can edit and update the file iteratively.
 A simple definition might look like this:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.golang.yaml
+   :caption: .workshop/golang.yaml
 
    name: golang
    base: ubuntu@22.04
@@ -132,7 +132,7 @@ Here, the :samp:`datasets` plug of the :samp:`pytorch` SDK
 is bound to the :samp:`datasets` plug under :samp:`tensorflow`:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.digits.yaml
+   :caption: .workshop/digits.yaml
    :emphasize-lines: 8
 
    name: digits
@@ -211,7 +211,7 @@ This reduces the need to run manual commands after starting the workshop.
 This example adds a slot, a plug and two connections to its SDKs:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.digits-cuda.yaml
+   :caption: .workshop/digits-cuda.yaml
    :emphasize-lines: 5-8, 11-14, 17-21
 
    base: ubuntu@22.04

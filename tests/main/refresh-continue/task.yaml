@@ -9,9 +9,9 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Update the workshop file to include a failing SDK"
-  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' .workshop/workshop.ws-refresh-cont.yaml
+  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' .workshop/ws-refresh-cont.yaml
   workshop_exec refresh --wait-on-error ws-refresh-cont || true
-  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' .workshop/workshop.ws-refresh-cont.yaml
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' .workshop/ws-refresh-cont.yaml
 
   echo "Check the workshop is in Pending state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-cont[[:space:]]+Pending[[:space:]]+wait-on-error$"

@@ -32,7 +32,7 @@ execute: |
   # Refresh
 
   # Change base
-  sed -i "s/22/20/g" .workshop/workshop.nimble.yaml
+  sed -i "s/22/20/g" .workshop/nimble.yaml
   workshop_exec refresh nimble
 
   # Execute commands

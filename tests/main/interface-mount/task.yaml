@@ -22,9 +22,9 @@ execute: |
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected if refresh fails"
-  sed -i 's/test-sdk-mount/test-sdk-setup-fail/g' .workshop/workshop.ws-mount.yaml
+  sed -i 's/test-sdk-mount/test-sdk-setup-fail/g' .workshop/ws-mount.yaml
   workshop_exec refresh ws-mount || true
-  sed -i 's/test-sdk-setup-fail/test-sdk-mount/g' .workshop/workshop.ws-mount.yaml
+  sed -i 's/test-sdk-setup-fail/test-sdk-mount/g' .workshop/ws-mount.yaml
   validate_host_mounts
 
   echo "Check manual connect/disconnect works"

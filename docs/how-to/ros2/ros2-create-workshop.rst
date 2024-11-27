@@ -50,7 +50,7 @@ put this file in the :file:`.workshop` directory
 in the project root:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.ros2-humble.yaml
+   :caption: .workshop/ros2-humble.yaml
 
    name: ros2-humble
    base: ubuntu@22.04
@@ -72,7 +72,7 @@ Your project directory should now look like this:
 
    $ ls .workshop/
 
-     workshop.ros2-humble.yaml
+     ros2-humble.yaml
 
 
 All set, so launch the workshop:
