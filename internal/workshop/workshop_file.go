@@ -28,16 +28,8 @@ func Filename(name string) string {
 	return fmt.Sprintf("%s.yaml", name)
 }
 
-func OldFilename(name string) string {
-	return fmt.Sprintf("workshop.%s.yaml", name)
-}
-
 func Filepath(project, name string) string {
 	return filepath.Join(project, Directory, Filename(name))
-}
-
-func OldFilepath(project, name string) string {
-	return filepath.Join(project, Directory, OldFilename(name))
 }
 
 type Plug struct {

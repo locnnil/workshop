@@ -147,7 +147,7 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 	// exists in the .workshop directory here; its state (e.g. if it is in sync
 	// with the workshop instance or has any errors) is not checked.
 	path := ws.Filepath()
-	if !osutil.FileExists(path) && !osutil.FileExists(ws.OldFilepath()) {
+	if !osutil.FileExists(path) {
 		w.state.Warnf("cannot find definition %q for workshop %q", path, ws.Name)
 
 		healthState.Status = healthstate.ErrorStatus

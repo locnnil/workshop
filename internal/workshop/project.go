@@ -48,14 +48,10 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	path := Filepath(w.Path, workshop)
 
 	buf, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		buf, err = os.ReadFile(OldFilepath(w.Path, workshop))
+	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("workshop definition %q not found", path)
-		} else if err != nil {
-			return nil, err
 		}
-	} else if err != nil {
 		return nil, err
 	}
 
@@ -90,7 +86,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), "workshop."), ".yaml")
+		var name = strings.TrimSuffix(info.Name(), ".yaml")
 		workshops = append(workshops, name)
 	}
 	return workshops, nil
