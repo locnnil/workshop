@@ -45,7 +45,7 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	// broken workshop
 	c.Assert(os.WriteFile(filepath.Join(w, "workshop.wb.yaml"), []byte(wb), 0644), check.IsNil)
 	// no match with the filename pattern
-	c.Assert(os.WriteFile(filepath.Join(w, ".workshop.test-dir.yaml"), []byte{}, 0644), check.IsNil)
+	c.Assert(os.WriteFile(filepath.Join(w, ".workshop.test-dir.yml"), []byte{}, 0644), check.IsNil)
 	fls, err := p.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 	c.Assert(fls, check.HasLen, 4)

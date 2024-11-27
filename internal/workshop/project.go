@@ -48,10 +48,14 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	path := Filepath(w.Path, workshop)
 
 	buf, err := os.ReadFile(path)
-	if err != nil {
+	if errors.Is(err, os.ErrNotExist) {
+		buf, err = os.ReadFile(OldFilepath(w.Path, workshop))
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("workshop definition %q not found", path)
+		} else if err != nil {
+			return nil, err
 		}
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -60,9 +64,9 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 		return nil, err
 	}
 
-	fname := filepath.Base(path)
-	if Filename(file.Name) != fname {
-		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)", file.Name, Filename(file.Name), fname)
+	if file.Name != workshop {
+		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)",
+			file.Name, Filename(file.Name), filepath.Base(path))
 	}
 	return file, nil
 }
@@ -71,7 +75,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
-	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "workshop.*.yaml"))
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
 	if err != nil {
 		return nil, err
 	}

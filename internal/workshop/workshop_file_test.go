@@ -110,7 +110,7 @@ base: ubuntu@20.04
 	f.createWFile(c, "xbert", yaml)
 	file, err := f.project.Workshop("xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named "workshop.xbert-gpu.yaml" \(now: "workshop.xbert.yaml"\)`)
+	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named "xbert-gpu.yaml" \(now: "xbert.yaml"\)`)
 }
 
 func (f *workshopFile) TestWorkshopInvalidName(c *check.C) {
