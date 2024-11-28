@@ -1,13 +1,28 @@
 Workshops, SDKs
 ===============
 
-These articles explain the core set of |project_markup|-related concepts.
+These articles explain the core set of |project_markup|-related concepts:
 
 .. toctree::
-   :glob:
    :maxdepth: 1
 
-   *
+   changes-tasks
+   hooks
+   parts
+   projects
+   sdks
+   workshops
+
+These topics cover multiple aspects of using SDKs in |project_markup|:
+
+
+.. toctree::
+   :maxdepth: 1
+
+   cli
+   Data persistence and sharing <data-persistence-sharing>
+   Dockerfiles versus SDKs <dockerfile-vs-sdk>
+   Health reports <workshopctl>
 
 
 Summary

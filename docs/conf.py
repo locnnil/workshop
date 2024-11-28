@@ -151,6 +151,7 @@ redirects = {}
 
 linkcheck_ignore = [
     "http://127.0.0.1:8000",
+    "https://github.com/canonical/sdkcraft",
     "https://github.com/canonical/workshop",
     r"^https://.*\.readthedocs-hosted\.com/.*#\w+$",
 ]

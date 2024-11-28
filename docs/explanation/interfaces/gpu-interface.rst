@@ -13,6 +13,41 @@ By using the interface,
 the SDK publisher allows the workshop to directly access the host's GPU devices,
 which may be required for various GPU-intensive workloads.
 
+.. _exp_gpu_plug:
+
+GPU interface plug
+------------------
+
+An essential element here is the GPU interface plug,
+which is declared in the SDK definition.
+
+Its structure includes just the name of the plug and the interface;
+both must be set to :samp:`gpu`.
+
+Defining the plug in an SDK
+allows the workshops using this SDK to directly access the host's GPU devices,
+which may be required for various GPU-intensive workloads.
+
+
+.. _exp_gpu_slot:
+
+GPU interface slot
+------------------
+
+To let SDKs in a workshop access the host's GPUs,
+:program:`Workshop` provides a GPU interface slot
+that multiple GPU interface plugs can access.
+
+When the SDK is installed at run-time during launch and refresh operations,
+:program:`Workshop` checks that the plug targeting the slot
+passes :ref:`validation <exp_interface_connections>`;
+if it does,
+it can be connected.
+
+
+Connection
+----------
+
 The interface is connected automatically at launch or refresh,
 provided that the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,

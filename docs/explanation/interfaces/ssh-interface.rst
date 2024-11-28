@@ -13,6 +13,42 @@ the SDK publisher allows the workshop to connect to the host's SSH agent,
 which can be useful in various SDK-specific tasks
 such as cloning private repositories, accessing remote machines and so on.
 
+.. _exp_ssh_plug:
+
+SSH interface plug
+------------------
+
+An essential element here is the SSH interface plug,
+which is declared in the SDK definition.
+
+Its structure includes just the name of the plug and the interface;
+both must be set to :samp:`ssh-agent`.
+
+Defining the plug in an SDK
+allows the workshops using this SDK to connect to the host's SSH agent,
+which can be useful in various SDK-specific tasks
+such as cloning private repositories, accessing remote machines and so on.
+
+
+.. _exp_ssh_slot:
+
+SSH interface slot
+------------------
+
+To let SDKs in a workshop access the host's SSH agent,
+:program:`Workshop` provides an SSH interface slot
+that multiple SSH interface plugs can access.
+
+When the SDK is installed at run-time during launch and refresh operations,
+:program:`Workshop` checks that the plug targeting the slot
+passes :ref:`validation <exp_interface_connections>`;
+if it does,
+it can be connected.
+
+
+Connection
+----------
+
 The interface isn't connected automatically at launch and refresh
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands

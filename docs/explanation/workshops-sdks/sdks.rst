@@ -61,7 +61,7 @@ the definition may look like this:
        workshop-target: /home/workshop/go/pkg/mod
 
 
-.. _exp_sdk_hooks:
+.. _exp_hooks:
 
 SDK hooks
 ---------
@@ -221,6 +221,11 @@ and isn't listed in the :command:`workshop info` output.
 It's also the only SDK
 that can have :ref:`mount interface <exp_mount_interface>` slots on the host.
 
+The uniformity of this approach lies in the fact that system resources
+and workshop resources are exposed using the same logic.
+Technically, the system SDK is of :samp:`system` type,
+whereas all other SDKs are of :samp:`regular` type,
+but this detail isn't exposed in :file:`sdkcraft.yaml`.
 
 .. _exp_hack_sdk:
 

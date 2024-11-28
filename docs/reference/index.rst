@@ -15,12 +15,14 @@ A complete tour of :program:`workshop`'s commands:
    cli/index
 
 
-Details of everything that goes into defining a workshop
+Details of everything that goes into defining a workshop or an SDK
 and maintaining it at run-time:
 
 .. toctree::
    :maxdepth: 1
 
+   sdks
    sdk-hooks
    workshop-definition
    workshop-status
+   workshopctl
