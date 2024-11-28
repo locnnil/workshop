@@ -51,3 +51,28 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	c.Assert(fls, check.HasLen, 4)
 	c.Assert(fls, testutil.DeepUnsortedMatches, []string{"w1", "w2", "wb", "-"})
 }
+
+func (f *workshopFile) TestSingleWorkshopFileExcludesOthers(c *check.C) {
+	d := c.MkDir()
+	p := &workshop.Project{Path: d, ProjectId: "42424242"}
+
+	w := filepath.Join(d, workshop.Directory)
+	c.Assert(os.MkdirAll(w, os.ModePerm), check.IsNil)
+
+	c.Assert(createWorkshop(w, "w1"), check.IsNil)
+	c.Assert(createWorkshop(w, "w2"), check.IsNil)
+	c.Assert(createWorkshop(d, "workshop"), check.IsNil)
+	fls, err := p.ReadWorkshops()
+	c.Assert(err, check.IsNil)
+	c.Assert(fls, check.DeepEquals, []string{"workshop"})
+}
+
+func (f *workshopFile) TestSingleWorkshopFileBroken(c *check.C) {
+	d := c.MkDir()
+	p := &workshop.Project{Path: d, ProjectId: "42424242"}
+
+	c.Assert(os.WriteFile(filepath.Join(d, ".workshop.yaml"), []byte(wb), 0644), check.IsNil)
+	fls, err := p.ReadWorkshops()
+	c.Assert(fls, check.IsNil)
+	c.Assert(err, check.NotNil)
+}

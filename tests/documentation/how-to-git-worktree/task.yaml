@@ -6,7 +6,7 @@ execute: |
   git config --global user.email "wsuser@example.com"
   git config --global user.name "Workshop User"
   git init original
-  mv main.go .workshop original/
+  mv main.go workshop.yaml original/
   cd original/
   workshop_exec --project "$PROJECT/original" launch golang
   git add . && git commit -m "initial commit"
@@ -18,7 +18,7 @@ execute: |
   git config --global --add safe.directory "$PROJECT/original"
   git worktree add $PROJECT/hotfix
   cd $PROJECT/hotfix/
-  sed -i "s/22\.04/20.04/g" .workshop/golang.yaml
+  sed -i "s/22\.04/20.04/g" workshop.yaml
   workshop_exec --project "$PROJECT/hotfix" launch golang
   sleep 1
   git commit -am "solve problem with hotfix"

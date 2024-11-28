@@ -4,6 +4,7 @@ prepare: |
   workshop_exec launch ws-refresh ws-refresh-sdk
 restore: |
   . "$TESTSLIB"/utils.sh
+  [ -f .workshop/ws-refresh.yaml ] || mv .workshop.yaml .workshop/ws-refresh.yaml
   workshop_exec remove ws-refresh ws-refresh-sdk
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -22,6 +23,11 @@ execute: |
   echo "Check apt cache is preserved across refreshes"
   workshop_exec exec ws-refresh -- mountpoint /var/cache/apt/archives
   workshop_exec exec ws-refresh -- sudo test -f /var/cache/apt/archives/sentinel
+
+  echo "Check refresh for single-workshop project"
+  mv .workshop/ws-refresh.yaml .workshop.yaml
+  workshop_exec refresh ws-refresh
+  mv .workshop.yaml .workshop/ws-refresh.yaml
 
   workshop_exec refresh ws-refresh-sdk
 

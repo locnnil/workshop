@@ -17,7 +17,7 @@ that behaves like any good file should.
 Things change *after* you run :command:`workshop launch`:
 
 .. code-block:: yaml
-   :caption: /home/user/old/.workshop/golang.yaml
+   :caption: /home/user/old/workshop.yaml
 
    name: golang
    base: ubuntu@22.04

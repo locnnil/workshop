@@ -6,7 +6,12 @@ Workshop definition
 Filename convention
 -------------------
 
-Workshop definition files should be located in the :file:`.workshop` folder,
+A project which defines a single workshop can store a definition file
+named :file:`workshop.yaml` or :file:`.workshop.yaml`
+in the project folder.
+
+To define more than one workshop,
+the definition files should be located in the :file:`.workshop` folder,
 with the filename :file:`<NAME>.yaml`.
 
 Here, :samp:`<NAME>` is a placeholder that stands for the actual name
@@ -34,7 +39,8 @@ and includes a number of mandatory and optional keys:
      - string
      - Workshop's name, used to reference the workshop itself.
 
-       Must be the same as :samp:`<NAME>`
+       For workshops defined in the :file:`.workshop` folder,
+       the name must be the same as :samp:`<NAME>`
        in the workshop definition's filename.
 
    * - :samp:`base` (required)

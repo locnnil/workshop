@@ -72,7 +72,7 @@ so you can edit and update the file iteratively.
 A simple definition might look like this:
 
 .. code-block:: yaml
-   :caption: .workshop/golang.yaml
+   :caption: workshop.yaml
 
    name: golang
    base: ubuntu@22.04
@@ -85,6 +85,12 @@ It specifies a *base* and an *SDK*.
 A more complete definition would usually list several SDKs
 that use different :ref:`interfaces <exp_interfaces>`,
 software packages and :ref:`hooks <exp_sdk_hooks>`.
+
+A workshop definition can be hidden by naming it
+:file:`.workshop.yaml` instead of :file:`workshop.yaml`.
+If a project defines more than one workshop,
+the definitions should be stored in the :file:`.workshop` directory,
+for example :file:`.workshop/golang.yaml`.
 
 
 .. _exp_base:

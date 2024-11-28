@@ -22,6 +22,7 @@ var (
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 	Directory = ".workshop"
+	Filenames = []string{"workshop.yaml", ".workshop.yaml"}
 )
 
 func Filename(name string) string {

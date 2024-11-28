@@ -172,11 +172,10 @@ your source code, custom assets, and so on.
 In this tutorial, we'll be building some Go code.
 
 In the project directory,
-create a workshop definition
-named :file:`.workshop/golang.yaml`:
+create a workshop definition named :file:`workshop.yaml`:
 
 .. code-block:: yaml
-   :caption: .workshop/golang.yaml
+   :caption: workshop.yaml
    :emphasize-lines: 4
 
    name: golang
@@ -370,7 +369,7 @@ Here, change the base in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
-   :caption: .workshop/golang.yaml
+   :caption: workshop.yaml
    :emphasize-lines: 2
 
    name: golang

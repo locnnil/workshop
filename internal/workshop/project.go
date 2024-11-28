@@ -45,6 +45,17 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
+	file, err := w.SingleWorkshop()
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	} else if file.Name != workshop {
+		return nil, fmt.Errorf("single workshop in project %q is named %q, not %q", w.Path, file.Name, workshop)
+	} else {
+		return file, nil
+	}
+
 	path := Filepath(w.Path, workshop)
 
 	buf, err := os.ReadFile(path)
@@ -55,7 +66,7 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 		return nil, err
 	}
 
-	file, err := readWorkshop(buf)
+	file, err = readWorkshop(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +78,37 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	return file, nil
 }
 
+// Read single workshop file if it exists and is unique.
+func (w *Project) SingleWorkshop() (*File, error) {
+	var result []byte
+
+	for _, name := range Filenames {
+		buf, err := os.ReadFile(filepath.Join(w.Path, name))
+		if err == nil {
+			if result != nil {
+				return nil, fmt.Errorf("more than one workshop definition in project %q", w.Path)
+			}
+			result = buf
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
+	if result == nil {
+		return nil, fmt.Errorf("default workshop definition for project %q: %w", w.Path, os.ErrNotExist)
+	}
+	return readWorkshop(result)
+}
+
 func (w *Project) ReadWorkshops() ([]string, error) {
+	file, err := w.SingleWorkshop()
+	if err == nil {
+		return []string{file.Name}, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.

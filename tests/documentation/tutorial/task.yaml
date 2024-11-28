@@ -7,7 +7,7 @@ execute: |
 
   # Define
   mkdir hello-workshop/
-  mv main.go .workshop hello-workshop/
+  mv main.go workshop.yaml hello-workshop/
   chown -R ubuntu:ubuntu hello-workshop/
   cd hello-workshop/
   workshop_exec list
@@ -32,7 +32,7 @@ execute: |
   # Refresh
 
   # Change base
-  sed -i "s/22/20/g" .workshop/nimble.yaml
+  sed -i "s/22/20/g" workshop.yaml
   workshop_exec refresh nimble
 
   # Execute commands

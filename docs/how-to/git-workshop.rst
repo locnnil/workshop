@@ -21,7 +21,7 @@ in your repository:
 
 
 .. code-block:: yaml
-   :caption: .workshop/golang.yaml
+   :caption: workshop.yaml
 
    name: golang
    base: ubuntu@22.04
@@ -129,7 +129,7 @@ update the definition
 to change the base image:
 
 .. code-block:: yaml
-   :caption: .workshop/golang.yaml
+   :caption: workshop.yaml
    :emphasize-lines: 2
 
    name: golang
