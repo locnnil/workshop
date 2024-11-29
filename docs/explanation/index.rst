@@ -6,6 +6,10 @@ Explanation
 These in-depth articles explain various |project_markup| concepts
 and how they fit together.
 
+
+Workshops and projects
+----------------------
+
 The core set of |project_markup|-related concepts
 such as projects and workshops:
 
@@ -16,6 +20,9 @@ such as projects and workshops:
    workshops/index
 
 
+SDKs
+----
+
 The topics that cover the role of SDKs in |project_markup|:
 
 .. toctree::
@@ -25,6 +32,9 @@ The topics that cover the role of SDKs in |project_markup|:
    sdks/index
 
 
+Interfaces
+----------
+
 Details of working with various interface types:
 
 .. toctree::
@@ -33,6 +43,9 @@ Details of working with various interface types:
 
    interfaces/index
 
+
+Security considerations
+-----------------------
 
 Important security aspects of |project_markup|:
 

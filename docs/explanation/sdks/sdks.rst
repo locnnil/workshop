@@ -1,7 +1,7 @@
-.. _exp_sdks:
+.. _exp_sdk_concepts:
 
-SDKs
-====
+SDK concepts
+============
 
 SDKs are essential workshop components
 that install the required system and language packages,

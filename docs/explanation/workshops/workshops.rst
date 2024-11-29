@@ -1,7 +1,7 @@
-.. _exp_workshops:
+.. _exp_workshop_concepts:
 
-Workshops
-=========
+Workshop concepts
+=================
 
 A *workshop*
 (lowercase; not to be confused with |project_markup| itself)

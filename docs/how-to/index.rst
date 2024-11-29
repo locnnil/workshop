@@ -3,6 +3,14 @@
 How-to guides
 =============
 
+These step-by-step guides
+cover specific needs and scenarios
+that arise when you use |project_markup|.
+
+
+Build SDKs
+----------
+
 To build SDKs, you use `SDKcraft`_:
 a tool that packages and publishes SDKs for |project_markup|.
 
@@ -12,9 +20,10 @@ a tool that packages and publishes SDKs for |project_markup|.
    Build SDKs with SDKcraft <use-sdkcraft>
 
 
-These step-by-step guides
-cover specific needs and scenarios
-that arise when you use |project_markup|.
+Use workshops
+-------------
+
+These articles address daily |project_markup| scenarios.
 
 .. toctree::
    :maxdepth: 1
@@ -24,6 +33,9 @@ that arise when you use |project_markup|.
    Troubleshoot the installation <troubleshoot>
    Use workshops with Git <git-workshop>
 
+
+Real-life examples
+------------------
 
 These topics present a case study for `ROS2 <https://www.ros.org/>`_,
 a popular robotics-oriented framework.
