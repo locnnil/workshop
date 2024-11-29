@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -24,6 +25,7 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 		SilenceUsage:     true,
 		TraverseChildren: true,
 
+		PersistentPreRunE: c.preRun,
 		PersistentPostRun: c.postRun,
 	}
 
@@ -68,6 +70,15 @@ func (c *CmdRoot) client() (*client.Client, error) {
 	}
 
 	return cli, err
+}
+
+func (c *CmdRoot) preRun(cmd *cobra.Command, args []string) error {
+	project, err := filepath.Abs(c.project)
+	if err != nil {
+		return err
+	}
+	c.project = project
+	return nil
 }
 
 func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
