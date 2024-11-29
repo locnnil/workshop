@@ -1,4 +1,4 @@
-.. _exp_sdk:
+.. _exp_sdks:
 
 SDKs
 ====

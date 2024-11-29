@@ -1,4 +1,4 @@
-.. _exp_workshop:
+.. _exp_workshops:
 
 Workshops
 =========

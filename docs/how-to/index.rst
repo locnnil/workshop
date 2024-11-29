@@ -3,6 +3,15 @@
 How-to guides
 =============
 
+To build SDKs, you use `SDKcraft`_:
+a tool that packages and publishes SDKs for |project_markup|.
+
+.. toctree::
+   :maxdepth: 1
+
+   Build SDKs with SDKcraft <use-sdkcraft>
+
+
 These step-by-step guides
 cover specific needs and scenarios
 that arise when you use |project_markup|.
@@ -12,8 +21,14 @@ that arise when you use |project_markup|.
 
    Debug issues in workshops <debug-workshop-issues>
    Move projects around <moving-projects>
-   ROS2: create a workshop <ros2-create-workshop>
-   ROS2: design the SDK <ros2-design-sdk>
    Troubleshoot the installation <troubleshoot>
-   Use SDKcraft <use-sdkcraft>
    Use workshops with Git <git-workshop>
+
+
+These topics present a case study for `ROS2 <https://www.ros.org/>`_,
+a popular robotics-oriented framework.
+
+.. toctree::
+   :maxdepth: 2
+
+   ros2/index
