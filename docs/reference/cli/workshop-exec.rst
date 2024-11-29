@@ -1,145 +1,104 @@
 .. _ref_workshop_exec:
 
 workshop exec
-=============
+-------------
 
-Runs a command and waits for it to complete.
+Run a command and wait for it to complete.
 
-.. code-block:: console
-
-   $ workshop exec <WORKSHOP> [-i|-I] [--timeout <TIME>] [-w <DIR>] [--uid <USER>] [--gid <GROUP>] <COMMAND> [OPTIONS]
-
-
-Examples
---------
-
-Run the :samp:`go build main.go` command
-under the :samp:`nimble` workshop
-in the current project directory:
+.. rubric:: Synopsis
 
 .. code-block:: console
 
-   $ workshop exec nimble go build main.go
+   workshop exec <WORKSHOP> [flags]
+
+.. rubric:: Description
 
 
-A similar command that sets an environment variable and the working directory:
+The **exec** subcommand runs an arbitrary command in the specified workshop,
+waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-.. code-block:: console
-
-   $ workshop exec nimble --env GO111MODULE=off -w /project/ -- go build -x
-
-
-Run a custom interactive shell:
-
-.. code-block:: console
-
-   $ workshop exec nimble -I sh
-
-
-Run a command as root (the default is :samp:`workshop`):
-
-.. code-block:: console
-
-   $ workshop exec nimble --uid 0 id
-
-
-Synopsis
---------
-
-The :samp:`exec` subcommand runs an arbitrary command
-in the specified workshop, waiting for it to complete.
-If a timeout elapses before that, it's terminated.
-
-To accept an :samp:`exec` command,
-the workshop must be *Ready* or *Pending*.
+To accept an **exec** command, the workshop must be *Ready* or *Pending*.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
+
 - Non-interactively (for scripts)
 
-To set the mode explicitly, use :option:`!-i` or :option:`!-I`.
-If neither is supplied,
-:program:`exec` deduces the mode based on the nature of its own streams:
 
-- If :samp:`stdin` and :samp:`stdout` are terminals, the mode is interactive
+To set the mode explicitly, use **-i** or **-I**. If neither is supplied,
+**exec** deduces the mode based on the nature of its own streams:
+
+- If stdin and stdout are terminals, the mode is interactive
+
 - Otherwise, it's non-interactive
 
-To separate the :program:`exec` subcommand from the command itself,
-use shell syntax such as :samp:`--`:
 
-.. code-block:: console
+To separate the **exec** subcommand from the command itself,
+use shell syntax such as *--*:
 
-   $ workshop exec golang -- echo -n foo bar
+  $ workshop exec nimble -- echo -n foo bar
 
 
-Notes
------
+Notes:
 
-- To start a workshop before running commands in it,
-  use :ref:`ref_workshop_start`
+- To start a workshop before running commands in it, use **workshop start**
 
 - You can set the working directory, environment variables, user and group ID
   for running the command in the workshop; reasonable defaults are provided
 
 
-Options
--------
-
--w, --cwd <DIRECTORY>
-
-  Set the working directory in the workshop (default: :file:`/project/`).
-
---env <KEY>[=<VALUE>]
-
-  Set an environment variable, e.g. 'FOO=bar';
-  if only the name is provided, the value is inherited from the CLI environment.
-
---uid <USER ID>
-
-  Run as a specific workshop user
-  (default: :samp:`1000`/:samp:`workshop`).
-
---gid <GROUP ID>
-
-  Run as a member of a specific workshop group
-  (default: :samp:`1000`/:samp:`workshop`).
-
---timeout <DURATION>
-
-  Set a timeout; valid units are :samp:`ns`, :samp:`us` or :samp:`µs`,
-  :samp:`ms`, :samp:`s`, :samp:`m`, :samp:`h`.
-
--i, --interactive
-
-  Force interactive mode.
-
--I, --non-interactive
-
-  Force non-interactive mode.
+.. rubric:: Options
 
 
-Global options
---------------
+--cwd
 
--h, --help
-
-  Print the help message for the command.
-
--p, --project <DIRECTORY>
-
-  Specify the project's directory path.
+   Set the working directory in the workshop
 
 
-See also
---------
+--env
 
-Explanation:
-
-- :ref:`exp_projects`
-- :ref:`exp_workshop`
+   Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.
 
 
-Reference:
+--uid
 
-- :ref:`ref_workshop_start`
-- :ref:`ref_workshop_shell`
+   Run as a specific workshop user
+
+
+--gid
+
+   Run as a member of a specific workshop group
+
+
+--timeout
+
+   Set a timeout; valid units are ns, us or µs, ms, s, m, h
+
+
+--interactive
+
+   Force interactive mode
+
+
+--non-interactive
+
+   Force non-interactive mode
+
+
+
+.. rubric:: Examples
+
+.. code-block:: console
+   
+   # Run the 'go build main.go' command under the 'nimble' workshop
+   # in the current project directory
+   workshop exec nimble go build main.go
+   
+   # A similar command that sets an environment variable and the working directory
+   workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+   
+   # Run a custom interactive shell
+   workshop exec nimble -I sh
+   
+   # Run a command as root (the default is 'workshop')
+   workshop exec nimble --uid 0 id

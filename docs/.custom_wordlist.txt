@@ -28,6 +28,7 @@ lxc
 lxd
 LXD
 Multipass
+ns
 onboarding
 pathname
 readme
@@ -46,6 +47,8 @@ SDK's
 snapcraft
 snapd
 stateDiagram
+stdin
+stdout
 subcommand
 sudo
 transactional

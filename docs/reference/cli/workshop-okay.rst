@@ -1,50 +1,27 @@
 .. _ref_workshop_okay:
 
 workshop okay
-=============
+-------------
 
-Acknowledges listed warnings.
+Acknowledge listed warnings.
 
-.. code-block:: console
-
-   $ workshop okay [OPTIONS]
-
-
-Examples
---------
-
-Acknowledge the globally registered warnings across all workshops
-(must run after :ref:`ref_workshop_warnings`):
+.. rubric:: Synopsis
 
 .. code-block:: console
 
-   $ workshop okay
+   workshop okay [flags]
 
+.. rubric:: Description
 
-Synopsis
---------
 
 This command acknowledges all warnings
-listed previously by the :ref:`ref_workshop_warnings` command.
+listed previously by the **workshop warnings** command.
 
 
-Global options
---------------
+.. rubric:: Examples
 
--h, --help
-
-  Print the help message for the command.
-
--p, --project <DIRECTORY>
-
-  Specify the project's directory path.
-
-
-See also
---------
-
-Reference:
-
-- :ref:`ref_workshop_changes`
-- :ref:`ref_workshop_tasks`
-- :ref:`ref_workshop_warnings`
+.. code-block:: console
+   
+   # Acknowledge the globally registered warnings across all workshops
+   # (must run after **workshop warnings**)
+   workshop okay

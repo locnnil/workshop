@@ -1,33 +1,21 @@
 .. _ref_workshop_remount:
 
 workshop remount
-================
+----------------
 
-Mount a new source location to the mount interface plug's target.
+Mount a new source location to the content interface plug's target.
 
-.. code-block:: console
-
-   $ workshop remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE> [OPTIONS]
-
-
-Examples
---------
-
-Remount the :samp:`mod-cache` mount interface plug
-of the :samp:`go` SDK under the :samp:`nimble` workshop
-in the current project directory
-to :file:`~/new-cache-mount/` on the host:
+.. rubric:: Synopsis
 
 .. code-block:: console
 
-   $ workshop remount nimble/go:mod-cache ~/new-cache-mount/
+   workshop remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE> [flags]
 
+.. rubric:: Description
 
-Synopsis
---------
 
 This command mounts a new source location on the host to the target directory
-of the specified mount interface plug, qualified by the SDK name.
+of the specified content interface plug, qualified by the SDK name.
 Specifically, it does the following:
 
 - Attempts the mount operation atomically;
@@ -38,55 +26,32 @@ Specifically, it does the following:
   to prevent data corruption
 
 
-Notes
------
+Notes:
 
-- To stop the workshop, use :ref:`ref_workshop_stop`
+- To stop the workshop, use **workshop stop**
 
-- :ref:`ref_workshop_info` lists any mounted mount interface plugs
-  for the workshop
+- **workshop info** lists any mounted content interface plugs for the workshop
 
-- :ref:`ref_workshop_refresh` mounts the last source
-  set by :command:`workshop remount`, if any
+- **workshop refresh** mounts the last source set by **workshop remount**, if any
 
-- During :ref:`ref_workshop_remove`,
-  non-default sources set by :command:`workshop remount` aren't removed
+- During **workshop remove**, non-default sources set by **workshop remount**
+  aren't removed
 
 
-Options
--------
+.. rubric:: Options
+
 
 --no-wait
 
-  Return the change ID, don't wait for the operation to finish.
+   Return the change ID, don't wait for the operation to finish
 
 
-Global options
---------------
 
--h, --help
+.. rubric:: Examples
 
-  Print the help message for the command.
-
--p, --project <DIRECTORY>
-
-  Specify the project's directory path.
-
-
-See also
---------
-
-Explanation:
-
-- :ref:`exp_mount_interface`
-- :ref:`exp_sdk`
-
-
-Reference:
-
-- :ref:`ref_workshop_connect`
-- :ref:`ref_workshop_disconnect`
-- :ref:`ref_workshop_info`
-- :ref:`ref_workshop_refresh`
-- :ref:`ref_workshop_remove`
-- :ref:`ref_workshop_stop`
+.. code-block:: console
+   
+   # Remount the 'mod-cache' mount interface plug of the 'go' SDK
+   # under the 'nimble' workshop in the current project directory
+   # to '~/new-cache-mount/' on the host:
+   workshop remount nimble/go:mod-cache ~/new-cache-mount

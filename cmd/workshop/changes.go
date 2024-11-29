@@ -39,8 +39,11 @@ Notes:
 
 - Only successful changes display values in the *Ready* column
 
-- To investigate the details of a specific change, use 'workshop tasks' instead
+- To investigate the details of a specific change, use **workshop tasks** instead
 `,
+		Example: `
+# List changes for all workshops in the current project directory
+workshop changes`,
 
 		RunE: c.Run,
 	}

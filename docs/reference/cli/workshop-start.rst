@@ -1,68 +1,42 @@
 .. _ref_workshop_start:
 
 workshop start
-==============
+--------------
 
-Starts one or many workshops.
+Start one or many workshops.
 
-.. code-block:: console
-
-   $ workshop start <WORKSHOP>... [OPTIONS]
-
-
-Examples
---------
-
-Start the :samp:`nimble` and :samp:`jazzy` workshops
-in the current project directory:
+.. rubric:: Synopsis
 
 .. code-block:: console
 
-   $ workshop start nimble jazzy
+   workshop start <WORKSHOP>... [flags]
 
+.. rubric:: Description
 
-Synopsis
---------
 
 This command activates the workshops listed as arguments. For each one, it:
 
 - Makes sure the workshop was actually launched
+
 - Activates the workshop for use and sets it to *Ready*
+
 
 If multiple workshops are listed and an error occurs,
 the operation is aborted and no workshops are started.
 
 
-Notes
------
+Notes:
 
 - If a workshop is already started or wasn't yet launched, an error occurs
+
 - When interrupted, the command attempts to gracefully revert its actions
-- To stop a started workshop, use :ref:`ref_workshop_stop`
+
+- To stop a started workshop, use **workshop stop**
 
 
-Global options
---------------
+.. rubric:: Examples
 
--h, --help
-
-  Print the help message for the command.
-
--p, --project <DIRECTORY>
-
-  Specify the project's directory path.
-
-
-See also
---------
-
-Explanation:
-
-- :ref:`exp_projects`
-- :ref:`exp_workshop`
-
-
-Reference:
-
-- :ref:`ref_workshop_launch`
-- :ref:`ref_workshop_stop`
+.. code-block:: console
+   
+   # Start the 'nimble' and 'jazzy' workshops in the current project directory
+   workshop start nimble jazzy

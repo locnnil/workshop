@@ -35,8 +35,11 @@ Notes:
 
 - When interrupted, the command attempts to gracefully revert its actions
 
-- To stop a started workshop, use 'workshop stop'
+- To stop a started workshop, use **workshop stop**
 `,
+		Example: `
+# Start the 'nimble' and 'jazzy' workshops in the current project directory
+workshop start nimble jazzy`,
 		RunE: c.Run,
 	}
 

@@ -1,0 +1,36 @@
+.. _{{ .Ref }}:
+
+{{ .CommandName }}
+{{ .Heading }}
+
+{{ .Short }}.
+
+.. rubric:: Synopsis
+
+.. code-block:: console
+
+   {{ .Synopsis }}
+
+.. rubric:: Description
+
+{{ .Long }}
+
+{{- if .Flags }}
+
+.. rubric:: Options
+
+{{ range .Flags }}
+--{{ .Name }}
+
+{{ .Usage | indent 3 }}
+
+{{ end }}
+{{- end }}
+
+{{- if .Examples }}
+
+.. rubric:: Examples
+
+.. code-block:: console
+{{ .Examples | indent 3 }}
+{{- end }}
