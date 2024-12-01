@@ -21,10 +21,8 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 	}
 
 	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid)
-	if !osutil.IsDir(destDir) {
-		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
 	}
 
 	// Make sure the target file doesn't exist as a directory.
@@ -42,7 +40,7 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 
 	// We are performing a Stat() here to ensure that the user can't steal
 	// another user's Xauthority file. Note that while Stat() uses fstat() on the
-	// file descriptor created during Open(), the file might have change
+	// file descriptor created during Open(), the file might have changed
 	// ownership between the Open() and the Stat(). That's ok because we aren't
 	// trying to block access that the user already has: if the user has the
 	// privileges to chown another user's Xauthority file, we won't block that

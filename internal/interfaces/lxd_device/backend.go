@@ -264,9 +264,12 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	// The .Xauthority cookie contains a 128bit key used to authenticate consumers
 	// of the X11 socket. It is generated on each boot with a random suffix,
 	// because of this we need to ensure there exists a consistently-named copy
-	// of the cookie for the LXC profile. We handle it here for the connect,
-	// presence of the copied cookie after reboot is the responsibility of the
-	// interface manager.
+	// of the cookie for the LXC profile. There are two cases where we need to
+	// copy the cookie, one is on workshopd startup as we iterate through the
+	// list of projects, the other is on connect because this could be the first
+	// workshop launched, in which case the user would not have had a project. We
+	// handle it here for the connect, presence of the copied cookie after reboot
+	// is the responsibility of the interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
 		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
@@ -490,7 +493,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 
 // NewSpecification returns a new mount specification.
 func (b *Backend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
-	return NewSpecification(user, pid, sdk)
+	return NewSpecification(user, sdk)
 }
 
 func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)) func() {

@@ -178,6 +178,12 @@ func (m *InterfaceManager) StartUp() error {
 				}
 			}
 		}
+
+		// The .Xauthority cookie contains a 128bit key used to authenticate
+		// consumers of the X11 socket. It is generated on each boot with a random
+		// suffix, because of this we need to ensure there exists a
+		// consistently-named copy of the cookie for the LXC profile. We handle
+		// this consistency across reboots here.
 		usr, err := workshop.LookupUsername(user)
 		if err != nil {
 			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
@@ -187,11 +193,9 @@ func (m *InterfaceManager) StartUp() error {
 		if err != nil {
 			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
 		}
-		err = x11.MigrateXauthority(usr, env["XAUTHORITY"])
-		if err != nil {
+		if err = x11.MigrateXauthority(usr, env["XAUTHORITY"]); err != nil {
 			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
 		}
-
 	}
 
 	if _, err := m.reloadConnections("", "", ""); err != nil {

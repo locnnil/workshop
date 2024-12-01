@@ -65,7 +65,7 @@ slots:
   ssh-agent:
 `, s.projectId, "ws", "producer", "ssh-agent")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "SSH_AUTH_SOCK=/tmp/dir/ssh"
@@ -92,7 +92,7 @@ slots:
   ssh-agent:
 `, s.projectId, "ws", "producer", "ssh-agent")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 >&2 echo -n "No medium found"

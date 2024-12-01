@@ -67,7 +67,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -98,7 +98,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -129,7 +129,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -164,7 +164,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -193,7 +193,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -220,7 +220,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR="/tmp"
@@ -246,7 +246,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR="/tmp"
@@ -272,7 +272,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR=""

@@ -11,13 +11,12 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-func NewSpecification(user *user.User, pid, sdk string) *Specification {
+func NewSpecification(user *user.User, sdk string) *Specification {
 	return &Specification{
 		devices: make(map[string]map[string]string),
 		config:  make(map[string]string),
 		Profile: workshop.NewSdkProfile(sdk),
 		User:    user,
-		pid:     pid,
 	}
 }
 
@@ -29,10 +28,6 @@ type Specification struct {
 
 	User *user.User
 	pid  string
-}
-
-func (s *Specification) ProjectId() string {
-	return s.pid
 }
 
 // AddPermanentSlot records side-effects of having a slot.

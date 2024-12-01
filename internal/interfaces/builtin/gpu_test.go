@@ -46,7 +46,7 @@ slots:
 `, s.projectId, "ws", "producer", "gpu")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 

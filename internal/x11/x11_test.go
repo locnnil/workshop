@@ -6,61 +6,60 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/x11"
 )
 
-var userCurrent = user.Current
-var userLookup = user.Lookup
+func Test(t *testing.T) { check.TestingT(t) }
 
-func Test(t *testing.T) { TestingT(t) }
-
-type X11TestSuit struct{}
-
-var _ = Suite(&X11TestSuit{})
-
-func (x *X11TestSuit) SetUpTest(c *C) {
+type X11TestSuit struct {
+	restore func()
 }
 
-func (x *X11TestSuit) TearDownTest(c *C) {
+var _ = check.Suite(&X11TestSuit{})
+
+func FakeWorkshopdRunDir(dir string) func() {
+	old := dirs.WorkshopdRunDir
+	dirs.WorkshopdRunDir = dir
+	return func() {
+		dirs.WorkshopdRunDir = old
+	}
 }
 
-func restoreWorkshopdRunDir(runDir string) {
-	dirs.WorkshopdRunDir = runDir
+func (x *X11TestSuit) SetUpTest(c *check.C) {
+	x.restore = FakeWorkshopdRunDir(c.MkDir())
 }
 
-func (x *X11TestSuit) TestCopyXAuthority(c *C) {
-	user, err := userCurrent()
-	c.Assert(err, IsNil)
+func (x *X11TestSuit) TearDownTest(c *check.C) {
+	x.restore()
+}
 
-	defer restoreWorkshopdRunDir(dirs.WorkshopdRunDir)
-	dirs.WorkshopdRunDir = c.MkDir()
+func (x *X11TestSuit) TestMigrateXAuthoritySuccess(c *check.C) {
+	user, err := user.Current()
+	c.Assert(err, check.IsNil)
 
 	xf, err := os.Create(filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	defer xf.Close()
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
-	c.Assert(err, IsNil)
-	_, err = os.Stat(filepath.Join(dirs.WorkshopdRunDir, user.Uid, ".Xauthority"))
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(filepath.Join(dirs.WorkshopdRunDir, user.Uid, ".Xauthority"), testutil.FilePresent)
 }
 
-func (x *X11TestSuit) TestCopyXAuthorityOwnershipFail(c *C) {
-	user, err := userLookup("root")
-	c.Assert(err, IsNil)
-
-	defer restoreWorkshopdRunDir(dirs.WorkshopdRunDir)
-	dirs.WorkshopdRunDir = c.MkDir()
+func (x *X11TestSuit) TestMigrateXAuthorityOwnershipFail(c *check.C) {
+	user, err := user.Lookup("root")
+	c.Assert(err, check.IsNil)
 
 	xf, err := os.Create(filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	defer xf.Close()
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), testutil.Contains, "Xauthority file isn't owned")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, "Xauthority file isn't owned by the current user "+user.Uid)
 }
