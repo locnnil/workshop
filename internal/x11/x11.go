@@ -20,6 +20,10 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 		return fmt.Errorf("xauth cannot be empty")
 	}
 
+	// We place the Xauthority inside a parent folder to ensure that the mounted
+	// cookie is updated when the host cookie changes (ie. reboot). This entire
+	// parent folder is mounted inside the workshop.
+	// https://discuss.linuxcontainers.org/t/mount-single-file/17975
 	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid, "Xauthority")
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err

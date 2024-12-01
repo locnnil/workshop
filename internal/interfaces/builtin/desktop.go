@@ -112,6 +112,9 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 		desktop.X11.Listen = desktop.X11.Connect
 	}
 
+	// We mount the Xauthority inside a parent folder to ensure that the mounted
+	// cookie is updated when the host cookie changes (ie. reboot).
+	// https://discuss.linuxcontainers.org/t/mount-single-file/17975
 	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, "Xauthority")
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {

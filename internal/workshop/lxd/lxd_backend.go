@@ -699,6 +699,12 @@ func checkNvidia() (bool, error) {
 	return nvidiaRuntime, nil
 }
 
+// The following 'write-files' and 'runcmd' sections are for the desktop
+// interface. These create a systemd path/service unit pair to copy the
+// Xauthority cookie to /tmp when we mount it in the workshop. This is done to
+// work around file mount ordering complications with lxc. Although these will
+// be present within every workshop, path units utilise inotify and as such add
+// effectively zero overhead to a workshop launch/start.
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
@@ -708,6 +714,35 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
+write_files:
+- content: |
+    # Managed by workshop, do not remove
+    [Unit]
+    Description=Required for x11 support
+
+    [Path]
+    PathChanged=/var/lib/workshop/run/
+    Unit=xauth-copy.service
+
+    [Install]
+    WantedBy=multi-user.target
+  path: /etc/systemd/system/xauth-watch.path
+- content: |
+    # Managed by workshop, do not remove
+    [Unit]
+    Description=Required for x11 support; copies Xauthority to /tmp
+
+    [Service]
+    Type=simple
+    ExecStart=/bin/bash -c 'if [ -f /var/lib/workshop/run/Xauthority/.Xauthority ]; then cp -f /var/lib/workshop/run/Xauthority/.Xauthority /tmp/.Xauthority && chown workshop:workshop /tmp/.Xauthority; fi'
+
+    [Install]
+    WantedBy=multi-user.target
+  path: /etc/systemd/system/xauth-copy.service
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable xauth-copy.service
+  - systemctl enable --now xauth-watch.path
 `
 
 	f, err := yaml.Marshal(file)
