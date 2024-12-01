@@ -8,15 +8,14 @@ Filename convention
 
 A project which defines a single workshop can store a definition file
 named :file:`workshop.yaml` or :file:`.workshop.yaml`
-in the project folder.
+in the project directory.
 
-To define more than one workshop,
-the definition files should be located in the :file:`.workshop` folder,
-with the filename :file:`<NAME>.yaml`.
+When multiple workshops are defined,
+their definition files must be stored in the :file:`.workshop/` subdirectory.
+The workshop name must also match the file name
+(without the :samp:`.yaml` extension).
 
-Here, :samp:`<NAME>` is a placeholder that stands for the actual name
-of the workshop itself;
-it must start with a lowercase letter
+Workshop names start with a lowercase letter
 and may include only lowercase letters, digits, hyphens or underscores.
 
 
@@ -39,9 +38,9 @@ and includes a number of mandatory and optional keys:
      - string
      - Workshop's name, used to reference the workshop itself.
 
-       For workshops defined in the :file:`.workshop` folder,
-       the name must be the same as :samp:`<NAME>`
-       in the workshop definition's filename.
+       For workshops defined in the :file:`.workshop/` subdirectory,
+       the definition file must have the same name
+       (followed by :samp:`.yaml`).
 
    * - :samp:`base` (required)
      - string
