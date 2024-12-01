@@ -92,16 +92,39 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	return nil
 }
 
+// Ssh Agent and Desktop are both of the lxc 'proxy' type
+// These are network protocol proxy devices and open a port on the host or in a workhop.
+// 'from', 'to' are the source and destination addresses (paths in the case of unix sockets),
+// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
+// bind denotes where the port is open (can be: instance, host)
+
 func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
-	// A network protocol proxy device, opens a port on the host or in a workhop.
-	// from, to are the source and destination addresses (paths in the case of unix sockets),
-	// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
-	// bind denotes where the port is open (can be: instance, host)
 	s.Profile.Agent = &agent
 
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, agent.Name)] = "ssh-agent"
-	s.devices[agent.Name] = map[string]string{"type": "proxy", "connect": "unix:" + agent.Connect, "listen": "unix:" + agent.Listen, "uid": "1000", "gid": "1000", "bind": "instance"}
+	s.devices[agent.Name] = map[string]string{
+		"type":    "proxy",
+		"connect": "unix:" + agent.Connect,
+		"listen":  "unix:" + agent.Listen,
+		"uid":     "1000",
+		"gid":     "1000",
+		"bind":    "instance",
+	}
+	return nil
+}
 
+func (s *Specification) SetDesktop(desktop workshop.Desktop) error {
+	s.Profile.Desktop = &desktop
+
+	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, desktop.Name)] = "desktop"
+	s.devices[desktop.Name] = map[string]string{
+		"type":    "proxy",
+		"connect": "unix:" + desktop.Connect,
+		"listen":  "unix:" + desktop.Listen,
+		"uid":     "1000",
+		"gid":     "1000",
+		"bind":    "instance",
+	}
 	return nil
 }
 

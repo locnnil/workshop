@@ -19,6 +19,7 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Gpu: &workshop.Gpu{Name: "gpu"}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"userdisk": {Name: "userdisk", What: "/home", Where: "/opt", Type: workshop.HostWorkshop}}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Agent: &workshop.SshAgent{Name: "ssh-agent", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}},
+		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Desktop: &workshop.Desktop{Name: "desktop", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"plug": {Name: "plug", What: "/var", Where: "/etc", Type: workshop.WorkshopWorkshop}}},
 	}
 
@@ -31,11 +32,13 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		{"sdk", map[string]map[string]string{"gpu": {"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}}, map[string]string{}},
 		{"sdk", map[string]map[string]string{"userdisk": {"type": "disk", "source": "/home", "path": "/opt"}}, map[string]string{}},
 		{"sdk", map[string]map[string]string{"ssh-agent": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{"user.workshop.sdk.ssh-agent.type": "ssh-agent"}},
+		{"sdk", map[string]map[string]string{"desktop": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{"user.workshop.sdk.desktop.type": "desktop"}},
 		{"sdk", map[string]map[string]string{"plug": {"type": "none"}}, map[string]string{"user.workshop.sdk.plug": `{"name": "plug", "what": "/var", "where": "/etc", "type": 1}`, "user.workshop.sdk.plug.type": "mount"}},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)
 		c.Assert(err, check.IsNil)
 		c.Assert(res.Agent, check.DeepEquals, expected[i].Agent)
+		c.Assert(res.Desktop, check.DeepEquals, expected[i].Desktop)
 		c.Assert(res.Camera, check.DeepEquals, expected[i].Camera)
 		c.Assert(res.Gpu, check.DeepEquals, expected[i].Gpu)
 		c.Assert(res.Mounts, testutil.DeepUnsortedMatches, expected[i].Mounts)

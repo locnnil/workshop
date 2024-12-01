@@ -76,7 +76,9 @@ uid
 unicode
 unmounts
 url
+wayland
 Wayland
+WAYLAND
 webhook
 workshopctl
 workshopd

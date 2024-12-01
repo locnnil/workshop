@@ -25,6 +25,12 @@ type SshAgent struct {
 	Listen  string
 }
 
+type Desktop struct {
+	Name    string
+	Connect string
+	Listen  string
+}
+
 type Gpu struct {
 	Name string
 }
@@ -32,10 +38,11 @@ type Gpu struct {
 type SdkProfile struct {
 	Sdk string
 
-	Camera *Camera
-	Mounts map[string]Mount
-	Agent  *SshAgent
-	Gpu    *Gpu
+	Camera  *Camera
+	Mounts  map[string]Mount
+	Agent   *SshAgent
+	Gpu     *Gpu
+	Desktop *Desktop
 }
 
 func NewSdkProfile(sdkName string) SdkProfile {

@@ -48,12 +48,14 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
-			if devtype == "ssh-agent" {
+			switch devtype {
+			case "ssh-agent":
 				pr.Agent = &workshop.SshAgent{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
-				continue
+			case "desktop":
+				pr.Desktop = &workshop.Desktop{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+			default:
+				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
-
-			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "unix-char":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			if devtype == "camera" {

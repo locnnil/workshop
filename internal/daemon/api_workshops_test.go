@@ -115,7 +115,7 @@ sdks:
   system:
     slots:
       training-slot:
-        interface: mount        
+        interface: mount
   test-sdk:
     channel: latest/stable
     plugs:
@@ -208,7 +208,7 @@ sdks:
   test-sdk-2:
     channel: latest/stable
     plugs:
-      photos: 
+      photos:
         bind: test-sdk:data
 connections:
   - plug: test-sdk:data
@@ -712,7 +712,7 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(err, check.IsNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 4)
+	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 5)
 
 	c.Assert(s.b.DownloadBaseCalls, check.HasLen, 1)
 

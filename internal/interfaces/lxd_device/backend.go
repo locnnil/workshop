@@ -226,6 +226,34 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, workshop string) error {
+	envVars := []string{
+		"WAYLAND_DISPLAY=" + strings.TrimPrefix(dev.Listen, "/run/user/1000/"),
+		"QT_QPA_PLATFORM=wayland-egl",
+		"XDG_SESSION_TYPE=wayland",
+		"ELECTRON_OZONE_PLATFORM_HINT=auto",
+	}
+
+	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+	if err != nil {
+		return fmt.Errorf("failed to setup the environment for desktop in profile.d for %q: %w", workshop, err)
+	}
+	defer env.Close()
+
+	for _, envVar := range envVars {
+		_, err = env.WriteString("export " + envVar + "\n")
+		if err != nil {
+			return fmt.Errorf("failed to setup the environment for desktop in profile.d for %q: %w", workshop, err)
+		}
+	}
+
+	return nil
+}
+
+func removeDesktop(fs workshop.WorkshopFs, dev workshop.Desktop) error {
+	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+}
+
 func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
 	sftp, err := conn.GetInstanceFileSFTP(lxdbackend.InstanceName(w, pid))
 	if err != nil {
@@ -290,6 +318,13 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 	}
 
+	if spec.Profile.Desktop != nil {
+		err = installDesktop(fs, *spec.Profile.Desktop, sdkInfo.Workshop)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Either create or update an existing LXD profile for the SDK so that later
 	// it can be assigned to the required workshop.
 	prevp, err := lxdbackend.Profile(conn, sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
@@ -306,6 +341,13 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		if prevp.Agent != nil {
 			if spec.Profile.Agent == nil || *prevp.Agent != *spec.Profile.Agent {
 				if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+					return err
+				}
+			}
+		}
+		if prevp.Desktop != nil {
+			if spec.Profile.Desktop == nil || *prevp.Desktop != *spec.Profile.Desktop {
+				if err = removeDesktop(fs, *prevp.Desktop); err != nil {
 					return err
 				}
 			}
@@ -376,6 +418,12 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 
 	if prof.Agent != nil {
 		if err = removeSshAgent(fs, *prof.Agent); err != nil {
+			return err
+		}
+	}
+
+	if prof.Desktop != nil {
+		if err = removeDesktop(fs, *prof.Desktop); err != nil {
 			return err
 		}
 	}
