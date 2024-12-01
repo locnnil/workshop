@@ -21,6 +21,7 @@ package builtin_test
 
 import (
 	"fmt"
+	"os/user"
 	"reflect"
 	"strings"
 
@@ -35,7 +36,12 @@ import (
 
 type AllSuite struct{}
 
-var _ = Suite(&AllSuite{})
+var (
+	_        = Suite(&AllSuite{})
+	testuser = user.User{
+		Name: "testuser",
+	}
+)
 
 // This section contains a list of *valid* defines that represent methods that
 // backends recognize and call. They are in individual interfaces as each

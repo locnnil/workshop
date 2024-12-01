@@ -3,6 +3,7 @@ package lxd_device
 import (
 	"encoding/json"
 	"fmt"
+	"os/user"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
@@ -10,12 +11,12 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-func NewSpecification(user, pid, sdk string) *Specification {
+func NewSpecification(user *user.User, pid, sdk string) *Specification {
 	return &Specification{
 		devices: make(map[string]map[string]string),
 		config:  make(map[string]string),
 		Profile: workshop.NewSdkProfile(sdk),
-		user:    user,
+		User:    user,
 		pid:     pid,
 	}
 }
@@ -26,12 +27,8 @@ type Specification struct {
 	devices map[string]map[string]string
 	config  map[string]string
 
-	user string
+	User *user.User
 	pid  string
-}
-
-func (s *Specification) User() string {
-	return s.user
 }
 
 func (s *Specification) ProjectId() string {

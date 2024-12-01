@@ -75,19 +75,14 @@ func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotIn
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workshop.LookupUsername(spec.User())
-	if err != nil {
-		return err
-	}
-
-	env, err := systemd.UserEnvironment(user.Username)
+	env, err := systemd.UserEnvironment(spec.User)
 	if err != nil {
 		return err
 	}
 
 	sock := env["SSH_AUTH_SOCK"]
 	if sock == "" {
-		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, spec.User())
+		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, spec.User.Username)
 	}
 
 	name := plug.Sdk().Name + "-" + plug.Name()

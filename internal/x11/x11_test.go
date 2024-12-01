@@ -1,7 +1,6 @@
-package workshoputil_test
+package x11_test
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -11,10 +10,11 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshoputil"
+	"github.com/canonical/workshop/internal/x11"
 )
 
 var userCurrent = user.Current
+var userLookup = user.Lookup
 
 func Test(t *testing.T) { TestingT(t) }
 
@@ -43,16 +43,16 @@ func (x *X11TestSuit) TestCopyXAuthority(c *C) {
 	defer xf.Close()
 	c.Assert(err, IsNil)
 
-	fake := testutil.FakeCommand(c, "sudo", fmt.Sprintf("echo XDG_RUNTIME_DIR=\"/tmp\"\necho XAUTHORITY=\"%s/.workshop-Xauthority\"\nexit 0", dirs.WorkshopdRunDir))
-	defer fake.Restore()
-
-	err = workshoputil.CopyXauthority(user.Username)
+	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, IsNil)
 	_, err = os.Stat(filepath.Join(dirs.WorkshopdRunDir, user.Uid, ".Xauthority"))
 	c.Assert(err, IsNil)
 }
 
 func (x *X11TestSuit) TestCopyXAuthorityOwnershipFail(c *C) {
+	user, err := userLookup("root")
+	c.Assert(err, IsNil)
+
 	defer restoreWorkshopdRunDir(dirs.WorkshopdRunDir)
 	dirs.WorkshopdRunDir = c.MkDir()
 
@@ -60,10 +60,7 @@ func (x *X11TestSuit) TestCopyXAuthorityOwnershipFail(c *C) {
 	defer xf.Close()
 	c.Assert(err, IsNil)
 
-	fake := testutil.FakeCommand(c, "sudo", fmt.Sprintf("echo XDG_RUNTIME_DIR=\"/tmp\"\necho XAUTHORITY=\"%s/.workshop-Xauthority\"\nexit 0", dirs.WorkshopdRunDir))
-	defer fake.Restore()
-
-	err = workshoputil.CopyXauthority("root")
+	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), testutil.Contains, "Xauthority file isn't owned")
 }

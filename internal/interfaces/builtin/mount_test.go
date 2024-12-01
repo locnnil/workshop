@@ -20,7 +20,6 @@
 package builtin_test
 
 import (
-	"os/user"
 	"path/filepath"
 	"testing"
 
@@ -174,28 +173,13 @@ slots:
  mount:
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
 
-	homeDir := c.MkDir()
-	usr, err := user.Current()
-	c.Assert(err, check.IsNil)
-
-	restore := testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     usr.Name,
-			Username: usr.Name,
-			Uid:      usr.Uid,
-			Gid:      usr.Gid,
-			HomeDir:  homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
-	defer restore()
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(homeDir, "/.local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
+	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }

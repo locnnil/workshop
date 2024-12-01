@@ -20,6 +20,8 @@
 package ifacetest
 
 import (
+	"os/user"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -28,7 +30,7 @@ import (
 type Specification struct {
 	Snippets []string
 
-	user string
+	user *user.User
 	pid  string
 	sdk  string
 }

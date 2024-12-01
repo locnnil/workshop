@@ -23,7 +23,7 @@ import (
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
-	"github.com/canonical/workshop/internal/workshoputil"
+	"github.com/canonical/workshop/internal/x11"
 )
 
 const (
@@ -229,8 +229,8 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
-func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, usr string, ws string) error {
-	env, err := systemd.UserEnvironment(usr)
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, ws string) error {
+	env, err := systemd.UserEnvironment(user)
 	if err != nil {
 		return err
 	}
@@ -270,8 +270,8 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, usr string, ws
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
 		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
-		if err := workshoputil.CopyXauthority(usr); err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", usr, err)
+		if err := x11.MigrateXauthority(user, xauth); err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user.Username, err)
 		}
 	}
 
@@ -363,7 +363,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, spec.user, sdkInfo.Workshop)
+		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, sdkInfo.Workshop)
 		if err != nil {
 			return err
 		}
@@ -489,7 +489,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 }
 
 // NewSpecification returns a new mount specification.
-func (b *Backend) NewSpecification(user, pid, sdk string) interfaces.Specification {
+func (b *Backend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
 	return NewSpecification(user, pid, sdk)
 }
 

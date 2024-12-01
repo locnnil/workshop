@@ -45,7 +45,7 @@ slots:
   camera:
 `, s.projectId, "ws", "producer", "camera")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 

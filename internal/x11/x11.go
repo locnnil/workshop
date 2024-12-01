@@ -1,6 +1,7 @@
-package workshoputil
+package x11
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -9,30 +10,17 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/systemd"
 )
 
 var userLookup = user.Lookup
 
-// Copies the user's $XAUTHORITY file to the Workshop run directory.
-// This is used by interfaces that require an X11 socket.
-func CopyXauthority(user string) error {
-	usr, err := userLookup(user)
-	if err != nil {
-		return err
-	}
-
-	env, err := systemd.UserEnvironment(user)
-	if err != nil {
-		return err
-	}
-
-	xauth := env["XAUTHORITY"]
+// Copies the user's $XAUTHORITY file to the Workshopd run directory.
+func MigrateXauthority(user *user.User, xauth string) (err error) {
 	if xauth == "" {
-		return err
+		return errors.New("xauth cannot be empty")
 	}
 
-	destDir := filepath.Join(dirs.WorkshopdRunDir, usr.Uid)
+	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid)
 	if !osutil.IsDir(destDir) {
 		if err := os.MkdirAll(destDir, 0755); err != nil {
 			return err
@@ -72,8 +60,8 @@ func CopyXauthority(user string) error {
 	// cheap comparison as the current uid is only available as a string
 	// but it is better to convert the uid from the stat result to a
 	// string than a string into a number.
-	if fmt.Sprintf("%d", sys.(*syscall.Stat_t).Uid) != usr.Uid {
-		return fmt.Errorf("Xauthority file isn't owned by the current user %s", usr.Uid)
+	if fmt.Sprintf("%d", sys.(*syscall.Stat_t).Uid) != user.Uid {
+		return fmt.Errorf("Xauthority file isn't owned by the current user %s", user.Uid)
 	}
 
 	err = osutil.CopyFile(xauth, destFile, osutil.CopyFlagOverwrite)

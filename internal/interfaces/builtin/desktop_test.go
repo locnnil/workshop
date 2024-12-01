@@ -67,7 +67,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -98,7 +98,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -129,7 +129,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -164,7 +164,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -172,11 +172,9 @@ echo "DISPLAY=:0"
 echo "XAUTHORITY=/tmp/.Xauthority"
 exit 0`)
 	defer fake.Restore()
-	user, err := workshop.LookupUsername(deviceSpec.User())
-	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, user.Uid, ".Xauthority"), Where: "/var/lib/workshop/run/.Xauthority"}
+	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, ".Xauthority"), Where: "/var/lib/workshop/run/.Xauthority"}
 	c.Assert(deviceSpec.Profile.Mounts["consumer-xauth"], check.DeepEquals, *expectedMount)
 }
 
@@ -195,7 +193,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo "XDG_RUNTIME_DIR=/tmp"
@@ -222,7 +220,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR="/tmp"
@@ -248,7 +246,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR="/tmp"
@@ -274,7 +272,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec := lxd_device.NewSpecification("testuser", s.projectId, "consumer")
+	deviceSpec := lxd_device.NewSpecification(&testuser, s.projectId, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR=""

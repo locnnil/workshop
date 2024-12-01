@@ -22,6 +22,7 @@ package interfaces_test
 import (
 	"context"
 	"fmt"
+	"os/user"
 
 	. "gopkg.in/check.v1"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type RepositorySuite struct {
@@ -43,6 +45,7 @@ type RepositorySuite struct {
 	testRepo  *Repository
 	context   context.Context
 	projectId string
+	restore   func()
 }
 
 var _ = Suite(&RepositorySuite{
@@ -91,10 +94,25 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	s.projectId = "42424242"
 	s.context = ifacetest.CreateTestContext("user", s.projectId)
+
+	usr, err := user.Current()
+	c.Assert(err, IsNil)
+	homeDir := c.MkDir()
+	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
+		u := &user.User{
+			Name:     usr.Name,
+			Username: usr.Name,
+			Uid:      usr.Uid,
+			Gid:      usr.Gid,
+			HomeDir:  homeDir,
+		}
+		return u, nil
+	}, &workshop.LookupUsername)
 }
 
 func (s *RepositorySuite) TearDownTest(c *C) {
 	s.BaseTest.TearDownTest(c)
+	s.restore()
 }
 
 type instanceNameAndYaml struct {
@@ -1655,7 +1673,7 @@ plugs:
 	s2 := sdk.MockInfo(c, `
 name: s2
 base: ubuntu@22.04
-slots: 
+slots:
   i1:
   i3:
 `, s.projectId, "ws")

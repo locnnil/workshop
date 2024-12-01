@@ -14,8 +14,9 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
-	"github.com/canonical/workshop/internal/workshoputil"
+	"github.com/canonical/workshop/internal/x11"
 )
 
 type InterfaceManager struct {
@@ -138,11 +139,6 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	for user, projects := range allprojects {
-		// We want to run this once for each user
-		err := workshoputil.CopyXauthority(user)
-		if err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
-		}
 
 		ctx := context.WithValue(context.Background(), workshop.ContextUser, user)
 		for _, project := range projects {
@@ -182,6 +178,20 @@ func (m *InterfaceManager) StartUp() error {
 				}
 			}
 		}
+		usr, err := workshop.LookupUsername(user)
+		if err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+			continue
+		}
+		env, err := systemd.UserEnvironment(usr)
+		if err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+		}
+		err = x11.MigrateXauthority(usr, env["XAUTHORITY"])
+		if err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+		}
+
 	}
 
 	if _, err := m.reloadConnections("", "", ""); err != nil {

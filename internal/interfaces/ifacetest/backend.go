@@ -21,6 +21,7 @@ package ifacetest
 
 import (
 	"context"
+	"os/user"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
@@ -75,7 +76,7 @@ func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName 
 	return b.RemoveCallback(sdkName)
 }
 
-func (b *TestSecurityBackend) NewSpecification(user, pid, sdk string) interfaces.Specification {
+func (b *TestSecurityBackend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
 	return &Specification{user: user, pid: pid, sdk: sdk}
 }
 

@@ -181,11 +181,6 @@ func (iface *mountInterface) MountConnectedSlot(spec *lxd_device.Specification, 
 
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workshop.LookupUsername(spec.User())
-	if err != nil {
-		return err
-	}
-
 	source, err := iface.workshopSource(slot)
 	if err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
 		return err
@@ -194,7 +189,7 @@ func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, 
 		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.WorkshopWorkshop})
 	}
 
-	source, err = iface.hostSource(user.HomeDir, plug, slot)
+	source, err = iface.hostSource(spec.User.HomeDir, plug, slot)
 	if err == nil {
 		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.HostWorkshop})
 	}

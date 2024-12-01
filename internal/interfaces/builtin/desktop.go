@@ -76,19 +76,14 @@ func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 }
 
 func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	usr, err := workshop.LookupUsername(spec.User())
-	if err != nil {
-		return err
-	}
-
-	env, err := systemd.UserEnvironment(usr.Username)
+	env, err := systemd.UserEnvironment(spec.User)
 	if err != nil {
 		return err
 	}
 
 	xdg := env["XDG_RUNTIME_DIR"]
 	if xdg == "" {
-		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User())
+		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
 	}
 
 	desktop := workshop.Desktop{}
@@ -97,7 +92,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	display := env["DISPLAY"]
 
 	if wayland == "" && display == "" {
-		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User())
+		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User.Username)
 	}
 
 	if wayland != "" {
@@ -119,7 +114,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 		x.Listen = x.Connect
 	}
 
-	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, usr.Uid, ".Xauthority")
+	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, ".Xauthority")
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
 		m := workshop.Mount{}
