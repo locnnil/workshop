@@ -73,9 +73,6 @@ func (iface *desktopInterface) StaticInfo() interfaces.StaticInfo {
 	}
 }
 
-// Why do we return autoconnect=true when allow-auto-connection is false?
-// Is this a case of two things named similary?
-// ie. allow is policy and the below is technical?
 func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	return true
 }
@@ -96,8 +93,9 @@ func (iface *desktopInterface) MountConnectedPlug(
 		return err
 	}
 
-	// systemd is responsible for generating the "WAYLAND_DISPLAY" environment variable
-	// because of this we must parse the environment as it's set by systemd
+	// Systemd is responsible for generating the "WAYLAND_DISPLAY" environment
+	// variable. Because of this we must parse the environment as it's set by
+	// systemd.
 	cmd := exec.Command("sudo", "-E", "-u", spec.User(), "systemctl", "--user", "show-environment")
 	// XDG_RUNTIME_DIR may not be set if a command invoked by sudo or
 	// systemd-run; set it here to the default location. It is required for the
@@ -129,8 +127,9 @@ func (iface *desktopInterface) MountConnectedPlug(
 	name := plug.Sdk().Name + "-" + plug.Name()
 
 	fromSocket := xdg + "/" + wayland
-	// The container XDG_RUNTIME_DIR is always /run/user/1000 for the workshop user
-	// Use the same WAYLAND_DISPLAY identifier as the host
+	// The container XDG_RUNTIME_DIR is always /run/user/1000 for the workshop
+	// user.
+	// Use the same WAYLAND_DISPLAY identifier as the host.
 	toSocket := "/run/user/1000/" + wayland
 
 	return spec.SetDesktop(workshop.Desktop{Name: name, Connect: fromSocket, Listen: toSocket})

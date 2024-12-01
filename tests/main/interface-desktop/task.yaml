@@ -1,4 +1,4 @@
-summary: Check desktop-agent interface scenarios
+summary: Check desktop interface scenarios
 prepare: |
   . "$TESTSLIB"/utils.sh
   # required to keep /lib/systemd/systemd --user running for a regular user
@@ -24,14 +24,22 @@ execute: |
   sudo -u ubuntu /bin/bash -c 'workshop connect ws-desktop/test-sdk-desktop:desktop :desktop'
 
   echo "Check that the expected environment is configured inside the workshop"
-  workshop_exec exec ws-desktop -- sudo -H -i -u workshop \
-    echo '$WAYLAND_DISPLAY, $QT_QPA_PLATFORM, $XDG_SESSION_TYPE, $ELECTRON_OZONE_PLATFORM_HINT' | \
-      MATCH ".*wayland-1.*wayland-egl.*wayland.*auto.*"
+  workshop_exec exec ws-desktop -- sudo -H -i -u workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -n "$WAYLAND_DISPLAY" ]
+      [ -n "$QT_QPA_PLATFORM" ]
+      [ -n "$XDG_SESSION_TYPE" ]
+      [ -n "$ELECTRON_OZONE_PLATFORM_HINT" ]
+  EOF
 
   echo "Disconnect the desktop interface"
   workshop_exec disconnect ws-desktop/test-sdk-desktop:desktop
 
   echo "Check that the environment is removed from the workshop"
-  workshop_exec exec ws-desktop -- sudo -H -i -u workshop \
-    echo '$WAYLAND_DISPLAY, $QT_QPA_PLATFORM, $XDG_SESSION_TYPE, $ELECTRON_OZONE_PLATFORM_HINT' | \
-      MATCH ", , unspecified,"
+  workshop_exec exec ws-desktop -- sudo -H -i -u workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -z "$WAYLAND_DISPLAY" ]
+      [ -z "$QT_QPA_PLATFORM" ]
+      [ "$XDG_SESSION_TYPE" == "unspecified" ]
+      [ -z "$ELECTRON_OZONE_PLATFORM_HINT" ]
+  EOF

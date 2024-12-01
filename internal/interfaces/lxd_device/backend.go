@@ -227,23 +227,24 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 }
 
 func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, workshop string) error {
-	envVars := []string{
-		"WAYLAND_DISPLAY=" + strings.TrimPrefix(dev.Listen, "/run/user/1000/"),
-		"QT_QPA_PLATFORM=wayland-egl",
-		"XDG_SESSION_TYPE=wayland",
-		"ELECTRON_OZONE_PLATFORM_HINT=auto",
+	envVars := map[string]string{
+		"WAYLAND_DISPLAY":              strings.TrimPrefix(dev.Listen, "/run/user/1000/"),
+		"QT_QPA_PLATFORM":              "wayland-egl",
+		"XDG_SESSION_TYPE":             "wayland",
+		"ELECTRON_OZONE_PLATFORM_HINT": "auto",
 	}
 
 	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 	if err != nil {
-		return fmt.Errorf("failed to configure the environment for interface: desktop in workshop: %q (%w)", workshop, err)
+		return fmt.Errorf("cannot configure required environment for %q: %w", workshop, err)
 	}
 	defer env.Close()
 
-	for _, envVar := range envVars {
-		_, err = env.WriteString("export " + envVar + "\n")
+	for key, val := range envVars {
+		_, err = env.WriteString("export " + key + "=" + val + "\n")
 		if err != nil {
-			return fmt.Errorf("failed to configure the environment for interface: desktop in workshop: %q (%w)", workshop, err)
+
+			return fmt.Errorf("cannot set %q for %q: %w", key, workshop, err)
 		}
 	}
 
