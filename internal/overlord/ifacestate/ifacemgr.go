@@ -186,15 +186,17 @@ func (m *InterfaceManager) StartUp() error {
 		// this consistency across reboots here.
 		usr, err := workshop.LookupUsername(user)
 		if err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
 			continue
 		}
 		env, err := systemd.UserEnvironment(usr)
 		if err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
+			continue
 		}
 		if err = x11.MigrateXauthority(usr, env["XAUTHORITY"]); err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
+			continue
 		}
 	}
 

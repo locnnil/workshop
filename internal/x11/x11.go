@@ -1,7 +1,6 @@
 package x11
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -18,7 +17,7 @@ var userLookup = user.Lookup
 // Copies the user's $XAUTHORITY file to the Workshopd run directory.
 func MigrateXauthority(user *user.User, xauth string) (err error) {
 	if xauth == "" {
-		return errors.New("xauth cannot be empty")
+		return fmt.Errorf("xauth cannot be empty")
 	}
 
 	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid, "Xauthority")

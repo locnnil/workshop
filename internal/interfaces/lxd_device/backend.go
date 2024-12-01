@@ -281,7 +281,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	if xauth != "" {
 		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, "Xauthority", ".Xauthority")
 		if err := x11.MigrateXauthority(user, xauth); err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user.Username, err)
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
 		}
 	}
 
@@ -290,8 +290,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	for key, val := range envVars {
 		_, err = envFile.WriteString("export " + key + "=" + val + "\n")
 		if err != nil {
-
-			return fmt.Errorf("cannot set %q for %q: %w", key, ws, err)
+			return fmt.Errorf("cannot set %s for %q: %w", key, ws, err)
 		}
 	}
 
