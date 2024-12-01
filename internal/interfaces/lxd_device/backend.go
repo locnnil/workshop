@@ -16,7 +16,6 @@ import (
 	"github.com/canonical/x-go/randutil"
 	"github.com/spf13/afero"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -287,9 +286,9 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	// is the responsibility of the interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
-		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, "Xauthority", ".Xauthority")
+		envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		if err := x11.MigrateXauthority(user, xauth); err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
+			logger.Noticef("cannot migrate Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
 		}
 	}
 
@@ -307,6 +306,12 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 
 func removeDesktop(fs workshop.WorkshopFs) error {
 	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return err
+		}
+	}
+
+	if err := fs.Remove("/tmp/.Xauthority"); err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
 			return err
 		}
