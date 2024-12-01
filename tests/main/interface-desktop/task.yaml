@@ -91,6 +91,24 @@ execute: |
   echo "Check that the required mounts are removed from the workshop"
   workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
       set -e
-      [ ! -f "${XAUTHORITY}" ]
       [ ! -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
+      [ ! -f "${XAUTHORITY}" ]
+  EOF
+
+  echo "Reconnect the desktop interface with a different socket name"
+  sudo -u ubuntu XDG_RUNTIME_DIR=/run/user/1000 systemctl --user set-environment DISPLAY=:1
+  workshop_exec connect ws-desktop/test-sdk-desktop:desktop :desktop
+
+  echo "Check that the expected environment is configured inside the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ "$DISPLAY" == ":1" ]
+      [ -n "$XAUTHORITY" ]
+  EOF
+
+  echo "Check that the required mounts are configured inside the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
+      [ -f "${XAUTHORITY}" ]
   EOF

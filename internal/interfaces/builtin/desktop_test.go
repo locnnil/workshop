@@ -110,7 +110,7 @@ exit 0`)
 	expectedProxy := &workshop.Desktop{}
 	expectedProxy.X11.Name = "consumer-x11"
 	expectedProxy.X11.Connect = "/tmp/.X11-unix/X0"
-	expectedProxy.X11.Listen = "/var/lib/workshop/run/X0"
+	expectedProxy.X11.Listen = "/tmp/.X11-unix/X0"
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 
@@ -145,7 +145,7 @@ exit 0`)
 	expectedProxy.Wayland.Listen = "/run/user/1000/wayland-0"
 	expectedProxy.X11.Name = "consumer-x11"
 	expectedProxy.X11.Connect = "/tmp/.X11-unix/X0"
-	expectedProxy.X11.Listen = "/var/lib/workshop/run/X0"
+	expectedProxy.X11.Listen = "/tmp/.X11-unix/X0"
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 

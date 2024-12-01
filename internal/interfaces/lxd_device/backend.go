@@ -14,6 +14,7 @@ import (
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/x-go/randutil"
+	"github.com/spf13/afero"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -264,11 +265,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.X11.Name != "" {
-		envVars["DISPLAY"] = ":" + strings.TrimPrefix(dev.X11.Listen, filepath.Join(dirs.WorkshopRunDir, "X"))
-		err := setupX11(fs, dev.X11.Listen)
-		if err != nil {
-			logger.Noticef("cannot symlink X11 socket, X11 applications will not work: %v", err)
-		}
+		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen), "X")
 	}
 
 	// The .Xauthority cookie contains a 128bit key used to authenticate consumers
@@ -302,17 +299,10 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 }
 
 func removeDesktop(fs workshop.WorkshopFs) error {
-	x11Service := "/etc/systemd/system/symlinkX11.service"
-	_, err := fs.Stat(x11Service)
-	if err == nil {
-		if err := fs.Remove(x11Service); err != nil {
+	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
 			return err
 		}
-	}
-	envFile := filepath.Join("/etc/profile.d", "desktop"+".sh")
-	_, err = fs.Stat(envFile)
-	if err == nil {
-		return fs.Remove(envFile)
 	}
 	return nil
 }
@@ -518,63 +508,4 @@ func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.Wor
 	return func() {
 		workshopFs = old
 	}
-}
-
-// Creates a systemd service to symlink the X11 socket into /tmp/.X11-unix/ on
-// each boot. Symlinks the created service to the multi-user.target directory
-// and the X11 socket to /tmp/.X11-unix for the current boot
-func setupX11(fs workshop.WorkshopFs, listen string) error {
-	// LXD has a race condition wherein it may wipe the /tmp directory after
-	// creating the proxy devices. Because of this, we proxy the X11 socket
-	// into the workshop runtime directory, then create a script to symlink it
-	// into the /tmp/.X11-unix directory after boot.
-	systemdDefaultDir := "/etc/systemd/system"
-	symlinkTarget := "/tmp/.X11-unix" + strings.TrimPrefix(listen, dirs.WorkshopRunDir)
-
-	if err := fs.MkdirAll(systemdDefaultDir, 755); err != nil {
-		return err
-	}
-
-	f, err := fs.Create(filepath.Join(systemdDefaultDir, "symlinkX11.service"))
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString(`
-[Unit]
-Description=X11 symlink service
-After=multi-user.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-User=workshop
-ExecStartPre=/bin/bash -c "mkdir -p /tmp/.X11-unix"
-`)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString(fmt.Sprintf("ExecStart=/bin/bash -c \"ln -sf %s %s\"", listen, symlinkTarget))
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString(`
-
-[Install]
-WantedBy=multi-user.target`)
-	if err != nil {
-		return err
-	}
-
-	if err = fs.Symlink(filepath.Join(systemdDefaultDir, "symlinkX11.service"), filepath.Join(systemdDefaultDir, "multi-user.target.wants", "symlinkX11.service")); err != nil {
-		return err
-	}
-
-	if err = fs.MkdirAll(filepath.Dir(symlinkTarget), 777); err != nil {
-		return err
-	}
-
-	return fs.Symlink(listen, symlinkTarget)
 }
