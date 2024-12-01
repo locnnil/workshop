@@ -55,7 +55,7 @@ const desktopDeclarationPlugs = `
       plug-names:
         - $INTERFACE
     allow-connection: true
-    allow-auto-connection: false
+    deny-auto-connection: true
 `
 
 type desktopInterface struct{}
