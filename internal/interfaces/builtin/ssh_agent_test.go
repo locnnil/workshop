@@ -73,7 +73,7 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := &workshop.SshAgent{Name: "consumer-" + plug.Name, Connect: "/tmp/dir/ssh", Listen: "/var/lib/workshop/run/consumer-ssh-agent.ssh"}
+	expectedProxy := &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: "consumer-" + plug.Name, Connect: "/tmp/dir/ssh", Listen: "/var/lib/workshop/run/consumer-ssh-agent.ssh"}}
 	c.Assert(deviceSpec.Profile.Agent, check.DeepEquals, expectedProxy)
 }
 

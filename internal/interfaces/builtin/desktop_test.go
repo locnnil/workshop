@@ -77,6 +77,7 @@ exit 0`)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{}
+	expectedProxy.Wayland = &workshop.ProxyEntry{}
 	expectedProxy.Wayland.Name = "consumer-wayland"
 	expectedProxy.Wayland.Connect = "/tmp/wayland-1"
 	expectedProxy.Wayland.Listen = "/run/user/1000/wayland-1"
@@ -108,6 +109,7 @@ exit 0`)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{}
+	expectedProxy.X11 = &workshop.ProxyEntry{}
 	expectedProxy.X11.Name = "consumer-x11"
 	expectedProxy.X11.Connect = "/tmp/.X11-unix/X0"
 	expectedProxy.X11.Listen = "/tmp/.X11-unix/X0"
@@ -140,6 +142,8 @@ exit 0`)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{}
+	expectedProxy.Wayland = &workshop.ProxyEntry{}
+	expectedProxy.X11 = &workshop.ProxyEntry{}
 	expectedProxy.Wayland.Name = "consumer-wayland"
 	expectedProxy.Wayland.Connect = "/tmp/wayland-0"
 	expectedProxy.Wayland.Listen = "/run/user/1000/wayland-0"

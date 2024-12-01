@@ -70,7 +70,7 @@ To check if the interface is connected:
      desktop    ws/desktop-sdk:desktop :desktop   manual
 
 
-This means the host's Wayland/X11 socket is available inside the workshop:
+This means the host's display socket (Wayland, X11 or both) is available inside the workshop:
 
 .. code-block:: console
 

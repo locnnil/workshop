@@ -92,20 +92,6 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		// confirm the target path exists
-		if info, err := fs.Stat(dev.Where); err != nil {
-			if !osutil.IsDirNotExist(err) {
-				return false, err
-			}
-			// FIXME: workaround LXD empty directory issue (which, if the
-			// connection was disconnected earlier, was removed by LXD).
-			if err = fs.Mkdir(dev.Where, os.ModePerm); err != nil {
-				return false, err
-			}
-		} else if !info.IsDir() {
-			return false, fmt.Errorf(`%q is not a directory`, dev.Where)
-		}
-
 		// Ensure that the source path exists here. LXD allows to
 		// require the source attribute when updating an instance
 		// configuration but it would fail and still save changes to the
@@ -115,13 +101,35 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 		// configuration which is not acceptable.
 		// The dir is being dynamically created (no source attribute
 		// provided by the slot).
-		if _, err := os.Stat(dev.What); err != nil {
+		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(dev.What)
+		if err != nil {
+			return false, err
+		}
+
+		// We cannot infer what the user intended to mount if the source doesn't
+		// exist. In this case - inline with the above - we create a directory.
+		if !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
 				return false, err
 			}
 
 			if err = osutil.MkdirAllChown(dev.What, 0755, uid, gid); err != nil {
+				return false, err
+			}
+		}
+
+		if !sourceIsDir {
+			return false, nil
+		}
+
+		_, err = fs.Stat(dev.Where)
+		if !osutil.IsDirNotExist(err) {
+			return false, err
+		} else {
+			// FIXME: workaround LXD empty directory issue (which, if the
+			// connection was disconnected earlier, was removed by LXD).
+			if err = fs.MkdirAll(dev.Where, os.ModePerm); err != nil {
 				return false, err
 			}
 		}
@@ -246,7 +254,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	defer envFile.Close()
 
 	// Use Wayland as the default backend in the case where it's unset
-	if (backend == "wayland" || backend == "") && dev.Wayland.Name != "" {
+	if (backend == "wayland" || backend == "") && dev.Wayland != nil {
 		envVars = map[string]string{
 			"QT_QPA_PLATFORM":  "wayland-egl",
 			"XDG_SESSION_TYPE": "wayland",
@@ -260,11 +268,11 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 		}
 	}
 
-	if dev.Wayland.Name != "" {
+	if dev.Wayland != nil {
 		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen, "/run/user/1000/")
 	}
 
-	if dev.X11.Name != "" {
+	if dev.X11 != nil {
 		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen), "X")
 	}
 

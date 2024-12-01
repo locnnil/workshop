@@ -25,11 +25,13 @@ type Mount struct {
 	Type  MountType `json:"type"`
 }
 
-type SshAgent ProxyEntry
+type SshAgent struct {
+	ProxyEntry
+}
 
 type Desktop struct {
-	Wayland ProxyEntry
-	X11     ProxyEntry
+	Wayland *ProxyEntry
+	X11     *ProxyEntry
 }
 
 type Gpu struct {

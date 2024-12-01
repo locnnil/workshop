@@ -92,19 +92,19 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 
 func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
 	s.Profile.Agent = &agent
-	addProxyEntry(s, (*workshop.ProxyEntry)(&agent), "ssh-agent")
+	s.addProxyEntry(&agent.ProxyEntry, "ssh-agent")
 	return nil
 }
 
-func (s *Specification) SetDesktop(desktop *workshop.Desktop) error {
-	s.Profile.Desktop = desktop
+func (s *Specification) SetDesktop(desktop workshop.Desktop) error {
+	s.Profile.Desktop = &desktop
 
-	if desktop.Wayland.Name != "" {
-		addProxyEntry(s, &desktop.Wayland, "desktop-wayland")
+	if desktop.Wayland != nil {
+		s.addProxyEntry(desktop.Wayland, "desktop-wayland")
 	}
 
-	if desktop.X11.Name != "" {
-		addProxyEntry(s, &desktop.X11, "desktop-x11")
+	if desktop.X11 != nil {
+		s.addProxyEntry(desktop.X11, "desktop-x11")
 	}
 
 	return nil
@@ -168,7 +168,7 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 	return nil
 }
 
-func addProxyEntry(s *Specification, entry *workshop.ProxyEntry, configKey string) {
+func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
 	s.devices[entry.Name] = map[string]string{
 		"type":    "proxy",

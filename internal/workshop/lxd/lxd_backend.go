@@ -721,7 +721,11 @@ users:
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
 		"user.workshop.file":       string(f),
-		"raw.lxc":                  "lxc.mount.entry = tmpfs tmp tmpfs defaults",
+		// LXC appears to have a race condition wherein a proxy device mounted in
+		// a dynamically created directory has the potential to be 'masked' by this
+		// directory. We create an explicit mount for /tmp here (one such dymanic
+		// directory) to allow us to mount X11 sockets reliably
+		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
 
 	nvidiaRuntime, err := checkNvidiaRuntime()
