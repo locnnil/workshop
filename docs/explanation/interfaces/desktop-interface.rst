@@ -1,14 +1,15 @@
 .. _exp_desktop_interface:
 
 Desktop interface
+=================
 
 The desktop interface
-provides access to the host system's Wayland socket
+provides access to the host system's display (Wayland/X11) socket(s)
 from inside the workshop,
-allowing it to securely run Wayland GUI applications.
+allowing it to securely run GUI applications.
 
 By using the interface,
-the SDK publisher allows the workshop to access the host's Wayland socket,
+the SDK publisher allows the workshop to utilise the host's display
 which can be useful for various SDK-specific tasks
 such as building graphical applications or using editors without remote support.
 
@@ -27,17 +28,35 @@ Establishing a connection means
 a proxy Unix domain socket has been created
 and the following environment variables have been set:
 
-- :envvar:`$WAYLAND_DISPLAY`
-  Sets the Wayland socket name
-  
-- :envvar:`$XDG_SESSION_TYPE`
-  Sets the current display server type
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 30 30 30
 
-- :envvar:`$QT_QPA_PLATFORM`
-  Sets the Qt platform plugin to be used for Qt applications
+   * - Wayland
+     - X11
+     - Both
 
-- :envvar:`$ELECTRON_OZONE_PLATFORM_HINT`
-  Sets the preferred platform for Electron applications
+   * - | :envvar:`$WAYLAND_DISPLAY`
+       | :envvar:`$XDG_SESSION_TYPE`
+       | :envvar:`$QT_QPA_PLATFORM`
+       | :envvar:`$ELECTRON_OZONE_PLATFORM_HINT`
+       | :envvar:`$XDG_BACKEND`
+     - | :envvar:`$DISPLAY`
+       | :envvar:`$XDG_SESSION_TYPE`
+       | :envvar:`$QT_QPA_PLATFORM`
+       | :envvar:`$ELECTRON_OZONE_PLATFORM_HINT`
+       | :envvar:`$XDG_BACKEND`
+       | :envvar:`$XAUTHORITY`:sup:`*`
+     - | :envvar:`$WAYLAND_DISPLAY`
+       | :envvar:`$DISPLAY`
+       | :envvar:`$XDG_SESSION_TYPE`
+       | :envvar:`$QT_QPA_PLATFORM`
+       | :envvar:`$ELECTRON_OZONE_PLATFORM_HINT`
+       | :envvar:`$XDG_BACKEND`
+       | :envvar:`$XAUTHORITY`:sup:`*`
+
+*\*only set if present on the host*
 
 
 To check if the interface is connected:
@@ -51,7 +70,7 @@ To check if the interface is connected:
      desktop    ws/desktop-sdk:desktop :desktop   manual
 
 
-This means the host's Wayland socket is available inside the workshop:
+This means the host's Wayland/X11 socket is available inside the workshop:
 
 .. code-block:: console
 
@@ -60,6 +79,12 @@ This means the host's Wayland socket is available inside the workshop:
 
      wayland-1
 
+.. code-block:: console
+
+   $ workshop shell ws
+   workshop@ws-8584e571$ ls /tmp/.X11-unix
+
+     X0
 
 See also
 --------

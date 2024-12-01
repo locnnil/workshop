@@ -15,6 +15,7 @@ Dockerfile
 Dockerfiles
 EdTech
 env
+envvar
 GCP
 gcs
 gid
@@ -86,7 +87,10 @@ workspace
 workspaces
 worktree
 worktrees
+ws
 WSL
 XDG
+X11
+XAUTHORITY
 yaml
 YYYY
