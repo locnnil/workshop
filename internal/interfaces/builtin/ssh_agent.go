@@ -21,16 +21,13 @@ package builtin
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -78,37 +75,19 @@ func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotIn
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	user, err := workshop.LookupUsername(spec.User())
+	usr, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
 
-	uid, _, err := osutil.UidGid(user)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("sudo", "-E", "-u", spec.User(), "systemctl", "--user", "show-environment")
-	// XDG_RUNTIME_DIR may not be set if a command invoked by sudo or
-	// systemd-run; set it here to the default location. It is required for the
-	// systemctl to work with --user. See:
-	// https://unix.stackexchange.com/questions/346841/why-does-sudo-i-not-set-xdg-runtime-dir-for-the-target-user
-	defaultXdg := filepath.Join(dirs.XdgRuntimeDirBase, strconv.FormatUint(uint64(uid), 10))
-	cmd.Env = append(cmd.Env, "XDG_RUNTIME_DIR="+defaultXdg)
-	out, errOut, err := osutil.RunCmd(cmd)
-	if err != nil {
-		return fmt.Errorf(string(errOut))
-	}
-
-	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
-	env, err := osutil.ParseEnvironment(rawEnv)
+	env, err := systemd.UserEnvironment(usr)
 	if err != nil {
 		return err
 	}
 
 	sock, ok := env["SSH_AUTH_SOCK"]
 	if !ok {
-		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, user.Username)
+		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, spec.User())
 	}
 
 	name := plug.Sdk().Name + "-" + plug.Name()
