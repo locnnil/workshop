@@ -48,7 +48,7 @@ func (x *X11TestSuit) TestMigrateXAuthoritySuccess(c *check.C) {
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, check.IsNil)
 
-	c.Assert(filepath.Join(dirs.WorkshopdRunDir, user.Uid, ".Xauthority"), testutil.FilePresent)
+	c.Assert(filepath.Join(dirs.WorkshopdRunDir, user.Uid, "Xauthority", ".Xauthority"), testutil.FilePresent)
 }
 
 func (x *X11TestSuit) TestMigrateXAuthorityOwnershipFail(c *check.C) {

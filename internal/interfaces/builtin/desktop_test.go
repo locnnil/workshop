@@ -174,7 +174,7 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, ".Xauthority"), Where: "/var/lib/workshop/run/.Xauthority"}
+	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"), Where: "/var/lib/workshop/run/Xauthority"}
 	c.Assert(deviceSpec.Profile.Mounts["consumer-xauth"], check.DeepEquals, *expectedMount)
 }
 

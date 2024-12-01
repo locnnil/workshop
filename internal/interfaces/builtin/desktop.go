@@ -114,14 +114,14 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 		x.Listen = x.Connect
 	}
 
-	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, ".Xauthority")
+	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, "Xauthority")
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
 		m := workshop.Mount{}
 		m.Name = plug.Sdk().Name + "-" + "xauth"
 		m.Type = 0
 		m.What = workshopdXauth
-		m.Where = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
+		m.Where = filepath.Join(dirs.WorkshopRunDir, "Xauthority")
 		spec.AddMountEntry(m)
 	}
 

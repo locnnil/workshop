@@ -20,21 +20,8 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 		return errors.New("xauth cannot be empty")
 	}
 
-	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid)
+	destDir := filepath.Join(dirs.WorkshopdRunDir, user.Uid, "Xauthority")
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return err
-	}
-
-	// Make sure the target file doesn't exist as a directory.
-	// We do this because if the file doesn't exist and the desktop interface is
-	// mounted, workshopd will create an empty directory as part of the mount
-	// interface.
-	// This then breaks any 'normal' file operations
-	//
-	// There's no advantage to comparing the files, destroy and copy every
-	// time
-	destFile := filepath.Join(destDir, ".Xauthority")
-	if err = os.RemoveAll(destFile); err != nil {
 		return err
 	}
 
@@ -62,7 +49,7 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 		return fmt.Errorf("Xauthority file isn't owned by the current user %s", user.Uid)
 	}
 
-	err = osutil.CopyFile(xauth, destFile, osutil.CopyFlagOverwrite)
+	err = osutil.CopyFile(xauth, filepath.Join(destDir, ".Xauthority"), osutil.CopyFlagOverwrite)
 	if err != nil {
 		return err
 	}
