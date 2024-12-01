@@ -721,6 +721,7 @@ users:
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
 		"user.workshop.file":       string(f),
+		"raw.lxc":                  "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
 
 	nvidiaRuntime, err := checkNvidiaRuntime()
