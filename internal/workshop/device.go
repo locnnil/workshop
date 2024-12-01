@@ -8,6 +8,12 @@ const (
 	Volume
 )
 
+type ProxyEntry struct {
+	Name    string
+	Connect string
+	Listen  string
+}
+
 type Camera struct {
 	Name string `json:"name"`
 }
@@ -19,16 +25,11 @@ type Mount struct {
 	Type  MountType `json:"type"`
 }
 
-type SshAgent struct {
-	Name    string
-	Connect string
-	Listen  string
-}
+type SshAgent ProxyEntry
 
 type Desktop struct {
-	Name    string
-	Connect string
-	Listen  string
+	Wayland ProxyEntry
+	X11     ProxyEntry
 }
 
 type Gpu struct {

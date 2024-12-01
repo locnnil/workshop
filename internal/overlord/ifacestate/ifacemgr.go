@@ -15,6 +15,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/wsutil"
 )
 
 type InterfaceManager struct {
@@ -137,6 +138,12 @@ func (m *InterfaceManager) StartUp() error {
 	}
 
 	for user, projects := range allprojects {
+		// We want to run this once for each user
+		err := wsutil.CopyXauthority(user)
+		if err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+		}
+
 		ctx := context.WithValue(context.Background(), workshop.ContextUser, user)
 		for _, project := range projects {
 			pctx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)

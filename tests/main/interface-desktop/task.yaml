@@ -5,6 +5,8 @@ prepare: |
   # which is used by the interface to get info about the desktop socket path
   loginctl enable-linger ubuntu
   workshop_exec launch ws-desktop
+  mkdir /var/snap/workshop/current/run/workshopd/1000
+  touch /var/snap/workshop/current/run/workshopd/1000/.Xauthority
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-desktop
@@ -19,12 +21,12 @@ execute: |
   workshop_exec launch ws-desktop-fail > launch.log || true
   MATCH ".*installation not allowed by \"user-desktop\" slot rule of interface \"desktop\"" < launch.log
 
-  echo "Connect the desktop interface"
+  echo "Connect the desktop interface for a wayland session"
   sudo -u ubuntu /bin/bash -c 'XDG_RUNTIME_DIR=/run/user/1000 systemctl --user set-environment WAYLAND_DISPLAY=wayland-1'
   sudo -u ubuntu /bin/bash -c 'workshop connect ws-desktop/test-sdk-desktop:desktop :desktop'
 
   echo "Check that the expected environment is configured inside the workshop"
-  workshop_exec exec ws-desktop -- sudo -H -i -u workshop /bin/bash -s <<"EOF"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
       set -e
       [ -n "$WAYLAND_DISPLAY" ]
       [ -n "$QT_QPA_PLATFORM" ]
@@ -32,14 +34,56 @@ execute: |
       [ -n "$ELECTRON_OZONE_PLATFORM_HINT" ]
   EOF
 
+  echo "Check that the required mounts are configured inside the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -S "/run/user/1000/${WAYLAND_DISPLAY}" ]
+  EOF
+
   echo "Disconnect the desktop interface"
   workshop_exec disconnect ws-desktop/test-sdk-desktop:desktop
 
   echo "Check that the environment is removed from the workshop"
-  workshop_exec exec ws-desktop -- sudo -H -i -u workshop /bin/bash -s <<"EOF"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
       set -e
       [ -z "$WAYLAND_DISPLAY" ]
       [ -z "$QT_QPA_PLATFORM" ]
       [ "$XDG_SESSION_TYPE" == "unspecified" ]
       [ -z "$ELECTRON_OZONE_PLATFORM_HINT" ]
+  EOF
+
+  echo "Connect the desktop interface for an x11 session"
+  sudo -u ubuntu /bin/bash -c 'touch /tmp/.Xauthority'
+  sudo -u ubuntu /bin/bash -c 'XDG_RUNTIME_DIR=/run/user/1000 systemctl --user set-environment DISPLAY=:0 XAUTHORITY=/tmp/.Xauthority'
+  sudo -u ubuntu /bin/bash -c 'workshop connect ws-desktop/test-sdk-desktop:desktop :desktop'
+
+  echo "Check that the expected environment is configured inside the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -n "$DISPLAY" ]
+      [ -n "$XAUTHORITY" ]
+  EOF
+
+  echo "Check that the required mounts are configured inside the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
+      [ -f "${XAUTHORITY}" ]
+  EOF
+
+  echo "Disconnect the desktop interface"
+  workshop_exec disconnect ws-desktop/test-sdk-desktop:desktop
+
+  echo "Check that the expected environment is removed from the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -z "$DISPLAY" ]
+      [ -z "$XAUTHORITY" ]
+  EOF
+
+  echo "Check that the required mounts are removed from the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ ! -f "${XAUTHORITY}" ]
+      [ ! -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
   EOF

@@ -51,8 +51,10 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			switch devtype {
 			case "ssh-agent":
 				pr.Agent = &workshop.SshAgent{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
-			case "desktop":
-				pr.Desktop = &workshop.Desktop{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+			case "desktop-wayland":
+				parseDesktop(name, dev, &pr, "wayland")
+			case "desktop-x11":
+				parseDesktop(name, dev, &pr, "x11")
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
@@ -92,4 +94,26 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		}
 	}
 	return pr, nil
+}
+
+func parseDesktop(name string, dev map[string]string, pr *workshop.SdkProfile, backend string) {
+	if pr.Desktop == nil {
+		pr.Desktop = &workshop.Desktop{}
+	}
+	switch backend {
+	case "wayland":
+		{
+			w := &pr.Desktop.Wayland
+			w.Name = name
+			w.Connect = dev["connect"]
+			w.Listen = dev["listen"]
+		}
+	case "x11":
+		{
+			x := &pr.Desktop.X11
+			x.Name = name
+			x.Connect = dev["connect"]
+			x.Listen = dev["listen"]
+		}
+	}
 }

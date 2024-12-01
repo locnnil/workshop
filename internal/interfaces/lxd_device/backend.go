@@ -15,12 +15,15 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/x-go/randutil"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/wsutil"
 )
 
 const (
@@ -111,7 +114,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 		// configuration which is not acceptable.
 		// The dir is being dynamically created (no source attribute
 		// provided by the slot).
-		if !osutil.IsDir(dev.What) {
+		if _, err := os.Stat(dev.What); err != nil {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
 				return false, err
@@ -226,33 +229,73 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
-func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, workshop string) error {
-	envVars := map[string]string{
-		"WAYLAND_DISPLAY":              strings.TrimPrefix(dev.Listen, "/run/user/1000/"),
-		"QT_QPA_PLATFORM":              "wayland-egl",
-		"XDG_SESSION_TYPE":             "wayland",
-		"ELECTRON_OZONE_PLATFORM_HINT": "auto",
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, usr string, ws string) error {
+	user, err := workshop.LookupUsername(usr)
+	if err != nil {
+		return err
 	}
 
-	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+	env, err := systemd.UserEnvironment(user)
 	if err != nil {
-		return fmt.Errorf("cannot configure required environment for %q: %w", workshop, err)
+		return err
 	}
-	defer env.Close()
+
+	backend := env["XDG_BACKEND"]
+
+	var envVars map[string]string
+	// Use Wayland as the default backend in the case where it's unset
+	if (backend == "wayland" || backend == "") && dev.Wayland.Name != "" {
+		envVars = map[string]string{
+			"QT_QPA_PLATFORM":  "wayland-egl",
+			"XDG_SESSION_TYPE": "wayland",
+			"XDG_BACKEND":      "wayland",
+		}
+	} else {
+		envVars = map[string]string{
+			"QT_QPA_PLATFORM":  "xcb",
+			"XDG_SESSION_TYPE": "x11",
+			"XDG_BACKEND":      "x11",
+		}
+	}
+
+	if dev.Wayland.Name != "" {
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen, "/run/user/1000/")
+	}
+
+	if dev.X11.Name != "" {
+		envVars["DISPLAY"] = ":" + strings.TrimPrefix(dev.X11.Listen, "/tmp/.X11-unix/X")
+	}
+
+	xauth := env["XAUTHORITY"]
+	if xauth != "" {
+		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
+		err := wsutil.CopyXauthority(usr)
+		if err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+		}
+	}
+
+	envVars["ELECTRON_OZONE_PLATFORM_HINT"] = "auto"
+
+	envFile, err := fs.Create(filepath.Join("/etc/profile.d", "desktop"+".sh"))
+	if err != nil {
+		return fmt.Errorf("cannot configure required environment for %q: %w", ws, err)
+	}
+	defer envFile.Close()
 
 	for key, val := range envVars {
-		_, err = env.WriteString("export " + key + "=" + val + "\n")
+		_, err = envFile.WriteString("export " + key + "=" + val + "\n")
 		if err != nil {
 
-			return fmt.Errorf("cannot set %q for %q: %w", key, workshop, err)
+			return fmt.Errorf("cannot set %q for %q: %w", key, ws, err)
 		}
 	}
 
 	return nil
 }
 
-func removeDesktop(fs workshop.WorkshopFs, dev workshop.Desktop) error {
-	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+func removeDesktop(fs workshop.WorkshopFs) error {
+	return fs.Remove(filepath.Join("/etc/profile.d", "desktop"+".sh"))
 }
 
 func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
@@ -320,7 +363,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, sdkInfo.Workshop)
+		err = installDesktop(fs, *spec.Profile.Desktop, spec.user, sdkInfo.Workshop)
 		if err != nil {
 			return err
 		}
@@ -348,7 +391,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 		if prevp.Desktop != nil {
 			if spec.Profile.Desktop == nil || *prevp.Desktop != *spec.Profile.Desktop {
-				if err = removeDesktop(fs, *prevp.Desktop); err != nil {
+				if err = removeDesktop(fs); err != nil {
 					return err
 				}
 			}
@@ -424,7 +467,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 	}
 
 	if prof.Desktop != nil {
-		if err = removeDesktop(fs, *prof.Desktop); err != nil {
+		if err = removeDesktop(fs); err != nil {
 			return err
 		}
 	}

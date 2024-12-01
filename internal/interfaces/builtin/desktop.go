@@ -21,16 +21,14 @@ package builtin
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -82,57 +80,62 @@ func (iface *desktopInterface) MountConnectedPlug(
 	plug *interfaces.ConnectedPlug,
 	slot *interfaces.ConnectedSlot,
 ) error {
-
-	user, err := workshop.LookupUsername(spec.User())
+	usr, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
 
-	uid, _, err := osutil.UidGid(user)
+	env, err := systemd.UserEnvironment(usr)
 	if err != nil {
 		return err
 	}
 
-	// Systemd is responsible for generating the "WAYLAND_DISPLAY" environment
-	// variable. Because of this we must parse the environment as it's set by
-	// systemd.
-	cmd := exec.Command("sudo", "-E", "-u", spec.User(), "systemctl", "--user", "show-environment")
-	// XDG_RUNTIME_DIR may not be set if a command invoked by sudo or
-	// systemd-run; set it here to the default location. It is required for the
-	// systemctl to work with --user. See:
-	// https://unix.stackexchange.com/questions/346841/why-does-sudo-i-not-set-xdg-runtime-dir-for-the-target-user
-	defaultXdg := filepath.Join(dirs.XdgRuntimeDirBase, strconv.FormatUint(uint64(uid), 10))
-	cmd.Env = append(cmd.Env, "XDG_RUNTIME_DIR="+defaultXdg)
-	out, errOut, err := osutil.RunCmd(cmd)
-	if err != nil {
-		return fmt.Errorf(string(errOut))
+	xdg := env["XDG_RUNTIME_DIR"]
+	if xdg == "" {
+		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User())
 	}
 
-	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
-	env, err := osutil.ParseEnvironment(rawEnv)
-	if err != nil {
-		return err
+	desktop := workshop.Desktop{}
+
+	wayland := env["WAYLAND_DISPLAY"]
+	display := env["DISPLAY"]
+
+	if wayland != "" {
+		// Add wayland to the profile string
+		w := &desktop.Wayland
+		w.Name = plug.Sdk().Name + "-" + "wayland"
+		w.Connect = filepath.Join(xdg, wayland)
+		w.Listen = filepath.Join("/run/user/1000/", wayland)
 	}
 
-	wayland, ok := env["WAYLAND_DISPLAY"]
-	if !ok || wayland == "" {
-		return fmt.Errorf("WAYLAND_DISPLAY is either empty or unset for user %q. Is this a Wayland session?", user.Username)
+	// We pass through the X11 socket regardless of whether XAUTHORITY is present
+	// on the host.
+	// This then gives users the option to modify their xhost settings to allow
+	// connections from the container and container user.
+	if display != "" {
+		// Add X11 to the profile string
+		x := &desktop.X11
+		x.Name = plug.Sdk().Name + "-" + "x11"
+		x.Connect = filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":"))
+		x.Listen = x.Connect
 	}
 
-	xdg, ok := env["XDG_RUNTIME_DIR"]
-	if !ok || xdg == "" {
-		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", user.Username)
+	if wayland == "" && display == "" {
+		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User())
 	}
 
-	name := plug.Sdk().Name + "-" + plug.Name()
+	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, usr.Uid, ".Xauthority")
+	xauth := env["XAUTHORITY"]
+	if xauth != "" {
+		m := workshop.Mount{}
+		m.Name = plug.Sdk().Name + "-" + "xauth"
+		m.Type = 0
+		m.What = workshopdXauth
+		m.Where = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
+		spec.AddMountEntry(m)
+	}
 
-	fromSocket := xdg + "/" + wayland
-	// The container XDG_RUNTIME_DIR is always /run/user/1000 for the workshop
-	// user.
-	// Use the same WAYLAND_DISPLAY identifier as the host.
-	toSocket := "/run/user/1000/" + wayland
-
-	return spec.SetDesktop(workshop.Desktop{Name: name, Connect: fromSocket, Listen: toSocket})
+	return spec.SetDesktop(&desktop)
 }
 
 func init() {
