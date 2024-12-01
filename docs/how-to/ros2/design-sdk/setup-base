@@ -36,7 +36,7 @@ fi
 
 # Add ROS 2 repository to the sources list
 if [ ! -f "/etc/apt/sources.list.d/ros2.list" ]; then
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" |  tee /etc/apt/sources.list.d/ros2.list > /dev/null
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" |  tee /etc/apt/sources.list.d/ros2.list > /dev/null
 fi
 # [ros2-repo-end]
 
@@ -63,13 +63,13 @@ apt-get -y install ros-${_WORKSHOP_ROS_DISTRO}-ros2run ros-${_WORKSHOP_ROS_DISTR
 # [ros2-workspace-end]
 
 # [bashrc-update-start]
-# Add bashrc setup script
-if ! grep -q "source /opt/ros/${_WORKSHOP_ROS_DISTRO}/setup.bash" "${_WORKSHOP_USER_HOME}/.bashrc"; then
+# Add setup script to .profile so that it is avail for both interactive and non-interactive shell
+if ! grep -q "source /opt/ros/${_WORKSHOP_ROS_DISTRO}/setup.bash" "${_WORKSHOP_USER_HOME}/.profile"; then
   echo "
   # Source ROS 2
   if [ -f /opt/ros/${_WORKSHOP_ROS_DISTRO}/setup.bash ]; then
     source /opt/ros/${_WORKSHOP_ROS_DISTRO}/setup.bash
-  fi" >> "${_WORKSHOP_USER_HOME}/.bashrc"
+  fi" >> "${_WORKSHOP_USER_HOME}/.profile"
 fi
 
 # Add colcon autocompletion to bashrc
@@ -80,7 +80,7 @@ if ! grep -q "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
     source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash
   fi" >> "${_WORKSHOP_USER_HOME}/.bashrc"
 fi
-[bashrc-update-end]
+# [bashrc-update-end]
 
 # [colcon-defaults-start]
 # Configure colcon's default dirs
@@ -117,7 +117,7 @@ chown ${_WORKSHOP_USER}:${_WORKSHOP_USER} "${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/
 if [ ! -d "${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/colcon-mixin-repository" ] ; then
   sudo -u ${_WORKSHOP_USER} bash -c "git -C ${_WORKSHOP_COLCON_CONFIG_BASE_PATH} clone https://github.com/colcon/colcon-mixin-repository.git"
 fi
-if [! -f ${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/mixin_repositories.yaml ] || ! grep -q "default:" "${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/mixin_repositories.yaml"; then
+if [ ! -f ${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/mixin_repositories.yaml ] || ! grep -q "default:" "${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/mixin_repositories.yaml"; then
   sudo -u ${_WORKSHOP_USER} bash -c "colcon mixin add default file://${_WORKSHOP_COLCON_CONFIG_BASE_PATH}/colcon-mixin-repository/index.yaml"
 fi
 sudo -u ${_WORKSHOP_USER} bash -c "colcon mixin update default"
@@ -139,5 +139,5 @@ fi
 # [rosdep-dependencies-end]
 
 # Install some useful snaps
-snap install lxd
-snap install snapcraft --classic
+snap install --no-wait lxd
+snap install --no-wait snapcraft --classic
