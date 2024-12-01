@@ -75,12 +75,12 @@ func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotIn
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	usr, err := workshop.LookupUsername(spec.User())
+	user, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
 
-	env, err := systemd.UserEnvironment(usr)
+	env, err := systemd.UserEnvironment(user.Username)
 	if err != nil {
 		return err
 	}

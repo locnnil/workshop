@@ -75,17 +75,13 @@ func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 	return true
 }
 
-func (iface *desktopInterface) MountConnectedPlug(
-	spec *lxd_device.Specification,
-	plug *interfaces.ConnectedPlug,
-	slot *interfaces.ConnectedSlot,
-) error {
+func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	usr, err := workshop.LookupUsername(spec.User())
 	if err != nil {
 		return err
 	}
 
-	env, err := systemd.UserEnvironment(usr)
+	env, err := systemd.UserEnvironment(usr.Username)
 	if err != nil {
 		return err
 	}
@@ -100,6 +96,10 @@ func (iface *desktopInterface) MountConnectedPlug(
 	wayland := env["WAYLAND_DISPLAY"]
 	display := env["DISPLAY"]
 
+	if wayland == "" && display == "" {
+		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User())
+	}
+
 	if wayland != "" {
 		// Add wayland to the profile string
 		w := &desktop.Wayland
@@ -109,19 +109,14 @@ func (iface *desktopInterface) MountConnectedPlug(
 	}
 
 	// We pass through the X11 socket regardless of whether XAUTHORITY is present
-	// on the host.
-	// This then gives users the option to modify their xhost settings to allow
-	// connections from the container and container user.
+	// on the host. This then gives users the option to modify their xhost
+	// settings to allow connections from the container and container user.
 	if display != "" {
 		// Add X11 to the profile string
 		x := &desktop.X11
 		x.Name = plug.Sdk().Name + "-" + "x11"
 		x.Connect = filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":"))
 		x.Listen = x.Connect
-	}
-
-	if wayland == "" && display == "" {
-		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User())
 	}
 
 	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, usr.Uid, ".Xauthority")

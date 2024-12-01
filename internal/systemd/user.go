@@ -12,7 +12,14 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 )
 
-func UserEnvironment(user *user.User) (map[string]string, error) {
+var userLookup = user.Lookup
+
+func UserEnvironment(usr string) (map[string]string, error) {
+	user, err := userLookup(usr)
+	if err != nil {
+		return nil, err
+	}
+
 	uid, _, err := osutil.UidGid(user)
 	if err != nil {
 		return nil, err
@@ -34,9 +41,5 @@ func UserEnvironment(user *user.User) (map[string]string, error) {
 	}
 
 	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
-	env, err := osutil.ParseEnvironment(rawEnv)
-	if err != nil {
-		return nil, err
-	}
-	return env, nil
+	return osutil.ParseEnvironment(rawEnv)
 }

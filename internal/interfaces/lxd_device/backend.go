@@ -23,7 +23,7 @@ import (
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
-	"github.com/canonical/workshop/internal/wsutil"
+	"github.com/canonical/workshop/internal/workshoputil"
 )
 
 const (
@@ -230,12 +230,7 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 }
 
 func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, usr string, ws string) error {
-	user, err := workshop.LookupUsername(usr)
-	if err != nil {
-		return err
-	}
-
-	env, err := systemd.UserEnvironment(user)
+	env, err := systemd.UserEnvironment(usr)
 	if err != nil {
 		return err
 	}
@@ -266,12 +261,17 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, usr string, ws
 		envVars["DISPLAY"] = ":" + strings.TrimPrefix(dev.X11.Listen, "/tmp/.X11-unix/X")
 	}
 
+	// The .Xauthority cookie contains a 128bit key used to authenticate consumers
+	// of the X11 socket. It is generated on each boot with a random suffix,
+	// because of this we need to ensure there exists a consistently-named copy
+	// of the cookie for the LXC profile. We handle it here for the connect,
+	// presence of the copied cookie after reboot is the responsibility of the
+	// interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
 		envVars["XAUTHORITY"] = filepath.Join(dirs.WorkshopRunDir, ".Xauthority")
-		err := wsutil.CopyXauthority(usr)
-		if err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", user, err)
+		if err := workshoputil.CopyXauthority(usr); err != nil {
+			logger.Noticef("cannot copy Xauthority file for user %s, X11 applications may not work, %v", usr, err)
 		}
 	}
 

@@ -1,38 +1,42 @@
-package wsutil
+package workshoputil
 
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"syscall"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/systemd"
-	"github.com/canonical/workshop/internal/workshop"
 )
+
+var userLookup = user.Lookup
 
 // Copies the user's $XAUTHORITY file to the Workshop run directory.
 // This is used by interfaces that require an X11 socket.
 func CopyXauthority(user string) error {
-	usr, err := workshop.LookupUsername(user)
+	usr, err := userLookup(user)
 	if err != nil {
 		return err
 	}
 
-	env, err := systemd.UserEnvironment(usr)
+	env, err := systemd.UserEnvironment(user)
 	if err != nil {
 		return err
 	}
 
-	xauth, _ := env["XAUTHORITY"]
+	xauth := env["XAUTHORITY"]
 	if xauth == "" {
 		return err
 	}
 
 	destDir := filepath.Join(dirs.WorkshopdRunDir, usr.Uid)
 	if !osutil.IsDir(destDir) {
-		os.MkdirAll(destDir, 0744)
+		if err := os.MkdirAll(destDir, 0755); err != nil {
+			return err
+		}
 	}
 
 	// Make sure the target file doesn't exist as a directory.
@@ -44,12 +48,19 @@ func CopyXauthority(user string) error {
 	// There's no advantage to comparing the files, destroy and copy every
 	// time
 	destFile := filepath.Join(destDir, ".Xauthority")
-	os.RemoveAll(destFile)
+	if err = os.RemoveAll(destFile); err != nil {
+		return err
+	}
 
-	// Make sure the user owns the file.
-	// Important to make sure that the user cannot steal another user's
-	// Xauthority file
-	// See migrateXauthority function inside of snapd for more info
+	// We are performing a Stat() here to ensure that the user can't steal
+	// another user's Xauthority file. Note that while Stat() uses fstat() on the
+	// file descriptor created during Open(), the file might have change
+	// ownership between the Open() and the Stat(). That's ok because we aren't
+	// trying to block access that the user already has: if the user has the
+	// privileges to chown another user's Xauthority file, we won't block that
+	// since the user can just steal it without having to use workshop. This code
+	// is just to ensure that a user who doesn't have those privileges can't
+	// steal the file via 'workshop connect'
 	f, err := os.Stat(xauth)
 	if err != nil {
 		return err
@@ -58,6 +69,9 @@ func CopyXauthority(user string) error {
 	if sys == nil {
 		return fmt.Errorf("cannot validate owner of file %s", f.Name())
 	}
+	// cheap comparison as the current uid is only available as a string
+	// but it is better to convert the uid from the stat result to a
+	// string than a string into a number.
 	if fmt.Sprintf("%d", sys.(*syscall.Stat_t).Uid) != usr.Uid {
 		return fmt.Errorf("Xauthority file isn't owned by the current user %s", usr.Uid)
 	}
