@@ -4,13 +4,13 @@ Desktop interface
 
 The desktop interface
 provides access to the host system's Wayland socket
-from inside the workshop, allowing it to securely
-execute Wayland GUI applications.
+from inside the workshop,
+allowing it to securely run Wayland GUI applications.
 
 By using the interface,
 the SDK publisher allows the workshop to access the host's Wayland socket,
-which can be useful for various SDK-specific tasks such as
-building graphical applications or using editors without remote support.
+which can be useful for various SDK-specific tasks
+such as building graphical applications or using editors without remote support.
 
 The interface isn't connected automatically at launch and refresh
 for security reasons.
@@ -27,14 +27,18 @@ Establishing a connection means
 a proxy Unix domain socket has been created
 and the following environment variables have been set:
 
-- :envvar:`WAYLAND_DISPLAY`
-  Identifies the name of the Wayland socket
-- :envvar:`XDG_SESSION_TYPE`
-  Specifies the current display server type
-- :envvar:`QT_QPA_PLATFORM`
-  Specifies the Qt platform plugin to be used for Qt-based applications
-- :envvar:`ELECTRON_OZONE_PLATFORM_HINT`
-  Specifies the preferred platform for electron applications
+- :envvar:`$WAYLAND_DISPLAY`
+  Sets the Wayland socket name
+  
+- :envvar:`$XDG_SESSION_TYPE`
+  Sets the current display server type
+
+- :envvar:`$QT_QPA_PLATFORM`
+  Sets the Qt platform plugin to be used for Qt applications
+
+- :envvar:`$ELECTRON_OZONE_PLATFORM_HINT`
+  Sets the preferred platform for Electron applications
+
 
 To check if the interface is connected:
 
@@ -46,7 +50,8 @@ To check if the interface is connected:
      ...
      desktop    ws/desktop-sdk:desktop :desktop   manual
 
-This means the host's Wayland socket is available inside the workshop
+
+This means the host's Wayland socket is available inside the workshop:
 
 .. code-block:: console
 

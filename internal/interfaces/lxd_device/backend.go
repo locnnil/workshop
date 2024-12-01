@@ -236,14 +236,14 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, workshop strin
 
 	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 	if err != nil {
-		return fmt.Errorf("failed to setup the environment for desktop in profile.d for %q: %w", workshop, err)
+		return fmt.Errorf("failed to configure the environment for interface: desktop in workshop: %q (%w)", workshop, err)
 	}
 	defer env.Close()
 
 	for _, envVar := range envVars {
 		_, err = env.WriteString("export " + envVar + "\n")
 		if err != nil {
-			return fmt.Errorf("failed to setup the environment for desktop in profile.d for %q: %w", workshop, err)
+			return fmt.Errorf("failed to configure the environment for interface: desktop in workshop: %q (%w)", workshop, err)
 		}
 	}
 

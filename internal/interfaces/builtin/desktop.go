@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2016 Canonical Ltd
+ * Copyright (C) 2024 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -118,7 +118,7 @@ func (iface *desktopInterface) MountConnectedPlug(
 
 	wayland, ok := env["WAYLAND_DISPLAY"]
 	if !ok || wayland == "" {
-		return fmt.Errorf("WAYLAND_DISPLAY is either empty or unset for user %q. Is this a wayland session?", user.Username)
+		return fmt.Errorf("WAYLAND_DISPLAY is either empty or unset for user %q. Is this a Wayland session?", user.Username)
 	}
 
 	xdg, ok := env["XDG_RUNTIME_DIR"]
