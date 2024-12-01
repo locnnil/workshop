@@ -10,6 +10,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var userLookup = user.Lookup
@@ -38,19 +39,29 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 	if err != nil {
 		return err
 	}
-	sys := f.Sys()
-	if sys == nil {
+	fsys := f.Sys()
+	if fsys == nil {
 		return fmt.Errorf("cannot validate owner of file %s", f.Name())
 	}
 	// cheap comparison as the current uid is only available as a string
 	// but it is better to convert the uid from the stat result to a
 	// string than a string into a number.
-	if fmt.Sprintf("%d", sys.(*syscall.Stat_t).Uid) != user.Uid {
+	if fmt.Sprintf("%d", fsys.(*syscall.Stat_t).Uid) != user.Uid {
 		return fmt.Errorf("Xauthority file isn't owned by the current user %s", user.Uid)
 	}
 
+	destFile := filepath.Join(destDir, ".Xauthority")
 	err = osutil.CopyFile(xauth, filepath.Join(destDir, ".Xauthority"), osutil.CopyFlagOverwrite)
 	if err != nil {
+		return err
+	}
+
+	uid, gid, err := osutil.UidGid(user)
+	if err != nil {
+		return err
+	}
+
+	if err = sys.ChownPath(destFile, uid, gid); err != nil {
 		return err
 	}
 
