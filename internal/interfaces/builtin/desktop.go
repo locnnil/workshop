@@ -111,7 +111,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 		x := &desktop.X11
 		x.Name = plug.Sdk().Name + "-" + "x11"
 		x.Connect = filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":"))
-		x.Listen = x.Connect
+		x.Listen = filepath.Join(dirs.WorkshopRunDir, "X"+strings.TrimPrefix(display, ":"))
 	}
 
 	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, "Xauthority")
