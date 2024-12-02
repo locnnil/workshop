@@ -13,7 +13,7 @@ execute: |
   workshop_exec list
 
   # Launch
-  workshop_exec launch nimble
+  workshop_exec launch
   workshop_exec info nimble
 
   # Changes and tasks after launch

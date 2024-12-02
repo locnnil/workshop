@@ -10,7 +10,7 @@ execute: |
   }
 
   echo "Check the mount interface plug can be installed and auto-connected"
-  workshop_exec launch ws-mount
+  workshop_exec launch
 
   project_id=$(cat .workshop.lock)
   source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/mount/ws-mount_test-sdk-mount_one.sdk"

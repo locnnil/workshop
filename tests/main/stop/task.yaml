@@ -1,7 +1,7 @@
 summary: Check workshop stop
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-stop
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-stop

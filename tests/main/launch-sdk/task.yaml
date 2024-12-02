@@ -3,7 +3,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check workshop can be launched with a basic SDK"
-  workshop_exec launch ws-basic
+  workshop_exec launch
   workshop_exec list | MATCH "$(pwd)[[:space:]]*ws-basic[[:space:]]*Ready[[:space:]]*-"
   
   # Ensure there is one installed SDK that was provided in the workshop definition

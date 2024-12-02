@@ -15,7 +15,7 @@ execute: |
   workshop_exec --help
 
   # Launch
-  workshop_exec launch nimble
+  workshop_exec launch
 
   # Changes
   workshop_exec changes

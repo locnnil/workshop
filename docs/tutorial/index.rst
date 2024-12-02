@@ -234,7 +234,7 @@ To get a workshop ready for use, you :ref:`launch <ref_workshop_launch>` it:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
 
 
 Now, the workshop is *Ready*;

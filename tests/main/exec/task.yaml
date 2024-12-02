@@ -1,7 +1,7 @@
 summary: Check major workshop exec scenarios
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-exec
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-exec

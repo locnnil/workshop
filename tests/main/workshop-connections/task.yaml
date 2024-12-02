@@ -2,7 +2,7 @@ summary: Check that "workshop connections" works as expected
 prepare: |
   . "$TESTSLIB"/utils.sh
   mkdir user-data user-data-2
-  workshop_exec launch ws-user-conns
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-user-conns

@@ -8,6 +8,6 @@ restore: |
   apt remove -y expect
 execute: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-sdk-health --no-wait
+  workshop_exec launch --no-wait
   sudo -u ubuntu 2>&1 -- expect -f ./health.exp
   workshop_exec remove ws-sdk-health

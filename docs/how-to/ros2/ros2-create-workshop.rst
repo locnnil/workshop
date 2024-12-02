@@ -74,7 +74,7 @@ All set, so launch the workshop:
 
 .. code-block:: console
 
-   $ workshop launch ros2-humble
+   $ workshop launch
 
 
 .. note::

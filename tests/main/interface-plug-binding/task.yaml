@@ -12,7 +12,7 @@ execute: |
     MATCH "ssh-agent  ws-bind/test-sdk-ssh-agent:ssh-agent       -                            bind.6" < conns.log
   }
 
-  workshop_exec launch ws-bind
+  workshop_exec launch
 
   echo "Check binding on launch"
   workshop_exec connections ws-bind > conns.log

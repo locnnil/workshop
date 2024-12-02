@@ -36,7 +36,7 @@ and start working on your code:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
 
 
 .. code-block:: go
@@ -87,7 +87,7 @@ They stay there even if you remove the workshop:
 
    .. code-block:: console
 
-      $ workshop launch golang
+      $ workshop launch
 
 From here, you can do whatever you like with your repo,
 because |ws_markup| handles
@@ -143,7 +143,7 @@ Next, launch the redefined workshop to work on the problem:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
    $ # Hacking away until the problem is solved
    $ git commit -m "solve problem with hotfix"
    $ cd ../original/

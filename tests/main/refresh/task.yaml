@@ -1,7 +1,7 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-refresh --project single
+  workshop_exec launch --project single
   workshop_exec launch ws-refresh ws-refresh-sdk --project multi
 restore: |
   . "$TESTSLIB"/utils.sh

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -81,6 +83,46 @@ func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name, nil, nil, nil, &workshop)
 	if err != nil {
 		return nil, err
+	}
+	return &workshop, nil
+}
+
+func (client *Client) SingleWorkshop(project *Project) (*Workshop, error) {
+	var info Workshops
+	_, err := client.doSync("GET", "/v1/projects/"+project.Id+"/workshops", nil, nil, nil, &info)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, workshop := range info.Workshops {
+		names = append(names, workshop.Name)
+	}
+	for _, file := range info.Files {
+		if !slices.Contains(names, file.Name) {
+			names = append(names, file.Name)
+		}
+	}
+
+	if len(names) < 1 {
+		return nil, fmt.Errorf("no workshops found in %q", project.Path)
+	}
+	if len(names) > 1 {
+		var quoted []string
+		for _, name := range names {
+			quoted = append(quoted, fmt.Sprintf("%q", name))
+		}
+		return nil, fmt.Errorf("multiple workshops found: %s", strings.Join(quoted, ", "))
+	}
+
+	var workshop Workshop
+	if len(info.Files) > 0 {
+		workshop.ProjectId = info.Files[0].ProjectId
+		workshop.Name = info.Files[0].Name
+		workshop.Path = info.Files[0].Path
+	}
+	if len(info.Workshops) > 0 {
+		workshop.WorkshopInfo = *info.Workshops[0]
 	}
 	return &workshop, nil
 }

@@ -1,7 +1,7 @@
 summary: Check a failed refresh can be fixed and continued successfully
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-refresh-cont
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-refresh-cont

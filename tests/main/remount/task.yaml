@@ -7,7 +7,7 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  workshop_exec launch ws-remount  
+  workshop_exec launch
   echo "Remount: the new source is empty or does not exist"
   new_source="/home/ubuntu/one"
   workshop_exec remount ws-remount/test-sdk-mount:one "$new_source"

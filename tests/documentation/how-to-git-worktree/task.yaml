@@ -8,18 +8,18 @@ execute: |
   git init original
   mv main.go workshop.yaml original/
   cd original/
-  workshop_exec --project "$PROJECT/original" launch golang
+  workshop_exec --project "$PROJECT/original" launch
   git add . && git commit -m "initial commit"
   chown -R ubuntu:ubuntu $PROJECT/original
   workshop_exec --project "$PROJECT/original" exec golang go build -x main.go
   workshop_exec --project "$PROJECT/original" remove golang
   ./main
-  workshop_exec --project "$PROJECT/original" launch golang
+  workshop_exec --project "$PROJECT/original" launch
   git config --global --add safe.directory "$PROJECT/original"
   git worktree add $PROJECT/hotfix
   cd $PROJECT/hotfix/
   sed -i "s/22\.04/20.04/g" workshop.yaml
-  workshop_exec --project "$PROJECT/hotfix" launch golang
+  workshop_exec --project "$PROJECT/hotfix" launch
   sleep 1
   git commit -am "solve problem with hotfix"
   cd $PROJECT/original/

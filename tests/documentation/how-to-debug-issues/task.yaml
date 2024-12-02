@@ -3,7 +3,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
   
   echo "Expecting launch to fail..."
-  workshop_exec launch golang-volatile || true
+  workshop_exec launch || true
   echo "Expecting refresh to fail..."
   workshop_exec refresh golang-volatile || true
   workshop_exec refresh --wait-on-error golang-volatile || true

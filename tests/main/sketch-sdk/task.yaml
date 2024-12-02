@@ -1,7 +1,7 @@
 summary: Check workshop sketch-sdk
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-sketch
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-sketch

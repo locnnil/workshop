@@ -1,7 +1,7 @@
 summary: Check workshop start
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-start
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove ws-start
