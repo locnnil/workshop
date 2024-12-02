@@ -10,8 +10,8 @@ execute: |
 
   function check_linger() {
     echo "Check that linger is enabled for the workshop user"
-    workshop_exec exec ws-start -- test -f /var/lib/systemd/linger/workshop
-    workshop_exec exec ws-start -- test -d /run/user/1000
+    workshop_exec exec ws-start test -f /var/lib/systemd/linger/workshop
+    workshop_exec exec ws-start test -d /run/user/1000
   }
 
   check_linger

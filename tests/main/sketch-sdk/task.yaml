@@ -48,4 +48,4 @@ execute: |
 
   workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x3)"
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
-  workshop_exec exec ws-sketch -- bash -c "test -d /home/workshop/ws-sketch-test"
+  workshop_exec exec ws-sketch test -d /home/workshop/ws-sketch-test

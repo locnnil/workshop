@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"time"
 
@@ -99,8 +100,8 @@ Notes:
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec <WORKSHOP>",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "exec [flags] <WORKSHOP> [--] <COMMAND>...",
+		Args:  nameAndCommand,
 		Short: shortExecHelp,
 		Long:  longExecHelp,
 		Example: `
@@ -109,17 +110,18 @@ in the current project directory:
 $ workshop exec nimble go build main.go
 
 A similar command that sets an environment variable and the working directory:
-$ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+$ workshop exec --env GO111MODULE=off -w /project nimble go build -x
 
 Run a custom interactive shell:
-$ workshop exec nimble -I sh
+$ workshop exec -I nimble sh
 
 Run a command as root (the default is 'workshop'):
-$ workshop exec nimble --uid 0 id`,
+$ workshop exec --uid 0 nimble id`,
 		RunE: c.Run,
 	}
 
 	cmd.Flags().SortFlags = false
+	cmd.Flags().SetInterspersed(false)
 	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
 	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
 	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "Run as a specific workshop user")
@@ -129,6 +131,18 @@ $ workshop exec nimble --uid 0 id`,
 	cmd.Flags().BoolVarP(&c.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
 
 	return cmd
+}
+
+func nameAndCommand(cmd *cobra.Command, av []string) error {
+	argCount := len(av)
+	if cmd.ArgsLenAtDash() < 0 && slices.Contains(av, "--") {
+		argCount--
+	}
+
+	if argCount < 2 {
+		return fmt.Errorf("requires at least 2 arg(s), only received %d", argCount)
+	}
+	return nil
 }
 
 func (c *CmdShellAlias) Command() *cobra.Command {
@@ -164,6 +178,13 @@ func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	// Remove first -- if cobra didn't see it
+	if cmd.ArgsLenAtDash() < 0 {
+		if i := slices.Index(av, "--"); i >= 0 {
+			av = slices.Delete(slices.Clone(av), i, i+1)
+		}
 	}
 
 	command := av[1:]

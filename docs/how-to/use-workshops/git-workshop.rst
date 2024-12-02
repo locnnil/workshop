@@ -58,7 +58,7 @@ should now occur inside the workshop:
 .. code-block:: console
 
    $ git add . && git commit -m "initial commit"
-   $ workshop exec golang -- go build -x main.go
+   $ workshop exec golang go build -x main.go
 
 
 However, the resulting artefacts are exposed in the project directory:

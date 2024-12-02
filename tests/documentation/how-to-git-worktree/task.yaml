@@ -11,7 +11,7 @@ execute: |
   workshop_exec --project "$PROJECT/original" launch golang
   git add . && git commit -m "initial commit"
   chown -R ubuntu:ubuntu $PROJECT/original
-  workshop_exec --project "$PROJECT/original" exec golang -- go build -x main.go
+  workshop_exec --project "$PROJECT/original" exec golang go build -x main.go
   workshop_exec --project "$PROJECT/original" remove golang
   ./main
   workshop_exec --project "$PROJECT/original" launch golang

@@ -446,7 +446,7 @@ or separate it from :command:`workshop exec` options for clarity:
 
 .. code-block:: console
 
-   $ workshop exec golang --env GO111MODULE=off -- go build -x
+   $ workshop exec --env GO111MODULE=off golang -- go build -x
 
 The binary, built within the workshop environment,
 is now available in the project directory.
@@ -492,8 +492,8 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec golang -- ls /project/
-   $ workshop exec golang -- touch /project/created_inside.txt
+   $ workshop exec golang ls /project/
+   $ workshop exec golang touch /project/created_inside.txt
    $ ls
 
 
