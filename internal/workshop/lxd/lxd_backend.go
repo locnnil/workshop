@@ -702,9 +702,18 @@ func checkNvidia() (bool, error) {
 // The following 'write-files' and 'runcmd' sections are for the desktop
 // interface. These create a systemd path/service unit pair to copy the
 // Xauthority cookie to /tmp when we mount it in the workshop. This is done to
-// work around file mount ordering complications with lxc. Although these will
-// be present within every workshop, path units utilise inotify and as such add
-// effectively zero overhead to a workshop launch/start.
+// work around file mount ordering complications with lxc and the requirements
+// on the Xauthority cookie for snapd, namely:
+//  1. Snapd requires the Xauth cookie to be in a directory visible to snaps,
+//     however there is a special case for /tmp in which snapd will migrate
+//     the cookie for us, guaranteeing it's visibility.
+//  2. Snapd explicitly checks the provided cookie for symlinks, this means
+//     that we can only make a copy of the cookie
+//  2. Mounts in dynamic filesystems (ie. /tmp) are genreally advised against
+//     for LXD
+//
+// Although these will be present within every workshop, path units utilise
+// inotify and as such add effectively zero overhead to a workshop launch/start.
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
@@ -759,7 +768,8 @@ runcmd:
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic
-		// directory) to allow us to mount X11 sockets reliably
+		// directory) to allow us to mount X11 sockets reliably.
+		// See: https://github.com/lxc/lxc/issues/434
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
 

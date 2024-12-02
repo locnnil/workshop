@@ -209,6 +209,7 @@ exit 0`)
 	_, ok := deviceSpec.Profile.Mounts["consumer-xauth"]
 	c.Assert(!ok, check.Equals, true)
 }
+
 func (s *desktopSuite) TestDesktopEnvWaylandFail(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04

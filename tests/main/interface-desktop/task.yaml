@@ -112,3 +112,26 @@ execute: |
       [ -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
       [ -f "${XAUTHORITY}" ]
   EOF
+
+  echo "Check refreshing to an empty workshop definition"
+  rm .workshop/workshop.ws-desktop.yaml
+  mv .workshop/workshop.ws-desktop-empty.yaml .workshop/workshop.ws-desktop.yaml
+  workshop_exec refresh ws-desktop
+
+  echo "Check that the desktop plug is removed from the workshop"
+  set -e
+  [ -z "$(workshop_exec connections --all)" ]
+
+  echo "Check that the expected environment is removed from the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ -z "$DISPLAY" ]
+      [ -z "$XAUTHORITY" ]
+  EOF
+
+  echo "Check that the required mounts are removed from the workshop"
+  workshop_exec exec ws-desktop -- sudo -Hiu workshop /bin/bash -s <<"EOF"
+      set -e
+      [ ! -S "/tmp/.X11-unix/X${DISPLAY:1}" ]
+      [ ! -f "${XAUTHORITY}" ]
+  EOF

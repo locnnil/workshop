@@ -178,32 +178,19 @@ func (m *InterfaceManager) StartUp() error {
 				}
 			}
 		}
-
 		// The .Xauthority cookie contains a 128bit key used to authenticate
 		// consumers of the X11 socket. It is generated on each boot with a random
 		// suffix, because of this we need to ensure there exists a
-		// consistently-named copy of the cookie for the LXC profile. We handle
-		// this consistency across reboots here.
-		usr, err := workshop.LookupUsername(user)
+		// consistently-named copy of the cookie for the LXC profile.
+		// this consistency across reboots here.}
+		err = updateXauthority(user)
 		if err != nil {
 			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
-			continue
-		}
-		env, err := systemd.UserEnvironment(usr)
-		if err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
-			continue
-		}
-		if err = x11.MigrateXauthority(usr, env["XAUTHORITY"]); err != nil {
-			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
-			continue
 		}
 	}
-
 	if _, err := m.reloadConnections("", "", ""); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -498,4 +485,24 @@ func MockSecurityBackends(be []interfaces.SecurityBackend) func() {
 	old := securityBackendsOverride
 	securityBackendsOverride = be
 	return func() { securityBackendsOverride = old }
+}
+
+// updateXauthority determines user and environment information, then calls
+// MigrateXauthority
+func updateXauthority(user string) error {
+	usr, err := workshop.LookupUsername(user)
+	if err != nil {
+		return err
+	}
+
+	env, err := systemd.UserEnvironment(usr)
+	if err != nil {
+		return err
+	}
+
+	if err = x11.MigrateXauthority(usr, env["XAUTHORITY"]); err != nil {
+		return err
+	}
+
+	return nil
 }
