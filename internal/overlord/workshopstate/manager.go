@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -141,21 +140,6 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 		healthState.Status = healthstate.ErrorStatus
 		healthState.Code = "missing-project"
 		return healthState
-	}
-
-	// Check if the associated workshop file exists. We only check if that file
-	// exists in the .workshop directory here; its state (e.g. if it is in sync
-	// with the workshop instance or has any errors) is not checked.
-	path := ws.Filepath()
-	if !osutil.FileExists(path) {
-		single, err := ws.Project.SingleWorkshop()
-		if err != nil || single.Name != ws.Name {
-			w.state.Warnf("cannot find definition %q for workshop %q", path, ws.Name)
-
-			healthState.Status = healthstate.ErrorStatus
-			healthState.Code = "missing-file"
-			return healthState
-		}
 	}
 
 	err := conflict.CheckChangeConflict(w.state, ws.Project.ProjectId, ws.Name, "")
