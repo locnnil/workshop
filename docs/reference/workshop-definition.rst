@@ -16,7 +16,7 @@ The workshop name must also match the file name
 (without the :samp:`.yaml` extension).
 
 Workshop names start with a lowercase letter
-and may include only lowercase letters, digits, hyphens or underscores.
+and may include only lowercase letters, digits or hyphens.
 
 
 Description

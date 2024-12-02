@@ -210,7 +210,7 @@ base: ubuntu@20.04
 	f.createWFile(c, "99-xbert", yaml)
 	file, err := f.project.Workshop("99-xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) include only lowercase alphanumeric characters or underscore\(s\)`)
+	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) include only lowercase alphanumeric and hyphen characters`)
 }
 
 func (f *workshopFile) TestWorkshopUnsupportedBase(c *check.C) {
