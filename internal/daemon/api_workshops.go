@@ -321,7 +321,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	var change *state.Change
-	var taskset = []*state.TaskSet{}
+	var taskset []*state.TaskSet
 	var err error
 
 	switch reqData.Action {
