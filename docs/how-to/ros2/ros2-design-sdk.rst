@@ -165,7 +165,7 @@ for running and launching ROS 2 nodes.
 
 
 Update environment for ROS 2 and :program:`colcon`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. literalinclude:: design-sdk/setup-base
    :language: shell
@@ -174,7 +174,7 @@ Update environment for ROS 2 and :program:`colcon`
 
 
 Adds lines to the :file:`.profile` and :file:`.bashrc` files
-to setup the ROS 2 environment and auto-completion for :program:`colcon`,
+to set up the ROS 2 environment and auto-completion for :program:`colcon`,
 ensuring they are loaded in every new shell session
 (:program:`Workshop` uses :program:`bash` by default).
 
