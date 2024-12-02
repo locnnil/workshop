@@ -21,6 +21,7 @@ package interfaces
 
 import (
 	"context"
+	"os/user"
 
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/timings"
@@ -48,7 +49,7 @@ type SecurityBackend interface {
 	Remove(context context.Context, workshop, sdkName string) error
 
 	// NewSpecification returns a new specification associated with this backend.
-	NewSpecification(user, pid, sdk string) Specification
+	NewSpecification(user *user.User, pid, sdk string) Specification
 }
 
 // SecurityBackendSetupMany interface may be implemented by backends that can optimize their operations

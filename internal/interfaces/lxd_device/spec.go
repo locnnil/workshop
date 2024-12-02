@@ -3,6 +3,7 @@ package lxd_device
 import (
 	"encoding/json"
 	"fmt"
+	"os/user"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
@@ -10,13 +11,12 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-func NewSpecification(user, pid, sdk string) *Specification {
+func NewSpecification(user *user.User, sdk string) *Specification {
 	return &Specification{
 		devices: make(map[string]map[string]string),
 		config:  make(map[string]string),
 		Profile: workshop.NewSdkProfile(sdk),
-		user:    user,
-		pid:     pid,
+		User:    user,
 	}
 }
 
@@ -26,16 +26,8 @@ type Specification struct {
 	devices map[string]map[string]string
 	config  map[string]string
 
-	user string
+	User *user.User
 	pid  string
-}
-
-func (s *Specification) User() string {
-	return s.user
-}
-
-func (s *Specification) ProjectId() string {
-	return s.pid
 }
 
 // AddPermanentSlot records side-effects of having a slot.
@@ -92,15 +84,28 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	return nil
 }
 
-func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
-	// A network protocol proxy device, opens a port on the host or in a workhop.
-	// from, to are the source and destination addresses (paths in the case of unix sockets),
-	// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
-	// bind denotes where the port is open (can be: instance, host)
-	s.Profile.Agent = &agent
+// Ssh Agent and Desktop are both of the lxc 'proxy' type
+// These are network protocol proxy devices that open a port on the host or in a workhop.
+// 'from', 'to' are the source and destination addresses (paths in the case of unix sockets),
+// see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
+// bind denotes where the port is open (can be: instance, host)
 
-	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, agent.Name)] = "ssh-agent"
-	s.devices[agent.Name] = map[string]string{"type": "proxy", "connect": "unix:" + agent.Connect, "listen": "unix:" + agent.Listen, "uid": "1000", "gid": "1000", "bind": "instance"}
+func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
+	s.Profile.Agent = &agent
+	s.addProxyEntry(&agent.ProxyEntry, "ssh-agent")
+	return nil
+}
+
+func (s *Specification) SetDesktop(desktop workshop.Desktop) error {
+	s.Profile.Desktop = &desktop
+
+	if desktop.Wayland != nil {
+		s.addProxyEntry(desktop.Wayland, "desktop-wayland")
+	}
+
+	if desktop.X11 != nil {
+		s.addProxyEntry(desktop.X11, "desktop-x11")
+	}
 
 	return nil
 }
@@ -161,4 +166,16 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 	}
 
 	return nil
+}
+
+func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
+	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
+	s.devices[entry.Name] = map[string]string{
+		"type":    "proxy",
+		"connect": "unix:" + entry.Connect,
+		"listen":  "unix:" + entry.Listen,
+		"uid":     "1000",
+		"gid":     "1000",
+		"bind":    "instance",
+	}
 }

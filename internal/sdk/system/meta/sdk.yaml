@@ -9,3 +9,5 @@ slots:
     interface: ssh-agent
   camera:
     interface: camera
+  desktop:
+    interface: desktop

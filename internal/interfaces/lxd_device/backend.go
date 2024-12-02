@@ -14,13 +14,16 @@ import (
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/x-go/randutil"
+	"github.com/spf13/afero"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
+	"github.com/canonical/workshop/internal/x11"
 )
 
 const (
@@ -88,20 +91,6 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		// confirm the target path exists
-		if info, err := fs.Stat(dev.Where); err != nil {
-			if !osutil.IsDirNotExist(err) {
-				return false, err
-			}
-			// FIXME: workaround LXD empty directory issue (which, if the
-			// connection was disconnected earlier, was removed by LXD).
-			if err = fs.Mkdir(dev.Where, os.ModePerm); err != nil {
-				return false, err
-			}
-		} else if !info.IsDir() {
-			return false, fmt.Errorf(`%q is not a directory`, dev.Where)
-		}
-
 		// Ensure that the source path exists here. LXD allows to
 		// require the source attribute when updating an instance
 		// configuration but it would fail and still save changes to the
@@ -111,13 +100,35 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 		// configuration which is not acceptable.
 		// The dir is being dynamically created (no source attribute
 		// provided by the slot).
-		if !osutil.IsDir(dev.What) {
+		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(dev.What)
+		if err != nil {
+			return false, err
+		}
+
+		// We cannot infer what the user intended to mount if the source doesn't
+		// exist. In this case - inline with the above - we create a directory.
+		if !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
 				return false, err
 			}
 
 			if err = osutil.MkdirAllChown(dev.What, 0755, uid, gid); err != nil {
+				return false, err
+			}
+		}
+
+		if !sourceIsDir {
+			return false, nil
+		}
+
+		_, err = fs.Stat(dev.Where)
+		if !osutil.IsDirNotExist(err) {
+			return false, err
+		} else {
+			// FIXME: workaround LXD empty directory issue (which, if the
+			// connection was disconnected earlier, was removed by LXD).
+			if err = fs.MkdirAll(dev.Where, os.ModePerm); err != nil {
 				return false, err
 			}
 		}
@@ -226,6 +237,88 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, ws string) error {
+	env, err := systemd.UserEnvironment(user)
+	if err != nil {
+		return err
+	}
+
+	backend := env["XDG_BACKEND"]
+
+	var envVars map[string]string
+	envFile, err := fs.Create(filepath.Join("/etc/profile.d", "desktop"+".sh"))
+	if err != nil {
+		return fmt.Errorf("cannot configure required environment for %q: %w", ws, err)
+	}
+	defer envFile.Close()
+
+	// Use Wayland as the default backend in the case where it's unset
+	if (backend == "wayland" || backend == "") && dev.Wayland != nil {
+		envVars = map[string]string{
+			"QT_QPA_PLATFORM":  "wayland-egl",
+			"XDG_SESSION_TYPE": "wayland",
+			"XDG_BACKEND":      "wayland",
+		}
+	} else {
+		envVars = map[string]string{
+			"QT_QPA_PLATFORM":  "xcb",
+			"XDG_SESSION_TYPE": "x11",
+			"XDG_BACKEND":      "x11",
+		}
+	}
+
+	if dev.Wayland != nil {
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen, "/run/user/1000/")
+	}
+
+	if dev.X11 != nil {
+		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen), "X")
+	}
+
+	// The .Xauthority cookie contains a 128bit key used to authenticate consumers
+	// of the X11 socket. It is generated on each boot with a random suffix,
+	// because of this we need to ensure there exists a consistently-named copy
+	// of the cookie for the LXC profile. There are two cases where we need to
+	// copy the cookie, one is on workshopd startup as we iterate through the
+	// list of projects, the other is on connect because this could be the first
+	// workshop launched, in which case the user would not have had a project. We
+	// handle it here for the connect, presence of the copied cookie after reboot
+	// is the responsibility of the interface manager.
+	xauth := env["XAUTHORITY"]
+	if xauth != "" {
+		envVars["XAUTHORITY"] = "/tmp/.Xauthority"
+		if err := x11.MigrateXauthority(user, xauth); err != nil {
+			logger.Noticef("cannot migrate Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
+		}
+	}
+
+	envVars["ELECTRON_OZONE_PLATFORM_HINT"] = "auto"
+
+	for key, val := range envVars {
+		_, err = envFile.WriteString("export " + key + "=" + val + "\n")
+		if err != nil {
+			return fmt.Errorf("cannot set %s for %q: %w", key, ws, err)
+		}
+	}
+
+	return nil
+}
+
+func removeDesktop(fs workshop.WorkshopFs) error {
+	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return err
+		}
+	}
+
+	if err := fs.Remove("/tmp/.Xauthority"); err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return err
+		}
+	}
+	return nil
+}
+
 func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
 	sftp, err := conn.GetInstanceFileSFTP(lxdbackend.InstanceName(w, pid))
 	if err != nil {
@@ -290,6 +383,13 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 	}
 
+	if spec.Profile.Desktop != nil {
+		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, sdkInfo.Workshop)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Either create or update an existing LXD profile for the SDK so that later
 	// it can be assigned to the required workshop.
 	prevp, err := lxdbackend.Profile(conn, sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
@@ -306,6 +406,13 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		if prevp.Agent != nil {
 			if spec.Profile.Agent == nil || *prevp.Agent != *spec.Profile.Agent {
 				if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+					return err
+				}
+			}
+		}
+		if prevp.Desktop != nil {
+			if spec.Profile.Desktop == nil || *prevp.Desktop != *spec.Profile.Desktop {
+				if err = removeDesktop(fs); err != nil {
 					return err
 				}
 			}
@@ -380,6 +487,12 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 		}
 	}
 
+	if prof.Desktop != nil {
+		if err = removeDesktop(fs); err != nil {
+			return err
+		}
+	}
+
 	// 1. Unassign the profile from the workshop
 	lxdname := lxdbackend.ProfileName(projectId, w, profile)
 	if idx := slices.Index(inst.Profiles, lxdname); idx != -1 {
@@ -397,8 +510,8 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 }
 
 // NewSpecification returns a new mount specification.
-func (b *Backend) NewSpecification(user, pid, sdk string) interfaces.Specification {
-	return NewSpecification(user, pid, sdk)
+func (b *Backend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
+	return NewSpecification(user, sdk)
 }
 
 func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)) func() {

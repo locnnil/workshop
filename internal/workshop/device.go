@@ -8,6 +8,12 @@ const (
 	Volume
 )
 
+type ProxyEntry struct {
+	Name    string
+	Connect string
+	Listen  string
+}
+
 type Camera struct {
 	Name string `json:"name"`
 }
@@ -20,9 +26,12 @@ type Mount struct {
 }
 
 type SshAgent struct {
-	Name    string
-	Connect string
-	Listen  string
+	ProxyEntry
+}
+
+type Desktop struct {
+	Wayland *ProxyEntry
+	X11     *ProxyEntry
 }
 
 type Gpu struct {
@@ -32,10 +41,11 @@ type Gpu struct {
 type SdkProfile struct {
 	Sdk string
 
-	Camera *Camera
-	Mounts map[string]Mount
-	Agent  *SshAgent
-	Gpu    *Gpu
+	Camera  *Camera
+	Mounts  map[string]Mount
+	Agent   *SshAgent
+	Gpu     *Gpu
+	Desktop *Desktop
 }
 
 func NewSdkProfile(sdkName string) SdkProfile {

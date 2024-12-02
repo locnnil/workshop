@@ -51,8 +51,9 @@ This behaviour varies by interface,
 but the overall aim is to conduct reasonably in each case:
 the :ref:`mount <exp_mount_interface>`
 and the :ref:`GPU <exp_gpu_interface>` interfaces are auto-connected,
-whereas the :ref:`camera <exp_camera_interface>`
-and :ref:`SSH <exp_ssh_interface>` interfaces require manual connection.
+whereas the :ref:`camera <exp_camera_interface>`,
+:ref:`desktop <exp_desktop_interface>` and :ref:`SSH <exp_ssh_interface>`
+interfaces require manual connection.
 
 
 See also

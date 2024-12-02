@@ -48,12 +48,22 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
-			if devtype == "ssh-agent" {
-				pr.Agent = &workshop.SshAgent{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
-				continue
+			switch devtype {
+			case "ssh-agent":
+				pr.Agent = &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}}
+			case "desktop-wayland":
+				if pr.Desktop == nil {
+					pr.Desktop = &workshop.Desktop{}
+				}
+				pr.Desktop.Wayland = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+			case "desktop-x11":
+				if pr.Desktop == nil {
+					pr.Desktop = &workshop.Desktop{}
+				}
+				pr.Desktop.X11 = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+			default:
+				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
-
-			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "unix-char":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			if devtype == "camera" {

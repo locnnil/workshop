@@ -28,7 +28,10 @@ import (
 	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
-var ParseRawEnvironment = parseRawEnvironment
+var (
+	ParseRawEnvironment = parseRawEnvironment
+	DoCopyFile          = doCopyFile
+)
 
 // ParseRawExpandableEnv returns a new expandable environment parsed from key=value strings.
 func ParseRawExpandableEnv(entries []string) (ExpandableEnv, error) {
@@ -128,5 +131,31 @@ func FakeSyscallGetpgid(f func(int) (int, error)) (restore func()) {
 	syscallGetpgid = f
 	return func() {
 		syscallGetpgid = oldSyscallGetpgid
+	}
+}
+
+func MockCopyFile(new func(fileish, fileish, os.FileInfo) error) (restore func()) {
+	old := copyfile
+	copyfile = new
+	return func() {
+		copyfile = old
+	}
+}
+
+func MockOpenFile(new func(string, int, os.FileMode) (fileish, error)) (restore func()) {
+	old := openfile
+	openfile = new
+	return func() {
+		openfile = old
+	}
+}
+
+type Fileish = fileish
+
+func MockMaxCp(new int64) (restore func()) {
+	old := maxcp
+	maxcp = new
+	return func() {
+		maxcp = old
 	}
 }

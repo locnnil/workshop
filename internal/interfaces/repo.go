@@ -789,12 +789,17 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 		return nil, fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
 	}
 
+	usr, err := workshop.LookupUsername(user)
+	if err != nil {
+		return nil, err
+	}
+
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	spec := backend.NewSpecification(user, projectId, sdkInfo.Sdk)
+	spec := backend.NewSpecification(usr, projectId, sdkInfo.Sdk)
 
 	key := plugOrSlotKey(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
 
