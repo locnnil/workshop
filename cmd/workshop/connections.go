@@ -38,13 +38,10 @@ Notes:
 `,
 		Example: `
 List connections for the workshop 'nimble' in the current project directory:
-
-  $ workshop connections nimble
-
+$ workshop connections nimble
 
 List connections for all workshops in the current project directory:
-
-  $ workshop connections`,
+$ workshop connections`,
 		RunE: c.Run,
 	}
 

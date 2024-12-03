@@ -69,7 +69,7 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 To separate the 'exec' subcommand from the command itself,
 use shell syntax such as *--*:
 
-  $ workshop exec nimble -- echo -n foo bar
+$ workshop exec nimble -- echo -n foo bar
 
 
 Notes:
@@ -106,23 +106,16 @@ func (c *CmdExec) Command() *cobra.Command {
 		Example: `
 Run the 'go build main.go' command under the 'nimble' workshop
 in the current project directory:
-
-  $ workshop exec nimble go build main.go
-
+$ workshop exec nimble go build main.go
 
 A similar command that sets an environment variable and the working directory:
-
-  $ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
-
+$ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
 
 Run a custom interactive shell:
-
-  $ workshop exec nimble -I sh
-
+$ workshop exec nimble -I sh
 
 Run a command as root (the default is 'workshop'):
-
-  $ workshop exec nimble --uid 0 id`,
+$ workshop exec nimble --uid 0 id`,
 		RunE: c.Run,
 	}
 
@@ -147,8 +140,7 @@ func (c *CmdShellAlias) Command() *cobra.Command {
 		Example: `
 Open the default login shell of the 'workshop' user into the 'nimble' workshop
 in the current project directory:
-
-  $ workshop shell nimble`,
+$ workshop shell nimble`,
 		RunE: c.Run,
 	}
 

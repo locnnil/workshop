@@ -43,8 +43,7 @@ Notes:
 `,
 		Example: `
 List changes for all workshops in the current project directory:
-
-  $ workshop changes`,
+$ workshop changes`,
 
 		RunE: c.Run,
 	}

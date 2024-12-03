@@ -47,13 +47,10 @@ Notes:
 `,
 		Example: `
 List the workshops in the current project directory:
-
-  $ workshop list
-
+$ workshop list
 
 List the globally registered workshops:
-
-  $ workshop list --global`,
+$ workshop list --global`,
 		RunE: c.Run,
 	}
 

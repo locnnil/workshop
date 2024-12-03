@@ -41,8 +41,7 @@ Notes:
 `,
 		Example: `
 List the tasks under change ID 42:
-
-  $ workshop tasks 42`,
+$ workshop tasks 42`,
 		RunE: c.Run,
 	}
 

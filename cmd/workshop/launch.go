@@ -44,8 +44,7 @@ Notes:
 `,
 		Example: `
 Launch the 'nimble' and 'jazzy' workshops in the current project directory:
-
-  $ workshop launch nimble jazzy`,
+$ workshop launch nimble jazzy`,
 		RunE: c.Run,
 	}
 

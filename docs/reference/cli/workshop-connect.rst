@@ -9,7 +9,7 @@ Connect a plug to a slot.
 
 .. code-block:: console
 
-   workshop connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>] [flags]
+   $ workshop connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>] [flags]
 
 .. rubric:: Description
 
@@ -39,7 +39,7 @@ that is specified as the second argument or deduced from the context.
 
 - Multiple plugs can be connected to the same slot, but not vice versa
 
-- The **workshop connections** output will list the connection as *manual*
+- The 'workshop connections' output will list the connection as 'manual'
 
 
 .. rubric:: Options
@@ -53,11 +53,19 @@ that is specified as the second argument or deduced from the context.
 
 .. rubric:: Examples
 
+
+Connect the 'mod-cache' mount interface plug of the 'go' SDK
+under the 'nimble' workshop in the current project directory:
+
 .. code-block:: console
-   
-   # Connect the 'mod-cache' mount interface plug of the 'go' SDK
-   # under the 'nimble' workshop in the current project directory
-   workshop connect nimble/go:mod-cache :mount
-   
-   # A full version of the command that also lists the target SDK ('system')
-   workshop connect nimble/go:mod-cache nimble/system:mount
+
+   $ workshop connect nimble/go:mod-cache :mount
+
+
+A full version of the command that also lists the target SDK ('system'):
+
+.. code-block:: console
+
+   $ workshop connect nimble/go:mod-cache nimble/system:mount
+
+

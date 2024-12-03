@@ -42,8 +42,7 @@ Notes:
 `,
 		Example: `
 List details for the 'nimble' workshop in the current project directory:
-
-  $ workshop info nimble`,
+$ workshop info nimble`,
 		RunE: c.Run,
 	}
 

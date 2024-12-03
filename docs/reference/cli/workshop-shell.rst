@@ -9,30 +9,34 @@ Start an interactive terminal session for the workshop.
 
 .. code-block:: console
 
-   workshop shell <WORKSHOP> [flags]
+   $ workshop shell <WORKSHOP> [flags]
 
 .. rubric:: Description
 
 
-The **shell** subcommand runs an interactive terminal session
+The 'shell' subcommand runs an interactive terminal session
 in the specified workshop.
 
-To accept a **shell** command, the workshop must be *Ready* or *Pending*.
+To accept a 'shell' command, the workshop must be 'Ready' or 'Pending'.
 
 
 Notes:
 
-- To start a workshop before running a terminal session, use **workshop start**
+- To start a workshop before running a terminal session, use 'workshop start'
 
-- The subcommand is a shorthand for **workshop exec**;
-  it launches the login shell for *workshop*,
+- The subcommand is a shorthand for 'workshop exec';
+  it launches the login shell for 'workshop',
   the default non-privileged user in a workshop
 
 
 .. rubric:: Examples
 
+
+Open the default login shell of the 'workshop' user into the 'nimble' workshop
+in the current project directory:
+
 .. code-block:: console
-   
-   # Open the default login shell of the 'workshop' user into the 'nimble' workshop
-   # in the current project directory
-   workshop shell nimble
+
+   $ workshop shell nimble
+
+

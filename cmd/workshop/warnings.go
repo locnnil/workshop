@@ -70,8 +70,7 @@ Also, warnings expire automatically; expired warnings are not listed.
 `,
 		Example: `
 List the globally registered warnings across all workshops:
-
-  $ workshop warnings`,
+$ workshop warnings`,
 		RunE: c.Run,
 	}
 
@@ -108,8 +107,7 @@ listed previously by the 'workshop warnings' command.
 		Example: `
 Acknowledge the globally registered warnings across all workshops
 (must run after 'workshop warnings'):
-
-  $ workshop okay`,
+$ workshop okay`,
 		RunE: c.Run,
 	}
 

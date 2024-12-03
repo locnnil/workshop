@@ -9,7 +9,7 @@ Start one or many workshops.
 
 .. code-block:: console
 
-   workshop start <WORKSHOP>... [flags]
+   $ workshop start <WORKSHOP>... [flags]
 
 .. rubric:: Description
 
@@ -18,7 +18,7 @@ This command activates the workshops listed as arguments. For each one, it:
 
 - Makes sure the workshop was actually launched
 
-- Activates the workshop for use and sets it to *Ready*
+- Activates the workshop for use and sets it to 'Ready'
 
 
 If multiple workshops are listed and an error occurs,
@@ -31,12 +31,16 @@ Notes:
 
 - When interrupted, the command attempts to gracefully revert its actions
 
-- To stop a started workshop, use **workshop stop**
+- To stop a started workshop, use 'workshop stop'
 
 
 .. rubric:: Examples
 
+
+Start the 'nimble' and 'jazzy' workshops in the current project directory:
+
 .. code-block:: console
-   
-   # Start the 'nimble' and 'jazzy' workshops in the current project directory
-   workshop start nimble jazzy
+
+   $ workshop start nimble jazzy
+
+

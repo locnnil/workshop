@@ -9,7 +9,7 @@ Disconnect a plug or a slot.
 
 .. code-block:: console
 
-   workshop disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>] [flags]
+   $ workshop disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>] [flags]
 
 .. rubric:: Description
 
@@ -30,8 +30,8 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   Notes:
 
 - After an auto-connected plug is thus disconnected,
-  it is reconnected during **workshop refresh**
-  only if the **--forget** option was used with **workshop disconnect**
+  it is reconnected during 'workshop refresh'
+  only if the '--forget' option was used with 'workshop disconnect'
 
 
 .. rubric:: Options
@@ -39,7 +39,7 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
 
 --forget
 
-   Reconnect the plugs at **workshop refresh** if auto-connected initially
+   Reconnect the plugs at 'workshop refresh' if auto-connected initially
 
 
 --no-wait
@@ -50,16 +50,28 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
 
 .. rubric:: Examples
 
+
+Disconnect the 'mod-cache' mount interface plug of the 'go' SDK
+under the 'nimble' workshop in the current project directory:
+
 .. code-block:: console
-   
-   # Disconnect the 'mod-cache' mount interface plug of the 'go' SDK
-   # under the 'nimble' workshop in the current project directory
-   workshop disconnect nimble/go:mod-cache
-   
-   # A full version of the same command
-   # that lists the target SDK ('system') and slot ('mount')
-   workshop disconnect nimble/go:mod-cache nimble/system:mount
-   
-   # Disconnect all plugs connected to the 'mount' slot of the 'system' SDK
-   # under the 'nimble' workshop in the current project directory
-   workshop disconnect nimble/system:mount
+
+   $ workshop disconnect nimble/go:mod-cache
+
+
+A full version of the same command
+that lists the target SDK ('system') and slot ('mount'):
+
+.. code-block:: console
+
+   $ workshop disconnect nimble/go:mod-cache nimble/system:mount
+
+
+Disconnect all plugs connected to the 'mount' slot of the 'system' SDK
+under the 'nimble' workshop in the current project directory:
+
+.. code-block:: console
+
+   $ workshop disconnect nimble/system:mount
+
+

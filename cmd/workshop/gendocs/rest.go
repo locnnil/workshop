@@ -38,6 +38,11 @@ type FlagDetail struct {
 	DefaultValue string
 }
 
+type ExampleDetail struct {
+	Info  string
+	Usage string
+}
+
 // GenReSTCustom creates custom reStructured Text output with the specified formatting.
 func GenReSTCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string, string) string) error {
 	cmd.InitDefaultHelpCmd()
@@ -54,7 +59,33 @@ func GenReSTCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string, str
 	ref := "ref_" + strings.ReplaceAll(name, " ", "_")
 
 	// Compute the heading separator
-	heading := strings.Repeat("-", len(name))
+	headinglen := len(name)
+
+	// Break down examples for further formatting
+	entries := strings.Split(cmd.Example, "\n\n")
+	var structuredExamples []ExampleDetail
+
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		lines := strings.Split(entry, "\n")
+		var infoLines, usageLines []string
+
+		for i, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "$") {
+				infoLines = lines[:i]
+				usageLines = lines[i:]
+				break
+			}
+		}
+
+		if len(infoLines) > 0 && len(usageLines) > 0 {
+			structuredExamples = append(structuredExamples, ExampleDetail{
+				Info:  strings.Join(infoLines, "\n"),
+				Usage: strings.Join(usageLines, "\n"),
+			})
+		}
+	}
 
 	// Collect flag details
 	flags := cmd.NonInheritedFlags()
@@ -74,21 +105,21 @@ func GenReSTCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string, str
 		Short       string
 		Long        string
 		Synopsis    string
-		Examples    string
+		Examples    []ExampleDetail
 		Flags       []FlagDetail
-		Heading     string
+		HeadingLen  int
 	}{
 		Ref:         ref,
 		CommandName: name,
 		Short:       short,
 		Long:        long,
 		Synopsis:    cmd.UseLine(),
-		Examples:    cmd.Example,
+		Examples:    structuredExamples,
 		Flags:       flagDetails,
-		Heading:     heading,
+		HeadingLen:  headinglen,
 	}
 
-	// Define the indent helper function
+	// Define the helper functions
 	funcMap := template.FuncMap{
 		"indent": func(spaces int, ss ...string) string {
 			padding := strings.Repeat(" ", spaces)
@@ -98,6 +129,7 @@ func GenReSTCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string, str
 			}
 			return strings.Join(indentedStrings, "\n")
 		},
+		"repeat": strings.Repeat,
 	}
 
 	// Read and parse the template
