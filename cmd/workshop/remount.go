@@ -43,10 +43,11 @@ Notes:
   aren't removed
 `,
 		Example: `
-# Remount the 'mod-cache' mount interface plug of the 'go' SDK
-# under the 'nimble' workshop in the current project directory
-# to '~/new-cache-mount/' on the host:
-workshop remount nimble/go:mod-cache ~/new-cache-mount`,
+Remount the 'mod-cache' mount interface plug of the 'go' SDK
+under the 'nimble' workshop in the current project directory
+to '~/new-cache-mount/' on the host:
+
+  $ workshop remount nimble/go:mod-cache ~/new-cache-mount`,
 		RunE: c.Run,
 	}
 

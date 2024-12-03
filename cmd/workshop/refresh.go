@@ -63,21 +63,29 @@ Notes:
   currently, it can only be **hack**
 `,
 		Example: `
-# Refresh the 'nimble' and 'jazzy' workshops in the current project directory
-workshop refresh nimble jazzy
+Refresh the 'nimble' and 'jazzy' workshops in the current project directory:
 
-# Refresh 'nimble', but stop on any errors (won’t accept multiple workshops)
-workshop refresh nimble --wait-on-error
+  $ workshop refresh nimble jazzy
 
-# After 'nimble' refresh stopped on error, abort the operation
-workshop refresh nimble --abort
 
-# After 'nimble' refresh stopped on error and the workshop was fixed,
-# continue the operation
-workshop refresh nimble --continue
+Refresh 'nimble', but stop on any errors (won’t accept multiple workshops):
 
-# Refresh the hack SDK under 'nimble'
-workshop refresh nimble/hack`,
+  $ workshop refresh nimble --wait-on-error
+
+
+After 'nimble' refresh stopped on error, abort the operation:
+
+  $ workshop refresh nimble --abort
+
+
+After 'nimble' refresh stopped on error and the workshop was fixed,
+continue the operation:
+
+  $ workshop refresh nimble --continue
+
+Refresh the hack SDK under 'nimble':
+
+  $ workshop refresh nimble/hack`,
 		RunE: c.Run,
 	}
 

@@ -58,16 +58,21 @@ Notes:
   with the **workshop refresh <WORKSHOP>/hack** command
 `,
 		Example: `
-# Edit the hack SDK definition for the 'nimble' workshop
-# and apply it after saving by automatically refreshing the workshop
-workshop hack nimble
+Edit the hack SDK definition for the 'nimble' workshop
+and apply it after saving by automatically refreshing the workshop:
 
-# Edit the 'check-health' hook for the hack SDK
-# and apply it after saving by automatically refreshing the workshop
-workshop hack nimble check-health
+  $ workshop hack nimble
 
-# Stash the hack SDK, temporarily reverting the changes in the workshop
-workshop hack nimble --drop`,
+
+Edit the 'check-health' hook for the hack SDK
+and apply it after saving by automatically refreshing the workshop:
+
+  $ workshop hack nimble check-health
+
+
+Stash the hack SDK, temporarily reverting the changes in the workshop:
+
+  $ workshop hack nimble --drop`,
 		RunE: c.Run,
 	}
 

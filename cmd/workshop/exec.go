@@ -104,18 +104,25 @@ func (c *CmdExec) Command() *cobra.Command {
 		Short: shortExecHelp,
 		Long:  longExecHelp,
 		Example: `
-# Run the 'go build main.go' command under the 'nimble' workshop
-# in the current project directory
-workshop exec nimble go build main.go
+Run the 'go build main.go' command under the 'nimble' workshop
+in the current project directory:
 
-# A similar command that sets an environment variable and the working directory
-workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+  $ workshop exec nimble go build main.go
 
-# Run a custom interactive shell
-workshop exec nimble -I sh
 
-# Run a command as root (the default is 'workshop')
-workshop exec nimble --uid 0 id`,
+A similar command that sets an environment variable and the working directory:
+
+  $ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+
+
+Run a custom interactive shell:
+
+  $ workshop exec nimble -I sh
+
+
+Run a command as root (the default is 'workshop'):
+
+  $ workshop exec nimble --uid 0 id`,
 		RunE: c.Run,
 	}
 
@@ -138,9 +145,10 @@ func (c *CmdShellAlias) Command() *cobra.Command {
 		Short: shortShellHelp,
 		Long:  longShellHelp,
 		Example: `
-# Open the default login shell of the 'workshop' user into the 'nimble' workshop
-# in the current project directory
-workshop shell nimble`,
+Open the default login shell of the 'workshop' user into the 'nimble' workshop
+in the current project directory:
+
+  $ workshop shell nimble`,
 		RunE: c.Run,
 	}
 
