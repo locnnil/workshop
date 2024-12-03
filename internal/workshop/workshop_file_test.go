@@ -121,13 +121,6 @@ base: ubuntu@20.04
 	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@20.04"})
 }
 
-func (f *workshopFile) TestSingleWorkshopFileMissing(c *check.C) {
-	file, err := f.project.SingleWorkshop()
-	c.Assert(file, check.IsNil)
-	message := fmt.Sprintf("default workshop definition for project %q: %v", f.project.Path, os.ErrNotExist)
-	c.Assert(err, check.ErrorMatches, message)
-}
-
 func (f *workshopFile) TestSingleWorkshopFileAmbiguous(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04

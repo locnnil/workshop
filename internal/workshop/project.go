@@ -45,14 +45,15 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	file, err := w.SingleWorkshop()
+	file, err := w.maybeSingleWorkshop()
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+		return nil, err
+	}
+	if file != nil {
+		if file.Name != workshop {
+			return nil, fmt.Errorf("single workshop in project %q is named %q, not %q",
+				w.Path, file.Name, workshop)
 		}
-	} else if file.Name != workshop {
-		return nil, fmt.Errorf("single workshop in project %q is named %q, not %q", w.Path, file.Name, workshop)
-	} else {
 		return file, nil
 	}
 
@@ -79,7 +80,7 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 }
 
 // Read single workshop file if it exists and is unique.
-func (w *Project) SingleWorkshop() (*File, error) {
+func (w *Project) maybeSingleWorkshop() (*File, error) {
 	var result []byte
 
 	for _, name := range Filenames {
@@ -95,18 +96,18 @@ func (w *Project) SingleWorkshop() (*File, error) {
 	}
 
 	if result == nil {
-		return nil, fmt.Errorf("default workshop definition for project %q: %w", w.Path, os.ErrNotExist)
+		return nil, nil
 	}
 	return readWorkshop(result)
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
-	file, err := w.SingleWorkshop()
-	if err == nil {
-		return []string{file.Name}, nil
-	}
-	if !errors.Is(err, os.ErrNotExist) {
+	file, err := w.maybeSingleWorkshop()
+	if err != nil {
 		return nil, err
+	}
+	if file != nil {
+		return []string{file.Name}, nil
 	}
 
 	// *.yaml is the only supported extension for workshop files as the only
