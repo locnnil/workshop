@@ -22,7 +22,7 @@ This command deactivates the workshops listed as arguments. For each one, it:
 
 - Makes sure the workshop was actually started or is already stopped
 
-- Deactivates the workshop and sets it to *Stopped*
+- Deactivates the workshop and sets it to 'Stopped'
 
 
 If multiple workshops are listed and an error occurs,
@@ -35,7 +35,7 @@ Notes:
 
 - When interrupted, the command attempts to gracefully revert its actions
 
-- To start a stopped workshop, use **workshop start**
+- To start a stopped workshop, use 'workshop start'
 `,
 		Example: `
 Stop the nimble and jazzy workshops in the current project directory:

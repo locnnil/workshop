@@ -55,7 +55,7 @@ func (ux unicodeMixin) addUnicodeChars(esc *escapes) {
 	} else {
 		esc.dash = "--" // two dashes keeps yaml happy also
 		esc.uparrow = "^"
-		esc.tick = "**"
+		esc.tick = "'"
 		esc.star = "*"
 	}
 }
