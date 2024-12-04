@@ -19,7 +19,6 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -498,48 +497,39 @@ func (s *Backend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter wor
 	return toReturn, nil
 }
 
-func (s *Backend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.Workshop, error) {
+func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
-		return nil, nil, fmt.Errorf("context key project-id not found")
+		return nil, fmt.Errorf("context key project-id not found")
 	}
 
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer conn.Disconnect()
 
 	var p *workshop.Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
-		return nil, nil, fmt.Errorf("project %q is not found", projectId)
+		return nil, fmt.Errorf("project %q is not found", projectId)
 	}
-
 	p = projects[user][idx]
-
-	files, err := p.ReadWorkshops()
-	// If the dir does not exist it does not mean there are no workshops. It
-	// could be because the dir was removed with some workshops still operating
-	// resulting in a missing-project error.
-	if err != nil && !osutil.IsDirNotExist(err) {
-		return nil, nil, err
-	}
 
 	// Get all the running workshops for this project.
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var workshops []*workshop.Workshop
@@ -554,11 +544,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.W
 		}
 	}
 
-	for _, ws := range workshops {
-		finder := func(p string) bool { return p == ws.Name }
-		files = slices.DeleteFunc(files, finder)
-	}
-	return files, workshops, nil
+	return workshops, nil
 }
 
 func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {

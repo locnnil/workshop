@@ -97,18 +97,40 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	return workshop, nil
 }
 
-// Returns all workshops and workshop files for a project, the state must be
+// Returns all workshop files for a project. The state must be locked.
+func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) ([]string, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
+	}
+
+	var p *workshop.Project
+	projects, err := w.backend.Projects(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == pId })
+	if idx == -1 {
+		return nil, fmt.Errorf("project %q is not found", pId)
+	}
+	p = projects[user][idx]
+
+	return p.ReadWorkshops()
+}
+
+// Returns all existing workshops for a project, the state must be
 // locked as it is used to find out the workshop state.
-func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]string, []*workshop.Workshop, error) {
+func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*workshop.Workshop, error) {
 	// project-id must be in the context for this query
 	pCtx := context.WithValue(ctx, workshop.ContextProjectId, pId)
 
-	files, workshops, err := w.backend.ProjectWorkshops(pCtx)
+	workshops, err := w.backend.ProjectWorkshops(pCtx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return files, workshops, nil
+	return workshops, nil
 }
 
 // Examine the tasks of the change to fetch possible check-health hook results

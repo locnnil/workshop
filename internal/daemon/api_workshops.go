@@ -206,7 +206,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	wrkmgr := c.d.overlord.WorkshopManager()
-	files, workshops, err := wrkmgr.Workshops(r.Context(), projectId)
+	workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
@@ -225,13 +225,28 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	// available, we add workshop files to the response (note these only exist
 	// as files, not instances)
 	if wstate == "all" || wstate == "off" {
-		for _, file := range files {
-			info := workshopFileToInfo(file, projectId)
-			infoLst = append(infoLst, info)
+		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+		if err != nil {
+			state.Warnf("%v", err)
+		} else {
+			infoLst = appendFiles(infoLst, files, projectId)
 		}
 	}
 
 	return SyncResponse(infoLst, http.StatusOK)
+}
+
+func appendFiles(infoLst []*WorkshopInfo, files []string, projectId string) []*WorkshopInfo {
+	for _, file := range files {
+		finder := func(info *WorkshopInfo) bool { return info.Name == file }
+		if slices.ContainsFunc(infoLst, finder) {
+			continue
+		}
+
+		info := workshopFileToInfo(file, projectId)
+		infoLst = append(infoLst, info)
+	}
+	return infoLst
 }
 
 func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {

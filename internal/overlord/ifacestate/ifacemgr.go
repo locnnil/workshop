@@ -143,7 +143,7 @@ func (m *InterfaceManager) StartUp() error {
 		ctx := context.WithValue(context.Background(), workshop.ContextUser, user)
 		for _, project := range projects {
 			pctx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
-			_, workshops, err := m.backend.ProjectWorkshops(pctx)
+			workshops, err := m.backend.ProjectWorkshops(pctx)
 			if err != nil {
 				logger.Noticef("Cannot load workshops from %q: %v", project.Path, err)
 				continue

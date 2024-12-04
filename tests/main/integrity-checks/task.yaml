@@ -1,6 +1,9 @@
 summary: Error states tracking and recovery for the .workshop.lock
 restore: |
   . "$TESTSLIB"/utils.sh
+
+  workshop_exec warnings
+  workshop_exec okay || true
   rm -rf ./new-project
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -26,4 +29,26 @@ execute: |
   cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project/  ws
   workshop_exec list --project $(pwd)/new-project | MATCH "^$(pwd)/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check for warnings when workshop files conflict"
+  cp new-project/.workshop/ws.yaml new-project/.workshop.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  rm new-project/.workshop/ws.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH 'more than one workshop, but ".*/new-project/.workshop.yaml" not in ".workshop" subdirectory'
+  workshop_exec list --project new-project | NOMATCH 'new warning'
+  workshop_exec okay
+
+  echo "Check for warnings when workshop file is unreadable"
+  rm new-project/.workshop.yaml
+  touch new-project/.workshop.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH "invalid file \".*/new-project/.workshop.yaml\": a workshop's name must: \\(1\\) start with a letter, \\(2\\) include only lowercase alphanumeric and hyphen characters"
+
   workshop_exec remove --project $(pwd)/new-project ws
