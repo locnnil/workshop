@@ -134,6 +134,32 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 	return workshops, nil
 }
 
+// A directory is a project if it has at least one workshop definition.
+func IsProject(dir string) bool {
+	files, err := filepath.Glob(filepath.Join(dir, Directory, "*.yaml"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			logger.Noticef("On IsProject: %v", err)
+		}
+		files = nil
+	}
+	for _, name := range Filenames {
+		files = append(files, filepath.Join(dir, name))
+	}
+
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				logger.Noticef("On IsProject: %v", err)
+			}
+		} else if info.Mode().IsRegular() {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *Project) UpdateProjectLock() error {
 	return w.createLock()
 }

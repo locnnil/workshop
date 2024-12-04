@@ -76,3 +76,30 @@ func (f *workshopFile) TestSingleWorkshopFileBroken(c *check.C) {
 	c.Assert(fls, check.IsNil)
 	c.Assert(err, check.NotNil)
 }
+
+func (f *workshopFile) TestIsProject(c *check.C) {
+	d := c.MkDir()
+	c.Assert(workshop.IsProject(d), check.Equals, false)
+
+	d = c.MkDir()
+	_, err := os.Create(filepath.Join(d, "workshop.yaml"))
+	c.Assert(err, check.IsNil)
+	c.Assert(workshop.IsProject(d), check.Equals, true)
+
+	d = c.MkDir()
+	_, err = os.Create(filepath.Join(d, ".workshop.yaml"))
+	c.Assert(os.Mkdir(filepath.Join(d, ".workshop"), os.ModePerm), check.IsNil)
+	c.Assert(err, check.IsNil)
+	c.Assert(workshop.IsProject(d), check.Equals, true)
+
+	d = c.MkDir()
+	c.Assert(os.Mkdir(filepath.Join(d, ".workshop"), os.ModePerm), check.IsNil)
+	_, err = os.Create(filepath.Join(d, ".workshop", "dev.yaml"))
+	c.Assert(err, check.IsNil)
+	c.Assert(workshop.IsProject(d), check.Equals, true)
+
+	d = c.MkDir()
+	path := filepath.Join(d, ".workshop", "prod.yaml")
+	c.Assert(os.MkdirAll(path, os.ModePerm), check.IsNil)
+	c.Assert(workshop.IsProject(d), check.Equals, false)
+}
