@@ -1,17 +1,28 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
 prepare: |  
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-refresh ws-refresh-sdk
+  workshop_exec launch ws-refresh --project single
+  workshop_exec launch ws-refresh ws-refresh-sdk --project multi
 restore: |
   . "$TESTSLIB"/utils.sh
-  [ -f .workshop/ws-refresh.yaml ] || mv .workshop.yaml .workshop/ws-refresh.yaml
-  workshop_exec remove ws-refresh ws-refresh-sdk
+  workshop_exec remove ws-refresh --project single
+  workshop_exec remove ws-refresh ws-refresh-sdk --project multi
 execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Modify apt cache for later"
+  cd single
   workshop_exec exec ws-refresh -- sudo touch /var/cache/apt/archives/sentinel
 
+  echo "Check refresh supports project-level workshop definitions"
+  workshop_exec refresh ws-refresh
+
+  echo "Check apt cache is preserved across refreshes"
+  workshop_exec exec ws-refresh -- mountpoint /var/cache/apt/archives
+  workshop_exec exec ws-refresh -- sudo test -f /var/cache/apt/archives/sentinel
+
+  echo "Check refresh supports multi-workshop projects"
+  cd ../multi
   workshop_exec refresh ws-refresh
 
   echo "Check refresh change is Done"
@@ -19,15 +30,6 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh[[:space:]]+Ready[[:space:]]+-$"
-
-  echo "Check apt cache is preserved across refreshes"
-  workshop_exec exec ws-refresh -- mountpoint /var/cache/apt/archives
-  workshop_exec exec ws-refresh -- sudo test -f /var/cache/apt/archives/sentinel
-
-  echo "Check refresh for single-workshop project"
-  mv .workshop/ws-refresh.yaml .workshop.yaml
-  workshop_exec refresh ws-refresh
-  mv .workshop.yaml .workshop/ws-refresh.yaml
 
   workshop_exec refresh ws-refresh-sdk
 

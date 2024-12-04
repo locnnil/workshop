@@ -51,8 +51,8 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	}
 	if file != nil {
 		if file.Name != workshop {
-			return nil, fmt.Errorf("single workshop in project %q is named %q, not %q",
-				w.Path, file.Name, workshop)
+			return nil, fmt.Errorf("workshop %q not found (only found %q)",
+				workshop, file.Name)
 		}
 		return file, nil
 	}
@@ -77,28 +77,6 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 			file.Name, Filename(file.Name), filepath.Base(path))
 	}
 	return file, nil
-}
-
-// Read single workshop file if it exists and is unique.
-func (w *Project) maybeSingleWorkshop() (*File, error) {
-	var result []byte
-
-	for _, name := range Filenames {
-		buf, err := os.ReadFile(filepath.Join(w.Path, name))
-		if err == nil {
-			if result != nil {
-				return nil, fmt.Errorf("more than one workshop definition in project %q", w.Path)
-			}
-			result = buf
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-	}
-
-	if result == nil {
-		return nil, nil
-	}
-	return readWorkshop(result)
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
@@ -132,6 +110,45 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		workshops = append(workshops, name)
 	}
 	return workshops, nil
+}
+
+// Read single workshop file if it exists and is unique.
+func (w *Project) maybeSingleWorkshop() (*File, error) {
+	var path string
+	var contents []byte
+
+	for _, name := range Filenames {
+		buf, err := os.ReadFile(filepath.Join(w.Path, name))
+		if err == nil {
+			if path != "" {
+				return nil, fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
+			}
+
+			path = filepath.Join(w.Path, name)
+			contents = buf
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
+	if path == "" {
+		return nil, nil
+	}
+
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	} else if len(files) > 0 {
+		return nil, fmt.Errorf("more than one workshop, but %q not in %q subdirectory", path, Directory)
+	}
+
+	file, err := readWorkshop(contents)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file %q: %w", path, err)
+	}
+	return file, nil
 }
 
 // A directory is a project if it has at least one workshop definition.

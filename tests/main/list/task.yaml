@@ -43,18 +43,19 @@ execute: |
   project_id_copy=$(cat "$PROJECT"-copy/.workshop.lock)
   test "$project_id_copy" != "$project_id"
 
-  echo "List should respect single-workshop projects"
-  cp "$PROJECT"-copy/.workshop/ws-list.yaml "$PROJECT"-copy/workshop.yaml
-  workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
-
   mv "$PROJECT"-new "$PROJECT"
   # launch from a new directory successfully
   workshop_exec --project "$PROJECT"-copy launch ws-list
   workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
-  rm "$PROJECT"-copy/workshop.yaml
+  workshop_exec --project "$PROJECT" remove ws-list
+  workshop_exec --project "$PROJECT"-copy remove ws-list
+
+  echo "List should respect project-level workshop definitions"
+  mv "$PROJECT"-copy/.workshop/ws-list.yaml "$PROJECT"-copy/workshop.yaml
+  workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy launch ws-list
   workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy remove ws-list
-  workshop_exec --project "$PROJECT" remove ws-list
 
   # TODO:
   # mv dir dir-1

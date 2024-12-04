@@ -129,8 +129,19 @@ base: ubuntu@20.04
 	f.createSingleWFile(c, ".workshop.yaml", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(file, check.IsNil)
-	message := fmt.Sprintf("more than one workshop definition in project %q", f.project.Path)
+	path := filepath.Join(f.project.Path, "workshop.yaml")
+	message := fmt.Sprintf(`ambiguous file %q \(directory also contains ".workshop.yaml"\)`, path)
 	c.Assert(err, check.ErrorMatches, message)
+}
+
+func (f *workshopFile) TestSingleWorkshopFileWrongName(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+`
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	file, err := f.project.Workshop("xbert")
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.ErrorMatches, `workshop "xbert" not found \(only found "xbert-gpu"\)`)
 }
 
 func (f *workshopFile) TestSingleWorkshopFileError(c *check.C) {
@@ -141,48 +152,17 @@ func (f *workshopFile) TestSingleWorkshopFileError(c *check.C) {
 	c.Assert(err, check.ErrorMatches, ".*is a directory")
 }
 
-func (f *workshopFile) TestSingleWorkshopFileHidesOthers(c *check.C) {
-	singleYaml := `name: xbert-gpu
+func (f *workshopFile) TestWorkshopFileDuplicate(c *check.C) {
+	yaml := `name: xbert-gpu
 base: ubuntu@22.04
 `
-	olderYaml := `name: xbert-gpu
-base: ubuntu@20.04
-`
-	hiddenYaml := `name: xbert
-base: ubuntu@20.04
-`
-	f.createSingleWFile(c, "workshop.yaml", singleYaml)
-	f.createWFile(c, "xbert-gpu", olderYaml)
-	f.createWFile(c, "xbert", hiddenYaml)
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	f.createWFile(c, "xbert-gpu", yaml)
 
 	file, err := f.project.Workshop("xbert-gpu")
-	c.Assert(err, check.IsNil)
-	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@22.04"})
-
-	file, err = f.project.Workshop("xbert")
 	c.Assert(file, check.IsNil)
-	message := fmt.Sprintf(`single workshop in project %q is named "xbert-gpu", not "xbert"`, f.project.Path)
-	c.Assert(err, check.ErrorMatches, message)
-}
-
-func (f *workshopFile) TestSingleWorkshopSymlink(c *check.C) {
-	singleYaml := `name: xbert-gpu
-base: ubuntu@20.04
-`
-	hiddenYaml := `name: xbert
-base: ubuntu@20.04
-`
-	f.createWFile(c, "xbert-gpu", singleYaml)
-	f.createWFile(c, "xbert", hiddenYaml)
-	c.Assert(os.Symlink(".workshop/xbert-gpu.yaml", filepath.Join(f.project.Path, ".workshop.yaml")), check.IsNil)
-
-	file, err := f.project.Workshop("xbert-gpu")
-	c.Assert(err, check.IsNil)
-	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@20.04"})
-
-	file, err = f.project.Workshop("xbert")
-	c.Assert(file, check.IsNil)
-	message := fmt.Sprintf(`single workshop in project %q is named "xbert-gpu", not "xbert"`, f.project.Path)
+	path := filepath.Join(f.project.Path, "workshop.yaml")
+	message := fmt.Sprintf(`more than one workshop, but %q not in ".workshop" subdirectory`, path)
 	c.Assert(err, check.ErrorMatches, message)
 }
 

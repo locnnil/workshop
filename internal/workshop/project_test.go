@@ -52,19 +52,20 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	c.Assert(fls, testutil.DeepUnsortedMatches, []string{"w1", "w2", "wb", "-"})
 }
 
-func (f *workshopFile) TestSingleWorkshopFileExcludesOthers(c *check.C) {
+func (f *workshopFile) TestMixedWorkshopFileConventions(c *check.C) {
 	d := c.MkDir()
 	p := &workshop.Project{Path: d, ProjectId: "42424242"}
 
 	w := filepath.Join(d, workshop.Directory)
 	c.Assert(os.MkdirAll(w, os.ModePerm), check.IsNil)
 
-	c.Assert(createWorkshop(w, "w1"), check.IsNil)
-	c.Assert(createWorkshop(w, "w2"), check.IsNil)
+	c.Assert(createWorkshop(w, "ws"), check.IsNil)
 	c.Assert(createWorkshop(d, "workshop"), check.IsNil)
 	fls, err := p.ReadWorkshops()
-	c.Assert(err, check.IsNil)
-	c.Assert(fls, check.DeepEquals, []string{"workshop"})
+	c.Assert(fls, check.IsNil)
+	path := filepath.Join(d, "workshop.yaml")
+	message := fmt.Sprintf(`more than one workshop, but %q not in ".workshop" subdirectory`, path)
+	c.Assert(err, check.ErrorMatches, message)
 }
 
 func (f *workshopFile) TestSingleWorkshopFileBroken(c *check.C) {
