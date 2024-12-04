@@ -38,13 +38,13 @@ Notes:
 
 - Names listed as arguments must match respective 'name:' values in definitions
 
-- To update an existing workshop, use **workshop refresh** instead
+- To update an existing workshop, use 'workshop refresh' instead
 
 - SDKs are installed in alphabetical order
 `,
 		Example: `
-# Launch the 'nimble' and 'jazzy' workshops in the current project directory
-workshop launch nimble jazzy`,
+Launch the 'nimble' and 'jazzy' workshops in the current project directory:
+$ workshop launch nimble jazzy`,
 		RunE: c.Run,
 	}
 

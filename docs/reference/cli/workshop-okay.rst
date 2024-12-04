@@ -9,19 +9,23 @@ Acknowledge listed warnings.
 
 .. code-block:: console
 
-   workshop okay [flags]
+   $ workshop okay [flags]
 
 .. rubric:: Description
 
 
 This command acknowledges all warnings
-listed previously by the **workshop warnings** command.
+listed previously by the 'workshop warnings' command.
 
 
 .. rubric:: Examples
 
+
+Acknowledge the globally registered warnings across all workshops
+(must run after 'workshop warnings'):
+
 .. code-block:: console
-   
-   # Acknowledge the globally registered warnings across all workshops
-   # (must run after **workshop warnings**)
-   workshop okay
+
+   $ workshop okay
+
+

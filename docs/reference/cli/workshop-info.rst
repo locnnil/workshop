@@ -9,7 +9,7 @@ Print the current status and details of a workshop as YAML.
 
 .. code-block:: console
 
-   workshop info <WORKSHOP> [flags]
+   $ workshop info <WORKSHOP> [flags]
 
 .. rubric:: Description
 
@@ -19,7 +19,7 @@ details for a workshop, formatting them as YAML. Specifically, it prints:
 
 - Essential workshop attributes, such as name, base and project directory
 
-- Current status (e.g. *Ready*, *Pending*, *Off*) and notes for the workshop
+- Current status (e.g. 'Ready', 'Pending', 'Off') and notes for the workshop
 
 - Individual SDK details, such as name, channel, installation date and revision
 
@@ -33,7 +33,11 @@ Notes:
 
 .. rubric:: Examples
 
+
+List details for the 'nimble' workshop in the current project directory:
+
 .. code-block:: console
-   
-   # List details for the 'nimble' workshop in the current project directory
-   workshop info nimble
+
+   $ workshop info nimble
+
+

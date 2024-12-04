@@ -9,12 +9,12 @@ Edit the hack SDK and graft it onto the workshop.
 
 .. code-block:: console
 
-   workshop hack [--drop|--restore] <WORKSHOP> [setup-base|save-save|restore-state|check-health] [flags]
+   $ workshop hack [--drop|--restore] <WORKSHOP> [setup-base|save-save|restore-state|check-health] [flags]
 
 .. rubric:: Description
 
 
-This command opens the default text editor to configure the **hack** SDK
+This command opens the default text editor to configure the 'hack' SDK
 and immediately installs it in the specified workshop,
 enabling rapid experiments and tweaks at the SDK level.
 
@@ -28,22 +28,22 @@ Setting the <HOOK> value opens the respective hook file:
 
 
 Saving and exiting causes a refresh,
-which installs the updated **hack** SDK in the workshop.
+which installs the updated 'hack' SDK in the workshop.
 
-The **--drop** and **--restore** options stash the **hack** SDK,
+The '--drop' and '--restore' options stash the 'hack' SDK,
 reversing the changes, and quickly restore it to the workshop.
 
 
 Notes:
 
-- The **hack** SDK doesn't appear in the workshop definition
+- The 'hack' SDK doesn't appear in the workshop definition
   and cannot include build-time data such as parts
 
-- In addition to hooks, the **hack** SDK can use interfaces,
+- In addition to hooks, the 'hack' SDK can use interfaces,
   define plugs, slots, connections and bindings
 
-- You can partially refresh the workshop, targeting the **hack** SDK
-  with the **workshop refresh <WORKSHOP>/hack** command
+- You can partially refresh the workshop, targeting the 'hack' SDK
+  with the 'workshop refresh <WORKSHOP>/hack' command
 
 
 .. rubric:: Options
@@ -62,15 +62,27 @@ Notes:
 
 .. rubric:: Examples
 
+
+Edit the hack SDK definition for the 'nimble' workshop
+and apply it after saving by automatically refreshing the workshop:
+
 .. code-block:: console
-   
-   # Edit the hack SDK definition for the 'nimble' workshop
-   # and apply it after saving by automatically refreshing the workshop
-   workshop hack nimble
-   
-   # Edit the 'check-health' hook for the hack SDK
-   # and apply it after saving by automatically refreshing the workshop
-   workshop hack nimble check-health
-   
-   # Stash the hack SDK, temporarily reverting the changes in the workshop
-   workshop hack nimble --drop
+
+   $ workshop hack nimble
+
+
+Edit the 'check-health' hook for the hack SDK
+and apply it after saving by automatically refreshing the workshop:
+
+.. code-block:: console
+
+   $ workshop hack nimble check-health
+
+
+Stash the hack SDK, temporarily reverting the changes in the workshop:
+
+.. code-block:: console
+
+   $ workshop hack nimble --drop
+
+

@@ -1,7 +1,7 @@
 .. _{{ .Ref }}:
 
 {{ .CommandName }}
-{{ .Heading }}
+{{ repeat "-" .HeadingLen }}
 
 {{ .Short }}.
 
@@ -9,7 +9,7 @@
 
 .. code-block:: console
 
-   {{ .Synopsis }}
+   $ {{ .Synopsis }}
 
 .. rubric:: Description
 
@@ -31,6 +31,12 @@
 
 .. rubric:: Examples
 
+{{ range .Examples }}
+{{ .Info }}
+
 .. code-block:: console
-{{ .Examples | indent 3 }}
+
+{{ .Usage | indent 3 }}
+
+{{ end }}
 {{- end }}

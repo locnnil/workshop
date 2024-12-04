@@ -9,7 +9,7 @@ Construct one or many workshops using their definitions.
 
 .. code-block:: console
 
-   workshop launch <WORKSHOP>... [flags]
+   $ workshop launch <WORKSHOP>... [flags]
 
 .. rubric:: Description
 
@@ -34,7 +34,7 @@ Notes:
 
 - Names listed as arguments must match respective 'name:' values in definitions
 
-- To update an existing workshop, use **workshop refresh** instead
+- To update an existing workshop, use 'workshop refresh' instead
 
 - SDKs are installed in alphabetical order
 
@@ -50,7 +50,11 @@ Notes:
 
 .. rubric:: Examples
 
+
+Launch the 'nimble' and 'jazzy' workshops in the current project directory:
+
 .. code-block:: console
-   
-   # Launch the 'nimble' and 'jazzy' workshops in the current project directory
-   workshop launch nimble jazzy
+
+   $ workshop launch nimble jazzy
+
+
