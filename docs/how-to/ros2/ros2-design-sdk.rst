@@ -164,8 +164,8 @@ Installs minimal workspace packages and tools
 for running and launching ROS 2 nodes.
 
 
-Update :file:`.bashrc` for ROS 2 and :program:`colcon`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Update environment for ROS 2 and :program:`colcon`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. literalinclude:: design-sdk/setup-base
    :language: shell
@@ -173,8 +173,8 @@ Update :file:`.bashrc` for ROS 2 and :program:`colcon`
    :end-before: [bashrc-update-end]
 
 
-Adds lines to the :file:`.bashrc` file
-to source ROS 2 and :program:`colcon` auto-completion scripts,
+Adds lines to the :file:`.profile` and :file:`.bashrc` files
+to set up the ROS 2 environment and auto-completion for :program:`colcon`,
 ensuring they are loaded in every new shell session
 (:program:`Workshop` uses :program:`bash` by default).
 
