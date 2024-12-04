@@ -9,7 +9,7 @@ Run a command and wait for it to complete.
 
 .. code-block:: console
 
-   $ workshop exec [flags] <WORKSHOP> [--] <COMMAND>...
+   $ workshop exec [flags] [<WORKSHOP>] [--] <COMMAND>...
 
 .. rubric:: Description
 
@@ -38,6 +38,7 @@ use shell syntax such as *--*:
 
 $ workshop exec nimble -- echo -n foo bar
 
+This syntax is required if the workshop name is omitted.
 
 Notes:
 
@@ -109,6 +110,14 @@ Run a custom interactive shell:
 .. code-block:: console
 
    $ workshop exec -I nimble sh
+
+
+The name is optional if the project only has one workshop
+and a separator is provided:
+
+.. code-block:: console
+
+   $ workshop exec -I -- sh
 
 
 Run a command as root (the default is 'workshop'):

@@ -100,7 +100,7 @@ Next, you can shell into the workshop to debug and possibly fix it:
 
 .. code-block:: console
 
-   $ workshop shell golang-volatile
+   $ workshop shell
 
 
 On success, you can resume the refresh process:

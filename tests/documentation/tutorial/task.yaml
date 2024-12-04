@@ -32,6 +32,7 @@ execute: |
 
   # Execute commands
   workshop_exec exec nimble go build main.go
+  workshop_exec exec -- go build main.go
 
   # Variable injection
   workshop_exec exec --env GO111MODULE=off nimble -- go build -x

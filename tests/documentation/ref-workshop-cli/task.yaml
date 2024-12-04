@@ -53,7 +53,7 @@ execute: |
   workshop_exec exec --uid 0 nimble id
 
   # Shell (TODO)
-  workshop_exec shell nimble
+  workshop_exec shell
 
   # Connections
   workshop_exec connections nimble

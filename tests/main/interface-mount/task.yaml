@@ -6,7 +6,7 @@ execute: |
     
   function validate_host_mounts() {
     test -d "$source_one" && test -d "$source_two"    
-    workshop_exec exec ws-mount bash -c "mountpoint -q /mnt/one && mountpoint -q /opt/two"
+    workshop_exec exec -- bash -c "mountpoint -q /mnt/one && mountpoint -q /opt/two"
   }
 
   echo "Check the mount interface plug can be installed and auto-connected"
@@ -29,7 +29,7 @@ execute: |
 
   echo "Check manual connect/disconnect works"
   workshop_exec disconnect ws-mount/test-sdk-mount:one
-  workshop_exec exec ws-mount bash -c "! mountpoint -q /mnt/one"
+  workshop_exec exec -- bash -c "! mountpoint -q /mnt/one"
 
   workshop_exec connect ws-mount/test-sdk-mount:one :mount
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:one.+:mount.+manual$"
@@ -37,10 +37,10 @@ execute: |
 
   echo "Check workshop to workshop bind mount"
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:jobs.+:jobs.+-$"
-  workshop_exec exec ws-mount bash -c "mountpoint -q /etc/cron.weekly && test -f /etc/cron.weekly/job.sh"
+  workshop_exec exec -- bash -c "mountpoint -q /etc/cron.weekly && test -f /etc/cron.weekly/job.sh"
   workshop_exec disconnect ws-mount/test-sdk-mount:jobs
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:jobs.+-.+-$"
-  workshop_exec exec ws-mount bash -c "! mountpoint -q /etc/cron.weekly && ! test -f /etc/cron.weekly/job.sh"
+  workshop_exec exec -- bash -c "! mountpoint -q /etc/cron.weekly && ! test -f /etc/cron.weekly/job.sh"
 
   echo "Check remove will also clean up the default mount interface default locations"
   workshop_exec remove

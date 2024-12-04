@@ -10,9 +10,10 @@ execute: |
 
   echo "Check that one -- prevents further argument parsing"
   workshop_exec exec ws-exec echo -e '\x66oo' | MATCH foo
-  workshop_exec exec -- ws-exec echo -e '\x66oo' | MATCH foo
+  workshop_exec exec -- echo -e '\x66oo' | MATCH foo
   workshop_exec exec ws-exec -- echo -e '\x66oo' | MATCH foo
   workshop_exec exec ws-exec echo -- -e '\x66oo' | MATCH foo
+  workshop_exec exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
   workshop_exec exec ws-exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
 
   echo "Check an environment variable can be set"
@@ -20,16 +21,16 @@ execute: |
 
   echo "Check that environment variables are inherited"
   sudo -u ubuntu 2>&1 -- env Foo=bar workshop exec --env Foo ws-exec bash -c '[ "$Foo" = bar ]'
-  sudo -u ubuntu 2>&1 -- env Foo= workshop exec --env Foo ws-exec bash -c '[ -z "${Foo-x}" ]'
+  sudo -u ubuntu 2>&1 -- env Foo= workshop exec --env Foo -- bash -c '[ -z "${Foo-x}" ]'
   sudo -u ubuntu 2>&1 -- env --unset=Foo workshop exec --env Foo ws-exec bash -c '[ -z "${Foo+x}" ]'
 
   echo "Check default user and group"
-  workshop_exec exec ws-exec bash -c 'id -u -n' | MATCH workshop
+  workshop_exec exec -- bash -c 'id -u -n' | MATCH workshop
   workshop_exec exec ws-exec bash -c 'id -g -n' | MATCH workshop
 
   echo "Check working directory setup"
   workshop_exec exec ws-exec pwd | MATCH '/project'
-  workshop_exec exec -w /home/workshop ws-exec pwd | MATCH '/home/workshop'
+  workshop_exec exec -w /home/workshop -- pwd | MATCH '/home/workshop'
 
   echo "Check enforce non-interactive mode"
   workshop_exec exec -I ws-exec bash -c '[[ -t 1 ]] || echo -n nonterminal' | MATCH nonterminal
@@ -45,7 +46,7 @@ execute: |
   #workshop_exec exec --interactive ws-exec bash -c 'echo -n terminal' | MATCH terminal
 
   echo "Check timeout"
-  workshop_exec exec --timeout 1s ws-exec bash -c 'sleep 5' | MATCH ".*timed out after 1s.*"
+  workshop_exec exec --timeout 1s -- sleep 5 | MATCH ".*timed out after 1s.*"
 
   echo "Check stderr (workshop exec redirects stderr to stdout for MATCH to work)"
   workshop_exec exec -I ws-exec bash -c '>&2 echo -n stderr' | MATCH stderr

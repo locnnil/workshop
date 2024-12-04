@@ -438,6 +438,18 @@ Next, build it *inside the workshop* using :ref:`exec <ref_workshop_exec>`:
 
    $ workshop exec golang go build main.go
 
+.. tip::
+
+   Since :samp:`golang` is the only workshop in the project,
+   it can be omitted from most :samp:`workshop` commands.
+   For :ref:`exec <ref_workshop_exec>`,
+   a name or a separator (:samp:`--`) is required to avoid ambiguity.
+   The above command can also be written as:
+
+   .. code-block:: console
+
+      $ workshop exec -- go build main.go
+
 
 This uses the Go version installed by the :samp:`go` SDK.
 
@@ -472,7 +484,7 @@ who's also named :samp:`workshop`:
 
 .. code-block:: console
 
-   $ workshop shell golang
+   $ workshop shell
    workshop@golang-6b79e889:~$ pwd
 
      /home/workshop
@@ -492,8 +504,8 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec golang ls /project/
-   $ workshop exec golang touch /project/created_inside.txt
+   $ workshop exec -- ls /project/
+   $ workshop exec -- touch /project/created_inside.txt
    $ ls
 
 
