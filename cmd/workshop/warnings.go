@@ -54,7 +54,7 @@ type CmdOkay struct {
 
 func (c *CmdWarnings) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "warnings [OPTIONS]",
+		Use:   "warnings",
 		Args:  cobra.ExactArgs(0),
 		Short: "List warnings",
 		Long: `
