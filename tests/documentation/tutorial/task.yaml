@@ -14,7 +14,7 @@ execute: |
 
   # Launch
   workshop_exec launch
-  workshop_exec info nimble
+  workshop_exec info
 
   # Changes and tasks after launch
   workshop_exec changes
@@ -51,7 +51,7 @@ execute: |
   workshop_exec disconnect nimble/test-sdk-go:mod-cache
   workshop_exec connect nimble/test-sdk-go:mod-cache :mount
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
-  workshop_exec info nimble
+  workshop_exec info
 
   # Remove
   workshop_exec remove nimble

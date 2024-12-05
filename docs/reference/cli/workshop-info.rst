@@ -9,7 +9,7 @@ Print the current status and details of a workshop as YAML.
 
 .. code-block:: console
 
-   $ workshop info <WORKSHOP> [flags]
+   $ workshop info [<WORKSHOP>] [flags]
 
 .. rubric:: Description
 
@@ -39,5 +39,12 @@ List details for the 'nimble' workshop in the current project directory:
 .. code-block:: console
 
    $ workshop info nimble
+
+
+The name is optional if the project only has one workshop:
+
+.. code-block:: console
+
+   $ workshop info
 
 

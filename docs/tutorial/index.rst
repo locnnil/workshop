@@ -251,7 +251,7 @@ to see what went into your workshop:
 
 .. code-block:: console
 
-   $ workshop info golang
+   $ workshop info
 
      name:     golang
      base:     ubuntu@22.04
@@ -549,7 +549,7 @@ to a new location on the host:
    :emphasize-lines: 14
 
    $ workshop remount golang/go:mod-cache ~/mod/
-   $ workshop info golang
+   $ workshop info
 
      name:     golang
      base:     ubuntu@20.04

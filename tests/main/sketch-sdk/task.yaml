@@ -13,15 +13,15 @@ execute: |
   wq
   EOF
 
-  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
+  workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 
   echo "Stash current sketch SDK"
   workshop_exec sketch-sdk --stash ws-sketch
-  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | NOMATCH ".*(x1)"
+  workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | NOMATCH ".*(x1)"
 
   echo "Restore sketch SDK"
   workshop_exec sketch-sdk --restore ws-sketch
-  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
+  workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 
   echo "Add setup-base"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
@@ -33,7 +33,7 @@ execute: |
   wq
   EOF
 
-  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x2)"
+  workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x2)"
 
   echo "Add a new mount"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
@@ -46,6 +46,6 @@ execute: |
   wq
   EOF
 
-  workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x3)"
+  workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x3)"
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
   workshop_exec exec ws-sketch test -d /home/workshop/ws-sketch-test

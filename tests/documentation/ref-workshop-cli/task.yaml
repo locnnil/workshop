@@ -28,7 +28,7 @@ execute: |
   workshop_exec list --global
 
   # Info
-  workshop_exec info nimble
+  workshop_exec info
 
   # Warnings
   workshop_exec warnings
