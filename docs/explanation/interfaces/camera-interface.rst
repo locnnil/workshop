@@ -26,7 +26,7 @@ A basic structure would include just the name of the plug itself
 and the interface (:samp:`camera`).
 
 Defining the plug in an SDK
-allows the workshops using this SDK to connect to the host's USB-based cameras,
+allows the workshops using this SDK to connect to the host's cameras,
 which can be useful in various SDK-specific tasks
 such as testing hardware or embedded devices.
 
@@ -65,10 +65,11 @@ can be invoked manually after the workshop has started:
 
 
 Establishing a connection means
-that all currently connected USB-based cameras
+that all existing :samp:`video4linux` and :samp:`media` devices
 will be made available inside the workshop.
-New cameras can be added
-by disconnecting and then reconnecting the camera interface.
+While the connection is active,
+new devices on the host will be made available inside the workshop;
+unplugged devices will also be removed from the workshop.
 
 To check if the interface is connected:
 
@@ -93,6 +94,10 @@ This means the host's cameras are available inside the workshop:
    workshop@ws-8584e571$ ls /dev/video*
 
      /dev/video0  /dev/video1
+
+   workshop@ws-8584e571$ ls /dev/media*
+
+     /dev/media0
 
 
 See also

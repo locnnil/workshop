@@ -161,10 +161,9 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 	s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, camera.Name)] = string(buf)
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, camera.Name)] = "camera"
 
-	for i := 0; i < 10; i++ {
+	for _, subsystem := range []string{"video4linux", "media"} {
 		// This name is unique because '/' is not permitted in plug names.
-		name := fmt.Sprintf("%s/video%d", camera.Name, i)
-		path := fmt.Sprintf("/dev/video%d", i)
+		name := fmt.Sprintf("%s/%s", camera.Name, subsystem)
 		// The default workshop user must be able to acces the video devices.
 		// Workshop assigns the devices to workshop.workshop. A more
 		// traditional way here would be to add them device to the video
@@ -174,12 +173,11 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 		// is a passwordless sudo user anyway, it was decided that it is OK if
 		// the workshop user owns video devices.
 		s.devices[name] = map[string]string{
-			"type":     "unix-char",
-			"source":   path,
-			"path":     path,
-			"required": "false",
-			"uid":      workshop.User.Uid,
-			"gid":      workshop.User.Gid,
+			"type":      "unix-hotplug",
+			"subsystem": subsystem,
+			"required":  "false",
+			"uid":       workshop.User.Uid,
+			"gid":       workshop.User.Gid,
 		}
 		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, name)] = "camera"
 	}
