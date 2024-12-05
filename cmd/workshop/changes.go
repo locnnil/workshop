@@ -17,7 +17,7 @@ type CmdChanges struct {
 func (c *CmdChanges) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "changes",
-		Args:  cobra.NoArgs,
+		Args:  cobra.ExactArgs(0),
 		Short: "List recent changes to the workshops in a project",
 		Long: `
 Any substantial operation on a workshop is a change that consists of tasks;
