@@ -37,7 +37,7 @@ execute: |
   workshop_exec okay || true
 
   # Stop
-  workshop_exec stop nimble
+  workshop_exec stop
 
   # Start
   workshop_exec start

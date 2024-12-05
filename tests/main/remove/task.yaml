@@ -22,7 +22,7 @@ execute: |
   workshop_exec exec ws-remove sudo test ! -f /var/cache/apt/archives/sentinel
 
   echo "Check the workshop can be removed if in Stopped"
-  workshop_exec stop  ws-remove
+  workshop_exec stop ws-remove
   workshop_exec remove ws-remove
   workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"
   

@@ -337,7 +337,7 @@ so you :ref:`stop <ref_workshop_stop>` the workshop:
 
 .. code-block:: console
 
-   $ workshop stop golang
+   $ workshop stop
 
 This changes the status of the workshop to *Stopped*.
 

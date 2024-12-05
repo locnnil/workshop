@@ -33,3 +33,21 @@ Notes:
 
 - To start a stopped workshop, use 'workshop start'
 
+
+.. rubric:: Examples
+
+
+Stop the nimble and jazzy workshops in the current project directory:
+
+.. code-block:: console
+
+   $ workshop stop nimble jazzy
+
+
+The name is optional if the project only has one workshop:
+
+.. code-block:: console
+
+   $ workshop stop
+
+

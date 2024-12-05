@@ -15,7 +15,7 @@ execute: |
   }
 
   check_linger
-  workshop_exec stop ws-start
+  workshop_exec stop
 
   echo "Check the workshop is in Stopped state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Stopped[[:space:]]+-$"

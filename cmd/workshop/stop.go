@@ -15,7 +15,6 @@ type CmdStop struct {
 func (c *CmdStop) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "stop <WORKSHOP>...",
-		Args:  cobra.MinimumNArgs(1),
 		Short: "Stop one or many workshops",
 		Long: `
 This command deactivates the workshops listed as arguments. For each one, it:
@@ -39,8 +38,10 @@ Notes:
 `,
 		Example: `
 Stop the nimble and jazzy workshops in the current project directory:
+$ workshop stop nimble jazzy
 
-workshop stop nimble jazzy`,
+The name is optional if the project only has one workshop:
+$ workshop stop`,
 		RunE: c.Run,
 	}
 
@@ -60,6 +61,14 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	if len(av) == 0 {
+		workshop, err := cli.SingleWorkshop(project)
+		if err != nil {
+			return fmt.Errorf("cannot infer workshop name: %w", err)
+		}
+		av = []string{workshop.Name}
 	}
 
 	changeId, err := cli.Stop(project.Id, av)

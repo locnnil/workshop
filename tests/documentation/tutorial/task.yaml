@@ -21,7 +21,7 @@ execute: |
   workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')
 
   # Start and stop
-  workshop_exec stop nimble
+  workshop_exec stop
   workshop_exec start
 
   # Refresh

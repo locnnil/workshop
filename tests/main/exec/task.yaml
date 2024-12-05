@@ -51,5 +51,5 @@ execute: |
   workshop_exec exec -I ws-exec bash -c '>&2 echo -n stderr' | MATCH stderr
 
   echo "Check stopped workshop"
-  workshop_exec stop ws-exec
+  workshop_exec stop
   workshop_exec exec ws-exec pwd | MATCH '.*cannot exec command in "ws-exec": workshop not running$'
