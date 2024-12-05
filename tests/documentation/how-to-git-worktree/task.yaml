@@ -12,7 +12,7 @@ execute: |
   git add . && git commit -m "initial commit"
   chown -R ubuntu:ubuntu $PROJECT/original
   workshop_exec --project "$PROJECT/original" exec golang go build -x main.go
-  workshop_exec --project "$PROJECT/original" remove golang
+  workshop_exec --project "$PROJECT/original" remove
   ./main
   workshop_exec --project "$PROJECT/original" launch
   git config --global --add safe.directory "$PROJECT/original"
@@ -26,5 +26,5 @@ execute: |
   git merge hotfix
   git worktree move $PROJECT/hotfix/ $PROJECT/resolved/
   workshop_exec list --global
-  workshop_exec --project "$PROJECT/resolved" remove golang
+  workshop_exec --project "$PROJECT/resolved" remove
   git worktree remove $PROJECT/resolved/

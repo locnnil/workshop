@@ -47,15 +47,15 @@ execute: |
   # launch from a new directory successfully
   workshop_exec --project "$PROJECT"-copy launch
   workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
-  workshop_exec --project "$PROJECT" remove ws-list
-  workshop_exec --project "$PROJECT"-copy remove ws-list
+  workshop_exec --project "$PROJECT" remove
+  workshop_exec --project "$PROJECT"-copy remove
 
   echo "List should respect project-level workshop definitions"
   mv "$PROJECT"-copy/.workshop/ws-list.yaml "$PROJECT"-copy/workshop.yaml
   workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy launch
   workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
-  workshop_exec --project "$PROJECT"-copy remove ws-list
+  workshop_exec --project "$PROJECT"-copy remove
 
   # TODO:
   # mv dir dir-1

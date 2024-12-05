@@ -5,7 +5,7 @@ prepare: |
   workshop_exec launch ws-refresh ws-refresh-sdk --project multi
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-refresh --project single
+  workshop_exec remove --project single
   workshop_exec remove ws-refresh ws-refresh-sdk --project multi
 execute: |
   . "$TESTSLIB"/utils.sh

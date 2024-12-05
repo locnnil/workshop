@@ -74,7 +74,7 @@ They stay there even if you remove the workshop:
 
 .. code-block:: console
 
-   $ workshop remove golang
+   $ workshop remove
    $ ./main
 
      hello, Workshop
@@ -171,7 +171,7 @@ before running :samp:`git worktree remove`:
 
 .. code-block:: console
 
-   $ workshop remove golang --project /home/user/resolved/
+   $ workshop remove --project ../resolved/
    $ git worktree remove ../resolved/
 
 

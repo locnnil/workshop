@@ -4,7 +4,7 @@ prepare: |
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-conn
+  workshop_exec remove
 execute: |
   . "$TESTSLIB"/utils.sh
 

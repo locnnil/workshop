@@ -123,7 +123,7 @@ before deleting the project directory:
 
 .. code-block:: console
 
-   $ workshop remove golang --project /home/user/old/
+   $ workshop remove --project /home/user/old/
    $ rm -rf /home/user/old/
 
 

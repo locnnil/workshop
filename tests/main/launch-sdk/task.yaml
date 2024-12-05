@@ -10,4 +10,4 @@ execute: |
   workshop_exec info | grep -v notes | yq ".content | length == 1"
   workshop_exec info | grep -v notes | yq '.content["test-sdk-basic"].channel' | MATCH "latest/stable"
 
-  workshop_exec remove ws-basic
+  workshop_exec remove

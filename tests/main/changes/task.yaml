@@ -7,4 +7,4 @@ execute: |
   echo "The launch change must present in the list"
   workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-changes\" workshop$"
   
-  workshop_exec remove ws-changes
+  workshop_exec remove

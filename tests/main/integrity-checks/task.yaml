@@ -17,13 +17,13 @@ execute: |
   workshop_exec --project "$PROJECT" list
   test -f "$PROJECT"/.workshop.lock
 
-  workshop_exec remove --project "$PROJECT" ws
+  workshop_exec remove --project "$PROJECT"
   
   echo "Check recreating project dir with the same name does not cause conflicts"
   mkdir -p ./new-project
   cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project
-  workshop_exec remove --project $(pwd)/new-project ws
+  workshop_exec remove --project $(pwd)/new-project
   rm -rf ./new-project
   mkdir -p ./new-project
   cp -r "$PROJECT"/.workshop ./new-project/

@@ -5,7 +5,7 @@ prepare: |
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-user-conns
+  workshop_exec remove
   rm -rf user-data user-data-2
 execute: |
   . "$TESTSLIB"/utils.sh

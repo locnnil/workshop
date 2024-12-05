@@ -694,7 +694,7 @@ If you no longer need your workshop,
 
 .. code-block:: console
 
-   $ workshop remove golang
+   $ workshop remove
 
 
 This doesn't affect the files in the project directory,

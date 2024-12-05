@@ -54,4 +54,4 @@ execute: |
   workshop_exec info
 
   # Remove
-  workshop_exec remove nimble
+  workshop_exec remove

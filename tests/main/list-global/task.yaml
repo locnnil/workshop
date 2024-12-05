@@ -32,5 +32,5 @@ execute: |
   rm -rf project-2-copy
   workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws-global[[:space:]]+Error[[:space:]]+missing-project$"
 
-  workshop_exec --project "$projects"/project-1 remove ws-global
-  workshop_exec --project "$projects"/project-2 remove ws-global
+  workshop_exec --project "$projects"/project-1 remove
+  workshop_exec --project "$projects"/project-2 remove

@@ -63,6 +63,6 @@ execute: |
   workshop_exec warnings | MATCH '^No further warnings.$'
 
   echo "Remount: workshop remove does not delete remounted dirs"
-  workshop_exec remove ws-remount
+  workshop_exec remove
   test -d "/home/ubuntu/one"
   test -d "/home/ubuntu/two"

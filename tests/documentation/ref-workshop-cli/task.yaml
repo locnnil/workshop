@@ -71,4 +71,4 @@ execute: |
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/new-cache-mount/
 
   # Remove
-  workshop_exec remove nimble
+  workshop_exec remove

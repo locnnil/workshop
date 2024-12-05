@@ -1,6 +1,6 @@
 summary: Check mount interface scenarios
 restore: |
-  workshop_exec remove ws-mount || true
+  workshop_exec remove || true
 execute: |
   . "$TESTSLIB"/utils.sh
     
@@ -43,6 +43,6 @@ execute: |
   workshop_exec exec ws-mount bash -c "! mountpoint -q /etc/cron.weekly && ! test -f /etc/cron.weekly/job.sh"
 
   echo "Check remove will also clean up the default mount interface default locations"
-  workshop_exec remove ws-mount
+  workshop_exec remove
   test ! -d "$source_one"
   test ! -d "$source_two"
