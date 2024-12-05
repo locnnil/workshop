@@ -112,7 +112,7 @@ func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) ([]stri
 
 	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == pId })
 	if idx == -1 {
-		return nil, fmt.Errorf("project %q is not found", pId)
+		return nil, fmt.Errorf("project %q not found", pId)
 	}
 	p = projects[user][idx]
 

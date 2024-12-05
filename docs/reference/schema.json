@@ -9,7 +9,7 @@
       "type": "string",
       "description": "Name of the workshop.",
       "pattern": "^[a-z][a-z0-9-]*$",
-      "errorMessage": "A workshop's name must start with a letter and can only include lowercase alphanumeric and hyphen characters."
+      "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens."
     },
     "base": {
       "type": "string",

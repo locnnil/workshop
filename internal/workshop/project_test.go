@@ -64,7 +64,7 @@ func (f *workshopFile) TestMixedWorkshopFileConventions(c *check.C) {
 	fls, err := p.ReadWorkshops()
 	c.Assert(fls, check.IsNil)
 	path := filepath.Join(d, "workshop.yaml")
-	message := fmt.Sprintf(`more than one workshop, but %q not in ".workshop" subdirectory`, path)
+	message := fmt.Sprintf(`multiple workshops found, but %q not in ".workshop" subdirectory`, path)
 	c.Assert(err, check.ErrorMatches, message)
 }
 

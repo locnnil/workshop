@@ -413,7 +413,7 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 
 	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
-		return nil, fmt.Errorf("project %q is not found", projectId)
+		return nil, fmt.Errorf("project %q not found", projectId)
 	}
 	p = projects[user][idx]
 
@@ -522,7 +522,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 
 	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
-		return nil, fmt.Errorf("project %q is not found", projectId)
+		return nil, fmt.Errorf("project %q not found", projectId)
 	}
 	p = projects[user][idx]
 

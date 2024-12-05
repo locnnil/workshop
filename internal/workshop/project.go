@@ -141,7 +141,7 @@ func (w *Project) maybeSingleWorkshop() (*File, error) {
 			return nil, err
 		}
 	} else if len(files) > 0 {
-		return nil, fmt.Errorf("more than one workshop, but %q not in %q subdirectory", path, Directory)
+		return nil, fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
 	}
 
 	file, err := readWorkshop(contents)

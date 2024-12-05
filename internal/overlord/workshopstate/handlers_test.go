@@ -261,7 +261,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration is not found.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration not found.*`)
 }
 
 func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {

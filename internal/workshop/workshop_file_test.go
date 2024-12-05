@@ -162,7 +162,7 @@ base: ubuntu@22.04
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(file, check.IsNil)
 	path := filepath.Join(f.project.Path, "workshop.yaml")
-	message := fmt.Sprintf(`more than one workshop, but %q not in ".workshop" subdirectory`, path)
+	message := fmt.Sprintf(`multiple workshops found, but %q not in ".workshop" subdirectory`, path)
 	c.Assert(err, check.ErrorMatches, message)
 }
 
@@ -183,7 +183,7 @@ base: ubuntu@20.04
 	f.createWFile(c, "99-xbert", yaml)
 	file, err := f.project.Workshop("99-xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) include only lowercase alphanumeric and hyphen characters`)
+	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) only include digits, lowercase letters, and hyphens`)
 }
 
 func (f *workshopFile) TestWorkshopUnsupportedBase(c *check.C) {

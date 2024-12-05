@@ -88,7 +88,7 @@ software packages and :ref:`hooks <exp_sdk_hooks>`.
 
 A workshop definition can be hidden by naming it
 :file:`.workshop.yaml` instead of :file:`workshop.yaml`.
-If a project defines more than one workshop,
+If a project has multiple workshops,
 the definitions should be stored in the :file:`.workshop/` directory
 (for example, :file:`.workshop/golang.yaml`).
 
