@@ -40,7 +40,7 @@ execute: |
   workshop_exec stop nimble
 
   # Start
-  workshop_exec start nimble
+  workshop_exec start
 
   # Refresh (TODO)
   sed -i "s/22.04/24.04/g" .workshop/nimble.yaml

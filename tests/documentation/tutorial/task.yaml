@@ -22,7 +22,7 @@ execute: |
 
   # Start and stop
   workshop_exec stop nimble
-  workshop_exec start nimble
+  workshop_exec start
 
   # Refresh
 

@@ -21,7 +21,7 @@ execute: |
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Start the workshop"
-  workshop_exec start ws-start
+  workshop_exec start
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Ready[[:space:]]+-$"

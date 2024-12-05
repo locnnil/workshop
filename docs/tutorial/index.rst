@@ -345,7 +345,7 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 .. code-block:: console
 
-   $ workshop start golang
+   $ workshop start
 
 
 Both commands work gracefully,

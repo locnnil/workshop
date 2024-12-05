@@ -28,7 +28,7 @@ execute: |
   workshop_exec stop ws-remount
   workshop_exec remount ws-remount/test-sdk-mount:two "$new_source"
   workshop_exec info | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$new_source"
-  workshop_exec start ws-remount
+  workshop_exec start
   workshop_exec info | grep -v notes | yq '.content["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*$new_source"
   test -d "$new_source"
 
