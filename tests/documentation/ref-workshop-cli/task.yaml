@@ -44,8 +44,8 @@ execute: |
 
   # Refresh (TODO)
   sed -i "s/22.04/24.04/g" .workshop/nimble.yaml
-  workshop_exec refresh nimble --wait-on-error
-  workshop_exec refresh nimble --abort || workshop_exec refresh nimble --continue || true
+  workshop_exec refresh --wait-on-error
+  workshop_exec refresh --abort || workshop_exec refresh --continue || true
 
   # Exec
   workshop_exec exec nimble go build main.go

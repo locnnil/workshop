@@ -395,7 +395,7 @@ and refresh the workshop:
 
 .. code-block:: console
 
-   $ workshop refresh golang
+   $ workshop refresh
 
 
 Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.

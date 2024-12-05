@@ -10,7 +10,7 @@ execute: |
 
   echo "Update the workshop file to include a failing SDK"
   sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' workshop.yaml
-  workshop_exec refresh --wait-on-error ws-refresh-cont || true
+  workshop_exec refresh --wait-on-error || true
   sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' workshop.yaml
 
   echo "Check the workshop is in Pending state"
@@ -20,7 +20,7 @@ execute: |
   workshop_exec exec --uid 0 --gid 0 ws-refresh-cont sed -i "s/exit 1/exit 0/g" /var/lib/workshop/sdk/test-sdk-setup-fail/current/sdk/hooks/setup-base
 
   echo "Check the workshop refresh --continue reverts to the previous state"
-  workshop_exec refresh --continue ws-refresh-cont | MATCH "\"ws-refresh-cont\" refreshed"
+  workshop_exec refresh --continue | MATCH "\"ws-refresh-cont\" refreshed"
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-cont[[:space:]]+Ready[[:space:]]+-$"

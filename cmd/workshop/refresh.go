@@ -19,7 +19,6 @@ type CmdRefresh struct {
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>[/<SDK>]...",
-		Args:  cobra.MinimumNArgs(1),
 		Short: "Update workshops according to their definitions",
 		Long: `
 This command updates the workshops listed as arguments by going over their
@@ -66,18 +65,21 @@ Notes:
 Refresh the 'nimble' and 'jazzy' workshops in the current project directory:
 $ workshop refresh nimble jazzy
 
-Refresh 'nimble', but stop on any errors (won’t accept multiple workshops):
-$ workshop refresh nimble --wait-on-error
+The name is optional if the project only has one workshop:
+$ workshop refresh
 
-After 'nimble' refresh stopped on error, abort the operation:
-$ workshop refresh nimble --abort
+Refresh workshop, but stop on any errors (won’t accept multiple workshops):
+$ workshop refresh --wait-on-error
 
-After 'nimble' refresh stopped on error and the workshop was fixed,
+After refresh stopped on error, abort the operation:
+$ workshop refresh --abort
+
+After refresh stopped on error and the workshop was fixed,
 continue the operation:
-$ workshop refresh nimble --continue
+$ workshop refresh --continue
 
-Refresh the hack SDK under 'nimble':
-$ workshop refresh nimble/hack`,
+Refresh the sketch SDK in the 'nimble' workshop:
+$ workshop refresh nimble/sketch`,
 		RunE: c.Run,
 	}
 
@@ -130,6 +132,14 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	if len(av) == 0 {
+		workshop, err := cli.SingleWorkshop(project)
+		if err != nil {
+			return fmt.Errorf("cannot infer workshop name: %w", err)
+		}
+		av = []string{workshop.Name}
 	}
 
 	mode := "transactional"

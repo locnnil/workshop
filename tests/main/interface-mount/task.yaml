@@ -18,12 +18,12 @@ execute: |
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected after refresh"
-  workshop_exec refresh ws-mount
+  workshop_exec refresh
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected if refresh fails"
   sed -i 's/test-sdk-mount/test-sdk-setup-fail/g' workshop.yaml
-  workshop_exec refresh ws-mount || true
+  workshop_exec refresh || true
   sed -i 's/test-sdk-setup-fail/test-sdk-mount/g' workshop.yaml
   validate_host_mounts
 

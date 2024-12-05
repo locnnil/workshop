@@ -17,7 +17,7 @@ execute: |
   workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*$new_source"
 
   echo "Remount: plugs remount sources are preserved after refresh"
-  workshop_exec refresh ws-remount
+  workshop_exec refresh
   workshop_exec info ws-remount | grep -v notes | yq '.content["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*$new_source"
 
   echo "Remount: the new source is not empty"  

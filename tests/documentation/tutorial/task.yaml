@@ -28,7 +28,7 @@ execute: |
 
   # Change base
   sed -i "s/22/20/g" workshop.yaml
-  workshop_exec refresh nimble
+  workshop_exec refresh
 
   # Execute commands
   workshop_exec exec nimble go build main.go

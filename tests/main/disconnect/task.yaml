@@ -29,5 +29,5 @@ execute: |
 
   echo "Check disconnect --forget (reconnects after refresh)"
   workshop_exec disconnect ws-disconn/test-sdk-mount:one --forget
-  workshop_exec refresh ws-disconn
+  workshop_exec refresh
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"

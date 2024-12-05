@@ -23,7 +23,7 @@ execute: |
 
   echo "Check refresh that removes a connection"
   mv -f .workshop/ws-user-conns.yaml.new .workshop/ws-user-conns.yaml
-  workshop_exec refresh ws-user-conns
+  workshop_exec refresh
   workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:one.+:mount.+\-$"
   workshop_exec connections ws-user-conns | MATCH "^mount.+ws-user-conns/test-sdk-mount:two.+:user-slot-2.+\-$"
 

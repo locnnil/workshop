@@ -135,7 +135,7 @@ Try this for yourself:
 .. code-block:: console
 
    workshop@ros2-humble-8584e57d$ exit
-   $ workshop refresh ros2-humble
+   $ workshop refresh
    $ workshop shell ros2-humble
    workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ colcon build

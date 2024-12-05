@@ -15,7 +15,7 @@ execute: |
   workshop_exec exec ws-refresh sudo touch /var/cache/apt/archives/sentinel
 
   echo "Check refresh supports project-level workshop definitions"
-  workshop_exec refresh ws-refresh
+  workshop_exec refresh
 
   echo "Check apt cache is preserved across refreshes"
   workshop_exec exec ws-refresh mountpoint /var/cache/apt/archives
