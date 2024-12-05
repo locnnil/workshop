@@ -36,7 +36,7 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 	cmd.AddCommand((&CmdStop{root: c}).Command())
 	cmd.AddCommand((&CmdInfo{root: c}).Command())
 	cmd.AddCommand((&CmdExec{root: c}).Command())
-	cmd.AddCommand((&CmdShellAlias{execCommand: &CmdExec{Env: []string{"WORKSHOP_SHELL=1"}, root: c}}).Command())
+	cmd.AddCommand((&CmdShellAlias{execCommand: &CmdExec{root: c}}).Command())
 	cmd.AddCommand((&CmdRemove{root: c}).Command())
 	cmd.AddCommand((&CmdRemount{root: c}).Command())
 	cmd.AddCommand((&CmdConnections{root: c}).Command())

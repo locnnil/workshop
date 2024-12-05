@@ -233,30 +233,6 @@ func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *work
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) GetWorkshopConfig(ctx context.Context, name string) (map[string]string, error) {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Disconnect()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
-	}
-
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return nil, err
-	}
-
-	if inst == nil {
-		return nil, fmt.Errorf("LXD instance is nil")
-	}
-
-	return inst.Config, nil
-}
-
 func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
