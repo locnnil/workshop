@@ -596,7 +596,7 @@ opens an :ref:`SDK definition <exp_sdk_definition>`:
 
 .. code-block:: console
 
-   $ workshop hack golang
+   $ workshop hack
 
 
 Initially, the editor shows a very basic setup
@@ -676,14 +676,14 @@ When you're done experimenting, you can just drop the hack SDK:
 
 .. code-block:: console
 
-   $ workshop hack golang --drop
+   $ workshop hack --drop
 
 
 If you drop a hack SDK by mistake, restoring it is quite simple:
 
 .. code-block:: console
 
-   $ workshop hack golang --restore
+   $ workshop hack --restore
 
 
 While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`

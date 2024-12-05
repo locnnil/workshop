@@ -9,22 +9,22 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Install empty sketch SDK"
-  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF  
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF  
   wq
   EOF
 
   workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 
   echo "Stash current sketch SDK"
-  workshop_exec sketch-sdk --stash ws-sketch
+  workshop_exec sketch-sdk --stash
   workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | NOMATCH ".*(x1)"
 
   echo "Restore sketch SDK"
-  workshop_exec sketch-sdk --restore ws-sketch
+  workshop_exec sketch-sdk --restore
   workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 
   echo "Add setup-base"
-  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   10
   i
     setup-base: |
@@ -36,7 +36,7 @@ execute: |
   workshop_exec info | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x2)"
 
   echo "Add a new mount"
-  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk ws-sketch <<EOF
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   $
   a
     sketch-plug:

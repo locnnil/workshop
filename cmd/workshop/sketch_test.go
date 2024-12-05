@@ -255,9 +255,9 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			fmt.Fprintln(w, mockSingleWorkshop)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -276,7 +276,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 
 	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(n, check.Equals, 5)
 
