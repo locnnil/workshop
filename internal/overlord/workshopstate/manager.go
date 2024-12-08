@@ -97,7 +97,8 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 	return workshop, nil
 }
 
-// Returns all workshop files for a project. The state must be locked.
+// Returns all workshop files for a project. The state must be locked,
+// as listing projects can update project metadata.
 func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) ([]string, error) {
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
