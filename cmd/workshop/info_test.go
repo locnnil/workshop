@@ -22,7 +22,7 @@ func (m *WorkshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"hack","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-file"]}}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"hack","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -52,13 +52,14 @@ func (m *WorkshopInfo) TestWorkshopInfo(c *check.C) {
 base:     ubuntu@22.04
 project:  %s
 status:   error
-notes:    missing-file
+notes:    missing-project
 content:
   go:
     channel:  latest/edge  2017-03-22  \(1\)
   hack:
     channel:  ~   2017-03-22  \(x1\)
 `, m.prjDir))
+	c.Check(n, check.Equals, 2)
 }
 
 var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
@@ -97,6 +98,7 @@ content:
     channel:  latest/edge  2017-03-22  \(1\)
     message:  Waiting for all required modules to be installed
 `, m.prjDir))
+	c.Check(n, check.Equals, 2)
 }
 
 var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
@@ -148,4 +150,5 @@ content:
         host-source:      /home/user/src
         workshop-target:  /home/workshop/target
 `, m.prjDir))
+	c.Check(n, check.Equals, 2)
 }
