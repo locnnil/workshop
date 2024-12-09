@@ -1,5 +1,5 @@
 :slug: home-page
-:relatedlinks: [SDKcraft](https://canonical-sdkcraft.readthedocs-hosted.com/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
+:relatedlinks: [SDKcraft](https://github.com/canonical/sdkcraft/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
 
 .. _home:
 

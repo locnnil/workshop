@@ -225,7 +225,7 @@ This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake
 
 .. note::
 
-   This guide assumes you're familiar with `SDKcraft`_.
+   This guide assumes you're familiar with :ref:`SDKcraft <use_sdkcraft>`.
 
 
 Create the directory structure
