@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -65,8 +66,10 @@ type Remount struct {
 }
 
 func (client *Client) List(opts *ListOptions) ([]*WorkshopInfo, []*WorkshopFile, error) {
+	query := url.Values{}
+	query.Set("state", "available")
 	var info Workshops
-	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &info)
+	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", query, nil, nil, &info)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot list workshops: %w", err)
 	}

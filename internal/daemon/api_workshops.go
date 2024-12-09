@@ -229,20 +229,26 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
-		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
-			continue
+		switch wstate {
+		case "all":
+			fallthrough
+		case "available":
+			fallthrough
+		case strings.ToLower(health.Status.String()):
+			wi := workshopToInfo(w, health, nil)
+			info.Workshops = append(info.Workshops, wi)
 		}
-		wi := workshopToInfo(w, health, nil)
-		info.Workshops = append(info.Workshops, wi)
 	}
 
 	// If the client queried everything available,
 	// we add workshop files to the response.
 	// Some of these may only exist as files, not instances.
-	if wstate == "all" {
+	// The "available" query is a best-effort version of "all":
+	// if something is wrong with the files we still return the instances.
+	if wstate == "all" || wstate == "available" {
 		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
 		var fileErr *workshopstate.WorkshopFileError
-		if errors.As(err, &fileErr) {
+		if wstate == "available" && errors.As(err, &fileErr) {
 			state.Warnf("%v", err)
 		} else if err != nil {
 			return statusInternalError("%v", err)
