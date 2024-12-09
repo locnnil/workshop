@@ -25,8 +25,8 @@ SDK hooks
 
      - Reports the health of the SDK
        (*okay*, *waiting* or *error*)
-       for |ws_markup|
-       to determine the overall state of the workshop.
+       so |ws_markup|
+       can determine the overall state of the workshop.
 
 
    * - :samp:`restore-state`

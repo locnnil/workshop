@@ -451,3 +451,10 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 This was the last step of the tutorial;
 you are now familiar with the basic operations |sdk_markup| provides
 and have had your first taste of what it can do for you.
+
+See also
+--------
+
+Reference:
+
+- :ref:`ref_workshopctl`
