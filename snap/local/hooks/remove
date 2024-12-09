@@ -1,8 +1,8 @@
 #!/bin/sh -e
 
-# The workshop services are stopped by the moment the configure 
+# The workshop services are stopped by the moment the remove 
 # hook is called. Therefore, for now, we walk the LXD projects created 
-# by the workshop and remove all instances/profiles/images.
+# by the workshop and remove all instances/profiles/images/volumes.
 projects=$(lxc project list -f compact | awk '$1 ~ /^workshop\..*/ {print $1}')
 
 for p in $(echo "$projects" | xargs -L1 echo); do
@@ -23,18 +23,19 @@ for p in $(echo "$projects" | xargs -L1 echo); do
     fi
   done
   
-  volumes=$(lxc storage volume list default -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
-  echo "Removing storage volumes: $volumes"
-  for volume in $(echo "$volumes" | xargs -L1 echo); do
-    lxc storage volume delete default "$volume" --project "$p"
-  done
-  
   images=$(lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
   if [ -n "$images" ]; then
     echo "Removing images: $images"
     # shellcheck disable=SC2086
     lxc image delete $images --project "$p"
   fi
+
+  lxc storage volume list default --project "$p"
+  volumes=$(lxc storage volume list default type=custom -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
+  echo "Removing storage volumes: $volumes"
+  for volume in $(echo "$volumes" | xargs -L1 echo); do
+    lxc storage volume delete default "$volume" --project "$p"
+  done
 
   lxc project delete "$p" 
 done 
