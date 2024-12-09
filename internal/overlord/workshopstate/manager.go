@@ -117,7 +117,24 @@ func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) (map[st
 	}
 	p = projects[user][idx]
 
-	return p.ReadWorkshops()
+	files, err := p.ReadWorkshops()
+	if err != nil {
+		return files, &WorkshopFileError{err}
+	}
+	return files, nil
+}
+
+// WorkshopFileError wraps errors related to invalid workshop definitions or file locations.
+type WorkshopFileError struct {
+	err error
+}
+
+func (e *WorkshopFileError) Error() string {
+	return e.err.Error()
+}
+
+func (e *WorkshopFileError) Unwrap() error {
+	return e.err
 }
 
 // Returns all existing workshops for a project, the state must be

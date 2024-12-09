@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -221,7 +222,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	wrkmgr := c.d.overlord.WorkshopManager()
 	workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
-		return statusInternalError("cannot list workshops: %v", err)
+		return statusInternalError("%v", err)
 	}
 
 	info := Workshops{}
@@ -235,13 +236,22 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		info.Workshops = append(info.Workshops, wi)
 	}
 
-	info.Files = make([]*WorkshopFileInfo, 0, len(workshops))
-	files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
-	if err != nil {
-		state.Warnf("%v", err)
-	}
-	for name, path := range files {
-		info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
+	// If the client queried everything available,
+	// we add workshop files to the response.
+	// Some of these may only exist as files, not instances.
+	if wstate == "all" {
+		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+		var fileErr *workshopstate.WorkshopFileError
+		if errors.As(err, &fileErr) {
+			state.Warnf("%v", err)
+		} else if err != nil {
+			return statusInternalError("%v", err)
+		} else {
+			info.Files = make([]*WorkshopFileInfo, 0, len(files))
+			for name, path := range files {
+				info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
+			}
+		}
 	}
 
 	return SyncResponse(info, http.StatusOK)

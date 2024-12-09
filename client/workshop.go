@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -67,7 +68,7 @@ func (client *Client) List(opts *ListOptions) ([]*WorkshopInfo, []*WorkshopFile,
 	var info Workshops
 	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &info)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot list workshops: %w", err)
 	}
 	return info.Workshops, info.Files, nil
 }
