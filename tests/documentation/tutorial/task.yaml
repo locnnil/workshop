@@ -15,11 +15,6 @@ execute: |
   # Launch
   workshop_exec launch nimble
   workshop_exec info nimble
-  cd ..
-  mv hello-workshop hi-workshop
-  workshop_exec list --global
-  mv hi-workshop hello-workshop
-  cd hello-workshop
 
   # Changes and tasks after launch
   workshop_exec changes
@@ -46,9 +41,10 @@ execute: |
   workshop_exec exec nimble -- bash -c "uname -a"
 
   # Changes in project directory
-  touch outside.txt
-  workshop_exec exec nimble -- touch inside.txt
-  ls -l
+  touch created_outside.txt
+  workshop_exec exec nimble -- [ -f "created_outside.txt" ]
+  workshop_exec exec nimble -- touch created_inside.txt
+  [ -f "created_inside.txt" ]
 
   # Interfaces
   workshop_exec connections

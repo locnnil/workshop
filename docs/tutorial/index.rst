@@ -477,9 +477,8 @@ are visible in the project directory, and vice versa:
 
 .. code-block:: console
 
-   $ touch outside_workshop.txt
-   $ workshop exec golang -- touch inside_workshop.txt
-   $ ls -l
+   $ touch created_outside.txt
+   $ workshop exec golang -- touch created_inside.txt
 
 
 This isn't the only way the host interacts with the workshop;
