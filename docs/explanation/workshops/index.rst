@@ -3,7 +3,7 @@
 Workshops
 =========
 
-These articles explain the core set of |project_markup|-related concepts:
+These articles explain the core set of |ws_markup|-related concepts:
 
 .. toctree::
    :maxdepth: 1

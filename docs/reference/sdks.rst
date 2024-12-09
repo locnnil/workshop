@@ -10,7 +10,7 @@ Source directory
 ----------------
 
 All files that go into an SDK should be placed in a *source directory*
-where you'll run |project_markup|
+where you'll run |ws_markup|
 to initialise, define, pack and publish the SDK.
 
 
@@ -153,12 +153,12 @@ formalises the description above:
 SDK parts
 ---------
 
-Parts can be thought of as the building blocks of |project_markup|.
+Parts can be thought of as the building blocks of |ws_markup|.
 Each part in the :file:`sdkcraft.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
 providing a way to modularise the package and manage its dependencies.
 
-|project_markup| is built as a
+|ws_markup| is built as a
 `craft-application <https://github.com/canonical/craft-application/>`_,
 which affects how :samp:`parts` are implemented.
 However, note that :samp:`stage-packages` and :samp:`stage-snaps`
@@ -177,7 +177,7 @@ refer to the corresponding Craft Parts
 SDK plugs and slots
 -------------------
 
-Currently, |project_markup| supports defining the following interface plugs:
+Currently, |ws_markup| supports defining the following interface plugs:
 
 - :ref:`Camera <ref_camera_interface>`
 - :ref:`Desktop <ref_desktop_interface>`
@@ -264,7 +264,7 @@ and the target directory:
         workshop-target: <WORKSHOP DIRECTORY>
 
 
-This mounts a directory automatically created by :program:`Workshop` on the host
+This mounts a directory automatically created by |ws_markup| on the host
 to the :samp:`workshop-target` directory.
 The host directory will be created under the path
 designated by the :envvar:`$XDG_DATA_HOME` variable.
@@ -312,7 +312,7 @@ via a Unix domain socket.
 Hooks
 -----
 
-|project_markup| supports the following life cycle hooks:
+|ws_markup| supports the following life cycle hooks:
 
 .. list-table::
    :header-rows: 1
@@ -320,7 +320,7 @@ Hooks
    :widths: 3 6 5
 
    * - Name
-     - When :program:`Workshop` runs it
+     - When |ws_markup| runs it
      - What it does
 
    * - :samp:`check-health`
@@ -382,7 +382,7 @@ a zero code indicates success.
 .. note::
 
    The hooks aren't mentioned in the :ref:`definition <ref_sdk_definition>`;
-   |project_markup| automatically enumerates them when packing the SDK.
+   |ws_markup| automatically enumerates them when packing the SDK.
 
 
 .. _ref_sdk_state:
@@ -392,7 +392,7 @@ SDK state
 
 An SDK cat store any data specific to it within the workshop.
 For this purpose, an environment variable named :envvar:`$SDK_STATE_DIR`
-is exposed by :program:`Workshop` at run-time;
+is exposed by |ws_markup| at run-time;
 it resolves to an internal directory in the workshop,
 which :samp:`save-state` and :samp:`restore-state`
 can use to preserve and recover the data respectively.

@@ -3,7 +3,7 @@
 How to troubleshoot the installation
 ====================================
 
-If you notice issues with workshops, projects or |project_markup| in general,
+If you notice issues with workshops, projects or |ws_markup| in general,
 it may be time to verify or update the installation or prerequisites.
 
 
@@ -31,7 +31,7 @@ If it's outdated, download and install the update:
 Install and start LXD
 ---------------------
 
-A major prerequisite for |project_markup| is `LXD`_;
+A major prerequisite for |ws_markup| is `LXD`_;
 ensure it's installed, initialised and running:
 
 .. code-block:: console
@@ -76,7 +76,7 @@ For instance, if you've deleted a project
 without first removing the associated workshops,
 you can list all LXD projects to locate the orphaned containers.
 These will appear under :samp:`workshop.<USER>`
-and include the |project_markup| project ID in their names:
+and include the |ws_markup| project ID in their names:
 
 .. code-block:: console
 

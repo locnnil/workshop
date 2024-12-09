@@ -4,7 +4,7 @@ Interface connections
 =====================
 
 These articles explain concepts
-that are important for understanding |project_markup|'s interface mechanics.
+that are important for understanding |ws_markup|'s interface mechanics.
 
 .. toctree::
    :glob:
@@ -16,7 +16,7 @@ that are important for understanding |project_markup|'s interface mechanics.
 Summary
 -------
 
-In |project_markup|, SDKs can act as providers and consumers of resources
+In |ws_markup|, SDKs can act as providers and consumers of resources
 such as the GPU or file directories.
 Host system resources
 are exposed via the :ref:`system SDK <exp_system_sdk>`

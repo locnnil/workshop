@@ -25,7 +25,7 @@ such as a model training configuration,
 within the workshop.
 To enable this,
 the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
-that |project_markup| runs at the appropriate moments
+that |ws_markup| runs at the appropriate moments
 to consistently handle such data, collectively known as *SDK state*.
 
 For example, before changes are applied to the workshop
@@ -69,12 +69,12 @@ SDK hooks
 SDK publishers can define optional *hooks*
 that control and extend the workshop's internal behaviour
 to make any framework wrapped as an SDK
-compatible with |project_markup|'s logic;
+compatible with |ws_markup|'s logic;
 in particular, the hooks manage the SDK state
 and report its health.
 
 Each hook is a shell script with domain-aware actions
-that |project_markup| runs in the workshop
+that |ws_markup| runs in the workshop
 at a particular life cycle stage
 to ensure that the SDK stays functional.
 Specific examples include :samp:`setup-base`,
@@ -91,16 +91,16 @@ Interfaces
 ----------
 
 To make SDKs customisable and extensible,
-|project_markup| implements a counterpart to
+|ws_markup| implements a counterpart to
 :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__,
 which controls whether an SDK can use resources beyond its confines.
 You can think of specific interfaces as resource *types*:
 file system, hardware, computing and so on.
 
-Specific interfaces are predefined and implemented by |project_markup|,
+Specific interfaces are predefined and implemented by |ws_markup|,
 so you can't create a custom interface type.
-Currently, |project_markup| supports the following:
+Currently, |ws_markup| supports the following:
 
 - :ref:`Camera interface <exp_camera_interface>` (manually connected)
 - :ref:`Desktop interface <exp_desktop_interface>` (manually connected)
@@ -152,7 +152,7 @@ Validation
 
 All plugs and slots defined for a workshop directly or via its SDKs are checked
 to make sure they can be installed as part of the workshop and then connected.
-For this, |project_markup| uses a set of internal rules.
+For this, |ws_markup| uses a set of internal rules.
 
 Each interface has its own rule set;
 for example, the mount interface plug can be installed and auto-connected
@@ -199,7 +199,7 @@ are removed.
 Also, you can manually enable or disable connections
 with :command:`workshop connect` and :command:`workshop disconnect`,
 whereas :command:`workshop connections` can list all connections
-that have been established by any |project_markup| projects.
+that have been established by any |ws_markup| projects.
 
 
 
@@ -237,7 +237,7 @@ The hack SDK is another special type of SDK.
 Again, it's unavailable from the SDK Store;
 instead, you define it inside the workshop
 using the :command:`workshop hack` command.
-Its purpose is to allow |project_markup| users
+Its purpose is to allow |ws_markup| users
 to quickly make changes to a workshop
 beside the regular SDKs listed in the :ref:`definition <exp_sdk_definition>`.
 

@@ -3,7 +3,7 @@
 SDKs
 ====
 
-These topics cover multiple aspects of using SDKs in |project_markup|:
+These topics cover multiple aspects of using SDKs in |ws_markup|:
 
 .. toctree::
    :maxdepth: 1

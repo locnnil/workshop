@@ -6,7 +6,7 @@ Tutorial
 
 This is a practical introduction
 that takes you on a tour
-of the essential |project_markup| activities.
+of the essential |ws_markup| activities.
 
 You will practise all the major steps
 in the life cycle of a *workshop*,
@@ -16,7 +16,7 @@ to :ref:`executing commands <tut_exec>`,
 :ref:`shelling <tut_shell>` into the workshop
 and finally :ref:`removing <tut_remove>` it.
 The actions you're about to perform
-cover most of your daily needs with |project_markup|.
+cover most of your daily needs with |ws_markup|.
 
 If you need a more descriptive overview,
 refer to the
@@ -29,18 +29,18 @@ see the
 :ref:`how-to guides <howto_index>`.
 
 
-Install |project_markup|
+Install |ws_markup|
 ------------------------
 
 Check the prerequisites,
-build and install |project_markup|,
+build and install |ws_markup|,
 then ensure it runs.
 
 
 Prepare LXD
 ~~~~~~~~~~~
 
-|project_markup| relies on
+|ws_markup| relies on
 `LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
@@ -90,13 +90,13 @@ is enabled and running:
 
 
 With LXD installed and initialised,
-proceed to installing |project_markup|.
+proceed to installing |ws_markup|.
 
 
 Install
 ~~~~~~~
 
-Download the latest snap from |project_markup|'s `Releases`_ page on GitHub
+Download the latest snap from |ws_markup|'s `Releases`_ page on GitHub
 and install it, using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
@@ -114,7 +114,7 @@ The command installs two main components:
 
 - The :program:`workshop`
   :ref:`CLI tool <exp_cli>`,
-  which uses this API to command |project_markup|
+  which uses this API to command |ws_markup|
 
 
 After installation, the daemon starts automatically.
@@ -132,7 +132,7 @@ Before proceeding further, ensure the CLI tool works:
 
 
 This should display available commands and usage information.
-Now, with |project_markup| operational,
+Now, with |ws_markup| operational,
 the next step is to create your first workshop.
 
 If anything went wrong in this section, see the how-to guide on
@@ -187,9 +187,9 @@ create a workshop definition named :file:`workshop.yaml`:
 
 This definition adds an :ref:`SDK <exp_sdk>`,
 the basic functionality unit of a workshop
-that is built with :program:`SDKcraft`.
+that is :ref:`built with SDKcraft <use_sdkcraft>`.
 
-To confirm that |project_markup| sees the definition,
+To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
 in the project directory:
 
@@ -250,7 +250,7 @@ The output looks like the :ref:`definition <tut_define>`
 with extra details such as the :ref:`mounts <tut_interfaces>`;
 skip these for now, though.
 
-After launch, |project_markup| starts tracking the project directory.
+After launch, |ws_markup| starts tracking the project directory.
 To see how it works, move the directory:
 
 .. code-block:: console
@@ -271,7 +271,7 @@ by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
 Check out the recent :ref:`changes <ref_workshop_changes>`
-to see how |project_markup| keeps track of the project directory:
+to see how |ws_markup| keeps track of the project directory:
 
 .. code-block:: console
 
@@ -440,7 +440,7 @@ is now available in the project directory.
 
 **This is the single most important part of the tutorial**;
 your deliverables, however complex they are, end up on the host system,
-while the tool-chain is transparently confined and managed by |project_markup|.
+while the tool-chain is transparently confined and managed by |ws_markup|.
 
 Next, we'll explore the remaining aspects of your daily workshop usage.
 
@@ -463,7 +463,7 @@ you can open an interactive :ref:`shell <ref_workshop_shell>`:
    workshop@golang-6b79e889:~$ uname -a
 
 
-|project_markup| runs the login shell
+|ws_markup| runs the login shell
 for the default non-privileged user,
 also named :samp:`workshop`.
 
@@ -493,7 +493,7 @@ Work with interfaces
 --------------------
 
 For security and control,
-|project_markup| exposes various host system capabilities to the workshop
+|ws_markup| exposes various host system capabilities to the workshop
 by connecting it to various :ref:`interfaces <exp_interfaces>`.
 SDKs can also use interfaces to interact in an organised fashion.
 
@@ -583,5 +583,5 @@ e.g. via the :ref:`mount interface <tut_interfaces>`.
 
 
 This was the last step in the tutorial;
-you are now familiar with the essential operations provided by |project_markup|
+you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.

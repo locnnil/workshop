@@ -5,13 +5,13 @@ How to use SDKcraft
 
 This is a practical how-to guide
 that takes you on a tour
-of the essential :program:`SDKcraft` activities.
+of the essential |sdk_markup| activities.
 
 Here, you will initialise, define, pack and publish an :ref:`SDK <exp_sdk>`:
 a set of hooks, interfaces and parts that is bundled into a single package,
-suitable for use with |project_markup|, the user-oriented CLI utility.
+suitable for use with |sdk_markup|, the user-oriented CLI utility.
 The commands you're about to run
-cover most of your daily needs with :program:`SDKcraft`.
+cover most of your daily needs with |sdk_markup|.
 
 For more details, see the
 :ref:`reference <ref_index>` and :ref:`explanation <exp_index>` sections.
@@ -20,7 +20,7 @@ For more details, see the
 Check the prerequisites
 -----------------------
 
-:program:`SDKcraft` relies on
+|sdk_markup| relies on
 `LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation,
 using its
@@ -69,10 +69,10 @@ is enabled and running:
       and your distribution's manuals for guidance.
 
 
-Install :program:`SDKcraft`
----------------------------
+Install |sdk_markup|
+--------------------
 
-Download the latest snap from :program:`SDKcraft`'s
+Download the latest snap from |sdk_markup|'s
 `Releases <https://github.com/canonical/sdkcraft/releases/>`__
 page on GitHub.
 
@@ -100,7 +100,7 @@ Make sure it runs:
 Initialise the SDK
 ------------------
 
-Once you have installed :program:`SDKcraft`,
+Once you have installed |sdk_markup|,
 use it to initialise, define and pack your first :ref:`SDK <exp_sdk>`.
 Here, we'll build an SDK that installs a version of Go in the workshop.
 
@@ -187,7 +187,7 @@ section in Craft Parts documentation.
 Add interface plugs
 -------------------
 
-In :program:`SDKcraft`,
+In |sdk_markup|,
 :ref:`interfaces <exp_interfaces>` provide a controllable way
 of exposing the resources of the host system to the workshops,
 and you can use them in a variety of ways
@@ -227,7 +227,7 @@ and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
 
 Now, when a workshop using this SDK will be started,
-:program:`Workshop` will map the plug's :samp:`target` in the workshop
+|ws_markup| will map the plug's :samp:`target` in the workshop
 to a host directory that will be automatically created
 and maintained between refresh operations.
 
@@ -361,7 +361,7 @@ the health is eventually set to :samp:`error` automatically.
 Make the hooks executable
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Make all hooks executable so that :program:`Workshop` can use them later:
+Make all hooks executable so that |ws_markup| can use them later:
 
 .. code-block:: console
 
@@ -414,7 +414,7 @@ Publish the SDK
 
 When an SDK is ready and packed,
 you need to publish it to the SDK Store
-for use with :program:`Workshop`:
+for use with |ws_markup|:
 
 .. code-block:: console
 
@@ -428,7 +428,7 @@ under the :samp:`latest/beta` channel in the SDK Store.
 Use the SDK
 -----------
 
-The resulting SDK can be accessed by |project_markup| as follows:
+The resulting SDK can be accessed by |ws_markup| as follows:
 
 .. code-block:: yaml
    :caption: .workshop.golang.yaml
@@ -449,5 +449,5 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 
 
 This was the last step of the tutorial;
-you are now familiar with the basic operations :program:`SDKcraft` provides
+you are now familiar with the basic operations |sdk_markup| provides
 and have had your first taste of what it can do for you.

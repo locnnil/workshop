@@ -85,7 +85,7 @@ Wait on error
 The :option:`!--wait-on-error` option in :command:`workshop refresh`
 pauses the refresh when an error occurs;
 instead of reverting the workshop to its previous state,
-|project_markup| will leave it as is for you to investigate:
+|ws_markup| will leave it as is for you to investigate:
 
 .. code-block:: console
 
@@ -124,7 +124,7 @@ the workshop will revert to its previous state.
 List and suppress warnings
 --------------------------
 
-|project_markup| occasionally encounters non-blocking or transient problems,
+|ws_markup| occasionally encounters non-blocking or transient problems,
 such as broken mount points.
 These are registered as *warnings* in a system-wide log,
 which can be accessed with :command:`workshop warnings`:

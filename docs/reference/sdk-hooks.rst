@@ -5,7 +5,7 @@
 SDK hooks
 =========
 
-|project_markup| supports the following life cycle hooks:
+|ws_markup| supports the following life cycle hooks:
 
 .. list-table::
    :header-rows: 1
@@ -25,7 +25,7 @@ SDK hooks
 
      - Reports the health of the SDK
        (*okay*, *waiting* or *error*)
-       for |project_markup|
+       for |ws_markup|
        to determine the overall state of the workshop.
 
 
@@ -37,7 +37,7 @@ SDK hooks
 
      - Restores SDK-specific data,
        collectively referred to as *state*,
-       from a |project_markup|-defined location.
+       from a |ws_markup|-defined location.
        The hook itself comes from the *new* SDK version.
 
 
@@ -48,7 +48,7 @@ SDK hooks
 
      - Preserves SDK-specific data,
        collectively referred to as *state*,
-       at a |project_markup|-defined location.
+       at a |ws_markup|-defined location.
        The hook itself comes from the *old* SDK version.
 
 

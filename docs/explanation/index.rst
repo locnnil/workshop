@@ -3,14 +3,14 @@
 Explanation
 ===========
 
-These in-depth articles explain various |project_markup| concepts
+These in-depth articles explain various |ws_markup| concepts
 and how they fit together.
 
 
 Workshops and projects
 ----------------------
 
-The core set of |project_markup|-related concepts
+The core set of |ws_markup|-related concepts
 such as projects and workshops:
 
 .. toctree::
@@ -23,7 +23,7 @@ such as projects and workshops:
 SDKs
 ----
 
-The topics that cover the role of SDKs in |project_markup|:
+The topics that cover the role of SDKs in |ws_markup|:
 
 .. toctree::
    :maxdepth: 2
@@ -47,7 +47,7 @@ Details of working with various interface types:
 Security considerations
 -----------------------
 
-Important security aspects of |project_markup|:
+Important security aspects of |ws_markup|:
 
 .. toctree::
    :maxdepth: 1
@@ -59,8 +59,8 @@ Summary
 -------
 
 Projects, workshops and SDKs
-are the main building blocks of |project_markup|.
-To start using |project_markup|,
+are the main building blocks of |ws_markup|.
+To start using |ws_markup|,
 it is important to understand how these concepts fit together.
 
 You can think of a *project* as your working directory,
@@ -70,7 +70,7 @@ The difference starts with the software dependencies
 that you used to install as system-wide packages, container images,
 or in myriad other ways.
 
-Instead, they are packed and published as |project_markup|-ready,
+Instead, they are packed and published as |ws_markup|-ready,
 isolated *SDKs* that you list while you define a *workshop*.
 The workshop definition is a :file:`.yaml` file in the :file:`.workshop`
 directory, and the workshop itself is the container built according to this
@@ -79,7 +79,7 @@ definition.
 To clear up a few points of confusion straight away:
 
 - A *workshop* is a container tied to a definition and a project;
-  not to be confused with |project_markup| itself.
+  not to be confused with |ws_markup| itself.
 
 - Launching an identical definition from two different projects
   creates two separate workshops.
@@ -92,12 +92,12 @@ and a project can have multiple workshops pointing to it,
 with each workshop containing multiple SDKs.
 What do *you* get out of this multiplicity, though?
 
-Firstly, |project_markup| is transactional in nature;
+Firstly, |ws_markup| is transactional in nature;
 you don't have to track down leftover files and libraries all over your system
 after you've uninstalled a package that turned out to be too unstable.
 Even if an SDK drops something unexpected on your drive,
 it's contained within the workshop.
-|project_markup| aims to encapsulate every piece of functionality you need,
+|ws_markup| aims to encapsulate every piece of functionality you need,
 keeping things clean and tidy.
 
 Next, it's portable;

@@ -35,11 +35,11 @@ Camera interface slot
 ---------------------
 
 To let SDKs in a workshop access the host's cameras,
-:program:`Workshop` provides a camera interface slot
+|ws_markup| provides a camera interface slot
 that multiple camera interface plugs can access.
 
 When the SDK is installed at run-time during launch and refresh operations,
-:program:`Workshop` checks that the plug targeting the slot
+|ws_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interface_connections>`;
 if it does,
 it can be connected.

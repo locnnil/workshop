@@ -30,7 +30,7 @@ conversely, the :command:`workshop stop` command unmounts it.
    some have a :option:`!--project` option
    that accepts a pathname to use as the project directory.
 
-External changes to the project are tracked by the |project_markup| daemon.
+External changes to the project are tracked by the |ws_markup| daemon.
 Thus, if the project is moved or copied,
 all workshops that reference it are updated,
 so you can continue working without interruption.

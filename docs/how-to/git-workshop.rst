@@ -90,7 +90,7 @@ They stay there even if you remove the workshop:
       $ workshop launch golang
 
 From here, you can do whatever you like with your repo,
-because |project_markup| handles
+because |ws_markup| handles
 :ref:`moving projects around <how_moving_projects>` quite well.
 
 With your dependencies accounted for,
@@ -112,7 +112,7 @@ Use worktrees
 Let's add a Git feature that works well with workshops,
 namely :literalref:`git worktree<https://git-scm.com/docs/git-worktree>`.
 
-One of |project_markup|'s goals is
+One of |ws_markup|'s goals is
 to simplify toggling external dependencies
 such as frameworks or OS versions.
 Say you want to investigate a problem that occurs on an older OS version,
@@ -151,7 +151,7 @@ Next, launch the redefined workshop to work on the problem:
 
 
 As with regular directories,
-|project_markup| works well with
+|ws_markup| works well with
 :literalref:`git worktree move<https://git-scm.com/docs/git-worktree#_commands>`:
 
 .. code-block:: console
@@ -176,7 +176,7 @@ before running :samp:`git worktree remove`:
 
 
 So using :command:`git worktree` reduces the effort on sync, stash and pull,
-while |project_markup| allows you to hot-swap an entire OS
+while |ws_markup| allows you to hot-swap an entire OS
 or another complex dependency
 by going from one directory to another.
 
