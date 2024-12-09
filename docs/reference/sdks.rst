@@ -207,6 +207,11 @@ A camera plug in the definition must specify the plug name and the interface:
 This makes the host's USB-based cameras directly available inside the workshop
 as video capture devices.
 
+.. note::
+
+   See the :ref:`explanation <exp_camera_interface>` for more details.
+
+
 .. _ref_desktop_interface:
 
 Desktop interface
@@ -224,6 +229,10 @@ A desktop plug in the definition must specify the plug name and the interface:
 
 
 This makes the host's Wayland socket directly available inside the workshop.
+
+.. note::
+
+   See the :ref:`explanation <exp_desktop_interface>` for more details.
 
 
 .. _ref_gpu_interface:
@@ -244,6 +253,10 @@ A GPU plug in the definition must specify the plug name and the interface:
 
 This makes the host's GPUs directly available inside the workshop
 via the GPU pass-through mechanism.
+
+.. note::
+
+   See the :ref:`explanation <exp_gpu_interface>` for more details.
 
 
 .. _ref_mount_interface:
@@ -286,6 +299,10 @@ to be mounted to another directory within the workshop.
 The :envvar:`$SDK` variable can be used to refer to the SDK installation path
 inside the workshop.
 
+.. note::
+
+   See the :ref:`explanation <exp_mount_interface>` for more details.
+
 
 .. _ref_ssh_interface:
 
@@ -305,6 +322,10 @@ An SSH plug in the definition must specify the plug name and the interface:
 
 This proxies the host's SSH keys and configuration inside the workshop
 via a Unix domain socket.
+
+.. note::
+
+   See the :ref:`explanation <exp_ssh_interface>` for more details.
 
 
 .. _ref_hooks:
