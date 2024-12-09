@@ -260,21 +260,6 @@ with extra details such as the :ref:`mounts <tut_interfaces>`;
 you can ignore these for now.
 
 After launch, |ws_markup| starts tracking the project directory.
-To see how it works, move the directory:
-
-.. code-block:: console
-
-   $ cd ..
-   $ mv hello-workshop hi-workshop
-   $ workshop list --global
-
-     Project                Workshop   Status  Notes
-     ~/hi-workshop          golang     Ready   -
-
-   $ mv hi-workshop hello-workshop
-   $ cd hello-workshop
-
-
 The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
