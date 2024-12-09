@@ -398,28 +398,16 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 		return nil, false, err
 	}
 
-	// no project found, try to create one, note there is no ID yet at this stage
-	var project = workshop.Project{Path: projectDir}
-	workshops, err := project.ReadWorkshops()
-	if err != nil {
-		return nil, false, err
-	}
-
-	// no workshops found in the directory provided
-	// it means we won't be creating a project
-	if len(workshops) == 0 {
+	// No project found. If there is at least one workshop definition,
+	// we consider the path as a project and create or load its project id.
+	if !workshop.IsProject(projectDir) {
 		return nil, false, workshop.ErrNotProject
 	}
 
+	project := workshop.Project{Path: projectDir}
 	project.ProjectId, err = workshop.ProjectId(projectDir)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, false, err
-	}
-
-	// No .workshop.lock in the project dir yet
 	if errors.Is(err, os.ErrNotExist) {
-		// If there is at least one workshop, we consider the path
-		// as a project and create a new project id
+		// No .workshop.lock in the project dir yet,
 		project.ProjectId, err = workshop.NewProjectId()
 		if err != nil {
 			return nil, false, err
@@ -430,6 +418,8 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 		if err = project.CreateProjectLock(); err != nil {
 			return nil, false, err
 		}
+	} else if err != nil {
+		return nil, false, err
 	}
 
 	// Now, add the project ID to the tracking map

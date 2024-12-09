@@ -35,9 +35,9 @@ func (m *WorkshopList) TestHomeDirectoryPathContraction(c *C) {
 	*/
 }
 
-var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-file"]}, {"name":"as-1","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]}`
+var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}, {"name":"as-1","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}],"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
 
-var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}]}`
+var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}],"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
 
 func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}
@@ -64,8 +64,9 @@ func (m *WorkshopInfo) TestWorkshopList(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, `Project        Workshop  Status  Notes
 /home/project  as-1      Ready   -
-/home/project  ws        Error   missing-file
+/home/project  ws        Error   missing-project
 `)
+	c.Check(n, check.Equals, 2)
 }
 
 func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
@@ -90,7 +91,7 @@ func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockWorkshopList2)
 		default:
-			c.Errorf("expected 2 calls, now on %d", n)
+			c.Errorf("expected 3 calls, now on %d", n)
 		}
 	})
 
@@ -99,9 +100,10 @@ func (m *WorkshopInfo) TestWorkshopListGlobal(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, `Project          Workshop  Status  Notes
 /home/project-1  as-1      Ready   -
-/home/project-1  ws        Error   missing-file
+/home/project-1  ws        Error   missing-project
 /home/project-2  ws        Ready   -
 `)
+	c.Check(n, check.Equals, 3)
 }
 
 func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
@@ -115,18 +117,8 @@ func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := `{"type": "sync", "result": []}`
 			fmt.Fprintln(w, r)
-		case 2:
-			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, "/v1/projects/1/workshops")
-			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopList)
-		case 3:
-			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, "/v1/projects/2/workshops")
-			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopList2)
 		default:
-			c.Errorf("expected 2 calls, now on %d", n)
+			c.Errorf("expected 1 call, now on %d", n)
 		}
 	})
 
@@ -134,4 +126,5 @@ func (m *WorkshopInfo) TestWorkshopListGlobalEmpty(c *check.C) {
 	err := cmd.runList()
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, ``)
+	c.Check(n, check.Equals, 1)
 }

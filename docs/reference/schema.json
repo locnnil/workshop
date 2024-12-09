@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://canonical.com/workshop.name.yaml",
+  "$id": "https://canonical.com/workshop.yaml",
   "title": "Workshop",
   "description": "Workshop definition.",
   "type": "object",
@@ -8,8 +8,8 @@
     "name": {
       "type": "string",
       "description": "Name of the workshop.",
-      "pattern": "^[a-z_][a-z0-9_-]*$",
-      "errorMessage": "A workshop's name must start with a letter and can only include lowercase alphanumeric characters or underscores."
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens."
     },
     "base": {
       "type": "string",

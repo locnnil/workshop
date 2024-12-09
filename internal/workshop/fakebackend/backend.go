@@ -260,10 +260,10 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 	return wp.Workshop, nil
 }
 
-func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]string, []*workshop.Workshop, error) {
+func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, error) {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var workshops = make([]*workshop.Workshop, 0)
@@ -271,7 +271,7 @@ func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]string, [
 		ws, _ := f.Workshop(ctx, i.Name)
 		workshops = append(workshops, ws)
 	}
-	return nil, workshops, nil
+	return workshops, nil
 }
 
 func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter workshop.WorkshopConfigFilter) ([]*workshop.Workshop, error) {

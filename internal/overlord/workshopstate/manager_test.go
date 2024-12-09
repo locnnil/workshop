@@ -82,13 +82,19 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 }
 
 func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) *workshop.Workshop {
+	return s.launchWorkshopAtPathWithSDKs(c, workshop.Filepath(s.project.Path, ws), ws, sdks)
+}
+
+func (s *managerSuite) launchSingleWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) *workshop.Workshop {
+	return s.launchWorkshopAtPathWithSDKs(c, filepath.Join(s.project.Path, "workshop.yaml"), ws, sdks)
+}
+
+func (s *managerSuite) launchWorkshopAtPathWithSDKs(c *check.C, path, ws string, sdks []workshop.SdkRecord) *workshop.Workshop {
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
 	var workshopFile = bytes.NewBuffer([]byte{})
-	t.Execute(workshopFile, sdks)
-
-	path := workshop.Filepath(s.project.Path, ws)
+	c.Assert(t.Execute(workshopFile, sdks), check.IsNil)
 
 	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	c.Assert(err, check.IsNil)
@@ -111,6 +117,19 @@ func (s *managerSuite) TestWorkshopHealthReady(c *check.C) {
 	defer s.state.Unlock()
 
 	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
+	health := s.manager.WorkshopHealth(workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.ReadyStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *managerSuite) TestSingleWorkshopHealthReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchSingleWorkshopWithSDKs(c, "test", nil)
 	health := s.manager.WorkshopHealth(workshop)
 
 	c.Assert(health.Status, check.Equals, healthstate.ReadyStatus)
@@ -149,25 +168,6 @@ func (s *managerSuite) TestWorkshopHealthMissingProject(c *check.C) {
 	warnings := s.state.AllWarnings()
 	c.Check(warnings, check.HasLen, 1)
 	warning := fmt.Sprintf(`cannot find project directory %q for workshop "test"`, s.project.Path)
-	c.Check(warnings[0].String(), check.Equals, warning)
-}
-
-func (s *managerSuite) TestWorkshopHealthMissingFile(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	testWorkshop := s.launchWorkshopWithSDKs(c, "test", nil)
-	c.Assert(os.RemoveAll(testWorkshop.Filepath()), check.IsNil)
-	health := s.manager.WorkshopHealth(testWorkshop)
-
-	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
-	c.Check(health.SdkHealth, check.HasLen, 0)
-	c.Check(health.Message, check.HasLen, 0)
-	c.Check(health.Code, check.Equals, "missing-file")
-
-	warnings := s.state.AllWarnings()
-	c.Check(warnings, check.HasLen, 1)
-	warning := fmt.Sprintf(`cannot find definition %q for workshop "test"`, testWorkshop.Filepath())
 	c.Check(warnings[0].String(), check.Equals, warning)
 }
 

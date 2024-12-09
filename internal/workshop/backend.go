@@ -141,7 +141,7 @@ type Backend interface {
 	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
 
 	// Returns a list of workshops for the project in context.
-	ProjectWorkshops(ctx context.Context) ([]string, []*Workshop, error)
+	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
 	// Launch a barebone workshop instance using the base provided.
 	LaunchWorkshop(ctx context.Context, file *File) error

@@ -17,24 +17,6 @@ execute: |
   workshop_exec --project "$PROJECT" list
   test -f "$PROJECT"/.workshop.lock
 
-  echo "Check for warnings if there is no workshop file"
-  mv "$PROJECT"/.workshop/workshop.ws.yaml "$PROJECT"/.workshop/workshop.ws.yaml.bak
-  workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
-  mv "$PROJECT"/.workshop/workshop.ws.yaml.bak "$PROJECT"/.workshop/workshop.ws.yaml
-  # TODO: it might be better if the warning went away on its own
-  workshop_exec --project "$PROJECT" list | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
-  workshop_exec warnings |
-    tr -d '\n' | # remove newlines
-    sed -e 's,\s\+, ,g' | # rename any extra spaces
-    MATCH 'cannot find definition ".*/project/.workshop/workshop.ws.yaml" for workshop "ws"'
-  workshop_exec --project "$PROJECT" list | NOMATCH 'new warning'
-
-  echo "Check report a workshop state as Error if there is no workshop file"
-  mv "$PROJECT"/.workshop/workshop.ws.yaml "$PROJECT"/.workshop/workshop.ws.yaml.bak
-  workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Error[[:space:]]+missing-file$"
-  mv "$PROJECT"/.workshop/workshop.ws.yaml.bak "$PROJECT"/.workshop/workshop.ws.yaml
-  workshop_exec --project "$PROJECT" list | MATCH "^$PROJECT[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
-  
   workshop_exec remove --project "$PROJECT" ws
   
   echo "Check recreating project dir with the same name does not cause conflicts"
@@ -47,9 +29,26 @@ execute: |
   cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project/  ws
   workshop_exec list --project $(pwd)/new-project | MATCH "^$(pwd)/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check for warnings when workshop files conflict"
+  cp new-project/.workshop/ws.yaml new-project/.workshop.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  rm new-project/.workshop/ws.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH 'multiple workshops found, but ".*/new-project/.workshop.yaml" not in ".workshop" subdirectory'
+  workshop_exec list --project new-project | NOMATCH 'new warning'
+  workshop_exec okay
+
+  echo "Check for warnings when workshop file is unreadable"
+  rm new-project/.workshop.yaml
+  touch new-project/.workshop.yaml
+  workshop_exec list --project new-project | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec warnings |
+    tr -d '\n' | # remove newlines
+    sed -e 's,\s\+, ,g' | # rename any extra spaces
+    MATCH "invalid file \".*/new-project/.workshop.yaml\": a workshop's name must: \\(1\\) start with a letter, \\(2\\) only include digits, lowercase letters, and hyphens"
+
   workshop_exec remove --project $(pwd)/new-project ws
-
-
-  
-  
-  

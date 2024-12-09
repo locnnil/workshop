@@ -45,6 +45,14 @@ func (f *workshopFile) createWFile(c *check.C, name, yaml string, checkArgs ...i
 	c.Assert(err, check.IsNil, checkArgs...)
 }
 
+func (f *workshopFile) createSingleWFile(c *check.C, filename, yaml string, checkArgs ...interface{}) {
+	err := os.MkdirAll(f.project.Path, os.ModePerm)
+	c.Assert(err, check.IsNil, checkArgs...)
+
+	err = os.WriteFile(filepath.Join(f.project.Path, filename), []byte(yaml), 0644)
+	c.Assert(err, check.IsNil, checkArgs...)
+}
+
 func (f *workshopFile) TestWorkshopFileParse(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
@@ -103,6 +111,61 @@ sdks:
 `)
 }
 
+func (f *workshopFile) TestSingleWorkshopFile(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+`
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	file, err := f.project.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
+	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@20.04"})
+}
+
+func (f *workshopFile) TestSingleWorkshopFileAmbiguous(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+`
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	f.createSingleWFile(c, ".workshop.yaml", yaml)
+	file, err := f.project.Workshop("xbert-gpu")
+	c.Assert(file, check.IsNil)
+	path := filepath.Join(f.project.Path, "workshop.yaml")
+	message := fmt.Sprintf(`ambiguous file %q \(directory also contains ".workshop.yaml"\)`, path)
+	c.Assert(err, check.ErrorMatches, message)
+}
+
+func (f *workshopFile) TestSingleWorkshopFileWrongName(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+`
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	file, err := f.project.Workshop("xbert")
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.ErrorMatches, `workshop "xbert" not found \(only found "xbert-gpu"\)`)
+}
+
+func (f *workshopFile) TestSingleWorkshopFileError(c *check.C) {
+	path := filepath.Join(f.project.Path, "workshop.yaml")
+	c.Assert(os.Mkdir(path, os.ModePerm), check.IsNil)
+	file, err := f.project.Workshop("xbert-gpu")
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.ErrorMatches, ".*is a directory")
+}
+
+func (f *workshopFile) TestWorkshopFileDuplicate(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@22.04
+`
+	f.createSingleWFile(c, "workshop.yaml", yaml)
+	f.createWFile(c, "xbert-gpu", yaml)
+
+	file, err := f.project.Workshop("xbert-gpu")
+	c.Assert(file, check.IsNil)
+	path := filepath.Join(f.project.Path, "workshop.yaml")
+	message := fmt.Sprintf(`multiple workshops found, but %q not in ".workshop" subdirectory`, path)
+	c.Assert(err, check.ErrorMatches, message)
+}
+
 func (f *workshopFile) TestWorkshopNamesDifferent(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
@@ -110,7 +173,7 @@ base: ubuntu@20.04
 	f.createWFile(c, "xbert", yaml)
 	file, err := f.project.Workshop("xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named "workshop.xbert-gpu.yaml" \(now: "workshop.xbert.yaml"\)`)
+	c.Assert(err, check.ErrorMatches, `"xbert-gpu" workshop file must be named "xbert-gpu.yaml" \(now: "xbert.yaml"\)`)
 }
 
 func (f *workshopFile) TestWorkshopInvalidName(c *check.C) {
@@ -120,7 +183,7 @@ base: ubuntu@20.04
 	f.createWFile(c, "99-xbert", yaml)
 	file, err := f.project.Workshop("99-xbert")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) include only lowercase alphanumeric characters or underscore\(s\)`)
+	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) only include digits, lowercase letters, and hyphens`)
 }
 
 func (f *workshopFile) TestWorkshopUnsupportedBase(c *check.C) {

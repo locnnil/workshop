@@ -9,7 +9,7 @@ workshopctl
 !workshop/
 .spread-reuse.*
 .workshop.lock
-.workshop/
+/.workshop/
 *.snap
 cover.out
 

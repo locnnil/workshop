@@ -114,8 +114,8 @@ execute: |
   EOF
 
   echo "Check refreshing to an empty workshop definition"
-  rm .workshop/workshop.ws-desktop.yaml
-  mv .workshop/workshop.ws-desktop-empty.yaml .workshop/workshop.ws-desktop.yaml
+  rm .workshop/ws-desktop.yaml
+  mv .workshop/ws-desktop-empty.yaml .workshop/ws-desktop.yaml
   workshop_exec refresh ws-desktop
 
   echo "Check that the desktop plug is removed from the workshop"

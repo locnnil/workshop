@@ -45,6 +45,18 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
+	file, err := w.maybeSingleWorkshop()
+	if err != nil {
+		return nil, err
+	}
+	if file != nil {
+		if file.Name != workshop {
+			return nil, fmt.Errorf("workshop %q not found (only found %q)",
+				workshop, file.Name)
+		}
+		return file, nil
+	}
+
 	path := Filepath(w.Path, workshop)
 
 	buf, err := os.ReadFile(path)
@@ -55,23 +67,31 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 		return nil, err
 	}
 
-	file, err := readWorkshop(buf)
+	file, err = readWorkshop(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	fname := filepath.Base(path)
-	if Filename(file.Name) != fname {
-		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)", file.Name, Filename(file.Name), fname)
+	if file.Name != workshop {
+		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)",
+			file.Name, Filename(file.Name), filepath.Base(path))
 	}
 	return file, nil
 }
 
 func (w *Project) ReadWorkshops() ([]string, error) {
+	file, err := w.maybeSingleWorkshop()
+	if err != nil {
+		return nil, err
+	}
+	if file != nil {
+		return []string{file.Name}, nil
+	}
+
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
 	// single way of naming workshop files avoids unneccesary inconsistencies.
-	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "workshop.*.yaml"))
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +106,75 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		var name = strings.TrimSuffix(strings.TrimPrefix(info.Name(), "workshop."), ".yaml")
+		var name = strings.TrimSuffix(info.Name(), ".yaml")
 		workshops = append(workshops, name)
 	}
 	return workshops, nil
+}
+
+// Read single workshop file if it exists and is unique.
+func (w *Project) maybeSingleWorkshop() (*File, error) {
+	var path string
+	var contents []byte
+
+	for _, name := range Filenames {
+		buf, err := os.ReadFile(filepath.Join(w.Path, name))
+		if err == nil {
+			if path != "" {
+				return nil, fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
+			}
+
+			path = filepath.Join(w.Path, name)
+			contents = buf
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
+	if path == "" {
+		return nil, nil
+	}
+
+	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	} else if len(files) > 0 {
+		return nil, fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
+	}
+
+	file, err := readWorkshop(contents)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file %q: %w", path, err)
+	}
+	return file, nil
+}
+
+// A directory is a project if it has at least one workshop definition.
+func IsProject(dir string) bool {
+	files, err := filepath.Glob(filepath.Join(dir, Directory, "*.yaml"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			logger.Noticef("On IsProject: %v", err)
+		}
+		files = nil
+	}
+	for _, name := range Filenames {
+		files = append(files, filepath.Join(dir, name))
+	}
+
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				logger.Noticef("On IsProject: %v", err)
+			}
+		} else if info.Mode().IsRegular() {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *Project) UpdateProjectLock() error {

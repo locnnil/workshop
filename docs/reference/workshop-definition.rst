@@ -6,16 +6,17 @@ Workshop definition
 Filename convention
 -------------------
 
-The path of the workshop definition
-file must have the following format: :file:`workshop.<NAME>.yaml`.
+A project which defines a single workshop can store a definition file
+named :file:`workshop.yaml` or :file:`.workshop.yaml`
+in the project directory.
 
-.. tip:: Workshop definitions should be located in the :file:`.workshop` folder.
+When multiple workshops are defined,
+their definition files must be stored in the :file:`.workshop/` subdirectory.
+The workshop name must also match the file name
+(without the :samp:`.yaml` extension).
 
-
-Here, :samp:`<NAME>` is a placeholder that stands for the actual name
-of the workshop itself;
-it must start with a lowercase letter
-and may include only lowercase letters, digits, hyphens or underscores.
+Workshop names start with a lowercase letter
+and may include only lowercase letters, digits or hyphens.
 
 
 Description
@@ -37,8 +38,9 @@ and includes a number of mandatory and optional keys:
      - string
      - Workshop's name, used to reference the workshop itself.
 
-       Must be the same as :samp:`<NAME>`
-       in the workshop definition's filename.
+       For workshops defined in the :file:`.workshop/` subdirectory,
+       the definition file must have the same name
+       (followed by :samp:`.yaml`).
 
    * - :samp:`base` (required)
      - string
@@ -145,7 +147,7 @@ with a single :samp:`go` SDK
 from the :samp:`latest/stable` channel:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.golang.yaml
+   :caption: .workshop/golang.yaml
 
    name: golang
    base: ubuntu@22.04
@@ -160,7 +162,7 @@ the :samp:`data` plug defined by the :samp:`dev-tunnel` SDK
 is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.go-dev.yaml
+   :caption: .workshop/go-dev.yaml
 
    name: go-dev
    base: ubuntu@22.04
@@ -185,7 +187,7 @@ and two connections:
   to the pre-existing :samp:`cuda:libs`.
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.digits-cuda.yaml
+   :caption: .workshop/digits-cuda.yaml
 
    base: ubuntu@22.04
    name: digits-cuda

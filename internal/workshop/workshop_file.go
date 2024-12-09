@@ -18,14 +18,15 @@ var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 	sdkBlocklist   = []string{"agent"}
 
-	workshopName = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	workshopName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 
 	Directory = ".workshop"
+	Filenames = []string{"workshop.yaml", ".workshop.yaml"}
 )
 
 func Filename(name string) string {
-	return fmt.Sprintf("workshop.%s.yaml", name)
+	return fmt.Sprintf("%s.yaml", name)
 }
 
 func Filepath(project, name string) string {
@@ -157,7 +158,7 @@ func readWorkshop(buf []byte) (*File, error) {
 	})
 
 	if !workshopName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) include only lowercase alphanumeric characters or underscore(s)")
+		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens")
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {

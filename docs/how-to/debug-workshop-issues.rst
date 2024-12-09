@@ -17,7 +17,7 @@ which uses an unstable SDK
 from the :samp:`latest/edge` channel:
 
 .. code-block:: yaml
-   :caption: .workshop/workshop.golang-volatile.yaml
+   :caption: workshop.yaml
 
    name: golang-volatile
    base: ubuntu@22.04

@@ -48,7 +48,7 @@ execute: |
   check_original_binding
 
   echo "Check a plug maybe unbound"
-  cat .workshop/workshop.ws-bind.yaml | yq '.sdks["test-sdk-mount"].plugs = ~' | sponge .workshop/workshop.ws-bind.yaml
+  cat workshop.yaml | yq '.sdks["test-sdk-mount"].plugs = ~' | sponge workshop.yaml
   workshop_exec refresh ws-bind
   workshop_exec connections ws-bind > conns.log
   MATCH "mount      ws-bind/test-sdk-mount:two                 :mount                       -" < conns.log

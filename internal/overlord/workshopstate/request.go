@@ -283,7 +283,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		}
 	}
 
-	_, workshops, err := w.Workshops(ctx, projectId)
+	workshops, err := w.Workshops(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}

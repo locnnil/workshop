@@ -49,7 +49,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	err = task.Get("workshop-base", &base)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
+		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
@@ -84,7 +84,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	st.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration is not found (task ID: %s)", w, task.ID())
+		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
 	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
