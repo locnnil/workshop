@@ -32,7 +32,7 @@ see the
 
 
 Install |ws_markup|
-------------------------
+-------------------
 
 Check the prerequisites,
 build and install |ws_markup|,
@@ -49,7 +49,7 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`
+First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
 and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
