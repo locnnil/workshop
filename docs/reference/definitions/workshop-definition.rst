@@ -1,4 +1,4 @@
-.. _ref_workshop_def:
+.. _ref_workshop_definition:
 
 Workshop definition
 ===================
@@ -19,8 +19,8 @@ Workshop names start with a lowercase letter
 and may include only lowercase letters, digits or hyphens.
 
 
-Description
------------
+Structure
+---------
 
 The definition in the file is written in `YAML <https://yaml.org/>`__
 and includes a number of mandatory and optional keys:
@@ -217,12 +217,13 @@ See also
 
 Explanation:
 
-- :ref:`exp_sdk`
 - :ref:`exp_base`
+- :ref:`exp_sdk`
 - :ref:`exp_system_sdk`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:
 
+- :ref:`ref_sdk_definition`
 - :ref:`ref_workshop_info`

@@ -1,4 +1,4 @@
-.. _use_sdkcraft:
+.. _how_use_sdkcraft:
 
 How to use SDKcraft
 ===================

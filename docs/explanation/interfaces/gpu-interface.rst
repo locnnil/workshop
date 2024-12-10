@@ -40,7 +40,7 @@ that multiple GPU interface plugs can access.
 
 When the SDK is installed at run-time during launch and refresh operations,
 |ws_markup| checks that the plug targeting the slot
-passes :ref:`validation <exp_interface_connections>`;
+passes :ref:`validation <exp_interfaces_validation>`;
 if it does,
 it can be connected.
 
@@ -50,7 +50,7 @@ Connection
 
 The interface is connected automatically at launch or refresh,
 provided that the plug can be matched to the slot by its name
-or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
+or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_definition>`,
 both subject to |ws_markup|'s
 :ref:`validation rules <exp_interfaces_validation>`.
 
@@ -93,7 +93,7 @@ Explanation:
 - :ref:`exp_interfaces`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:

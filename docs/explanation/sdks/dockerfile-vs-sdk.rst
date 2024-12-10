@@ -16,7 +16,7 @@ maps to a workshop and its SDKs.
 .. note::
 
    We assume you're familiar
-   with |sdk_markup| basics covered in the :ref:`how-to guide <use_sdkcraft>`
+   with |sdk_markup| basics covered in the :ref:`how-to guide <how_use_sdkcraft>`
    and have an understanding of Docker.
 
 
@@ -224,7 +224,7 @@ it comes down to this (or similar) instruction:
 For |ws_markup| and |sdk_markup|,
 this translates to :samp:`ubuntu@24.04`
 in the :ref:`SDK definition <exp_sdk_definition>`
-and the :ref:`workshop definition <ref_workshop_def>`.
+and the :ref:`workshop definition <ref_workshop_definition>`.
 
 
 .. _exp_docker_project:

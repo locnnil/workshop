@@ -3,44 +3,45 @@
 How-to guides
 =============
 
-These step-by-step guides
-cover specific needs and scenarios
-that arise when you use |ws_markup|.
-
-
-Build SDKs
-----------
-
-To build SDKs, you use `SDKcraft`_:
-a tool that packages and publishes SDKs for |ws_markup|.
-
-.. toctree::
-   :maxdepth: 1
-
-   Build SDKs with SDKcraft <use-sdkcraft>
+These articles
+cover the needs and corner cases
+that arise when you use |ws_markup| and |sdk_markup|.
 
 
 Use workshops
 -------------
 
-These articles address daily |ws_markup| scenarios.
+These topics address daily |ws_markup|-related scenarios,
+such as debugging individual workshops or the entire |ws_markup| installation,
+moving projects within the file system or using |ws_markup| with Git:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   Debug issues in workshops <debug-workshop-issues>
-   Move projects around <moving-projects>
-   Troubleshoot the installation <troubleshoot>
-   Use workshops with Git <git-workshop>
+   Use workshops <use-workshops/index>
 
 
-Real-life examples
-------------------
+Study examples
+--------------
 
-These topics present a case study for `ROS2 <https://www.ros.org/>`_,
+This section presents a case study for `ROS2 <https://www.ros.org/>`_,
 a popular robotics-oriented framework.
+The articles discuss the design of a ROS2-oriented SDK and its practical usage:
 
 .. toctree::
    :maxdepth: 2
 
    ros2/index
+
+
+Build SDKs
+----------
+
+To create SDKs for |ws_markup|, SDK publishers use |sdk_markup|.
+This tool is installed separately and accepts an SDK definition
+to build and publish the SDK in the SDK Store (credentials provided on request):
+
+.. toctree::
+   :maxdepth: 1
+
+   Build SDKs with SDKcraft <use-sdkcraft>

@@ -208,7 +208,7 @@ Explanation:
 - :ref:`exp_plugs_slots`
 - :ref:`exp_projects`
 - :ref:`exp_sdk`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:

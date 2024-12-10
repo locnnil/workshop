@@ -7,23 +7,23 @@ SDKs use the :program:`workshopctl` tool when reporting to the workshop;
 to invoke a subcommand, add it to your :ref:`SDK hook <ref_sdk_hooks>`.
 
 
-:samp:`workshopctl set-health`
-------------------------------
+workshopctl set-health
+----------------------
 
 This subcommand reports the health of the SDK.
 It is essential for the :samp:`check-health` hook
 that runs after launch or refresh operations in a workshop:
 
-.. code-block:: shell
+.. code-block:: console
 
-   workshopctl set-health [--code=<ERROR CODE>] <STATUS> [<MESSAGE>]
+   $ workshopctl set-health [--code=<ERROR CODE>] <STATUS> [<MESSAGE>]
 
 
 Example (note only the message is quoted):
 
-.. code-block:: shell
+.. code-block:: console
 
-   workshopctl set-health --code=missing-cuda error "CUDA libraries not found"
+   $ workshopctl set-health --code=missing-cuda error "CUDA libraries not found"
 
 
 .. list-table::
@@ -61,3 +61,4 @@ Explanation:
 Reference:
 
 - :ref:`ref_sdk_hooks`
+- :ref:`ref_workshop_cli`

@@ -3,15 +3,19 @@
 Explanation
 ===========
 
-These in-depth articles explain various |ws_markup| concepts
-and how they fit together.
+These explanatory articles cover the main building blocks of |ws_markup|.
+To start using |ws_markup|,
+it is important to understand how these concepts fit together.
 
 
 Workshops and projects
 ----------------------
 
-The core set of |ws_markup|-related concepts
-such as projects and workshops:
+A *workshop* is a container that enables consistent environment builds.
+It is tied to a definition that lists SDKs and is stored as a `.yaml` file
+under a project directory.
+A *project* is the working directory for tasks like coding, running models,
+and managing repositories.
 
 .. toctree::
    :maxdepth: 2
@@ -23,7 +27,13 @@ such as projects and workshops:
 SDKs
 ----
 
-The topics that cover the role of SDKs in |ws_markup|:
+With |ws_markup|, you can package and publish software dependencies
+as isolated *SDKs* listed in a workshop definition,
+instead of managing them system-wide or through container images.
+SDKs encapsulate all required functionality,
+keeping installations clean and limiting access to system-level capabilities.
+Publishers handle installation and updates for SDKs,
+freeing users from maintaining complex image definitions or configurations.
 
 .. toctree::
    :maxdepth: 2
@@ -35,7 +45,10 @@ The topics that cover the role of SDKs in |ws_markup|:
 Interfaces
 ----------
 
-Details of working with various interface types:
+Interface connections are a mechanism for communication and resource sharing.
+It is an integral part of workshop confinement,
+ensuring that each workshop operates in its own isolated environment,
+while still allowing controlled interactions among the SDKs and with the host.
 
 .. toctree::
    :maxdepth: 2
@@ -47,63 +60,10 @@ Details of working with various interface types:
 Security considerations
 -----------------------
 
-Important security aspects of |ws_markup|:
+This overview discusses the most important security aspects of |ws_markup|,
+such as isolation, privileges, relevant risks and interface mechanics.
 
 .. toctree::
    :maxdepth: 1
 
    Security <../security>
-
-
-Summary
--------
-
-Projects, workshops and SDKs
-are the main building blocks of |ws_markup|.
-To start using |ws_markup|,
-it is important to understand how these concepts fit together.
-
-You can think of a *project* as your working directory,
-and do everything you would usually do there:
-create and populate repositories, write and build code, run models, and so on.
-The difference starts with the software dependencies
-that you used to install as system-wide packages, container images,
-or in myriad other ways.
-
-Instead, they are packed and published as |ws_markup|-ready,
-isolated *SDKs* that you list while you define a *workshop*.
-The workshop definition is a :file:`.yaml` file in the :file:`.workshop`
-directory, and the workshop itself is the container built according to this
-definition.
-
-To clear up a few points of confusion straight away:
-
-- A *workshop* is a container tied to a definition and a project;
-  not to be confused with |ws_markup| itself.
-
-- Launching an identical definition from two different projects
-  creates two separate workshops.
-
-- Two workshops in a project share the same project directory,
-  mapped inside both as :file:`/project/`.
-
-A single workshop always points to a project,
-and a project can have multiple workshops pointing to it,
-with each workshop containing multiple SDKs.
-What do *you* get out of this multiplicity, though?
-
-Firstly, |ws_markup| is transactional in nature;
-you don't have to track down leftover files and libraries all over your system
-after you've uninstalled a package that turned out to be too unstable.
-Even if an SDK drops something unexpected on your drive,
-it's contained within the workshop.
-|ws_markup| aims to encapsulate every piece of functionality you need,
-keeping things clean and tidy.
-
-Next, it's portable;
-imagine sending a compact definition of your project environment to a colleague,
-who can rebuild it with exactly the same dependency versions you used.
-Better still, it's done without any manual, high-maintenance image definitions
-or configurations;
-all the work of keeping the SDKs in your workshop operational is done
-by the people who are actually responsible for them: the publishers.

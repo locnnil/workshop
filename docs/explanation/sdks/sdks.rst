@@ -115,11 +115,11 @@ Plugs and slots
 ~~~~~~~~~~~~~~~
 
 To make use of these interfaces,
-SDKs and :ref:`workshops <exp_workshop_def_connections>` define *slots*.
+SDKs and :ref:`workshops <exp_workshop_definition_connections>` define *slots*.
 For example, a :ref:`mount interface <exp_mount_interface>` slot
 creates a source directory to be mounted inside the workshop via a plug.
 
-Further, SDKs and :ref:`workshops <exp_workshop_def_connections>` define *plugs*
+Further, SDKs and :ref:`workshops <exp_workshop_definition_connections>` define *plugs*
 to connect to a slot of a certain interface type.
 For example, a :ref:`mount interface <exp_mount_interface>` plug
 mounts the slot to a target directory inside the workshop.
@@ -136,7 +136,7 @@ Connections can be established:
 - Manually:
   By running :command:`workshop connect` after the workshop has started,
   or by listing connections in the
-  :ref:`workshop definition <exp_workshop_def_connections>`
+  :ref:`workshop definition <exp_workshop_definition_connections>`
   and running :command:`workshop refresh`.
 
 
@@ -260,7 +260,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interface_connections`
+- :ref:`exp_interface`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 

@@ -56,7 +56,7 @@ Status diagrams in the `See also`_ section below
 provide more details of valid transitions.
 
 
-.. _exp_workshop_def:
+.. _exp_workshop_definition:
 
 Workshop definition
 -------------------
@@ -204,7 +204,7 @@ Here, both plugs are listed as :samp:`bind.2`,
 pointing to :samp:`tensorflow:datasets` in the second line.
 
 
-.. _exp_workshop_def_connections:
+.. _exp_workshop_definition_connections:
 
 Slots, plugs, connections
 -------------------------
@@ -271,5 +271,5 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_connections`
-- :ref:`ref_workshop_def`
+- :ref:`ref_workshop_definition`
 - :ref:`ref_workshop_status`

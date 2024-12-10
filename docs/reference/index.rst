@@ -8,28 +8,42 @@ provide technical background
 that may be required to use |ws_markup|.
 
 
-Command-line interface
-----------------------
 
-A complete tour of :program:`workshop`'s command-line capabilities:
+Command-line interfaces
+-----------------------
+
+These articles share the usage details of |ws_markup|'s command-line tools:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   cli/index
+   CLI <cli/index>
 
 
-SDK and workshop definitions
-----------------------------
+Definition formats
+------------------
 
-Details of everything that goes into defining a workshop or an SDK
-and maintaining it at run-time:
+Workshops and SDKs are defined in YAML and share a number of basic elements
+such as plugs, base images and so on.
+However, both definition types have different purposes and structure:
+
+.. toctree::
+   :maxdepth: 2
+
+   Definitions <definitions/index>
+
+
+Structure and behaviour
+-----------------------
+
+These topics provide detailed guidance on various aspects
+of operating an SDK or a workshop at run-time.
+Workshops are essentially made of SDKs;
+to understand how a workshop runs and the status it has,
+it's crucial to know how SDKs are structured and operated:
 
 .. toctree::
    :maxdepth: 1
 
    sdks
-   sdk-hooks
-   workshop-definition
    workshop-status
-   workshopctl

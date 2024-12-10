@@ -94,7 +94,7 @@ Explanation:
 - :ref:`exp_interfaces`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:

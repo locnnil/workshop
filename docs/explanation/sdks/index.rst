@@ -3,17 +3,18 @@
 SDKs
 ====
 
-These topics cover multiple aspects of using SDKs in |ws_markup|:
+These topics cover the many aspects of defining and using SDKs
+with |ws_markup| and |sdk_markup|:
 
 .. toctree::
    :maxdepth: 1
 
+   sdks
    Data storage and sharing <data-persistence-sharing>
    Dockerfiles versus SDKs <dockerfile-vs-sdk>
    Health reports <workshopctl>
    Hooks <hooks>
    Parts <parts>
-   sdks
 
 
 See also
@@ -21,12 +22,12 @@ See also
 
 Explanation:
 
-- :ref:`exp_interface_connections`
+- :ref:`exp_interface`
 - :ref:`exp_workshop`
 
 
 Reference:
 
-- :ref:`ref_cli`
-- :ref:`ref_workshop_def`
-- :ref:`ref_workshop_status`
+- :ref:`ref_sdk`
+- :ref:`ref_sdk_definition`
+- :ref:`ref_workshopctl`
