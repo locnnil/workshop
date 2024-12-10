@@ -4,7 +4,7 @@ ROS2: case study
 ================
 
 These topics present an end-to-end scenario
-of using |project_markup| with `ROS2 <https://www.ros.org/>`_,
+of using |ws_markup| with `ROS2 <https://www.ros.org/>`_,
 a popular robotics-oriented framework.
 
 .. toctree::

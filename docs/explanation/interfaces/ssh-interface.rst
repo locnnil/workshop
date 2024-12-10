@@ -36,11 +36,11 @@ SSH interface slot
 ------------------
 
 To let SDKs in a workshop access the host's SSH agent,
-:program:`Workshop` provides an SSH interface slot
+|ws_markup| provides an SSH interface slot
 that multiple SSH interface plugs can access.
 
 When the SDK is installed at run-time during launch and refresh operations,
-:program:`Workshop` checks that the plug targeting the slot
+|ws_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interface_connections>`;
 if it does,
 it can be connected.

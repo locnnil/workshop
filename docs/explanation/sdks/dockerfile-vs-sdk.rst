@@ -3,7 +3,7 @@
 How Dockerfiles compare to SDKs
 ===============================
 
-:program:`Workshop` and |project_markup| didn't occur in a vacuum;
+|ws_markup| didn't occur in a vacuum;
 there have been many attempts to provide developers with robust environments.
 A common approach is to use Docker
 to achieve repeatability, persistence, layering, and various other benefits
@@ -16,15 +16,15 @@ maps to a workshop and its SDKs.
 .. note::
 
    We assume you're familiar
-   with |project_markup| essentials covered in the :ref:`tutorial <tutorial>`
-   and have a basic understanding of Docker.
+   with |sdk_markup| basics covered in the :ref:`how-to guide <use_sdkcraft>`
+   and have an understanding of Docker.
 
 
 Feature discussion
 ------------------
 
 To begin with, it's perfectly reasonable to draw a few comparisons
-between Docker and the combination of |project_markup| and :program:`Workshop`.
+between Docker and the combination of |ws_markup| and |sdk_markup|.
 
 
 :spellexception:`(Im)mutability`
@@ -48,7 +48,7 @@ The expectations for their configuration are set by the image author
 but the actual parameters are provided by users at the author's guidance;
 the resulting manual process is error-prone and adds unnecessary overhead.
 
-|project_markup| and :program:`Workshop` reciprocate this
+|ws_markup| and |sdk_markup| reciprocate this
 with :ref:`mount interface <exp_mount_interface>` plugs
 that are akin to Docker volumes
 and the :command:`workshop remount` command
@@ -57,7 +57,7 @@ However, the user can't create arbitrary mounts;
 the choice is limited to what the SDKs offer.
 
 In turn, this implies that the mount logic
-in |project_markup| and :program:`Workshop`
+in |ws_markup| and |sdk_markup|
 is built into the SDK by its author,
 not implemented manually by the user;
 unless the user decides to intervene,
@@ -72,7 +72,7 @@ the Docker way of accessing various host resources
 can be notably inconsistent;
 for example, enabling GPU pass-through is visibly different from SSH forwarding.
 
-In contrast, |project_markup| and :program:`Workshop` unify these mechanisms
+In contrast, |ws_markup| and |sdk_markup| unify these mechanisms
 under the single concept of an :ref:`interface <exp_interfaces>`,
 providing a consistent way to uniformly manage host resource access.
 
@@ -88,7 +88,7 @@ their expressiveness makes them more diverse and semantically rich,
 allowing the layout of an SDK to be formalised in a modular way.
 If necessary, the layered approach
 can be mimicked using :ref:`SDK hooks <exp_sdk_hooks>`,
-although |project_markup| and :program:`Workshop` don't yet support layering.
+although |ws_markup| and |sdk_markup| don't yet support layering.
 
 
 Build commands
@@ -97,7 +97,7 @@ Build commands
 In Docker,
 build commands are typically bundled as :samp:`RUN` instructions.
 
-In |project_markup| SDKs,
+In |sdk_markup| SDKs,
 the :samp:`setup-base` :ref:`hook <exp_sdk_hooks>`
 is responsible for building the workshop,
 but other hooks add extra functionality with run-time events and health checks.
@@ -113,11 +113,11 @@ but a workshop is *managed* by the user, yet it relies on publisher-defined SDKs
 whose layout is beyond the user's reach.
 
 This means that some capabilities of Docker
-won't be available to a user of :program:`Workshop` alone,
-so the functionality is split between the user-oriented :program:`Workshop`
-and the publisher-focused |project_markup|.
+won't be available to a user of |ws_markup| alone,
+so the functionality is split between the user-oriented |ws_markup|
+and the publisher-focused |sdk_markup|.
 
-Important Dockerfile instructions are mapped to |project_markup| as follows:
+Important Dockerfile instructions are mapped to |sdk_markup| as follows:
 
 .. list-table::
    :header-rows: 1
@@ -221,9 +221,10 @@ it comes down to this (or similar) instruction:
    FROM ubuntu:noble
 
 
-For |project_markup| and :program:`Workshop`,
+For |ws_markup| and |sdk_markup|,
 this translates to :samp:`ubuntu@24.04`
-in the :ref:`SDK definition <exp_sdk_definition>` and the workshop definition.
+in the :ref:`SDK definition <exp_sdk_definition>`
+and the :ref:`workshop definition <ref_workshop_def>`.
 
 
 .. _exp_docker_project:
@@ -243,7 +244,7 @@ in the example is defined as a bind mount that eventually becomes this:
      # ...
 
 
-Its counterpart in :program:`Workshop` is the *project directory*
+Its counterpart in |ws_markup| is the *project directory*
 where the workshop was defined and launched;
 it is automatically mounted as :file:`/project/` when the workshop is started:
 
@@ -275,7 +276,7 @@ a complete :command:`docker run` command may look like this:
      ros2
 
 
-In |project_markup| and :program:`Workshop`,
+In |ws_markup| and |sdk_markup|,
 additional file system mounts are defined by the SDK author or the user
 using the :ref:`mount interface <exp_mount_interface>`:
 
@@ -298,7 +299,7 @@ this avoids the need for manual setup when starting the workshop:
 
 
 Again,
-|project_markup| and :program:`Workshop`
+|ws_markup| and |sdk_markup|
 have no direct counterpart to bind mounts;
 plugs are more similar to Docker volumes.
 Yet, the :command:`workshop remount` command
@@ -310,7 +311,7 @@ enables remounting existing plugs to new host directories:
 
 
 Thus,
-|project_markup| and :program:`Workshop`
+|ws_markup| and |sdk_markup|
 largely leave the design of mount points to the SDK author,
 allowing the user to rely on their default, well-defined behaviour
 with the extra option of adjusting them if necessary.

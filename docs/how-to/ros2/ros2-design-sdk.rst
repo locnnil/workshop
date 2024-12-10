@@ -12,7 +12,7 @@ is structured.
 
 .. note::
 
-   This guide assumes that you already have |project_markup| installed
+   This guide assumes that you already have |ws_markup| installed
    and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`jazzy` distribution;
    adapt these steps for other distributions as needed.
@@ -57,7 +57,7 @@ Let's review the less trivial sections:
        - The GPU plug provides GPU pass-through for the SDK.
 
 
-Summarily, the definition builds upon :program:`Workshop`'s capabilities,
+Summarily, the definition builds upon |ws_markup|'s capabilities,
 persisting the important reusable parts of the setup on the host
 and making its GPU capabilities directly available.
 
@@ -176,7 +176,7 @@ Update environment for ROS 2 and :program:`colcon`
 Adds lines to the :file:`.profile` and :file:`.bashrc` files
 to set up the ROS 2 environment and auto-completion for :program:`colcon`,
 ensuring they are loaded in every new shell session
-(:program:`Workshop` uses :program:`bash` by default).
+(|ws_markup| uses :program:`bash` by default).
 
 
 Configure :program:`colcon` defaults

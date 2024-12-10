@@ -219,13 +219,13 @@ of ``Spread``:
 How to run a local SDK Store
 ----------------------------
 
-To test SDKs with |project_markup| locally without publishing,
+To test SDKs with |ws_markup| locally without publishing,
 it is possible to run a local instance of SDK Store.
 This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake-gcs-server>`_.
 
 .. note::
 
-   This guide assumes you're familiar with `SDKcraft`_.
+   This guide assumes you're familiar with :ref:`SDKcraft <use_sdkcraft>`.
 
 
 Create the directory structure
@@ -283,11 +283,11 @@ Pass the top-level SDK store directory to this :command:`go run` command:
      time=1990-01-01T00:00:00.000+00.00 level=INFO msg="server started at http://0.0.0.0:8080"
 
 
-Use the local store with |project_markup|
+Use the local store with |ws_markup|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To override the URL that |project_markup| uses to connect to SDK Store,
-configure the |project_markup| snap
+To override the URL that |ws_markup| uses to connect to SDK Store,
+configure the |ws_markup| snap
 with the address from :option:`!-public-host` in the step above,
 adding :samp:`/storage/v1/` as the path:
 
@@ -297,7 +297,7 @@ adding :samp:`/storage/v1/` as the path:
    $ sudo snap restart workshop
 
 
-|project_markup| will now use the local store.
+|ws_markup| will now use the local store.
 
 
 Revert changes
@@ -310,7 +310,7 @@ To go back to the default store:
    $ sudo snap set workshop store.url=""
 
 
-|project_markup| will now use the default URL.
+|ws_markup| will now use the default URL.
 
 Documentation
 -------------

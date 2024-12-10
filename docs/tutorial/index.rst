@@ -6,9 +6,11 @@ Tutorial
 
 This is a practical introduction
 that takes you on a tour
-of the essential |project_markup| activities.
+of the essential |ws_markup| activities.
 
-You will practise all the major steps
+A :ref:`workshop <exp_workshop>` is an environment
+that maps your project to its contained dependencies.
+Here, you will practise all the major steps
 in the life cycle of a *workshop*,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`
 and :ref:`refreshing <tut_refresh>` it
@@ -16,44 +18,46 @@ to :ref:`executing commands <tut_exec>`,
 :ref:`shelling <tut_shell>` into the workshop
 and finally :ref:`removing <tut_remove>` it.
 The actions you're about to perform
-cover most of your daily needs with |project_markup|.
+cover most of your daily needs with |ws_markup|.
 
 If you need a more descriptive overview,
 refer to the
-:ref:`explanation <exp_index>`.
+:ref:`explanation <exp_index>` section.
 For comprehensive details, explore the
-:ref:`reference <ref_index>`.
+:ref:`reference <ref_index>` section.
 Finally,
 if you're looking for advanced practical steps,
 see the
 :ref:`how-to guides <howto_index>`.
 
 
-Install |project_markup|
+Install |ws_markup|
 ------------------------
 
 Check the prerequisites,
-build and install |project_markup|,
+build and install |ws_markup|,
 then ensure it runs.
 
 
 Prepare LXD
 ~~~~~~~~~~~
 
-|project_markup| relies on
+|ws_markup| relies on
 `LXD 5.21+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-First, install and
+First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`
+and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
-It's available as a snap:
 
 .. tabs::
    .. group-tab:: Using :program:`snap`
+
+      It's available as a snap:
 
       .. code-block:: console
 
@@ -90,13 +94,13 @@ is enabled and running:
 
 
 With LXD installed and initialised,
-proceed to installing |project_markup|.
+proceed to installing |ws_markup|.
 
 
 Install
 ~~~~~~~
 
-Download the latest snap from |project_markup|'s `Releases`_ page on GitHub
+Download the latest snap from |ws_markup|'s `Releases`_ page on GitHub
 and install it, using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
@@ -105,7 +109,7 @@ for example:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.3_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.5_amd64.snap
 
 
 The command installs two main components:
@@ -114,37 +118,41 @@ The command installs two main components:
 
 - The :program:`workshop`
   :ref:`CLI tool <exp_cli>`,
-  which uses this API to command |project_markup|
+  which uses this API to command |ws_markup|
 
 
-After installation, the daemon starts automatically.
-Use the CLI tool to talk to it.
+After installation, the daemon should automatically.
+Make sure it's running:
+
+.. code-block:: console
+
+   $ snap services workshop.workshopd
 
 
 Run
 ~~~
 
-Before proceeding further, ensure the CLI tool works:
+Before proceeding, ensure the CLI tool works:
 
 .. code-block:: console
 
    $ workshop --help
 
 
-This should display available commands and usage information.
-Now, with |project_markup| operational,
-the next step is to create your first workshop.
+This should display the available commands and usage information.
+Now that |ws_markup| is operational,
+you're ready to create your first workshop.
 
-If anything went wrong in this section, see the how-to guide on
-:ref:`troubleshooting the installation <how_troubleshoot>`.
+.. note::
+
+   If anything went wrong in this section, see this guide:
+   :ref:`how_troubleshoot`.
 
 
 Launch a workshop
 -----------------
 
-A :ref:`workshop <exp_workshop>` is an environment
-that maps your project to its contained dependencies;
-now you'll learn how to define, launch, start and stop it.
+Now you'll learn how to define, launch, start and stop a workshop.
 
 
 .. _tut_define:
@@ -152,7 +160,7 @@ now you'll learn how to define, launch, start and stop it.
 Define
 ~~~~~~
 
-First, you need to define the workshop.
+First, you need to define a workshop.
 A :ref:`definition <exp_workshop_def>` lists the components of a workshop
 to be instantiated at launch
 and is stored in your project directory.
@@ -187,9 +195,9 @@ create a workshop definition named :file:`workshop.yaml`:
 
 This definition adds an :ref:`SDK <exp_sdk>`,
 the basic functionality unit of a workshop
-that is built with :program:`SDKcraft`.
+that is :ref:`built with SDKcraft <use_sdkcraft>`.
 
-To confirm that |project_markup| sees the definition,
+To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
 in the project directory:
 
@@ -217,12 +225,13 @@ To get a workshop ready for use, you :ref:`launch <ref_workshop_launch>` it:
    $ workshop launch golang
 
 
-Now, the workshop is *Ready* to build, debug and run your code.
+Now, the workshop is *Ready*;
+you can start using it to build, debug and run your code.
 
 .. note::
 
-   If something goes wrong at this point, see the
-   :ref:`debugging guide <how_debug_issues_workshops>`.
+   If anything went wrong in this section, see this guide:
+   :ref:`how_debug_issues_workshops`.
 
 
 After launching, check the run-time :ref:`info <ref_workshop_info>`
@@ -248,30 +257,15 @@ to see what went into your workshop:
 
 The output looks like the :ref:`definition <tut_define>`
 with extra details such as the :ref:`mounts <tut_interfaces>`;
-skip these for now, though.
+you can ignore these for now.
 
-After launch, |project_markup| starts tracking the project directory.
-To see how it works, move the directory:
-
-.. code-block:: console
-
-   $ cd ..
-   $ mv hello-workshop hi-workshop
-   $ workshop list --global
-
-     Project                Workshop   Status  Notes
-     ~/hi-workshop          golang     Ready   -
-
-   $ mv hi-workshop hello-workshop
-   $ cd hello-workshop
-
-
+After launch, |ws_markup| starts tracking the project directory.
 The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
 Check out the recent :ref:`changes <ref_workshop_changes>`
-to see how |project_markup| keeps track of the project directory:
+to see how |ws_markup| keeps track of the project directory:
 
 .. code-block:: console
 
@@ -299,15 +293,21 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
      140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
 
 
-Here, the :ref:`project directory <tut_define>`
-is mounted to the workshop as :file:`/project/`;
-the workshop is *started*, or brought online;
-next, the :samp:`go` SDK from the definition
-is retrieved, installed and set up inside the workshop;
-then the :ref:`interfaces <exp_interfaces>` of the SDK are connected.
+Here, the following happens:
+
+- The :ref:`project directory <tut_define>`
+  is mounted to the workshop as :file:`/project/`
+
+- The workshop is *started*, or brought online.
+
+- The :samp:`go` SDK from the definition is retrieved,
+  installed and set up inside the workshop.
+
+- The :ref:`interfaces <exp_interfaces>` of the SDK are connected.
+
 
 You only need to launch a workshop once after defining it;
-any subsequent changes require a :ref:`refresh <tut_refresh>`.
+for any subsequent changes, you can do a :ref:`refresh <tut_refresh>`.
 Otherwise, the workshop is just a fancy container
 that can be started and stopped.
 
@@ -344,7 +344,7 @@ waiting for the workshop to comply:
   unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`
 
 
-Speaking of the refresh operation, it's also our next step.
+In the next step, you'll refresh an existing workshop.
 
 
 .. _tut_refresh:
@@ -365,7 +365,7 @@ In either case,
 you should :ref:`refresh <ref_workshop_refresh>` the workshop
 to apply the updates.
 
-Here, change the base in your definition
+To do so, change the base in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
@@ -388,8 +388,7 @@ Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
 However, it ensures the workshop remains operational.
 If issues occur, a refresh rolls back to a previous stable condition,
 whereas a failed launch has no condition to revert to and just fails.
-For more details, see the
-:ref:`debugging guide <how_debug_issues_workshops>`.
+For help, see this guide: :ref:`how_debug_issues_workshops`.
 
 
 Now that you can launch, refresh, start and stop a workshop,
@@ -440,7 +439,7 @@ is now available in the project directory.
 
 **This is the single most important part of the tutorial**;
 your deliverables, however complex they are, end up on the host system,
-while the tool-chain is transparently confined and managed by |project_markup|.
+while the tool chain is transparently confined and managed by |ws_markup|.
 
 Next, we'll explore the remaining aspects of your daily workshop usage.
 
@@ -451,7 +450,11 @@ Interactive shell
 ~~~~~~~~~~~~~~~~~
 
 Besides running individual commands,
-you can open an interactive :ref:`shell <ref_workshop_shell>`:
+you can open an interactive :ref:`shell <ref_workshop_shell>`
+if you need to perform multiple operations within a session.
+|ws_markup| runs the login shell
+for the default non-privileged user,
+also named :samp:`workshop`:
 
 .. code-block:: console
 
@@ -461,11 +464,7 @@ you can open an interactive :ref:`shell <ref_workshop_shell>`:
      /home/workshop
 
    workshop@golang-6b79e889:~$ uname -a
-
-
-|project_markup| runs the login shell
-for the default non-privileged user,
-also named :samp:`workshop`.
+   workshop@golang-6b79e889:~$ exit
 
 
 Project directory updates
@@ -478,9 +477,8 @@ are visible in the project directory, and vice versa:
 
 .. code-block:: console
 
-   $ touch outside_workshop.txt
-   $ workshop exec golang -- touch inside_workshop.txt
-   $ ls -l
+   $ touch created_outside.txt
+   $ workshop exec golang -- touch created_inside.txt
 
 
 This isn't the only way the host interacts with the workshop;
@@ -493,7 +491,7 @@ Work with interfaces
 --------------------
 
 For security and control,
-|project_markup| exposes various host system capabilities to the workshop
+|ws_markup| exposes various host system capabilities to the workshop
 by connecting it to various :ref:`interfaces <exp_interfaces>`.
 SDKs can also use interfaces to interact in an organised fashion.
 
@@ -510,10 +508,10 @@ use :ref:`connections <ref_workshop_connections>`:
 
 This lists a :ref:`mount interface <exp_mount_interface>` plug
 named :samp:`golang/go:mod-cache`.
-As seen in the :command:`workshop info` output previously,
+As seen in the :command:`workshop info` output,
 it was automatically connected at :ref:`launch <tut_launch>`
 to the :samp:`golang/system:mount` slot,
-here contracted by convention as :samp:`:mount`.
+here abbreviated by convention as :samp:`:mount`.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
@@ -551,10 +549,10 @@ to a new location on the host:
 
 
 This makes :file:`/home/user/mod/` on the host
-serve as the Go modules cache for the workshop.
+act as the Go modules cache for the workshop.
 
-We're nearing the end of our tour;
-the only thing left is the clean-up.
+We're nearing the end of our tutorial;
+the only thing left is the cleanup.
 
 
 .. _tut_remove:
@@ -578,10 +576,10 @@ e.g. via the :ref:`mount interface <tut_interfaces>`.
 .. important::
 
    Don't delete the project directory without first removing the workshop.
-   Otherwise, you'll need to :ref:`manually delete <how_troubleshoot_lxc>`
-   the orphaned workshops.
+   Otherwise, you'll need to manually delete the orphaned workshops;
+   for help, see this guide: :ref:`how_troubleshoot_lxc`.
 
 
 This was the last step in the tutorial;
-you are now familiar with the essential operations provided by |project_markup|
+you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.

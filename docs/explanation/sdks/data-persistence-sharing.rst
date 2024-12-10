@@ -19,7 +19,7 @@ you need to mount a lot of directories to make it work,
 and the handling of these mounts both inside and outside the container
 can quickly become an overhead.
 
-|project_markup| addresses this issue by providing a way
+|ws_markup| addresses this issue by providing a way
 to reuse and share content between the host and the workshop via SDKs
 while keeping manual intervention to a necessary minimum.
 Typically, workshops are isolated from each other and from the host system;
@@ -31,7 +31,7 @@ When a workshop uses the SDK,
 an auto-assigned, non-customisable source directory on the host
 is mounted to the plug-defined target directory inside the workshop.
 What's more, its contents are preserved during refresh operations.
-In this way, |project_markup| enables SDK data persistence and reuse
+In this way, |ws_markup| enables SDK data persistence and reuse
 *inside* individual workshops.
 
 Note, however,
@@ -76,7 +76,7 @@ per each directory you want to retain during the workshop's life cycle.
 
 This SDK defines two mount plugs;
 for each,
-|project_markup| creates a source directory on the host at run-time.
+|ws_markup| creates a source directory on the host at run-time.
 Both :samp:`workshop-target` directories inside the workshop
 can be used by the SDK-specific logic
 implemented via :ref:`hooks <exp_sdk_hooks>` and other features.
@@ -94,7 +94,7 @@ Here's a corresponding workshop definition:
 
 
 The default host location
-that :program:`Workshop` mounts to the target
+that |ws_markup| mounts to the target
 is pre-defined as follows:
 
 .. code-block:: none
@@ -118,7 +118,7 @@ is customising the source directory of a plug.
 The :command:`docker run` example at the beginning illustrates this approach;
 it explicitly lists the host directories to be mounted to each target.
 
-This can also be done with :program:`Workshop`,
+This can also be done with |ws_markup|,
 and the :command:`workshop remount` command is the key to it:
 
 .. code-block:: console

@@ -19,11 +19,9 @@ in our docs for a more detailed introduction to Workshop.
 
 To join the development effort, see `How to contribute <contributing.rst>`_.
 
-To know more about `SDKcraft <https://github.com/canonical/sdkcraft>`_,
-the user-facing counterpart to Workshop,
-start with its own `Tutorial
-<https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/tutorial/>`_.
-
+To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
+the SDK authoring tool for Workshop,
+see the :ref:`how-to guide <use_sdkcraft>` in our docs.
 
 Installation
 ~~~~~~~~~~~~
@@ -49,7 +47,7 @@ for example:
 
 .. code-block:: console
 
-   sudo snap install --dangerous --classic ./workshop_0.1.0_amd64.snap
+   sudo snap install --dangerous --classic ./workshop_0.1.5_amd64.snap
 
 
 Launching workshops

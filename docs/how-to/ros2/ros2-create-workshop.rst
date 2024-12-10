@@ -13,7 +13,7 @@ under the :samp:`latest/edge` channel.
 
 .. note::
 
-   This guide assumes that you already have |project_markup| installed
+   This guide assumes that you already have |ws_markup| installed
    and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
    so we'll use their
@@ -89,7 +89,7 @@ All set, so launch the workshop:
 Build the project
 -----------------
 
-|project_markup| mounts the project directory
+|ws_markup| mounts the project directory
 inside the workshop as :file:`/project/`,
 so open a shell and go there:
 
@@ -146,7 +146,7 @@ although :command:`workshop refresh` rebuilds the workshop from scratch,
 including any SDK updates.
 
 The host-mapped contents of the workshop can actually be seen
-in |project_markup|'s default content directory on the host
+in |ws_markup|'s default content directory on the host
 (use your project ID from the shell prompt; here, it's :samp:`8584e57d`):
 
 .. code-block:: console
@@ -182,7 +182,7 @@ from the project directory:
 Benefits
 --------
 
-Let's review the advantages of using |project_markup| with the ROS 2 SDK:
+Let's review the advantages of using |ws_markup| with the ROS 2 SDK:
 
 - **Little or no setup is required to get started**:
   The SDK automates the installation of all prerequisites

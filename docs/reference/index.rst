@@ -5,7 +5,7 @@ Reference
 
 These reference guides
 provide technical background
-that may be required to use |project_markup|.
+that may be required to use |ws_markup|.
 
 
 Command-line interface

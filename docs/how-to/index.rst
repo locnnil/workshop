@@ -5,14 +5,14 @@ How-to guides
 
 These step-by-step guides
 cover specific needs and scenarios
-that arise when you use |project_markup|.
+that arise when you use |ws_markup|.
 
 
 Build SDKs
 ----------
 
 To build SDKs, you use `SDKcraft`_:
-a tool that packages and publishes SDKs for |project_markup|.
+a tool that packages and publishes SDKs for |ws_markup|.
 
 .. toctree::
    :maxdepth: 1
@@ -23,7 +23,7 @@ a tool that packages and publishes SDKs for |project_markup|.
 Use workshops
 -------------
 
-These articles address daily |project_markup| scenarios.
+These articles address daily |ws_markup| scenarios.
 
 .. toctree::
    :maxdepth: 1

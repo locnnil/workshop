@@ -4,7 +4,7 @@ Workshop concepts
 =================
 
 A *workshop*
-(lowercase; not to be confused with |project_markup| itself)
+(lowercase; not to be confused with |ws_markup| itself)
 is a container that is described in a definition file,
 which is associated with a :ref:`project directory <exp_projects>`.
 Currently, these containers are hosted by `LXD`_,

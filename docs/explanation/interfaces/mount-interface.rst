@@ -39,11 +39,11 @@ the interface (:samp:`mount`)
 and the intended target path inside the workshop (:samp:`workshop-target`).
 
 Defining the plug in an SDK designates the target directory inside the workshop;
-a directory on the host system that |project_markup| will create at run-time
+a directory on the host system that |ws_markup| will create at run-time
 will be mounted to it.
 
 This allows the workshops using this SDK to use the host directory
-(which :program:`Workshop` allocates automatically and doesn't expose otherwise)
+(which |ws_markup| allocates automatically and doesn't expose otherwise)
 to persist the files placed there from inside the workshop
 in the host file system when the workshop stops.
 
@@ -54,11 +54,11 @@ Mount interface slot
 --------------------
 
 To let SDKs in a workshop access the host file system,
-:program:`Workshop` provides a mount interface slot
+|ws_markup| provides a mount interface slot
 that multiple mount interface plugs can access.
 
 When the SDK is installed at run-time during launch and refresh operations,
-:program:`Workshop` checks the following for each plug that targets the slot:
+|ws_markup| checks the following for each plug that targets the slot:
 
 - The plug can be installed.
 
@@ -77,10 +77,10 @@ Connection
 The interface is connected automatically at launch or refresh
 if the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
-both subject to |project_markup|'s
+both subject to |ws_markup|'s
 :ref:`validation rules <exp_interfaces_validation>`.
 
-Establishing a connection means the source directory created by |project_markup|
+Establishing a connection means the source directory created by |ws_markup|
 is mounted to the target directory inside the workshop.
 The source directory can be created:
 
@@ -88,7 +88,7 @@ The source directory can be created:
   which needs a slot with :samp:`workshop-source` set
 
 - At an internal location on the host,
-  which |project_markup| assigns if no slot is set explicitly
+  which |ws_markup| assigns if no slot is set explicitly
 
 
 If the directory is created on the host,
@@ -133,7 +133,7 @@ This means a source directory is mounted to the target:
 
 
 Here, the source is set to an internal location (:samp:`...`)
-that |project_markup| maintains on the host file system;
+that |ws_markup| maintains on the host file system;
 the SDKs can't set host locations explicitly for security reasons,
 but there's a way to do it manually.
 

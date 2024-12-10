@@ -35,11 +35,11 @@ GPU interface slot
 ------------------
 
 To let SDKs in a workshop access the host's GPUs,
-:program:`Workshop` provides a GPU interface slot
+|ws_markup| provides a GPU interface slot
 that multiple GPU interface plugs can access.
 
 When the SDK is installed at run-time during launch and refresh operations,
-:program:`Workshop` checks that the plug targeting the slot
+|ws_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interface_connections>`;
 if it does,
 it can be connected.
@@ -51,7 +51,7 @@ Connection
 The interface is connected automatically at launch or refresh,
 provided that the plug can be matched to the slot by its name
 or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
-both subject to |project_markup|'s
+both subject to |ws_markup|'s
 :ref:`validation rules <exp_interfaces_validation>`.
 
 After the workshop has started,

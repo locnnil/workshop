@@ -56,14 +56,14 @@ Move the project directory and check the workshop:
      /home/user/new          golang    Ready   -
 
 
-|project_markup| handles the project's move graciously
+|ws_markup| handles the project's move graciously
 so the workshop here remains as you would expect;
 there are no loose ends to pick up,
 no paths to update in your definition file.
 
 However,
 this only ensures the safe transition of the workshop itself,
-so it's up to you to update any paths external to |project_markup|
+so it's up to you to update any paths external to |ws_markup|
 that point to the project's previous location.
 
 
@@ -93,7 +93,7 @@ Copy the project directory and check the workshops:
      /home/user/old          golang    Ready   -
 
 
-|project_markup| won't launch the workshop in the new directory,
+|ws_markup| won't launch the workshop in the new directory,
 which is probably the sensible default here,
 but what happens if you do it yourself?
 
@@ -110,14 +110,14 @@ but what happens if you do it yourself?
 Now, these are two independent workshops that happen to have the same name,
 not a single workshop that is somehow shared by multiple project directories.
 
-Again, it's up to you to update any paths external to |project_markup|
+Again, it's up to you to update any paths external to |ws_markup|
 that should point to your new project.
 
 
 Removing a project
 ------------------
 
-|project_markup| doesn't handle file deletion automatically;
+|ws_markup| doesn't handle file deletion automatically;
 make sure you remove all workshops
 before deleting the project directory:
 

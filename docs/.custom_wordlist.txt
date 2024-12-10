@@ -73,6 +73,7 @@ subcommands
 subdirectory
 sudo
 transactional
+ubuntu
 uid
 unicode
 unmounts
