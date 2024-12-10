@@ -297,7 +297,7 @@ func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx contex
 func ProjectPath(cwd string) (string, error) {
 	path, err := filepath.EvalSymlinks(cwd)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	for {
