@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 
 	"github.com/canonical/workshop/client"
@@ -32,7 +33,20 @@ import (
 )
 
 type CmdExec struct {
-	root           *CmdRoot
+	root  *CmdRoot
+	flags ExecFlags
+}
+
+type CmdShell struct {
+	root *CmdRoot
+}
+
+type CmdRun struct {
+	root  *CmdRoot
+	flags ExecFlags
+}
+
+type ExecFlags struct {
 	WorkingDir     string
 	Env            []string
 	UserId         int
@@ -42,12 +56,11 @@ type CmdExec struct {
 	NonInteractive bool
 }
 
-type CmdShellAlias struct {
-	execCommand *CmdExec
-}
-
-type CmdRun struct {
-	execCommand *CmdExec
+type ExecArgs struct {
+	workshop string
+	implicit bool
+	command  []string
+	script   bool
 }
 
 var shortExecHelp = "Run a command and wait for it to complete"
@@ -168,13 +181,7 @@ $ workshop exec --uid 0 nimble id`,
 
 	cmd.Flags().SortFlags = false
 	cmd.Flags().SetInterspersed(false)
-	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
-	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
-	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "Run as a specific workshop user")
-	cmd.Flags().IntVar(&c.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
-	cmd.Flags().DurationVar(&c.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h")
-	cmd.Flags().BoolVarP(&c.Interactive, "interactive", "i", false, "Force interactive mode")
-	cmd.Flags().BoolVarP(&c.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
+	commonVars(cmd.Flags(), &c.flags)
 
 	return cmd
 }
@@ -197,22 +204,28 @@ func maybeNameAndCommand(cmd *cobra.Command, av []string) error {
 }
 
 func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
+	args := &ExecArgs{}
+
 	// Infer workshop name if first positional argument is --
 	if cmd.ArgsLenAtDash() == 0 {
-		return c.runExec("", true, av, false)
-	}
-
-	// Remove first -- if cobra didn't see it
-	if cmd.ArgsLenAtDash() < 0 {
-		if i := slices.Index(av, "--"); i >= 0 {
-			av = slices.Delete(slices.Clone(av), i, i+1)
+		args.implicit = true
+		args.command = av
+	} else {
+		// Remove first -- if cobra didn't see it
+		if cmd.ArgsLenAtDash() < 0 {
+			if i := slices.Index(av, "--"); i >= 0 {
+				av = slices.Delete(slices.Clone(av), i, i+1)
+			}
 		}
+
+		args.workshop = av[0]
+		args.command = av[1:]
 	}
 
-	return c.runExec(av[0], false, av[1:], false)
+	return exec(c.root, &c.flags, args)
 }
 
-func (c *CmdShellAlias) Command() *cobra.Command {
+func (c *CmdShell) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "shell [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
@@ -231,13 +244,16 @@ $ workshop shell`,
 	return cmd
 }
 
-func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
-	var workshop string
+func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
+	args := &ExecArgs{command: []string{"sudo", "-i", "-u", "workshop", "bash", "-c", "cd /project; exec bash"}}
+
 	if len(av) > 0 {
-		workshop = av[0]
+		args.workshop = av[0]
+	} else {
+		args.implicit = true
 	}
-	command := []string{"sudo", "-i", "-u", "workshop", "bash", "-c", "cd /project; exec bash"}
-	return c.execCommand.runExec(workshop, len(av) == 0, command, false)
+
+	return exec(c.root, &ExecFlags{WorkingDir: "/project"}, args)
 }
 
 func (c *CmdRun) Command() *cobra.Command {
@@ -266,13 +282,7 @@ $ workshop run -- build --debug
 
 	cmd.Flags().SortFlags = false
 	cmd.Flags().SetInterspersed(false)
-	cmd.Flags().StringVarP(&c.execCommand.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
-	cmd.Flags().StringArrayVar(&c.execCommand.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
-	cmd.Flags().IntVar(&c.execCommand.UserId, "uid", 1000, "Run as a specific workshop user")
-	cmd.Flags().IntVar(&c.execCommand.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
-	cmd.Flags().DurationVar(&c.execCommand.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h")
-	cmd.Flags().BoolVarP(&c.execCommand.Interactive, "interactive", "i", false, "Force interactive mode")
-	cmd.Flags().BoolVarP(&c.execCommand.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
+	commonVars(cmd.Flags(), &c.flags)
 
 	return cmd
 }
@@ -295,12 +305,12 @@ func maybeNameAndScript(cmd *cobra.Command, av []string) error {
 }
 
 func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
-	var workshop string
-	var inferName bool
+	args := &ExecArgs{script: true}
 
 	// Infer workshop name if first positional argument is --
 	if cmd.ArgsLenAtDash() == 0 {
-		inferName = true
+		args.implicit = true
+		args.command = av
 	} else {
 		// Remove first -- if cobra didn't see it
 		if cmd.ArgsLenAtDash() < 0 {
@@ -311,42 +321,54 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 
 		// Allow `workshop run script`. Passing arguments requires -- though.
 		if len(av) <= 1 {
-			inferName = true
+			args.implicit = true
+			args.command = av
 		} else {
-			workshop = av[0]
-			av = av[1:]
+			args.workshop = av[0]
+			args.command = av[1:]
 		}
 	}
 
-	return c.execCommand.runExec(workshop, inferName, av, true)
+	return exec(c.root, &c.flags, args)
 }
 
-func (c *CmdExec) runExec(workshop string, inferName bool, command []string, script bool) error {
-	if c.Interactive && c.NonInteractive {
+func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
+	f.StringVarP(&flags.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
+	f.StringArrayVar(&flags.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
+	f.IntVar(&flags.UserId, "uid", 1000, "Run as a specific workshop user")
+	f.IntVar(&flags.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
+	f.DurationVar(&flags.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h")
+	f.BoolVarP(&flags.Interactive, "interactive", "i", false, "Force interactive mode")
+	f.BoolVarP(&flags.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
+}
+
+func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
+	if flags.Interactive && flags.NonInteractive {
 		return errors.New("'-i' incompatible with '-I'")
 	}
 
-	cli, err := c.root.client()
+	cli, err := root.client()
 	if err != nil {
 		return err
 	}
 
-	project, err := cli.Project(c.root.project)
+	project, err := cli.Project(root.project)
 	if err != nil {
 		return err
 	}
 
-	if inferName {
+	workshop := args.workshop
+	if args.implicit {
 		workshop, err = cli.SingleWorkshopName(project)
 		if err != nil {
 			return err
 		}
 	}
 
-	if script {
-		logger.Debugf("Running script %q", command)
+	if args.script {
+		logger.Debugf("Running script %q", args.command)
 	} else {
-		logger.Debugf("Running %q", command)
+		logger.Debugf("Running %q", args.command)
 	}
 
 	// Set up environment variables.
@@ -356,7 +378,7 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string, scr
 		env["TERM"] = term
 	}
 
-	for _, kv := range c.Env {
+	for _, kv := range flags.Env {
 		parts := strings.SplitN(kv, "=", 2)
 		key := parts[0]
 
@@ -378,9 +400,9 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string, scr
 	// Specify Interactive=true if -i is given, or if stdin and stdout are TTYs.
 	stdinIsTerminal := ptyutil.IsTerminal(unix.Stdin)
 	var interactive bool
-	if c.Interactive {
+	if flags.Interactive {
 		interactive = true
-	} else if c.NonInteractive {
+	} else if flags.NonInteractive {
 		interactive = false
 	} else {
 		interactive = stdinIsTerminal && stdoutIsTerminal
@@ -412,14 +434,14 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string, scr
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
-		Command:     command,
-		Script:      script,
+		Command:     args.command,
+		Script:      args.script,
 		Environment: env,
-		WorkingDir:  c.WorkingDir,
-		UserId:      &c.UserId,
-		GroupId:     &c.GroupId,
+		WorkingDir:  flags.WorkingDir,
+		UserId:      &flags.UserId,
+		GroupId:     &flags.GroupId,
 		Interactive: interactive,
-		Timeout:     c.Timeout,
+		Timeout:     flags.Timeout,
 		Width:       width,
 		Height:      height,
 		Stdin:       Stdin,
