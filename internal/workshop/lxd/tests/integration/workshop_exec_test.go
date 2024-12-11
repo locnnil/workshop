@@ -277,21 +277,3 @@ func (f *wsExec) TestLxdBackendExecValidateCloudInitConfig(c *check.C) {
 	c.Assert(strings.Contains(stdout, "Valid schema user-data"), check.Equals, true)
 	c.Assert(strings.Contains(stdout, "Error"), check.Equals, false)
 }
-
-func (f *wsExec) TestLxdBackendExecCheckLoginCwd(c *check.C) {
-	// Setup
-	opts_shell := &client.ExecOptions{
-		Command:    []string{"sudo", "-u", "workshop", "-D", "/project/", "-s", "pwd"},
-		WorkingDir: "/",
-		UserId:     new(int),
-		GroupId:    new(int),
-	}
-
-	// Exec
-	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts_shell)
-
-	// Verify that login dir with WORKSHOP_SHELL env var is /project
-	c.Assert(err, check.IsNil)
-	c.Assert(stderr, check.Equals, "")
-	c.Assert(stdout, check.Equals, "/project\n")
-}

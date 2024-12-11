@@ -734,10 +734,6 @@ write_files:
     [Install]
     WantedBy=multi-user.target
   path: /etc/systemd/system/xauth-copy.service
-- content: |
-    Defaults: root   runcwd=*
-  path: /etc/sudoers.d/allow_root_chdir
-  defer: true
 runcmd:
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
