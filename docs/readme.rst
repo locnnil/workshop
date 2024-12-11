@@ -30,7 +30,7 @@ Installation
 ~~~~~~~~~~~~
 
 Workshop requires
-`LXD 5.21+ <https://canonical.com/lxd>`_
+`LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation.
 
 Check whether it's configured:

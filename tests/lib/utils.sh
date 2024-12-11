@@ -1,8 +1,11 @@
 #!/bin/bash
 
 function setup_lxd() {
-    snap install --classic lxd
-    snap refresh --channel=5.21/stable lxd
+    if snap list lxd >/dev/null; then
+        snap refresh --channel=6/stable lxd
+    else
+        snap install --channel=6/stable lxd
+    fi
     lxd waitready --timeout=180
 
     # can already be initialised if reused
