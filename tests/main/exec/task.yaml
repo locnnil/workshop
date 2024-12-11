@@ -51,6 +51,11 @@ execute: |
   echo "Check stderr (workshop exec redirects stderr to stdout for MATCH to work)"
   workshop_exec exec -I ws-exec bash -c '>&2 echo -n stderr' | MATCH stderr
 
+  echo "Check exit code (125 is used by git bisect run)"
+  exitcode=0
+  workshop_exec exec ws-exec bash -c 'exit 125' || exitcode="$?"
+  [ "$exitcode" -eq 125 ]
+
   echo "Check stopped workshop"
   workshop_exec stop
   workshop_exec exec ws-exec pwd | MATCH '.*cannot exec command in "ws-exec": workshop not running$'
