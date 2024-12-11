@@ -14,8 +14,10 @@ Workshops and projects
 A *workshop* is a container that enables consistent environment builds.
 It is tied to a definition that lists SDKs and is stored as a `.yaml` file
 under a project directory.
-A *project* is the working directory for tasks like coding, running models,
-and managing repositories.
+A *project* is the working directory where workshop definitions are placed.
+When you start a workshop, the project directory is mounted inside it,
+so storing repositories, code, or data such as models in the project directory
+enables you to use them inside the workshop.
 
 .. toctree::
    :maxdepth: 2
