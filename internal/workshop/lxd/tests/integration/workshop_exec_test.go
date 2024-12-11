@@ -38,6 +38,14 @@ type wsExec struct {
 
 var _ = check.Suite(&wsExec{})
 
+func execTestDevices(projectDir string) func() map[string]map[string]string {
+	conf := helper.DefaultTestDevices()
+	conf["workshop.project"] = map[string]string{"type": "disk", "source": projectDir, "path": "/project"}
+	return func() map[string]map[string]string {
+		return conf
+	}
+}
+
 func (f *wsExec) SetUpSuite(c *check.C) {
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 
@@ -93,7 +101,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return u, nil
 	}, &daemon.LookupUserId)
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
+	f.restoreDevices = lxdbackend.FakeDefaultDevices(execTestDevices(c.MkDir()))
 
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
@@ -249,4 +257,23 @@ func (f *wsExec) TestLxdBackendExecTimeout(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.ErrorMatches, "(?s).*timed out after 100ms.*")
+}
+
+func (f *wsExec) TestLxdBackendExecValidateCloudInitConfig(c *check.C) {
+	// Setup
+	opts := &client.ExecOptions{
+		Command:    []string{"cloud-init", "schema", "--system", "--annotate"},
+		WorkingDir: "/",
+		UserId:     new(int),
+		GroupId:    new(int),
+	}
+
+	// Exec
+	stdout, stderr, err := f.exec(c, "", "test", f.project.ProjectId, opts)
+
+	// Validate
+	c.Assert(err, check.IsNil)
+	c.Assert(stderr, check.Equals, "")
+	c.Assert(strings.Contains(stdout, "Valid schema user-data"), check.Equals, true)
+	c.Assert(strings.Contains(stdout, "Error"), check.Equals, false)
 }
