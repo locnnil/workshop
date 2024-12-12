@@ -668,11 +668,6 @@ func stopMany(st *state.State, names []string, project workshop.Project) ([]*sta
 	return taskset, nil
 }
 
-type ExecMeta struct {
-	Environment map[string]string
-	WorkingDir  string
-}
-
 func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs) (*state.Task, error) {
 	err := w.CheckStatus(
 		ctx,
