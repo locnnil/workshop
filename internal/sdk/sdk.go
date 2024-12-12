@@ -404,12 +404,16 @@ func ProjectSketchSdkDir(homedir, pid string) string {
 	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "sketch")
 }
 
+func WorkshopSketchSdk(homedir, pid, wp string) string {
+	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp)
+}
+
 func WorkshopSketchSdkCurrent(homedir, pid, wp string) string {
 	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "current")
 }
 
-func WorkshopSketchSdkStored(homedir, pid, wp string) string {
-	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "stored")
+func WorkshopSketchSdkStash(homedir, pid, wp string) string {
+	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "stash")
 }
 
 func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {

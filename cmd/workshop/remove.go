@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
@@ -75,23 +76,13 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	// Drop all the workshops' sketch directories if exist. Sketch SDK content is
-	// controlled by the client code now, thus, we will not consider it to be a
-	// responsibility of workshopd to drop the sketch directory on removal (see
-	// doRemoveWorkshop). Sketch SDK is a type of a local SDK that will continue
-	// to exist in a stored directory for some time after the workshop removal
-	// so if recreated, it can be summoned back with 'workshop sketch --restore
-	// <WORKSHOP>.
-	// workshopd will, however, be responsible for the final clean up of the
-	// sketch SDK content (e.g. if Workshop is removed from the system or the sketch
-	// SDK content was stored for over 90 days).
+	// Once workshop has been removed, its current and stashed sketches must be
+	// cleaned up. We let the client to control this logic as these are the type
+	// of a local SDK and were by the client in the first place.
 	for _, wp := range av {
-		sketchdir := sdk.WorkshopSketchSdkCurrent(user.HomeDir, project.Id, wp)
-		if exists, dir, _ := osutil.ExistsIsDir(sketchdir); exists && dir {
-			storedir := sdk.WorkshopSketchSdkStored(user.HomeDir, project.Id, wp)
-			if _, err := dropSketch(sketchdir, storedir); err != nil {
-				fmt.Fprintf(Stderr, "cannot drop sketch SDK for %q: %v\n", wp, err)
-			}
+		sketchdir := sdk.WorkshopSketchSdk(user.HomeDir, project.Id, wp)
+		if err := os.RemoveAll(sketchdir); err != nil {
+			fmt.Fprintf(Stderr, "cannot remove the sketch SDK for %q: %v\n", wp, err)
 		}
 	}
 

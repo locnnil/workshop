@@ -3,13 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"os/user"
 
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/sdk"
 )
 
 type workshopRemove struct {
@@ -28,12 +26,6 @@ func (m *workshopRemove) SetUpTest(c *check.C) {
 	m.prjId = "42424242"
 	var err error
 	m.user, err = osutil.UserMaybeSudoUser()
-	c.Assert(err, check.IsNil)
-}
-
-func (m *workshopRemove) TearDownTest(c *check.C) {
-	sketchdir := sdk.ProjectSketchSdkDir(m.user.HomeDir, m.prjId)
-	err := os.RemoveAll(sketchdir)
 	c.Assert(err, check.IsNil)
 }
 

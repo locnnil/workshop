@@ -49,7 +49,7 @@ func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, current bool, meta []b
 	if current {
 		rootdir = sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
 	} else {
-		rootdir = sdk.WorkshopSketchSdkStored(m.user.HomeDir, m.prjId, "ws")
+		rootdir = sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
 	}
 
 	err := writeSketchSdk(rootdir, meta)
@@ -204,23 +204,23 @@ plugs:
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, sketchContent)
 }
 
-func (m *workshopSketch) TestSketchSdkDropRestoreIncompatible(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, drop: true, restore: true}
+func (m *workshopSketch) TestSketchSdkRemoveRestoreIncompatible(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, remove: true, restore: true}
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot sketch: '--drop' incompatible with '--replace'`)
+	c.Assert(err, check.ErrorMatches, `cannot sketch: '--remove' incompatible with '--restore'`)
 }
 
-func (m *workshopSketch) TestSketchSdkDropRestoreSingleWorkshop(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, drop: true, restore: false}
+func (m *workshopSketch) TestSketchSdkSingleWorkshop(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, remove: true, restore: false}
 
 	err := cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, `cannot sketch: '--drop' and '--replace' require a single workshop name`)
+	c.Assert(err, check.ErrorMatches, `cannot sketch: require a single workshop name`)
 }
 
-func (m *workshopSketch) TestSketchSdkDrop(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, drop: true}
-	restore := sdk.WorkshopSketchSdkStored(m.user.HomeDir, m.prjId, "ws")
+func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	restore := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
 	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileAbsent)
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
@@ -233,8 +233,32 @@ func (m *workshopSketch) TestSketchSdkDrop(c *check.C) {
 	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 }
 
-func (m *workshopSketch) TestSketchSdkDropRevertOnFail(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, drop: true}
+func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	stash := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
+	_, stashedhooks := m.mockMinimalSketchSdk(c, false, []byte(`name: sketch
+base: ubuntu@18.04
+hooks:
+    setup-base: |
+        touch /home/workshop/stash
+    check-health: |
+        exit 0
+`))
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(metadir, testutil.FileAbsent)
+	c.Assert(filepath.Join(stash, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(filepath.Join(stashedhooks, "setup-base"), testutil.FileAbsent)
+	c.Assert(filepath.Join(stashedhooks, "check-health"), testutil.FileAbsent)
+}
+
+func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 
 	n := 0
 	workshop := "ws"
@@ -273,7 +297,7 @@ func (m *workshopSketch) TestSketchSdkDropRevertOnFail(c *check.C) {
 	c.Assert(err, check.NotNil)
 
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
-	restore := sdk.WorkshopSketchSdkStored(m.user.HomeDir, m.prjId, "ws")
+	restore := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
 	recs, err := os.ReadDir(restore)
 	c.Assert(recs, check.HasLen, 0)
 	c.Assert(err, check.IsNil)
@@ -298,10 +322,10 @@ func (m *workshopSketch) TestSketchSdkRestoreNoStoredSketch(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot restore: no stored 'sketch' SDK found`)
+	c.Assert(err, check.ErrorMatches, `cannot restore: no stashed 'sketch' SDK found`)
 }
 
-func (m *workshopSketch) TestSketchSdkRestoreSwaps(c *check.C) {
+func (m *workshopSketch) TestSketchSdkRestoreFailsIfCurrentExists(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
@@ -317,16 +341,10 @@ plugs:
 	m.mockMinimalSketchSdk(c, false, []byte(stored))
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.IsNil)
-
-	current := sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
-	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, stored)
-
-	restore := sdk.WorkshopSketchSdkStored(m.user.HomeDir, m.prjId, "ws")
-	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(err, check.ErrorMatches, `cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
 }
 
-func (m *workshopSketch) TestRemoveDropsSketch(c *check.C) {
+func (m *workshopSketch) TestRemoveRemovesSketch(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
@@ -368,10 +386,6 @@ func (m *workshopSketch) TestRemoveDropsSketch(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, `"ws" removed\n`)
 
-	sketchdir := sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
-	exist, _, _ := osutil.ExistsIsDir(sketchdir)
-	c.Assert(exist, check.Equals, false)
-
-	storedir := sdk.WorkshopSketchSdkStored(m.user.HomeDir, m.prjId, "ws")
-	c.Assert(filepath.Join(storedir, "meta", "sdk.yaml"), testutil.FilePresent)
+	sketchroot := sdk.WorkshopSketchSdk(m.user.HomeDir, m.prjId, "ws")
+	c.Assert(sketchroot, testutil.FileAbsent)
 }

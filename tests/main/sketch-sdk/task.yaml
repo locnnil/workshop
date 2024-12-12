@@ -4,7 +4,6 @@ prepare: |
   workshop_exec launch ws-sketch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec sketch-sdk --drop ws-sketch
   workshop_exec remove ws-sketch
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -16,9 +15,11 @@ execute: |
 
   workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 
-  workshop_exec sketch-sdk --drop ws-sketch
+  echo "Stash current sketch SDK"
+  workshop_exec sketch-sdk --stash ws-sketch
   workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | NOMATCH ".*(x1)"
 
+  echo "Restore sketch SDK"
   workshop_exec sketch-sdk --restore ws-sketch
   workshop_exec info ws-sketch | grep -v notes | yq '.content["sketch"].channel' | MATCH ".*(x1)"
 

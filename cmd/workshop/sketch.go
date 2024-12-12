@@ -18,13 +18,14 @@ import (
 
 type CmdSketch struct {
 	root    *CmdRoot
-	drop    bool
+	stash   bool
 	restore bool
+	remove  bool
 }
 
 func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "sketch-sdk [--drop|--restore] <WORKSHOP>",
+		Use:   "sketch-sdk [--stash|--restore|--remove] <WORKSHOP>",
 		Args:  cobra.ExactArgs(1),
 		Short: "Edit the sketch SDK and graft it onto the workshop",
 		Long: `
@@ -35,7 +36,7 @@ enabling rapid experiments and tweaks at the SDK level.
 Saving and exiting causes a refresh,
 which installs the updated 'sketch' SDK in the workshop.
 
-The '--drop' and '--restore' options stash the 'sketch' SDK,
+The '--stash' and '--restore' options stash the 'sketch' SDK,
 reversing the changes, and quickly restore it to the workshop.
 
 
@@ -53,8 +54,9 @@ Notes:
 		RunE: c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.drop, "drop", false, "Drop the sketch SDK from the workshop.")
-	cmd.Flags().BoolVar(&c.restore, "restore", false, "Return the previously dropped SDK to the workshop.")
+	cmd.Flags().BoolVar(&c.stash, "stash", false, "Stash the sketch SDK and remove it from the workshop.")
+	cmd.Flags().BoolVar(&c.restore, "restore", false, "Return the previously stashed SDK to the workshop.")
+	cmd.Flags().BoolVar(&c.remove, "remove", false, "Remove the sketch SDK from the workshop.")
 
 	return cmd
 }
@@ -100,7 +102,7 @@ var (
 	runTextEditor = shared.TextEditor
 )
 
-func dropSketch(sketchdir, storedir string) (*revert.Reverter, error) {
+func stashSketch(sketchdir, stashdir string) (*revert.Reverter, error) {
 	reverter := revert.New()
 
 	recs, err := os.ReadDir(sketchdir)
@@ -109,17 +111,17 @@ func dropSketch(sketchdir, storedir string) (*revert.Reverter, error) {
 	}
 	if len(recs) == 0 {
 		// Nothing to do.
-		return nil, fmt.Errorf(`cannot drop: the 'sketch' SDK doesn't exist`)
+		return nil, fmt.Errorf(`cannot stash: the 'sketch' SDK doesn't exist`)
 	}
 
-	if err := os.MkdirAll(storedir, 0755); err != nil {
+	if err := os.MkdirAll(stashdir, 0755); err != nil {
 		return nil, err
 	}
 
-	if err := osutil.Exchange(sketchdir, storedir); err != nil {
+	if err := osutil.Exchange(sketchdir, stashdir); err != nil {
 		return nil, err
 	}
-	reverter.Add(func() { _ = osutil.Exchange(storedir, sketchdir) })
+	reverter.Add(func() { _ = osutil.Exchange(stashdir, sketchdir) })
 
 	if err := os.RemoveAll(sketchdir); err != nil {
 		return nil, err
@@ -128,34 +130,39 @@ func dropSketch(sketchdir, storedir string) (*revert.Reverter, error) {
 	return reverter, nil
 }
 
-func restoreSketch(sketchdir, storedir string) error {
-	recs, err := os.ReadDir(storedir)
+func restoreSketch(sketchdir, stashdir string) error {
+	recs, err := os.ReadDir(stashdir)
 	if err != nil && !osutil.IsDirNotExist(err) {
 		return err
 	}
 	if len(recs) == 0 || osutil.IsDirNotExist(err) {
 		// Nothing in stored.
-		return fmt.Errorf(`cannot restore: no stored 'sketch' SDK found`)
+		return fmt.Errorf(`cannot restore: no stashed 'sketch' SDK found`)
 	}
 
-	// If sketch does not exist (i.e. was dropped) - create it, we'll be
-	// exchanging an empty sketchdir with the content from stored in this case.
+	// We don't overwrite current sketch SDK as opposed to overwriting stashed
+	// sketch SDK.
+	if _, err = os.Stat(sketchdir); err == nil {
+		return fmt.Errorf(`cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
+	}
+
 	if err := os.MkdirAll(sketchdir, 0755); err != nil {
 		return err
 	}
 
-	if err = osutil.Exchange(sketchdir, storedir); err != nil {
+	if err = osutil.Exchange(sketchdir, stashdir); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
-	if c.drop && c.restore {
-		return fmt.Errorf("cannot sketch: '--drop' incompatible with '--replace'")
+	if c.remove && c.restore {
+		return fmt.Errorf("cannot sketch: '--remove' incompatible with '--restore'")
 	}
-	if (c.drop || c.restore) && len(av) != 1 {
-		return fmt.Errorf("cannot sketch: '--drop' and '--replace' require a single workshop name")
+
+	if len(av) != 1 {
+		return fmt.Errorf("cannot sketch: require a single workshop name")
 	}
 
 	cli, err := c.root.client()
@@ -179,9 +186,9 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 	sketchdir := sdk.WorkshopSketchSdkCurrent(user.HomeDir, p.Id, wp.Name)
 
-	if c.drop {
-		storedir := sdk.WorkshopSketchSdkStored(user.HomeDir, p.Id, wp.Name)
-		reverter, err := dropSketch(sketchdir, storedir)
+	if c.stash {
+		storedir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
+		reverter, err := stashSketch(sketchdir, storedir)
 		if err != nil {
 			return err
 		}
@@ -202,7 +209,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
 
-		storedir := sdk.WorkshopSketchSdkStored(user.HomeDir, p.Id, wp.Name)
+		storedir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
 
 		if err = restoreSketch(sketchdir, storedir); err != nil {
 			return err
