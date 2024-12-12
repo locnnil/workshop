@@ -63,19 +63,19 @@ var sketchTemplate = `# Sketch SDK for %s
 # Sketch SDK provides local customisation of this specific workshop.
 
 # To read more about SDKs, their components and syntax, see:
-# https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/explanation/
+# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/
 name: sketch
 base: %s
 
 hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
-  # See https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/reference/sdks/#ref-sdk-hooks
+  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # setup-base: |
     # apt-get install -y --no-install-recommends PACKAGE...
     # snap install SNAP...
 
   # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
-  # See https://canonical-sdkcraft.readthedocs-hosted.com/en/latest/reference/sdks/#ref-sdk-hooks
+  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
