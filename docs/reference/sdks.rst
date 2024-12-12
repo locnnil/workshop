@@ -271,7 +271,7 @@ a zero code indicates success.
 .. note::
 
    The hooks aren't mentioned in the :ref:`definition <ref_sdk_definition>`;
-   |ws_markup| automatically enumerates them when packing the SDK.
+   |sdk_markup| automatically enumerates them when packing the SDK.
 
    Hooks of the same type from multiple SDKs run non-deterministically,
    so you shouldn't rely on any particular order of their execution.
