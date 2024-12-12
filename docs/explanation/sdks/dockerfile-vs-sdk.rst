@@ -339,9 +339,15 @@ to transparently identify and install project-specific dependencies.
 See also
 --------
 
+Explanation:
+
+- :ref:`exp_projects`
+
+
 How-to guides:
 
 - :ref:`how_create_ros2_sdk`
+
 
 Reference:
 

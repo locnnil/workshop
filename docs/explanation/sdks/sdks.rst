@@ -25,7 +25,8 @@ such as a model training configuration,
 within the workshop.
 To enable this,
 the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
-that |ws_markup| runs at the appropriate moments
+when building the SDK using |sdk_markup|.
+Later, |ws_markup| runs these hooks at the appropriate moments
 to consistently handle such data, collectively known as *SDK state*.
 
 For example, before changes are applied to the workshop
@@ -100,7 +101,7 @@ file system, hardware, computing and so on.
 
 Specific interfaces are predefined and implemented by |ws_markup|,
 so you can't create a custom interface type.
-Currently, |ws_markup| supports the following:
+Currently, |ws_markup| and |sdk_markup| support the following:
 
 - :ref:`Camera interface <exp_camera_interface>` (manually connected)
 - :ref:`Desktop interface <exp_desktop_interface>` (manually connected)

@@ -10,7 +10,7 @@ Source directory
 ----------------
 
 All files that go into an SDK should be placed in a *source directory*
-where you'll run |ws_markup|
+where you'll run |sdk_markup|
 to initialise, define, pack and publish the SDK.
 
 
@@ -19,12 +19,12 @@ to initialise, define, pack and publish the SDK.
 SDK parts
 ---------
 
-Parts can be thought of as the building blocks of |ws_markup|.
+Parts can be thought of as the building blocks of |ws_markup| and |sdk_markup|.
 Each part in the :file:`sdkcraft.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
 providing a way to modularise the package and manage its dependencies.
 
-|ws_markup| is built as a
+|sdk_markup| is built as a
 `craft-application <https://github.com/canonical/craft-application/>`_,
 which affects how :samp:`parts` are implemented.
 However, note that :samp:`stage-packages` and :samp:`stage-snaps`
@@ -43,7 +43,7 @@ refer to the corresponding Craft Parts
 SDK plugs and slots
 -------------------
 
-Currently, |ws_markup| supports defining the following interface plugs:
+Currently, |ws_markup| and |sdk_markup| support the following interface plugs:
 
 - :ref:`Camera <ref_camera_interface>`
 - :ref:`Desktop <ref_desktop_interface>`
@@ -200,7 +200,7 @@ SDK hooks
 ---------
 
 |ws_markup| supports the following life cycle hooks,
-which can be defined at the time of an SDK's creation:
+which can be defined when the SDK's is built using |sdk_markup|:
 
 .. list-table::
    :header-rows: 1

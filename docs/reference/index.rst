@@ -5,14 +5,15 @@ Reference
 
 These reference guides
 provide technical background
-that may be required to use |ws_markup|.
+that may be required to use |ws_markup| and |sdk_markup|.
 
 
 
 Command-line interfaces
 -----------------------
 
-These articles share the usage details of |ws_markup|'s command-line tools:
+These articles share the usage details of the command-line tools
+provided by |ws_markup| and |sdk_markup|:
 
 .. toctree::
    :maxdepth: 2

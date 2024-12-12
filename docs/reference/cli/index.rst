@@ -3,7 +3,7 @@
 Command-line interfaces
 =======================
 
-These articles share the details of |ws_markup|'s command-line tools.
+These articles share the details of the various command-line tools.
 Here, :program:`workshop` is mainly intended for |ws_markup| users,
 while :program:`workshopctl` is operated by SDK authors who use |sdk_markup|:
 

@@ -4,7 +4,7 @@ Explanation
 ===========
 
 These explanatory articles cover the main building blocks of |ws_markup|.
-To start using |ws_markup|,
+To start using |ws_markup| and |sdk_markup|,
 it is important to understand how these concepts fit together.
 
 
@@ -29,8 +29,8 @@ enables you to use them inside the workshop.
 SDKs
 ----
 
-With |ws_markup|, you can package and publish software dependencies
-as isolated *SDKs* listed in a workshop definition,
+With |sdk_markup|, you can package and publish software dependencies
+as isolated *SDKs* to be used in a workshop definition by |ws_markup|,
 instead of managing them system-wide or through container images.
 SDKs encapsulate all required functionality,
 keeping installations clean and limiting access to system-level capabilities.
@@ -62,7 +62,7 @@ while still allowing controlled interactions among the SDKs and with the host.
 Security considerations
 -----------------------
 
-This overview discusses the most important security aspects of |ws_markup|,
+This overview discusses the security aspects of |ws_markup| and |sdk_markup|,
 such as isolation, privileges, relevant risks and interface mechanics.
 
 .. toctree::

@@ -284,7 +284,7 @@ Pass the top-level SDK store directory to this :command:`go run` command:
 
 
 Use the local store with |ws_markup|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To override the URL that |ws_markup| uses to connect to SDK Store,
 configure the |ws_markup| snap

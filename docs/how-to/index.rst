@@ -44,4 +44,4 @@ to build and publish the SDK in the SDK Store (credentials provided on request):
 .. toctree::
    :maxdepth: 1
 
-   Build SDKs with SDKcraft <use-sdkcraft>
+   Build SDKs <use-sdkcraft>

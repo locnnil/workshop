@@ -5,8 +5,8 @@
 SDK hooks
 =========
 
-|ws_markup| allows you to define optional life cycle *hooks*
-that control and extend the behaviour of the SDK.
+|ws_markup| and |sdk_markup| enable optional life cycle *hooks*
+that control and extend the behaviour of an SDK.
 
 Each hook is a shell script
 that performs SDK-specific, domain-oriented actions in the workshop
@@ -18,7 +18,7 @@ Specific examples include :samp:`setup-base`,
 When you define an SDK,
 its hooks should be placed in the :file:`hooks/` subdirectory
 next to the :ref:`definition <exp_sdk_definition>`;
-|ws_markup| validates and packages them along with the :file:`.yaml` file.
+|sdk_markup| validates and packages them along with the :file:`.yaml` file.
 
 
 See also

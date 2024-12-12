@@ -454,7 +454,7 @@ you can open an interactive :ref:`shell <ref_workshop_shell>`
 if you need to perform multiple operations within a session.
 |ws_markup| runs the login shell
 for the default non-privileged user,
-also named :samp:`workshop`:
+who's also named :samp:`workshop`:
 
 .. code-block:: console
 

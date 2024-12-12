@@ -1,7 +1,7 @@
 .. _how_troubleshoot:
 
-How to troubleshoot the installation
-====================================
+How to troubleshoot |ws_markup|
+===============================
 
 If you notice issues with workshops, projects or |ws_markup| in general,
 it may be time to verify or update the installation or prerequisites.
