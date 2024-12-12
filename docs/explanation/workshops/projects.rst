@@ -10,7 +10,7 @@ containing one workshop definition or more.
 
 To initialise a directory as a project,
 create a
-:ref:`workshop definition <exp_workshop_def>`
+:ref:`workshop definition <exp_workshop_definition>`
 in it
 and run :command:`workshop launch`.
 Launching a workshop from a project
@@ -48,7 +48,7 @@ See also
 Explanation:
 
 - :ref:`exp_workshop`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 How-to guides:

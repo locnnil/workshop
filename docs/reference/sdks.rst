@@ -1,4 +1,4 @@
-.. _ref_sdks:
+.. _ref_sdk:
 
 SDKs
 ====
@@ -10,142 +10,8 @@ Source directory
 ----------------
 
 All files that go into an SDK should be placed in a *source directory*
-where you'll run |ws_markup|
+where you'll run |sdk_markup|
 to initialise, define, pack and publish the SDK.
-
-
-.. _ref_sdk_definition:
-
-SDK definition
---------------
-
-The name of the workshop definition file must be :file:`sdkcraft.yaml`;
-the file is usually created using the :command:`sdkcraft init` command
-in the source directory.
-
-The definition in the file must be written in
-`YAML <https://yaml.org/>`__
-and include these top-level fields:
-:samp:`name`, :samp:`base`, :samp:`version`, :samp:`summary`,
-:samp:`description`, :samp:`license`, :samp:`platforms` and :samp:`parts`.
-The :samp:`plugs` field is optional.
-
-.. list-table::
-   :header-rows: 1
-   :width: 95
-   :widths: 1 1 7
-
-   * - Key
-     - Value
-     - Description
-
-   * - :samp:`name`
-     - string
-     - SDK's name, used to reference it in the workshop definition.
-
-
-   * - :samp:`base`
-     - string
-     - SDK's base image
-       that provides the underlying OS capabilities.
-
-       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
-       or :samp:`ubuntu@24.04`.
-
-
-   * - :samp:`version`
-     - string
-     - SDK's arbitrary version;
-       semantic versioning is recommended.
-
-       .. note::
-
-          Use quotes to avoid potential data type mismatches:
-          without them, :samp:`'1.0'` can be interpreted as a number,
-          for example.
-
-
-   * - :samp:`summary`
-     - string
-     - A short one-line summary of up to 79 characters.
-
-
-   * - :samp:`description`
-     - string
-     - A longer, more detailed description of the SDK, up to one hundred words.
-
-
-   * - :samp:`license`
-     - string
-     - Name of the software license under which the SDK is distributed.
-
-       .. note::
-
-          Make sure it matches the individual components of the SDK.
-
-
-   * - :samp:`platforms`
-     - object
-     - Lists individual architectures that the SDK supports.
-
-
-   * - :samp:`parts`
-     - object
-     - See :ref:`ref_sdk_parts` for a detailed discussion.
-
-
-   * - :samp:`plugs`
-     - object
-     - See :ref:`ref_sdk_plugs_slots` for a detailed discussion.
-
-   * - :samp:`slots`
-     - object
-     - See :ref:`ref_sdk_plugs_slots` for a detailed discussion.
-
-
-For example:
-
-.. code-block:: yaml
-   :caption: sdkcraft.yaml
-
-    name: go
-    title: Go SDK
-    base: ubuntu@22.04
-    summary: The Go programming language
-    description: |
-      Go is an open source programming language that enables the production
-      of simple, efficient and reliable software at scale.
-    version: '0.1'
-    license: LGPL-2.1
-    platforms:
-        amd64:
-
-    parts:
-      go-part:
-        plugin: nil
-
-    plugs:
-      mod-cache:
-        interface: mount
-        workshop-target: /home/workshop/go/pkg/mod
-
-   slots:
-      tools:
-        interface:  mount
-        workshop-source: $SDK/go
-
-
-JSON Schema
-~~~~~~~~~~~
-
-The following
-`JSON Schema`
-formalises the description above:
-
-.. dropdown:: SDK definition schema
-
-   .. literalinclude:: schema-sdk.json
-      :language: json
 
 
 .. _ref_sdk_parts:
@@ -153,12 +19,12 @@ formalises the description above:
 SDK parts
 ---------
 
-Parts can be thought of as the building blocks of |ws_markup|.
+Parts can be thought of as the building blocks of |ws_markup| and |sdk_markup|.
 Each part in the :file:`sdkcraft.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
 providing a way to modularise the package and manage its dependencies.
 
-|ws_markup| is built as a
+|sdk_markup| is built as a
 `craft-application <https://github.com/canonical/craft-application/>`_,
 which affects how :samp:`parts` are implemented.
 However, note that :samp:`stage-packages` and :samp:`stage-snaps`
@@ -177,7 +43,7 @@ refer to the corresponding Craft Parts
 SDK plugs and slots
 -------------------
 
-Currently, |ws_markup| supports defining the following interface plugs:
+Currently, |ws_markup| and |sdk_markup| support the following interface plugs:
 
 - :ref:`Camera <ref_camera_interface>`
 - :ref:`Desktop <ref_desktop_interface>`
@@ -328,12 +194,13 @@ via a Unix domain socket.
    See the :ref:`explanation <exp_ssh_interface>` for more details.
 
 
-.. _ref_hooks:
+.. _ref_sdk_hooks:
 
-Hooks
------
+SDK hooks
+---------
 
-|ws_markup| supports the following life cycle hooks:
+|ws_markup| supports the following life cycle hooks,
+which can be defined when the SDK's is built using |sdk_markup|:
 
 .. list-table::
    :header-rows: 1
@@ -345,20 +212,21 @@ Hooks
      - What it does
 
    * - :samp:`check-health`
-     - At :command:`workshop launch`:
+     - At :ref:`ref_workshop_launch`:
        after running :samp:`setup-base` hooks for *all* SDKs.
      
-       At :command:`workshop refresh`:
+       At :ref:`ref_workshop_refresh`:
        after running :samp:`restore-state` hooks for *all* SDKs.
 
      - Sets the state of the SDK
        (:samp:`okay`, :samp:`waiting` or :samp:`error`)
        using :ref:`workshopctl <ref_workshopctl>`,
-       which affects the status of the workshop.
+       which affects the :ref:`status <ref_workshop_status>` of the workshop.
+
 
    * - :samp:`restore-state`
 
-     - At :command:`workshop refresh`:
+     - At :ref:`ref_workshop_refresh`:
        after launching the new workshop
        and running the :samp:`setup-base` hook for the SDK.
 
@@ -368,7 +236,7 @@ Hooks
 
    * - :samp:`save-state`
 
-     - At :command:`workshop refresh`:
+     - At :ref:`ref_workshop_refresh`:
        before destroying the old workshop.
 
      - Saves SDK-specific data to the :ref:`state directory <ref_sdk_state>`.
@@ -377,7 +245,7 @@ Hooks
 
    * - :samp:`setup-base`
 
-     - At :command:`workshop launch`, :command:`workshop refresh`:
+     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
        after unpacking the base image
        and starting the workshop,
        but before setting its status to *Ready*.
@@ -403,7 +271,10 @@ a zero code indicates success.
 .. note::
 
    The hooks aren't mentioned in the :ref:`definition <ref_sdk_definition>`;
-   |ws_markup| automatically enumerates them when packing the SDK.
+   |sdk_markup| automatically enumerates them when packing the SDK.
+
+   Hooks of the same type from multiple SDKs run non-deterministically,
+   so you shouldn't rely on any particular order of their execution.
 
 
 .. _ref_sdk_state:
@@ -451,5 +322,8 @@ See also
 
 Explanation:
 
+- :ref:`exp_base`
 - :ref:`exp_interfaces`
 - :ref:`exp_sdk`
+- :ref:`exp_sdk_state`
+- :ref:`exp_workshop_definition`

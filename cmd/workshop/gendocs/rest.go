@@ -220,8 +220,8 @@ func GenReSTTreeCustom(cmd *cobra.Command, dir string, filePrepender func(string
 		return err
 	}
 
-	// Create and write the index.rst file
-	indexPath := filepath.Join(dir, "index.rst")
+	// Create and write the workshop.rst file
+	indexPath := filepath.Join(dir, "workshop.rst")
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		return err

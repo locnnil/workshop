@@ -25,7 +25,8 @@ such as a model training configuration,
 within the workshop.
 To enable this,
 the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
-that |ws_markup| runs at the appropriate moments
+when building the SDK using |sdk_markup|.
+Later, |ws_markup| runs these hooks at the appropriate moments
 to consistently handle such data, collectively known as *SDK state*.
 
 For example, before changes are applied to the workshop
@@ -100,7 +101,7 @@ file system, hardware, computing and so on.
 
 Specific interfaces are predefined and implemented by |ws_markup|,
 so you can't create a custom interface type.
-Currently, |ws_markup| supports the following:
+Currently, |ws_markup| and |sdk_markup| support the following:
 
 - :ref:`Camera interface <exp_camera_interface>` (manually connected)
 - :ref:`Desktop interface <exp_desktop_interface>` (manually connected)
@@ -115,11 +116,11 @@ Plugs and slots
 ~~~~~~~~~~~~~~~
 
 To make use of these interfaces,
-SDKs and :ref:`workshops <exp_workshop_def_connections>` define *slots*.
+SDKs and :ref:`workshops <exp_workshop_definition_connections>` define *slots*.
 For example, a :ref:`mount interface <exp_mount_interface>` slot
 creates a source directory to be mounted inside the workshop via a plug.
 
-Further, SDKs and :ref:`workshops <exp_workshop_def_connections>` define *plugs*
+Further, SDKs and :ref:`workshops <exp_workshop_definition_connections>` define *plugs*
 to connect to a slot of a certain interface type.
 For example, a :ref:`mount interface <exp_mount_interface>` plug
 mounts the slot to a target directory inside the workshop.
@@ -136,7 +137,7 @@ Connections can be established:
 - Manually:
   By running :command:`workshop connect` after the workshop has started,
   or by listing connections in the
-  :ref:`workshop definition <exp_workshop_def_connections>`
+  :ref:`workshop definition <exp_workshop_definition_connections>`
   and running :command:`workshop refresh`.
 
 
@@ -260,7 +261,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interface_connections`
+- :ref:`exp_interface`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 

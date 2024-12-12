@@ -1,11 +1,11 @@
-.. _howto_ros2:
+.. _how_ros2:
 
 ROS2: case study
 ================
 
 These topics present an end-to-end scenario
-of using |ws_markup| with `ROS2 <https://www.ros.org/>`_,
-a popular robotics-oriented framework.
+of using |ws_markup| and |sdk_markup| with `ROS2 <https://www.ros.org/>`_,
+a popular robotics-oriented framework:
 
 .. toctree::
    :maxdepth: 1

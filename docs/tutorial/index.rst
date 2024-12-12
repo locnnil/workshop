@@ -32,7 +32,7 @@ see the
 
 
 Install |ws_markup|
-------------------------
+-------------------
 
 Check the prerequisites,
 build and install |ws_markup|,
@@ -49,7 +49,7 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`
+First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
 and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
@@ -117,7 +117,7 @@ The command installs two main components:
 - The :program:`workshopd` daemon, which exposes a REST API
 
 - The :program:`workshop`
-  :ref:`CLI tool <exp_cli>`,
+  :ref:`CLI tool <exp_workshop_cli>`,
   which uses this API to command |ws_markup|
 
 
@@ -161,7 +161,7 @@ Define
 ~~~~~~
 
 First, you need to define a workshop.
-A :ref:`definition <exp_workshop_def>` lists the components of a workshop
+A :ref:`definition <exp_workshop_definition>` lists the components of a workshop
 to be instantiated at launch
 and is stored in your project directory.
 
@@ -195,7 +195,7 @@ create a workshop definition named :file:`workshop.yaml`:
 
 This definition adds an :ref:`SDK <exp_sdk>`,
 the basic functionality unit of a workshop
-that is :ref:`built with SDKcraft <use_sdkcraft>`.
+that is :ref:`built with SDKcraft <how_use_sdkcraft>`.
 
 To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
@@ -454,7 +454,7 @@ you can open an interactive :ref:`shell <ref_workshop_shell>`
 if you need to perform multiple operations within a session.
 |ws_markup| runs the login shell
 for the default non-privileged user,
-also named :samp:`workshop`:
+who's also named :samp:`workshop`:
 
 .. code-block:: console
 

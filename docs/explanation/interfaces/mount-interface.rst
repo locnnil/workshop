@@ -76,7 +76,7 @@ Connection
 
 The interface is connected automatically at launch or refresh
 if the plug can be matched to the slot by its name
-or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_def>`,
+or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_definition>`,
 both subject to |ws_markup|'s
 :ref:`validation rules <exp_interfaces_validation>`.
 
@@ -173,7 +173,7 @@ Explanation:
 - :ref:`exp_interfaces`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:

@@ -1,7 +1,7 @@
 Security
 ========
 
-This is an overview of security aspects and considerations for |ws_markup|.
+This is an overview of security considerations for |ws_markup| and |sdk_markup|.
 
 
 Privileges
@@ -10,7 +10,7 @@ Privileges
 |ws_markup| has a client-server architecture;
 its CLI, which is the contact surface for the users,
 is confined as a snap and neither needs nor requires elevated privileges to run.
-Instead, it uses a RESTful API to communicate with the ``workshopd`` daemon,
+Instead, it uses a RESTful API to communicate with the :program:`workshopd` daemon,
 which performs all the heavy lifting and does indeed run with elevated privileges.
 The use of `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
 for implementation provides the benefits of a mature container technology.
@@ -55,7 +55,7 @@ Interfaces
 
 In |ws_markup|, the interface mechanism plays a role in maintaining security
 by controlling access between the workshop's components and the host system;
-the implementation is largely similar to ``snapd``'s
+the implementation is largely similar to :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__:
 
 - Interfaces define and control what resources a workshop can use,

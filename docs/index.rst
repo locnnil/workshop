@@ -4,7 +4,7 @@
 .. _home:
 
 |ws_markup|
-================
+===========
 
 .. toctree::
    :hidden:
@@ -57,7 +57,7 @@ In this documentation
 
    .. grid-item:: :doc:`How-to guides <how-to/index>`
 
-      **Step-by-step guides** covering common tasks
+      **Step-by-step guides** for common |ws_markup| and |sdk_markup| tasks
 
 
    .. grid-item:: :doc:`Explanation <explanation/index>`
@@ -77,8 +77,7 @@ Project and community
 
 |ws_markup| is an emergent project
 within the Enterprise Engineering department here at Canonical;
-`SDKcraft`_
-is a sibling project,
+|sdk_markup| is its sibling project,
 aimed at publishers who create and distribute SDKs for |ws_markup|.
 
 At its core, |ws_markup| builds upon Canonical's mature tech.

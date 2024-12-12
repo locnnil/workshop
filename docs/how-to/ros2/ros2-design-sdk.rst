@@ -12,7 +12,7 @@ is structured.
 
 .. note::
 
-   This guide assumes that you already have |ws_markup| installed
+   This guide assumes that you already have |sdk_markup| installed
    and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`jazzy` distribution;
    adapt these steps for other distributions as needed.
@@ -57,7 +57,7 @@ Let's review the less trivial sections:
        - The GPU plug provides GPU pass-through for the SDK.
 
 
-Summarily, the definition builds upon |ws_markup|'s capabilities,
+Summarily, the definition builds upon |sdk_markup|'s capabilities,
 persisting the important reusable parts of the setup on the host
 and making its GPU capabilities directly available.
 

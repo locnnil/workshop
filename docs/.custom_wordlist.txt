@@ -9,6 +9,7 @@ cuda
 customisable
 cwd
 deliverables
+deterministically
 dev
 distributions
 Dockerfile

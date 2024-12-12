@@ -225,7 +225,7 @@ This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake
 
 .. note::
 
-   This guide assumes you're familiar with :ref:`SDKcraft <use_sdkcraft>`.
+   This guide assumes you're familiar with :ref:`SDKcraft <how_use_sdkcraft>`.
 
 
 Create the directory structure
@@ -284,7 +284,7 @@ Pass the top-level SDK store directory to this :command:`go run` command:
 
 
 Use the local store with |ws_markup|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To override the URL that |ws_markup| uses to connect to SDK Store,
 configure the |ws_markup| snap

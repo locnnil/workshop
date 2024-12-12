@@ -133,7 +133,7 @@ See also
 Explanation:
 
 - :ref:`exp_projects`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 Reference:

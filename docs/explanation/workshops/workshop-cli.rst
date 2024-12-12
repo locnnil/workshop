@@ -1,9 +1,9 @@
 :hide-toc:
 
-.. _exp_cli:
+.. _exp_workshop_cli:
 
-CLI
-===
+workshop (CLI)
+==============
 
 |ws_markup| includes an eponymous command-line utility,
 :command:`workshop`;

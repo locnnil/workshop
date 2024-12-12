@@ -20,19 +20,19 @@ and focuses on a specific feature or resource;
 these can be libraries, binaries, or configuration files.
 
 A part defines a number of preset attributes and life cycle stages in YAML;
-|ws_markup| executes these definitions stage by stage
+|sdk_markup| executes these definitions stage by stage
 and iteratively resolves any dependencies between parts.
 Eventually, this results in a uniform SDK,
 ready for publishing and installation;
 such SDKs arrive to the users pre-built,
 allowing to factor out build activities from :ref:`SDK hooks <exp_sdk_hooks>`
-that run inside the workshop.
+that |ws_markup| executes inside the workshop at run-time.
 
 
 Implementation notes
 --------------------
 
-Full disclosure: |ws_markup| borrows the
+Full disclosure: |sdk_markup| borrows the
 `Craft Parts <https://github.com/canonical/craft-parts/>`_
 mechanism from the upstream
 `Craft Application <https://github.com/canonical/craft-application/>`_
@@ -44,7 +44,7 @@ and
 so general approaches that work for any of those will apply here.
 
 Aside from not yet allowing :samp:`stage-packages` and :samp:`stage-snaps`,
-|ws_markup| doesn't further limit or expand the parts functionality.
+|sdk_markup| doesn't further limit or expand the parts functionality.
 However, be aware of the requirements and limitations
 that the upstream project places on what's available
 for a given base, plugin, source and so on.

@@ -188,7 +188,7 @@ Explanation:
 
 - :ref:`exp_base`
 - :ref:`exp_projects`
-- :ref:`exp_workshop_def`
+- :ref:`exp_workshop_definition`
 
 
 How-to guides:
