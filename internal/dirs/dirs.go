@@ -20,13 +20,13 @@ var (
 	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 
 	// Base directory for the state storage
-	WorkshopStateDir = filepath.Join(WorkshopBaseDir, "/state")
+	WorkshopStateDir = filepath.Join(WorkshopBaseDir, "state")
 
 	// Base directory for the SDK state storage
-	WorkshopSdkStateDir = filepath.Join(WorkshopStateDir, "/sdk")
+	WorkshopSdkStateDir = filepath.Join(WorkshopStateDir, "sdk")
 
 	// Run directory inside workshop
-	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "/run")
+	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "run")
 
 	// Cache directory for deb packages
 	AptCachePath = "/var/cache/apt/archives"
