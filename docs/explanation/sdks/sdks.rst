@@ -232,18 +232,13 @@ but this detail isn't exposed in :file:`sdkcraft.yaml`.
 .. _exp_sketch_sdk:
 
 Sketch SDK
---------
+----------
 
 The sketch SDK is another special type of SDK.
 Again, it's unavailable from the SDK Store;
 instead, you define it inside the workshop
-<<<<<<< HEAD:docs/explanation/sdks/sdks.rst
-using the :command:`workshop hack` command.
+using the :command:`workshop sketch-sdk` command.
 Its purpose is to allow |ws_markup| users
-=======
-using the :command:`workshop sketch-sdk` command.
-Its purpose is to allow |project_markup| users
->>>>>>> 1b9a21d (Rename workshop hack to workshop sketch-sdk):docs/explanation/workshops-sdks/sdks.rst
 to quickly make changes to a workshop
 beside the regular SDKs listed in the :ref:`definition <exp_sdk_definition>`.
 
