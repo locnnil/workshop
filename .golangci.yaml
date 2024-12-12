@@ -6,6 +6,7 @@ linters:
     - govet
     - ineffassign
     - nilerr
+    - staticcheck
 linters-settings:
   gci:
     sections:

@@ -339,4 +339,6 @@ func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	// Validate
 	c.Assert(err, check.IsNil)
 	c.Assert(created, check.Equals, true)
+	c.Assert(prj, check.NotNil)
+	c.Assert(prj.Path, check.Equals, projectDir)
 }

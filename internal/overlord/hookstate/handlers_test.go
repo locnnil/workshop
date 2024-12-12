@@ -482,6 +482,7 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
 	defer ws.Close()
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)

@@ -168,10 +168,10 @@ func (ts *AtomicWriteTestSuite) TestAtomicWriteFileOverwriteRelativeSymlink(c *C
 func (ts *AtomicWriteTestSuite) TestAtomicWriteFileNoOverwriteTmpExisting(c *C) {
 	tmpdir := c.MkDir()
 	// ensure we always get the same result
-	rand.Seed(1)
+	rand.Seed(1) //nolint:staticcheck // Deprecated, but randutil needs updating first.
 	expectedRandomness := randutil.RandomString(12) + "~"
 	// ensure we always get the same result
-	rand.Seed(1)
+	rand.Seed(1) //nolint:staticcheck
 
 	p := filepath.Join(tmpdir, "foo")
 	err := os.WriteFile(p+"."+expectedRandomness, []byte(""), 0644)

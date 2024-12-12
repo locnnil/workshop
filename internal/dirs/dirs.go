@@ -1,10 +1,7 @@
 package dirs
 
 import (
-	crypto_rand "crypto/rand"
-	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 )
@@ -81,13 +78,6 @@ func init() {
 	XdgRuntimeDirBase = "/run/user"
 	BaseDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
-
-	var b [8]byte
-	_, err = crypto_rand.Read(b[:])
-	if err != nil {
-		panic("cannot seed math/rand package")
-	}
-	rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
 }
 
 func SetRootDir(rootdir string) {

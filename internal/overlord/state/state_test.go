@@ -53,7 +53,7 @@ type mgrState2 struct {
 func (ss *stateSuite) TestLockUnlock(c *C) {
 	st := state.New(nil)
 	st.Lock()
-	st.Unlock()
+	st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 }
 
 func (ss *stateSuite) TestGetAndSet(c *C) {
@@ -276,7 +276,7 @@ func (ss *stateSuite) TestImplicitCheckpointRetry(c *C) {
 	st.Lock()
 
 	// implicit checkpoint will retry
-	st.Unlock()
+	st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 
 	c.Check(retries, Equals, 2)
 }
@@ -310,9 +310,9 @@ func (ss *stateSuite) TestImplicitCheckpointModifiedOnly(c *C) {
 	b := &fakeStateBackend{}
 	st := state.New(b)
 	st.Lock()
-	st.Unlock()
+	st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 	st.Lock()
-	st.Unlock()
+	st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 
 	c.Assert(b.checkpoints, HasLen, 1)
 
@@ -712,7 +712,7 @@ func (ss *stateSuite) TestMethodEntrance(c *C) {
 
 	// Reset modified flag.
 	st.Lock()
-	st.Unlock()
+	st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 
 	writes := []func(){
 		func() { st.Set("foo", 1) },
@@ -749,7 +749,7 @@ func (ss *stateSuite) TestMethodEntrance(c *C) {
 
 	for i, f := range writes {
 		st.Lock()
-		st.Unlock()
+		st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 		c.Assert(st.Modified(), Equals, false)
 
 		c.Logf("Testing write function #%d", i)

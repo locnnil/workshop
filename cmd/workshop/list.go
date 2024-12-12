@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"text/tabwriter"
@@ -173,13 +172,13 @@ func workshopEntry(w *client.WorkshopInfo, p client.Project) []string {
 /*
 Make the path nicer and shorter by contracting $HOME with a ~
 
-	TODO: Make it fully correct, filepath uses strings module which is not path-aware
+	TODO: Make it fully correct, strings module is not path-aware
 */
 func contractHomeDirectory(path string) string {
 	if home, err := os.UserHomeDir(); err == nil {
-		if filepath.HasPrefix(path, home) {
+		if strings.HasPrefix(path, home) {
 			return strings.Replace(path, home, "~", 1)
-		} else if filepath.HasPrefix(path, "(") {
+		} else if strings.HasPrefix(path, "(") {
 			return "-"
 		}
 	}

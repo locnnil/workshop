@@ -67,7 +67,7 @@ func (s *utilSuite) TestDecodeSuccess(c *C) {
 func (utilSuite) TestStructFields(c *C) {
 	type aStruct struct {
 		Foo int `json:"hello"`
-		Bar int `json:"potato,stuff"`
+		Bar int `json:"potato,omitempty"`
 	}
 	c.Assert(jsonutil.StructFields((*aStruct)(nil)), DeepEquals, []string{"hello", "potato"})
 }
@@ -75,7 +75,7 @@ func (utilSuite) TestStructFields(c *C) {
 func (utilSuite) TestStructFieldsExcept(c *C) {
 	type aStruct struct {
 		Foo int `json:"hello"`
-		Bar int `json:"potato,stuff"`
+		Bar int `json:"potato,omitempty"`
 	}
 	c.Assert(jsonutil.StructFields((*aStruct)(nil), "potato"), DeepEquals, []string{"hello"})
 	c.Assert(jsonutil.StructFields((*aStruct)(nil), "hello"), DeepEquals, []string{"potato"})

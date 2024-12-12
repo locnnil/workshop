@@ -42,8 +42,8 @@ func (x *X11TestSuit) TestMigrateXAuthoritySuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	xf, err := os.Create(filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
-	defer xf.Close()
 	c.Assert(err, check.IsNil)
+	defer xf.Close()
 
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, check.IsNil)
@@ -56,8 +56,8 @@ func (x *X11TestSuit) TestMigrateXAuthorityOwnershipFail(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	xf, err := os.Create(filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
-	defer xf.Close()
 	c.Assert(err, check.IsNil)
+	defer xf.Close()
 
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, check.NotNil)
