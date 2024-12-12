@@ -12,7 +12,7 @@ Workshops and projects
 ----------------------
 
 A *workshop* is a container that enables consistent environment builds.
-It is tied to a definition that lists SDKs and is stored as a `.yaml` file
+It is tied to a definition that lists SDKs and is stored as a :file:`.yaml` file
 under a project directory.
 A *project* is the working directory where workshop definitions are placed.
 When you start a workshop, the project directory is mounted inside it,
