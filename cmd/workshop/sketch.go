@@ -58,6 +58,8 @@ Notes:
 	cmd.Flags().BoolVar(&c.restore, "restore", false, "Return the previously stashed SDK to the workshop.")
 	cmd.Flags().BoolVar(&c.remove, "remove", false, "Remove the sketch SDK from the workshop.")
 
+	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "remove")
+
 	return cmd
 }
 
@@ -157,14 +159,6 @@ func restoreSketch(sketchdir, stashdir string) error {
 }
 
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
-	if c.remove && c.restore {
-		return fmt.Errorf("cannot sketch: '--remove' incompatible with '--restore'")
-	}
-
-	if len(av) != 1 {
-		return fmt.Errorf("cannot sketch: require a single workshop name")
-	}
-
 	cli, err := c.root.client()
 	if err != nil {
 		return err

@@ -204,20 +204,6 @@ plugs:
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, sketchContent)
 }
 
-func (m *workshopSketch) TestSketchSdkRemoveRestoreIncompatible(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, remove: true, restore: true}
-
-	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot sketch: '--remove' incompatible with '--restore'`)
-}
-
-func (m *workshopSketch) TestSketchSdkSingleWorkshop(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, remove: true, restore: false}
-
-	err := cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, `cannot sketch: require a single workshop name`)
-}
-
 func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 	restore := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
