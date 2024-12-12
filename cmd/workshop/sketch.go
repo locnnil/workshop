@@ -39,6 +39,7 @@ which installs the updated 'sketch' SDK in the workshop.
 The '--stash' and '--restore' options stash the 'sketch' SDK,
 reversing the changes, and quickly restore it to the workshop.
 
+The '--remove' option removes the 'sketch' SDK permanently.
 
 Notes:
 
@@ -158,6 +159,19 @@ func restoreSketch(sketchdir, stashdir string) error {
 	return nil
 }
 
+func removeSketch(sketchdir string) error {
+	_, err := os.Stat(sketchdir)
+	if err != nil && !osutil.IsDirNotExist(err) {
+		return err
+	}
+	if osutil.IsDirNotExist(err) {
+		// Nothing to do.
+		return fmt.Errorf(`cannot remove: the 'sketch' SDK doesn't exist`)
+	}
+
+	return os.RemoveAll(sketchdir)
+}
+
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cli, err := c.root.client()
 	if err != nil {
@@ -181,8 +195,8 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	sketchdir := sdk.WorkshopSketchSdkCurrent(user.HomeDir, p.Id, wp.Name)
 
 	if c.stash {
-		storedir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
-		reverter, err := stashSketch(sketchdir, storedir)
+		stashdir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
+		reverter, err := stashSketch(sketchdir, stashdir)
 		if err != nil {
 			return err
 		}
@@ -190,7 +204,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		if err = cmdrefresh.Run(cmd, av[0:1]); err != nil {
-			// Refresh failed, revert the drop operation so a possible subsequent
+			// Refresh failed, revert the stash operation so a possible subsequent
 			// "workshop refresh <WORKSHOP>/sketch" won't fail due to the lack of
 			// sketch SDK definition.
 			return err
@@ -215,6 +229,15 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// workshop refresh --abort and workshop sketch --restore to restore the
 		// original sketch content.
 		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", av[0])})
+	}
+
+	if c.remove {
+		if err := removeSketch(sketchdir); err != nil {
+			return err
+		}
+
+		cmdrefresh := &CmdRefresh{root: c.root}
+		return cmdrefresh.Run(cmd, av[0:1])
 	}
 
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")

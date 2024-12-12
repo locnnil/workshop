@@ -375,3 +375,25 @@ func (m *workshopSketch) TestRemoveRemovesSketch(c *check.C) {
 	sketchroot := sdk.WorkshopSketchSdk(m.user.HomeDir, m.prjId, "ws")
 	c.Assert(sketchroot, testutil.FileAbsent)
 }
+
+func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+	m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.IsNil)
+
+	current := sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
+	c.Assert(current, testutil.FileAbsent)
+}
+
+func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, `cannot remove: the 'sketch' SDK doesn't exist`)
+}
