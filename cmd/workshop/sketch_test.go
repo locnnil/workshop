@@ -134,7 +134,7 @@ hooks:
 
 	current := sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
-	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, `echo "Hello"`)
+	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
 }
 
 func (m *workshopSketch) TestSketchSdkUpdateHooks(c *check.C) {
@@ -170,8 +170,8 @@ hooks:
 	c.Assert(filepath.Join(meta, "sdk.yaml"), testutil.FileEquals, sketchContent)
 	c.Assert(filepath.Join(hooks, "setup-base"), testutil.FileAbsent)
 	c.Assert(filepath.Join(hooks, "check-health"), testutil.FileAbsent)
-	c.Assert(filepath.Join(hooks, "save-state"), testutil.FileEquals, `# saves state`)
-	c.Assert(filepath.Join(hooks, "restore-state"), testutil.FileEquals, `# restores state`)
+	c.Assert(filepath.Join(hooks, "save-state"), testutil.FileEquals, "# saves state\n")
+	c.Assert(filepath.Join(hooks, "restore-state"), testutil.FileEquals, "# restores state\n")
 }
 
 func (m *workshopSketch) TestSketchSdkEditExistingMeta(c *check.C) {
@@ -192,8 +192,6 @@ plugs:
     interface: gpu
 `
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
-		err := os.WriteFile(inPath, []byte(sketchContent), 0644)
-		c.Assert(err, check.IsNil)
 		return []byte(sketchContent), nil
 	})
 	defer restore()
@@ -282,6 +280,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
+	c.Assert(n, check.Equals, 5)
 
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 	restore := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")

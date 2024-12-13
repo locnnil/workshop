@@ -154,8 +154,6 @@ func readWorkshop(path string) (*File, error) {
 		}
 		return nil, err
 	}
-	file.Path = path
-
 	if err = yaml.Unmarshal(buf, &file); err != nil {
 		te, ok := err.(*yaml.TypeError)
 		if ok {
@@ -164,6 +162,7 @@ func readWorkshop(path string) (*File, error) {
 		}
 		return nil, err
 	}
+	file.Path = path
 
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
 		return cmp.Compare(a.Name, b.Name)

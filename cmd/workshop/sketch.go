@@ -316,7 +316,7 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
 		hookpath := filepath.Join(hooksdir, hook)
 		if script := rec.Hooks[hook]; len(script) > 0 {
-			if err := os.WriteFile(hookpath, []byte(script), 0644); err != nil {
+			if err := os.WriteFile(hookpath, []byte(script+"\n"), 0644); err != nil {
 				return err
 			}
 		} else {

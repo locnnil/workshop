@@ -52,7 +52,7 @@ Notes:
 
 - If the optional <SDK> is supplied,
   the operation is limited to this SDK;
-  currently, it can only be 'hack'
+  currently, it can only be 'sketch'
 
 
 .. rubric:: Options
@@ -106,8 +106,10 @@ continue the operation:
    $ workshop refresh nimble --continue
 
 
-Refresh the :samp:`sketch` SDK in :samp:`nimble`:
+Refresh the hack SDK under 'nimble':
 
 .. code-block:: console
 
-   $ workshop refresh nimble/sketch
+   $ workshop refresh nimble/hack
+
+

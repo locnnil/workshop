@@ -71,7 +71,7 @@ var workshopMounts = mounts
 func workshopFileToInfo(name string, file string, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
 	ws.Path = file
-	ws.Name = file
+	ws.Name = name
 	ws.ProjectId = pid
 	ws.Status = healthstate.OffStatus.String()
 	return &ws

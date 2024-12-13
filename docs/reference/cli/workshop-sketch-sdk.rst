@@ -14,17 +14,15 @@ Edit the sketch SDK and graft it onto the workshop.
 .. rubric:: Description
 
 
-This command opens the default text editor to configure the 'sketch' SDK
-and immediately installs it in the specified workshop,
+This opens the 'sketch' SDK definition in the default text editor,
 enabling rapid experiments and tweaks at the SDK level.
 
-Saving and exiting causes a refresh,
-which installs the updated 'sketch' SDK in the workshop.
+Saving the definition and exiting the editor causes a refresh,
+which installs the configured 'sketch' SDK in the workshop.
 
-The '--stash' and '--restore' options stash the 'sketch' SDK,
+The '--stash' and '--restore' options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-
-The '--remove' option removes the 'sketch' SDK permanently.
+The '--remove' option removes the SDK permanently.
 
 Notes:
 
@@ -54,3 +52,24 @@ Notes:
 --stash
 
    Stash the sketch SDK and remove it from the workshop.
+
+
+
+.. rubric:: Examples
+
+
+Edit the hack SDK definition for the 'nimble' workshop
+and apply it after saving by automatically refreshing the workshop:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk nimble
+
+
+Stash the hack SDK, temporarily reverting the changes in the workshop:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk nimble --stash
+
+
