@@ -50,6 +50,13 @@ Notes:
 - You can partially refresh the workshop, targeting the 'sketch' SDK
   with the 'workshop refresh <WORKSHOP>/sketch' command
 `,
+		Example: `
+Edit the hack SDK definition for the 'nimble' workshop
+and apply it after saving by automatically refreshing the workshop:
+$ workshop sketch-sdk nimble
+
+Stash the hack SDK, temporarily reverting the changes in the workshop:
+$ workshop sketch-sdk nimble --stash`,
 		RunE: c.Run,
 	}
 
