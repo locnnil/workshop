@@ -29,17 +29,15 @@ func (c *CmdSketch) Command() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "Edit the sketch SDK and graft it onto the workshop",
 		Long: `
-This command opens the default text editor to configure the 'sketch' SDK
-and immediately installs it in the specified workshop,
+This opens the 'sketch' SDK definition in the default text editor,
 enabling rapid experiments and tweaks at the SDK level.
 
-Saving and exiting causes a refresh,
-which installs the updated 'sketch' SDK in the workshop.
+Saving the definition and exiting the editor causes a refresh,
+which installs the configured 'sketch' SDK in the workshop.
 
-The '--stash' and '--restore' options stash the 'sketch' SDK,
+The '--stash' and '--restore' options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-
-The '--remove' option removes the 'sketch' SDK permanently.
+The '--remove' option removes the SDK permanently.
 
 Notes:
 
@@ -85,7 +83,7 @@ hooks:
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
     # else
-    #   workshopctl set-health --code=installation-fails error "Installation fails"
+    #   workshopctl set-health --code=installation-failed error "Installation failed"
     # fi
 
 plugs:
@@ -226,7 +224,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// Run refresh with the stored sketch SDK. We do not revert dirs exchange
 		// on a failed refresh here as it is run with the content from "stored"
 		// and with --wait-on-error. Hence, there is always a possibility to
-		// workshop refresh --abort and workshop sketch --restore to restore the
+		// workshop refresh --abort and workshop sketch-sdk --restore to restore the
 		// original sketch content.
 		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", av[0])})
 	}
@@ -288,7 +286,7 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 	}
 
 	if rec.Name != sdk.Sketch {
-		return fmt.Errorf("cannot sketch: SDK name must be %q", sdk.Sketch)
+		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
 	metadir := filepath.Join(sketchdir, "meta")
