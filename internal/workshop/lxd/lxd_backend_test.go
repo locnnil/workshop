@@ -116,7 +116,8 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 	c.Assert(projects, check.HasLen, 0)
 }
 
-var marshalledWorkshop = `name: test
+var marshalledWorkshop = `file-path: /home/user/work/workshop.yaml
+name: test
 base: ubuntu@22.04
 sdks:
     one:
@@ -134,6 +135,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	// Setup
 	b := &lxdbackend.Backend{}
 	file := &workshop.File{
+		Path: "/home/user/work/workshop.yaml",
 		Name: "test",
 		Base: "ubuntu@22.04",
 		Sdks: workshop.SdkList{

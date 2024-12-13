@@ -56,6 +56,7 @@ type Mount struct {
 }
 
 type WorkshopInfo struct {
+	Path      string     `json:"file-path"`
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
 	ProjectId string     `json:"project-id"`
@@ -67,8 +68,9 @@ type WorkshopInfo struct {
 var ensureStateSoon = stateEnsureBefore
 var workshopMounts = mounts
 
-func workshopFileToInfo(file string, pid string) *WorkshopInfo {
+func workshopFileToInfo(name string, file string, pid string) *WorkshopInfo {
 	var ws WorkshopInfo
+	ws.Path = file
 	ws.Name = file
 	ws.ProjectId = pid
 	ws.Status = healthstate.OffStatus.String()
@@ -77,6 +79,7 @@ func workshopFileToInfo(file string, pid string) *WorkshopInfo {
 
 func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
+	info.Path = w.File.Path
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
@@ -211,42 +214,42 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	var infoLst = make([]*WorkshopInfo, 0)
+	var infos = make([]*WorkshopInfo, 0)
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
 		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
 			continue
 		}
 		info := workshopToInfo(w, health, nil)
-		infoLst = append(infoLst, info)
+		infos = append(infos, info)
 	}
 
 	// Now, if the client wants only workshop files or just queried everything
 	// available, we add workshop files to the response (note these only exist
 	// as files, not instances)
 	if wstate == "all" || wstate == "off" {
-		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+		wfiles, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
 		if err != nil {
 			state.Warnf("%v", err)
 		} else {
-			infoLst = appendFiles(infoLst, files, projectId)
+			infos = appendFiles(infos, wfiles, projectId)
 		}
 	}
 
-	return SyncResponse(infoLst, http.StatusOK)
+	return SyncResponse(infos, http.StatusOK)
 }
 
-func appendFiles(infoLst []*WorkshopInfo, files []string, projectId string) []*WorkshopInfo {
-	for _, file := range files {
-		finder := func(info *WorkshopInfo) bool { return info.Name == file }
-		if slices.ContainsFunc(infoLst, finder) {
+func appendFiles(infos []*WorkshopInfo, wfiles map[string]string, projectId string) []*WorkshopInfo {
+	for name, file := range wfiles {
+		finder := func(info *WorkshopInfo) bool { return info.Name == name }
+		if slices.ContainsFunc(infos, finder) {
 			continue
 		}
 
-		info := workshopFileToInfo(file, projectId)
-		infoLst = append(infoLst, info)
+		info := workshopFileToInfo(name, file, projectId)
+		infos = append(infos, info)
 	}
-	return infoLst
+	return infos
 }
 
 func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {

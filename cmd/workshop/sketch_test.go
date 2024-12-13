@@ -12,7 +12,6 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 type workshopSketch struct {
@@ -75,7 +74,8 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			rspcontent := fmt.Sprintf(mockWorkshopWithContent, filepath.Join(m.prjDir, "workshop.yaml"))
+			fmt.Fprintln(w, rspcontent)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -98,7 +98,7 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
 
-	sketchContent := fmt.Sprintf(sketchTemplate, workshop.Filepath(m.prjDir, "ws"), "ubuntu@22.04")
+	sketchContent := fmt.Sprintf(sketchTemplate, filepath.Join(m.prjDir, "workshop.yaml"), "ubuntu@22.04")
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
 		return []byte(inContent), nil
 	})
@@ -260,7 +260,8 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			rspcontent := fmt.Sprintf(mockWorkshopWithContent, filepath.Join(m.prjDir, "workshop.yaml"))
+			fmt.Fprintln(w, rspcontent)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))

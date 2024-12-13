@@ -246,7 +246,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
-	boilerplate := fmt.Sprintf(sketchTemplate, workshop.Filepath(p.Path, wp.Name), wp.Base)
+	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path, wp.Base)
 
 	if osutil.FileExists(metafile) {
 		old, err := os.ReadFile(metafile)

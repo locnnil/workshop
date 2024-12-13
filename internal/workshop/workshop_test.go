@@ -18,6 +18,7 @@ import (
 type workshopSuite struct {
 	bend *fakebackend.FakeWorkshopBackend
 	ctx  context.Context
+	p    *workshop.Project
 
 	restoreUserLookup func()
 }
@@ -46,10 +47,10 @@ func (f *workshopSuite) SetUpTest(c *check.C) {
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	p, _, err := f.bend.CreateOrLoadProject(ctx, c.MkDir())
+	f.p, _, err = f.bend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	f.ctx = createTestContext("testuser", p.ProjectId)
+	f.ctx = createTestContext("testuser", f.p.ProjectId)
 }
 
 func (f *workshopSuite) TearDownTest(c *check.C) {
@@ -68,7 +69,9 @@ func writeFile(c *check.C, path string, content string) {
 }
 
 func (f *workshopSuite) TestInstallLocalSdkMetaOnlyOK(c *check.C) {
-	file, err := workshop.ReadWorkshop(workshopyaml)
+	wpath := filepath.Join(f.p.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
 	err = f.bend.LaunchWorkshop(f.ctx, file)
@@ -93,7 +96,9 @@ base: ubuntu@22.04`)
 }
 
 func (f *workshopSuite) TestInstallLocalSdkNoMetaFails(c *check.C) {
-	file, err := workshop.ReadWorkshop(workshopyaml)
+	wpath := filepath.Join(f.p.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
 	err = f.bend.LaunchWorkshop(f.ctx, file)
@@ -116,7 +121,9 @@ func (f *workshopSuite) TestInstallLocalSdkNoMetaFails(c *check.C) {
 }
 
 func (f *workshopSuite) TestInstallLocalSdkWithHooksOK(c *check.C) {
-	file, err := workshop.ReadWorkshop(workshopyaml)
+	wpath := filepath.Join(f.p.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
 	err = f.bend.LaunchWorkshop(f.ctx, file)

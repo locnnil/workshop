@@ -58,34 +58,25 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 	}
 
 	path := Filepath(w.Path, workshop)
-
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("workshop definition %q not found", path)
-		}
-		return nil, err
-	}
-
-	file, err = readWorkshop(buf)
+	file, err = readWorkshop(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if file.Name != workshop {
 		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)",
-			file.Name, Filename(file.Name), filepath.Base(path))
+			file.Name, filename(file.Name), filepath.Base(path))
 	}
 	return file, nil
 }
 
-func (w *Project) ReadWorkshops() ([]string, error) {
+func (w *Project) ReadWorkshops() (map[string]string, error) {
 	file, err := w.maybeSingleWorkshop()
 	if err != nil {
 		return nil, err
 	}
 	if file != nil {
-		return []string{file.Name}, nil
+		return map[string]string{file.Name: file.Path}, nil
 	}
 
 	// *.yaml is the only supported extension for workshop files as the only
@@ -96,7 +87,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		return nil, err
 	}
 
-	var workshops = make([]string, 0, len(files))
+	var workshops = make(map[string]string, len(files))
 	for _, f := range files {
 		info, err := os.Stat(f)
 		if err != nil {
@@ -107,7 +98,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 			continue
 		}
 		var name = strings.TrimSuffix(info.Name(), ".yaml")
-		workshops = append(workshops, name)
+		workshops[name] = f
 	}
 	return workshops, nil
 }
@@ -115,17 +106,15 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 // Read single workshop file if it exists and is unique.
 func (w *Project) maybeSingleWorkshop() (*File, error) {
 	var path string
-	var contents []byte
 
 	for _, name := range Filenames {
-		buf, err := os.ReadFile(filepath.Join(w.Path, name))
+		_, err := os.Stat(filepath.Join(w.Path, name))
 		if err == nil {
 			if path != "" {
 				return nil, fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
 			}
 
 			path = filepath.Join(w.Path, name)
-			contents = buf
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -144,7 +133,7 @@ func (w *Project) maybeSingleWorkshop() (*File, error) {
 		return nil, fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
 	}
 
-	file, err := readWorkshop(contents)
+	file, err := readWorkshop(path)
 	if err != nil {
 		return nil, fmt.Errorf("invalid file %q: %w", path, err)
 	}

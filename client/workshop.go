@@ -29,6 +29,7 @@ type Sdk struct {
 }
 
 type Workshop struct {
+	Path      string   `json:"file-path"`
 	ProjectId string   `json:"project-id"`
 	Name      string   `json:"name"`
 	Base      string   `json:"base"`
