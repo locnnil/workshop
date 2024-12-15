@@ -1,5 +1,5 @@
 name: ws-launch-abort
 base: ubuntu@22.04
 sdks:
-  test-sdk-basic:
+  test-sdk-setup-fail:
     channel: latest/stable

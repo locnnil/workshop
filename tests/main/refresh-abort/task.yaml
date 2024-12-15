@@ -19,3 +19,6 @@ execute: |
   echo "Check the 'workshop refresh --abort' command reverts to the previous state"
   workshop_exec refresh --abort | MATCH "\"ws-refresh-abort\" refresh aborted"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-abort[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Validate the task output from the refresh attempt"
+  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-refresh-abort\"..."
