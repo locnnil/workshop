@@ -25,6 +25,7 @@ there is no container yet.
    stateDiagram-v2
        OFF --> READY: launch
        OFF --> ERROR: launch (on error)
+       OFF --> PENDING: launch --wait-on-error (on error)
 
 
 Ready
@@ -77,6 +78,8 @@ and the container itself is non-operational.
    :align: center
 
     stateDiagram-v2
+        PENDING --> OFF: launch --abort
+        PENDING --> READY: launch --continue
         PENDING --> READY: refresh --abort
         PENDING --> READY: refresh --continue
 

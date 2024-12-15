@@ -82,7 +82,8 @@ The SDK-specific reason can be addressed individually.
 Wait on error
 -------------
 
-The :option:`!--wait-on-error` option in :command:`workshop refresh`
+The :option:`!--wait-on-error` option in :command:`workshop refresh` and
+:command:`workshop launch`
 pauses the refresh when an error occurs;
 instead of reverting the workshop to its previous state,
 |ws_markup| will leave it as is for you to investigate:
@@ -91,10 +92,13 @@ instead of reverting the workshop to its previous state,
 
    $ workshop refresh --wait-on-error
 
-     Error: cannot perform the following tasks:
-     - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
-     Refresh aborted
+     YYYY-MM-DDT00:00:00 ERROR command exit code 1
+     error: cannot refresh; fix the errors reported,
+     then run "workshop refresh --continue blank".
+     To abort and revert, run "workshop refresh --abort blank"
 
+To help determine what went wrong, use the :command:`workshop_changes` and
+:command:`workshop_tasks` commands discussed above
 
 Next, you can shell into the workshop to debug and possibly fix it:
 
