@@ -97,8 +97,8 @@ instead of reverting the workshop to its previous state,
      then run "workshop refresh --continue blank".
      To abort and revert, run "workshop refresh --abort blank"
 
-To help determine what went wrong, use the :command:`workshop_changes` and
-:command:`workshop_tasks` commands discussed above
+To help determine what went wrong, use the :command:`workshop changes` and
+:command:`workshop tasks` commands discussed above.
 
 Next, you can shell into the workshop to debug and possibly fix it:
 
