@@ -114,43 +114,43 @@ func (s *conflictSuite) TestCheckChangeConflictIgnoreChange(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (s *conflictSuite) TestResumeRefreshNothingInProgress(c *check.C) {
+func (s *conflictSuite) TestResumeAfterWaitNothingInProgress(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshContinue)
-	c.Check(err, check.ErrorMatches, ".* no refresh in progress")
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	c.Check(err, check.ErrorMatches, ".* no wait in progress")
 }
 
-func (s *conflictSuite) TestResumeRefreshIncorrectMode(c *check.C) {
+func (s *conflictSuite) TestResumeAfterWaitIncorrectMode(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshTransactional)
-	c.Check(err, check.ErrorMatches, "cannot resume: only abort or continue can be used to resume the refresh operation")
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeTransactional, "refresh")
+	c.Check(err, check.ErrorMatches, "cannot resume: only abort or continue can be used to resume the operation")
 }
 
-func (s *conflictSuite) TestResumeRefreshWrongChangeKindInProgress(c *check.C) {
+func (s *conflictSuite) TestResumeAfterWaitWrongChangeKindInProgress(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
 	_ = s.newChange("launch")
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshContinue)
-	c.Check(err, check.ErrorMatches, `.* no refresh in progress \(launch is in progress\)`)
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	c.Check(err, check.ErrorMatches, `.* refresh requested but launch is in progress`)
 }
 
-func (s *conflictSuite) TestResumeRefreshNoWaitingOnError(c *check.C) {
+func (s *conflictSuite) TestResumeAfterWaitNoWaitingOnError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
 	_ = s.newChange("refresh")
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshContinue)
-	c.Check(err, check.ErrorMatches, ".* no refresh is waiting on error")
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	c.Check(err, check.ErrorMatches, ".* no wait in progress")
 }
 
-func (s *conflictSuite) TestResumeRefreshContinue(c *check.C) {
+func (s *conflictSuite) TestResumeChangeContinue(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -158,12 +158,12 @@ func (s *conflictSuite) TestResumeRefreshContinue(c *check.C) {
 	task := change.Tasks()[0]
 	task.SetToWait(state.HoldStatus)
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshContinue)
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	c.Assert(err, check.IsNil)
 	c.Assert(task.Status(), check.Equals, state.HoldStatus)
 }
 
-func (s *conflictSuite) TestResumeRefreshAbort(c *check.C) {
+func (s *conflictSuite) TestResumeChangeAbort(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -178,8 +178,8 @@ func (s *conflictSuite) TestResumeRefreshAbort(c *check.C) {
 	change.AddTask(task2)
 	change.SetStatus(state.WaitStatus)
 
-	_, err := conflict.ResumeRefresh(s.state, "ws", s.project.ProjectId, conflict.RefreshAbort)
+	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeAbort, "refresh")
 	c.Assert(err, check.IsNil)
-	c.Assert(task.Status(), check.Equals, state.ErrorStatus)
+	c.Assert(task.Status(), check.Equals, state.AbortStatus)
 	c.Assert(task2.Status(), check.Equals, state.HoldStatus)
 }

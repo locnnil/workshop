@@ -1,0 +1,15 @@
+summary: Check a failed non-transactional launch can be aborted successfully
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Update the workshop file to include a failing SDK"
+  sed -i 's/test-sdk-basic/test-sdk-setup-fail/g' .workshop/ws-launch-abort.yaml
+  workshop_exec launch --wait-on-error ws-launch-abort || true
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' .workshop/ws-launch-abort.yaml
+
+  echo "Check the workshop is in Pending state"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Pending[[:space:]]+wait-on-error$"
+
+  echo "Check the workshop launch --abort reverts to the previous state"
+  workshop_exec launch --abort ws-launch-abort | MATCH "\"ws-launch-abort\" launch aborted"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"

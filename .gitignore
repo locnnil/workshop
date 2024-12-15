@@ -2,6 +2,7 @@
 .vscode/
 .code-workspace
 __debug_bin*
+.tmux*
 
 # Local artefacts
 workshop

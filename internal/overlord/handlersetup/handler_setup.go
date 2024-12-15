@@ -34,19 +34,19 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 
 		if err != nil {
 			change := task.Change()
-			if change.Kind() == "refresh" {
-				var setup conflict.RefreshSetup
-				if errKey := change.Get("refresh-setup", &setup); errKey != nil {
+			if change.Kind() == "refresh" || change.Kind() == "launch" {
+				var setup conflict.ChangeSetup
+				if errKey := change.Get("wait-setup", &setup); errKey != nil {
 					return errKey
 				}
 
-				mode, moderr := conflict.ParseRefreshMode(setup.Mode)
+				mode, moderr := conflict.ParseChangeMode(setup.Mode)
 				if moderr != nil {
-					return fmt.Errorf("internal error: unkown refresh mode: %s", setup.Mode)
+					return fmt.Errorf("internal error: unkown change mode: %s", setup.Mode)
 				}
 
-				if mode == conflict.RefreshWaitOnError {
-					task.Logf("Setting the task to wait until the refresh is either aborted or continued...")
+				if mode == conflict.ChangeWaitOnError {
+					task.Logf("Setting the task to wait until the operation is either aborted or continued...")
 					task.Errorf(err.Error())
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,

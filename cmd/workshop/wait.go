@@ -176,7 +176,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*c
 			// tasks that became Error due to the undo logic execution not
 			// during the refresh (those must be reported as it means that abort
 			// itself failed).
-			if chg.Status == "Error" && abortExpected {
+			if chg.Status == "Undone" && abortExpected {
 				for _, t := range chg.Tasks {
 					if t.Status == "Error" {
 						lastLogLine := t.Log[len(t.Log)-1]

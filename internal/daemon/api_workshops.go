@@ -25,7 +25,7 @@ import (
 )
 
 type actionOpts struct {
-	Mode string `json:"refresh-mode"`
+	Mode string `json:"change-mode"`
 }
 
 type workshopReq struct {
@@ -278,22 +278,43 @@ func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
 	return "", "", false
 }
 
-func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
-	var refreshMode conflict.RefreshMode
-	var change *state.Change
-	var taskset []*state.TaskSet
+func maybeResume(reqData *workshopReq) (conflict.ChangeMode, bool, error) {
+	var changeMode conflict.ChangeMode
+	var resume bool
 	var err error
 
-	refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
+	changeMode, err = conflict.ParseChangeMode(reqData.Options.Mode)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot refresh: %v", err)
+		return changeMode, resume, fmt.Errorf("cannot %s: %v", reqData.Action, err)
 	}
 
-	if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
-		return nil, nil, fmt.Errorf("wait-on-error is not supported for multiple workshops")
+	if len(reqData.Names) > 1 && changeMode != conflict.ChangeTransactional {
+		return changeMode, resume, fmt.Errorf("wait-on-error is not supported for multiple workshops")
 	}
 
-	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
+	switch changeMode {
+	case conflict.ChangeTransactional, conflict.ChangeWaitOnError:
+		resume = false
+	case conflict.ChangeContinue, conflict.ChangeAbort:
+		resume = true
+	}
+
+	return changeMode, resume, nil
+}
+
+func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+	var taskset []*state.TaskSet
+	var change = &state.Change{}
+
+	changeMode, resume, err := maybeResume(reqData)
+	if err != nil {
+		return change, taskset, err
+	}
+
+	switch {
+	case resume:
+		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, changeMode, "refresh")
+	default:
 		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
 			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
 			if sk != sdk.Sketch {
@@ -304,14 +325,33 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 			change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
 			taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
 		}
-		var setup conflict.RefreshSetup
-		setup.Mode = refreshMode.String()
-		change.Set("refresh-setup", setup)
+		var setup conflict.ChangeSetup
+		setup.Mode = changeMode.String()
+		change.Set("wait-setup", setup)
+	}
+	return change, taskset, err
+}
+
+func launch(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+	var taskset []*state.TaskSet
+	var change = &state.Change{}
+
+	changeMode, resume, err := maybeResume(reqData)
+	if err != nil {
+		return change, taskset, err
 	}
 
-	if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
-		change, err = conflict.ResumeRefresh(st, reqData.Names[0], pid, refreshMode)
+	switch {
+	case resume:
+		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, changeMode, "launch")
+	default:
+		change = newWorkshopChange(st, "launch", user, pid, reqData.Action, reqData.Names)
+		taskset, err = mgr.LaunchMany(ctx, reqData.Names, pid, change.ID())
+		var setup conflict.ChangeSetup
+		setup.Mode = changeMode.String()
+		change.Set("wait-setup", setup)
 	}
+
 	return change, taskset, err
 }
 
@@ -345,8 +385,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	switch reqData.Action {
 	case "launch":
-		change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
-		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
+		change, taskset, err = launch(r.Context(), st, wsmgr, &reqData, user, projectId)
 	case "refresh":
 		change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
 	case "start":
