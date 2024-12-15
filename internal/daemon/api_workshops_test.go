@@ -706,7 +706,7 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot launch "basic": workshop already exists`,
+			Message: `cannot launch "basic": workshop exists`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -1727,7 +1727,7 @@ base: ubuntu@22.04
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "manysdks": refresh waiting on error`,
+			Message: `cannot refresh "manysdks": waiting on error`,
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}

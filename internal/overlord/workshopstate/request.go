@@ -2,7 +2,6 @@ package workshopstate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -85,17 +84,17 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	taskset := make([]*state.TaskSet, 0, len(names))
 	var sdks []sdk.SdkResult
 	for _, name := range names {
+		// Make sure the workshop doesn't exist
+		_, err := w.Workshop(ctx, name, projectId)
+		if err == nil {
+			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
+		} else if err != workshop.ErrWorkshopNotLaunched {
+			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
+		}
+
 		file, err := project.Workshop(name)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
-		}
-
-		_, err = w.Workshop(ctx, name, projectId)
-		if err == nil {
-			return nil, fmt.Errorf("cannot launch %q: workshop already exists", name)
-		}
-		if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
-			return nil, err
 		}
 
 		sdks, err = launchStoreInfo(w.state, ctx, projectId, file)

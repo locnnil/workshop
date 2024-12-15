@@ -55,19 +55,24 @@ func (w *WorkshopManager) Ensure() error {
 
 // Checks the provided workshop has one of the allowed health statuses.
 func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, allowedStatuses []healthstate.Status) error {
+	health := healthstate.HealthState{}
 	wp, err := w.Workshop(ctx, name, pId)
-	if err != nil {
+	switch {
+	case err == nil:
+		health = w.WorkshopHealth(wp)
+	case err == workshop.ErrWorkshopNotLaunched:
+		health.Status = healthstate.OffStatus
+	default:
 		return err
 	}
 
-	health := w.WorkshopHealth(wp)
 	if !slices.Contains(allowedStatuses, health.Status) {
 		switch health.Status {
 		case healthstate.ReadyStatus:
 			return fmt.Errorf("workshop already running")
 		case healthstate.PendingStatus:
 			if health.Code == "wait-on-error" {
-				return fmt.Errorf("refresh waiting on error")
+				return fmt.Errorf("waiting on error")
 			}
 			return fmt.Errorf("other changes in progress")
 		case healthstate.ErrorStatus:
