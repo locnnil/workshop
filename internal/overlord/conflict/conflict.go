@@ -174,7 +174,6 @@ func ResumeAfterWait(st *state.State,
 				tsk.Logf("Continuing for workshop %q...", workshop)
 			} else if mode == ChangeAbort {
 				tsk.Logf("Aborting for workshop %q...", workshop)
-				tsk.Errorf("Task %q failed", tsk.Summary())
 			}
 		}
 	}
