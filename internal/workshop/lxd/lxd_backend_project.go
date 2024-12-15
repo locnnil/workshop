@@ -3,11 +3,8 @@ package lxdbackend
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -75,188 +72,51 @@ func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
 }
 
 func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*workshop.Project, bool, error) {
-	var err error
-
-	if !filepath.IsAbs(path) {
-		return nil, false, workshop.ErrNoRelativePathsAllowed
-	}
-
-	projectDir, err := ProjectPath(path)
-	if err != nil {
-		return nil, false, err
-	}
-
 	client, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, false, err
 	}
 	defer client.Disconnect()
 
-	// see if we have this project already existing
-	if existingProject, err := s.loadProjectFromPath(client, ctx, projectDir); err == nil {
-		// the tracked path and the requested path must be the same
-		// otherwise it means that the project directory was moved or copied
-		// If that is the case, we must update the project's configuration
-		// in the LXD user.* key (i.e. track the project path with the existing id)
-		if existingProject.Path != projectDir {
-			// Was the project directory moved or copied?
-			_, err := os.Stat(existingProject.Path)
-			copied := true
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return nil, false, err
-			} else if errors.Is(err, os.ErrNotExist) {
-				copied = false
-			}
-
-			if !copied {
-				// the directory was moved, so we:
-				// 1. Update the new path to the actual and track it
-				// 2. Update all the workshops to the new project mount
-				existingProject.Path = projectDir
-				err := s.trackProject(client, ctx, existingProject)
-				if err != nil {
-					return nil, false, err
-				}
-				// also, update configuration of all the project's workshops
-				return existingProject, false, s.updateProjectMounts(client, ctx, existingProject)
-			} else {
-				// the directory was copied, so we:
-				// 1. Generate a new project id for the actual path and update .lock file
-				// 2. Start tracking the actual path as a new project
-				id, err := workshop.NewProjectId()
-				if err != nil {
-					return nil, false, err
-				}
-				var newPrj = workshop.Project{Path: projectDir, ProjectId: id}
-
-				// rewrite the existing lock file with the new project id.
-				if err = newPrj.UpdateProjectLock(); err != nil {
-					return nil, false, err
-				}
-				if err := s.trackProject(client, ctx, &newPrj); err != nil {
-					return nil, false, err
-				}
-				return &newPrj, true, nil
-			}
-		}
-		return existingProject, false, nil
-	} else if !errors.Is(err, workshop.ErrProjectNotFound) {
-		// if there is some error that is unrelated to the
-		// project loadOrCreate logic (e.g. failed to connect to LXD)
-		// then return the error immediately
-		return nil, false, err
-	}
-
-	// No project found. If there is at least one workshop definition,
-	// we consider the path as a project and create or load its project id.
-	if !workshop.IsProject(projectDir) {
-		return nil, false, workshop.ErrNotProject
-	}
-
-	project := workshop.Project{Path: projectDir}
-	project.ProjectId, err = workshop.ProjectId(projectDir)
-	if errors.Is(err, os.ErrNotExist) {
-		// No .workshop.lock in the project dir yet,
-		project.ProjectId, err = workshop.NewProjectId()
-		if err != nil {
-			return nil, false, err
-		}
-
-		// if we allocated a new project ID successfully,
-		// store it in the lock file immediately.
-		if err = project.CreateProjectLock(); err != nil {
-			return nil, false, err
-		}
-	} else if err != nil {
-		return nil, false, err
-	}
-
-	// Now, add the project ID to the tracking map
-	// stored in a custom user.* key of the LXD project for this user
-	if err = s.trackProject(client, ctx, &project); err != nil {
-		return nil, false, err
-	}
-
-	return &project, true, nil
-}
-
-// projectPath returns a project path for the cwd provided
-// if cwd is a sub-directory of the project. Otherwise, cwd
-// is returned unchanged
-func ProjectPath(cwd string) (string, error) {
-	path, err := filepath.EvalSymlinks(cwd)
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		var err error
-		var ok, isDir bool
-		if ok, isDir, err = osutil.ExistsIsDir(path); err == nil && ok && isDir {
-			if _, err := workshop.ProjectId(path); err == nil {
-				return filepath.Clean(path), nil
-			}
-		}
-		if err != nil {
-			return "", err
-		}
-
-		if path == string(os.PathSeparator) {
-			break
-		}
-		path = filepath.Join(path, "..", string(os.PathSeparator))
-	}
-
-	if cwd, err = filepath.EvalSymlinks(cwd); err != nil {
-		return "", err
-	}
-	return cwd, nil
-}
-
-func (s *Backend) loadProjectFromPath(client lxd.InstanceServer, ctx context.Context, path string) (*workshop.Project, error) {
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
+		return nil, false, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	pId, err := workshop.ProjectId(path)
-	lockNotFound := false
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	} else if errors.Is(err, os.ErrNotExist) {
-		lockNotFound = true
-	}
-
-	lxdPrj, _, err := client.GetProject(LxdProjectName(user))
+	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	// did we find a .workshop.lock in the path?
-	if lockNotFound {
-		// try to recover .workshop.lock file for this project
-		// if it existed before and was accidentally removed
-		for _, i := range projects {
-			if i.Path == path {
-				// save the lock file in the project's location
-				if err = i.CreateProjectLock(); err != nil {
-					return nil, err
-				}
-				return i, nil
-			}
-		}
-	} else {
-		idx := slices.IndexFunc(projects, func(p *workshop.Project) bool { return p.ProjectId == pId })
-		if idx != -1 {
-			return projects[idx], nil
+	tracker := workshop.ProjectTracker{Projects: projects}
+	project, result, err := tracker.Track(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if result == workshop.ProjectMoved {
+		if err = s.updateProjectMounts(client, ctx, project); err != nil {
+			return nil, false, err
 		}
 	}
-	return nil, workshop.ErrProjectNotFound
+
+	if result != workshop.ProjectFound {
+		projectsJson, err := saveProjects(tracker.Projects)
+		if err != nil {
+			return nil, false, err
+		}
+		lxdPrj.Config["user.workshop.projects"] = projectsJson
+		if err = client.UpdateProject(lxdPrj.Name, lxdPrj.Writable(), etag); err != nil {
+			return nil, false, err
+		}
+	}
+
+	return project, result == workshop.ProjectAdded, nil
 }
 
 func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project, error) {
