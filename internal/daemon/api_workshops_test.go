@@ -1268,6 +1268,10 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 
 		// partial refresh is only supported for the sketch SDK
 		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"mode":"transactional"}}`),
+
+		// modes other than transactional are not supported for commands other than
+		// launch or refresh
+		bytes.NewBufferString(`{"names":["basic"],"action":"start", "options": {"mode":"continue"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1297,7 +1301,7 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "sketch" SDK`,
+			Message: `cannot start: mode "continue" is not valid with this command`,
 		},
 	}
 

@@ -25,6 +25,10 @@ func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
 }
 
+func (s Mode) Resume() bool {
+	return s == ChangeContinue || s == ChangeAbort
+}
+
 func ParseMode(s string) (Mode, error) {
 	changeMap := map[string]Mode{
 		ChangeTransactional.String(): ChangeTransactional,
