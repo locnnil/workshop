@@ -9,24 +9,24 @@ import (
 )
 
 type ChangeSetup struct {
-	Mode string `json:"change-mode"`
+	Mode string `json:"mode"`
 }
 
-type ChangeMode int
+type Mode int
 
 const (
-	ChangeTransactional ChangeMode = iota
+	ChangeTransactional Mode = iota
 	ChangeWaitOnError
 	ChangeContinue
 	ChangeAbort
 )
 
-func (s ChangeMode) String() string {
+func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
 }
 
-func ParseChangeMode(s string) (ChangeMode, error) {
-	changeMap := map[string]ChangeMode{
+func ParseMode(s string) (Mode, error) {
+	changeMap := map[string]Mode{
 		ChangeTransactional.String(): ChangeTransactional,
 		ChangeWaitOnError.String():   ChangeWaitOnError,
 		ChangeContinue.String():      ChangeContinue,
@@ -132,7 +132,7 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreChan
 // for the given workshop. Depending on the mode the change will either be
 // turned into Doing (Continue mode) or Abort (Abort mode).
 func ResumeAfterWait(st *state.State,
-	workshop string, projectId string, mode ChangeMode, action string) (*state.Change, error) {
+	workshop string, projectId string, mode Mode, action string) (*state.Change, error) {
 	if mode != ChangeAbort && mode != ChangeContinue {
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}

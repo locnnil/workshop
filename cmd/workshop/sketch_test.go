@@ -59,7 +59,7 @@ func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, current bool, meta []b
 	return metadir, hooksdir
 }
 
-func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname string, changemode string) {
+func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname string, mode string) {
 	n := 0
 	workshop := "ws"
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +79,7 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{refreshname}, "options": map[string]interface{}{"change-mode": changemode}})
+				"names": []interface{}{refreshname}, "options": map[string]interface{}{"mode": mode}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 5:
@@ -262,7 +262,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{workshop}, "options": map[string]interface{}{"change-mode": "transactional"}})
+				"names": []interface{}{workshop}, "options": map[string]interface{}{"mode": "transactional"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 5:

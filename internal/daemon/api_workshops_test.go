@@ -255,7 +255,7 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string
 	defer s.store.SetActionCallback(storeAction)()
 	defer s.mockDoInstallSdk(c, name, sdks)()
 
-	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch","options": {"change-mode":"%s"}}`, name, mode))
+	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch","options": {"mode":"%s"}}`, name, mode))
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", reqbuf)
 	c.Assert(err, check.IsNil)
@@ -683,11 +683,11 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	s.createWFile(c, "basic-invalid", basic_invalid)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic", "basic", "basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":[],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["missing"],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["basic-invalid"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic", "basic", "basic"],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":[],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["missing"],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic-invalid"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	missingFile := workshop.Filepath(s.project.Path, "missing")
@@ -756,7 +756,7 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopslot", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopslot"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopslot"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -790,7 +790,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	}
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -828,7 +828,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 	defer s.mockDoInstallSdk(c, "somebound", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["somebound"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["somebound"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -864,7 +864,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 	defer s.mockDoInstallSdk(c, "masterunknown", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["masterunknown"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["masterunknown"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -889,7 +889,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 	defer s.mockDoInstallSdk(c, "slaveunknown", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["slaveunknown"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["slaveunknown"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -914,7 +914,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	defer s.mockDoInstallSdk(c, "bindincompatible", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["bindincompatible"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["bindincompatible"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -940,7 +940,7 @@ func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopplug", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopplug"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopplug"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -972,7 +972,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopplugbound", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopplugbound"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopplugbound"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1008,7 +1008,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopconns", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1059,7 +1059,7 @@ func (s *apiSuite) TestWorkshopConnectionsUnknownPlug(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopbrokenconn", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopbrokenconn"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopbrokenconn"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1092,7 +1092,7 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	defer s.mockDoInstallSdk(c, "connsplugbound", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["connsplugbound"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["connsplugbound"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1131,7 +1131,7 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	s.createWFile(c, "basic", basic)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 	expected := []*expectedResp{
 		{
@@ -1147,7 +1147,7 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	defer s.mockDoInstallSdk(c, "basic", testsdks)()
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"transactional"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1193,7 +1193,7 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"transactional"}}`)}
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"transactional"}}`)}
 
 	expected := []*expectedResp{{
 		Type:    ResponseTypeAsync,
@@ -1206,7 +1206,7 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	// Setup "refresh" with a new workshop that will trigger an error
 	s.createWFile(c, "manysdks", manysdks_refreshed)
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"change-mode":"transactional"}}`)}
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"transactional"}}`)}
 	expected = []*expectedResp{{
 		Type:      ResponseTypeAsync,
 		Status:    http.StatusAccepted,
@@ -1255,19 +1255,19 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 	// Setup
 	requests := []*bytes.Buffer{
 		// try continue without starting wait-on-error
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"change-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"mode":"continue"}}`),
 
 		// unknown refresh option
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"change-mode":"unknown"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"mode":"unknown"}}`),
 
 		// a workshop name is a must
 		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
 
 		// non-transactional refresh is only supported for a single workshop
-		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"change-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 
 		// partial refresh is only supported for the sketch SDK
-		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"mode":"transactional"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1319,10 +1319,10 @@ func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
 		// start - continue (success)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1363,9 +1363,9 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 	s.createWFile(c, "basic", basic)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"continue"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1407,10 +1407,10 @@ func (s *apiSuite) TestRefreshWorkshopChangeAbort(c *check.C) {
 	}
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
 		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"change-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1462,8 +1462,8 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"change-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"continue"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1506,8 +1506,8 @@ func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
 
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"continue"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1542,9 +1542,9 @@ func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
 	s.createWFile(c, "basic", basic)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"continue"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1586,8 +1586,8 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 
 	requests := []*bytes.Buffer{
 		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1631,7 +1631,7 @@ plugs:
 `)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 	expected := []*expectedResp{
 		{
@@ -1644,8 +1644,8 @@ plugs:
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"change-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"change-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1701,7 +1701,7 @@ base: ubuntu@22.04
 `)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"transactional"}}`),
 	}
 	expected := []*expectedResp{
 		{
@@ -1714,8 +1714,8 @@ base: ubuntu@22.04
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"change-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"transactional"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1743,7 +1743,7 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 	s.createWFile(c, "basic", basic)
 	// Setup
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
 
 		bytes.NewBufferString(`{"names":["basic"],"action":"stop"}`),
 		//
@@ -1793,7 +1793,7 @@ func (s *apiSuite) TestStopWorkshop(c *check.C) {
 	s.createWFile(c, "basic", basic)
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"transactional"}}`),
 
 		bytes.NewBufferString(`{"names":["basic"],"action":"stop"}`),
 	}
@@ -1830,7 +1830,7 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	defer s.mockDoInstallSdk(c, "workshopconns", testsdks)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch","options": {"change-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch","options": {"mode":"transactional"}}`),
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"remove"}`),
 	}
 

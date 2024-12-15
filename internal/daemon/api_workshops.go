@@ -25,7 +25,7 @@ import (
 )
 
 type actionOpts struct {
-	Mode string `json:"change-mode"`
+	Mode string `json:"mode"`
 }
 
 type workshopReq struct {
@@ -278,42 +278,42 @@ func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
 	return "", "", false
 }
 
-func maybeResume(reqData *workshopReq) (conflict.ChangeMode, bool, error) {
-	var changeMode conflict.ChangeMode
+func maybeResume(reqData *workshopReq) (conflict.Mode, bool, error) {
+	var mode conflict.Mode
 	var resume bool
 	var err error
 
-	changeMode, err = conflict.ParseChangeMode(reqData.Options.Mode)
+	mode, err = conflict.ParseMode(reqData.Options.Mode)
 	if err != nil {
-		return changeMode, resume, fmt.Errorf("cannot %s: %v", reqData.Action, err)
+		return mode, resume, fmt.Errorf("cannot %s: %v", reqData.Action, err)
 	}
 
-	if len(reqData.Names) > 1 && changeMode != conflict.ChangeTransactional {
-		return changeMode, resume, fmt.Errorf("wait-on-error is not supported for multiple workshops")
+	if len(reqData.Names) > 1 && mode != conflict.ChangeTransactional {
+		return mode, resume, fmt.Errorf("wait-on-error is not supported for multiple workshops")
 	}
 
-	switch changeMode {
+	switch mode {
 	case conflict.ChangeTransactional, conflict.ChangeWaitOnError:
 		resume = false
 	case conflict.ChangeContinue, conflict.ChangeAbort:
 		resume = true
 	}
 
-	return changeMode, resume, nil
+	return mode, resume, nil
 }
 
 func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
 	var taskset []*state.TaskSet
 	var change = &state.Change{}
 
-	changeMode, resume, err := maybeResume(reqData)
+	mode, resume, err := maybeResume(reqData)
 	if err != nil {
 		return change, taskset, err
 	}
 
 	switch {
 	case resume:
-		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, changeMode, "refresh")
+		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, mode, "refresh")
 	default:
 		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
 			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
@@ -326,7 +326,7 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 			taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
 		}
 		var setup conflict.ChangeSetup
-		setup.Mode = changeMode.String()
+		setup.Mode = mode.String()
 		change.Set("wait-setup", setup)
 	}
 	return change, taskset, err
@@ -336,19 +336,19 @@ func launch(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMan
 	var taskset []*state.TaskSet
 	var change = &state.Change{}
 
-	changeMode, resume, err := maybeResume(reqData)
+	mode, resume, err := maybeResume(reqData)
 	if err != nil {
 		return change, taskset, err
 	}
 
 	switch {
 	case resume:
-		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, changeMode, "launch")
+		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], pid, mode, "launch")
 	default:
 		change = newWorkshopChange(st, "launch", user, pid, reqData.Action, reqData.Names)
 		taskset, err = mgr.LaunchMany(ctx, reqData.Names, pid, change.ID())
 		var setup conflict.ChangeSetup
-		setup.Mode = changeMode.String()
+		setup.Mode = mode.String()
 		change.Set("wait-setup", setup)
 	}
 

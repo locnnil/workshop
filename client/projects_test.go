@@ -46,7 +46,7 @@ func (cs *clientSuite) TestClientLaunch(c *check.C) {
 	body, err := io.ReadAll(cs.req.Body)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"launch",\"options\":{\"change-mode\":\"transactional\"}}\n`)
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"launch",\"options\":{\"mode\":\"transactional\"}}\n`)
 }
 
 func (cs *clientSuite) TestClientRefresh(c *check.C) {
@@ -61,7 +61,7 @@ func (cs *clientSuite) TestClientRefresh(c *check.C) {
 	body, err := io.ReadAll(cs.req.Body)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"change-mode":"transactional"}}\n`)
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"mode":"transactional"}}\n`)
 }
 
 func (cs *clientSuite) TestClientStart(c *check.C) {

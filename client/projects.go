@@ -12,7 +12,7 @@ type Project struct {
 }
 
 type WorkshopActionOptions struct {
-	ChangeMode string `json:"change-mode,omitempty"`
+	Mode string `json:"mode,omitempty"`
 }
 
 type WorkshopActionSetup struct {
@@ -75,7 +75,7 @@ func (client *Client) Launch(projectId string, names []string, mode string) (cha
 		Action: "launch",
 		Names:  names,
 		Options: &WorkshopActionOptions{
-			ChangeMode: mode,
+			Mode: mode,
 		},
 	})
 }
@@ -85,7 +85,7 @@ func (client *Client) Refresh(projectId string, names []string, mode string) (ch
 		Action: "refresh",
 		Names:  names,
 		Options: &WorkshopActionOptions{
-			ChangeMode: mode,
+			Mode: mode,
 		},
 	})
 }
