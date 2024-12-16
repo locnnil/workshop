@@ -28,12 +28,11 @@ func LxdProjectName(user string) string {
 	return "workshop." + user
 }
 
-func LxdProjectUser(project string) string {
-	parts := strings.Split(project, ".")
-	if len(parts) != 2 {
-		return ""
+func lxdProjectUser(project string) string {
+	if strings.HasPrefix(project, "workshop.") {
+		return strings.TrimPrefix(project, "workshop.")
 	}
-	return parts[1]
+	return ""
 }
 
 func LxdSystemProjectName(user string) string {
@@ -121,48 +120,53 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 
 func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project, error) {
 	if user, ok := ctx.Value(workshop.ContextUser).(string); ok {
-		projects, err := s.loadUserProjects(ctx, user)
+		projects, err := s.userProjects(ctx, user)
 		if err != nil {
 			return nil, err
 		}
 		return map[string][]*workshop.Project{user: projects}, nil
-	} else {
-		// get a default connection without preseting the LXD project as we are
-		// going over all the LXD projects to filter the ones managed by
-		// workshop and reload every interface connection for every SDK of
-		// every workshop
-		client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
-		if err != nil {
-			return nil, err
-		}
-		// list all projects for all users if the user is not provided
-		lxdProjects, err := client.GetProjects()
-		if err != nil {
-			return nil, err
-		}
-		allProjects := make(map[string][]*workshop.Project)
-		for _, lxdProject := range lxdProjects {
-			username := LxdProjectUser(lxdProject.Name)
-			if _, err = workshop.LookupUsername(username); err != nil {
-				continue
-			}
-			// if the project is created by workshop, the key must be present
-			if _, ok := lxdProject.Config["user.workshop.projects"]; ok {
-				prjctx := context.WithValue(ctx, workshop.ContextUser, username)
-
-				projects, err := s.loadUserProjects(prjctx, username)
-				if err != nil {
-					return nil, err
-				}
-
-				allProjects[username] = projects
-			}
-		}
-		return allProjects, nil
 	}
+
+	// get a default connection without preseting the LXD project as we are
+	// going over all the LXD projects to filter the ones managed by
+	// workshop and reload every interface connection for every SDK of
+	// every workshop
+	client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
+	if err != nil {
+		return nil, err
+	}
+	// list all projects for all users if the user is not provided
+	lxdProjects, err := client.GetProjects()
+	if err != nil {
+		return nil, err
+	}
+	allProjects := make(map[string][]*workshop.Project)
+	for _, lxdProject := range lxdProjects {
+		// if the project is created by workshop, the key must be present
+		if _, ok := lxdProject.Config["user.workshop.projects"]; !ok {
+			continue
+		}
+		username := lxdProjectUser(lxdProject.Name)
+		if username == "" {
+			continue
+		}
+		if _, err = workshop.LookupUsername(username); err != nil {
+			logger.Noticef("cannot find user %q: %v", username, err)
+			continue
+		}
+
+		prjctx := context.WithValue(ctx, workshop.ContextUser, username)
+		projects, err := s.userProjects(prjctx, username)
+		if err != nil {
+			return nil, err
+		}
+
+		allProjects[username] = projects
+	}
+	return allProjects, nil
 }
 
-func (s *Backend) loadUserProjects(ctx context.Context, user string) ([]*workshop.Project, error) {
+func (s *Backend) userProjects(ctx context.Context, user string) ([]*workshop.Project, error) {
 	client, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
