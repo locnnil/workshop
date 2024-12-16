@@ -568,14 +568,128 @@ to a new location on the host:
 This makes :file:`/home/user/mod/` on the host
 act as the Go modules cache for the workshop.
 
-We're nearing the end of our tutorial;
-the only thing left is the cleanup.
+
+.. _tut_hack:
+
+Hack a workshop (optional)
+--------------------------
+
+Another way to customise a workshop in-place is *hacking*.
+This process grafts a special :ref:`hack SDK <exp_hack_sdk>` onto the workshop,
+so you can run a quick local experiment
+instead of the usual SDK Store publishing workflow.
+
+The core form of the :command:`workshop hack` command
+opens an :ref:`SDK definition <exp_sdk_definition>`:
+
+.. code-block:: console
+
+   $ workshop hack golang
+
+
+Initially, the editor shows a very basic setup
+consisting of :samp:`name` and :samp:`base`:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+   name: hack
+   base: ubuntu@20.04
+
+
+Suppose you want to use the SSH interface in your workshop.
+While you can add a :ref:`corresponding plug <exp_ssh_interface>`
+immediately in the workshop definition,
+adding extra functionality such as testing would require hooks.
+This implies an experiment with an SDK can be the solution;
+let's see how it's done.
+
+First, adjust the hack SDK definition, adding a plug:
+
+.. code-block:: yaml
+   :caption: hack.yaml
+   :emphasize-lines: 4-6
+
+   name: hack
+   base: ubuntu@20.04
+
+   plugs:
+     ssh-agent:
+       interface: ssh-agent
+
+
+After saving and exiting,
+the workshop is automatically refreshed,
+and the output from :command:`workshop info`
+includes lines similar to the following:
+
+.. code-block:: console
+
+   content:
+     hack:
+       channel:  ~   2024-12-15  (x1)
+
+
+Note that the hack SDK lists the time of last update and the revision
+instead of the channel name;
+if you edit the definition multiple times,
+the revision will be incremented.
+
+Another form of the :command:`workshop hack` command
+enables you to edit a specific :ref:`hook <exp_hooks>`:
+
+.. code-block:: console
+
+   $ workshop hack golang check-health
+
+This opens the :samp:`check-health` hook that |ws_markup| runs
+to test whether the SDK's functional after launch or refresh.
+Add the following script that checks if the proxy socket is in place:
+
+.. code-block:: console
+   :caption: check-health
+
+   #!/usr/bin/bash
+   
+   if [ -n "$SSH_AUTH_SOCK" ]; then
+     workshopctl set-health okay
+   else
+     workshopctl set-health --code=ssh-fails error "SSH interface fails"
+   fi
+
+Saving and exiting should refresh the workshop again.
+At this point, you've built a real, albeit simple, SDK from scratch in minutes;
+in a real-life scenario, you would iterate over errors and issues that pop up
+until the hack SDK is sufficiently functional for your purposes.
+
+When you're done experimenting, you can just drop the hack SDK:
+
+.. code-block:: console
+
+   $ workshop hack golang --drop
+
+
+If you drop a hack SDK by mistake, restoring it is quite simple:
+
+.. code-block:: console
+
+   $ workshop hack golang --restore
+
+
+While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`
+is beyond the scope of this tutorial,
+consider diving further into the basic SDK concepts
+such as :ref:`plugs, slots <exp_plugs_slots>` and :ref:`hooks <exp_hooks>`
+to successfully use them with :command:`workshop hack`.
 
 
 .. _tut_remove:
 
 Remove a workshop
 -----------------
+
+We're at the end of our tutorial;
+the only thing left is the cleanup.
 
 If you no longer need your workshop,
 :ref:`remove <ref_workshop_remove>` it:
