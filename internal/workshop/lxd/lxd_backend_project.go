@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
-	"slices"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -183,53 +181,70 @@ func (s *Backend) userProjects(ctx context.Context, user string) ([]*workshop.Pr
 		return nil, err
 	}
 
-	checked := s.maybeRecoverProjectPaths(client, ctx, projects)
-
-	if !reflect.DeepEqual(projects, checked) {
-		projectsJson, err := saveProjects(checked)
+	projects, modified, err := s.pruneProjects(client, ctx, projects)
+	if err != nil {
+		return nil, err
+	}
+	if modified {
+		projectsJson, err := saveProjects(projects)
 		if err != nil {
 			return nil, err
 		}
 		lxdPrj.Config["user.workshop.projects"] = projectsJson
-		if err = client.UpdateProject(LxdProjectName(user), lxdPrj.Writable(), etag); err != nil {
+		if err = client.UpdateProject(lxdPrj.Name, lxdPrj.Writable(), etag); err != nil {
 			return nil, err
 		}
 	}
-	return checked, nil
+
+	return projects, nil
 }
 
-// Ensures that every project has a valid existing path. If not, tries to
-// recover the path from the actual bind mount of the '/project'. If recovery
-// went unsuccessful, removes the project from the list.
-func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx context.Context, projects []*workshop.Project) []*workshop.Project {
-	return slices.DeleteFunc(projects, func(prj *workshop.Project) bool {
-		if !prj.Exists() {
-			var err error
-			// If got here then there is no project directory for the projectId
-			// anymore. It can mean moving or deletion happened in the past. Try
-			// to recover the new project path
-			newPath, _ := s.projectFsRoot(client, ctx, prj.ProjectId)
-			if newPath != "" {
-				// start tracking this project under a new path
-				prj.Path = newPath
-				if err = s.trackProject(client, ctx, prj); err == nil {
-					// update the workshops configuration with the new path
-					_ = s.updateProjectMounts(client, ctx, prj)
-				}
-				return false
-			}
-			// Could not recover the directory, reconcile the project from the
-			// list of projects that we track (only if there are no remaining
-			// workshops for this project)
-			inst, err := s.filterLxdInstancesByConfig(client, func(config map[string]string) bool {
-				return config["user.workshop.project-id"] == prj.ProjectId
-			})
-			if err == nil && len(inst) == 0 {
-				return true
-			}
+// Attempts to ensure that every project has a valid existing path.
+// If a path does not exist, recover it from the actual bind mount of the '/project'.
+// If recovery fails and no workshops exist for the project,
+// remove the project from the list.
+func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, projects []*workshop.Project) ([]*workshop.Project, bool, error) {
+	pruned := make([]*workshop.Project, 0, len(projects))
+	modified := false
+
+	for _, prj := range projects {
+		if prj.Exists() {
+			pruned = append(pruned, prj)
+			continue
 		}
-		return false
-	})
+
+		// If got here then there is no project directory for the projectId
+		// anymore. It can mean moving or deletion happened in the past. Try
+		// to recover the new project path.
+		path, err := s.projectFsRoot(client, ctx, prj.ProjectId)
+		if err != nil {
+			return nil, false, err
+		}
+		if path != "" {
+			prj = &workshop.Project{Path: path, ProjectId: prj.ProjectId}
+			if err = s.updateProjectMounts(client, ctx, prj); err != nil {
+				return nil, false, err
+			}
+			pruned = append(pruned, prj)
+			modified = true
+			continue
+		}
+
+		// Could not recover the directory, reconcile the project from the
+		// list of projects that we track (only if there are no remaining
+		// workshops for this project)
+		workshops, err := s.filterLxdInstancesByConfig(client, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, prj.ProjectId))
+		if err != nil {
+			return nil, false, err
+		}
+		if len(workshops) > 0 {
+			pruned = append(pruned, prj)
+		} else {
+			modified = true
+		}
+	}
+
+	return pruned, modified, nil
 }
 
 func (s *Backend) projectFsRoot(conn lxd.InstanceServer, ctx context.Context, projectId string) (path string, err error) {
@@ -314,38 +329,6 @@ func saveProjects(projects []*workshop.Project) (string, error) {
 		return "", err
 	}
 	return string(buf), nil
-}
-
-func (s *Backend) trackProject(client lxd.InstanceServer, ctx context.Context, prj *workshop.Project) error {
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
-	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
-	if err != nil {
-		return err
-	}
-
-	projects, err := readProjects([]byte(lxdPrj.Config["user.workshop.projects"]))
-	if err != nil {
-		return err
-	}
-
-	idx := slices.IndexFunc(projects, func(p *workshop.Project) bool { return p.ProjectId == prj.ProjectId })
-	if idx == -1 {
-		projects = append(projects, prj)
-	} else {
-		projects[idx] = prj
-	}
-
-	projectsJson, err := saveProjects(projects)
-	if err != nil {
-		return err
-	}
-	lxdPrj.Config["user.workshop.projects"] = projectsJson
-
-	return client.UpdateProject(LxdProjectName(user), lxdPrj.Writable(), etag)
 }
 
 func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Context, project *workshop.Project) error {
