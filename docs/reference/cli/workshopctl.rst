@@ -10,21 +10,21 @@ to invoke a subcommand, add it to your :ref:`SDK hook <ref_sdk_hooks>`.
 workshopctl set-health
 ----------------------
 
-This subcommand reports the health of the SDK.
-It is essential for the :samp:`check-health` hook
-that runs after launch or refresh operations in a workshop:
+Report the health of the SDK.
+
+.. rubric:: Synopsis
 
 .. code-block:: console
 
    $ workshopctl set-health [--code=<ERROR CODE>] <STATUS> [<MESSAGE>]
 
 
-Example (note only the message is quoted):
+.. rubric:: Description
 
-.. code-block:: console
 
-   $ workshopctl set-health --code=missing-cuda error "CUDA libraries not found"
-
+This command is essential for the :samp:`check-health` hook
+that runs after launch or refresh operations in a workshop.
+The arguments are as follows:
 
 .. list-table::
    :header-rows: 1
@@ -39,15 +39,25 @@ Example (note only the message is quoted):
      - Required
      - Can be :samp:`okay`, :samp:`waiting` or :samp:`error`.
 
-   * - :samp:`<ERROR CODE>`
-     - Optional, not allowed with :samp:`okay`
+   * - :samp:`<ERROR CODE>`
+     - Optional, can't go with :samp:`okay`
      - Short code of lowercase letters, hyphens and digits;
-       3–30 characters, should start with a letter.
+       3–30 characters, starts with a letter.
 
    * - :samp:`<MESSAGE>`
      - Required with :samp:`error-code`
      - Arbitrary string explaining the context of the error code;
        7–70 characters.
+
+
+.. rubric:: Examples
+
+Report an error with a code and a message;
+note only the message is quoted:
+
+.. code-block:: console
+
+   $ workshopctl set-health --code=missing-cuda error "CUDA libraries not found"
 
 
 See also
