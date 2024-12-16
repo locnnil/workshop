@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -65,7 +66,7 @@ plugs:
     interface: mock-network
     attribute: three
   plug-ssh:
-    interface: mock-ssh-agent	
+    interface: mock-ssh-agent
 `
 
 var consumer2 = `name: consumer2
@@ -81,7 +82,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mount
-    workshop-target: /home/workshop  
+    workshop-target: /home/workshop
 `
 
 var conflictingTarget2 = `name: conflict-2
@@ -89,7 +90,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mount
-    workshop-target: /home/workshop  
+    workshop-target: /home/workshop
 `
 
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
@@ -511,7 +512,7 @@ base: ubuntu@22.04
 type: system
 slots:
     slot:
-        interface: mount        
+        interface: mount
 `
 	wm, err := s.launchWorkshop(c, "ws-consumer", []testSdkSetup{{csetup, sdkYaml}})
 	c.Assert(err, check.IsNil)
@@ -1763,4 +1764,71 @@ func (s *interfaceHandlersSuite) TestUndoDiscardConnsSuccess(c *check.C) {
 			Undesired: true,
 		},
 	})
+}
+
+func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
+	// Launch
+	repo := s.mgr.Repository()
+	s.launchWorkshop(c, "ws", []testSdkSetup{
+		{csetup, consumerManyPlugs},
+		{psetup, strings.Replace(producer, "mock-network", "mock-ssh-agent", 1)},
+	})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, strings.Replace(producer, "mock-network", "mock-ssh-agent", 1), s.prj.ProjectId, "ws")), check.IsNil)
+
+	// Connect
+	s.state.Lock()
+	c1 := s.state.NewChange("sample", "")
+	t1 := s.state.NewTask("connect", "")
+	t1.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t1.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	setWorkshopProject("ws", s.prj, t1)
+	c1.AddTask(t1)
+	c1.Set("project-id", s.prj.ProjectId)
+	c1.Set("user", "testuser")
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	oldConns := map[string]*schema.ConnState{}
+	s.state.Get("conns", &oldConns)
+
+	// Force the disconnect to fail
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		return fmt.Errorf("setup failed")
+	}
+
+	// Disconnect
+	c2 := s.state.NewChange("sample", "")
+	t2 := s.state.NewTask("disconnect", "")
+
+	t2.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t2.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	setWorkshopProject("ws", s.prj, t2)
+	c2.AddTask(t2)
+	c2.Set("project-id", s.prj.ProjectId)
+	c2.Set("user", "testuser")
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Assert(c2.Err(), check.ErrorMatches, `cannot perform the following tasks:
+-  \(setup failed\)`)
+
+	// Ensure that the connection is not removed from state
+	newConns := map[string]*schema.ConnState{}
+	s.state.Get("conns", &newConns)
+	c.Assert(oldConns, check.DeepEquals, newConns)
+
+	// Ensure the connection is not removed from the repo
+	ref, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	ref, err = repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
 }
