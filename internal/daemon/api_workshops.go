@@ -281,18 +281,18 @@ func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
 func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	var mode conflict.Mode
 
-	switch reqData.Action {
-	case "launch", "refresh":
-	default:
-		// Commands that are not 'launch' or 'refresh' have no valid modes other
-		// than an empty string or transactional
-		if reqData.Options.Mode != "transactional" {
-			if reqData.Options.Mode == "" {
-				reqData.Options.Mode = "transactional"
-			} else {
-				return mode, fmt.Errorf("cannot %s: mode %q is not valid with this command", reqData.Action, reqData.Options.Mode)
-			}
+	if reqData.Options.Mode == "" {
+		reqData.Options.Mode = "transactional"
+	}
+
+	switch reqData.Options.Mode {
+	case "transactional":
+	case "wait-on-error", "continue", "abort":
+		if reqData.Action != "refresh" && reqData.Action != "launch" {
+			return mode, fmt.Errorf("cannot %s: mode %q is not valid with this command", reqData.Action, reqData.Options.Mode)
 		}
+	default:
+		return mode, fmt.Errorf("cannot %s: %q is not a valid mode", reqData.Action, reqData.Options.Mode)
 	}
 
 	mode, err := conflict.ParseMode(reqData.Options.Mode)
