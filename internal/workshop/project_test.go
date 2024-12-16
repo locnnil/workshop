@@ -31,9 +31,9 @@ func createWorkshop(dir, name string) error {
 	return os.WriteFile(filepath.Join(dir, workshop.Filename(name)), []byte(fmt.Sprintf(w, name)), 0644)
 }
 
-func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
+func (p *projectSuite) TestSomeWorkshopFilesBroken(c *check.C) {
 	d := c.MkDir()
-	p := &workshop.Project{Path: d, ProjectId: "42424242"}
+	project := &workshop.Project{Path: d, ProjectId: "42424242"}
 
 	w := filepath.Join(d, workshop.Directory)
 	c.Assert(os.MkdirAll(w, os.ModePerm), check.IsNil)
@@ -45,39 +45,39 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	c.Assert(os.WriteFile(filepath.Join(w, "wb.yaml"), []byte(wb), 0644), check.IsNil)
 	// no match with the filename pattern
 	c.Assert(os.WriteFile(filepath.Join(w, "test-file.yml"), []byte{}, 0644), check.IsNil)
-	fls, err := p.ReadWorkshops()
+	fls, err := project.ReadWorkshops()
 	c.Assert(err, check.IsNil)
 	c.Assert(fls, check.HasLen, 3)
 	c.Assert(fls, testutil.DeepUnsortedMatches, map[string]string{"w1": filepath.Join(w, "w1.yaml"), "w2": filepath.Join(w, "w2.yaml"), "wb": filepath.Join(w, "wb.yaml")})
 }
 
-func (f *workshopFile) TestMixedWorkshopFileConventions(c *check.C) {
+func (p *projectSuite) TestMixedWorkshopFileConventions(c *check.C) {
 	d := c.MkDir()
-	p := &workshop.Project{Path: d, ProjectId: "42424242"}
+	project := &workshop.Project{Path: d, ProjectId: "42424242"}
 
 	w := filepath.Join(d, workshop.Directory)
 	c.Assert(os.MkdirAll(w, os.ModePerm), check.IsNil)
 
 	c.Assert(createWorkshop(w, "ws"), check.IsNil)
 	c.Assert(createWorkshop(d, "workshop"), check.IsNil)
-	fls, err := p.ReadWorkshops()
+	fls, err := project.ReadWorkshops()
 	c.Assert(fls, check.IsNil)
 	path := filepath.Join(d, "workshop.yaml")
 	message := fmt.Sprintf(`multiple workshops found, but %q not in ".workshop" subdirectory`, path)
 	c.Assert(err, check.ErrorMatches, message)
 }
 
-func (f *workshopFile) TestSingleWorkshopFileBroken(c *check.C) {
+func (p *projectSuite) TestSingleWorkshopFileBroken(c *check.C) {
 	d := c.MkDir()
-	p := &workshop.Project{Path: d, ProjectId: "42424242"}
+	project := &workshop.Project{Path: d, ProjectId: "42424242"}
 
 	c.Assert(os.WriteFile(filepath.Join(d, ".workshop.yaml"), []byte(wb), 0644), check.IsNil)
-	fls, err := p.ReadWorkshops()
+	fls, err := project.ReadWorkshops()
 	c.Assert(fls, check.IsNil)
 	c.Assert(err, check.NotNil)
 }
 
-func (f *workshopFile) TestIsProject(c *check.C) {
+func (p *projectSuite) TestIsProject(c *check.C) {
 	d := c.MkDir()
 	c.Assert(workshop.IsProject(d), check.Equals, false)
 
