@@ -49,7 +49,7 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
 and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
@@ -165,14 +165,26 @@ A :ref:`definition <exp_workshop_definition>` lists the components of a workshop
 to be instantiated at launch
 and is stored in your project directory.
 
+We'll be focusing on :ref:`SDKs <exp_sdk>`,
+which are the basic units of a workshop's functionality.
+They are :ref:`built with SDKcraft <how_use_sdkcraft>` by SDK publishers
+to be published on the SDK Store.
+At run-time, |ws_markup| pulls and installs them,
+providing the dependencies and packages required for your work,
+while keeping the SDKs themselves isolated and manageable.
+
+Here, we'll use the sample :samp:`go` SDK,
+which was already defined, built and published in the SDK Store
+by the |ws_markup| team.
+
 Create a
 :ref:`project directory <exp_projects>`
 named :file:`hello-workshop`:
 
 .. code-block:: console
 
-   $ mkdir ~/hello-workshop
-   $ cd ~/hello-workshop
+   $ mkdir ./hello-workshop
+   $ cd ./hello-workshop
 
 
 Everything you plan to build using your workshop goes here:
@@ -193,9 +205,9 @@ create a workshop definition named :file:`workshop.yaml`:
        channel: latest/stable
 
 
-This definition adds an :ref:`SDK <exp_sdk>`,
-the basic functionality unit of a workshop
-that is :ref:`built with SDKcraft <how_use_sdkcraft>`.
+Here, the SDK is referenced as :samp:`go`,
+and the specific version to retrieve from the SDK Store
+comes from the :samp:`latest/stable` channel.
 
 To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
@@ -206,7 +218,7 @@ in the project directory:
    $ workshop list
 
      Project                Workshop   Status  Notes
-     ~/hello-workshop       golang     Off     -
+     ./hello-workshop       golang     Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
@@ -296,7 +308,9 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
 Here, the following happens:
 
 - The :ref:`project directory <tut_define>`
-  is mounted to the workshop as :file:`/project/`
+  is mounted inside the workshop
+  (remember that it's a container)
+  as :file:`/project/`.
 
 - The workshop is *started*, or brought online.
 
@@ -478,7 +492,9 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec golang -- touch created_inside.txt
+   $ workshop exec golang -- ls /project/
+   $ workshop exec golang -- touch /project/created_inside.txt
+   $ ls
 
 
 This isn't the only way the host interacts with the workshop;
@@ -511,7 +527,8 @@ named :samp:`golang/go:mod-cache`.
 As seen in the :command:`workshop info` output,
 it was automatically connected at :ref:`launch <tut_launch>`
 to the :samp:`golang/system:mount` slot,
-here abbreviated by convention as :samp:`:mount`.
+indicated by the ellipsis in the :samp:`host-source` path
+and abbreviated here as :samp:`:mount` by convention.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
