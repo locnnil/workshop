@@ -658,9 +658,10 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 		}
 	})
 
-	oldConns := maps.Clone(conns)
+	oldConn := *conn
 	rev.Add(func() {
-		setConns(st, oldConns)
+		conns[cref.ID()] = &oldConn
+		setConns(st, conns)
 	})
 
 	switch {
