@@ -1248,64 +1248,71 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	})
 }
 
-func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
+// Tests the input validation logic of v1PostProjectWorkshop. Excludes any
+// dispatch validation, these are covered by their own tests
+func (s *apiSuite) TestValidatev1PostProjectWorkshopInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
+
+	type validMode struct {
+		valid             bool
+		transactionalOnly bool
+	}
+
 	// Setup
-	requests := []*bytes.Buffer{
-		// try continue without starting wait-on-error
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"mode":"continue"}}`),
+	modes := map[string]bool{"": true, "transactional": true, "wait-on-error": true, "continue": true, "abort": true, "invalid-mode": false}
 
-		// unknown refresh option
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"mode":"unknown"}}`),
+	commands := map[string]validMode{"launch": {true, false}, "refresh": {true, false}, "start": {true, true}, "stop": {true, true}, "remove": {true, true}, "invalid-action": {false, true}, "": {false, true}}
 
-		// a workshop name is a must
-		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
+	for mode, valid := range modes {
+		for cmd, validMode := range commands {
+			// Construct request
+			req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s", "options": {"mode":"%s"}}`, cmd, mode)))
+			c.Assert(err, check.IsNil)
 
-		// non-transactional refresh is only supported for a single workshop
-		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+			// Construct response
+			exp := expectedResp{
+				Type:   ResponseTypeError,
+				Status: http.StatusBadRequest,
+			}
+			switch {
+			case !valid:
+				exp.Message = fmt.Sprintf("cannot %s: %q is not a valid mode", cmd, mode)
+			case mode != "" && mode != "transactional" && validMode.transactionalOnly:
+				exp.Message = fmt.Sprintf("cannot %s: mode %q is not valid with this command", cmd, mode)
+			case mode == "continue" || mode == "abort":
+				exp.Message = fmt.Sprintf("cannot %s: no wait in progress", mode)
+			// Once we reach the dispatch phase of v1PostProject, it's not a concern
+			// whether the return is an error. Provided the message is as below this
+			// is technically successful
+			case cmd == "refresh" || cmd == "remove" || cmd == "start" || cmd == "stop":
+				exp.Message = fmt.Sprintf("cannot %s \"basic\": workshop not launched", cmd)
+			case cmd == "launch":
+				exp.Message = `cannot launch "basic": workshop definition.*`
+			case !validMode.valid:
+				exp.Message = fmt.Sprintf("unknown action %q", cmd)
+			}
 
-		// partial refresh is only supported for the sketch SDK
-		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh"}`),
+			// Execute
+			rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
 
-		// modes other than transactional are not supported for commands other than
-		// launch or refresh
-		bytes.NewBufferString(`{"names":["basic"],"action":"start", "options": {"mode":"continue"}}`),
+			// If this was a launch command, try to remove the workshop
+			if cmd == "launch" {
+				reqBuf := bytes.NewBufferString(`{"names":["basic"],"action":"remove"`)
+
+				req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", reqBuf)
+				c.Assert(err, check.IsNil)
+
+				_ = v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+			}
+
+			// Validate
+			c.Assert(rsp.Type, check.Equals, exp.Type)
+			c.Assert(rsp.Status, check.Equals, exp.Status)
+			c.Assert(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
+		}
 	}
-
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
-		}, {
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot refresh: "unknown" is not a valid mode`,
-		}, {
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: at least one workshop name must be provided",
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "wait-on-error is not supported for multiple workshops",
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "sketch" SDK`,
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot start: mode "continue" is not valid with this command`,
-		},
-	}
-
-	s.runActionTest(c, requests, expected)
 }
 
 func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
