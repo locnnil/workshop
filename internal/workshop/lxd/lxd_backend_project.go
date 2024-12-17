@@ -118,8 +118,7 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 					return nil, false, err
 				}
 				// also, update configuration of all the project's workshops
-				projectCtx := context.WithValue(ctx, workshop.ContextProjectId, existingProject.ProjectId)
-				return existingProject, false, s.updateWorkshopsProjectPath(client, projectCtx, existingProject)
+				return existingProject, false, s.updateProjectMounts(client, ctx, existingProject)
 			} else {
 				// the directory was copied, so we:
 				// 1. Generate a new project id for the actual path and update .lock file
@@ -351,7 +350,7 @@ func (s *Backend) maybeRecoverProjectPaths(client lxd.InstanceServer, ctx contex
 				prj.Path = newPath
 				if err = s.trackProject(client, ctx, prj); err == nil {
 					// update the workshops configuration with the new path
-					_ = s.updateWorkshopsProjectPath(client, ctx, prj)
+					_ = s.updateProjectMounts(client, ctx, prj)
 				}
 				return false
 			}
@@ -486,17 +485,19 @@ func (s *Backend) trackProject(client lxd.InstanceServer, ctx context.Context, p
 	return client.UpdateProject(LxdProjectName(user), lxdPrj.Writable(), etag)
 }
 
-func (s *Backend) updateWorkshopsProjectPath(conn lxd.InstanceServer, ctx context.Context, existingProject *workshop.Project) error {
-	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, existingProject.ProjectId))
+func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Context, project *workshop.Project) error {
+	projectCtx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
+
+	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, project.ProjectId))
 	if err != nil {
 		return err
 	}
 
 	for _, i := range workshops {
-		project := workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: existingProject.Path, Where: workshop.WorkshopProjectPath}
-		err = s.AddWorkshopMount(ctx, workshop.WorkshopName(i.Name), project)
+		mount := workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: project.Path, Where: workshop.WorkshopProjectPath}
+		err = s.AddWorkshopMount(projectCtx, workshop.WorkshopName(i.Name), mount)
 		if err != nil {
-			return fmt.Errorf("cannot update workshop \"%v\" project directory", i.Name)
+			return fmt.Errorf("cannot update workshop %q project directory: %w", i.Name, err)
 		}
 	}
 	return nil
