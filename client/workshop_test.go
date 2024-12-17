@@ -20,7 +20,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 	}]}}`
 	workshops, _, err := cs.cli.List(&client.ListOptions{ProjectId: "42ws42ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(workshops, check.DeepEquals, []*client.Workshop{
+	c.Assert(workshops, check.DeepEquals, []*client.WorkshopInfo{
 		{
 			ProjectId: "42ws42ws",
 			Name:      "workshop",
@@ -45,7 +45,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 	c.Check(cs.req.Method, check.Equals, "GET")
 }
 func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": {"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
+	cs.rsp = `{"type": "sync", "result": {"workshop":{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
 	"content":[
 		{"name":"go",
 		"channel":"latest/stable",
@@ -53,10 +53,10 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 		"install-time":"2023-04-25T01:02:03Z", 
 		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"},
 		"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},{"workshop-source":"/home","workshop-target":"/mnt", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name-2"}}]
-	}]}}`
-	prj, err := cs.cli.Workshop("42ws42ws", "workshop")
+	}]}, "file":{"name":"workshop","project-id":"2","path":"/home/projects/.workshop/workshop.yaml"}}}`
+	wp, file, err := cs.cli.Workshop("42ws42ws", "workshop")
 	c.Assert(err, check.IsNil)
-	c.Assert(prj, check.DeepEquals, &client.Workshop{
+	c.Assert(wp, check.DeepEquals, &client.WorkshopInfo{
 		ProjectId: "42ws42ws",
 		Name:      "workshop",
 		Base:      "ubuntu@20.04",
@@ -78,6 +78,11 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 				},
 			},
 		},
+	})
+	c.Assert(file, check.DeepEquals, &client.WorkshopFile{
+		ProjectId: "2",
+		Name:      "workshop",
+		Path:      "/home/projects/.workshop/workshop.yaml",
 	})
 	c.Check(cs.req.Method, check.Equals, "GET")
 }

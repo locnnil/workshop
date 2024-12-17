@@ -121,14 +121,14 @@ func (c *CmdList) runList() error {
 	return nil
 }
 
-func sorter[T *client.Workshop | *client.WorkshopFile](extract func(T) string) func(a, b T) int {
+func sorter[T *client.WorkshopInfo | *client.WorkshopFile](extract func(T) string) func(a, b T) int {
 	return func(a, b T) int {
 		return cmp.Compare(extract(a), extract(b))
 	}
 }
 
-func print(w *tabwriter.Writer, workshops []*client.Workshop, files []*client.WorkshopFile, prj *client.Project) {
-	slices.SortFunc(workshops, sorter(func(w *client.Workshop) string { return w.Name }))
+func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*client.WorkshopFile, prj *client.Project) {
+	slices.SortFunc(workshops, sorter(func(w *client.WorkshopInfo) string { return w.Name }))
 	for _, wp := range workshops {
 		line := workshopEntry(wp, prj)
 		fmt.Fprintln(w, strings.Join(line, "\t"))
@@ -136,7 +136,7 @@ func print(w *tabwriter.Writer, workshops []*client.Workshop, files []*client.Wo
 
 	slices.SortFunc(files, sorter(func(f *client.WorkshopFile) string { return f.Name }))
 	for _, wf := range files {
-		_, found := slices.BinarySearchFunc(workshops, wf, func(w *client.Workshop, wf *client.WorkshopFile) int {
+		_, found := slices.BinarySearchFunc(workshops, wf, func(w *client.WorkshopInfo, wf *client.WorkshopFile) int {
 			return cmp.Compare(w.Name, wf.Name)
 		})
 		if !found {
@@ -156,7 +156,7 @@ func fileEntry(w *client.WorkshopFile, p *client.Project) []string {
 	return line
 }
 
-func workshopEntry(w *client.Workshop, p *client.Project) []string {
+func workshopEntry(w *client.WorkshopInfo, p *client.Project) []string {
 	comment := "-"
 	if len(w.Notes) > 0 {
 		comment = strings.Join(w.Notes, ",")

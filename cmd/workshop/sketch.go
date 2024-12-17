@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -187,7 +188,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	wp, err := cli.Workshop(p.Id, av[0])
+	wp, file, err := cli.Workshop(p.Id, av[0])
 	if err != nil {
 		return err
 	}
@@ -246,7 +247,13 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
-	boilerplate := fmt.Sprintf(sketchTemplate, wp.Name, wp.Base)
+
+	// Format sketch SDK template header.
+	wpath := ""
+	if file != nil {
+		wpath = file.Path
+	}
+	boilerplate := fmt.Sprintf(sketchTemplate, wpath, wp.Base)
 
 	if osutil.FileExists(metafile) {
 		old, err := os.ReadFile(metafile)
@@ -320,7 +327,7 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 				return err
 			}
 		} else {
-			if err := os.Remove(hookpath); err != nil && !osutil.IsDirNotExist(err) {
+			if err := os.Remove(hookpath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
 		}

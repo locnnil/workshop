@@ -78,7 +78,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	workshop, err := cli.Workshop(project.Id, av[0])
+	workshop, _, err := cli.Workshop(project.Id, av[0])
 	if err != nil {
 		return err
 	}

@@ -55,7 +55,12 @@ type Mount struct {
 	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
-type Info struct {
+type Workshop struct {
+	Workshop *WorkshopInfo     `json:"workshop"`
+	File     *WorkshopFileInfo `json:"file"`
+}
+
+type Workshops struct {
 	Workshops []*WorkshopInfo     `json:"workshops"`
 	Files     []*WorkshopFileInfo `json:"files"`
 }
@@ -102,11 +107,8 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 			}
 		}
 
-		var sdkMounts []*Mount
-		if mounts != nil {
-			sdkMounts = mounts[sdk.Name]
-			slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
-		}
+		sdkMounts := mounts[sdk.Name]
+		slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sdk.Name,
@@ -222,7 +224,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	info := Info{}
+	info := Workshops{}
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
@@ -388,5 +390,17 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(err.Error())
 	}
 
-	return SyncResponse(workshopToInfo(w, health, ms), http.StatusOK)
+	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
+	file := files[w.Name]
+
+	rsp := Workshop{
+		Workshop: workshopToInfo(w, health, ms),
+		File:     workshopFileToInfo(projectId, w.Name, file),
+	}
+
+	return SyncResponse(rsp, http.StatusOK)
 }

@@ -28,12 +28,17 @@ type Sdk struct {
 	Mounts      []*Mount     `json:"mounts,omitempty"`
 }
 
-type Info struct {
-	Workshops []*Workshop     `json:"workshops"`
+type Workshops struct {
+	Workshops []*WorkshopInfo `json:"workshops"`
 	Files     []*WorkshopFile `json:"files"`
 }
 
 type Workshop struct {
+	Workshop *WorkshopInfo `json:"workshop"`
+	File     *WorkshopFile `json:"file"`
+}
+
+type WorkshopInfo struct {
 	ProjectId string   `json:"project-id"`
 	Name      string   `json:"name"`
 	Base      string   `json:"base"`
@@ -58,8 +63,8 @@ type Remount struct {
 	HostSource string   `json:"host-source"`
 }
 
-func (client *Client) List(opts *ListOptions) ([]*Workshop, []*WorkshopFile, error) {
-	var info Info
+func (client *Client) List(opts *ListOptions) ([]*WorkshopInfo, []*WorkshopFile, error) {
+	var info Workshops
 	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &info)
 	if err != nil {
 		return nil, nil, err
@@ -67,13 +72,13 @@ func (client *Client) List(opts *ListOptions) ([]*Workshop, []*WorkshopFile, err
 	return info.Workshops, info.Files, nil
 }
 
-func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
+func (client *Client) Workshop(projectId, name string) (*WorkshopInfo, *WorkshopFile, error) {
 	var workshop Workshop
 	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name, nil, nil, nil, &workshop)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &workshop, nil
+	return workshop.Workshop, workshop.File, nil
 }
 
 func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {

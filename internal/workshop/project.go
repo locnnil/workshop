@@ -112,7 +112,7 @@ func (w *Project) ReadWorkshops() (map[string]string, error) {
 	return workshops, nil
 }
 
-// Read single workshop file if it exists and is unique.
+// Detects a single workshop file path if it exists and is unique.
 func (w *Project) maybeSingleWorkshop() (string, error) {
 	var path string
 

@@ -297,7 +297,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	info := rsp.Result.(Info)
+	info := rsp.Result.(Workshops)
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
 		Name:      "manysdks",
 		Base:      "ubuntu@22.04",
@@ -383,61 +383,63 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Name:      "manysdks",
-		Base:      "ubuntu@22.04",
-		ProjectId: s.project.ProjectId,
-		Status:    "Ready",
-		Notes:     nil,
-		Content: []*SdkInfo{
-			{
-				Name:        "test-sdk",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t1,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
-						WorkshopTarget: "/opt/data",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk",
-							Name:      "data",
+	c.Check(rsp.Result, check.DeepEquals, Workshop{
+		Workshop: &WorkshopInfo{
+			Name:      "manysdks",
+			Base:      "ubuntu@22.04",
+			ProjectId: s.project.ProjectId,
+			Status:    "Ready",
+			Notes:     nil,
+			Content: []*SdkInfo{
+				{
+					Name:        "test-sdk",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t1,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+							WorkshopTarget: "/opt/data",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk",
+								Name:      "data",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "test-sdk-2",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t2,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk-2",
-							Name:      "photos",
+				{
+					Name:        "test-sdk-2",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t2,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk-2",
+								Name:      "photos",
+							},
 						},
-					},
-					{
-						WorkshopSource: "/photos",
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk-2",
-							Name:      "photos2",
+						{
+							WorkshopSource: "/photos",
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk-2",
+								Name:      "photos2",
+							},
 						},
 					},
 				},
 			},
 		},
-	})
+		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "manysdks", Path: workshop.Filepath(s.project.Path, "manysdks")}})
 }
 
 func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
@@ -474,51 +476,53 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Name:      "somebound",
-		Base:      "ubuntu@22.04",
-		ProjectId: s.project.ProjectId,
-		Status:    "Ready",
-		Notes:     nil,
-		Content: []*SdkInfo{
-			{
-				Name:        "test-sdk",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t1,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "somebound",
-							Sdk:       "test-sdk",
-							Name:      "data",
+	c.Check(rsp.Result, check.DeepEquals, Workshop{
+		Workshop: &WorkshopInfo{
+			Name:      "somebound",
+			Base:      "ubuntu@22.04",
+			ProjectId: s.project.ProjectId,
+			Status:    "Ready",
+			Notes:     nil,
+			Content: []*SdkInfo{
+				{
+					Name:        "test-sdk",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t1,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "somebound",
+								Sdk:       "test-sdk",
+								Name:      "data",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "test-sdk-2",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t2,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "somebound",
-							Sdk:       "test-sdk-2",
-							Name:      "photos",
+				{
+					Name:        "test-sdk-2",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t2,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "somebound",
+								Sdk:       "test-sdk-2",
+								Name:      "photos",
+							},
 						},
 					},
 				},
 			},
 		},
-	})
+		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "somebound", Path: workshop.Filepath(s.project.Path, "somebound")}})
 }
 
 type expectedResp struct {
