@@ -378,7 +378,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
 			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 		default:
-			return statusBadRequest("unknown action")
+			return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
 		}
 	}
 
