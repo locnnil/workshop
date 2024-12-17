@@ -11,14 +11,16 @@ import (
 )
 
 func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": [{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":["missing-project"],
-	"content":[
-		{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z", 
-		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
-	}]}`
-	prj, err := cs.cli.ListWorkshops(&client.ListOptions{ProjectId: "42ws42ws"})
+	cs.rsp = `{"type": "sync", "result": {"workshops": [{"name":"workshop",
+		"base":"ubuntu@20.04",
+		"project-id":"42ws42ws",
+		"status":"Ready",
+		"notes":["missing-project"],
+		"content":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z","health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
+	}]}}`
+	workshops, _, err := cs.cli.List(&client.ListOptions{ProjectId: "42ws42ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(prj, check.DeepEquals, []*client.Workshop{
+	c.Assert(workshops, check.DeepEquals, []*client.Workshop{
 		{
 			ProjectId: "42ws42ws",
 			Name:      "workshop",

@@ -55,31 +55,39 @@ type Mount struct {
 	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
+type Info struct {
+	Workshops []*WorkshopInfo     `json:"workshops"`
+	Files     []*WorkshopFileInfo `json:"files"`
+}
+
 type WorkshopInfo struct {
-	Path      string     `json:"file-path"`
+	ProjectId string     `json:"project-id"`
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
-	ProjectId string     `json:"project-id"`
 	Status    string     `json:"status"`
 	Content   []*SdkInfo `json:"content,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
 
+type WorkshopFileInfo struct {
+	ProjectId string `json:"project-id"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+}
+
 var ensureStateSoon = stateEnsureBefore
 var workshopMounts = mounts
 
-func workshopFileToInfo(name string, file string, pid string) *WorkshopInfo {
-	var ws WorkshopInfo
-	ws.Path = file
-	ws.Name = name
+func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo {
+	var ws WorkshopFileInfo
 	ws.ProjectId = pid
-	ws.Status = healthstate.OffStatus.String()
+	ws.Name = name
+	ws.Path = path
 	return &ws
 }
 
 func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
-	info.Path = w.File.Path
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
@@ -214,42 +222,27 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	var infos = make([]*WorkshopInfo, 0)
+	info := Info{}
+	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
 		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
 			continue
 		}
-		info := workshopToInfo(w, health, nil)
-		infos = append(infos, info)
+		wi := workshopToInfo(w, health, nil)
+		info.Workshops = append(info.Workshops, wi)
 	}
 
-	// Now, if the client wants only workshop files or just queried everything
-	// available, we add workshop files to the response (note these only exist
-	// as files, not instances)
-	if wstate == "all" || wstate == "off" {
-		wfiles, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
-		if err != nil {
-			state.Warnf("%v", err)
-		} else {
-			infos = appendFiles(infos, wfiles, projectId)
-		}
+	info.Files = make([]*WorkshopFileInfo, 0, len(workshops))
+	files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+	if err != nil {
+		state.Warnf("%v", err)
+	}
+	for name, path := range files {
+		info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
 	}
 
-	return SyncResponse(infos, http.StatusOK)
-}
-
-func appendFiles(infos []*WorkshopInfo, wfiles map[string]string, projectId string) []*WorkshopInfo {
-	for name, file := range wfiles {
-		finder := func(info *WorkshopInfo) bool { return info.Name == name }
-		if slices.ContainsFunc(infos, finder) {
-			continue
-		}
-
-		info := workshopFileToInfo(name, file, projectId)
-		infos = append(infos, info)
-	}
-	return infos
+	return SyncResponse(info, http.StatusOK)
 }
 
 func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os/user"
-	"path/filepath"
 
 	"gopkg.in/check.v1"
 )
@@ -23,7 +22,7 @@ func (m *workshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"file-path":"%s","name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -41,8 +40,7 @@ func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			rspcontent := fmt.Sprintf(mockWorkshopWithContent, filepath.Join(m.prjDir, "workshop.yaml"))
-			fmt.Fprintln(w, rspcontent)
+			fmt.Fprintln(w, mockWorkshopWithContent)
 		default:
 			c.Errorf("expected 2 calls, now on %d", n)
 		}

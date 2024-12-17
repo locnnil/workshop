@@ -297,37 +297,43 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*WorkshopInfo{
-		{
-			Path:      workshop.Filepath(s.project.Path, "manysdks"),
-			Name:      "manysdks",
-			Base:      "ubuntu@22.04",
-			ProjectId: s.project.ProjectId,
-			Status:    "Ready",
-			Content: []*SdkInfo{
-				{
-					Name:        "test-sdk",
-					Channel:     "latest/stable",
-					Revision:    "1",
-					InstallTime: &t1,
-				},
-				{
-					Name:        "test-sdk-2",
-					Channel:     "latest/stable",
-					Revision:    "1",
-					InstallTime: &t2,
-				},
+	info := rsp.Result.(Info)
+	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
+		Name:      "manysdks",
+		Base:      "ubuntu@22.04",
+		ProjectId: s.project.ProjectId,
+		Status:    "Ready",
+		Content: []*SdkInfo{
+			{
+				Name:        "test-sdk",
+				Channel:     "latest/stable",
+				Revision:    "1",
+				InstallTime: &t1,
 			},
-			Notes: nil,
-		}, {
-			Path:      workshop.Filepath(s.project.Path, "basic"),
-			Name:      "basic",
-			Base:      "ubuntu@22.04",
-			ProjectId: s.project.ProjectId,
-			Status:    "Ready",
-			Notes:     nil,
+			{
+				Name:        "test-sdk-2",
+				Channel:     "latest/stable",
+				Revision:    "1",
+				InstallTime: &t2,
+			},
 		},
-	})
+		Notes: nil,
+	}, {
+		Name:      "basic",
+		Base:      "ubuntu@22.04",
+		ProjectId: s.project.ProjectId,
+		Status:    "Ready",
+	}})
+
+	c.Check(info.Files, testutil.DeepUnsortedMatches, []*WorkshopFileInfo{{
+		Name:      "manysdks",
+		Path:      workshop.Filepath(s.project.Path, "manysdks"),
+		ProjectId: s.project.ProjectId,
+	}, {
+		Name:      "basic",
+		Path:      workshop.Filepath(s.project.Path, "basic"),
+		ProjectId: s.project.ProjectId,
+	}})
 }
 
 func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
@@ -378,7 +384,6 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Path:      workshop.Filepath(s.project.Path, "manysdks"),
 		Name:      "manysdks",
 		Base:      "ubuntu@22.04",
 		ProjectId: s.project.ProjectId,
@@ -470,7 +475,6 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Path:      workshop.Filepath(s.project.Path, "somebound"),
 		Name:      "somebound",
 		Base:      "ubuntu@22.04",
 		ProjectId: s.project.ProjectId,

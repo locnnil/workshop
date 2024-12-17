@@ -86,7 +86,6 @@ sdks:
 
 func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 	fl := &workshop.File{
-		Path: "/home/user/work/workshop.yaml",
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
@@ -96,8 +95,7 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 	}
 	out, err := yaml.Marshal(fl)
 	c.Assert(err, check.IsNil)
-	c.Assert(string(out), check.Equals, `file-path: /home/user/work/workshop.yaml
-name: test-workshop
+	c.Assert(string(out), check.Equals, `name: test-workshop
 base: ubuntu@22.04
 sdks:
     one:
@@ -120,7 +118,7 @@ base: ubuntu@20.04
 	f.createSingleWFile(c, "workshop.yaml", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@20.04", Path: filepath.Join(f.project.Path, "workshop.yaml")})
+	c.Assert(file, check.DeepEquals, &workshop.File{Name: "xbert-gpu", Base: "ubuntu@20.04"})
 }
 
 func (f *workshopFile) TestSingleWorkshopFileAmbiguous(c *check.C) {

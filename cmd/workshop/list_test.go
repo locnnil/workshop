@@ -32,9 +32,44 @@ func (m *workshopList) TestHomeDirectoryPathContraction(c *C) {
 	*/
 }
 
-var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}, {"name":"as-1","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}],"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
+var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}, {"name":"as-1","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}],"files":[
+{"name":"ws","project-id":"2","path":"/home/projects/.workshop/ws.yaml"},{"name":"as-1","project-id":"2","path":"/home/projects/.workshop/as-1.yaml"},{"name":"zs-1","project-id":"2","path":"/home/projects/.workshop/zs-1.yaml"},{"name":"ds-1","project-id":"2","path":"/home/projects/.workshop/ds-1.yaml"}]},"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
 
-var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}],"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
+var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}],"files":[
+{"name":"ws","project-id":"2","path":"/home/projects/ws"},{"name":"ws2","project-id":"2","path":"/home/projects/ws"}]},"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
+
+var mockWorkshopList3 = `{"type":"sync","status-code":200,"status":"OK","result":{"files":[
+{"name":"ws","project-id":"2","path":"/home/projects/.workshop/ws.yaml"},{"name":"as-1","project-id":"2","path":"/home/projects/.workshop/as-1.yaml"}]}}`
+
+func (m *workshopInfo) TestWorkshopListFilesOnly(c *check.C) {
+	cmd := &CmdList{root: &CmdRoot{}}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, "/home/project")
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopList3)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.runList()
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, `Project        Workshop  Status  Notes
+/home/project  as-1      Off     -
+/home/project  ws        Off     -
+`)
+	c.Check(n, check.Equals, 2)
+}
 
 func (m *workshopInfo) TestWorkshopList(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}
@@ -62,6 +97,8 @@ func (m *workshopInfo) TestWorkshopList(c *check.C) {
 	c.Assert(m.stdout.String(), check.Matches, `Project        Workshop  Status  Notes
 /home/project  as-1      Ready   -
 /home/project  ws        Error   missing-project
+/home/project  ds-1      Off     -
+/home/project  zs-1      Off     -
 `)
 	c.Check(n, check.Equals, 2)
 }

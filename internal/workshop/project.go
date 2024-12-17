@@ -45,11 +45,15 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	file, err := w.maybeSingleWorkshop()
+	path, err := w.maybeSingleWorkshop()
 	if err != nil {
 		return nil, err
 	}
-	if file != nil {
+	if path != "" {
+		file, err := readWorkshop(path)
+		if err != nil {
+			return nil, fmt.Errorf("invalid file %q: %w", path, err)
+		}
 		if file.Name != workshop {
 			return nil, fmt.Errorf("workshop %q not found (only found %q)",
 				workshop, file.Name)
@@ -57,8 +61,8 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 		return file, nil
 	}
 
-	path := Filepath(w.Path, workshop)
-	file, err = readWorkshop(path)
+	path = Filepath(w.Path, workshop)
+	file, err := readWorkshop(path)
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +75,17 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 }
 
 func (w *Project) ReadWorkshops() (map[string]string, error) {
-	file, err := w.maybeSingleWorkshop()
+	path, err := w.maybeSingleWorkshop()
 	if err != nil {
 		return nil, err
 	}
-	if file != nil {
-		return map[string]string{file.Name: file.Path}, nil
+
+	if path != "" {
+		file, err := readWorkshop(path)
+		if err != nil {
+			return nil, fmt.Errorf("invalid file %q: %w", path, err)
+		}
+		return map[string]string{file.Name: path}, nil
 	}
 
 	// *.yaml is the only supported extension for workshop files as the only
@@ -104,40 +113,36 @@ func (w *Project) ReadWorkshops() (map[string]string, error) {
 }
 
 // Read single workshop file if it exists and is unique.
-func (w *Project) maybeSingleWorkshop() (*File, error) {
+func (w *Project) maybeSingleWorkshop() (string, error) {
 	var path string
 
 	for _, name := range Filenames {
 		_, err := os.Stat(filepath.Join(w.Path, name))
 		if err == nil {
 			if path != "" {
-				return nil, fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
+				return "", fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
 			}
 
 			path = filepath.Join(w.Path, name)
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+			return "", err
 		}
 	}
 
 	if path == "" {
-		return nil, nil
+		return "", nil
 	}
 
 	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+			return "", err
 		}
 	} else if len(files) > 0 {
-		return nil, fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
+		return "", fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
 	}
 
-	file, err := readWorkshop(path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid file %q: %w", path, err)
-	}
-	return file, nil
+	return path, nil
 }
 
 // A directory is a project if it has at least one workshop definition.

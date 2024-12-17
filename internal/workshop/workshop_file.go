@@ -93,7 +93,6 @@ type Connection struct {
 type SdkList []SdkRecord
 
 type File struct {
-	Path        string       `yaml:"file-path"`
 	Name        string       `yaml:"name"`
 	Base        string       `yaml:"base"`
 	Sdks        SdkList      `yaml:"sdks,omitempty"`
@@ -162,7 +161,6 @@ func readWorkshop(path string) (*File, error) {
 		}
 		return nil, err
 	}
-	file.Path = path
 
 	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
 		return cmp.Compare(a.Name, b.Name)

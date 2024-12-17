@@ -28,14 +28,24 @@ type Sdk struct {
 	Mounts      []*Mount     `json:"mounts,omitempty"`
 }
 
+type Info struct {
+	Workshops []*Workshop     `json:"workshops"`
+	Files     []*WorkshopFile `json:"files"`
+}
+
 type Workshop struct {
-	Path      string   `json:"file-path"`
 	ProjectId string   `json:"project-id"`
 	Name      string   `json:"name"`
 	Base      string   `json:"base"`
 	Status    string   `json:"status"`
 	Content   []*Sdk   `json:"content,omitempty"`
 	Notes     []string `json:"notes,omitempty"`
+}
+
+type WorkshopFile struct {
+	ProjectId string `json:"project-id"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
 }
 
 type ListOptions struct {
@@ -48,13 +58,13 @@ type Remount struct {
 	HostSource string   `json:"host-source"`
 }
 
-func (client *Client) ListWorkshops(opts *ListOptions) ([]*Workshop, error) {
-	var workshops []*Workshop
-	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &workshops)
+func (client *Client) List(opts *ListOptions) ([]*Workshop, []*WorkshopFile, error) {
+	var info Info
+	_, err := client.doSync("GET", "/v1/projects/"+opts.ProjectId+"/workshops", nil, nil, nil, &info)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return workshops, nil
+	return info.Workshops, info.Files, nil
 }
 
 func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
