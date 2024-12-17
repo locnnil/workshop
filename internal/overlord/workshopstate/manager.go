@@ -55,16 +55,12 @@ func (w *WorkshopManager) Ensure() error {
 
 // Checks the provided workshop has one of the allowed health statuses.
 func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, allowedStatuses []healthstate.Status) error {
-	health := healthstate.HealthState{}
 	wp, err := w.Workshop(ctx, name, pId)
-	switch {
-	case err == nil:
-		health = w.WorkshopHealth(wp)
-	case err == workshop.ErrWorkshopNotLaunched:
-		health.Status = healthstate.OffStatus
-	default:
+	if err != nil {
 		return err
 	}
+
+	health := w.WorkshopHealth(wp)
 
 	if !slices.Contains(allowedStatuses, health.Status) {
 		switch health.Status {
@@ -79,8 +75,6 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 			return fmt.Errorf("workshop is unhealthy")
 		case healthstate.StoppedStatus:
 			return fmt.Errorf("workshop not running")
-		case healthstate.OffStatus:
-			return workshop.ErrWorkshopNotLaunched
 		default:
 			return fmt.Errorf("workshop health is unknown")
 		}
