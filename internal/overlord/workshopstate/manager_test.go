@@ -269,3 +269,69 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not launched`)
 }
+
+func (s *managerSuite) TestCheckStatusReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	s.launchWorkshopWithSDKs(c, "test", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+
+	// Ready status should not return an error
+	err := s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop already running")
+}
+
+func (s *managerSuite) TestCheckStatusPending(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "test")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	s.launchWorkshopWithSDKs(c, "test", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+
+	// Pending status should not return an error
+	err := s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.PendingStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.OffStatus, healthstate.ReadyStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "waiting on error")
+}
+
+func (s *managerSuite) TestCheckStatusError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	s.launchWorkshopWithSDKs(c, "test", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	c.Assert(os.RemoveAll(s.project.Path), check.IsNil)
+
+	// Error status should not return an error
+	err := s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop is unhealthy")
+}
+
+func (s *managerSuite) TestCheckStatusStopped(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	s.launchWorkshopWithSDKs(c, "test", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	s.backend.StopWorkshop(s.ctx, "test", true)
+
+	// Stopped status should not return an error
+	err := s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.StoppedStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop not running")
+}
