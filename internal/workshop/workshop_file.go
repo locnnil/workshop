@@ -2,7 +2,9 @@ package workshop
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -25,12 +27,12 @@ var (
 	Filenames = []string{"workshop.yaml", ".workshop.yaml"}
 )
 
-func Filename(name string) string {
+func filename(name string) string {
 	return fmt.Sprintf("%s.yaml", name)
 }
 
 func Filepath(project, name string) string {
-	return filepath.Join(project, Directory, Filename(name))
+	return filepath.Join(project, Directory, filename(name))
 }
 
 type Plug struct {
@@ -140,10 +142,17 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readWorkshop(buf []byte) (*File, error) {
+func readWorkshop(path string) (*File, error) {
 	var err error
 	var file File
 
+	buf, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("workshop definition %q not found", path)
+		}
+		return nil, err
+	}
 	if err = yaml.Unmarshal(buf, &file); err != nil {
 		te, ok := err.(*yaml.TypeError)
 		if ok {

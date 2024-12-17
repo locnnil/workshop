@@ -40,7 +40,6 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 
 	c.Assert(createWorkshop(w, "w1"), check.IsNil)
 	c.Assert(createWorkshop(w, "w2"), check.IsNil)
-	c.Assert(createWorkshop(w, "-"), check.IsNil)
 	c.Assert(os.MkdirAll(filepath.Join(w, "test-dir.yaml"), 0755), check.IsNil)
 	// broken workshop
 	c.Assert(os.WriteFile(filepath.Join(w, "wb.yaml"), []byte(wb), 0644), check.IsNil)
@@ -48,8 +47,8 @@ func (f *workshopFile) TestSomeWorkshopFilesBroken(c *check.C) {
 	c.Assert(os.WriteFile(filepath.Join(w, "test-file.yml"), []byte{}, 0644), check.IsNil)
 	fls, err := p.ReadWorkshops()
 	c.Assert(err, check.IsNil)
-	c.Assert(fls, check.HasLen, 4)
-	c.Assert(fls, testutil.DeepUnsortedMatches, []string{"w1", "w2", "wb", "-"})
+	c.Assert(fls, check.HasLen, 3)
+	c.Assert(fls, testutil.DeepUnsortedMatches, map[string]string{"w1": filepath.Join(w, "w1.yaml"), "w2": filepath.Join(w, "w2.yaml"), "wb": filepath.Join(w, "wb.yaml")})
 }
 
 func (f *workshopFile) TestMixedWorkshopFileConventions(c *check.C) {

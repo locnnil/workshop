@@ -45,11 +45,15 @@ func (p *Project) Exists() bool {
 }
 
 func (w *Project) Workshop(workshop string) (*File, error) {
-	file, err := w.maybeSingleWorkshop()
+	path, err := w.maybeSingleWorkshop()
 	if err != nil {
 		return nil, err
 	}
-	if file != nil {
+	if path != "" {
+		file, err := readWorkshop(path)
+		if err != nil {
+			return nil, fmt.Errorf("invalid file %q: %w", path, err)
+		}
 		if file.Name != workshop {
 			return nil, fmt.Errorf("workshop %q not found (only found %q)",
 				workshop, file.Name)
@@ -57,35 +61,31 @@ func (w *Project) Workshop(workshop string) (*File, error) {
 		return file, nil
 	}
 
-	path := Filepath(w.Path, workshop)
-
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("workshop definition %q not found", path)
-		}
-		return nil, err
-	}
-
-	file, err = readWorkshop(buf)
+	path = Filepath(w.Path, workshop)
+	file, err := readWorkshop(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if file.Name != workshop {
 		return nil, fmt.Errorf("%q workshop file must be named %q (now: %q)",
-			file.Name, Filename(file.Name), filepath.Base(path))
+			file.Name, filename(file.Name), filepath.Base(path))
 	}
 	return file, nil
 }
 
-func (w *Project) ReadWorkshops() ([]string, error) {
-	file, err := w.maybeSingleWorkshop()
+func (w *Project) ReadWorkshops() (map[string]string, error) {
+	path, err := w.maybeSingleWorkshop()
 	if err != nil {
 		return nil, err
 	}
-	if file != nil {
-		return []string{file.Name}, nil
+
+	if path != "" {
+		file, err := readWorkshop(path)
+		if err != nil {
+			return nil, fmt.Errorf("invalid file %q: %w", path, err)
+		}
+		return map[string]string{file.Name: path}, nil
 	}
 
 	// *.yaml is the only supported extension for workshop files as the only
@@ -96,7 +96,7 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 		return nil, err
 	}
 
-	var workshops = make([]string, 0, len(files))
+	var workshops = make(map[string]string, len(files))
 	for _, f := range files {
 		info, err := os.Stat(f)
 		if err != nil {
@@ -107,48 +107,42 @@ func (w *Project) ReadWorkshops() ([]string, error) {
 			continue
 		}
 		var name = strings.TrimSuffix(info.Name(), ".yaml")
-		workshops = append(workshops, name)
+		workshops[name] = f
 	}
 	return workshops, nil
 }
 
-// Read single workshop file if it exists and is unique.
-func (w *Project) maybeSingleWorkshop() (*File, error) {
+// Detects a single workshop file path if it exists and is unique.
+func (w *Project) maybeSingleWorkshop() (string, error) {
 	var path string
-	var contents []byte
 
 	for _, name := range Filenames {
-		buf, err := os.ReadFile(filepath.Join(w.Path, name))
+		_, err := os.Stat(filepath.Join(w.Path, name))
 		if err == nil {
 			if path != "" {
-				return nil, fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
+				return "", fmt.Errorf("ambiguous file %q (directory also contains %q)", path, name)
 			}
 
 			path = filepath.Join(w.Path, name)
-			contents = buf
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+			return "", err
 		}
 	}
 
 	if path == "" {
-		return nil, nil
+		return "", nil
 	}
 
 	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+			return "", err
 		}
 	} else if len(files) > 0 {
-		return nil, fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
+		return "", fmt.Errorf("multiple workshops found, but %q not in %q subdirectory", path, Directory)
 	}
 
-	file, err := readWorkshop(contents)
-	if err != nil {
-		return nil, fmt.Errorf("invalid file %q: %w", path, err)
-	}
-	return file, nil
+	return path, nil
 }
 
 // A directory is a project if it has at least one workshop definition.

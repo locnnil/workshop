@@ -210,7 +210,7 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			w.WriteHeader(200)
 			fmt.Fprintln(w, `{
-					"result": [{}],
+					"result": {"files":[{"name":"ws","path":"/home/project/workshop.yaml","project-id":"2"}]},
 					"status": "OK",
 					"status-code": 200,
 					"type": "sync",
@@ -242,7 +242,7 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 
 	c.Check(s.Stdout(), check.Equals, `
 Project        Workshop  Status  Notes
-/home/project                    -
+/home/project  ws        Off     -
 `[1:])
 	c.Check(s.Stderr(), check.Equals, "WARNING: There are 2 new warnings. See 'workshop warnings'.\n")
 

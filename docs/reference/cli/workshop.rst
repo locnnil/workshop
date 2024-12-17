@@ -24,9 +24,6 @@ such as :option:`!--help` or :option:`!-h`.
 .. include:: workshop-exec.rst
 
 
-.. include:: workshop-hack.rst
-
-
 .. include:: workshop-info.rst
 
 
@@ -49,6 +46,9 @@ such as :option:`!--help` or :option:`!-h`.
 
 
 .. include:: workshop-shell.rst
+    
+
+.. include:: workshop-sketch-sdk.rst
 
 
 .. include:: workshop-start.rst

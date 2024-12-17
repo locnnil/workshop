@@ -60,7 +60,7 @@ Notes:
 
 - If the optional <SDK> is supplied,
   the operation is limited to this SDK;
-  currently, it can only be 'hack'
+  currently, it can only be 'sketch'
 `,
 		Example: `
 Refresh the 'nimble' and 'jazzy' workshops in the current project directory:

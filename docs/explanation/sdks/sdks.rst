@@ -229,31 +229,31 @@ Technically, the system SDK is of :samp:`system` type,
 whereas all other SDKs are of :samp:`regular` type,
 but this detail isn't exposed in :file:`sdkcraft.yaml`.
 
-.. _exp_hack_sdk:
+.. _exp_sketch_sdk:
 
-Hack SDK
---------
+Sketch SDK
+----------
 
-The hack SDK is another special type of SDK.
+The sketch SDK is another special type of SDK.
 Again, it's unavailable from the SDK Store;
 instead, you define it inside the workshop
-using the :command:`workshop hack` command.
+using the :command:`workshop sketch-sdk` command.
 Its purpose is to allow |ws_markup| users
 to quickly make changes to a workshop
 beside the regular SDKs listed in the :ref:`definition <exp_sdk_definition>`.
 
-Unlike a regular SDK, the hack SDK:
+Unlike a regular SDK, the sketch SDK:
 
 - doesn't carry any persistent data
 - doesn't appear on the definition
 - is unique to the workshop where it was created
 
 
-The hack SDK can have :ref:`hooks <exp_sdk_hooks>`
+The sketch SDK can have :ref:`hooks <exp_sdk_hooks>`
 and use :ref:`interfaces <exp_interfaces>`,
 which allows it to interact with other SDKs.
-Note that :samp:`hack` is a reserved name,
-and the hack SDK is always installed last.
+Note that :samp:`sketch` is a reserved name,
+and the sketch SDK is always installed last.
 
 
 See also

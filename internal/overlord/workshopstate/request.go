@@ -53,7 +53,7 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 	return projects[username][idx], nil
 }
 
-func maybeHack(ctx context.Context, pid, wp string) (bool, error) {
+func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return false, fmt.Errorf("context key user not found")
@@ -63,10 +63,10 @@ func maybeHack(ctx context.Context, pid, wp string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	hackdir := sdk.WorkshopHackSdkCurrent(usr.HomeDir, pid, wp)
+	sketchdir := sdk.WorkshopSketchSdkCurrent(usr.HomeDir, pid, wp)
 
-	recs, err := os.ReadDir(hackdir)
-	// no hack SDK exists for the workshop and it is not an error.
+	recs, err := os.ReadDir(sketchdir)
+	// no Sketch SDK exists for the workshop and it is not an error.
 	if len(recs) == 0 || osutil.IsDirNotExist(err) {
 		return false, nil
 	}
@@ -310,12 +310,12 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
-		found, err := maybeHack(ctx, projectId, ws)
+		found, err := maybeSketch(ctx, projectId, ws)
 		if err != nil {
 			return nil, err
 		}
 		if found {
-			newContent = append(newContent, sdk.Setup{Name: sdk.Hack, Revision: sdk.Revision{N: -1}})
+			newContent = append(newContent, sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
 		}
 
 		toinstall = append(toinstall, newContent)

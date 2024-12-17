@@ -52,7 +52,7 @@ Notes:
 
 - If the optional <SDK> is supplied,
   the operation is limited to this SDK;
-  currently, it can only be 'hack'
+  currently, it can only be 'sketch'
 
 
 .. rubric:: Options

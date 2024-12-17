@@ -73,83 +73,98 @@ func (c *CmdList) runList() error {
 		return err
 	}
 
+	w := tabWriter()
+	var header sync.Once
+	printHeader := func() {
+		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
+	}
+
 	if !c.global {
 		project, err := cli.Project(c.root.project)
 		if err != nil {
 			return err
 		}
 
-		workshops, err := cli.ListWorkshops(&client.ListOptions{ProjectId: project.Id})
+		workshops, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 		if err != nil {
 			return err
 		}
-		slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
+
 		/* List all workshops for the current project */
-		if len(workshops) != 0 {
-			printWorkshops(workshops, project)
-		} else {
-			return err
+		if len(workshops) != 0 || len(files) != 0 {
+			header.Do(printHeader)
+			print(w, workshops, files, project)
 		}
-		return err
 	} else {
-		w := tabWriter()
-
 		projects, err := cli.Projects()
-		slices.SortFunc(projects, func(a, b *client.Project) int { return cmp.Compare(a.Path, b.Path) })
-
 		if err != nil {
 			return err
 		}
-		var header sync.Once
-		printHeader := func() {
-			fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
-		}
-		for _, i := range projects {
-			workshops, err := cli.ListWorkshops(&client.ListOptions{ProjectId: i.Id})
+
+		for _, p := range projects {
+			workshops, _, err := cli.List(&client.ListOptions{ProjectId: p.Id})
 			if err != nil {
 				return err
 			}
-			slices.SortFunc(workshops, func(a, b *client.Workshop) int { return cmp.Compare(a.Name, b.Name) })
-
-			for _, j := range workshops {
-				// --global flag would not list Off workshops for consistency.
-				// We may not be aware of all the project directories on the system
-				// and, thus, will not know all the available Off workshops (contrary
-				// to the workshops that are in any other state, i.e. running instances, which we always know
-				// about from the workshop backend)
-				if j.Status != "Off" {
-					header.Do(printHeader)
-					fmt.Fprintln(w, strings.Join(printWorkshop(j, i), "\t"))
-				}
-			}
+			header.Do(printHeader)
+			// --global flag does not list files for consistency. We may not be
+			// aware of all the project directories on the system and, thus,
+			// will not know all the available "Off" workshops (contrary to the
+			// workshops that are in any other state, i.e. running instances,
+			// which we always know about from the workshop backend).
+			print(w, workshops, nil, p)
 		}
-
-		w.Flush()
 	}
+
+	w.Flush()
 
 	return nil
 }
 
-func printWorkshops(wsList []*client.Workshop, prj *client.Project) {
-	w := tabWriter()
-	fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
-
-	for _, val := range wsList {
-		line := printWorkshop(val, prj)
-		fmt.Fprintln(w, strings.Join(line, "\t"))
+func sorter[T *client.WorkshopInfo | *client.WorkshopFile](extract func(T) string) func(a, b T) int {
+	return func(a, b T) int {
+		return cmp.Compare(extract(a), extract(b))
 	}
-	w.Flush()
 }
 
-func printWorkshop(j *client.Workshop, prj *client.Project) []string {
+func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*client.WorkshopFile, prj *client.Project) {
+	slices.SortFunc(workshops, sorter(func(w *client.WorkshopInfo) string { return w.Name }))
+	for _, wp := range workshops {
+		line := workshopEntry(wp, prj)
+		fmt.Fprintln(w, strings.Join(line, "\t"))
+	}
+
+	slices.SortFunc(files, sorter(func(f *client.WorkshopFile) string { return f.Name }))
+	for _, wf := range files {
+		_, found := slices.BinarySearchFunc(workshops, wf, func(w *client.WorkshopInfo, wf *client.WorkshopFile) int {
+			return cmp.Compare(w.Name, wf.Name)
+		})
+		if !found {
+			line := fileEntry(wf, prj)
+			fmt.Fprintln(w, strings.Join(line, "\t"))
+		}
+	}
+}
+
+func fileEntry(w *client.WorkshopFile, p *client.Project) []string {
+	line := []string{
+		contractHomeDirectory(p.Path),
+		w.Name,
+		"Off",
+		"-",
+	}
+	return line
+}
+
+func workshopEntry(w *client.WorkshopInfo, p *client.Project) []string {
 	comment := "-"
-	if len(j.Notes) > 0 {
-		comment = strings.Join(j.Notes, ",")
+	if len(w.Notes) > 0 {
+		comment = strings.Join(w.Notes, ",")
 	}
 	line := []string{
-		contractHomeDirectory(prj.Path),
-		j.Name,
-		j.Status,
+		contractHomeDirectory(p.Path),
+		w.Name,
+		w.Status,
 		comment,
 	}
 	return line

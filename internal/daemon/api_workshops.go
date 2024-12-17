@@ -55,23 +55,39 @@ type Mount struct {
 	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
+type Workshop struct {
+	Workshop *WorkshopInfo     `json:"workshop"`
+	File     *WorkshopFileInfo `json:"file"`
+}
+
+type Workshops struct {
+	Workshops []*WorkshopInfo     `json:"workshops"`
+	Files     []*WorkshopFileInfo `json:"files"`
+}
+
 type WorkshopInfo struct {
+	ProjectId string     `json:"project-id"`
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
-	ProjectId string     `json:"project-id"`
 	Status    string     `json:"status"`
 	Content   []*SdkInfo `json:"content,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
 
+type WorkshopFileInfo struct {
+	ProjectId string `json:"project-id"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+}
+
 var ensureStateSoon = stateEnsureBefore
 var workshopMounts = mounts
 
-func workshopFileToInfo(file string, pid string) *WorkshopInfo {
-	var ws WorkshopInfo
-	ws.Name = file
+func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo {
+	var ws WorkshopFileInfo
 	ws.ProjectId = pid
-	ws.Status = healthstate.OffStatus.String()
+	ws.Name = name
+	ws.Path = path
 	return &ws
 }
 
@@ -91,11 +107,8 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 			}
 		}
 
-		var sdkMounts []*Mount
-		if mounts != nil {
-			sdkMounts = mounts[sdk.Name]
-			slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
-		}
+		sdkMounts := mounts[sdk.Name]
+		slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sdk.Name,
@@ -211,42 +224,27 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot list workshops: %v", err)
 	}
 
-	var infoLst = make([]*WorkshopInfo, 0)
+	info := Workshops{}
+	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
 		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
 			continue
 		}
-		info := workshopToInfo(w, health, nil)
-		infoLst = append(infoLst, info)
+		wi := workshopToInfo(w, health, nil)
+		info.Workshops = append(info.Workshops, wi)
 	}
 
-	// Now, if the client wants only workshop files or just queried everything
-	// available, we add workshop files to the response (note these only exist
-	// as files, not instances)
-	if wstate == "all" || wstate == "off" {
-		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
-		if err != nil {
-			state.Warnf("%v", err)
-		} else {
-			infoLst = appendFiles(infoLst, files, projectId)
-		}
+	info.Files = make([]*WorkshopFileInfo, 0, len(workshops))
+	files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+	if err != nil {
+		state.Warnf("%v", err)
+	}
+	for name, path := range files {
+		info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
 	}
 
-	return SyncResponse(infoLst, http.StatusOK)
-}
-
-func appendFiles(infoLst []*WorkshopInfo, files []string, projectId string) []*WorkshopInfo {
-	for _, file := range files {
-		finder := func(info *WorkshopInfo) bool { return info.Name == file }
-		if slices.ContainsFunc(infoLst, finder) {
-			continue
-		}
-
-		info := workshopFileToInfo(file, projectId)
-		infoLst = append(infoLst, info)
-	}
-	return infoLst
+	return SyncResponse(info, http.StatusOK)
 }
 
 func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
@@ -279,8 +277,8 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
 		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
 			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
-			if sk != sdk.Hack {
-				return change, taskset, fmt.Errorf(`partial refresh is supported only for "hack" SDK`)
+			if sk != sdk.Sketch {
+				return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 			}
 			taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
 		} else {
@@ -392,5 +390,17 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(err.Error())
 	}
 
-	return SyncResponse(workshopToInfo(w, health, ms), http.StatusOK)
+	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
+	file := files[w.Name]
+
+	rsp := Workshop{
+		Workshop: workshopToInfo(w, health, ms),
+		File:     workshopFileToInfo(projectId, w.Name, file),
+	}
+
+	return SyncResponse(rsp, http.StatusOK)
 }

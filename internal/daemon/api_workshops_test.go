@@ -297,35 +297,43 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*WorkshopInfo{
-		{
-			Name:      "manysdks",
-			Base:      "ubuntu@22.04",
-			ProjectId: s.project.ProjectId,
-			Status:    "Ready",
-			Content: []*SdkInfo{
-				{
-					Name:        "test-sdk",
-					Channel:     "latest/stable",
-					Revision:    "1",
-					InstallTime: &t1,
-				},
-				{
-					Name:        "test-sdk-2",
-					Channel:     "latest/stable",
-					Revision:    "1",
-					InstallTime: &t2,
-				},
+	info := rsp.Result.(Workshops)
+	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
+		Name:      "manysdks",
+		Base:      "ubuntu@22.04",
+		ProjectId: s.project.ProjectId,
+		Status:    "Ready",
+		Content: []*SdkInfo{
+			{
+				Name:        "test-sdk",
+				Channel:     "latest/stable",
+				Revision:    "1",
+				InstallTime: &t1,
 			},
-			Notes: nil,
-		}, {
-			Name:      "basic",
-			Base:      "ubuntu@22.04",
-			ProjectId: s.project.ProjectId,
-			Status:    "Ready",
-			Notes:     nil,
+			{
+				Name:        "test-sdk-2",
+				Channel:     "latest/stable",
+				Revision:    "1",
+				InstallTime: &t2,
+			},
 		},
-	})
+		Notes: nil,
+	}, {
+		Name:      "basic",
+		Base:      "ubuntu@22.04",
+		ProjectId: s.project.ProjectId,
+		Status:    "Ready",
+	}})
+
+	c.Check(info.Files, testutil.DeepUnsortedMatches, []*WorkshopFileInfo{{
+		Name:      "manysdks",
+		Path:      workshop.Filepath(s.project.Path, "manysdks"),
+		ProjectId: s.project.ProjectId,
+	}, {
+		Name:      "basic",
+		Path:      workshop.Filepath(s.project.Path, "basic"),
+		ProjectId: s.project.ProjectId,
+	}})
 }
 
 func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
@@ -375,61 +383,63 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Name:      "manysdks",
-		Base:      "ubuntu@22.04",
-		ProjectId: s.project.ProjectId,
-		Status:    "Ready",
-		Notes:     nil,
-		Content: []*SdkInfo{
-			{
-				Name:        "test-sdk",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t1,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
-						WorkshopTarget: "/opt/data",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk",
-							Name:      "data",
+	c.Check(rsp.Result, check.DeepEquals, Workshop{
+		Workshop: &WorkshopInfo{
+			Name:      "manysdks",
+			Base:      "ubuntu@22.04",
+			ProjectId: s.project.ProjectId,
+			Status:    "Ready",
+			Notes:     nil,
+			Content: []*SdkInfo{
+				{
+					Name:        "test-sdk",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t1,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+							WorkshopTarget: "/opt/data",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk",
+								Name:      "data",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "test-sdk-2",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t2,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk-2",
-							Name:      "photos",
+				{
+					Name:        "test-sdk-2",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t2,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk-2",
+								Name:      "photos",
+							},
 						},
-					},
-					{
-						WorkshopSource: "/photos",
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "manysdks",
-							Sdk:       "test-sdk-2",
-							Name:      "photos2",
+						{
+							WorkshopSource: "/photos",
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "manysdks",
+								Sdk:       "test-sdk-2",
+								Name:      "photos2",
+							},
 						},
 					},
 				},
 			},
 		},
-	})
+		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "manysdks", Path: workshop.Filepath(s.project.Path, "manysdks")}})
 }
 
 func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
@@ -466,51 +476,53 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, &WorkshopInfo{
-		Name:      "somebound",
-		Base:      "ubuntu@22.04",
-		ProjectId: s.project.ProjectId,
-		Status:    "Ready",
-		Notes:     nil,
-		Content: []*SdkInfo{
-			{
-				Name:        "test-sdk",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t1,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "somebound",
-							Sdk:       "test-sdk",
-							Name:      "data",
+	c.Check(rsp.Result, check.DeepEquals, Workshop{
+		Workshop: &WorkshopInfo{
+			Name:      "somebound",
+			Base:      "ubuntu@22.04",
+			ProjectId: s.project.ProjectId,
+			Status:    "Ready",
+			Notes:     nil,
+			Content: []*SdkInfo{
+				{
+					Name:        "test-sdk",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t1,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "somebound",
+								Sdk:       "test-sdk",
+								Name:      "data",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "test-sdk-2",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &t2,
-				Mounts: []*Mount{
-					{
-						HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
-						WorkshopTarget: "/opt/data2",
-						Plug: interfaces.PlugRef{
-							ProjectId: s.project.ProjectId,
-							Workshop:  "somebound",
-							Sdk:       "test-sdk-2",
-							Name:      "photos",
+				{
+					Name:        "test-sdk-2",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					InstallTime: &t2,
+					Mounts: []*Mount{
+						{
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							WorkshopTarget: "/opt/data2",
+							Plug: interfaces.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "somebound",
+								Sdk:       "test-sdk-2",
+								Name:      "photos",
+							},
 						},
 					},
 				},
 			},
 		},
-	})
+		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "somebound", Path: workshop.Filepath(s.project.Path, "somebound")}})
 }
 
 type expectedResp struct {
@@ -651,8 +663,8 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 	return func() { s.b.ExecCallback = nil }
 }
 
-func (s *apiSuite) mockHackSdk(c *check.C, ws string, meta string) {
-	sdkpath := sdk.WorkshopHackSdkCurrent(s.userhome, s.project.ProjectId, ws)
+func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
+	sdkpath := sdk.WorkshopSketchSdkCurrent(s.userhome, s.project.ProjectId, ws)
 	metadir := filepath.Join(sdkpath, "meta")
 	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
 	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)
@@ -1251,7 +1263,7 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 		// non-transactional refresh is only supported for a single workshop
 		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 
-		// partial refresh is only supported for the hack SDK
+		// partial refresh is only supported for the sketch SDK
 		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"refresh-mode":"transactional"}}`),
 	}
 
@@ -1277,12 +1289,12 @@ func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "hack" SDK`,
+			Message: `partial refresh is supported only for "sketch" SDK`,
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "hack" SDK`,
+			Message: `partial refresh is supported only for "sketch" SDK`,
 		},
 	}
 
@@ -1435,10 +1447,10 @@ func (s *apiSuite) TestRefreshWorkshopPartialOK(c *check.C) {
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
 	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
-	s.mockHackSdk(c, "manysdks", `name: hack
+	s.mockSketchSdk(c, "manysdks", `name: sketch
 base: ubuntu@22.04
 plugs:
-  hack-plug:
+  sketch-plug:
     interface: mount
     workshop-target: /etc
 `)
@@ -1457,21 +1469,21 @@ plugs:
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 	}
 	expected = []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks/hack" SDK`,
+			Summary: `Refresh "manysdks/sketch" SDK`,
 		},
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks/hack" SDK`,
+			Summary: `Refresh "manysdks/sketch" SDK`,
 		},
 	}
 
@@ -1481,26 +1493,26 @@ plugs:
 	c.Assert(err, check.IsNil)
 	c.Assert(wp.Running, check.Equals, true)
 
-	hacksetup := wp.Content["hack"]
-	c.Assert(hacksetup.RevisionSequence, check.HasLen, 1)
-	c.Assert(hacksetup.RevisionSequence[0].String(), check.Equals, "x1")
-	c.Assert(hacksetup.Revision.String(), check.Equals, "x2")
+	sketchsetup := wp.Content["sketch"]
+	c.Assert(sketchsetup.RevisionSequence, check.HasLen, 1)
+	c.Assert(sketchsetup.RevisionSequence[0].String(), check.Equals, "x1")
+	c.Assert(sketchsetup.Revision.String(), check.Equals, "x2")
 
 	fs, err := s.b.WorkshopFs(s.ctx, "manysdks")
 	c.Assert(err, check.IsNil)
 
-	_, err = fs.Stat(sdk.SdkRevPath("hack", "x1"))
+	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x1"))
 	c.Assert(err, check.IsNil)
 
-	_, err = fs.Stat(sdk.SdkRevPath("hack", "x2"))
+	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x2"))
 	c.Assert(err, check.IsNil)
 
-	path, err := fs.ReadLink(sdk.SdkCurrentPath("hack"))
+	path, err := fs.ReadLink(sdk.SdkCurrentPath("sketch"))
 	c.Assert(err, check.IsNil)
-	c.Assert(strings.HasSuffix(path, sdk.SdkRevPath("hack", "x2")), check.Equals, true)
+	c.Assert(strings.HasSuffix(path, sdk.SdkRevPath("sketch", "x2")), check.Equals, true)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "hack", "hack-plug"), check.NotNil)
+	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "sketch", "sketch-plug"), check.NotNil)
 }
 
 func (s *apiSuite) TestRefreshWorkshopPartialConflictChange(c *check.C) {
@@ -1510,7 +1522,7 @@ func (s *apiSuite) TestRefreshWorkshopPartialConflictChange(c *check.C) {
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
 	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
-	s.mockHackSdk(c, "manysdks", `name: illegal%
+	s.mockSketchSdk(c, "manysdks", `name: illegal%
 base: ubuntu@22.04
 `)
 
@@ -1528,7 +1540,7 @@ base: ubuntu@22.04
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/hack"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
 	}
 	expected = []*expectedResp{
@@ -1536,7 +1548,7 @@ base: ubuntu@22.04
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks/hack" SDK`,
+			Summary: `Refresh "manysdks/sketch" SDK`,
 		},
 		{
 			Type:    ResponseTypeError,
