@@ -45,7 +45,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 	c.Check(cs.req.Method, check.Equals, "GET")
 }
 func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
-	cs.rsp = `{"type": "sync", "result": {"workshop":{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
+	cs.rsp = `{"type": "sync", "result": {"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
 	"content":[
 		{"name":"go",
 		"channel":"latest/stable",
@@ -53,36 +53,34 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 		"install-time":"2023-04-25T01:02:03Z", 
 		"health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"},
 		"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},{"workshop-source":"/home","workshop-target":"/mnt", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name-2"}}]
-	}]}, "file":{"name":"workshop","project-id":"2","path":"/home/projects/.workshop/workshop.yaml"}}}`
-	wp, file, err := cs.cli.Workshop("42ws42ws", "workshop")
+	}],"path":"/home/projects/.workshop/workshop.yaml"}}`
+	wp, err := cs.cli.Workshop("42ws42ws", "workshop")
 	c.Assert(err, check.IsNil)
-	c.Assert(wp, check.DeepEquals, &client.WorkshopInfo{
-		ProjectId: "42ws42ws",
-		Name:      "workshop",
-		Base:      "ubuntu@20.04",
-		Status:    "Ready",
-		Content: []*client.Sdk{
-			{
-				Name:        "go",
-				Channel:     "latest/stable",
-				Revision:    "453",
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
-				Health: &client.HealthCheck{
-					Timestamp: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
-					Message:   "hello from health-check",
-					Code:      "check-waiting",
-				},
-				Mounts: []*client.Mount{
-					{HostSource: "/home/user/src", WorkshopTarget: "/home/workshop/target", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name"}},
-					{WorkshopSource: "/home", WorkshopTarget: "/mnt", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name-2"}},
+	c.Assert(wp, check.DeepEquals, &client.Workshop{
+		WorkshopInfo: client.WorkshopInfo{
+			ProjectId: "42ws42ws",
+			Name:      "workshop",
+			Base:      "ubuntu@20.04",
+			Status:    "Ready",
+			Content: []*client.Sdk{
+				{
+					Name:        "go",
+					Channel:     "latest/stable",
+					Revision:    "453",
+					InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+					Health: &client.HealthCheck{
+						Timestamp: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+						Message:   "hello from health-check",
+						Code:      "check-waiting",
+					},
+					Mounts: []*client.Mount{
+						{HostSource: "/home/user/src", WorkshopTarget: "/home/workshop/target", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name"}},
+						{WorkshopSource: "/home", WorkshopTarget: "/mnt", Plug: client.PlugRef{ProjectId: "42ws42ws", Workshop: "workshop", Sdk: "go", Name: "plug-name-2"}},
+					},
 				},
 			},
 		},
-	})
-	c.Assert(file, check.DeepEquals, &client.WorkshopFile{
-		ProjectId: "2",
-		Name:      "workshop",
-		Path:      "/home/projects/.workshop/workshop.yaml",
+		Path: "/home/projects/.workshop/workshop.yaml",
 	})
 	c.Check(cs.req.Method, check.Equals, "GET")
 }

@@ -56,11 +56,6 @@ type Mount struct {
 	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
-type Workshop struct {
-	Workshop *WorkshopInfo     `json:"workshop"`
-	File     *WorkshopFileInfo `json:"file"`
-}
-
 type Workshops struct {
 	Workshops []*WorkshopInfo     `json:"workshops"`
 	Files     []*WorkshopFileInfo `json:"files"`
@@ -79,6 +74,11 @@ type WorkshopFileInfo struct {
 	ProjectId string `json:"project-id"`
 	Name      string `json:"name"`
 	Path      string `json:"path"`
+}
+
+type Workshop struct {
+	WorkshopInfo
+	Path string `json:"path"`
 }
 
 var ensureStateSoon = stateEnsureBefore
@@ -411,11 +411,9 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(err.Error())
 	}
 
-	file := files[w.Name]
-
 	rsp := Workshop{
-		Workshop: workshopToInfo(w, health, ms),
-		File:     workshopFileToInfo(projectId, w.Name, file),
+		WorkshopInfo: *workshopToInfo(w, health, ms),
+		Path:         files[w.Name],
 	}
 
 	return SyncResponse(rsp, http.StatusOK)

@@ -188,7 +188,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	wp, file, err := cli.Workshop(p.Id, av[0])
+	wp, err := cli.Workshop(p.Id, av[0])
 	if err != nil {
 		return err
 	}
@@ -249,11 +249,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
 
 	// Format sketch SDK template header.
-	wpath := ""
-	if file != nil {
-		wpath = file.Path
-	}
-	boilerplate := fmt.Sprintf(sketchTemplate, wpath, wp.Base)
+	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path, wp.Base)
 
 	if osutil.FileExists(metafile) {
 		old, err := os.ReadFile(metafile)

@@ -35,11 +35,6 @@ type Workshops struct {
 	Files     []*WorkshopFile `json:"files"`
 }
 
-type Workshop struct {
-	Workshop *WorkshopInfo `json:"workshop"`
-	File     *WorkshopFile `json:"file"`
-}
-
 type WorkshopInfo struct {
 	ProjectId string   `json:"project-id"`
 	Name      string   `json:"name"`
@@ -53,6 +48,11 @@ type WorkshopFile struct {
 	ProjectId string `json:"project-id"`
 	Name      string `json:"name"`
 	Path      string `json:"path"`
+}
+
+type Workshop struct {
+	WorkshopInfo
+	Path string `json:"path"`
 }
 
 type ListOptions struct {
@@ -76,13 +76,13 @@ func (client *Client) List(opts *ListOptions) ([]*WorkshopInfo, []*WorkshopFile,
 	return info.Workshops, info.Files, nil
 }
 
-func (client *Client) Workshop(projectId, name string) (*WorkshopInfo, *WorkshopFile, error) {
+func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 	var workshop Workshop
 	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name, nil, nil, nil, &workshop)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return workshop.Workshop, workshop.File, nil
+	return &workshop, nil
 }
 
 func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {

@@ -384,7 +384,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, Workshop{
-		Workshop: &WorkshopInfo{
+		WorkshopInfo: WorkshopInfo{
 			Name:      "manysdks",
 			Base:      "ubuntu@22.04",
 			ProjectId: s.project.ProjectId,
@@ -439,7 +439,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				},
 			},
 		},
-		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "manysdks", Path: workshop.Filepath(s.project.Path, "manysdks")}})
+		Path: workshop.Filepath(s.project.Path, "manysdks")})
 }
 
 func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
@@ -477,7 +477,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	// for DeepEqual to work correctly
 	t1, t2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, Workshop{
-		Workshop: &WorkshopInfo{
+		WorkshopInfo: WorkshopInfo{
 			Name:      "somebound",
 			Base:      "ubuntu@22.04",
 			ProjectId: s.project.ProjectId,
@@ -522,7 +522,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				},
 			},
 		},
-		File: &WorkshopFileInfo{ProjectId: "b8639dea", Name: "somebound", Path: workshop.Filepath(s.project.Path, "somebound")}})
+		Path: workshop.Filepath(s.project.Path, "somebound")})
 }
 
 type expectedResp struct {
