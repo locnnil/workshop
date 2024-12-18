@@ -651,8 +651,10 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	defer rev.Fail()
 
 	rev.Add(func() {
-		oldConn := new(schema.ConnState)
-		task.Get("old-conn", oldConn)
+		oldConn := &schema.ConnState{}
+		if err := task.Get("old-conn", oldConn); err != nil {
+			logger.Noticef("On doDisconnect: Cannot recover disconnected %q", cref.ID())
+		}
 		conns[cref.ID()] = oldConn
 		setConns(st, conns)
 
