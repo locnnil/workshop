@@ -21,7 +21,7 @@ type wsOps struct {
 	bd                 *lxdbackend.Backend
 	ctx                context.Context
 	username           string
-	project            *workshop.Project
+	project            workshop.Project
 	restoreLookupUsr   func()
 	restoreNewId       func()
 	restoreDevices     func()
@@ -37,7 +37,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	f.username = "testuser"
-	f.project = &workshop.Project{
+	f.project = workshop.Project{
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}

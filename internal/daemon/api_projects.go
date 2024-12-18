@@ -18,7 +18,7 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 		return statusInternalError("cannot get projects list: %v", err)
 	}
 
-	result := make([]*workshop.Project, 0)
+	result := make([]workshop.Project, 0)
 	for _, val := range projects {
 		result = append(result, val...)
 	}

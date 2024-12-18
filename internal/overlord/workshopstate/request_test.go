@@ -26,7 +26,7 @@ import (
 
 type requestSuite struct {
 	state   *state.State
-	project *workshop.Project
+	project workshop.Project
 	backend workshop.Backend
 	mgr     *workshopstate.WorkshopManager
 	ctx     context.Context
@@ -45,7 +45,9 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
 	s.mgr = workshopstate.New(s.state, state.NewTaskRunner(s.state))
-	s.project, _, _ = s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
+	project, _, err := s.backend.CreateOrLoadProject(s.ctx, c.MkDir())
+	c.Assert(err, check.IsNil)
+	s.project = *project
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.project.ProjectId)
 }
 
@@ -107,7 +109,7 @@ func (s *requestSuite) ensureTaskHasWorkshopAndProjectKeys(c *check.C, w string,
 		var prj workshop.Project
 		err := i.Get("project", &prj)
 		c.Assert(err, check.IsNil)
-		c.Assert(&prj, check.DeepEquals, s.project)
+		c.Assert(prj, check.DeepEquals, s.project)
 
 		var workshop string
 		err = i.Get("workshop", &workshop)
@@ -743,7 +745,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	c.Assert(task.Get("project", &p), check.IsNil)
 	c.Assert(task.Summary(), check.Equals, `Remount "ws-1/sdk-1:plug"`)
 	c.Assert(w, check.Equals, "ws-1")
-	c.Assert(p, check.DeepEquals, *s.project)
+	c.Assert(p, check.DeepEquals, s.project)
 
 	var plugRef interfaces.PlugRef
 	var src string

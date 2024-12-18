@@ -46,11 +46,11 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop
 		return nil, err
 	}
 
-	idx := slices.IndexFunc(projects[username], func(p *workshop.Project) bool { return p.ProjectId == id })
+	idx := slices.IndexFunc(projects[username], func(p workshop.Project) bool { return p.ProjectId == id })
 	if idx == -1 {
 		return nil, fmt.Errorf("no project found with \"id\" %v", id)
 	}
-	return projects[username][idx], nil
+	return &projects[username][idx], nil
 }
 
 func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
@@ -108,7 +108,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
-		tasks := launch(w.state, file, sets, project)
+		tasks := launch(w.state, file, sets, *project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
@@ -212,7 +212,7 @@ func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
 	return checkHealth
 }
 
-func constructWorkshop(st *state.State, file *workshop.File, project *workshop.Project) *state.TaskSet {
+func constructWorkshop(st *state.State, file *workshop.File, project workshop.Project) *state.TaskSet {
 	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
 	base.Set("workshop-base", file.Base)
 
@@ -231,7 +231,7 @@ func constructWorkshop(st *state.State, file *workshop.File, project *workshop.P
 	return state.NewTaskSet(base, create, mountProject, mountAptCache, start)
 }
 
-func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project *workshop.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
 	// check and download all the required SDKs
 	retrieve := retrieveSdks(st, sdks)
 
@@ -322,7 +322,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		installed = append(installed, maps.Values(workshops[idx].Content))
 	}
 
-	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, project)
+	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, *project)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,7 @@ func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*
 }
 
 func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,
-	toInstall [][]sdk.Setup, project *workshop.Project) ([]*state.TaskSet, error) {
+	toInstall [][]sdk.Setup, project workshop.Project) ([]*state.TaskSet, error) {
 	taskset := make([]*state.TaskSet, 0, len(files))
 
 	for i, file := range files {
@@ -455,7 +455,7 @@ func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setu
 	return taskset, nil
 }
 
-func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInstall []sdk.Setup, p *workshop.Project) (*state.TaskSet, error) {
+func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInstall []sdk.Setup, p workshop.Project) (*state.TaskSet, error) {
 	// 1. Save previous state
 	// 2. Stop previous workshop
 	// 3. Put to stash
@@ -544,7 +544,7 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInst
 
 	for _, task := range refresh.Tasks() {
 		task.Set("workshop", file.Name)
-		task.Set("project", *p)
+		task.Set("project", p)
 	}
 
 	return refresh, nil
@@ -609,20 +609,20 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := startMany(w.state, names, project)
+	taskset, err := startMany(w.state, names, *project)
 	if err != nil {
 		return nil, err
 	}
 	return taskset, nil
 }
 
-func startMany(st *state.State, names []string, project *workshop.Project) ([]*state.TaskSet, error) {
+func startMany(st *state.State, names []string, project workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
 		start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 		start.Set("workshop", name)
-		start.Set("project", *project)
+		start.Set("project", project)
 
 		taskset = append(taskset, state.NewTaskSet(start))
 	}
@@ -646,21 +646,21 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := stopMany(w.state, names, project)
+	taskset, err := stopMany(w.state, names, *project)
 	if err != nil {
 		return nil, err
 	}
 	return taskset, nil
 }
 
-func stopMany(st *state.State, names []string, project *workshop.Project) ([]*state.TaskSet, error) {
+func stopMany(st *state.State, names []string, project workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
 		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", name))
 		stop.Set("force", false)
 		stop.Set("workshop", name)
-		stop.Set("project", *project)
+		stop.Set("project", project)
 
 		taskset = append(taskset, state.NewTaskSet(stop))
 	}
@@ -740,14 +740,14 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		}
 	}
 
-	taskset, err := removeMany(w.state, workshops, project)
+	taskset, err := removeMany(w.state, workshops, *project)
 	if err != nil {
 		return nil, err
 	}
 	return taskset, nil
 }
 
-func removeMany(st *state.State, workshops []*workshop.Workshop, project *workshop.Project) ([]*state.TaskSet, error) {
+func removeMany(st *state.State, workshops []*workshop.Workshop, project workshop.Project) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
 	for _, name := range workshops {
 		remove, err := remove(st, name, project)
@@ -759,7 +759,7 @@ func removeMany(st *state.State, workshops []*workshop.Workshop, project *worksh
 	return taskset, nil
 }
 
-func remove(st *state.State, w *workshop.Workshop, project *workshop.Project) (*state.TaskSet, error) {
+func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
 	disconnectSet := disconnectSdks(maps.Values(w.Content), st)
 

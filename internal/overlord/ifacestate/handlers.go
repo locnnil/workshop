@@ -287,7 +287,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 	return nil
 }
 
-func (m *InterfaceManager) batchDisconnectTasks(p *workshop.Project, workshop, sdkName string,
+func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sdkName string,
 	conns map[string]*schema.ConnState, refs []*interfaces.ConnRef) *state.TaskSet {
 	ts := state.NewTaskSet()
 
@@ -366,7 +366,7 @@ func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.T
 		return err
 	}
 
-	ts := m.batchDisconnectTasks(project, w, s, conns, connections)
+	ts := m.batchDisconnectTasks(*project, w, s, conns, connections)
 
 	handlersetup.InjectTasks(task, ts)
 	m.state.EnsureBefore(0)

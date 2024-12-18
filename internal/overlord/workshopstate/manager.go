@@ -105,17 +105,16 @@ func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) (map[st
 		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	var p *workshop.Project
 	projects, err := w.backend.Projects(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == pId })
+	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == pId })
 	if idx == -1 {
 		return nil, fmt.Errorf("project %q not found", pId)
 	}
-	p = projects[user][idx]
+	p := projects[user][idx]
 
 	files, err := p.ReadWorkshops()
 	if err != nil {

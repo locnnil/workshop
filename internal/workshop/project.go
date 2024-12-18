@@ -146,7 +146,7 @@ func (w *Project) maybeSingleWorkshop() (string, error) {
 }
 
 type ProjectTracker struct {
-	Projects []*Project
+	Projects []Project
 }
 
 type TrackResult int
@@ -229,12 +229,12 @@ func readProjectId(projectDir string) (string, error) {
 func (t *ProjectTracker) writeProjectId(path string) (*Project, TrackResult, error) {
 	// Try to recover .lock file for this project
 	// if it existed before and was accidentally removed.
-	idx := slices.IndexFunc(t.Projects, func(p *Project) bool { return p.Path == path })
+	idx := slices.IndexFunc(t.Projects, func(p Project) bool { return p.Path == path })
 	if idx >= 0 {
 		if err := t.Projects[idx].updateLock(); err != nil {
 			return nil, ProjectError, err
 		}
-		return t.Projects[idx], ProjectFound, nil
+		return &t.Projects[idx], ProjectFound, nil
 	}
 
 	// No project found. If there is at least one workshop definition,
@@ -246,12 +246,12 @@ func (t *ProjectTracker) writeProjectId(path string) (*Project, TrackResult, err
 }
 
 func (t *ProjectTracker) maybeFindProject(path, id string) (*Project, TrackResult, error) {
-	idx := slices.IndexFunc(t.Projects, func(p *Project) bool { return p.ProjectId == id })
+	idx := slices.IndexFunc(t.Projects, func(p Project) bool { return p.ProjectId == id })
 	if idx < 0 {
 		return nil, ProjectError, nil
 	}
 	if t.Projects[idx].Path == path {
-		return t.Projects[idx], ProjectFound, nil
+		return &t.Projects[idx], ProjectFound, nil
 	}
 
 	// Existing project was moved or copied.
@@ -260,7 +260,7 @@ func (t *ProjectTracker) maybeFindProject(path, id string) (*Project, TrackResul
 		if errors.Is(err, os.ErrNotExist) {
 			// Moved: keep ID but update path.
 			t.Projects[idx].Path = path
-			return t.Projects[idx], ProjectMoved, nil
+			return &t.Projects[idx], ProjectMoved, nil
 		}
 		return nil, ProjectError, err
 	}
@@ -275,13 +275,13 @@ func (t *ProjectTracker) createProject(path string) (*Project, TrackResult, erro
 		return nil, ProjectError, err
 	}
 
-	project := &Project{Path: path, ProjectId: id}
+	project := Project{Path: path, ProjectId: id}
 	if err = project.updateLock(); err != nil {
 		return nil, ProjectError, err
 	}
 
 	t.Projects = append(t.Projects, project)
-	return project, ProjectAdded, nil
+	return &project, ProjectAdded, nil
 }
 
 func (t *ProjectTracker) createProjectWithId(path, id string) (*Project, TrackResult, error) {
@@ -291,9 +291,9 @@ func (t *ProjectTracker) createProjectWithId(path, id string) (*Project, TrackRe
 		return nil, ProjectError, ErrNotProject
 	}
 
-	project := &Project{ProjectId: id, Path: path}
+	project := Project{ProjectId: id, Path: path}
 	t.Projects = append(t.Projects, project)
-	return project, ProjectAdded, nil
+	return &project, ProjectAdded, nil
 }
 
 // A directory is a project if it has at least one workshop definition.

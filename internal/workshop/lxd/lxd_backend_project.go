@@ -97,7 +97,7 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 	}
 
 	if result == workshop.ProjectMoved {
-		if err = s.updateProjectMounts(client, ctx, project); err != nil {
+		if err = s.updateProjectMounts(client, ctx, *project); err != nil {
 			return nil, false, err
 		}
 	}
@@ -116,13 +116,13 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 	return project, result == workshop.ProjectAdded, nil
 }
 
-func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project, error) {
+func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, error) {
 	if user, ok := ctx.Value(workshop.ContextUser).(string); ok {
 		projects, err := s.userProjects(ctx, user)
 		if err != nil {
 			return nil, err
 		}
-		return map[string][]*workshop.Project{user: projects}, nil
+		return map[string][]workshop.Project{user: projects}, nil
 	}
 
 	// get a default connection without preseting the LXD project as we are
@@ -138,7 +138,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project,
 	if err != nil {
 		return nil, err
 	}
-	allProjects := make(map[string][]*workshop.Project)
+	allProjects := make(map[string][]workshop.Project)
 	for _, lxdProject := range lxdProjects {
 		// if the project is created by workshop, the key must be present
 		if _, ok := lxdProject.Config["user.workshop.projects"]; !ok {
@@ -164,7 +164,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]*workshop.Project,
 	return allProjects, nil
 }
 
-func (s *Backend) userProjects(ctx context.Context, user string) ([]*workshop.Project, error) {
+func (s *Backend) userProjects(ctx context.Context, user string) ([]workshop.Project, error) {
 	client, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -203,8 +203,8 @@ func (s *Backend) userProjects(ctx context.Context, user string) ([]*workshop.Pr
 // If a path does not exist, recover it from the actual bind mount of the '/project'.
 // If recovery fails and no workshops exist for the project,
 // remove the project from the list.
-func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, projects []*workshop.Project) ([]*workshop.Project, bool, error) {
-	pruned := make([]*workshop.Project, 0, len(projects))
+func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, projects []workshop.Project) ([]workshop.Project, bool, error) {
+	pruned := make([]workshop.Project, 0, len(projects))
 	modified := false
 
 	for _, prj := range projects {
@@ -221,7 +221,7 @@ func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, 
 			return nil, false, err
 		}
 		if path != "" {
-			prj = &workshop.Project{Path: path, ProjectId: prj.ProjectId}
+			prj.Path = path
 			if err = s.updateProjectMounts(client, ctx, prj); err != nil {
 				return nil, false, err
 			}
@@ -312,8 +312,8 @@ func (s *Backend) projectFsRoot(conn lxd.InstanceServer, ctx context.Context, pr
 	return "", nil
 }
 
-func readProjects(jsonData []byte) ([]*workshop.Project, error) {
-	var projects = make([]*workshop.Project, 0)
+func readProjects(jsonData []byte) ([]workshop.Project, error) {
+	var projects = make([]workshop.Project, 0)
 	if len(jsonData) == 0 {
 		return projects, nil
 	}
@@ -323,7 +323,7 @@ func readProjects(jsonData []byte) ([]*workshop.Project, error) {
 	return projects, nil
 }
 
-func saveProjects(projects []*workshop.Project) (string, error) {
+func saveProjects(projects []workshop.Project) (string, error) {
 	buf, err := json.Marshal(projects)
 	if err != nil {
 		return "", err
@@ -331,7 +331,7 @@ func saveProjects(projects []*workshop.Project) (string, error) {
 	return string(buf), nil
 }
 
-func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Context, project *workshop.Project) error {
+func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Context, project workshop.Project) error {
 	projectCtx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
 
 	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, project.ProjectId))

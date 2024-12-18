@@ -18,7 +18,7 @@ import (
 type workshopSuite struct {
 	bend *fakebackend.FakeWorkshopBackend
 	ctx  context.Context
-	p    *workshop.Project
+	p    workshop.Project
 
 	restoreUserLookup func()
 }
@@ -47,8 +47,9 @@ func (f *workshopSuite) SetUpTest(c *check.C) {
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
-	f.p, _, err = f.bend.CreateOrLoadProject(ctx, c.MkDir())
+	p, _, err := f.bend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	f.p = *p
 
 	f.ctx = createTestContext("testuser", f.p.ProjectId)
 }

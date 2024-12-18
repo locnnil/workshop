@@ -11,7 +11,7 @@ import (
 )
 
 type LxdBeTests struct {
-	project *workshop.Project
+	project workshop.Project
 }
 
 var _ = check.Suite(&LxdBeTests{})
@@ -20,7 +20,7 @@ func TestLxdBackendSuite(t *testing.T) { check.TestingT(t) }
 
 func (s *LxdBeTests) SetUpTest(c *check.C) {
 	dir := c.MkDir()
-	s.project = &workshop.Project{ProjectId: "42ws42ws", Path: dir}
+	s.project = workshop.Project{ProjectId: "42ws42ws", Path: dir}
 }
 
 func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
@@ -28,7 +28,7 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 
 	projects, err := lxdbackend.ReadProjects([]byte(configData))
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, testutil.DeepUnsortedMatches, []*workshop.Project{
+	c.Assert(projects, testutil.DeepUnsortedMatches, []workshop.Project{
 		{
 			Path:      "/home/dmitry/Work/ros-tutorials",
 			ProjectId: "01ac7c0e",

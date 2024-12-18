@@ -29,7 +29,7 @@ var InstallTimeNow = time.Now
 
 type Workshop struct {
 	Backend Backend
-	Project *Project
+	Project Project
 	// Workshop file that was used to launch it; it may be out of sync with the
 	// file in the project directory due to user's edits, etc.
 	File    *File

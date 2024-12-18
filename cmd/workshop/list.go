@@ -93,7 +93,7 @@ func (c *CmdList) runList() error {
 		/* List all workshops for the current project */
 		if len(workshops) != 0 || len(files) != 0 {
 			header.Do(printHeader)
-			print(w, workshops, files, project)
+			print(w, workshops, files, *project)
 		}
 	} else {
 		projects, err := cli.Projects()
@@ -127,7 +127,7 @@ func sorter[T *client.WorkshopInfo | *client.WorkshopFile](extract func(T) strin
 	}
 }
 
-func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*client.WorkshopFile, prj *client.Project) {
+func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*client.WorkshopFile, prj client.Project) {
 	slices.SortFunc(workshops, sorter(func(w *client.WorkshopInfo) string { return w.Name }))
 	for _, wp := range workshops {
 		line := workshopEntry(wp, prj)
@@ -146,7 +146,7 @@ func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*clien
 	}
 }
 
-func fileEntry(w *client.WorkshopFile, p *client.Project) []string {
+func fileEntry(w *client.WorkshopFile, p client.Project) []string {
 	line := []string{
 		contractHomeDirectory(p.Path),
 		w.Name,
@@ -156,7 +156,7 @@ func fileEntry(w *client.WorkshopFile, p *client.Project) []string {
 	return line
 }
 
-func workshopEntry(w *client.WorkshopInfo, p *client.Project) []string {
+func workshopEntry(w *client.WorkshopInfo, p client.Project) []string {
 	comment := "-"
 	if len(w.Notes) > 0 {
 		comment = strings.Join(w.Notes, ",")

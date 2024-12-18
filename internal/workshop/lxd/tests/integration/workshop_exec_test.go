@@ -28,7 +28,7 @@ type wsExec struct {
 	username            string
 	client              *client.Client
 	daemon              *daemon.Daemon
-	project             *workshop.Project
+	project             workshop.Project
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
 	newProjectidRestore func()
@@ -70,7 +70,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	})
 	c.Assert(err, check.IsNil)
 
-	f.project = &workshop.Project{
+	f.project = workshop.Project{
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}

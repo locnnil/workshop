@@ -19,7 +19,7 @@ import (
 
 type workshopFile struct {
 	fs      afero.Fs
-	project *workshop.Project
+	project workshop.Project
 }
 
 var _ = check.Suite(&workshopFile{})
@@ -29,7 +29,7 @@ func TestWorkshop(t *testing.T) { check.TestingT(t) }
 func (f *workshopFile) SetUpTest(c *check.C) {
 	f.fs = afero.NewMemMapFs()
 
-	f.project = &workshop.Project{
+	f.project = workshop.Project{
 		Path:      c.MkDir(),
 		ProjectId: "b8639dea",
 	}

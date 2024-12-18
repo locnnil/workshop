@@ -13,7 +13,7 @@ import (
 
 type conflictSuite struct {
 	state   *state.State
-	project *workshop.Project
+	project workshop.Project
 }
 
 var _ = check.Suite(&conflictSuite{})
@@ -41,7 +41,7 @@ func (s *conflictSuite) newChangeDisconnect(kind string) *state.Change {
 
 func (s *conflictSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *conflictSuite) TestCheckChangeConflictNotFound(c *check.C) {

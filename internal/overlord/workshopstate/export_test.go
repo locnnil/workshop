@@ -8,7 +8,5 @@ var (
 	RestoreStateHooks  = restoreStateHooks
 	StartManyImpl      = startMany
 	StopManyImpl       = stopMany
-	RemoveManyImpl     = removeMany
-	Launch             = launch
 	CheckHealthTimeout = checkHealthTimeout
 )

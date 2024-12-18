@@ -46,7 +46,7 @@ type apiSuite struct {
 	username    string
 	userhome    string
 	installTime time.Time
-	project     *workshop.Project
+	project     workshop.Project
 	ctx         context.Context
 
 	vars map[string]string
@@ -74,7 +74,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		return &user.User{Name: s.username, HomeDir: s.userhome, Uid: cur.Uid, Gid: cur.Gid}, nil
 	})
 
-	s.project = &workshop.Project{
+	s.project = workshop.Project{
 		Path:      s.workshopDir,
 		ProjectId: "b8639dea",
 	}

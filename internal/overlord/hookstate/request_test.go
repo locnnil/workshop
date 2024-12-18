@@ -8,19 +8,16 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 type S struct {
-	state   *state.State
-	project *workshop.Project
+	state *state.State
 }
 
 var _ = check.Suite(&S{})
 
 func (s *S) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshop.Project{Path: "/home/testuser", ProjectId: "42ws42ws"}
 }
 
 func (s *S) TestCreateHook(c *check.C) {

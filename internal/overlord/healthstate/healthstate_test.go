@@ -44,7 +44,7 @@ type healthSuite struct {
 	runner  *state.TaskRunner
 	backend *fakebackend.FakeWorkshopBackend
 	hookMgr *hookstate.HookManager
-	project *workshop.Project
+	project workshop.Project
 	ctx     context.Context
 }
 
@@ -63,8 +63,9 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	workshop.ReplaceBackend(s.state, s.backend)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
-	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
 	s.hookMgr = hookstate.New(s.state, s.runner)
@@ -86,10 +87,10 @@ func (s *healthSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 	for _, task := range tasks {
 		task.Set("workshop", w)
-		task.Set("project", *p)
+		task.Set("project", p)
 	}
 }
 

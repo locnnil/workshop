@@ -28,7 +28,7 @@ type hookSuite struct {
 	se          *overlord.StateEngine
 	hookmgr     *hookstate.HookManager
 	ctx         context.Context
-	project     *workshop.Project
+	project     workshop.Project
 	mockHandler *hooktest.MockHandler
 }
 
@@ -40,10 +40,10 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
-		i.Set("project", *p)
+		i.Set("project", p)
 	}
 }
 
@@ -52,8 +52,9 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 	s.backend, err = fakebackend.New(c.MkDir())
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
-	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
 	s.state = state.New(nil)

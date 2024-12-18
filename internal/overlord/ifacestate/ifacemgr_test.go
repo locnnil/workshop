@@ -31,7 +31,7 @@ type interfaceManagerSuite struct {
 	runner     *state.TaskRunner
 	ctx        context.Context
 	wsbackend  workshop.Backend
-	prj        *workshop.Project
+	prj        workshop.Project
 	secBackend *ifacetest.TestSecurityBackend
 
 	restoreProjectId func()
@@ -56,8 +56,9 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	workshop.ReplaceBackend(s.state, s.wsbackend)
 
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
-	s.prj, _, err = s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
+	prj, _, err := s.wsbackend.CreateOrLoadProject(s.ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	s.prj = *prj
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))

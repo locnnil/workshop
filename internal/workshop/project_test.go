@@ -214,18 +214,18 @@ func (p *projectSuite) TestTrackExistingProject(c *check.C) {
 	original := filepath.Join(d, "original")
 	c.Assert(os.Mkdir(original, os.ModePerm), check.IsNil)
 
-	first := &workshop.Project{Path: original, ProjectId: "42424242"}
-	c.Assert(workshop.UpdateLock(first), check.IsNil)
+	first := workshop.Project{Path: original, ProjectId: "42424242"}
+	c.Assert(workshop.UpdateLock(&first), check.IsNil)
 
-	projects := []*workshop.Project{{Path: original, ProjectId: "42424242"}}
+	projects := []workshop.Project{{Path: original, ProjectId: "42424242"}}
 	tracker := workshop.ProjectTracker{Projects: projects}
 
 	// Existing project with .lock file.
 	project, result, err := tracker.Track(original)
 	c.Assert(err, check.IsNil)
 	c.Check(result, check.Equals, workshop.ProjectFound)
-	c.Check(project, check.DeepEquals, first)
-	c.Check(tracker.Projects, check.DeepEquals, []*workshop.Project{first})
+	c.Check(project, check.DeepEquals, &first)
+	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{first})
 
 	// Copy of existing project with .lock file.
 	copied := filepath.Join(d, "copied")
@@ -237,8 +237,8 @@ func (p *projectSuite) TestTrackExistingProject(c *check.C) {
 	c.Check(project.Path, check.Equals, copied)
 	c.Check(project.ProjectId, check.Not(check.Equals), "")
 	c.Check(project.ProjectId, check.Not(check.Equals), first.ProjectId)
-	second := &workshop.Project{Path: copied, ProjectId: project.ProjectId}
-	c.Check(tracker.Projects, testutil.DeepUnsortedMatches, []*workshop.Project{first, second})
+	second := workshop.Project{Path: copied, ProjectId: project.ProjectId}
+	c.Check(tracker.Projects, testutil.DeepUnsortedMatches, []workshop.Project{first, second})
 
 	// Relocation of existing project with .lock file.
 	moved := filepath.Join(d, "moved")
@@ -248,23 +248,23 @@ func (p *projectSuite) TestTrackExistingProject(c *check.C) {
 	project, result, err = tracker.Track(moved)
 	c.Assert(err, check.IsNil)
 	c.Check(result, check.Equals, workshop.ProjectMoved)
-	c.Check(project, check.DeepEquals, first)
-	c.Check(tracker.Projects, testutil.DeepUnsortedMatches, []*workshop.Project{first, second})
+	c.Check(project, check.DeepEquals, &first)
+	c.Check(tracker.Projects, testutil.DeepUnsortedMatches, []workshop.Project{first, second})
 }
 
 func (p *projectSuite) TestTrackRecoversProjectIds(c *check.C) {
 	d := c.MkDir()
-	expected := &workshop.Project{Path: d, ProjectId: "42424242"}
+	expected := workshop.Project{Path: d, ProjectId: "42424242"}
 
-	projects := []*workshop.Project{{Path: d, ProjectId: "42424242"}}
+	projects := []workshop.Project{{Path: d, ProjectId: "42424242"}}
 	tracker := workshop.ProjectTracker{Projects: projects}
 
 	// Existing project without .lock file.
 	project, result, err := tracker.Track(d)
 	c.Assert(err, check.IsNil)
 	c.Check(result, check.Equals, workshop.ProjectFound)
-	c.Check(project, check.DeepEquals, expected)
-	c.Check(tracker.Projects, check.DeepEquals, []*workshop.Project{expected})
+	c.Check(project, check.DeepEquals, &expected)
+	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{expected})
 	c.Assert(workshop.LockPath(d), testutil.FilePresent)
 
 	// Unknown directory with .lock file.
@@ -281,6 +281,6 @@ func (p *projectSuite) TestTrackRecoversProjectIds(c *check.C) {
 	project, result, err = tracker.Track(d)
 	c.Assert(err, check.IsNil)
 	c.Check(result, check.Equals, workshop.ProjectAdded)
-	c.Check(project, check.DeepEquals, expected)
-	c.Check(tracker.Projects, check.DeepEquals, []*workshop.Project{expected})
+	c.Check(project, check.DeepEquals, &expected)
+	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{expected})
 }

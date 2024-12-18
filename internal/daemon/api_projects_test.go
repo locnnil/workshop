@@ -35,7 +35,7 @@ func (s *apiSuite) TestProjectsGetProjects(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []*workshop.Project{
+	c.Check(rsp.Result, testutil.DeepUnsortedMatches, []workshop.Project{
 		{Path: s.project.Path, ProjectId: s.project.ProjectId},
 	})
 }

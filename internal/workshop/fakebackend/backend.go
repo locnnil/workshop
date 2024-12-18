@@ -54,7 +54,7 @@ type FakeWorkshopBackend struct {
 	WorkshopVolumeContents    map[string]map[string]bool
 	WorkshopVolumeMountPoints map[string]string
 	// the key is a username
-	projects map[string][]*workshop.Project
+	projects map[string][]workshop.Project
 
 	ExecCallback ExecFunc
 	ExecCalls    []*ExecCall
@@ -75,7 +75,7 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	be.WorkshopVolumes = make(map[string]bool)
 	be.WorkshopVolumeContents = make(map[string]map[string]bool)
 	be.WorkshopVolumeMountPoints = make(map[string]string)
-	be.projects = make(map[string][]*workshop.Project)
+	be.projects = make(map[string][]workshop.Project)
 
 	be.ExecCallback = DoExecDefault
 	be.BaseDir = baseDir
@@ -89,26 +89,26 @@ func (s *FakeWorkshopBackend) CreateOrLoadProject(ctx context.Context, path stri
 		return nil, false, errors.New("user not found")
 	}
 	if val, ok := s.projects[username]; ok {
-		idx := slices.IndexFunc(val, func(p *workshop.Project) bool { return p.Path == path })
+		idx := slices.IndexFunc(val, func(p workshop.Project) bool { return p.Path == path })
 		if idx != -1 {
-			return val[idx], false, nil
+			return &val[idx], false, nil
 		}
 	} else {
-		s.projects[username] = make([]*workshop.Project, 0)
+		s.projects[username] = make([]workshop.Project, 0)
 	}
 
 	prjId, _ := workshop.NewProjectId()
-	newPrj := &workshop.Project{ProjectId: prjId, Path: path}
+	newPrj := workshop.Project{ProjectId: prjId, Path: path}
 	s.projects[username] = append(s.projects[username], newPrj)
-	return newPrj, true, nil
+	return &newPrj, true, nil
 }
 
-func (f *FakeWorkshopBackend) Projects(ctx context.Context) (map[string][]*workshop.Project, error) {
+func (f *FakeWorkshopBackend) Projects(ctx context.Context) (map[string][]workshop.Project, error) {
 	userName, ok := ctx.Value(workshop.ContextUser).(string)
 	if ok {
-		return map[string][]*workshop.Project{userName: f.projects[userName]}, nil
+		return map[string][]workshop.Project{userName: f.projects[userName]}, nil
 	}
-	all := map[string][]*workshop.Project{}
+	all := map[string][]workshop.Project{}
 	for name, prjs := range f.projects {
 		all[name] = prjs
 	}
@@ -117,9 +117,9 @@ func (f *FakeWorkshopBackend) Projects(ctx context.Context) (map[string][]*works
 
 func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	prjs := f.projects[user]
-	idx := slices.IndexFunc(prjs, func(p *workshop.Project) bool { return p.ProjectId == id })
+	idx := slices.IndexFunc(prjs, func(p workshop.Project) bool { return p.ProjectId == id })
 	if idx != -1 {
-		return prjs[idx]
+		return &prjs[idx]
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 	ws.Workshop = &workshop.Workshop{Backend: f,
 		Name:    file.Name,
 		Running: false,
-		Project: prj,
+		Project: *prj,
 		Base:    file.Base,
 		File:    file,
 	}
