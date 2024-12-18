@@ -21,7 +21,10 @@ To join the development effort, see `How to contribute <contributing.rst>`_.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
-see the :ref:`how-to guide <how_use_sdkcraft>` in our docs.
+see the
+`how-to guide
+<https://canonical-workshop.readthedocs-hosted.com/en/latest/how-to/use-sdkcraft/>`_
+in our docs.
 
 Installation
 ~~~~~~~~~~~~

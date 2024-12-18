@@ -28,7 +28,7 @@ For comprehensive details, explore the
 Finally,
 if you're looking for advanced practical steps,
 see the
-:ref:`how-to guides <howto_index>`.
+:ref:`how-to guides <how_index>`.
 
 
 Install |ws_markup|
@@ -49,7 +49,7 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-First, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
 and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
@@ -165,14 +165,26 @@ A :ref:`definition <exp_workshop_definition>` lists the components of a workshop
 to be instantiated at launch
 and is stored in your project directory.
 
+We'll be focusing on :ref:`SDKs <exp_sdk>`,
+which are the basic units of a workshop's functionality.
+They are :ref:`built with SDKcraft <how_use_sdkcraft>` by SDK publishers
+to be published on the SDK Store.
+At run-time, |ws_markup| pulls and installs them,
+providing the dependencies and packages required for your work,
+while keeping the SDKs themselves isolated and manageable.
+
+Here, we'll use the sample :samp:`go` SDK,
+which was already defined, built and published in the SDK Store
+by the |ws_markup| team.
+
 Create a
 :ref:`project directory <exp_projects>`
 named :file:`hello-workshop`:
 
 .. code-block:: console
 
-   $ mkdir ~/hello-workshop
-   $ cd ~/hello-workshop
+   $ mkdir ./hello-workshop
+   $ cd ./hello-workshop
 
 
 Everything you plan to build using your workshop goes here:
@@ -193,9 +205,9 @@ create a workshop definition named :file:`workshop.yaml`:
        channel: latest/stable
 
 
-This definition adds an :ref:`SDK <exp_sdk>`,
-the basic functionality unit of a workshop
-that is :ref:`built with SDKcraft <how_use_sdkcraft>`.
+Here, the SDK is referenced as :samp:`go`,
+and the specific version to retrieve from the SDK Store
+comes from the :samp:`latest/stable` channel.
 
 To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
@@ -296,7 +308,9 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
 Here, the following happens:
 
 - The :ref:`project directory <tut_define>`
-  is mounted to the workshop as :file:`/project/`
+  is mounted inside the workshop
+  (remember that it's a container)
+  as :file:`/project/`.
 
 - The workshop is *started*, or brought online.
 
@@ -478,7 +492,9 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec golang -- touch created_inside.txt
+   $ workshop exec golang -- ls /project/
+   $ workshop exec golang -- touch /project/created_inside.txt
+   $ ls
 
 
 This isn't the only way the host interacts with the workshop;
@@ -511,7 +527,8 @@ named :samp:`golang/go:mod-cache`.
 As seen in the :command:`workshop info` output,
 it was automatically connected at :ref:`launch <tut_launch>`
 to the :samp:`golang/system:mount` slot,
-here abbreviated by convention as :samp:`:mount`.
+indicated by the ellipsis in the :samp:`host-source` path
+and abbreviated here as :samp:`:mount` by convention.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
@@ -551,14 +568,126 @@ to a new location on the host:
 This makes :file:`/home/user/mod/` on the host
 act as the Go modules cache for the workshop.
 
-We're nearing the end of our tutorial;
-the only thing left is the cleanup.
+
+.. _tut_hack:
+
+Hack a workshop (optional)
+--------------------------
+
+Another way to customise a workshop in-place is *hacking*.
+This process grafts a :ref:`special SDK <exp_sketch_sdk>` onto the workshop,
+so you can run a quick local experiment
+instead of the usual SDK Store publishing workflow.
+
+The core form of the :command:`workshop hack` command
+opens an :ref:`SDK definition <exp_sdk_definition>`:
+
+.. code-block:: console
+
+   $ workshop hack golang
+
+
+Initially, the editor shows a very basic setup
+consisting of :samp:`name` and :samp:`base`:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+   name: hack
+   base: ubuntu@20.04
+
+
+Suppose you want to use the SSH interface in your workshop.
+While you can add a :ref:`corresponding plug <exp_ssh_interface>`
+immediately in the workshop definition,
+adding extra functionality such as testing would require hooks.
+This implies an experiment with an SDK can be the solution;
+let's see how it's done.
+
+First, adjust the hack SDK definition, adding a plug:
+
+.. code-block:: yaml
+   :caption: hack.yaml
+   :emphasize-lines: 4-6
+
+   name: hack
+   base: ubuntu@20.04
+
+   plugs:
+     ssh-agent:
+       interface: ssh-agent
+
+
+After saving and exiting,
+the workshop is automatically refreshed,
+and the output from :command:`workshop info`
+includes lines similar to the following:
+
+.. code-block:: console
+
+   content:
+     hack:
+       channel:  ~   2024-12-15  (x1)
+
+
+Note that the hack SDK lists the time of last update
+and the local revision (:samp:`x1`) instead of the channel name,
+which is given as :samp:`~` because it's a local SDK.
+If you edit the definition, the revision will be incremented.
+
+Another form of the :command:`workshop hack` command
+enables you to edit a specific :ref:`hook <exp_hooks>`:
+
+.. code-block:: console
+
+   $ workshop hack golang setup-base
+
+This opens the :samp:`setup-base` hook that |ws_markup| runs
+at launch or refresh to set up the base image for the SDK.
+Add the following script that installs a debugger and an alternative compiler:
+
+.. code-block:: console
+   :caption: setup-base
+
+   #!/usr/bin/bash
+   apt-get update
+   apt-get install -y delve
+   apt-get install -y clang
+
+
+Saving and exiting should refresh the workshop again.
+At this point, you've built a real, albeit simple, SDK from scratch in minutes;
+in a real-life scenario, you would iterate over errors and issues that pop up
+until the hack SDK is sufficiently functional for your purposes.
+
+When you're done experimenting, you can just drop the hack SDK:
+
+.. code-block:: console
+
+   $ workshop hack golang --drop
+
+
+If you drop a hack SDK by mistake, restoring it is quite simple:
+
+.. code-block:: console
+
+   $ workshop hack golang --restore
+
+
+While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`
+is beyond the scope of this tutorial,
+consider diving further into the basic SDK concepts
+such as :ref:`plugs, slots <exp_plugs_slots>` and :ref:`hooks <exp_hooks>`
+to successfully use them with :command:`workshop hack`.
 
 
 .. _tut_remove:
 
 Remove a workshop
 -----------------
+
+We're at the end of our tutorial;
+the only thing left is the cleanup.
 
 If you no longer need your workshop,
 :ref:`remove <ref_workshop_remove>` it:
@@ -580,6 +709,21 @@ e.g. via the :ref:`mount interface <tut_interfaces>`.
    for help, see this guide: :ref:`how_troubleshoot_lxc`.
 
 
+Next steps
+----------
+
 This was the last step in the tutorial;
 you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
+
+- If you wish to try building and publishing a full-fledged SDK,
+  continue to the |sdk_markup| :ref:`how-to guide <how_use_sdkcraft>`;
+  the :ref:`ROS2 case study <how_ros2>`
+  describes the entire process of building an SDK and using it in |ws_markup|
+  in extra detail.
+
+- For advanced scenarios and use cases,
+  see other :ref:`how-to guides <how_index>`.
+
+- To know more about workshops in general,
+  proceed to :ref:`explanation <exp_index>` and :ref:`reference <ref_index>` sections.

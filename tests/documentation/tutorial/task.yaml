@@ -42,8 +42,8 @@ execute: |
 
   # Changes in project directory
   touch created_outside.txt
-  workshop_exec exec nimble -- [ -f "created_outside.txt" ]
-  workshop_exec exec nimble -- touch created_inside.txt
+  workshop_exec exec nimble -- [ -f "/project/created_outside.txt" ]
+  workshop_exec exec nimble -- touch /project/created_inside.txt
   [ -f "created_inside.txt" ]
 
   # Interfaces
