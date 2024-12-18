@@ -28,7 +28,7 @@ For comprehensive details, explore the
 Finally,
 if you're looking for advanced practical steps,
 see the
-:ref:`how-to guides <howto_index>`.
+:ref:`how-to guides <how_index>`.
 
 
 Install |ws_markup|
@@ -218,7 +218,7 @@ in the project directory:
    $ workshop list
 
      Project                Workshop   Status  Notes
-     ./hello-workshop       golang     Off     -
+     ~/hello-workshop       golang     Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
@@ -640,22 +640,20 @@ enables you to edit a specific :ref:`hook <exp_hooks>`:
 
 .. code-block:: console
 
-   $ workshop hack golang check-health
+   $ workshop hack golang setup-base
 
-This opens the :samp:`check-health` hook that |ws_markup| runs
-to test whether the SDK's functional after launch or refresh.
-Add the following script that checks if the proxy socket is in place:
+This opens the :samp:`setup-base` hook that |ws_markup| runs
+at launch or refresh to set up the base image for the SDK.
+Add the following script that installs a debugger and an alternative compiler:
 
 .. code-block:: console
-   :caption: check-health
+   :caption: setup-base
 
    #!/usr/bin/bash
-   
-   if [ -n "$SSH_AUTH_SOCK" ]; then
-     workshopctl set-health okay
-   else
-     workshopctl set-health --code=ssh-fails error "SSH interface fails"
-   fi
+   apt-get update
+   apt-get install -y delve
+   apt-get install -y clang
+
 
 Saving and exiting should refresh the workshop again.
 At this point, you've built a real, albeit simple, SDK from scratch in minutes;
@@ -711,6 +709,21 @@ e.g. via the :ref:`mount interface <tut_interfaces>`.
    for help, see this guide: :ref:`how_troubleshoot_lxc`.
 
 
+Next steps
+----------
+
 This was the last step in the tutorial;
 you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
+
+- If you wish to try building and publishing a full-fledged SDK,
+  continue to the |sdk_markup| :ref:`how-to guide <how_use_sdkcraft>`;
+  the :ref:`ROS2 case study <how_ros2>`
+  describes the entire process of building an SDK and using it in |ws_markup|
+  in extra detail.
+
+- For advanced scenarios and use cases,
+  see other :ref:`how-to guides <how_index>`.
+
+- To know more about workshops in general,
+  proceed to :ref:`explanation <exp_index>` and :ref:`reference <ref_index>` sections.
