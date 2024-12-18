@@ -1791,9 +1791,16 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 
 	s.settle(c)
 
+	// Store current connections present in state and repo
 	s.state.Lock()
 	oldConns := map[string]*schema.ConnState{}
 	s.state.Get("conns", &oldConns)
+
+	oldPlugRefs, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
+	c.Assert(err, check.IsNil)
+
+	oldSlotRefs, err := repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
+	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
 	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
@@ -1824,13 +1831,13 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 	s.state.Get("conns", &newConns)
 	c.Assert(oldConns, check.DeepEquals, newConns)
 
-	// Ensure the connection is not removed from the repo
-	ref, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
-	c.Assert(ref, check.HasLen, 1)
+	// Ensure the connection remains identical in the repo
+	refs, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
+	c.Assert(refs, check.DeepEquals, oldPlugRefs)
 	c.Assert(err, check.IsNil)
 
-	ref, err = repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
-	c.Assert(ref, check.HasLen, 1)
+	refs, err = repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
+	c.Assert(refs, check.DeepEquals, oldSlotRefs)
 	c.Assert(err, check.IsNil)
 }
 
@@ -1859,9 +1866,16 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 
 	s.settle(c)
 
+	// Store current connections present in state and repo
 	s.state.Lock()
 	oldConns := map[string]*schema.ConnState{}
 	s.state.Get("conns", &oldConns)
+
+	oldPlugRefs, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
+	c.Assert(err, check.IsNil)
+
+	oldSlotRefs, err := repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
+	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
 	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
@@ -1887,17 +1901,17 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 	c.Assert(c2.Err(), check.ErrorMatches, `cannot perform the following tasks:
 -  \(setup failed\)`)
 
-	// Ensure that the connection is not removed from state
+	// Ensure the connection remains identical in state
 	newConns := map[string]*schema.ConnState{}
 	s.state.Get("conns", &newConns)
 	c.Assert(oldConns, check.DeepEquals, newConns)
 
-	// Ensure the connection is not removed from the repo
-	ref, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
-	c.Assert(ref, check.HasLen, 1)
+	// Ensure the connection remains identical in the repo
+	refs, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug-ssh")
+	c.Assert(refs, check.DeepEquals, oldPlugRefs)
 	c.Assert(err, check.IsNil)
 
-	ref, err = repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
-	c.Assert(ref, check.HasLen, 1)
+	refs, err = repo.Connected(s.prj.ProjectId, "ws", "producer", "slot")
+	c.Assert(refs, check.DeepEquals, oldSlotRefs)
 	c.Assert(err, check.IsNil)
 }
