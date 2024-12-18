@@ -575,7 +575,7 @@ Hack a workshop (optional)
 --------------------------
 
 Another way to customise a workshop in-place is *hacking*.
-This process grafts a special :ref:`hack SDK <exp_hack_sdk>` onto the workshop,
+This process grafts a :ref:`special SDK <exp_sketch_sdk>` onto the workshop,
 so you can run a quick local experiment
 instead of the usual SDK Store publishing workflow.
 
@@ -630,10 +630,10 @@ includes lines similar to the following:
        channel:  ~   2024-12-15  (x1)
 
 
-Note that the hack SDK lists the time of last update and the revision
-instead of the channel name;
-if you edit the definition multiple times,
-the revision will be incremented.
+Note that the hack SDK lists the time of last update
+and the local revision (:samp:`x1`) instead of the channel name,
+which is given as :samp:`~` because it's a local SDK.
+If you edit the definition, the revision will be incremented.
 
 Another form of the :command:`workshop hack` command
 enables you to edit a specific :ref:`hook <exp_hooks>`:
