@@ -202,7 +202,8 @@ func ancestorProject(child string) (string, error) {
 			return "", err
 		}
 		if ok && isDir {
-			if _, err := readProjectId(path); err == nil {
+			_, err := readProjectId(path)
+			if err == nil || isProject(path) {
 				return filepath.Clean(path), nil
 			}
 		}
