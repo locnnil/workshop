@@ -1,0 +1,14 @@
+summary: Check shell functionality and environment
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-shell
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove ws-shell
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check the workshop shell contains expected login shell env vars"
+  set -e
+  [ -n "$(echo 'echo $XDG_RUNTIME_DIR' | workshop_exec shell ws-shell)" ]
+  [ -n "$(echo 'echo $DBUS_SESSION_BUS_ADDRESS' | workshop_exec shell ws-shell)" ]
