@@ -37,10 +37,10 @@ Environment setup
       workshopd run --create-dirs
 
    The client can connect using the daemon's Unix domain socket:
-   
+
    .. code-block:: console
 
-      
+
       export WORKSHOP=~/workshop
       workshop list
 
@@ -214,6 +214,39 @@ of ``Spread``:
 .. code-block:: console
 
    spread tests/<TestPathName>
+
+
+To check code coverage:
+
+.. code-block:: console
+
+  go test --coverpkg=<./...|package> covermode=<set|count|atomic> -coverprofile=<OutputFile> <./...|package>
+
+  // For example to measure coverage using all tests:
+  go test covermode=count -coverprofile=cover.out ./...
+
+
+To generate a html representation:
+
+.. code-block:: console
+
+  go tool cover -html=<OutputFile> -o <OutputHTML>
+
+  // For example:
+  go tool cover -html=cover.out -o cover.html
+
+  // The output flag can be omitted to open in the default browser:
+  go tool cover -html=cover.out
+
+
+The above will work for unit and integration tests instrumented directly with
+`go test`. Integration tests run using spread will create the coverprofile
+automatically, however the artifacts will need to be collected from the VM.
+This can be accomplished by using the `-artifacts` flag when running spread.
+
+.. code-block:: console
+
+  spread -artifacts=<path-to-dest> tests/integration/
 
 
 How to run a local SDK Store
