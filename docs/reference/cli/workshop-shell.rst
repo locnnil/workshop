@@ -40,7 +40,7 @@ in the current project directory:
    $ workshop shell nimble
 
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 
 .. code-block:: console
 

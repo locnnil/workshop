@@ -66,7 +66,7 @@ and apply it after saving by automatically refreshing the workshop:
    $ workshop sketch-sdk nimble
 
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 
 .. code-block:: console
 

@@ -57,7 +57,7 @@ Edit the sketch SDK definition for the 'nimble' workshop
 and apply it after saving by automatically refreshing the workshop:
 $ workshop sketch-sdk nimble
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 $ workshop sketch-sdk
 
 Stash the sketch SDK, temporarily reverting the changes in the workshop:

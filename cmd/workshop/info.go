@@ -44,7 +44,7 @@ Notes:
 List details for the 'nimble' workshop in the current project directory:
 $ workshop info nimble
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 $ workshop info`,
 		RunE: c.Run,
 	}

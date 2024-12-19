@@ -112,7 +112,7 @@ Run a custom interactive shell:
    $ workshop exec -I nimble sh
 
 
-The name is optional if the project only has one workshop
+The name is optional if the project has only one workshop
 and a separator is provided:
 
 .. code-block:: console

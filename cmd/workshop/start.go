@@ -40,7 +40,7 @@ Notes:
 Start the 'nimble' and 'jazzy' workshops in the current project directory:
 $ workshop start nimble jazzy
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 $ workshop start`,
 		RunE: c.Run,
 	}

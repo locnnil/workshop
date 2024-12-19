@@ -116,7 +116,7 @@ $ workshop exec --env GO111MODULE=off -w /project nimble go build -x
 Run a custom interactive shell:
 $ workshop exec -I nimble sh
 
-The name is optional if the project only has one workshop
+The name is optional if the project has only one workshop
 and a separator is provided:
 $ workshop exec -I -- sh
 
@@ -182,7 +182,7 @@ Open the default login shell of the 'workshop' user into the 'nimble' workshop
 in the current project directory:
 $ workshop shell nimble
 
-The name is optional if the project only has one workshop:
+The name is optional if the project has only one workshop:
 $ workshop shell`,
 		RunE: c.Run,
 	}
