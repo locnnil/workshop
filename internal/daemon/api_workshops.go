@@ -289,7 +289,7 @@ func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	case "transactional":
 	case "wait-on-error", "continue", "abort":
 		if reqData.Action != "refresh" && reqData.Action != "launch" {
-			return mode, fmt.Errorf("cannot %s: mode %q is not valid with this command", reqData.Action, reqData.Options.Mode)
+			return mode, fmt.Errorf("cannot %s: mode %q is not valid with the %q command", reqData.Action, reqData.Options.Mode, reqData.Action)
 		}
 	default:
 		return mode, fmt.Errorf("cannot %s: %q is not a valid mode", reqData.Action, reqData.Options.Mode)
@@ -344,6 +344,18 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
+	validActions := []string{
+		"launch",
+		"refresh",
+		"start",
+		"stop",
+		"remove",
+	}
+
+	if !slices.Contains(validActions, reqData.Action) {
+		return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
+	}
+
 	mode, err := actionMode(&reqData)
 	if err != nil {
 		return statusBadRequest(err.Error())
@@ -378,7 +390,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
 			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
 		default:
-			return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
+			return statusBadRequest("internal error: action passed validation but was not matched during dispatch")
 		}
 	}
 

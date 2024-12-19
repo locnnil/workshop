@@ -249,13 +249,13 @@ var testsdks = map[string]string{
 	"test-sdk-2": testsdk2,
 }
 
-func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string]string, mode string) {
+func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string]string) {
 	s.createWFile(c, name, yaml)
 
 	defer s.store.SetActionCallback(storeAction)()
 	defer s.mockDoInstallSdk(c, name, sdks)()
 
-	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch","options": {"mode":"%s"}}`, name, mode))
+	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch"}`, name))
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", reqbuf)
 	c.Assert(err, check.IsNil)
@@ -279,8 +279,8 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "manysdks", manysdks, testsdks, "")
-	s.launchWorkshop(c, "basic", basic, map[string]string{}, "")
+	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
+	s.launchWorkshop(c, "basic", basic, map[string]string{})
 
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
 	s.vars = map[string]string{"id": s.project.ProjectId}
@@ -343,7 +343,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "manysdks", manysdks, testsdks, "")
+	s.launchWorkshop(c, "manysdks", manysdks, testsdks)
 
 	w, ok := s.b.Workshops[s.project.ProjectId]["manysdks"]
 	c.Assert(ok, check.Equals, true)
@@ -450,7 +450,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "somebound", somebound, testsdks, "")
+	s.launchWorkshop(c, "somebound", somebound, testsdks)
 
 	w, ok := s.b.Workshops[s.project.ProjectId]["somebound"]
 	c.Assert(ok, check.Equals, true)
@@ -1250,25 +1250,23 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 
 // Tests the input validation logic of v1PostProjectWorkshop. Excludes any
 // dispatch validation, these are covered by their own tests.
-func (s *apiSuite) TestValidatev1PostProjectWorkshopInputs(c *check.C) {
+func (s *apiSuite) TestValidatev1PostProjectWorkshopModeInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
 	type table struct {
 		cmd    string
-		valid  bool
 		result map[string]string
 	}
 
 	// Note we are explicitly testing the validation up until dispatch here. All
-	// error messages are desired. 'mode'/'action' errors represent an invalid
+	// error messages are desired. 'mode' errors represent an invalid
 	// input, all other errors occur after input validation - these represent a
 	// valid input
 	cmds := []table{
 		{
-			cmd:   "launch",
-			valid: true,
+			cmd: "launch",
 			result: map[string]string{
 				"":              `cannot launch "basic": workshop definition .*`,
 				"transactional": `cannot launch "basic": workshop definition .*`,
@@ -1278,8 +1276,7 @@ func (s *apiSuite) TestValidatev1PostProjectWorkshopInputs(c *check.C) {
 				"invalid-mode":  `cannot launch: "invalid-mode" is not a valid mode`,
 			},
 		}, {
-			cmd:   "refresh",
-			valid: true,
+			cmd: "refresh",
 			result: map[string]string{
 				"":              `cannot refresh "basic": workshop not launched`,
 				"transactional": `cannot refresh "basic": workshop not launched`,
@@ -1289,59 +1286,34 @@ func (s *apiSuite) TestValidatev1PostProjectWorkshopInputs(c *check.C) {
 				"invalid-mode":  `cannot refresh: "invalid-mode" is not a valid mode`,
 			},
 		}, {
-			cmd:   "start",
-			valid: true,
+			cmd: "start",
 			result: map[string]string{
 				"":              `cannot start "basic": workshop not launched`,
 				"transactional": `cannot start "basic": workshop not launched`,
-				"wait-on-error": `cannot start: mode "wait-on-error" is not valid with this command`,
-				"continue":      `cannot start: mode "continue" is not valid with this command`,
-				"abort":         `cannot start: mode "abort" is not valid with this command`,
+				"wait-on-error": `cannot start: mode "wait-on-error" is not valid with the "start" command`,
+				"continue":      `cannot start: mode "continue" is not valid with the "start" command`,
+				"abort":         `cannot start: mode "abort" is not valid with the "start" command`,
 				"invalid-mode":  `cannot start: "invalid-mode" is not a valid mode`,
 			},
 		}, {
-			cmd:   "stop",
-			valid: true,
+			cmd: "stop",
 			result: map[string]string{
 				"":              `cannot stop "basic": workshop not launched`,
 				"transactional": `cannot stop "basic": workshop not launched`,
-				"wait-on-error": `cannot stop: mode "wait-on-error" is not valid with this command`,
-				"continue":      `cannot stop: mode "continue" is not valid with this command`,
-				"abort":         `cannot stop: mode "abort" is not valid with this command`,
+				"wait-on-error": `cannot stop: mode "wait-on-error" is not valid with the "stop" command`,
+				"continue":      `cannot stop: mode "continue" is not valid with the "stop" command`,
+				"abort":         `cannot stop: mode "abort" is not valid with the "stop" command`,
 				"invalid-mode":  `cannot stop: "invalid-mode" is not a valid mode`,
 			},
 		}, {
-			cmd:   "remove",
-			valid: true,
+			cmd: "remove",
 			result: map[string]string{
 				"":              `cannot remove "basic": workshop not launched`,
 				"transactional": `cannot remove "basic": workshop not launched`,
-				"wait-on-error": `cannot remove: mode "wait-on-error" is not valid with this command`,
-				"continue":      `cannot remove: mode "continue" is not valid with this command`,
-				"abort":         `cannot remove: mode "abort" is not valid with this command`,
+				"wait-on-error": `cannot remove: mode "wait-on-error" is not valid with the "remove" command`,
+				"continue":      `cannot remove: mode "continue" is not valid with the "remove" command`,
+				"abort":         `cannot remove: mode "abort" is not valid with the "remove" command`,
 				"invalid-mode":  `cannot remove: "invalid-mode" is not a valid mode`,
-			},
-		}, {
-			cmd:   "invalid-cmd",
-			valid: false,
-			result: map[string]string{
-				"":              `unknown action "invalid-cmd"`,
-				"transactional": `unknown action "invalid-cmd"`,
-				"wait-on-error": `cannot invalid-cmd: mode "wait-on-error" is not valid with this command`,
-				"continue":      `cannot invalid-cmd: mode "continue" is not valid with this command`,
-				"abort":         `cannot invalid-cmd: mode "abort" is not valid with this command`,
-				"invalid-mode":  `cannot invalid-cmd: "invalid-mode" is not a valid mode`,
-			},
-		}, {
-			cmd:   "",
-			valid: false,
-			result: map[string]string{
-				"":              `unknown action ""`,
-				"transactional": `unknown action ""`,
-				"wait-on-error": `cannot : mode "wait-on-error" is not valid with this command`,
-				"continue":      `cannot : mode "continue" is not valid with this command`,
-				"abort":         `cannot : mode "abort" is not valid with this command`,
-				"invalid-mode":  `cannot : "invalid-mode" is not a valid mode`,
 			},
 		},
 	}
@@ -1367,6 +1339,49 @@ func (s *apiSuite) TestValidatev1PostProjectWorkshopInputs(c *check.C) {
 			c.Check(rsp.Status, check.Equals, exp.Status)
 			c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
 		}
+	}
+}
+
+func (s *apiSuite) TestValidatev1PostProjectWorkshopActionInputs(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	type table struct {
+		cmd    string
+		result string
+	}
+
+	cmds := []table{
+		{
+			cmd:    "invalid-cmd",
+			result: "unknown action \"invalid-cmd\"",
+		},
+		{
+			cmd:    "",
+			result: "unknown action \"\"",
+		},
+	}
+
+	for _, cmd := range cmds {
+		// Construct request
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s"}`, cmd.cmd)))
+		c.Assert(err, check.IsNil)
+
+		// Construct response
+		exp := expectedResp{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: cmd.result,
+		}
+
+		// Execute
+		rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+
+		// Validate
+		c.Check(rsp.Type, check.Equals, exp.Type)
+		c.Check(rsp.Status, check.Equals, exp.Status)
+		c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
 	}
 }
 
