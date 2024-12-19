@@ -215,8 +215,16 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	query := r.URL.Query()
 	wstate := query.Get("state")
-	if wstate == "" {
-		wstate = "all"
+	status := healthstate.UnknownStatus
+	ignoreStatus := false
+	var err error
+	if wstate == "" || wstate == "all" || wstate == "available" {
+		ignoreStatus = true
+	} else {
+		status, err = healthstate.StatusLookup(wstate)
+		if err != nil {
+			return statusBadRequest(`%v, "all", "available"`, err)
+		}
 	}
 
 	wrkmgr := c.d.overlord.WorkshopManager()
@@ -229,12 +237,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
-		switch wstate {
-		case "all":
-			fallthrough
-		case "available":
-			fallthrough
-		case strings.ToLower(health.Status.String()):
+		if ignoreStatus || health.Status == status {
 			wi := workshopToInfo(w, health, nil)
 			info.Workshops = append(info.Workshops, wi)
 		}
@@ -245,7 +248,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	// Some of these may only exist as files, not instances.
 	// The "available" query is a best-effort version of "all":
 	// if something is wrong with the files we still return the instances.
-	if wstate == "all" || wstate == "available" {
+	if ignoreStatus {
 		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
 		var fileErr *workshopstate.WorkshopFileError
 		if wstate == "available" && errors.As(err, &fileErr) {
