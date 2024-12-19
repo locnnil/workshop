@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
-	"strings"
 	"time"
+
+	"github.com/canonical/x-go/strutil"
 )
 
 type HealthCheck struct {
@@ -140,11 +141,7 @@ func (client *Client) singleWorkshopOrFile(project *Project) (*WorkshopInfo, *Wo
 		return nil, nil, fmt.Errorf("no workshops found in %q", project.Path)
 	}
 	if len(names) > 1 {
-		var quoted []string
-		for _, name := range names {
-			quoted = append(quoted, fmt.Sprintf("%q", name))
-		}
-		return nil, nil, fmt.Errorf("multiple workshops found: %s", strings.Join(quoted, ", "))
+		return nil, nil, fmt.Errorf("multiple workshops found: %s", strutil.Quoted(names))
 	}
 
 	var workshop *WorkshopInfo
