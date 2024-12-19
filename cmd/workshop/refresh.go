@@ -135,11 +135,11 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if len(av) == 0 {
-		workshop, err := cli.SingleWorkshop(project)
+		name, err := cli.SingleWorkshopName(project)
 		if err != nil {
-			return fmt.Errorf("cannot infer workshop name: %w", err)
+			return err
 		}
-		av = []string{workshop.Name}
+		av = []string{name}
 	}
 
 	mode := "transactional"

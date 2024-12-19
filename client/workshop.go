@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -87,11 +88,42 @@ func (client *Client) Workshop(projectId, name string) (*Workshop, error) {
 	return &workshop, nil
 }
 
+func (client *Client) SingleWorkshopName(project *Project) (string, error) {
+	info, file, err := client.singleWorkshopOrFile(project)
+	if err != nil {
+		return "", fmt.Errorf("cannot infer workshop name: %w", err)
+	}
+
+	if info != nil {
+		return info.Name, nil
+	}
+	if file != nil {
+		return file.Name, nil
+	}
+	return "", errors.New("internal error: singleWorkshopOrFile returned nothing")
+}
+
 func (client *Client) SingleWorkshop(project *Project) (*Workshop, error) {
+	info, file, err := client.singleWorkshopOrFile(project)
+	if err != nil {
+		return nil, fmt.Errorf("cannot infer workshop name: %w", err)
+	}
+
+	if info == nil {
+		return nil, errors.New("workshop not launched")
+	}
+	workshop := Workshop{WorkshopInfo: *info}
+	if file != nil {
+		workshop.Path = file.Path
+	}
+	return &workshop, nil
+}
+
+func (client *Client) singleWorkshopOrFile(project *Project) (*WorkshopInfo, *WorkshopFile, error) {
 	var info Workshops
 	_, err := client.doSync("GET", "/v1/projects/"+project.Id+"/workshops", nil, nil, nil, &info)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var names []string
@@ -105,26 +137,25 @@ func (client *Client) SingleWorkshop(project *Project) (*Workshop, error) {
 	}
 
 	if len(names) < 1 {
-		return nil, fmt.Errorf("no workshops found in %q", project.Path)
+		return nil, nil, fmt.Errorf("no workshops found in %q", project.Path)
 	}
 	if len(names) > 1 {
 		var quoted []string
 		for _, name := range names {
 			quoted = append(quoted, fmt.Sprintf("%q", name))
 		}
-		return nil, fmt.Errorf("multiple workshops found: %s", strings.Join(quoted, ", "))
+		return nil, nil, fmt.Errorf("multiple workshops found: %s", strings.Join(quoted, ", "))
 	}
 
-	var workshop Workshop
-	if len(info.Files) > 0 {
-		workshop.ProjectId = info.Files[0].ProjectId
-		workshop.Name = info.Files[0].Name
-		workshop.Path = info.Files[0].Path
-	}
+	var workshop *WorkshopInfo
 	if len(info.Workshops) > 0 {
-		workshop.WorkshopInfo = *info.Workshops[0]
+		workshop = info.Workshops[0]
 	}
-	return &workshop, nil
+	var file *WorkshopFile
+	if len(info.Files) > 0 {
+		file = info.Files[0]
+	}
+	return workshop, file, nil
 }
 
 func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {

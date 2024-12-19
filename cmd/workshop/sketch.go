@@ -201,10 +201,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	} else {
 		wp, err = cli.SingleWorkshop(p)
 		if err != nil {
-			return fmt.Errorf("cannot infer workshop name: %w", err)
-		}
-		if wp.Base == "" {
-			return workshop.ErrWorkshopNotLaunched
+			return err
 		}
 	}
 

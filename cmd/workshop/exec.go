@@ -215,11 +215,10 @@ func (c *CmdExec) runExec(workshop string, inferName bool, command []string) err
 	}
 
 	if inferName {
-		wp, err := cli.SingleWorkshop(project)
+		workshop, err = cli.SingleWorkshopName(project)
 		if err != nil {
-			return fmt.Errorf("cannot infer workshop name: %w", err)
+			return err
 		}
-		workshop = wp.Name
 	}
 
 	logger.Debugf("Running %q", command)
