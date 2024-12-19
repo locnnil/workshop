@@ -441,7 +441,7 @@ Next, build it *inside the workshop* using :ref:`exec <ref_workshop_exec>`:
 .. tip::
 
    Since :samp:`golang` is the only workshop in the project,
-   it can be omitted from most :samp:`workshop` commands.
+   it can be omitted from most :command:`workshop` commands.
    For :ref:`exec <ref_workshop_exec>`,
    a name or a separator (:samp:`--`) is required to avoid ambiguity.
    The above command can also be written as:
