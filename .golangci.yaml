@@ -1,13 +1,9 @@
 linters:
-  disable-all: true
+  disable:
+    - errcheck
   enable:
     - gci
-    - gosimple
-    - govet
-    - ineffassign
     - nilerr
-    - staticcheck
-    - unused
 linters-settings:
   gci:
     sections:
