@@ -195,7 +195,7 @@ func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
 	if len(av) > 0 {
 		workshop = av[0]
 	}
-	command := []string{"sudo", "-u", "workshop", "bash", "-l"}
+	command := []string{"sudo", "-i", "-u", "workshop", "bash", "-c", "cd /project; exec bash"}
 	return c.execCommand.runExec(workshop, len(av) == 0, command)
 }
 
