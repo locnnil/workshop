@@ -44,3 +44,10 @@ Start the 'nimble' and 'jazzy' workshops in the current project directory:
    $ workshop start nimble jazzy
 
 
+The name is optional if the project has only one workshop:
+
+.. code-block:: console
+
+   $ workshop start
+
+

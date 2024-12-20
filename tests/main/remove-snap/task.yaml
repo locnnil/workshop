@@ -13,7 +13,7 @@ execute: |
   workshop_exec launch --project $(pwd)/project-2 ws-snap-remove-2 ws-snap-remove-2a
 
   echo "Modify apt cache for later"
-  workshop_exec exec --project $(pwd)/project-1 ws-snap-remove-1 -- sudo touch /var/cache/apt/archives/sentinel
+  workshop_exec exec --project $(pwd)/project-1 ws-snap-remove-1 sudo touch /var/cache/apt/archives/sentinel
 
   echo "Check that workshops will be removed on snap removal"       
   snap remove workshop
@@ -23,4 +23,4 @@ execute: |
 
   echo "Check that cache storage has been removed"
   workshop_exec launch --project $(pwd)/project-1 ws-snap-remove-1
-  workshop_exec exec --project $(pwd)/project-1 ws-snap-remove-1 -- sudo test ! -f /var/cache/apt/archives/sentinel
+  workshop_exec exec --project $(pwd)/project-1 ws-snap-remove-1 sudo test ! -f /var/cache/apt/archives/sentinel

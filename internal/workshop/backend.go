@@ -132,7 +132,7 @@ type Backend interface {
 
 	// Returns a list of projects known to the backend. The returned map
 	// has a username key that the corresponding projects belong to.
-	Projects(ctx context.Context) (map[string][]*Project, error)
+	Projects(ctx context.Context) (map[string][]Project, error)
 
 	// Loads a workshop instance.
 	Workshop(ctx context.Context, name string) (*Workshop, error)

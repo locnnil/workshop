@@ -20,8 +20,8 @@ type CmdInfo struct {
 
 func (c *CmdInfo) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "info <WORKSHOP>",
-		Args:  cobra.RangeArgs(1, 1),
+		Use:   "info [<WORKSHOP>]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Print the current status and details of a workshop as YAML",
 		Long: `
 This command outputs the basic settings, current status and individual SDK
@@ -42,7 +42,10 @@ Notes:
 `,
 		Example: `
 List details for the 'nimble' workshop in the current project directory:
-$ workshop info nimble`,
+$ workshop info nimble
+
+The name is optional if the project has only one workshop:
+$ workshop info`,
 		RunE: c.Run,
 	}
 
@@ -78,7 +81,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	workshop, _, err := cli.Workshop(project.Id, av[0])
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+		av = []string{name}
+	}
+
+	workshop, err := cli.Workshop(project.Id, av[0])
 	if err != nil {
 		return err
 	}

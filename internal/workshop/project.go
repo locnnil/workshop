@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -15,7 +16,6 @@ import (
 )
 
 var (
-	ErrProjectNotFound        = errors.New("project not found")
 	ErrProjectLockNotFound    = errors.New("project lock file not found")
 	ErrProjectAlreadyExists   = errors.New("project already exists")
 	ErrNotProject             = errors.New("not a project (no workshop files found)")
@@ -145,8 +145,159 @@ func (w *Project) maybeSingleWorkshop() (string, error) {
 	return path, nil
 }
 
+type ProjectTracker struct {
+	Projects []Project
+}
+
+type TrackResult int
+
+const (
+	ProjectError TrackResult = iota
+	ProjectFound
+	ProjectMoved
+	ProjectAdded
+)
+
+// Track attempts to locate a known project that contains the given path.
+// If unsuccessful, it creates a new project and begins tracking it.
+// Moved projects will be updated with the new path,
+// whereas copied projects will receive a new project ID.
+func (t *ProjectTracker) Track(path string) (*Project, TrackResult, error) {
+	if !filepath.IsAbs(path) {
+		return nil, ProjectError, ErrNoRelativePathsAllowed
+	}
+
+	path, err := ancestorProject(path)
+	if err != nil {
+		return nil, ProjectError, err
+	}
+
+	id, err := readProjectId(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return t.writeProjectId(path)
+		}
+		return nil, ProjectError, err
+	}
+
+	project, result, err := t.maybeFindProject(path, id)
+	if err == nil && project == nil {
+		return t.createProjectWithId(path, id)
+	}
+	return project, result, err
+}
+
+// ancestorProject returns an existing project which contains the given path,
+// or the path itself if there is no such project.
+func ancestorProject(child string) (string, error) {
+	child, err := filepath.EvalSymlinks(child)
+	if err != nil {
+		return "", err
+	}
+
+	path := child
+	for {
+		ok, isDir, err := osutil.ExistsIsDir(path)
+		if err != nil {
+			return "", err
+		}
+		if ok && isDir {
+			if _, err := readProjectId(path); err == nil {
+				return filepath.Clean(path), nil
+			}
+		}
+
+		parent := filepath.Dir(path)
+		if parent == path {
+			break
+		}
+		path = parent
+	}
+
+	return child, nil
+}
+
+// Read a project id from projectDir (.workshop.lock)
+func readProjectId(projectDir string) (string, error) {
+	buf, err := os.ReadFile(LockPath(projectDir))
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
+
+func (t *ProjectTracker) writeProjectId(path string) (*Project, TrackResult, error) {
+	// Try to recover .lock file for this project
+	// if it existed before and was accidentally removed.
+	idx := slices.IndexFunc(t.Projects, func(p Project) bool { return p.Path == path })
+	if idx >= 0 {
+		if err := t.Projects[idx].updateLock(); err != nil {
+			return nil, ProjectError, err
+		}
+		return &t.Projects[idx], ProjectFound, nil
+	}
+
+	// No project found. If there is at least one workshop definition,
+	// we consider the path as a project and create a project ID.
+	if !isProject(path) {
+		return nil, ProjectError, ErrNotProject
+	}
+	return t.createProject(path)
+}
+
+func (t *ProjectTracker) maybeFindProject(path, id string) (*Project, TrackResult, error) {
+	idx := slices.IndexFunc(t.Projects, func(p Project) bool { return p.ProjectId == id })
+	if idx < 0 {
+		return nil, ProjectError, nil
+	}
+	if t.Projects[idx].Path == path {
+		return &t.Projects[idx], ProjectFound, nil
+	}
+
+	// Existing project was moved or copied.
+	_, err := os.Stat(t.Projects[idx].Path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Moved: keep ID but update path.
+			t.Projects[idx].Path = path
+			return &t.Projects[idx], ProjectMoved, nil
+		}
+		return nil, ProjectError, err
+	}
+
+	// Copied: generate a new project ID and overwrite the copied .lock file.
+	return t.createProject(path)
+}
+
+func (t *ProjectTracker) createProject(path string) (*Project, TrackResult, error) {
+	id, err := NewProjectId()
+	if err != nil {
+		return nil, ProjectError, err
+	}
+
+	project := Project{Path: path, ProjectId: id}
+	if err = project.updateLock(); err != nil {
+		return nil, ProjectError, err
+	}
+
+	t.Projects = append(t.Projects, project)
+	return &project, ProjectAdded, nil
+}
+
+func (t *ProjectTracker) createProjectWithId(path, id string) (*Project, TrackResult, error) {
+	// If there is at least one workshop definition,
+	// we consider the path as a project and use the given ID.
+	if !isProject(path) {
+		return nil, ProjectError, ErrNotProject
+	}
+
+	project := Project{ProjectId: id, Path: path}
+	t.Projects = append(t.Projects, project)
+	return &project, ProjectAdded, nil
+}
+
 // A directory is a project if it has at least one workshop definition.
-func IsProject(dir string) bool {
+func isProject(dir string) bool {
 	files, err := filepath.Glob(filepath.Join(dir, Directory, "*.yaml"))
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -171,18 +322,7 @@ func IsProject(dir string) bool {
 	return false
 }
 
-func (w *Project) UpdateProjectLock() error {
-	return w.createLock()
-}
-
-func (w *Project) CreateProjectLock() error {
-	if osutil.FileExists(LockPath(w.Path)) {
-		return ErrProjectAlreadyExists
-	}
-	return w.createLock()
-}
-
-func (w *Project) createLock() error {
+func (w *Project) updateLock() error {
 	lock, err := os.Create(LockPath(w.Path))
 	if err != nil {
 		return err
@@ -211,15 +351,6 @@ func (w *Project) createLock() error {
 	}
 
 	return nil
-}
-
-// Read a project id from projectDir (.workshop.lock)
-func ProjectId(projectDir string) (string, error) {
-	buf, err := os.ReadFile(LockPath(projectDir))
-	if err != nil {
-		return "", err
-	}
-	return string(buf), nil
 }
 
 func allocateProjectId() (string, error) {

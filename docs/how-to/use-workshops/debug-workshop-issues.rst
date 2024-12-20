@@ -30,7 +30,7 @@ Suppose something goes wrong during :command:`workshop refresh`:
 
 .. code-block:: console
 
-   $ workshop refresh golang-volatile
+   $ workshop refresh
 
      Error: cannot perform the following tasks:
      - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
@@ -89,7 +89,7 @@ instead of reverting the workshop to its previous state,
 
 .. code-block:: console
 
-   $ workshop refresh --wait-on-error golang-volatile
+   $ workshop refresh --wait-on-error
 
      Error: cannot perform the following tasks:
      - Run hook "setup-base" for "go" SDK (command failed with an error code (1))
@@ -100,21 +100,21 @@ Next, you can shell into the workshop to debug and possibly fix it:
 
 .. code-block:: console
 
-   $ workshop shell golang-volatile
+   $ workshop shell
 
 
 On success, you can resume the refresh process:
 
 .. code-block:: console
 
-   $ workshop refresh --continue golang-volatile
+   $ workshop refresh --continue
 
 
 Otherwise, undo the changes with the :option:`!--abort` option:
 
 .. code-block:: console
 
-   $ workshop refresh --abort golang-volatile
+   $ workshop refresh --abort
 
 
 The effect will be the same as if you hadn't used :option:`!--wait-on-error`:

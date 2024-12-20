@@ -234,7 +234,7 @@ To get a workshop ready for use, you :ref:`launch <ref_workshop_launch>` it:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
 
 
 Now, the workshop is *Ready*;
@@ -251,7 +251,7 @@ to see what went into your workshop:
 
 .. code-block:: console
 
-   $ workshop info golang
+   $ workshop info
 
      name:     golang
      base:     ubuntu@22.04
@@ -337,7 +337,7 @@ so you :ref:`stop <ref_workshop_stop>` the workshop:
 
 .. code-block:: console
 
-   $ workshop stop golang
+   $ workshop stop
 
 This changes the status of the workshop to *Stopped*.
 
@@ -345,7 +345,7 @@ To make it *Ready* again, :ref:`start <ref_workshop_start>` the workshop:
 
 .. code-block:: console
 
-   $ workshop start golang
+   $ workshop start
 
 
 Both commands work gracefully,
@@ -395,7 +395,7 @@ and refresh the workshop:
 
 .. code-block:: console
 
-   $ workshop refresh golang
+   $ workshop refresh
 
 
 Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
@@ -438,6 +438,18 @@ Next, build it *inside the workshop* using :ref:`exec <ref_workshop_exec>`:
 
    $ workshop exec golang go build main.go
 
+.. tip::
+
+   Since :samp:`golang` is the only workshop in the project,
+   it can be omitted from most :command:`workshop` commands.
+   For :ref:`exec <ref_workshop_exec>`,
+   a name or a separator (:samp:`--`) is required to avoid ambiguity.
+   The above command can also be written as:
+
+   .. code-block:: console
+
+      $ workshop exec -- go build main.go
+
 
 This uses the Go version installed by the :samp:`go` SDK.
 
@@ -446,7 +458,7 @@ or separate it from :command:`workshop exec` options for clarity:
 
 .. code-block:: console
 
-   $ workshop exec golang --env GO111MODULE=off -- go build -x
+   $ workshop exec --env GO111MODULE=off golang -- go build -x
 
 The binary, built within the workshop environment,
 is now available in the project directory.
@@ -472,7 +484,7 @@ who's also named :samp:`workshop`:
 
 .. code-block:: console
 
-   $ workshop shell golang
+   $ workshop shell
    workshop@golang-6b79e889:~$ pwd
 
      /home/workshop
@@ -492,8 +504,8 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec golang -- ls /project/
-   $ workshop exec golang -- touch /project/created_inside.txt
+   $ workshop exec -- ls /project/
+   $ workshop exec -- touch /project/created_inside.txt
    $ ls
 
 
@@ -549,7 +561,7 @@ to a new location on the host:
    :emphasize-lines: 14
 
    $ workshop remount golang/go:mod-cache ~/mod/
-   $ workshop info golang
+   $ workshop info
 
      name:     golang
      base:     ubuntu@20.04
@@ -584,7 +596,7 @@ opens an :ref:`SDK definition <exp_sdk_definition>`:
 
 .. code-block:: console
 
-   $ workshop hack golang
+   $ workshop hack
 
 
 Initially, the editor shows a very basic setup
@@ -664,14 +676,14 @@ When you're done experimenting, you can just drop the hack SDK:
 
 .. code-block:: console
 
-   $ workshop hack golang --drop
+   $ workshop hack --drop
 
 
 If you drop a hack SDK by mistake, restoring it is quite simple:
 
 .. code-block:: console
 
-   $ workshop hack golang --restore
+   $ workshop hack --restore
 
 
 While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`
@@ -694,7 +706,7 @@ If you no longer need your workshop,
 
 .. code-block:: console
 
-   $ workshop remove golang
+   $ workshop remove
 
 
 This doesn't affect the files in the project directory,

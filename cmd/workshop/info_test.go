@@ -22,7 +22,9 @@ func (m *workshopInfo) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"workshop":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"]},"file":{"name":"ws","path":"/home/project/.workshop/ws.yaml","project-id":"42424242"}},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockSingleWorkshop = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -38,15 +40,20 @@ func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockSingleWorkshop)
+		case 3:
+			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockWorkshopWithContent)
 		default:
-			c.Errorf("expected 2 calls, now on %d", n)
+			c.Errorf("expected 3 calls, now on %d", n)
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), []string{workshop})
+	err := cmd.Run(cmd.Command(), nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
 base:     ubuntu@22.04
@@ -59,10 +66,10 @@ content:
   sketch:
     channel:  ~   2017-03-22  \(x1\)
 `, m.prjDir))
-	c.Check(n, check.Equals, 2)
+	c.Check(n, check.Equals, 3)
 }
 
-var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"workshop":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}}`
+var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
 
 func (m *workshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -101,12 +108,12 @@ content:
 	c.Check(n, check.Equals, 2)
 }
 
-var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"workshop":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
+var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
 "content":[
 	{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z",
 	"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
 	{"host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
-}]}}}`
+}]}}`
 
 func (m *workshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}

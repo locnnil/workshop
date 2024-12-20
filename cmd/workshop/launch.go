@@ -15,7 +15,6 @@ type CmdLaunch struct {
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "launch <WORKSHOP>...",
-		Args:  cobra.MinimumNArgs(1),
 		Short: "Construct one or many workshops using their definitions",
 		Long: `
 This command constructs the workshops listed as arguments by going over their
@@ -44,7 +43,10 @@ Notes:
 `,
 		Example: `
 Launch the 'nimble' and 'jazzy' workshops in the current project directory:
-$ workshop launch nimble jazzy`,
+$ workshop launch nimble jazzy
+
+The name is optional if the project has only one workshop:
+$ workshop launch`,
 		RunE: c.Run,
 	}
 
@@ -66,6 +68,14 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+		av = []string{name}
 	}
 
 	changeId, err := cli.Launch(project.Id, av)

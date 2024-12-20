@@ -39,7 +39,7 @@ type workshopHandlers struct {
 	se                *overlord.StateEngine
 	wrkmgr            *workshopstate.WorkshopManager
 	ctx               context.Context
-	project           *workshop.Project
+	project           workshop.Project
 	homeDir           string
 	lookupUserRestore func()
 }
@@ -50,10 +50,10 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
-		i.Set("project", *p)
+		i.Set("project", p)
 	}
 }
 
@@ -77,8 +77,9 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.backend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	s.project, _, err = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
+	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	s.homeDir = c.MkDir()
 	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {

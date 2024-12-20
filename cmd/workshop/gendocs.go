@@ -18,7 +18,7 @@ type CmdDocs struct {
 func (c *CmdDocs) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:    "generate-docs",
-		Args:   cobra.RangeArgs(0, 1),
+		Args:   cobra.MaximumNArgs(1),
 		Short:  "Generate workshop reference docs",
 		Hidden: true,
 		RunE:   c.Run,
@@ -37,8 +37,8 @@ func linkHandler(name, ref string) string {
 
 func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 	docDir := "docs-gendocs"
-	if len(av) > 1 {
-		docDir = av[1]
+	if len(av) > 0 {
+		docDir = av[0]
 	}
 
 	err := os.MkdirAll(docDir, os.ModePerm)

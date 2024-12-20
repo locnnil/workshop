@@ -1,16 +1,16 @@
 summary: Check mount interface scenarios
 restore: |
-  workshop_exec remove ws-mount || true
+  workshop_exec remove || true
 execute: |
   . "$TESTSLIB"/utils.sh
     
   function validate_host_mounts() {
     test -d "$source_one" && test -d "$source_two"    
-    workshop_exec exec ws-mount -- bash -c "mountpoint -q /mnt/one && mountpoint -q /opt/two"
+    workshop_exec exec -- bash -c "mountpoint -q /mnt/one && mountpoint -q /opt/two"
   }
 
   echo "Check the mount interface plug can be installed and auto-connected"
-  workshop_exec launch ws-mount
+  workshop_exec launch
 
   project_id=$(cat .workshop.lock)
   source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/mount/ws-mount_test-sdk-mount_one.sdk"
@@ -18,18 +18,18 @@ execute: |
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected after refresh"
-  workshop_exec refresh ws-mount
+  workshop_exec refresh
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected if refresh fails"
   sed -i 's/test-sdk-mount/test-sdk-setup-fail/g' workshop.yaml
-  workshop_exec refresh ws-mount || true
+  workshop_exec refresh || true
   sed -i 's/test-sdk-setup-fail/test-sdk-mount/g' workshop.yaml
   validate_host_mounts
 
   echo "Check manual connect/disconnect works"
   workshop_exec disconnect ws-mount/test-sdk-mount:one
-  workshop_exec exec ws-mount -- bash -c "! mountpoint -q /mnt/one"
+  workshop_exec exec -- bash -c "! mountpoint -q /mnt/one"
 
   workshop_exec connect ws-mount/test-sdk-mount:one :mount
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:one.+:mount.+manual$"
@@ -37,12 +37,12 @@ execute: |
 
   echo "Check workshop to workshop bind mount"
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:jobs.+:jobs.+-$"
-  workshop_exec exec ws-mount -- bash -c "mountpoint -q /etc/cron.weekly && test -f /etc/cron.weekly/job.sh"
+  workshop_exec exec -- bash -c "mountpoint -q /etc/cron.weekly && test -f /etc/cron.weekly/job.sh"
   workshop_exec disconnect ws-mount/test-sdk-mount:jobs
   workshop_exec connections ws-mount | MATCH "^mount.+ws-mount/test-sdk-mount:jobs.+-.+-$"
-  workshop_exec exec ws-mount -- bash -c "! mountpoint -q /etc/cron.weekly && ! test -f /etc/cron.weekly/job.sh"
+  workshop_exec exec -- bash -c "! mountpoint -q /etc/cron.weekly && ! test -f /etc/cron.weekly/job.sh"
 
   echo "Check remove will also clean up the default mount interface default locations"
-  workshop_exec remove ws-mount
+  workshop_exec remove
   test ! -d "$source_one"
   test ! -d "$source_two"

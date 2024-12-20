@@ -1,27 +1,27 @@
 summary: Check workshop start
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-start
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-start
+  workshop_exec remove
 execute: |
   . "$TESTSLIB"/utils.sh
 
   function check_linger() {
     echo "Check that linger is enabled for the workshop user"
-    workshop_exec exec ws-start -- test -f /var/lib/systemd/linger/workshop
-    workshop_exec exec ws-start -- test -d /run/user/1000
+    workshop_exec exec -- test -f /var/lib/systemd/linger/workshop
+    workshop_exec exec -- test -d /run/user/1000
   }
 
   check_linger
-  workshop_exec stop ws-start
+  workshop_exec stop
 
   echo "Check the workshop is in Stopped state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Start the workshop"
-  workshop_exec start ws-start
+  workshop_exec start
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-start[[:space:]]+Ready[[:space:]]+-$"

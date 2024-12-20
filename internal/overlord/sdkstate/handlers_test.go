@@ -37,7 +37,7 @@ type sdkStateSuite struct {
 	sdkmgr      *sdkstate.SdkManager
 	repo        *interfaces.Repository
 	ctx         context.Context
-	project     *workshop.Project
+	project     workshop.Project
 	installTime time.Time
 
 	restoreProjectId   func()
@@ -52,7 +52,7 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 	return nil
 }
 
-func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
 		i.Set("project", p)
@@ -110,7 +110,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	s.backend, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
-	s.project = &workshop.Project{
+	s.project = workshop.Project{
 		Path:      c.MkDir(),
 		ProjectId: "projectId",
 	}

@@ -14,7 +14,7 @@ func (cs *clientSuite) TestClientProjects(c *check.C) {
 			"path": "/home/francua/test"}]}`
 	prjs, err := cs.cli.Projects()
 	c.Assert(err, check.IsNil)
-	c.Assert(prjs, check.DeepEquals, []*client.Project{{"42ws42ws", "/home/francua/workshop"}, {"34hg34gh", "/home/francua/test"}})
+	c.Assert(prjs, check.DeepEquals, []client.Project{{"42ws42ws", "/home/francua/workshop"}, {"34hg34gh", "/home/francua/test"}})
 	c.Check(cs.req.Method, check.Equals, "GET")
 }
 

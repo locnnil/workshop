@@ -16,7 +16,7 @@ import (
 
 type CommonStateFuncs struct {
 	state   *state.State
-	project *workshop.Project
+	project workshop.Project
 }
 
 var _ = check.Suite(&CommonStateFuncs{})
@@ -32,14 +32,14 @@ func (s *CommonStateFuncs) setupTask() *state.Task {
 
 	t := s.state.NewTask("task", "...")
 	t.Set("workshop", "ws")
-	t.Set("project", *s.project)
+	t.Set("project", s.project)
 	chg.AddTask(t)
 	return t
 }
 
 func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
-	s.project = &workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
+	s.project = workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
 func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {

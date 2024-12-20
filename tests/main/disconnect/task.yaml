@@ -1,10 +1,10 @@
 summary: Check that "workshop disconnect" works as expected
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-disconn
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-disconn
+  workshop_exec remove
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -17,8 +17,8 @@ execute: |
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:two.+-.+\-$"
 
   echo "Check 'workshop remove' does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
-  workshop_exec remove ws-disconn
-  workshop_exec launch ws-disconn
+  workshop_exec remove
+  workshop_exec launch
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:two.+:mount.+\-$"  
 
@@ -29,5 +29,5 @@ execute: |
 
   echo "Check disconnect --forget (reconnects after refresh)"
   workshop_exec disconnect ws-disconn/test-sdk-mount:one --forget
-  workshop_exec refresh ws-disconn
+  workshop_exec refresh
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"

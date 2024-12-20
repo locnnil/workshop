@@ -400,7 +400,6 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		return nil, fmt.Errorf("context key project-id not found")
 	}
 
-	var p *workshop.Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
 		return nil, err
@@ -411,11 +410,11 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
+	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
 		return nil, fmt.Errorf("project %q not found", projectId)
 	}
-	p = projects[user][idx]
+	p := projects[user][idx]
 
 	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
@@ -443,7 +442,7 @@ func workshopFile(lxdConfig map[string]string) (*workshop.File, error) {
 	return &f, nil
 }
 
-func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p *workshop.Project) (*workshop.Workshop, error) {
+func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p workshop.Project) (*workshop.Workshop, error) {
 	f, err := workshopFile(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
@@ -514,17 +513,16 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	}
 	defer conn.Disconnect()
 
-	var p *workshop.Project
 	projects, err := s.Projects(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	idx := slices.IndexFunc(projects[user], func(p *workshop.Project) bool { return p.ProjectId == projectId })
+	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == projectId })
 	if idx == -1 {
 		return nil, fmt.Errorf("project %q not found", projectId)
 	}
-	p = projects[user][idx]
+	p := projects[user][idx]
 
 	// Get all the running workshops for this project.
 	instances, err := conn.GetInstances(api.InstanceTypeContainer)

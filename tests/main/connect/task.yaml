@@ -1,10 +1,10 @@
 summary: Check that "workshop connect" works as expected
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-conn
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-conn
+  workshop_exec remove
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -24,9 +24,9 @@ execute: |
   workshop_exec connections ws-conn | MATCH "^gpu.+ws-conn/test-sdk-gpu:gpu.+:gpu.+manual$"
 
   echo "Check workshop refresh does not reconnect undesired connections"
-  workshop_exec refresh ws-conn
+  workshop_exec refresh
   workshop_exec disconnect ws-conn/test-sdk-gpu:gpu
-  workshop_exec refresh ws-conn
+  workshop_exec refresh
   workshop_exec connections ws-conn > output.log
   MATCH "^mount.+ws-conn/test-sdk-mount:one.+:mount.+$" < output.log
   MATCH "^mount.+ws-conn/test-sdk-mount:two.+:mount.+$" < output.log

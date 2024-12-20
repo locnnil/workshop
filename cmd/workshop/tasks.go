@@ -19,7 +19,7 @@ type CmdTasks struct {
 func (c *CmdTasks) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "tasks <CHANGE ID>",
-		Args:  cobra.RangeArgs(1, 1),
+		Args:  cobra.ExactArgs(1),
 		Short: "List tasks for a specific change",
 		Long: `
 Any substantial operation on a workshop is a change that consists of tasks;

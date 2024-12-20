@@ -28,7 +28,7 @@ Things change *after* you run :command:`workshop launch`:
 
 .. code-block:: console
 
-   $ workshop launch golang --project /home/user/old/
+   $ workshop launch --project /home/user/old/
 
 
 Moving a project
@@ -99,7 +99,7 @@ but what happens if you do it yourself?
 
 .. code-block:: console
 
-   $ workshop launch golang --project /home/user/new/
+   $ workshop launch --project /home/user/new/
    $ workshop list --global
 
      Project                 Workshop  Status  Notes
@@ -123,7 +123,7 @@ before deleting the project directory:
 
 .. code-block:: console
 
-   $ workshop remove golang --project /home/user/old/
+   $ workshop remove --project /home/user/old/
    $ rm -rf /home/user/old/
 
 

@@ -26,7 +26,7 @@ type managerSuite struct {
 	runner  *state.TaskRunner
 	manager *workshopstate.WorkshopManager
 	ctx     context.Context
-	project *workshop.Project
+	project workshop.Project
 
 	lookupUserRestore func()
 }
@@ -52,7 +52,9 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 		}
 		return u, nil
 	}, &workshop.LookupUsername)
-	s.project, _, _ = s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
+	c.Assert(err, check.IsNil)
+	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
 }

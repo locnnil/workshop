@@ -21,8 +21,8 @@ type WorkshopActionSetup struct {
 	Options *WorkshopActionOptions
 }
 
-func (client *Client) Projects() ([]*Project, error) {
-	var projects []*Project
+func (client *Client) Projects() ([]Project, error) {
+	var projects []Project
 	_, err := client.doSync("GET", "/v1/projects", nil, nil, nil, &projects)
 	if err != nil {
 		return nil, err

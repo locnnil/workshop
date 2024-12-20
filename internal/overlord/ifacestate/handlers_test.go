@@ -145,10 +145,10 @@ func (s *interfaceHandlersSuite) settle(c *check.C) {
 	c.Check(err, check.IsNil)
 }
 
-func setWorkshopProject(w string, p *workshop.Project, tasks ...*state.Task) {
+func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 	for _, i := range tasks {
 		i.Set("workshop", w)
-		i.Set("project", *p)
+		i.Set("project", p)
 	}
 }
 

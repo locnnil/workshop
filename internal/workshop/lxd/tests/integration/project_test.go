@@ -250,7 +250,7 @@ func (f *wsProject) TestLxdBackendListAvailableProjects(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, check.DeepEquals, map[string][]*workshop.Project{
+	c.Assert(projects, check.DeepEquals, map[string][]workshop.Project{
 		f.username: {
 			{ProjectId: "b8639dea", Path: projectDir},
 			{ProjectId: "d4352dea", Path: projectDir2},
@@ -308,7 +308,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 	// Validate
 	c.Assert(err, check.IsNil)
-	c.Assert(projects, testutil.DeepUnsortedMatches, map[string][]*workshop.Project{
+	c.Assert(projects, testutil.DeepUnsortedMatches, map[string][]workshop.Project{
 		f.username: {{ProjectId: "b8639dea", Path: projectDir}},
 	})
 }

@@ -9,7 +9,7 @@ Start an interactive terminal session for the workshop.
 
 .. code-block:: console
 
-   $ workshop shell <WORKSHOP> [flags]
+   $ workshop shell [<WORKSHOP>] [flags]
 
 .. rubric:: Description
 
@@ -38,5 +38,12 @@ in the current project directory:
 .. code-block:: console
 
    $ workshop shell nimble
+
+
+The name is optional if the project has only one workshop:
+
+.. code-block:: console
+
+   $ workshop shell
 
 

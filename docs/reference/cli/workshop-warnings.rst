@@ -9,7 +9,7 @@ List warnings.
 
 .. code-block:: console
 
-   $ workshop warnings [OPTIONS] [flags]
+   $ workshop warnings [flags]
 
 .. rubric:: Description
 

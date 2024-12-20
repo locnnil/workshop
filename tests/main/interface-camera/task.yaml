@@ -30,26 +30,26 @@ execute: |
     }
     detect_device
 
-    workshop_exec exec ws-camera -- test ! -e "$device_node"
+    workshop_exec exec ws-camera test ! -e "$device_node"
     workshop_exec connect ws-camera/test-sdk-camera:camera
-    workshop_exec exec ws-camera -- test -e "$device_node"
+    workshop_exec exec ws-camera test -e "$device_node"
 
     echo "Ensure video devices can be hotplugged"
     rmmod v4l2loopback
     # this check could fail if another device is immediately plugged in,
     # but within a VM this should be unlikely/impossible
-    workshop_exec exec ws-camera -- test ! -e "$device_node"
+    workshop_exec exec ws-camera test ! -e "$device_node"
 
     modprobe v4l2loopback card_label=v4l2loopback
     detect_device
-    workshop_exec exec ws-camera -- test -e "$device_node"
+    workshop_exec exec ws-camera test -e "$device_node"
 
     echo "Ensure workshop user can access video devices"
-    workshop_exec exec ws-camera -- test -r "$device_node"
-    workshop_exec exec ws-camera -- test -w "$device_node"
+    workshop_exec exec ws-camera test -r "$device_node"
+    workshop_exec exec ws-camera test -w "$device_node"
 
     workshop_exec disconnect ws-camera/test-sdk-camera:camera
-    workshop_exec exec ws-camera -- test ! -e "$device_node"
+    workshop_exec exec ws-camera test ! -e "$device_node"
   fi
 
   echo "Check a user cannot install a camera slot (violates slot declaration)"

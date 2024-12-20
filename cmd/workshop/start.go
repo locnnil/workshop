@@ -15,7 +15,6 @@ type CmdStart struct {
 func (c *CmdStart) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "start <WORKSHOP>...",
-		Args:  cobra.MinimumNArgs(1),
 		Short: "Start one or many workshops",
 		Long: `
 This command activates the workshops listed as arguments. For each one, it:
@@ -39,7 +38,10 @@ Notes:
 `,
 		Example: `
 Start the 'nimble' and 'jazzy' workshops in the current project directory:
-$ workshop start nimble jazzy`,
+$ workshop start nimble jazzy
+
+The name is optional if the project has only one workshop:
+$ workshop start`,
 		RunE: c.Run,
 	}
 
@@ -59,6 +61,14 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+		av = []string{name}
 	}
 
 	changeId, err := cli.Start(project.Id, av)

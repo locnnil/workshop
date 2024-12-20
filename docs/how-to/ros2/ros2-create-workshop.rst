@@ -74,7 +74,7 @@ All set, so launch the workshop:
 
 .. code-block:: console
 
-   $ workshop launch ros2-humble
+   $ workshop launch
 
 
 .. note::
@@ -95,7 +95,7 @@ so open a shell and go there:
 
 .. code-block:: console
 
-   $ workshop shell ros2-humble
+   $ workshop shell
    workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ ls
 
@@ -135,8 +135,8 @@ Try this for yourself:
 .. code-block:: console
 
    workshop@ros2-humble-8584e57d$ exit
-   $ workshop refresh ros2-humble
-   $ workshop shell ros2-humble
+   $ workshop refresh
+   $ workshop shell
    workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ colcon build
 
@@ -173,7 +173,7 @@ from the project directory:
 
 .. code-block:: console
 
-   $ workshop shell ros2-humble
+   $ workshop shell
    workshop@ros2-humble-8584e57d$ cd /project/
    workshop@ros2-humble-8584e57d$ colcon test
    workshop@ros2-humble-8584e57d$ colcon test-result --all

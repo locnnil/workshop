@@ -19,7 +19,6 @@ type CmdRemove struct {
 func (c *CmdRemove) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "remove <WORKSHOP>...",
-		Args:  cobra.MinimumNArgs(1),
 		Short: "Remove one or many workshops",
 		Long: `
 This command removes the workshops listed as arguments. For each workshop, it:
@@ -37,7 +36,10 @@ Notes:
 `,
 		Example: `
 Remove the 'nimble' and 'jazzy' workshops in the current project directory:
-$ workshop remove nimble jazzy`,
+$ workshop remove nimble jazzy
+
+The name is optional if the project has only one workshop:
+$ workshop remove`,
 		RunE: c.Run,
 	}
 
@@ -57,6 +59,14 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 	project, err := cli.Project(c.root.project)
 	if err != nil {
 		return err
+	}
+
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+		av = []string{name}
 	}
 
 	changeId, err := cli.Remove(project.Id, av)

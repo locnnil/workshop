@@ -84,32 +84,39 @@ Refresh the 'nimble' and 'jazzy' workshops in the current project directory:
    $ workshop refresh nimble jazzy
 
 
-Refresh 'nimble', but stop on any errors (won’t accept multiple workshops):
+The name is optional if the project has only one workshop:
 
 .. code-block:: console
 
-   $ workshop refresh nimble --wait-on-error
+   $ workshop refresh
 
 
-After 'nimble' refresh stopped on error, abort the operation:
+Refresh workshop, but stop on any errors (won’t accept multiple workshops):
 
 .. code-block:: console
 
-   $ workshop refresh nimble --abort
+   $ workshop refresh --wait-on-error
 
 
-After 'nimble' refresh stopped on error and the workshop was fixed,
+After refresh stopped on error, abort the operation:
+
+.. code-block:: console
+
+   $ workshop refresh --abort
+
+
+After refresh stopped on error and the workshop was fixed,
 continue the operation:
 
 .. code-block:: console
 
-   $ workshop refresh nimble --continue
+   $ workshop refresh --continue
 
 
-Refresh the hack SDK under 'nimble':
+Refresh the sketch SDK in the 'nimble' workshop:
 
 .. code-block:: console
 
-   $ workshop refresh nimble/hack
+   $ workshop refresh nimble/sketch
 
 

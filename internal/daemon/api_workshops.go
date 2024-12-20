@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -55,11 +56,6 @@ type Mount struct {
 	WorkshopTarget string             `json:"workshop-target,omitempty"`
 }
 
-type Workshop struct {
-	Workshop *WorkshopInfo     `json:"workshop"`
-	File     *WorkshopFileInfo `json:"file"`
-}
-
 type Workshops struct {
 	Workshops []*WorkshopInfo     `json:"workshops"`
 	Files     []*WorkshopFileInfo `json:"files"`
@@ -78,6 +74,11 @@ type WorkshopFileInfo struct {
 	ProjectId string `json:"project-id"`
 	Name      string `json:"name"`
 	Path      string `json:"path"`
+}
+
+type Workshop struct {
+	WorkshopInfo
+	Path string `json:"path"`
 }
 
 var ensureStateSoon = stateEnsureBefore
@@ -214,34 +215,52 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	query := r.URL.Query()
 	wstate := query.Get("state")
-	if wstate == "" {
-		wstate = "all"
+	status := healthstate.UnknownStatus
+	ignoreStatus := false
+	var err error
+	if wstate == "" || wstate == "all" || wstate == "available" {
+		ignoreStatus = true
+	} else {
+		status, err = healthstate.StatusLookup(wstate)
+		if err != nil {
+			return statusBadRequest(`%v, "all", "available"`, err)
+		}
 	}
 
 	wrkmgr := c.d.overlord.WorkshopManager()
 	workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
-		return statusInternalError("cannot list workshops: %v", err)
+		return statusInternalError("%v", err)
 	}
 
 	info := Workshops{}
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
-		if wstate != "all" && strings.ToLower(health.Status.String()) != wstate {
-			continue
+		if ignoreStatus || health.Status == status {
+			wi := workshopToInfo(w, health, nil)
+			info.Workshops = append(info.Workshops, wi)
 		}
-		wi := workshopToInfo(w, health, nil)
-		info.Workshops = append(info.Workshops, wi)
 	}
 
-	info.Files = make([]*WorkshopFileInfo, 0, len(workshops))
-	files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
-	if err != nil {
-		state.Warnf("%v", err)
-	}
-	for name, path := range files {
-		info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
+	// If the client queried everything available,
+	// we add workshop files to the response.
+	// Some of these may only exist as files, not instances.
+	// The "available" query is a best-effort version of "all":
+	// if something is wrong with the files we still return the instances.
+	if ignoreStatus {
+		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
+		var fileErr *workshopstate.WorkshopFileError
+		if wstate == "available" && errors.As(err, &fileErr) {
+			state.Warnf("%v", err)
+		} else if err != nil {
+			return statusInternalError("%v", err)
+		} else {
+			info.Files = make([]*WorkshopFileInfo, 0, len(files))
+			for name, path := range files {
+				info.Files = append(info.Files, workshopFileToInfo(projectId, name, path))
+			}
+		}
 	}
 
 	return SyncResponse(info, http.StatusOK)
@@ -321,7 +340,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	var change *state.Change
-	var taskset = []*state.TaskSet{}
+	var taskset []*state.TaskSet
 	var err error
 
 	switch reqData.Action {
@@ -395,11 +414,9 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(err.Error())
 	}
 
-	file := files[w.Name]
-
 	rsp := Workshop{
-		Workshop: workshopToInfo(w, health, ms),
-		File:     workshopFileToInfo(projectId, w.Name, file),
+		WorkshopInfo: *workshopToInfo(w, health, ms),
+		Path:         files[w.Name],
 	}
 
 	return SyncResponse(rsp, http.StatusOK)

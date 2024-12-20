@@ -15,7 +15,7 @@ execute: |
   workshop_exec --help
 
   # Launch
-  workshop_exec launch nimble
+  workshop_exec launch
 
   # Changes
   workshop_exec changes
@@ -28,7 +28,7 @@ execute: |
   workshop_exec list --global
 
   # Info
-  workshop_exec info nimble
+  workshop_exec info
 
   # Warnings
   workshop_exec warnings
@@ -37,23 +37,23 @@ execute: |
   workshop_exec okay || true
 
   # Stop
-  workshop_exec stop nimble
+  workshop_exec stop
 
   # Start
-  workshop_exec start nimble
+  workshop_exec start
 
   # Refresh (TODO)
   sed -i "s/22.04/24.04/g" .workshop/nimble.yaml
-  workshop_exec refresh nimble --wait-on-error
-  workshop_exec refresh nimble --abort || workshop_exec refresh nimble --continue || true
+  workshop_exec refresh --wait-on-error
+  workshop_exec refresh --abort || workshop_exec refresh --continue || true
 
   # Exec
   workshop_exec exec nimble go build main.go
-  workshop_exec exec nimble --env GO111MODULE=off -w /project/ -- go build -x
-  workshop_exec exec nimble --uid 0 id
+  workshop_exec exec --env GO111MODULE=off -w /project/ nimble go build -x
+  workshop_exec exec --uid 0 nimble id
 
   # Shell (TODO)
-  workshop_exec shell nimble
+  workshop_exec shell
 
   # Connections
   workshop_exec connections nimble
@@ -71,4 +71,4 @@ execute: |
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/new-cache-mount/
 
   # Remove
-  workshop_exec remove nimble
+  workshop_exec remove

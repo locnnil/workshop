@@ -13,37 +13,38 @@ execute: |
   workshop_exec list
 
   # Launch
-  workshop_exec launch nimble
-  workshop_exec info nimble
+  workshop_exec launch
+  workshop_exec info
 
   # Changes and tasks after launch
   workshop_exec changes
   workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')
 
   # Start and stop
-  workshop_exec stop nimble
-  workshop_exec start nimble
+  workshop_exec stop
+  workshop_exec start
 
   # Refresh
 
   # Change base
   sed -i "s/22/20/g" workshop.yaml
-  workshop_exec refresh nimble
+  workshop_exec refresh
 
   # Execute commands
   workshop_exec exec nimble go build main.go
+  workshop_exec exec -- go build main.go
 
   # Variable injection
-  workshop_exec exec nimble --env GO111MODULE=off -- go build -x
+  workshop_exec exec --env GO111MODULE=off nimble -- go build -x
 
   # Interactive shell needs a tweak in testing
-  workshop_exec exec nimble -- bash -c "pwd"
-  workshop_exec exec nimble -- bash -c "uname -a"
+  workshop_exec exec nimble bash -c "pwd"
+  workshop_exec exec nimble bash -c "uname -a"
 
   # Changes in project directory
   touch created_outside.txt
-  workshop_exec exec nimble -- [ -f "/project/created_outside.txt" ]
-  workshop_exec exec nimble -- touch /project/created_inside.txt
+  workshop_exec exec nimble [ -f "/project/created_outside.txt" ]
+  workshop_exec exec nimble touch /project/created_inside.txt
   [ -f "created_inside.txt" ]
 
   # Interfaces
@@ -51,7 +52,7 @@ execute: |
   workshop_exec disconnect nimble/test-sdk-go:mod-cache
   workshop_exec connect nimble/test-sdk-go:mod-cache :mount
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
-  workshop_exec info nimble
+  workshop_exec info
 
   # Remove
-  workshop_exec remove nimble
+  workshop_exec remove

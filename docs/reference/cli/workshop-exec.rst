@@ -9,7 +9,7 @@ Run a command and wait for it to complete.
 
 .. code-block:: console
 
-   $ workshop exec <WORKSHOP> [flags]
+   $ workshop exec [flags] [<WORKSHOP>] [--] <COMMAND>...
 
 .. rubric:: Description
 
@@ -38,6 +38,7 @@ use shell syntax such as *--*:
 
 $ workshop exec nimble -- echo -n foo bar
 
+This syntax is required if the workshop name is omitted.
 
 Notes:
 
@@ -101,20 +102,28 @@ A similar command that sets an environment variable and the working directory:
 
 .. code-block:: console
 
-   $ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+   $ workshop exec --env GO111MODULE=off -w /project nimble go build -x
 
 
 Run a custom interactive shell:
 
 .. code-block:: console
 
-   $ workshop exec nimble -I sh
+   $ workshop exec -I nimble sh
+
+
+The name is optional if the project has only one workshop
+and a separator is provided:
+
+.. code-block:: console
+
+   $ workshop exec -I -- sh
 
 
 Run a command as root (the default is 'workshop'):
 
 .. code-block:: console
 
-   $ workshop exec nimble --uid 0 id
+   $ workshop exec --uid 0 nimble id
 
 

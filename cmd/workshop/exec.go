@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"time"
 
@@ -71,6 +72,7 @@ use shell syntax such as *--*:
 
 $ workshop exec nimble -- echo -n foo bar
 
+This syntax is required if the workshop name is omitted.
 
 Notes:
 
@@ -99,8 +101,8 @@ Notes:
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec <WORKSHOP>",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "exec [flags] [<WORKSHOP>] [--] <COMMAND>...",
+		Args:  maybeNameAndCommand,
 		Short: shortExecHelp,
 		Long:  longExecHelp,
 		Example: `
@@ -109,17 +111,22 @@ in the current project directory:
 $ workshop exec nimble go build main.go
 
 A similar command that sets an environment variable and the working directory:
-$ workshop exec nimble --env GO111MODULE=off -w /project -- go build -x
+$ workshop exec --env GO111MODULE=off -w /project nimble go build -x
 
 Run a custom interactive shell:
-$ workshop exec nimble -I sh
+$ workshop exec -I nimble sh
+
+The name is optional if the project has only one workshop
+and a separator is provided:
+$ workshop exec -I -- sh
 
 Run a command as root (the default is 'workshop'):
-$ workshop exec nimble --uid 0 id`,
+$ workshop exec --uid 0 nimble id`,
 		RunE: c.Run,
 	}
 
 	cmd.Flags().SortFlags = false
+	cmd.Flags().SetInterspersed(false)
 	cmd.Flags().StringVarP(&c.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
 	cmd.Flags().StringArrayVar(&c.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
 	cmd.Flags().IntVar(&c.UserId, "uid", 1000, "Run as a specific workshop user")
@@ -131,16 +138,52 @@ $ workshop exec nimble --uid 0 id`,
 	return cmd
 }
 
+func maybeNameAndCommand(cmd *cobra.Command, av []string) error {
+	if cmd.ArgsLenAtDash() == 0 {
+		// Workshop name is implicit if -- precedes all positional arguments
+		return cobra.MinimumNArgs(1)(cmd, av)
+	}
+
+	argCount := len(av)
+	if cmd.ArgsLenAtDash() < 0 && slices.Contains(av, "--") {
+		argCount--
+	}
+
+	if argCount < 2 {
+		return fmt.Errorf("requires at least 2 arg(s), only received %d", argCount)
+	}
+	return nil
+}
+
+func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
+	// Infer workshop name if first positional argument is --
+	if cmd.ArgsLenAtDash() == 0 {
+		return c.runExec("", true, av)
+	}
+
+	// Remove first -- if cobra didn't see it
+	if cmd.ArgsLenAtDash() < 0 {
+		if i := slices.Index(av, "--"); i >= 0 {
+			av = slices.Delete(slices.Clone(av), i, i+1)
+		}
+	}
+
+	return c.runExec(av[0], false, av[1:])
+}
+
 func (c *CmdShellAlias) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "shell <WORKSHOP>",
-		Args:  cobra.ExactArgs(1),
+		Use:   "shell [<WORKSHOP>]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: shortShellHelp,
 		Long:  longShellHelp,
 		Example: `
 Open the default login shell of the 'workshop' user into the 'nimble' workshop
 in the current project directory:
-$ workshop shell nimble`,
+$ workshop shell nimble
+
+The name is optional if the project has only one workshop:
+$ workshop shell`,
 		RunE: c.Run,
 	}
 
@@ -148,10 +191,15 @@ $ workshop shell nimble`,
 }
 
 func (c *CmdShellAlias) Run(cmd *cobra.Command, av []string) error {
-	return c.execCommand.Run(cmd, []string{av[0], "sudo", "-u", "workshop", "bash", "-l"})
+	var workshop string
+	if len(av) > 0 {
+		workshop = av[0]
+	}
+	command := []string{"sudo", "-u", "workshop", "bash", "-l"}
+	return c.execCommand.runExec(workshop, len(av) == 0, command)
 }
 
-func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
+func (c *CmdExec) runExec(workshop string, inferName bool, command []string) error {
 	if c.Interactive && c.NonInteractive {
 		return errors.New("'-i' incompatible with '-I'")
 	}
@@ -166,7 +214,13 @@ func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	command := av[1:]
+	if inferName {
+		workshop, err = cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger.Debugf("Running %q", command)
 
 	// Set up environment variables.
@@ -247,7 +301,7 @@ func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	// Start the command.
-	process, err := cli.Exec(opts, av[0], project.Id)
+	process, err := cli.Exec(opts, workshop, project.Id)
 	if err != nil {
 		return err
 	}

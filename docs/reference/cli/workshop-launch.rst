@@ -58,3 +58,10 @@ Launch the 'nimble' and 'jazzy' workshops in the current project directory:
    $ workshop launch nimble jazzy
 
 
+The name is optional if the project has only one workshop:
+
+.. code-block:: console
+
+   $ workshop launch
+
+

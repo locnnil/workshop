@@ -9,7 +9,7 @@ Edit the sketch SDK and graft it onto the workshop.
 
 .. code-block:: console
 
-   $ workshop sketch-sdk [--stash|--restore|--remove] <WORKSHOP> [flags]
+   $ workshop sketch-sdk [--stash|--restore|--remove] [<WORKSHOP>] [flags]
 
 .. rubric:: Description
 
@@ -58,7 +58,7 @@ Notes:
 .. rubric:: Examples
 
 
-Edit the hack SDK definition for the 'nimble' workshop
+Edit the sketch SDK definition for the 'nimble' workshop
 and apply it after saving by automatically refreshing the workshop:
 
 .. code-block:: console
@@ -66,7 +66,14 @@ and apply it after saving by automatically refreshing the workshop:
    $ workshop sketch-sdk nimble
 
 
-Stash the hack SDK, temporarily reverting the changes in the workshop:
+The name is optional if the project has only one workshop:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk
+
+
+Stash the sketch SDK, temporarily reverting the changes in the workshop:
 
 .. code-block:: console
 

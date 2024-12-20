@@ -36,7 +36,7 @@ and start working on your code:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
 
 
 .. code-block:: go
@@ -58,7 +58,7 @@ should now occur inside the workshop:
 .. code-block:: console
 
    $ git add . && git commit -m "initial commit"
-   $ workshop exec golang -- go build -x main.go
+   $ workshop exec golang go build -x main.go
 
 
 However, the resulting artefacts are exposed in the project directory:
@@ -74,7 +74,7 @@ They stay there even if you remove the workshop:
 
 .. code-block:: console
 
-   $ workshop remove golang
+   $ workshop remove
    $ ./main
 
      hello, Workshop
@@ -87,7 +87,7 @@ They stay there even if you remove the workshop:
 
    .. code-block:: console
 
-      $ workshop launch golang
+      $ workshop launch
 
 From here, you can do whatever you like with your repo,
 because |ws_markup| handles
@@ -143,7 +143,7 @@ Next, launch the redefined workshop to work on the problem:
 
 .. code-block:: console
 
-   $ workshop launch golang
+   $ workshop launch
    $ # Hacking away until the problem is solved
    $ git commit -m "solve problem with hotfix"
    $ cd ../original/
@@ -171,7 +171,7 @@ before running :samp:`git worktree remove`:
 
 .. code-block:: console
 
-   $ workshop remove golang --project /home/user/resolved/
+   $ workshop remove --project ../resolved/
    $ git worktree remove ../resolved/
 
 

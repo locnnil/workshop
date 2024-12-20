@@ -13,8 +13,8 @@ execute: |
   
   projects=$(pwd)
   
-  workshop_exec --project "$projects"/project-1 launch ws-global
-  workshop_exec --project "$projects"/project-2 launch ws-global
+  workshop_exec --project "$projects"/project-1 launch
+  workshop_exec --project "$projects"/project-2 launch
   
   echo "(1) make sure every required workshop present in the global list output"
   workshop_exec list --global | MATCH "^$projects/project-1[[:space:]]+ws-global[[:space:]]+Ready[[:space:]]+-$"
@@ -28,9 +28,9 @@ execute: |
   
   echo "(3) delete a directory and validate it has a correct state in the output"
   cp -R project-2 project-2-copy
-  workshop_exec --project $projects/project-2-copy launch ws-global
+  workshop_exec --project $projects/project-2-copy launch
   rm -rf project-2-copy
   workshop_exec list --global | MATCH "^$projects/project-2-copy[[:space:]]+ws-global[[:space:]]+Error[[:space:]]+missing-project$"
 
-  workshop_exec --project "$projects"/project-1 remove ws-global
-  workshop_exec --project "$projects"/project-2 remove ws-global
+  workshop_exec --project "$projects"/project-1 remove
+  workshop_exec --project "$projects"/project-2 remove

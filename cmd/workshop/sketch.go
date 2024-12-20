@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -26,8 +27,8 @@ type CmdSketch struct {
 
 func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "sketch-sdk [--stash|--restore|--remove] <WORKSHOP>",
-		Args:  cobra.ExactArgs(1),
+		Use:   "sketch-sdk [--stash|--restore|--remove] [<WORKSHOP>]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Edit the sketch SDK and graft it onto the workshop",
 		Long: `
 This opens the 'sketch' SDK definition in the default text editor,
@@ -52,11 +53,14 @@ Notes:
   with the 'workshop refresh <WORKSHOP>/sketch' command
 `,
 		Example: `
-Edit the hack SDK definition for the 'nimble' workshop
+Edit the sketch SDK definition for the 'nimble' workshop
 and apply it after saving by automatically refreshing the workshop:
 $ workshop sketch-sdk nimble
 
-Stash the hack SDK, temporarily reverting the changes in the workshop:
+The name is optional if the project has only one workshop:
+$ workshop sketch-sdk
+
+Stash the sketch SDK, temporarily reverting the changes in the workshop:
 $ workshop sketch-sdk nimble --stash`,
 		RunE: c.Run,
 	}
@@ -188,9 +192,17 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	wp, file, err := cli.Workshop(p.Id, av[0])
-	if err != nil {
-		return err
+	var wp *client.Workshop
+	if len(av) > 0 {
+		wp, err = cli.Workshop(p.Id, av[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		wp, err = cli.SingleWorkshop(p)
+		if err != nil {
+			return err
+		}
 	}
 
 	user, err := osutil.UserMaybeSudoUser()
@@ -209,7 +221,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		if err = cmdrefresh.Run(cmd, av[0:1]); err != nil {
+		if err = cmdrefresh.Run(cmd, []string{wp.Name}); err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
 			// "workshop refresh <WORKSHOP>/sketch" won't fail due to the lack of
 			// sketch SDK definition.
@@ -234,7 +246,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// and with --wait-on-error. Hence, there is always a possibility to
 		// workshop refresh --abort and workshop sketch-sdk --restore to restore the
 		// original sketch content.
-		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", av[0])})
+		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
 	}
 
 	if c.remove {
@@ -243,17 +255,13 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		return cmdrefresh.Run(cmd, av[0:1])
+		return cmdrefresh.Run(cmd, []string{wp.Name})
 	}
 
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
 
 	// Format sketch SDK template header.
-	wpath := ""
-	if file != nil {
-		wpath = file.Path
-	}
-	boilerplate := fmt.Sprintf(sketchTemplate, wpath, wp.Base)
+	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path, wp.Base)
 
 	if osutil.FileExists(metafile) {
 		old, err := os.ReadFile(metafile)
@@ -287,7 +295,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
 
-	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", av[0])})
+	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
 }
 
 func writeSketchSdk(sketchdir string, content []byte) error {

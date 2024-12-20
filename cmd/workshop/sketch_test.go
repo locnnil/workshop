@@ -255,9 +255,9 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			fmt.Fprintln(w, mockSingleWorkshop)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -276,7 +276,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 
 	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(n, check.Equals, 5)
 
@@ -352,23 +352,28 @@ func (m *workshopSketch) TestRemoveRemovesSketch(c *check.C) {
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
 		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			fmt.Fprintln(w, mockSingleWorkshop)
+		case 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
-		case 3:
+		case 4:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		default:
-			c.Errorf("expected 3 calls, now on %d", n)
+			c.Errorf("expected 4 calls, now on %d", n)
 		}
 	})
 
 	m.ResetStdStreams()
-	err = cmdremove.Run(nil, []string{"ws"})
+	err = cmdremove.Run(nil, nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, `"ws" removed\n`)
+	c.Check(n, check.Equals, 4)
 
 	sketchroot := sdk.WorkshopSketchSdk(m.user.HomeDir, m.prjId, "ws")
 	c.Assert(sketchroot, testutil.FileAbsent)

@@ -24,12 +24,33 @@ const (
 	OffStatus
 )
 
+var knownStatuses = []string{"Unknown", "Ready", "Pending", "Error", "Stopped", "Off"}
+
+func StatusLookup(str string) (Status, error) {
+	switch str {
+	case "unknown":
+		return UnknownStatus, nil
+	case "ready":
+		return ReadyStatus, nil
+	case "pending":
+		return PendingStatus, nil
+	case "error":
+		return ErrorStatus, nil
+	case "stopped":
+		return StoppedStatus, nil
+	case "off":
+		return OffStatus, nil
+	}
+
+	return -1, fmt.Errorf("invalid status %q, must be one of %s",
+		str, strutil.Quoted(knownStatuses))
+}
+
 func (s Status) String() string {
-	statuses := [...]string{"Unknown", "Ready", "Pending", "Error", "Stopped", "Off"}
-	if s < 0 || int(s) >= len(statuses) {
+	if s < 0 || int(s) >= len(knownStatuses) {
 		return fmt.Sprintf("invalid (%d)", s)
 	}
-	return statuses[s]
+	return knownStatuses[s]
 }
 
 type HealthCheckResult int
