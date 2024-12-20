@@ -651,10 +651,17 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 	defer rev.Fail()
 
 	rev.Add(func() {
+		oldConn := &schema.ConnState{}
+		if err1 := task.Get("old-conn", oldConn); err1 != nil {
+			err = fmt.Errorf("On Disconnect: %w\nWhen attempting to revert: internal error: previous connection not found in state", err)
+		}
+		conns[cref.ID()] = oldConn
+		setConns(st, conns)
+
 		_, err1 := m.repo.Connect(&cref, conn.StaticPlugAttrs, conn.DynamicPlugAttrs, conn.StaticSlotAttrs,
 			conn.DynamicSlotAttrs, nil)
 		if err1 != nil {
-			logger.Noticef("On doDisconnect: Cannot recover disconnected %q", cref.ID())
+			err = fmt.Errorf("On Disconnect: %w\nWhen attempting to revert: Cannot recover disconnected %q", err, cref.ID())
 		}
 	})
 
@@ -680,7 +687,7 @@ func (m *InterfaceManager) doDisconnect(task *state.Task, tomb *tomb.Tomb) (err 
 		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
 		defer cancel()
 		for _, backend := range m.repo.Backends() {
-			if err := backend.Setup(ctx, ref, m.repo); err != nil {
+			if err = backend.Setup(ctx, ref, m.repo); err != nil {
 				return err
 			}
 		}
