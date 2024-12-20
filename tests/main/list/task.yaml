@@ -55,6 +55,11 @@ execute: |
   workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy launch
   workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "List should create nested project even if parent is known"
+  mkdir -p "$PROJECT"-copy/subprj/.workshop
+  touch "$PROJECT"-copy/subprj/.workshop/nested.yaml
+  workshop_exec --project "$PROJECT"-copy/subprj list | MATCH "^$PROJECT-copy/subprj[[:space:]]+nested[[:space:]]+Off[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy remove
 
   # TODO:

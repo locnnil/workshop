@@ -209,6 +209,25 @@ func (p *projectSuite) TestTrackProjectSubDirectory(c *check.C) {
 	}
 }
 
+func (p *projectSuite) TestTrackNestedProjects(c *check.C) {
+	outer := c.MkDir()
+	_, err := os.Create(filepath.Join(outer, "workshop.yaml"))
+	c.Assert(err, check.IsNil)
+	project := &workshop.Project{Path: outer, ProjectId: "42424242"}
+	c.Assert(workshop.UpdateLock(project), check.IsNil)
+
+	inner := filepath.Join(outer, "vendor", "product")
+	c.Assert(os.MkdirAll(inner, os.ModePerm), check.IsNil)
+	_, err = os.Create(filepath.Join(inner, "workshop.yaml"))
+	c.Assert(err, check.IsNil)
+
+	tracker := workshop.ProjectTracker{}
+	project, result, err := tracker.Track(inner)
+	c.Assert(err, check.IsNil)
+	c.Check(result, check.Equals, workshop.ProjectAdded)
+	c.Check(project.Path, check.Equals, inner)
+}
+
 func (p *projectSuite) TestTrackExistingProject(c *check.C) {
 	d := c.MkDir()
 	original := filepath.Join(d, "original")
