@@ -10,9 +10,10 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 var testYaml = `name: test

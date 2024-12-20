@@ -9,12 +9,13 @@ import (
 	"os/user"
 	"sync"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
-	"gopkg.in/check.v1"
 )
 
 type wsOps struct {

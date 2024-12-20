@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gopkg.in/check.v1"
-
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
