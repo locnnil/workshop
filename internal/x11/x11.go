@@ -12,8 +12,6 @@ import (
 	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
-var userLookup = user.Lookup
-
 // Copies the user's $XAUTHORITY file to the Workshopd run directory.
 func MigrateXauthority(user *user.User, xauth string) (err error) {
 	if xauth == "" {

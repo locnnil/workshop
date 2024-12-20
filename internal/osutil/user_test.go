@@ -30,8 +30,6 @@ import (
 
 type userSuite struct {
 	testutil.BaseTest
-
-	restorer func()
 }
 
 func TestOsUtil(t *testing.T) { check.TestingT(t) }

@@ -7,6 +7,7 @@ linters:
     - ineffassign
     - nilerr
     - staticcheck
+    - unused
 linters-settings:
   gci:
     sections:

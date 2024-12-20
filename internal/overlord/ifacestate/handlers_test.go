@@ -95,10 +95,6 @@ plugs:
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 
-var consumerNoPlugs = `name: consumer
-base: ubuntu@22.04
-`
-
 func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.interfaceManagerSuite.SetUpTest(c)
 	s.restoreSimple = builtin.MockInterface(simpleIface{name: "mock-network"})

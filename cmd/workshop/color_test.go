@@ -30,6 +30,8 @@ type colorSuite struct {
 	BaseWorkshopSuite
 }
 
+var _ = check.Suite(&colorSuite{})
+
 func setEnviron(env map[string]string) func() {
 	old := make(map[string]string, len(env))
 	ok := make(map[string]bool, len(env))

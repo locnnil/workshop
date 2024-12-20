@@ -23,24 +23,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/canonical/x-go/i18n"
 	"golang.org/x/term"
 )
 
 var isStdinTTY = term.IsTerminal(0)
-
-type mixinDescs map[string]string
-
-func (mxd mixinDescs) also(m map[string]string) mixinDescs {
-	n := make(map[string]string, len(mxd)+len(m))
-	for k, v := range mxd {
-		n[k] = v
-	}
-	for k, v := range m {
-		n[k] = v
-	}
-	return n
-}
 
 type unicodeMixin struct {
 	Unicode string
@@ -128,17 +114,6 @@ func colorTable(mode string) escapes {
 	return color
 }
 
-var colorDescs = mixinDescs{
-	// TRANSLATORS: This should not start with a lowercase letter.
-	"color":   i18n.G("Use a little bit of color to highlight some things."),
-	"unicode": unicodeDescs["unicode"],
-}
-
-var unicodeDescs = mixinDescs{
-	// TRANSLATORS: This should not start with a lowercase letter.
-	"unicode": i18n.G("Use a little bit of Unicode to improve legibility."),
-}
-
 type escapes struct {
 	green        string
 	brightYellow string
@@ -165,9 +140,3 @@ var (
 
 	noesc = escapes{}
 )
-
-// fillerPublisher is used to add an no-op escape sequence to a header in a
-// tabwriter table, so that things line up.
-func fillerPublisher(esc *escapes) string {
-	return esc.green + esc.end
-}

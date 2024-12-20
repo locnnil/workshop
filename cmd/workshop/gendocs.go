@@ -11,8 +11,7 @@ import (
 )
 
 type CmdDocs struct {
-	root   *CmdRoot
-	global bool
+	root *CmdRoot
 }
 
 func (c *CmdDocs) Command() *cobra.Command {
