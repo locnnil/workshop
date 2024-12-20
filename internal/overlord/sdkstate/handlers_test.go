@@ -554,6 +554,7 @@ func (s *sdkStateSuite) TestUndoLinkSdkRestorePreviousRev(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	curpath, err := fs.ReadLink(sdk.SdkCurrentPath("test"))
+	c.Assert(err, check.IsNil)
 	c.Assert(strings.HasSuffix(curpath, sdk.SdkRevPath("test", "1")), check.Equals, true)
 
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)

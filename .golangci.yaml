@@ -4,6 +4,7 @@ linters:
     - gci
     - gosimple
     - govet
+    - ineffassign
     - nilerr
 linters-settings:
   gci:

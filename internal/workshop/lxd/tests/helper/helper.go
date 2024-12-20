@@ -66,6 +66,7 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	}
 
 	profiles, err := cli.GetProfileNames()
+	c.Check(err, check.IsNil)
 	for _, p := range profiles {
 		if p == "default" {
 			continue

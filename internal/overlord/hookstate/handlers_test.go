@@ -50,6 +50,7 @@ func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 func (s *hookSuite) SetUpTest(c *check.C) {
 	var err error
 	s.backend, err = fakebackend.New(c.MkDir())
+	c.Assert(err, check.IsNil)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())

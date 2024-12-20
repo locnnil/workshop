@@ -105,6 +105,7 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	c.Check(err, check.IsNil)
 
 	wfs, err := s.b.WorkshopFs(s.ctx, w)
+	c.Assert(err, check.IsNil)
 	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
 	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})

@@ -35,7 +35,7 @@ type Connection struct {
 }
 
 func (c *Connection) CheckBound() (*ConnRef, bool) {
-	attr, ok := c.Plug.Lookup("bind")
+	attr, _ := c.Plug.Lookup("bind")
 	if attr == nil {
 		return nil, false
 	}
