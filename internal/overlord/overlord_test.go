@@ -159,7 +159,7 @@ func (ovs *overlordSuite) TestNewWithPatches(c *C) {
 	}
 	patch.Mock(1, 1, map[int][]patch.PatchFunc{1: {p, sp}})
 
-	fakeState := []byte(fmt.Sprintf(`{"data":{"patch-level":0, "patch-sublevel":0}}`))
+	fakeState := []byte(`{"data":{"patch-level":0, "patch-sublevel":0}}`)
 	err := os.WriteFile(ovs.statePath, fakeState, 0600)
 	c.Assert(err, IsNil)
 

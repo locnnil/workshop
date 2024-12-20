@@ -340,7 +340,7 @@ func logit(handler http.Handler) http.Handler {
 		ww := &wrappedWriter{w: w}
 		t0 := time.Now()
 		handler.ServeHTTP(ww, r)
-		t := time.Now().Sub(t0)
+		t := time.Since(t0)
 
 		// Don't log GET /v1/changes/{change-id} as that's polled quickly by
 		// clients when waiting for a change (e.g., service starting). Also
