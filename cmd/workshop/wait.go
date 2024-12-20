@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/canonical/x-go/i18n"
@@ -46,16 +44,6 @@ type waitMixin struct {
 
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
-
-var abortLogMessage = regexp.MustCompile(`^aborting for workshop \".+\"...$`)
-
-func stripAbortMessage(str string) string {
-	i := strings.Index(str, " ")
-	if i >= 0 && strings.HasPrefix(str[i:], " INFO ") {
-		return str[i+len(" INFO "):]
-	}
-	return str
-}
 
 func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*client.Change, error) {
 	if wmx.NoWait {
@@ -169,7 +157,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*c
 				return chg, nil
 			}
 
-			// if the change finished as Ready and reported an error, check if
+			// if the change finished as Undone and reported an error, check if
 			// it was an expected abortion of a failed refresh and if the
 			// latter, finish gracefully instead of reporting errors. This
 			// approach uses the task log and checks if there are other Error
@@ -179,13 +167,6 @@ func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*c
 			if chg.Status == "Undone" && abortExpected {
 				for _, t := range chg.Tasks {
 					if t.Status == "Error" {
-						lastLogLine := t.Log[len(t.Log)-1]
-						abortMsg := stripAbortMessage(lastLogLine)
-						if abortLogMessage.Match([]byte(abortMsg)) {
-							continue
-						}
-						// no abort message, that means the task produced an
-						// error during the undo execution
 						goto ReportError
 					}
 				}
