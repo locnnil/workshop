@@ -69,8 +69,8 @@ func decodeWithNumber(r io.Reader, value interface{}) error {
 	return nil
 }
 
-func unixDialer(socketPath string) func(string, string) (net.Conn, error) {
-	return func(_, _ string) (net.Conn, error) {
+func unixDialer(socketPath string) func(context.Context, string, string) (net.Conn, error) {
+	return func(ctx context.Context, _, _ string) (net.Conn, error) {
 		_, err := os.Stat(socketPath)
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, &SocketNotFoundError{Err: err, Path: socketPath}
@@ -79,7 +79,8 @@ func unixDialer(socketPath string) func(string, string) (net.Conn, error) {
 			return nil, fmt.Errorf("cannot stat %q: %w", socketPath, err)
 		}
 
-		return net.Dial("unix", socketPath)
+		var d net.Dialer
+		return d.DialContext(ctx, "unix", socketPath)
 	}
 }
 
@@ -141,7 +142,7 @@ func New(config *Config) (*Client, error) {
 
 	if config.BaseURL == "" {
 		// By default talk over a unix socket.
-		transport = &http.Transport{Dial: unixDialer(config.Socket), DisableKeepAlives: config.DisableKeepAlive}
+		transport = &http.Transport{DialContext: unixDialer(config.Socket), DisableKeepAlives: config.DisableKeepAlive}
 		baseURL := url.URL{Scheme: "http", Host: "localhost"}
 		client = &Client{baseURL: baseURL}
 	} else {
@@ -175,7 +176,7 @@ func (client *Client) getTaskWebsocket(taskID, websocketID string) (clientWebsoc
 
 func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error) {
 	dialer := websocket.Dialer{
-		NetDial:          transport.Dial,
+		NetDialContext:   transport.DialContext,
 		Proxy:            transport.Proxy,
 		TLSClientConfig:  transport.TLSClientConfig,
 		HandshakeTimeout: 5 * time.Second,

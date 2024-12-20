@@ -372,6 +372,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "manysdks"}
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/manysdks", nil)
+	c.Assert(err, check.IsNil)
 
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
 
@@ -465,6 +466,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "somebound"}
 	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/somebound", nil)
+	c.Assert(err, check.IsNil)
 
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
 

@@ -74,25 +74,6 @@ func NewContext(task *state.Task, state *state.State, setup *HookSetup, handler 
 	}, nil
 }
 
-func newEphemeralHookContextWithData(st *state.State, setup *HookSetup, contextData map[string]interface{}) (*Context, error) {
-	context, err := NewContext(nil, st, setup, nil, "")
-	if err != nil {
-		return nil, err
-	}
-	if contextData != nil {
-		serialized, err := json.Marshal(contextData)
-		if err != nil {
-			return nil, err
-		}
-		var data map[string]*json.RawMessage
-		if err := json.Unmarshal(serialized, &data); err != nil {
-			return nil, err
-		}
-		context.cache["ephemeral-context"] = data
-	}
-	return context, nil
-}
-
 // Sdk returns the name of the SDK in this context.
 func (c *Context) Sdk() string {
 	return c.setup.Sdk

@@ -34,9 +34,7 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type patchSuite struct {
-	restoreSanitize func()
-}
+type patchSuite struct{}
 
 var _ = Suite(&patchSuite{})
 

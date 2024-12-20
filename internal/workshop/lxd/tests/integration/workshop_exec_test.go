@@ -11,6 +11,8 @@ import (
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/osutil"
@@ -18,7 +20,6 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
-	"gopkg.in/check.v1"
 )
 
 type wsExec struct {

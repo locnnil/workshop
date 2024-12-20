@@ -740,7 +740,7 @@ runcmd:
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
-		return map[string]string{}, nil
+		return map[string]string{}, err
 	}
 
 	cfg := map[string]string{

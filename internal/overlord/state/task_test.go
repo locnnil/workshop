@@ -492,7 +492,7 @@ func (cs *taskSuite) TestMethodEntrance(c *C) {
 
 	for i, f := range writes {
 		st.Lock()
-		st.Unlock()
+		st.Unlock() //nolint:staticcheck // Deliberately empty critical section.
 		c.Assert(st.Modified(), Equals, false)
 
 		c.Logf("Testing write function #%d", i)

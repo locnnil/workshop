@@ -38,12 +38,7 @@ func useFuseImpl() bool {
 		return false
 	}
 
-	virt := strings.TrimSpace(string(out))
-	if virt != "none" {
-		return true
-	}
-
-	return false
+	return strings.TrimSpace(string(out)) != "none"
 }
 
 // FakeUseFuse is exported so useFuse can be overridden by testing.

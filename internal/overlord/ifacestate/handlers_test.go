@@ -97,10 +97,6 @@ plugs:
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
 
-var consumerNoPlugs = `name: consumer
-base: ubuntu@22.04
-`
-
 func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.interfaceManagerSuite.SetUpTest(c)
 	s.restoreSimple = builtin.MockInterface(simpleIface{name: "mock-network"})
@@ -1591,6 +1587,7 @@ func (s *interfaceHandlersSuite) TestUndoConnectUndesired(c *check.C) {
 
 	var afterUndo map[string]*schema.ConnState
 	err = s.state.Get("conns", &afterUndo)
+	c.Assert(err, check.IsNil)
 	c.Assert(afterUndo, check.DeepEquals, map[string]*schema.ConnState{
 		"42424242/ws/consumer:plug 42424242/ws/producer:slot": {
 			Auto:      true,

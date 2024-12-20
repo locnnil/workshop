@@ -1,7 +1,9 @@
 linters:
-  disable-all: true
+  disable:
+    - errcheck
   enable:
     - gci
+    - nilerr
 linters-settings:
   gci:
     sections:
@@ -14,4 +16,5 @@ issues:
   max-same-issues: 0
 
 run:
+  build-tags: [integration]
   timeout: 5m

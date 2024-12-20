@@ -50,15 +50,6 @@ type slotJSON struct {
 	Connections []interfaces.PlugRef `json:"connections,omitempty"`
 }
 
-// interfaceJSON aids in marshaling interfaces.Info into JSON.
-type interfaceJSON struct {
-	Name    string      `json:"name,omitempty"`
-	Summary string      `json:"summary,omitempty"`
-	DocURL  string      `json:"doc-url,omitempty"`
-	Plugs   []*plugJSON `json:"plugs,omitempty"`
-	Slots   []*slotJSON `json:"slots,omitempty"`
-}
-
 // interfaceAction is an action performed on the interface system.
 type interfaceAction struct {
 	Action string     `json:"action"`

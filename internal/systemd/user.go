@@ -23,7 +23,7 @@ func UserEnvironment(user *user.User) (map[string]string, error) {
 	cmd.Env = append(cmd.Env, "XDG_RUNTIME_DIR="+defaultXdg)
 	out, errOut, err := osutil.RunCmd(cmd)
 	if err != nil {
-		return nil, fmt.Errorf(string(errOut))
+		return nil, fmt.Errorf("%s", string(errOut))
 	}
 
 	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })

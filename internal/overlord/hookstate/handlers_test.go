@@ -50,6 +50,7 @@ func setWorkshopProject(w string, p workshop.Project, tasks ...*state.Task) {
 func (s *hookSuite) SetUpTest(c *check.C) {
 	var err error
 	s.backend, err = fakebackend.New(c.MkDir())
+	c.Assert(err, check.IsNil)
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -481,6 +482,7 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
 	defer ws.Close()
 	c.Check(err, check.IsNil)
 	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)

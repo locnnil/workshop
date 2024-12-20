@@ -227,13 +227,13 @@ func setSlotsFromSdkYaml(y *sdkYaml, sdk *Info) error {
 
 func convertToSlotOrPlugData(plugOrSlot, name string, data interface{}) (iface, label string, attrs map[string]interface{}, err error) {
 	iface = name
-	switch data.(type) {
+	switch data := data.(type) {
 	case string:
-		return data.(string), "", nil, nil
+		return data, "", nil, nil
 	case nil:
 		return name, "", nil, nil
 	case map[string]interface{}:
-		for key, valueData := range data.(map[string]interface{}) {
+		for key, valueData := range data {
 			if strings.HasPrefix(key, "$") {
 				err := fmt.Errorf("%s %q uses reserved attribute %q", plugOrSlot, name, key)
 				return "", "", nil, err

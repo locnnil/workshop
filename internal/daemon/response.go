@@ -199,7 +199,6 @@ var (
 	statusForbidden        = makeErrorResponder(403)
 	statusNotFound         = makeErrorResponder(404)
 	statusMethodNotAllowed = makeErrorResponder(405)
-	statusConflict         = makeErrorResponder(409)
 	statusInternalError    = makeErrorResponder(500)
 	statusNotImplemented   = makeErrorResponder(501)
 	statusGatewayTimeout   = makeErrorResponder(504)

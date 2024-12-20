@@ -27,7 +27,6 @@ type Specification struct {
 	config  map[string]string
 
 	User *user.User
-	pid  string
 }
 
 // AddPermanentSlot records side-effects of having a slot.

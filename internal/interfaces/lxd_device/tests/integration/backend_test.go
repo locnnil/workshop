@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	lxd "github.com/canonical/lxd/client"
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	backend "github.com/canonical/workshop/internal/interfaces/backends"
@@ -21,11 +23,8 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/workshop/internal/workshop/lxd/tests/helper"
-
-	"gopkg.in/check.v1"
 )
 
 type backendDeviceSuite struct {
@@ -63,8 +62,8 @@ func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	fstab, err := fs.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0744)
-	defer fstab.Close()
 	c.Assert(err, check.IsNil)
+	defer fstab.Close()
 	buf, err := io.ReadAll(fstab)
 	c.Assert(err, check.IsNil)
 	return string(buf)

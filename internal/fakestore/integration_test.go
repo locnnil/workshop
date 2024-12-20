@@ -11,13 +11,14 @@ import (
 	"path/filepath"
 	"sync"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"gopkg.in/check.v1"
 )
 
 type storeIntegration struct {

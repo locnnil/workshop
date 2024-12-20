@@ -34,7 +34,7 @@ import (
 	"github.com/canonical/x-go/strutil"
 	"github.com/canonical/x-go/strutil/quantity"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/osutil"
@@ -116,7 +116,7 @@ $ workshop okay`,
 
 func termSize() (width, height int) {
 	if f, ok := Stdout.(*os.File); ok {
-		width, height, _ = terminal.GetSize(int(f.Fd()))
+		width, height, _ = term.GetSize(int(f.Fd()))
 	}
 
 	if width <= 0 {

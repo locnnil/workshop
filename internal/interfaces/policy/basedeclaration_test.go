@@ -94,22 +94,6 @@ slots:
 	}
 }
 
-func (s *baseDeclSuite) installPlugCand(c *check.C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
-	if yaml == "" {
-		yaml = fmt.Sprintf(`name: install-plug-sdk
-base: ubuntu@22.04
-type: %s
-plugs:
-  %s:
-`, sdkType, iface)
-	}
-	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws")
-	return &policy.InstallCandidate{
-		Sdk:             sdk,
-		BaseDeclaration: s.baseDecl,
-	}
-}
-
 func (s *baseDeclSuite) TestAutoConnection(c *C) {
 	all := builtin.Interfaces()
 

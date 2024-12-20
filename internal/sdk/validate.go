@@ -11,7 +11,6 @@ import (
 var (
 	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 	sdkName      = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
 	// Regular expression describing correct plug, slot and interface names.
 	validPlugSlotIface = regexp.MustCompile("^[a-z](?:-?[a-z0-9])*$")
 )
