@@ -288,7 +288,7 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if len(info.BadInterfaces) > 0 {
-		return fmt.Errorf(sdk.BadInterfacesSummary(info))
+		return fmt.Errorf("%s", sdk.BadInterfacesSummary(info))
 	}
 
 	if err = policy.CheckInterfaces(info); err != nil {

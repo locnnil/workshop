@@ -77,7 +77,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*c
 		}
 		_, err := cli.Abort(id)
 		if err != nil {
-			fmt.Fprintf(Stderr, err.Error()+"\n")
+			fmt.Fprintf(Stderr, "%v\n", err)
 		}
 	}()
 

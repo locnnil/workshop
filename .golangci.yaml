@@ -3,6 +3,7 @@ linters:
   enable:
     - gci
     - gosimple
+    - govet
     - nilerr
 linters-settings:
   gci:
