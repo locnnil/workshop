@@ -87,7 +87,7 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(cli, changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId); err != nil {
 		if err == errNoWait {
 			return nil
 		}

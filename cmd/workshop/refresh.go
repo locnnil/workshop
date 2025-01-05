@@ -160,7 +160,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(cli, changeId, c.Abort); err != nil {
+	if _, err := c.wait(cli, changeId); err != nil {
 		if err == errNoWait {
 			return nil
 		}

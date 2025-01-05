@@ -45,7 +45,7 @@ type waitMixin struct {
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
 
-func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*client.Change, error) {
+func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error) {
 	if wmx.NoWait {
 		fmt.Fprintf(Stdout, "%s\n", id)
 		return nil, errNoWait
@@ -153,31 +153,13 @@ func (wmx waitMixin) wait(cli *client.Client, id string, abortExpected bool) (*c
 		}
 
 		if chg.Ready {
-			if chg.Status == "Done" {
-				return chg, nil
-			}
-
-			// if the change finished as Undone and reported an error, check if
-			// it was an expected abortion of a failed refresh and if the
-			// latter, finish gracefully instead of reporting errors. This
-			// approach uses the task log and checks if there are other Error
-			// tasks that became Error due to the undo logic execution not
-			// during the refresh (those must be reported as it means that abort
-			// itself failed).
-			if chg.Status == "Undone" && abortExpected {
-				for _, t := range chg.Tasks {
-					if t.Status == "Error" {
-						goto ReportError
-					}
+			if chg.Status == "Error" {
+				if chg.Err != "" {
+					return chg, errors.New(chg.Err)
 				}
-				return chg, nil
+				return chg, errors.New(i18n.G(`change finished in status "Error" with no error message`))
 			}
-		ReportError:
-			if chg.Err != "" {
-				return chg, errors.New(chg.Err)
-			}
-
-			return nil, fmt.Errorf(i18n.G("change finished in status %q with no error message"), chg.Status)
+			return chg, nil
 		}
 
 		if rebootingErr != nil {
