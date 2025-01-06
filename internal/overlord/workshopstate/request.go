@@ -2,6 +2,7 @@ package workshopstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,7 +89,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		_, err := w.Workshop(ctx, name, projectId)
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
-		} else if err != workshop.ErrWorkshopNotLaunched {
+		} else if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
 		}
 
