@@ -13,7 +13,6 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/x-go/randutil"
 	"github.com/spf13/afero"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -191,18 +190,7 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 			return nil
 		}
 
-		tmp := "fstab" + "." + randutil.RandomString(12) + "~"
-		newfstab, err := fs.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_EXCL, 0744)
-		if err != nil {
-			return nil
-		}
-		defer newfstab.Close()
-
-		if _, err = mounts.WriteTo(newfstab); err != nil {
-			return err
-		}
-
-		if err = fs.Rename(tmp, "/etc/fstab"); err != nil {
+		if err = workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644); err != nil {
 			return err
 		}
 
