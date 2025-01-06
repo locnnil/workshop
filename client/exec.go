@@ -166,7 +166,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	taskID := result.TaskID
 	controlConn, err := client.getTaskWebsocket(taskID, "control")
 	if err != nil {
-		return nil, fmt.Errorf(`cannot connect to "control" websocket: %w`, err)
+		return nil, err
 	}
 
 	// Forward stdin and stdout.
@@ -175,7 +175,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 
 	stdioConn, err = client.getTaskWebsocket(taskID, "stdio")
 	if err != nil {
-		return nil, fmt.Errorf(`cannot connect to "stdio" websocket: %w`, err)
+		return nil, err
 	}
 	stdinDone = wsutil.WebsocketSendStream(stdioConn, stdin, -1)
 
@@ -184,13 +184,13 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	} else {
 		stdoutConn, err = client.getTaskWebsocket(taskID, "stdout")
 		if err != nil {
-			return nil, fmt.Errorf(`cannot connect to "stdout" websocket: %w`, err)
+			return nil, err
 		}
 		stdoutDone = wsutil.WebsocketRecvStream(stdout, stdoutConn)
 
 		stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
 		if err != nil {
-			return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
+			return nil, err
 		}
 		stderrDone = wsutil.WebsocketRecvStream(stderr, stderrConn)
 	}

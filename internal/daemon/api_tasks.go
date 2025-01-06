@@ -28,13 +28,13 @@ func v1GetTaskWebsocket(c *Command, req *http.Request, _ *userState) Response {
 
 	task := st.Task(taskID)
 	if task == nil {
-		logger.Noticef("Websocket: cannot find task with id %q", taskID)
-		return statusNotFound("cannot find task with id %q", taskID)
+		logger.Noticef("Websocket: cannot find task %q", taskID)
+		return statusNotFound("cannot find task %q", taskID)
 	}
 
 	if task.Kind() != "exec" {
-		logger.Noticef("Websocket %s: %q tasks do not have websockets", task.ID(), task.Kind())
-		return statusBadRequest("%q tasks do not have websockets", task.Kind())
+		logger.Noticef("Websocket %s: %s tasks do not have websockets", task.ID(), task.Kind())
+		return statusBadRequest("%s task %q has no websockets", task.Kind(), task.ID())
 	}
 
 	cmdmgr := c.d.overlord.CommandManager()
@@ -49,16 +49,13 @@ func v1GetTaskWebsocket(c *Command, req *http.Request, _ *userState) Response {
 func (wr websocketResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := wr.connect(r, w, wr.task, wr.websocketID)
 	if errors.Is(err, os.ErrNotExist) {
-		logger.Noticef("Websocket %s: cannot find websocket with id %q", wr.task.ID(), wr.websocketID)
-		rsp := statusNotFound("cannot find websocket with id %q", wr.websocketID)
+		logger.Noticef("Websocket %s: cannot find %s websocket", wr.task.ID(), wr.websocketID)
+		rsp := statusNotFound("cannot find %s websocket for task %q", wr.websocketID, wr.task.ID())
 		rsp.ServeHTTP(w, r)
-		return
-	}
-	if err != nil {
-		logger.Noticef("Websocket %s: cannot connect to websocket %q: %v", wr.task.ID(), wr.websocketID, err)
-		rsp := statusInternalError("cannot connect to websocket %q: %v", wr.websocketID, err)
+	} else if err != nil {
+		logger.Noticef("Websocket %s: cannot connect to %s websocket: %v", wr.task.ID(), wr.websocketID, err)
+		rsp := statusInternalError("%v", err)
 		rsp.ServeHTTP(w, r)
-		return
 	}
 	// In the success case, Connect takes over the connection and upgrades to
 	// the websocket protocol.
