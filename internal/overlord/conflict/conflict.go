@@ -8,34 +8,38 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
-type RefreshSetup struct {
+type ChangeSetup struct {
 	Mode string `json:"mode"`
 }
 
-type RefreshMode int
+type Mode int
 
 const (
-	RefreshTransactional RefreshMode = iota
-	RefreshWaitOnError
-	RefreshContinue
-	RefreshAbort
+	ChangeTransactional Mode = iota
+	ChangeWaitOnError
+	ChangeContinue
+	ChangeAbort
 )
 
-func (s RefreshMode) String() string {
+func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
 }
 
-func ParseRefreshMode(s string) (RefreshMode, error) {
-	refreshMap := map[string]RefreshMode{
-		RefreshTransactional.String(): RefreshTransactional,
-		RefreshWaitOnError.String():   RefreshWaitOnError,
-		RefreshContinue.String():      RefreshContinue,
-		RefreshAbort.String():         RefreshAbort,
+func (s Mode) Resume() bool {
+	return s == ChangeContinue || s == ChangeAbort
+}
+
+func ParseMode(s string) (Mode, error) {
+	changeMap := map[string]Mode{
+		ChangeTransactional.String(): ChangeTransactional,
+		ChangeWaitOnError.String():   ChangeWaitOnError,
+		ChangeContinue.String():      ChangeContinue,
+		ChangeAbort.String():         ChangeAbort,
 	}
-	if val, ok := refreshMap[s]; ok {
+	if val, ok := changeMap[s]; ok {
 		return val, nil
 	}
-	return -1, errors.New(`refresh mode must be any of: "transactional", "wait-on-error", "continue", "abort"`)
+	return -1, errors.New(`change mode must be any of: "transactional", "wait-on-error", "continue", "abort"`)
 }
 
 // ChangeConflictError represents an error because of snap conflicts between changes.
@@ -128,13 +132,13 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreChan
 	return nil
 }
 
-// Attempt to resume the change associated with the refresh operation for the
-// given workshop. Depending on the mode the change will either be turned
-// into Doing (Continue mode) or Abort (Abort mode).
-func ResumeRefresh(st *state.State,
-	workshop string, projectId string, mode RefreshMode) (*state.Change, error) {
-	if mode != RefreshAbort && mode != RefreshContinue {
-		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the refresh operation")
+// Attempt to resume the change associated with the Resume/Launch operation
+// for the given workshop. Depending on the mode the change will either be
+// turned into Doing (Continue mode) or Abort (Abort mode).
+func ResumeAfterWait(st *state.State,
+	workshop string, projectId string, mode Mode, action string) (*state.Change, error) {
+	if mode != ChangeAbort && mode != ChangeContinue {
+		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
 
 	var chg *state.Change
@@ -151,31 +155,34 @@ func ResumeRefresh(st *state.State,
 		}
 	}
 	if chg == nil {
-		return nil, fmt.Errorf("cannot %s: no refresh in progress", mode)
+		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
 	}
 
-	if chg.Kind() != "refresh" {
-		return nil, fmt.Errorf("cannot resume: no refresh in progress (%s is in progress)", chg.Kind())
+	if chg.Kind() != action {
+		return nil, fmt.Errorf("cannot %s: %s requested but %s is in progress", mode, action, chg.Kind())
+	}
+
+	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
+		return nil, fmt.Errorf("cannot %s: no wait in progress (%q is in progress)", chg.Kind(), mode)
 	}
 
 	if chg.Status() != state.WaitStatus {
-		return nil, fmt.Errorf("cannot resume: no refresh is waiting on error")
+		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
 	}
 
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
-			if mode == RefreshContinue {
+			if mode == ChangeContinue {
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
-				tsk.Logf("Continuing the %q workshop refresh...", workshop)
-			} else if mode == RefreshAbort {
-				tsk.Logf("Aborting the %q workshop refresh...", workshop)
-				tsk.SetStatus(state.ErrorStatus)
+				tsk.Logf("Continuing for workshop %q...", workshop)
+			} else if mode == ChangeAbort {
+				tsk.Logf("Aborting for workshop %q...", workshop)
 			}
 		}
 	}
 
-	if mode == RefreshAbort {
+	if mode == ChangeAbort {
 		chg.Abort()
 	}
 

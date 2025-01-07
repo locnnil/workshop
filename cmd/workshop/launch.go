@@ -9,7 +9,10 @@ import (
 
 type CmdLaunch struct {
 	waitMixin
-	root *CmdRoot
+	root        *CmdRoot
+	WaitOnError bool
+	Continue    bool
+	Abort       bool
 }
 
 func (c *CmdLaunch) Command() *cobra.Command {
@@ -29,6 +32,9 @@ definitions and installing their components. For each workshop, it:
 - On success, ties the workshop to the project and starts it
 
 
+The '--wait-on-error' option pauses the launch if an error occurs.
+Thus, you can fix the error and resume the operation or abort and revert it.
+This option can only be used with a single workshop.
 If multiple workshops are listed and an error occurs,
 the operation is aborted and no workshops are constructed.
 
@@ -50,6 +56,15 @@ $ workshop launch`,
 		RunE: c.Run,
 	}
 
+	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
+		false,
+		"Pause the operation on error; to resume, use '--continue' or '--abort'.")
+	cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
+		false,
+		"Continue the previously paused operation.")
+	cmd.PersistentFlags().BoolVar(&c.Abort, "abort",
+		false,
+		"Abort the previously paused operation, reverting any changes.")
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
 		"Return the change ID, don't wait for the operation to finish")
@@ -59,6 +74,24 @@ $ workshop launch`,
 
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	av = strutil.Deduplicate(av)
+
+	if c.Abort && c.Continue {
+		return fmt.Errorf("cannot launch: '--abort' incompatible with '--continue'")
+	}
+
+	if c.WaitOnError && c.Abort {
+		return fmt.Errorf("cannot launch: '--wait-on-error' incompatible with '--abort'")
+	}
+
+	if c.WaitOnError && c.Continue {
+		return fmt.Errorf("cannot launch: '--wait-on-error' incompatible with '--continue'")
+	}
+
+	// We should have no more than one argument (a single workshop) for a
+	// wait-on-error operation
+	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
+		return fmt.Errorf("cannot launch: '--wait-on-error' incompatible with multiple workshops")
+	}
 
 	cli, err := c.root.client()
 	if err != nil {
@@ -78,16 +111,37 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
-	changeId, err := cli.Launch(project.Id, av)
+	mode := "transactional"
+	if c.WaitOnError {
+		mode = "wait-on-error"
+	}
+	if c.Continue {
+		mode = "continue"
+	}
+	if c.Abort {
+		mode = "abort"
+	}
+
+	changeId, err := cli.Launch(project.Id, av, mode)
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.wait(cli, changeId, false); err != nil {
+	if _, err := c.wait(cli, changeId); err != nil {
 		if err == errNoWait {
 			return nil
 		}
-		return err
+		if err == errWaitOnError {
+			return fmt.Errorf("cannot launch; fix the errors reported,\n"+
+				"then run \"workshop launch --continue %s\".\n"+
+				"To abort and revert, run \"workshop launch --abort %s\"", workshopName(av[0]), workshopName(av[0]))
+		}
+		return fmt.Errorf("%v\n%s launch aborted", err, strutil.Quoted(av))
+	}
+
+	if c.Abort {
+		fmt.Fprintf(Stdout, "%q launch aborted\n", av[0])
+		return nil
 	}
 
 	for _, i := range av {

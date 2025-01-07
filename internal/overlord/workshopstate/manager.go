@@ -61,21 +61,20 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 	}
 
 	health := w.WorkshopHealth(wp)
+
 	if !slices.Contains(allowedStatuses, health.Status) {
 		switch health.Status {
 		case healthstate.ReadyStatus:
 			return fmt.Errorf("workshop already running")
 		case healthstate.PendingStatus:
 			if health.Code == "wait-on-error" {
-				return fmt.Errorf("refresh waiting on error")
+				return fmt.Errorf("waiting on error")
 			}
 			return fmt.Errorf("other changes in progress")
 		case healthstate.ErrorStatus:
 			return fmt.Errorf("workshop is unhealthy")
 		case healthstate.StoppedStatus:
 			return fmt.Errorf("workshop not running")
-		case healthstate.OffStatus:
-			return workshop.ErrWorkshopNotLaunched
 		default:
 			return fmt.Errorf("workshop health is unknown")
 		}

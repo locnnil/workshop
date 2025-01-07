@@ -25,7 +25,7 @@ import (
 )
 
 type actionOpts struct {
-	Mode string `json:"refresh-mode"`
+	Mode string `json:"mode"`
 }
 
 type workshopReq struct {
@@ -278,39 +278,49 @@ func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
 	return "", "", false
 }
 
+func actionMode(reqData *workshopReq) (conflict.Mode, error) {
+	var mode conflict.Mode
+
+	if reqData.Options.Mode == "" {
+		reqData.Options.Mode = "transactional"
+	}
+
+	switch reqData.Options.Mode {
+	case "transactional":
+	case "wait-on-error", "continue", "abort":
+		if reqData.Action != "refresh" && reqData.Action != "launch" {
+			return mode, fmt.Errorf("cannot %s: mode %q is not valid with the %q command", reqData.Action, reqData.Options.Mode, reqData.Action)
+		}
+	default:
+		return mode, fmt.Errorf("cannot %s: %q is not a valid mode", reqData.Action, reqData.Options.Mode)
+	}
+
+	mode, err := conflict.ParseMode(reqData.Options.Mode)
+	if err != nil {
+		return mode, fmt.Errorf("cannot %s: %v", reqData.Action, err)
+	}
+
+	if len(reqData.Names) > 1 && mode != conflict.ChangeTransactional {
+		return mode, fmt.Errorf("wait-on-error is not supported for multiple workshops")
+	}
+
+	return mode, nil
+}
+
 func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
-	var refreshMode conflict.RefreshMode
-	var change *state.Change
 	var taskset []*state.TaskSet
+	var change *state.Change
 	var err error
 
-	refreshMode, err = conflict.ParseRefreshMode(reqData.Options.Mode)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot refresh: %v", err)
-	}
-
-	if len(reqData.Names) > 1 && refreshMode != conflict.RefreshTransactional {
-		return nil, nil, fmt.Errorf("wait-on-error is not supported for multiple workshops")
-	}
-
-	if refreshMode == conflict.RefreshTransactional || refreshMode == conflict.RefreshWaitOnError {
-		if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
-			change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
-			if sk != sdk.Sketch {
-				return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
-			}
-			taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
-		} else {
-			change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-			taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
+	if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
+		change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
+		if sk != sdk.Sketch {
+			return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 		}
-		var setup conflict.RefreshSetup
-		setup.Mode = refreshMode.String()
-		change.Set("refresh-setup", setup)
-	}
-
-	if refreshMode == conflict.RefreshContinue || refreshMode == conflict.RefreshAbort {
-		change, err = conflict.ResumeRefresh(st, reqData.Names[0], pid, refreshMode)
+		taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
+	} else {
+		change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
+		taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
 	}
 	return change, taskset, err
 }
@@ -334,6 +344,23 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
+	validActions := []string{
+		"launch",
+		"refresh",
+		"start",
+		"stop",
+		"remove",
+	}
+
+	if !slices.Contains(validActions, reqData.Action) {
+		return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
+	}
+
+	mode, err := actionMode(&reqData)
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
 	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
@@ -341,25 +368,30 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	var change *state.Change
 	var taskset []*state.TaskSet
-	var err error
 
-	switch reqData.Action {
-	case "launch":
-		change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
-		taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
-	case "refresh":
-		change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
-	case "start":
-		change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
-		taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
-	case "stop":
-		change = newWorkshopChange(st, "stop", user, projectId, reqData.Action, reqData.Names)
-		taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
-	case "remove":
-		change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
-		taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
-	default:
-		return statusBadRequest("unknown action")
+	if mode.Resume() {
+		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], projectId, mode, reqData.Action)
+	} else {
+		switch reqData.Action {
+		case "launch":
+			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
+			taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
+			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+		case "refresh":
+			change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
+			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+		case "start":
+			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
+			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
+		case "stop":
+			change = newWorkshopChange(st, "stop", user, projectId, reqData.Action, reqData.Names)
+			taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
+		case "remove":
+			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
+			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
+		default:
+			return statusBadRequest("internal error: action passed validation but was not matched during dispatch")
+		}
 	}
 
 	if err != nil {

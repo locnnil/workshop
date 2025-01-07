@@ -43,11 +43,11 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
     "id":   "four",
     "kind": "refresh",
     "summary": "...",
-    "status": "Error",
+    "status": "Undone",
     "ready": true,
     "spawn-time": "2015-02-21T01:02:03Z",
     "ready-time": "2015-02-21T01:02:04Z",
-    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting the \"ws\" workshop refresh..."], "data":{"workshop":"ws"}}]
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Hold", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting for workshop \"ws\"..."], "data":{"workshop":"ws"}}]
 }}`
 
 var mockChangeWithError = `{"type": "sync", "result":{
@@ -151,7 +151,7 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "wait-on-error"}})
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "wait-on-error"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 4:
@@ -186,7 +186,7 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) 
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "abort"}})
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "abort"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:
@@ -221,7 +221,7 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{"ws"}, "options": map[string]interface{}{"refresh-mode": "continue"}})
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "continue"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 3:

@@ -12,7 +12,7 @@ type Project struct {
 }
 
 type WorkshopActionOptions struct {
-	RefreshMode string `json:"refresh-mode,omitempty"`
+	Mode string `json:"mode,omitempty"`
 }
 
 type WorkshopActionSetup struct {
@@ -70,10 +70,13 @@ func (client *Client) doWorkshopAction(projectId string, action *WorkshopActionS
 	return client.doAsync("POST", "/v1/projects/"+projectId+"/workshops", nil, nil, &body)
 }
 
-func (client *Client) Launch(projectId string, names []string) (changeId string, err error) {
+func (client *Client) Launch(projectId string, names []string, mode string) (changeId string, err error) {
 	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "launch",
 		Names:  names,
+		Options: &WorkshopActionOptions{
+			Mode: mode,
+		},
 	})
 }
 
@@ -82,7 +85,7 @@ func (client *Client) Refresh(projectId string, names []string, mode string) (ch
 		Action: "refresh",
 		Names:  names,
 		Options: &WorkshopActionOptions{
-			RefreshMode: mode,
+			Mode: mode,
 		},
 	})
 }

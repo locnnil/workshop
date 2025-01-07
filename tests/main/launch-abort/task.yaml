@@ -1,0 +1,24 @@
+summary: Check a failed non-transactional launch can be aborted successfully
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec launch --wait-on-error || true
+
+  echo "Check the workshop is in Pending state"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Pending[[:space:]]+wait-on-error$"
+
+  echo "Check the 'workshop launch --abort' command reverts to the previous state"
+  workshop_exec launch --abort | MATCH "\"ws-launch-abort\" launch aborted"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
+
+  echo "Validate the task output from the launch attempt"
+  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-launch-abort\"..."
+
+  echo "Ensure SDKs are unlinked successfully during abort"
+  echo "Update the workshop file to use test-sdk-content-broken"
+  sed -i 's/test-sdk-setup-fail/test-sdk-content-broken/g' workshop.yaml
+  workshop_exec launch --wait-on-error || true
+  sed -i 's/test-sdk-content-broken/test-sdk-setup-fail/g' workshop.yaml
+
+  workshop_exec launch --abort
+  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -2 | MATCH ".*ERROR installation denied by \"one\" slot rule of interface \"mount\""

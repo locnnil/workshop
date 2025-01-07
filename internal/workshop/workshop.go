@@ -3,6 +3,7 @@ package workshop
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -158,7 +159,13 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	}
 
 	// No revisions left in the sequence, remove the 'current' link.
-	return fs.Remove(sdk.SdkCurrentPath(name))
+	// This will be the case during a launch operation that fails, therefore it's
+	// possible for there to be no current revision to remove.
+	if err = fs.Remove(sdk.SdkCurrentPath(name)); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	return err
 }
 
 func WorkshopName(instance string) string {

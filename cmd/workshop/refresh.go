@@ -120,6 +120,8 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with '--continue'")
 	}
 
+	// We should have no more than one argument (a single workshop) for a
+	// wait-on-error operation
 	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
 		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with multiple workshops")
 	}
@@ -158,7 +160,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(cli, changeId, c.Abort); err != nil {
+	if _, err := c.wait(cli, changeId); err != nil {
 		if err == errNoWait {
 			return nil
 		}

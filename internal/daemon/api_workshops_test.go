@@ -261,6 +261,7 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string
 	c.Assert(err, check.IsNil)
 
 	rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+
 	st := s.d.state
 	st.Lock()
 	change := st.Change(rsp.Change)
@@ -705,7 +706,7 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot launch "basic": workshop already exists`,
+			Message: `cannot launch "basic": workshop exists`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -1146,7 +1147,7 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	defer s.mockDoInstallSdk(c, "basic", testsdks)()
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh"}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1205,7 +1206,7 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	// Setup "refresh" with a new workshop that will trigger an error
 	s.createWFile(c, "manysdks", manysdks_refreshed)
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`)}
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`)}
 	expected = []*expectedResp{{
 		Type:      ResponseTypeAsync,
 		Status:    http.StatusAccepted,
@@ -1247,60 +1248,141 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	})
 }
 
-func (s *apiSuite) TestRefreshWorkshopIncorrectInput(c *check.C) {
+// Tests the input validation logic of v1PostProjectWorkshop. Excludes any
+// dispatch validation, these are covered by their own tests.
+func (s *apiSuite) TestValidatev1PostProjectWorkshopModeInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
-	// Setup
-	requests := []*bytes.Buffer{
-		// try continue without starting wait-on-error
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"refresh-mode":"continue"}}`),
 
-		// unknown refresh option
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"refresh-mode":"unknown"}}`),
-
-		// a workshop name is a must
-		bytes.NewBufferString(`{"names":[],"action":"refresh"}`),
-
-		// non-transactional refresh is only supported for a single workshop
-		bytes.NewBufferString(`{"names":["basic", "basic1"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
-
-		// partial refresh is only supported for the sketch SDK
-		bytes.NewBufferString(`{"names":["basic/test-sdk-1"],"action":"refresh", "options": {"refresh-mode":"transactional"}}`),
+	type table struct {
+		cmd    string
+		result map[string]string
 	}
 
-	expected := []*expectedResp{
+	// Note we are explicitly testing the validation up until dispatch here. All
+	// error messages are desired. 'mode' errors represent an invalid
+	// input, all other errors occur after input validation - these represent a
+	// valid input
+	cmds := []table{
 		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no refresh in progress",
+			cmd: "launch",
+			result: map[string]string{
+				"":              `cannot launch "basic": workshop definition .*`,
+				"transactional": `cannot launch "basic": workshop definition .*`,
+				"wait-on-error": `cannot launch "basic": workshop definition .*`,
+				"continue":      "cannot continue: no wait in progress",
+				"abort":         "cannot abort: no wait in progress",
+				"invalid-mode":  `cannot launch: "invalid-mode" is not a valid mode`,
+			},
 		}, {
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot refresh: refresh mode must be any of: "transactional", "wait-on-error", "continue", "abort"`,
+			cmd: "refresh",
+			result: map[string]string{
+				"":              `cannot refresh "basic": workshop not launched`,
+				"transactional": `cannot refresh "basic": workshop not launched`,
+				"wait-on-error": `cannot refresh "basic": workshop not launched`,
+				"continue":      "cannot continue: no wait in progress",
+				"abort":         "cannot abort: no wait in progress",
+				"invalid-mode":  `cannot refresh: "invalid-mode" is not a valid mode`,
+			},
 		}, {
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot refresh: at least one workshop name must be provided",
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "wait-on-error is not supported for multiple workshops",
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "sketch" SDK`,
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `partial refresh is supported only for "sketch" SDK`,
+			cmd: "start",
+			result: map[string]string{
+				"":              `cannot start "basic": workshop not launched`,
+				"transactional": `cannot start "basic": workshop not launched`,
+				"wait-on-error": `cannot start: mode "wait-on-error" is not valid with the "start" command`,
+				"continue":      `cannot start: mode "continue" is not valid with the "start" command`,
+				"abort":         `cannot start: mode "abort" is not valid with the "start" command`,
+				"invalid-mode":  `cannot start: "invalid-mode" is not a valid mode`,
+			},
+		}, {
+			cmd: "stop",
+			result: map[string]string{
+				"":              `cannot stop "basic": workshop not launched`,
+				"transactional": `cannot stop "basic": workshop not launched`,
+				"wait-on-error": `cannot stop: mode "wait-on-error" is not valid with the "stop" command`,
+				"continue":      `cannot stop: mode "continue" is not valid with the "stop" command`,
+				"abort":         `cannot stop: mode "abort" is not valid with the "stop" command`,
+				"invalid-mode":  `cannot stop: "invalid-mode" is not a valid mode`,
+			},
+		}, {
+			cmd: "remove",
+			result: map[string]string{
+				"":              `cannot remove "basic": workshop not launched`,
+				"transactional": `cannot remove "basic": workshop not launched`,
+				"wait-on-error": `cannot remove: mode "wait-on-error" is not valid with the "remove" command`,
+				"continue":      `cannot remove: mode "continue" is not valid with the "remove" command`,
+				"abort":         `cannot remove: mode "abort" is not valid with the "remove" command`,
+				"invalid-mode":  `cannot remove: "invalid-mode" is not a valid mode`,
+			},
 		},
 	}
 
-	s.runActionTest(c, requests, expected)
+	for _, cmd := range cmds {
+		for mode, error := range cmd.result {
+			// Construct request
+			req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s", "options": {"mode":"%s"}}`, cmd.cmd, mode)))
+			c.Assert(err, check.IsNil)
+
+			// Construct response
+			exp := expectedResp{
+				Type:    ResponseTypeError,
+				Status:  http.StatusBadRequest,
+				Message: error,
+			}
+
+			// Execute
+			rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+
+			// Validate
+			c.Check(rsp.Type, check.Equals, exp.Type)
+			c.Check(rsp.Status, check.Equals, exp.Status)
+			c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
+		}
+	}
+}
+
+func (s *apiSuite) TestValidatev1PostProjectWorkshopActionInputs(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	type table struct {
+		cmd    string
+		result string
+	}
+
+	cmds := []table{
+		{
+			cmd:    "invalid-cmd",
+			result: "unknown action \"invalid-cmd\"",
+		},
+		{
+			cmd:    "",
+			result: "unknown action \"\"",
+		},
+	}
+
+	for _, cmd := range cmds {
+		// Construct request
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s"}`, cmd.cmd)))
+		c.Assert(err, check.IsNil)
+
+		// Construct response
+		exp := expectedResp{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: cmd.result,
+		}
+
+		// Execute
+		rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+
+		// Validate
+		c.Check(rsp.Type, check.Equals, exp.Type)
+		c.Check(rsp.Status, check.Equals, exp.Status)
+		c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
+	}
 }
 
 func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
@@ -1319,9 +1401,9 @@ func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
 	// Setup
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		// start - continue (success) - continue (fail, already finished)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"continue"}}`),
+		// start - continue (success)
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1363,8 +1445,8 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"continue"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1377,19 +1459,19 @@ func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no refresh in progress",
+			Message: "cannot continue: no wait in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no refresh in progress",
+			Message: "cannot abort: no wait in progress",
 		},
 	}
 
 	s.runActionTest(c, requests, expected)
 }
 
-func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
+func (s *apiSuite) TestRefreshWorkshopChangeAbort(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1397,17 +1479,19 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 	s.createWFile(c, "basic", basic)
 
 	var errOnce sync.Once
+	removeProfile := false
 	s.secBackend.RemoveCallback = func(sdkName string) error {
 		var err error
-		errOnce.Do(func() { err = errors.New("cannot remove profile") })
+		errOnce.Do(func() { err = fmt.Errorf("cannot remove profiles") })
+		removeProfile = true
 		return err
 	}
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
 		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"refresh-mode":"abort"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
 	}
 
 	expected := []*expectedResp{
@@ -1424,11 +1508,181 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 			Summary: `Refresh "basic" workshop`,
 		},
 		{
-			Type:      ResponseTypeAsync,
-			Status:    http.StatusAccepted,
-			Kind:      "refresh",
-			Summary:   `Refresh "basic" workshop`,
-			ChangeErr: `(?s).*cannot remove profile.*`,
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	c.Assert(removeProfile, check.Equals, true)
+	st := s.d.state
+	st.Lock()
+	defer st.Unlock()
+	// no refresh in progress after continue was successful
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", "")
+	c.Assert(err, check.IsNil)
+}
+
+func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+
+	var errOnce sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("setup failed") })
+		return err
+	}
+
+	// Setup
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"continue"}}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue: refresh requested but launch is in progress",
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	st := s.d.state
+	st.Lock()
+	defer st.Unlock()
+	// no wait in progress after continue was successful
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
+	c.Assert(err, check.ErrorMatches, `*. has "launch" change in progress`)
+}
+
+func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+
+	var errOnce sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("setup failed") })
+		return err
+	}
+
+	// Setup
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"continue"}}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	st := s.d.state
+	st.Lock()
+	defer st.Unlock()
+	// no wait in progress after continue was successful
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
+	c.Assert(err, check.IsNil)
+}
+
+func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "basic", basic)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch","options": {"mode":"abort"}}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue: no wait in progress",
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot abort: no wait in progress",
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+}
+
+func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+
+	var errOnce sync.Once
+	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("setup failed") })
+		return err
+	}
+
+	requests := []*bytes.Buffer{
+		// start - abort (both success)
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options": {"mode":"abort"}}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
 		},
 	}
 
@@ -1438,7 +1692,7 @@ func (s *apiSuite) TestRefreshWorkshopRefreshAbort(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no refresh in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", "")
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
 	c.Assert(err, check.IsNil)
 }
 
@@ -1471,8 +1725,8 @@ plugs:
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1516,7 +1770,6 @@ plugs:
 	repo := s.d.overlord.InterfaceManager().Repository()
 	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "sketch", "sketch-plug"), check.NotNil)
 }
-
 func (s *apiSuite) TestRefreshWorkshopPartialConflictChange(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -1542,8 +1795,8 @@ base: ubuntu@22.04
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"refresh-mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"refresh-mode":"transactional"}}`),
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -1555,7 +1808,7 @@ base: ubuntu@22.04
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "manysdks": refresh waiting on error`,
+			Message: `cannot refresh "manysdks": waiting on error`,
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}

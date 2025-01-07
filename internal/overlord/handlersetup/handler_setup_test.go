@@ -42,7 +42,7 @@ func (s *CommonStateFuncs) SetUpTest(c *check.C) {
 	s.project = workshop.Project{Path: c.MkDir(), ProjectId: "42ws42ws"}
 }
 
-func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {
+func (s *CommonStateFuncs) TestChangeWaitOnError(c *check.C) {
 	handler := handlersetup.OnDo(func(task *state.Task, tomb *tomb.Tomb) error {
 		return errors.New("task failed")
 	})
@@ -50,7 +50,7 @@ func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {
 	task := s.setupTask()
 	s.state.Lock()
 	chg := task.Change()
-	chg.Set("refresh-setup", conflict.RefreshSetup{Mode: conflict.RefreshWaitOnError.String()})
+	chg.Set("wait-setup", conflict.ChangeSetup{Mode: conflict.ChangeWaitOnError.String()})
 	chg.Set("project-id", s.project.ProjectId)
 	s.state.Unlock()
 
@@ -59,7 +59,7 @@ func (s *CommonStateFuncs) TestRefreshWaitOnError(c *check.C) {
 	c.Assert(err, check.ErrorMatches, expected.Error())
 	s.state.Lock()
 	c.Assert(task.Log(), check.HasLen, 2)
-	c.Assert(task.Log()[0], check.Matches, ".*Setting the task to wait until the refresh is either aborted or continued...")
+	c.Assert(task.Log()[0], check.Matches, ".*Setting the task to wait until the operation is either aborted or continued...")
 	c.Assert(task.Log()[1], check.Matches, ".*task failed")
 	s.state.Unlock()
 
