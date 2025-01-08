@@ -42,8 +42,10 @@ type HealthCheckInfo struct {
 
 type SdkInfo struct {
 	Name        string           `json:"name"`
+	Version     string           `json:"version,omitempty"`
 	Channel     string           `json:"channel"`
 	Revision    string           `json:"revision"`
+	BuildTime   *time.Time       `json:"build-time,omitempty"`
 	InstallTime *time.Time       `json:"install-time,omitempty"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
@@ -91,15 +93,20 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
+func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
 
-	for _, sdk := range w.Content {
+	for _, sk := range w.Content {
+		sdkInfo := content[sk.Name]
+		if sdkInfo == nil {
+			sdkInfo = &sdk.Info{}
+		}
+
 		var healthInfo *HealthCheckInfo
-		if sdkHealth, ok := health.SdkHealth[sdk.Name]; ok {
+		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
 			healthInfo = &HealthCheckInfo{
 				Timestamp: sdkHealth.Timestamp,
 				Message:   sdkHealth.Message,
@@ -107,14 +114,16 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 			}
 		}
 
-		sdkMounts := mounts[sdk.Name]
+		sdkMounts := mounts[sk.Name]
 		slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 
 		info.Content = append(info.Content, &SdkInfo{
-			Name:        sdk.Name,
-			Channel:     sdk.Channel,
-			Revision:    sdk.Revision.String(),
-			InstallTime: sdk.InstallTime,
+			Name:        sk.Name,
+			Version:     sdkInfo.Version,
+			Channel:     sk.Channel,
+			Revision:    sk.Revision.String(),
+			BuildTime:   sdkInfo.BuildTime,
+			InstallTime: sk.InstallTime,
 			Health:      healthInfo,
 			Mounts:      sdkMounts,
 		})
@@ -129,13 +138,8 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState, mounts
 	return &info
 }
 
-func mounts(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error) {
+func mounts(w *workshop.Workshop, content map[string]*sdk.Info) (map[string][]*Mount, error) {
 	var mnts = map[string][]*Mount{}
-
-	content, err := w.ContentInfo(ctx)
-	if err != nil {
-		return mnts, err
-	}
 
 	masters := map[interfaces.PlugRef][]interfaces.PlugRef{}
 	for _, sk := range content {
@@ -237,7 +241,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
 		if ignoreStatus || health.Status == status {
-			wi := workshopToInfo(w, health, nil)
+			wi := workshopToInfo(w, nil, health, nil)
 			info.Workshops = append(info.Workshops, wi)
 		}
 	}
@@ -433,7 +437,12 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	health := wrkmgr.WorkshopHealth(w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	ms, err := mounts(ctx, w)
+	content, err := w.ContentInfo(ctx)
+	if err != nil {
+		return statusBadRequest(err.Error())
+	}
+
+	ms, err := mounts(w, content)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
@@ -444,7 +453,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	rsp := Workshop{
-		WorkshopInfo: *workshopToInfo(w, health, ms),
+		WorkshopInfo: *workshopToInfo(w, content, health, ms),
 		Path:         files[w.Name],
 	}
 

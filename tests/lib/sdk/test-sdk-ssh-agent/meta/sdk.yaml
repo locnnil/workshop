@@ -5,6 +5,8 @@ base: ubuntu@20.04
 summary: test-sdk-ssh-agent SDK
 description: |
   test-sdk-ssh-agent SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
 plugs:
   ssh-agent:
     interface: ssh-agent

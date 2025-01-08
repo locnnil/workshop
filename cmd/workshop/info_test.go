@@ -24,7 +24,7 @@ func (m *workshopInfo) SetUpTest(c *check.C) {
 
 var mockSingleWorkshop = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -62,14 +62,16 @@ status:   error
 notes:    missing-project
 content:
   go:
-    channel:  latest/edge  2017-03-22  \(1\)
+    tracking:   latest/edge
+    installed:  1.8.0  2017-02-19  \(1\)
   sketch:
-    channel:  ~   2017-03-22  \(x1\)
+    tracking:   ~
+    installed:  2017-03-22  \(x1\)
 `, m.prjDir))
 	c.Check(n, check.Equals, 3)
 }
 
-var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
+var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
 
 func (m *workshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -102,15 +104,16 @@ status:   pending
 notes:    workshop-note,try-later
 content:
   go:
-    channel:  latest/edge  2017-03-22  \(1\)
-    message:  Waiting for all required modules to be installed
+    tracking:   latest/edge
+    installed:  1.8.0  2017-02-19  \(1\)
+    message:    Waiting for all required modules to be installed
 `, m.prjDir))
 	c.Check(n, check.Equals, 2)
 }
 
 var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
 "content":[
-	{"name":"go","channel":"latest/edge","revision":"1","install-time":"2017-03-22T09:01:00.0Z",
+	{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z",
 	"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
 	{"host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
 }]}}`
@@ -148,7 +151,8 @@ status:   ready
 notes:    -
 content:
   go:
-    channel:  latest/edge  2017-03-22  \(1\)
+    tracking:   latest/edge
+    installed:  1.8.0  2017-02-19  \(1\)
     mounts:
       plug-default:
         host-source:      .../17942561/mount/ws_go_mod-cache.sdk

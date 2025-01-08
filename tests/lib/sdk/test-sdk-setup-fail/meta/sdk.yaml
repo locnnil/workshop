@@ -5,3 +5,5 @@ base: ubuntu@20.04
 summary: test-sdk-setup-fail SDK
 description: |
   test-sdk-setup-fail SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'

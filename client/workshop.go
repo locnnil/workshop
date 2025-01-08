@@ -27,8 +27,10 @@ type Mount struct {
 
 type Sdk struct {
 	Name        string       `json:"name"`
+	Version     string       `json:"version,omitempty"`
 	Channel     string       `json:"channel"`
 	Revision    string       `json:"revision"`
+	BuildTime   time.Time    `json:"build-time"`
 	InstallTime time.Time    `json:"install-time"`
 	Health      *HealthCheck `json:"health-check,omitempty"`
 	Mounts      []*Mount     `json:"mounts,omitempty"`

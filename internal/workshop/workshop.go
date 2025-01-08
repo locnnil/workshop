@@ -261,16 +261,16 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	return info, nil
 }
 
-// Returns a list of SDK info for installed SDKs. The info includes SDK details
+// Returns a map of SDK info for installed SDKs. The info includes SDK details
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
-func (w *Workshop) ContentInfo(ctx context.Context) ([]*sdk.Info, error) {
-	var infos = make([]*sdk.Info, 0, len(w.Content))
+func (w *Workshop) ContentInfo(ctx context.Context) (map[string]*sdk.Info, error) {
+	var infos = make(map[string]*sdk.Info, len(w.Content))
 	for _, sdk := range w.Content {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err
 		}
-		infos = append(infos, info)
+		infos[info.Name] = info
 	}
 	return infos, nil
 }

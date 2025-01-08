@@ -125,7 +125,8 @@ This means a source directory is mounted to the target:
      notes:    -
      content:
        mount-sdk:
-         channel:  latest/edge
+         tracking:   latest/edge
+         installed:  2022-03-04  (1)
          mounts:
            cache:
              host-source:      .../8584e571/mount/ws_mount-sdk_cache.sdk

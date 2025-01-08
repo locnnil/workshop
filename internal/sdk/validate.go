@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"golang.org/x/exp/slices"
 )
@@ -17,11 +18,15 @@ var (
 
 func Validate(sdk *Info) error {
 	if !sdkName.MatchString(sdk.Name) {
-		return fmt.Errorf("invalid sdk name: %q", sdk.Name)
+		return fmt.Errorf("invalid SDK name %q", sdk.Name)
 	}
 
 	if !slices.Contains(AllowedBases, sdk.Base) {
-		return fmt.Errorf("invalid sdk base: %q; supported bases: %s", sdk.Base, strings.Join(AllowedBases, ", "))
+		return fmt.Errorf("invalid SDK base %q; supported bases: %s", sdk.Base, strings.Join(AllowedBases, ", "))
+	}
+
+	if sdk.BuildTime != nil && sdk.BuildTime.Location() != time.UTC {
+		return fmt.Errorf("invalid SDK build time %q: must be UTC", sdk.BuildTime.Format(time.RFC3339))
 	}
 
 	for plugName, plug := range sdk.Plugs {

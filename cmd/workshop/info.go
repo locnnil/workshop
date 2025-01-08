@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -123,14 +124,23 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(w, "content:\n")
 		for _, sdk := range workshop.Content {
 			fmt.Fprintf(w, "  %s:\n", sdk.Name)
-			installTime := sdk.InstallTime.Format("2006-01-02")
-			if sdk.InstallTime.IsZero() {
-				installTime = ""
-			}
 			if sdk.Channel == "" {
 				sdk.Channel = "~"
 			}
-			fmt.Fprintf(w, "    channel:\t%s\t%s\t(%s)\n", sdk.Channel, installTime, sdk.Revision)
+			fmt.Fprintf(w, "    tracking:\t%s\n", sdk.Channel)
+
+			var buildTime string
+			if !sdk.BuildTime.IsZero() {
+				buildTime = "\t" + sdk.BuildTime.Format(time.DateOnly)
+			} else if !sdk.InstallTime.IsZero() {
+				// TODO: remove this fallback once most SDKs have build times
+				buildTime = "\t" + sdk.InstallTime.Format(time.DateOnly)
+			}
+			var version string
+			if sdk.Version != "" {
+				version = "\t" + sdk.Version
+			}
+			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, buildTime, sdk.Revision)
 			if sdk.Health != nil {
 				fmt.Fprintf(w, "    message:\t%s\n", sdk.Health.Message)
 			}
