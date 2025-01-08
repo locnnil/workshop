@@ -646,13 +646,14 @@ includes lines similar to the following:
 
    content:
      sketch:
-       tracking:   ~
+       tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/sketch
        installed:  2024-12-15  (x1)
 
 
 Note that the sketch SDK entry lists the time of last update
-and the revision (:samp:`x1`);
-the channel name is given as :samp:`~` because it's a local SDK.
+and the revision (:samp:`x1`).
+Instead of a channel,
+:samp:`tracking` displays the path of the SDK definition.
 If you edit the definition, the revision is incremented.
 
 The next step would be to edit a :ref:`hook <exp_hooks>` under :samp:`hooks`.

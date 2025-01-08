@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdInfo struct {
@@ -122,33 +124,35 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if len(workshop.Content) > 0 {
 		fmt.Fprintf(w, "content:\n")
-		for _, sdk := range workshop.Content {
-			fmt.Fprintf(w, "  %s:\n", sdk.Name)
-			if sdk.Channel == "" {
-				sdk.Channel = "~"
+		for _, sk := range workshop.Content {
+			fmt.Fprintf(w, "  %s:\n", sk.Name)
+			if sk.Name == sdk.Sketch {
+				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)
+			} else if sk.Channel == "" {
+				sk.Channel = "~"
 			}
-			fmt.Fprintf(w, "    tracking:\t%s\n", sdk.Channel)
+			fmt.Fprintf(w, "    tracking:\t%s\n", sk.Channel)
 
 			var buildTime string
-			if !sdk.BuildTime.IsZero() {
-				buildTime = "\t" + sdk.BuildTime.Format(time.DateOnly)
-			} else if !sdk.InstallTime.IsZero() {
+			if !sk.BuildTime.IsZero() {
+				buildTime = "\t" + sk.BuildTime.Format(time.DateOnly)
+			} else if !sk.InstallTime.IsZero() {
 				// TODO: remove this fallback once most SDKs have build times
-				buildTime = "\t" + sdk.InstallTime.Format(time.DateOnly)
+				buildTime = "\t" + sk.InstallTime.Format(time.DateOnly)
 			}
 			var version string
-			if sdk.Version != "" {
-				version = "\t" + sdk.Version
+			if sk.Version != "" {
+				version = "\t" + sk.Version
 			}
-			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, buildTime, sdk.Revision)
-			if sdk.Health != nil {
-				fmt.Fprintf(w, "    message:\t%s\n", sdk.Health.Message)
+			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, buildTime, sk.Revision)
+			if sk.Health != nil {
+				fmt.Fprintf(w, "    message:\t%s\n", sk.Health.Message)
 			}
 
-			if len(sdk.Mounts) > 0 {
+			if len(sk.Mounts) > 0 {
 				fmt.Fprintf(w, "    mounts:\n")
-				slices.SortFunc(sdk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
-				for _, mount := range sdk.Mounts {
+				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
+				for _, mount := range sk.Mounts {
 					if mount.HostSource != "" {
 						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
 						fmt.Fprintf(w, "        host-source:\t%s\n", shortenDefaulPath(mount.HostSource))
@@ -169,4 +173,14 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	w.Flush()
 
 	return nil
+}
+
+func sketchSdkChannel(projectId, workshop string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "~"
+	}
+
+	path := sdk.WorkshopSketchSdk(home, projectId, workshop)
+	return contractHomeDirectory(path)
 }

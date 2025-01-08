@@ -65,7 +65,7 @@ content:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
   sketch:
-    tracking:   ~
+    tracking:   ~/.local/share/workshop/project/42424242/sdk/sketch/ws
     installed:  2017-03-22  \(x1\)
 `, m.prjDir))
 	c.Check(n, check.Equals, 3)
