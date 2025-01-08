@@ -27,7 +27,7 @@ execute: |
   # Refresh
 
   # Change base
-  sed -i "s/22/20/g" workshop.yaml
+  sed -i "s/22/24/g" workshop.yaml
   workshop_exec refresh
 
   # Execute commands

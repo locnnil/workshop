@@ -133,7 +133,7 @@ to change the base image:
    :emphasize-lines: 2
 
    name: golang
-   base: ubuntu@20.04
+   base: ubuntu@24.04
    sdks:
      go:
        channel: latest/stable

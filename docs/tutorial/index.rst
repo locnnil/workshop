@@ -387,7 +387,7 @@ and refresh the workshop:
    :emphasize-lines: 2
 
    name: golang
-   base: ubuntu@20.04
+   base: ubuntu@24.04
    sdks:
      go:
        channel: latest/stable
@@ -564,7 +564,7 @@ to a new location on the host:
    $ workshop info
 
      name:     golang
-     base:     ubuntu@20.04
+     base:     ubuntu@24.04
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
@@ -606,7 +606,7 @@ empty :samp:`hooks` and :samp:`plugs`:
    :caption: sketch.yaml
 
    name: sketch
-   base: ubuntu@20.04
+   base: ubuntu@24.04
    # ...
 
 
@@ -628,7 +628,7 @@ First, adjust the SDK definition, adding a plug under :samp:`plugs`
    :emphasize-lines: 4-6
 
    name: sketch
-   base: ubuntu@20.04
+   base: ubuntu@24.04
 
    plugs:
      ssh-agent:
