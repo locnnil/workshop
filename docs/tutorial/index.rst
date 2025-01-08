@@ -658,7 +658,7 @@ This opens the :samp:`setup-base` hook that |ws_markup| runs
 at launch or refresh to set up the base image for the SDK.
 Add the following script that installs a debugger and an alternative compiler:
 
-.. code-block:: console
+.. code-block:: shell
    :caption: setup-base
 
    #!/usr/bin/bash
