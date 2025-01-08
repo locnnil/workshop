@@ -1,4 +1,10 @@
 summary: Run LXD integration tests for project tracking
 
 execute: |
-  go test "$SPREAD_PATH"/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsProject
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/workshop/lxd/tests/integration -timeout=30m -tags=integration -check.v -check.f wsProject -coverpkg=github.com/canonical/workshop/internal/workshop/lxd -args -test.gocoverdir="$PWD"/cover
+
+artifacts:
+  - cover

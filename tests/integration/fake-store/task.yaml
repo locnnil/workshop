@@ -8,4 +8,10 @@ restore: |
   . "$TESTSLIB"/utils.sh
   stop_sdk_store
 execute: |
-  go test "$SPREAD_PATH"/internal/fakestore/ -timeout=30m -tags=integration -check.v -check.f storeIntegration
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/fakestore/ -timeout=30m -tags=integration -check.v -check.f storeIntegration -coverpkg=github.com/canonical/workshop/internal/fakestore -args -test.gocoverdir="$PWD"/cover
+
+artifacts:
+  - cover

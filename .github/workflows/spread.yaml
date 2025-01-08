@@ -1,18 +1,5 @@
 name: Spread
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: "0 0 */2 * *"
-  workflow_dispatch:
-
-# Cancel currently-running builds when pushing new commits to a PR or branch
-# https://stackoverflow.com/a/72408109
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
+on: [workflow_dispatch, workflow_call]
 
 jobs:
   build-snap:
@@ -40,7 +27,7 @@ jobs:
       - name: Install LXD
         uses: canonical/setup-lxd@main
         with:
-            channel: 5.21/stable
+          channel: 5.21/stable
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
@@ -52,7 +39,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
           cache: false
       - uses: actions/download-artifact@master
         with:
@@ -66,5 +53,12 @@ jobs:
           go install ./...
           popd
       - name: Run spread
-        run: |  
-          spread tests/${{matrix.suite}}/
+        run: |
+          mkdir ${{ github.workspace }}.cover
+          spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}/
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-${{matrix.suite}}
+          path: ${{ github.workspace }}.cover/lxd:ubuntu-24.04:tests/
+          if-no-files-found: ignore

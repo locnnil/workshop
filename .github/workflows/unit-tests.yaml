@@ -1,22 +1,26 @@
 name: Unit Tests
-on:
-  pull_request:
-  push:
-    branches: [main]
+on: [workflow_dispatch, workflow_call]
 
 jobs:
   test:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.23'
+      - name: Setup
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v ./...
 
-    - name: Test
-      run: go test -v ./...
+      - name: Test
+        run: mkdir -p ${{ github.workspace }}.cover/unit/cover && go test -cover ./... -args -test.gocoverdir=${{ github.workspace }}.cover/unit/cover
+
+      - name: Upload Coverage
+        id: upload-coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-unit
+          path: ${{ github.workspace }}.cover/

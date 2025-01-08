@@ -1,3 +1,9 @@
+|Coverage badge|
+
+.. |Coverage badge| image:: https://github.com/canonical/workshop/wiki/coverage/coverage.svg
+   :target: https://github.com/canonical/workshop/wiki/coverage/coverage.html
+
+
 Workshop
 ========
 
