@@ -15,14 +15,10 @@
 package daemon
 
 import (
-	"context"
 	"net/http"
 	"time"
 
-	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
-	"github.com/canonical/workshop/internal/overlord/workshopstate"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 func FakeMuxVars(f func(*http.Request) map[string]string) (restore func()) {
@@ -38,22 +34,6 @@ func FakeStateEnsureBefore(f func(st *state.State, d time.Duration)) (restore fu
 	stateEnsureBefore = f
 	return func() {
 		stateEnsureBefore = old
-	}
-}
-
-func FakeWorkshopHealth(f func(mgr *workshopstate.WorkshopManager, w *workshop.Workshop) healthstate.HealthState) (restore func()) {
-	old := workshopHealth
-	workshopHealth = f
-	return func() {
-		workshopHealth = old
-	}
-}
-
-func FakeSdkMounts(f func(ctx context.Context, w *workshop.Workshop) (map[string][]*Mount, error)) (restore func()) {
-	old := workshopMounts
-	workshopMounts = f
-	return func() {
-		workshopMounts = old
 	}
 }
 

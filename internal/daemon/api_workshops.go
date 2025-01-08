@@ -82,7 +82,6 @@ type Workshop struct {
 }
 
 var ensureStateSoon = stateEnsureBefore
-var workshopMounts = mounts
 
 func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo {
 	var ws WorkshopFileInfo
@@ -410,8 +409,6 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	return AsyncResponse(nil, change.ID())
 }
 
-var workshopHealth = (*workshopstate.WorkshopManager).WorkshopHealth
-
 func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	name := muxVars(r)["name"]
@@ -433,10 +430,10 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	if err != nil {
 		return statusNotFound("%v", err)
 	}
-	health := workshopHealth(wrkmgr, w)
+	health := wrkmgr.WorkshopHealth(w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	ms, err := workshopMounts(ctx, w)
+	ms, err := mounts(ctx, w)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
