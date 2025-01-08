@@ -54,5 +54,7 @@ execute: |
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info
 
+  # TODO: sketch-sdk
+
   # Remove
   workshop_exec remove
