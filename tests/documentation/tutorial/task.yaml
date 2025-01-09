@@ -54,7 +54,26 @@ execute: |
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info
 
-  # TODO: sketch-sdk
+  # sketch SDK
+
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  $
+  a
+    ssh-agent:
+  .
+  wq
+  EOF
+
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  10
+  i
+    setup-base: |
+      apt-get update
+      apt-get install -y --no-install-recommends delve
+      apt-get install -y --no-install-recommends clang
+  .
+  wq
+  EOF
 
   # Remove
   workshop_exec remove
