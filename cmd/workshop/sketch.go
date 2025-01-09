@@ -5,7 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
 
 	"github.com/canonical/lxd/shared"
 	"github.com/spf13/cobra"
@@ -159,11 +163,7 @@ func restoreSketch(sketchdir, stashdir string) error {
 		return fmt.Errorf(`cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
 	}
 
-	if err := os.MkdirAll(sketchdir, 0755); err != nil {
-		return err
-	}
-
-	if err = osutil.Exchange(sketchdir, stashdir); err != nil {
+	if err = osutil.Rename(stashdir, sketchdir); err != nil {
 		return err
 	}
 	return nil
@@ -343,4 +343,99 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 
 	r.Success()
 	return nil
+}
+
+type CmdSketches struct {
+	root *CmdRoot
+}
+
+func (c *CmdSketches) Command() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "sketches",
+		Args:  cobra.ExactArgs(0),
+		Short: "List sketches",
+		Long: `
+This command enumerates all sketches in the project, printing a compact list:
+
+- Project:  absolute pathname of the project
+
+- Workshop: workshop name, as set in its definition
+
+- Rev:      sketch SDK revision, if present
+
+- Notes:    current, stashed, or both
+`,
+		Example: `
+List the sketches in the current project directory:
+$ workshop sketches`,
+		RunE: c.Run,
+	}
+
+	return cmd
+}
+
+func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
+	cli, err := c.root.client()
+	if err != nil {
+		return err
+	}
+
+	w := tabWriter()
+	var header sync.Once
+	printHeader := func() {
+		fmt.Fprintf(w, "Project\tWorkshop\tRev\tNotes\n")
+	}
+
+	p, err := cli.Project(c.root.project)
+	if err != nil {
+		return err
+	}
+
+	wps, _, err := cli.List(&client.ListOptions{ProjectId: p.Id})
+	if err != nil {
+		return err
+	}
+
+	user, err := osutil.UserMaybeSudoUser()
+	if err != nil {
+		return err
+	}
+
+	for _, wp := range wps {
+		entry := stashEntry(user, wp, p)
+		if entry != nil {
+			header.Do(printHeader)
+			fmt.Fprintln(w, strings.Join(entry, "\t"))
+		}
+	}
+
+	w.Flush()
+
+	return nil
+}
+
+func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) []string {
+	rev := "-"
+	notes := ""
+	exists := false
+	idx := slices.IndexFunc(w.Content, func(s *client.Sdk) bool { return s.Name == sdk.Sketch })
+	if idx != -1 {
+		info := w.Content[idx]
+		rev = info.Revision
+		notes = "current"
+		exists = true
+	}
+
+	stashdir := sdk.WorkshopSketchSdkStash(usr.HomeDir, p.Id, w.Name)
+	if osutil.IsDir(stashdir) {
+		if len(notes) > 0 {
+			notes += ","
+		}
+		notes += "stashed"
+		exists = true
+	}
+	if !exists {
+		return nil
+	}
+	return []string{contractHomeDirectory(p.Path), w.Name, rev, notes}
 }
