@@ -23,6 +23,8 @@ type workshopSketch struct {
 
 var _ = check.Suite(&workshopSketch{})
 
+var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","content":[{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"nosketch","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"},{"name":"both","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","content":[{"name":"sketch","channel":"","revision":"x3","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"none","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+
 var simpleSketchMeta = `name: sketch
 base: ubuntu@22.04
 `
@@ -43,12 +45,12 @@ func (m *workshopSketch) TearDownTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, current bool, meta []byte) (metapath string, hookspath string) {
+func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current bool, meta []byte) (metapath string, hookspath string) {
 	var rootdir string
 	if current {
-		rootdir = sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, "ws")
+		rootdir = sdk.WorkshopSketchSdkCurrent(m.user.HomeDir, m.prjId, ws)
 	} else {
-		rootdir = sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
+		rootdir = sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, ws)
 	}
 
 	err := writeSketchSdk(rootdir, meta)
@@ -88,6 +90,27 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		default:
 			c.Errorf("expected 5 calls, now on %d", n)
+		}
+	})
+}
+
+func (m *workshopSketch) mockSketchesHappyPath(c *check.C, resp string) {
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			res := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, res)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects/"+m.prjId+"/workshops")
+			w.WriteHeader(200)
+			fmt.Fprintln(w, resp)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
 		}
 	})
 }
@@ -140,7 +163,7 @@ func (m *workshopSketch) TestSketchSdkUpdateHooks(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
 
-	meta, hooks := m.mockMinimalSketchSdk(c, true, []byte(`name: sketch
+	meta, hooks := m.mockMinimalSketchSdk(c, "ws", true, []byte(`name: sketch
 base: ubuntu@22.04
 
 hooks:
@@ -207,7 +230,7 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileAbsent)
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
-	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
@@ -219,7 +242,7 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 	stash := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")
-	_, stashedhooks := m.mockMinimalSketchSdk(c, false, []byte(`name: sketch
+	_, stashedhooks := m.mockMinimalSketchSdk(c, "ws", false, []byte(`name: sketch
 base: ubuntu@18.04
 hooks:
     setup-base: |
@@ -229,7 +252,7 @@ hooks:
 `))
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
-	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
@@ -274,7 +297,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 		}
 	})
 
-	metadir, _ := m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
@@ -291,7 +314,7 @@ func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
-	m.mockMinimalSketchSdk(c, false, []byte(simpleSketchMeta))
+	m.mockMinimalSketchSdk(c, "ws", false, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
@@ -320,9 +343,9 @@ plugs:
     interface: gpu
 `
 	// current
-	m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 	// stored
-	m.mockMinimalSketchSdk(c, false, []byte(stored))
+	m.mockMinimalSketchSdk(c, "ws", false, []byte(stored))
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
@@ -383,7 +406,7 @@ func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
-	m.mockMinimalSketchSdk(c, true, []byte(simpleSketchMeta))
+	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
@@ -399,4 +422,33 @@ func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot remove: the 'sketch' SDK doesn't exist`)
+}
+
+func (m *workshopSketch) TestSketchesOK(c *check.C) {
+	cmd := &CmdSketches{root: &CmdRoot{}}
+
+	m.mockSketchesHappyPath(c, mockWorkshopsListWithSketch)
+	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
+	m.mockMinimalSketchSdk(c, "nosketch", false, []byte(simpleSketchMeta))
+	m.mockMinimalSketchSdk(c, "both", false, []byte(simpleSketchMeta))
+
+	err := cmd.Run(nil, nil)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`Project                   Workshop  Rev  Notes
+%s  ws        x1   current
+%s  nosketch  -    stashed
+%s  both      x3   current,stashed
+`, m.prjDir, m.prjDir, m.prjDir))
+}
+
+func (m *workshopSketch) TestSketchesEmpty(c *check.C) {
+	cmd := &CmdSketches{root: &CmdRoot{}}
+
+	m.mockSketchesHappyPath(c, mockWorkshopList)
+
+	err := cmd.Run(nil, nil)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(m.stdout.String(), check.Matches, "")
 }

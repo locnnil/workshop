@@ -47,6 +47,7 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 	cmd.AddCommand((&CmdWarnings{root: c}).Command())
 	cmd.AddCommand((&CmdOkay{root: c}).Command())
 	cmd.AddCommand((&CmdSketch{root: c}).Command())
+	cmd.AddCommand((&CmdSketches{root: c}).Command())
 	cmd.AddCommand((&CmdDocs{root: c}).Command())
 
 	cmd.PersistentFlags().StringVarP(&c.project, "project", "p", cwd, "Specify the project's directory path.")
