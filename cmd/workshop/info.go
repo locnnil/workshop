@@ -128,6 +128,9 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
 			if sk.Name == sdk.Sketch {
 				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)
+				if sk.BuildTime.IsZero() {
+					sk.BuildTime = sk.InstallTime
+				}
 			} else if sk.Channel == "" {
 				sk.Channel = "~"
 			}
@@ -136,9 +139,6 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			var buildTime string
 			if !sk.BuildTime.IsZero() {
 				buildTime = "\t" + sk.BuildTime.Format(time.DateOnly)
-			} else if !sk.InstallTime.IsZero() {
-				// TODO: remove this fallback once most SDKs have build times
-				buildTime = "\t" + sk.InstallTime.Format(time.DateOnly)
 			}
 			var version string
 			if sk.Version != "" {
