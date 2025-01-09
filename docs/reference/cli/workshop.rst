@@ -46,7 +46,7 @@ such as :option:`!--help` or :option:`!-h`.
 
 
 .. include:: workshop-shell.rst
-    
+
 
 .. include:: workshop-sketch-sdk.rst
 
@@ -73,13 +73,13 @@ follow the instructions offered by **workshop completion**:
 
 .. code-block:: console
 
-   workshop completion -h
+   $ workshop completion -h
 
 For example, in your :file:`~/.bashrc` file:
 
 .. code-block:: console
 
-   source <(workshop completion bash)
+   $ source <(workshop completion bash)
 
 
 See also

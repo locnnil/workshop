@@ -27,7 +27,7 @@ execute: |
   # Refresh
 
   # Change base
-  sed -i "s/22/20/g" workshop.yaml
+  sed -i "s/22/24/g" workshop.yaml
   workshop_exec refresh
 
   # Execute commands
@@ -53,6 +53,27 @@ execute: |
   workshop_exec connect nimble/test-sdk-go:mod-cache :mount
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info
+
+  # sketch SDK
+
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  $
+  a
+    ssh-agent:
+  .
+  wq
+  EOF
+
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  10
+  i
+    setup-base: |
+      apt-get update
+      apt-get install -y --no-install-recommends delve
+      apt-get install -y --no-install-recommends clang
+  .
+  wq
+  EOF
 
   # Remove
   workshop_exec remove

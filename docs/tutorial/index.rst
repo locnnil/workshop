@@ -387,7 +387,7 @@ and refresh the workshop:
    :emphasize-lines: 2
 
    name: golang
-   base: ubuntu@20.04
+   base: ubuntu@24.04
    sdks:
      go:
        channel: latest/stable
@@ -564,7 +564,7 @@ to a new location on the host:
    $ workshop info
 
      name:     golang
-     base:     ubuntu@20.04
+     base:     ubuntu@24.04
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
@@ -581,33 +581,37 @@ This makes :file:`/home/user/mod/` on the host
 act as the Go modules cache for the workshop.
 
 
-.. _tut_hack:
+.. _tut_sketch:
 
-Hack a workshop (optional)
---------------------------
+Sketch an SDK (optional)
+------------------------
 
-Another way to customise a workshop in-place is *hacking*.
+Another way to customise a workshop in-place is called *sketching*.
 This process grafts a :ref:`special SDK <exp_sketch_sdk>` onto the workshop,
 so you can run a quick local experiment
-instead of the usual SDK Store publishing workflow.
+and circumvent the usual SDK Store publishing workflow.
 
-The core form of the :command:`workshop hack` command
+The core form of the :command:`workshop sketch-sdk` command
 opens an :ref:`SDK definition <exp_sdk_definition>`:
 
 .. code-block:: console
 
-   $ workshop hack
+   $ workshop sketch-sdk golang
 
 
-Initially, the editor shows a very basic setup
-consisting of :samp:`name` and :samp:`base`:
+The editor shows a very basic setup consisting of :samp:`name`, :samp:`base`,
+empty :samp:`hooks` and :samp:`plugs`:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sketch.yaml
 
-   name: hack
-   base: ubuntu@20.04
+   name: sketch
+   base: ubuntu@24.04
+   # ...
 
+
+The comments are self-explanatory,
+but let's walk through the basic steps of sketching an SDK.
 
 Suppose you want to use the SSH interface in your workshop.
 While you can add a :ref:`corresponding plug <exp_ssh_interface>`
@@ -616,14 +620,15 @@ adding extra functionality such as testing would require hooks.
 This implies an experiment with an SDK can be the solution;
 let's see how it's done.
 
-First, adjust the hack SDK definition, adding a plug:
+First, adjust the SDK definition, adding a plug under :samp:`plugs`
+(you can simply uncomment the section):
 
 .. code-block:: yaml
-   :caption: hack.yaml
+   :caption: sketch.yaml
    :emphasize-lines: 4-6
 
-   name: hack
-   base: ubuntu@20.04
+   name: sketch
+   base: ubuntu@24.04
 
    plugs:
      ssh-agent:
@@ -632,65 +637,76 @@ First, adjust the hack SDK definition, adding a plug:
 
 After saving and exiting,
 the workshop is automatically refreshed,
-and the output from :command:`workshop info`
+and the :command:`workshop info` output
 includes lines similar to the following:
 
 .. code-block:: console
 
    content:
-     hack:
-       channel:  ~   2024-12-15  (x1)
+     sketch:
+       channel:  ~   2025-01-08  (x1)
 
 
-Note that the hack SDK lists the time of last update
-and the local revision (:samp:`x1`) instead of the channel name,
-which is given as :samp:`~` because it's a local SDK.
-If you edit the definition, the revision will be incremented.
+Note that the sketch SDK entry lists the time of last update
+and the revision (:samp:`x1`);
+the channel name is given as :samp:`~` because it's a local SDK.
+If you edit the definition, the revision is incremented.
 
-Another form of the :command:`workshop hack` command
-enables you to edit a specific :ref:`hook <exp_hooks>`:
-
-.. code-block:: console
-
-   $ workshop hack golang setup-base
-
-This opens the :samp:`setup-base` hook that |ws_markup| runs
-at launch or refresh to set up the base image for the SDK.
-Add the following script that installs a debugger and an alternative compiler:
+The next step would be to edit a :ref:`hook <exp_hooks>` under :samp:`hooks`.
+Run the command again:
 
 .. code-block:: console
-   :caption: setup-base
 
-   #!/usr/bin/bash
-   apt-get update
-   apt-get install -y delve
-   apt-get install -y clang
+   $ workshop sketch-sdk golang
+
+
+Browse to the commented :samp:`setup-base`;
+this is the hook that |ws_markup| runs at launch or refresh
+to set up the base image for the SDK.
+Add commands that install a debugger and an alternative compiler:
+
+.. code-block:: yaml
+   :caption: sketch.yaml
+
+   hooks:
+     setup-base: |
+       apt-get update
+       apt-get install -y --no-install-recommends delve
+       apt-get install -y --no-install-recommends clang
 
 
 Saving and exiting should refresh the workshop again.
+During the refresh, the hook runs in due order:
+
+.. code-block:: console
+
+   Run hook "setup-base" for "sketch" SDK
+
+
 At this point, you've built a real, albeit simple, SDK from scratch in minutes;
 in a real-life scenario, you would iterate over errors and issues that pop up
-until the hack SDK is sufficiently functional for your purposes.
+until the SDK is good enough for your purposes.
 
-When you're done experimenting, you can just drop the hack SDK:
-
-.. code-block:: console
-
-   $ workshop hack --drop
-
-
-If you drop a hack SDK by mistake, restoring it is quite simple:
+To undo or redo the changes, you can stash and restore the sketch SDK:
 
 .. code-block:: console
 
-   $ workshop hack --restore
+   $ workshop sketch-sdk golang --stash
+   $ workshop sketch-sdk golang --restore
+
+
+When you're done experimenting, you can remove the sketch SDK entirely:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk golang --remove
 
 
 While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`
 is beyond the scope of this tutorial,
 consider diving further into the basic SDK concepts
 such as :ref:`plugs, slots <exp_plugs_slots>` and :ref:`hooks <exp_hooks>`
-to successfully use them with :command:`workshop hack`.
+to successfully use them with :command:`workshop sketch-sdk`.
 
 
 .. _tut_remove:
@@ -738,4 +754,5 @@ and have had your first taste of what it can do for you.
   see other :ref:`how-to guides <how_index>`.
 
 - To know more about workshops in general,
-  proceed to :ref:`explanation <exp_index>` and :ref:`reference <ref_index>` sections.
+  proceed to :ref:`explanation <exp_index>`
+  and :ref:`reference <ref_index>` sections.

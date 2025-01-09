@@ -50,7 +50,7 @@ the definition may look like this:
 
    name: go
    title: Go SDK
-   base: ubuntu@20.04
+   base: ubuntu@24.04
    summary: The Go programming language
    description: |
      Go is an open source programming language that enables the production

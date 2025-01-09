@@ -79,6 +79,7 @@ sudo
 transactional
 ubuntu
 uid
+uncomment
 unicode
 unmounts
 url
