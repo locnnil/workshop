@@ -69,19 +69,19 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	var setup workshop.ExecArgs
 	st := task.State()
 	st.Lock()
-	err = task.Get("exec-setup", &setup)
+	argsObj := st.Cached(ExecArgsKey(task.ID()))
 	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("cannot get exec setup object for task %q: %w", task.ID(), err)
+	args, ok := argsObj.(*workshop.ExecArgs)
+	if !ok || args == nil {
+		return fmt.Errorf("cannot get exec args for task %q: task was probably interrupted", task.ID())
 	}
 
 	// Set up the object that will track the execution.
 	e := &execution{
 		workshop:         w,
-		execArgs:         &setup,
+		execArgs:         args,
 		websockets:       make(map[string]*websocket.Conn),
 		ioConnected:      make(chan struct{}),
 		controlConnected: make(chan struct{}),

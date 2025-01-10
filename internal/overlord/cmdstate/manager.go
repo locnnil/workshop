@@ -18,6 +18,8 @@ import (
 	"net/http"
 	"sync"
 
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -41,8 +43,20 @@ func New(st *state.State, runner *state.TaskRunner) *CommandManager {
 
 	runner.AddHandler("exec", manager.doExec, nil)
 	runner.AddHandler("copy-script", manager.doCopyScript, nil)
+
+	// Delete the in-memory ExecArgs object when the exec is done.
+	runner.AddCleanup("exec", func(task *state.Task, tomb *tomb.Tomb) error {
+		st = task.State()
+		st.Lock()
+		defer st.Unlock()
+		st.Cache(ExecArgsKey(task.ID()), nil)
+		return nil
+	})
+
 	return manager
 }
+
+type ExecArgsKey string
 
 // Ensure is part of the overlord.StateManager interface.
 func (m *CommandManager) Ensure() error {

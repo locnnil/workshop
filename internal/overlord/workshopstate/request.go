@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -711,7 +712,9 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		}
 	} else {
 		exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
-		exec.Set("exec-setup", args)
+
+		w.state.Cache(cmdstate.ExecArgsKey(exec.ID()), args)
+
 		execSet = state.NewTaskSet(exec)
 	}
 
@@ -736,13 +739,14 @@ func (w *WorkshopManager) run(file *workshop.File, args *workshop.ExecArgs) (*st
 	path := filepath.Join(dirs.WorkshopScriptsDir, name)
 	command := []string{"bash", "-ue", "-o", "pipefail", path}
 	command = append(command, args.Command[1:]...)
-	setup := *args
-	setup.Command = command
+	execArgs := *args
+	execArgs.Command = command
 
 	exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
-	exec.Set("exec-setup", &setup)
-	exec.WaitFor(cp)
 
+	w.state.Cache(cmdstate.ExecArgsKey(exec.ID()), &execArgs)
+
+	exec.WaitFor(cp)
 	return state.NewTaskSet(cp, exec), nil
 }
 
