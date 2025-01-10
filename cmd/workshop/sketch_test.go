@@ -435,7 +435,7 @@ func (m *workshopSketch) TestSketchesOK(c *check.C) {
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`Project                   Workshop  Rev  Notes
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`Project +Workshop  Rev  Notes
 %s  ws        x1   current
 %s  nosketch  -    stashed
 %s  both      x3   current,stashed

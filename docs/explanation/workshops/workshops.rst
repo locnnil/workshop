@@ -171,13 +171,15 @@ because they reference the same entity:
      ...
      sdks:
        pytorch:
-         channel: latest/stable
+         tracking:   latest/stable
+         installed:  2.5.1  2024-11-02  (42)
          mounts:
            datasets:
              host-source:      /new-mount
              workshop-target:  /home/workshop/.cache/torchvision/datasets
        tensorflow:
-         channel: latest/stable
+         tracking:   latest/stable
+         installed:  2.18.0  2024-10-27  (37)
          mounts:
            data:
              host-source:      /new-mount

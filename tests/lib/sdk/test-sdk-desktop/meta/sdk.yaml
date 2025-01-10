@@ -5,6 +5,8 @@ base: ubuntu@22.04
 summary: test-sdk-desktop SDK
 description: |
   test-sdk-desktop SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
 plugs:
   desktop:
     interface: desktop

@@ -5,3 +5,5 @@ base: ubuntu@22.04
 summary: test-sdk-health-waiting SDK
 description: |
   test-sdk-health-waiting SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'

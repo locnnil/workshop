@@ -3,14 +3,17 @@ package main
 import (
 	"cmp"
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdInfo struct {
@@ -121,24 +124,35 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if len(workshop.Content) > 0 {
 		fmt.Fprintf(w, "content:\n")
-		for _, sdk := range workshop.Content {
-			fmt.Fprintf(w, "  %s:\n", sdk.Name)
-			installTime := sdk.InstallTime.Format("2006-01-02")
-			if sdk.InstallTime.IsZero() {
-				installTime = ""
+		for _, sk := range workshop.Content {
+			fmt.Fprintf(w, "  %s:\n", sk.Name)
+			if sk.Name == sdk.Sketch {
+				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)
+				if sk.BuildTime.IsZero() {
+					sk.BuildTime = sk.InstallTime
+				}
+			} else if sk.Channel == "" {
+				sk.Channel = "~"
 			}
-			if sdk.Channel == "" {
-				sdk.Channel = "~"
+			fmt.Fprintf(w, "    tracking:\t%s\n", sk.Channel)
+
+			var buildTime string
+			if !sk.BuildTime.IsZero() {
+				buildTime = "\t" + sk.BuildTime.Format(time.DateOnly)
 			}
-			fmt.Fprintf(w, "    channel:\t%s\t%s\t(%s)\n", sdk.Channel, installTime, sdk.Revision)
-			if sdk.Health != nil {
-				fmt.Fprintf(w, "    message:\t%s\n", sdk.Health.Message)
+			var version string
+			if sk.Version != "" {
+				version = "\t" + sk.Version
+			}
+			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, buildTime, sk.Revision)
+			if sk.Health != nil {
+				fmt.Fprintf(w, "    message:\t%s\n", sk.Health.Message)
 			}
 
-			if len(sdk.Mounts) > 0 {
+			if len(sk.Mounts) > 0 {
 				fmt.Fprintf(w, "    mounts:\n")
-				slices.SortFunc(sdk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
-				for _, mount := range sdk.Mounts {
+				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
+				for _, mount := range sk.Mounts {
 					if mount.HostSource != "" {
 						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
 						fmt.Fprintf(w, "        host-source:\t%s\n", shortenDefaulPath(mount.HostSource))
@@ -159,4 +173,14 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	w.Flush()
 
 	return nil
+}
+
+func sketchSdkChannel(projectId, workshop string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "~"
+	}
+
+	path := sdk.WorkshopSketchSdk(home, projectId, workshop)
+	return contractHomeDirectory(path)
 }

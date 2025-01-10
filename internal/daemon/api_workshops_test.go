@@ -217,10 +217,12 @@ connections:
 
 	testsdk = `
 name: test-sdk
-base: ubuntu@20.04
 title: title
+base: ubuntu@20.04
+version: '0.1.2'
 summary: summary
 description: SDK
+sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
 plugs:
   data:
     interface: mount
@@ -231,10 +233,12 @@ plugs:
 
 	testsdk2 = `
 name: test-sdk-2
-base: ubuntu@20.04
 title: title
+base: ubuntu@20.04
+version: '20200401.3f3a63f'
 summary: summary
 description: SDK
+sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
 plugs:
   photos:
     interface: mount
@@ -297,7 +301,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
-	t1, t2 := s.installTime, s.installTime
+	install1, install2 := s.installTime, s.installTime
 	info := rsp.Result.(Workshops)
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
 		Name:      "manysdks",
@@ -309,13 +313,13 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
 				Revision:    "1",
-				InstallTime: &t1,
+				InstallTime: &install1,
 			},
 			{
 				Name:        "test-sdk-2",
 				Channel:     "latest/stable",
 				Revision:    "1",
-				InstallTime: &t2,
+				InstallTime: &install2,
 			},
 		},
 		Notes: nil,
@@ -383,8 +387,10 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
+	build1 := time.Date(2020, 4, 22, 19, 12, 7, 903032000, time.UTC)
+	build2 := time.Date(2020, 5, 3, 22, 5, 35, 811829000, time.UTC)
 	// for DeepEqual to work correctly
-	t1, t2 := s.installTime, s.installTime
+	install1, install2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
 			Name:      "manysdks",
@@ -395,9 +401,11 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			Content: []*SdkInfo{
 				{
 					Name:        "test-sdk",
+					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					InstallTime: &t1,
+					BuildTime:   &build1,
+					InstallTime: &install1,
 					Mounts: []*Mount{
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
@@ -413,9 +421,11 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				},
 				{
 					Name:        "test-sdk-2",
+					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					InstallTime: &t2,
+					BuildTime:   &build2,
+					InstallTime: &install2,
 					Mounts: []*Mount{
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
@@ -477,8 +487,10 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
+	build1 := time.Date(2020, 4, 22, 19, 12, 7, 903032000, time.UTC)
+	build2 := time.Date(2020, 5, 3, 22, 5, 35, 811829000, time.UTC)
 	// for DeepEqual to work correctly
-	t1, t2 := s.installTime, s.installTime
+	install1, install2 := s.installTime, s.installTime
 	c.Check(rsp.Result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
 			Name:      "somebound",
@@ -489,9 +501,11 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			Content: []*SdkInfo{
 				{
 					Name:        "test-sdk",
+					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					InstallTime: &t1,
+					BuildTime:   &build1,
+					InstallTime: &install1,
 					Mounts: []*Mount{
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
@@ -507,9 +521,11 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				},
 				{
 					Name:        "test-sdk-2",
+					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					InstallTime: &t2,
+					BuildTime:   &build2,
+					InstallTime: &install2,
 					Mounts: []*Mount{
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
@@ -744,7 +760,9 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(err, check.IsNil)
 	c.Assert(sdkInfo.Workshop, check.Equals, "basic")
 	c.Assert(sdkInfo.Name, check.Equals, sdk.System.String())
+	c.Assert(sdkInfo.Version, check.Equals, "")
 	c.Assert(sdkInfo.Type, check.Equals, sdk.System)
+	c.Assert(sdkInfo.BuildTime, check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {

@@ -28,11 +28,13 @@ func (s *Setup) Filename() string {
 }
 
 type sdkYaml struct {
-	Name  string                 `json:"name"`
-	Base  string                 `json:"base"`
-	Type  string                 `json:"type"`
-	Plugs map[string]interface{} `yaml:"plugs,omitempty"`
-	Slots map[string]interface{} `yaml:"slots,omitempty"`
+	Name      string                 `yaml:"name"`
+	Base      string                 `yaml:"base"`
+	Version   string                 `yaml:"version,omitempty"`
+	Type      string                 `yaml:"type"`
+	BuildTime *time.Time             `yaml:"sdkcraft-started-at,omitempty"`
+	Plugs     map[string]interface{} `yaml:"plugs,omitempty"`
+	Slots     map[string]interface{} `yaml:"slots,omitempty"`
 }
 
 type Type string
@@ -53,9 +55,11 @@ type Info struct {
 	Workshop  string
 	Name      string
 	Base      string
+	Version   string
 	Type      Type
 	Revision  Revision
 	Channel   string
+	BuildTime *time.Time
 
 	Plugs     map[string]*PlugInfo
 	PlugBinds map[string]*PlugBind
@@ -170,7 +174,9 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Workshop:      workshop,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
+		Version:       sdkYaml.Version,
 		Type:          Type(sdkYaml.Type),
+		BuildTime:     sdkYaml.BuildTime,
 		Plugs:         make(map[string]*PlugInfo),
 		PlugBinds:     make(map[string]*PlugBind),
 		Slots:         make(map[string]*SlotInfo),

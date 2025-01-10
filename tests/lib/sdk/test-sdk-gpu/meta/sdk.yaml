@@ -5,6 +5,8 @@ base: ubuntu@20.04
 summary: test-sdk-gpu SDK
 description: |
   test-sdk-gpu SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
 plugs:
   gpu:
     interface: gpu

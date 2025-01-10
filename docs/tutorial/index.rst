@@ -260,7 +260,8 @@ to see what went into your workshop:
      notes:    -
      content:
        go:
-         channel:  latest/stable
+         tracking:   latest/stable
+         installed:  1.23.0  2024-08-15  (51)
          mounts:
            mod-cache:
              host-source:      .../6b79e889/mount/golang_go_mod-cache.sdk
@@ -570,7 +571,8 @@ to a new location on the host:
      notes:    -
      content:
        go:
-         channel:  latest/stable
+         tracking:   latest/stable
+         installed:  1.23.3  2024-11-09  (54)
          mounts:
            mod-cache:
              host-source:      /home/user/mod
@@ -644,12 +646,14 @@ includes lines similar to the following:
 
    content:
      sketch:
-       channel:  ~   2025-01-08  (x1)
+       tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/sketch
+       installed:  2024-12-15  (x1)
 
 
 Note that the sketch SDK entry lists the time of last update
-and the revision (:samp:`x1`);
-the channel name is given as :samp:`~` because it's a local SDK.
+and the revision (:samp:`x1`).
+Instead of a channel,
+:samp:`tracking` displays the path of the SDK definition.
 If you edit the definition, the revision is incremented.
 
 The next step would be to edit a :ref:`hook <exp_hooks>` under :samp:`hooks`.
