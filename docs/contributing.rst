@@ -102,10 +102,13 @@ PR descriptions should follow the PR template checklist,
 which largely reiterates this section.
 
 
-After receiving review comments, ensure the original commit history is preserved.
-Avoid using rebase or force push, as these can overwrite existing commits
-and thus make the discussion harder to follow.
-Instead, address review comments by creating additional commits.
+After receiving review comments,
+optimise for commit history clarity.
+Address review comments with 
+`fixup commits <https://git-scm.com/docs/git-commit/2.32.0#Documentation/git-commit.txt---fixupamendrewordltcommitgt>`_ 
+and rebase using 
+`autosquash <https://git-scm.com/docs/git-rebase#Documentation/git-rebase.txt---autosquash>`_ 
+when reasonable.
 
 
 Reversibility
