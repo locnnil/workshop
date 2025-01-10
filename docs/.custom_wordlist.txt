@@ -1,4 +1,5 @@
 artifacts
+autosquash
 AUTH
 backend
 basename
@@ -19,6 +20,7 @@ Dockerfiles
 EdTech
 env
 envvar
+fixup
 GCP
 gcs
 gid
