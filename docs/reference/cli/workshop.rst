@@ -51,6 +51,9 @@ such as :option:`!--help` or :option:`!-h`.
 .. include:: workshop-sketch-sdk.rst
 
 
+.. include:: workshop-sketches.rst
+
+
 .. include:: workshop-start.rst
 
 
