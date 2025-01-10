@@ -3,7 +3,6 @@ package daemon
 import (
 	"bytes"
 	"net/http"
-	"os"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -168,47 +167,6 @@ func (s *apiSuite) TestExecScriptSuccess(c *check.C) {
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
-}
-
-func (s *apiSuite) TestExecBrokenFile(c *check.C) {
-	// Setup
-	projectsCmd := s.setupExec(c)
-
-	path := workshop.Filepath(s.project.Path, "ws")
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	c.Assert(err, check.IsNil)
-	_, err = file.Write([]byte("{\n"))
-	c.Assert(err, check.IsNil)
-	c.Assert(file.Close(), check.IsNil)
-
-	body := bytes.NewBufferString(`{"command":["lint"],"script":true,"working-dir":"/"}`)
-
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
-
-	// Verify
-	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
-	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": script "lint": yaml: .*`)
-}
-
-func (s *apiSuite) TestExecMissingScript(c *check.C) {
-	// Setup
-	projectsCmd := s.setupExec(c)
-
-	body := bytes.NewBufferString(`{"command":["missing"],"script":true,"working-dir":"/"}`)
-
-	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
-
-	// Verify
-	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
-	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": script "missing" not found`)
 }
 
 func (s *apiSuite) TestExecUserOrGroupNotProvided(c *check.C) {

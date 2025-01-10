@@ -359,21 +359,38 @@ func (m *CommandManager) doCopyScript(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	var name string
-	var script string
+	var execTask string
 	st := task.State()
 	st.Lock()
-	err = task.Get("name", &name)
+	err = task.Get("exec-task", &execTask)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("cannot get script name for task %q: %w", task.ID(), err)
+		return fmt.Errorf("cannot get exec task for task %q: %w", task.ID(), err)
 	}
 	st.Lock()
-	err = task.Get("script", &script)
+	argsObj := st.Cached(ExecArgsKey(task.ID()))
 	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("cannot get script for task %q: %w", task.ID(), err)
+	argsOld, ok := argsObj.(*workshop.ExecArgs)
+	if !ok || argsOld == nil {
+		return fmt.Errorf("cannot get exec args for task %q: task was probably interrupted", task.ID())
 	}
+	// Shallow copy to avoid modifying original object.
+	args := *argsOld
+
+	name := args.Command[0]
+	file, err := prj.Workshop(w)
+	if err != nil {
+		return err
+	}
+
+	script, ok := file.Scripts[name]
+	if !ok {
+		return errors.New("script not found")
+	}
+
+	path := filepath.Join(dirs.WorkshopScriptsDir, name)
+	command := []string{"bash", "-ue", "-o", "pipefail", path}
+	args.Command = append(command, args.Command[1:]...)
 
 	wfs, err := m.backend.WorkshopFs(ctx, w)
 	if err != nil {
@@ -385,6 +402,14 @@ func (m *CommandManager) doCopyScript(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	path := filepath.Join(dirs.WorkshopScriptsDir, name)
-	return workshop.AtomicWrite(wfs, path, strings.NewReader(script), 0644)
+	err = workshop.AtomicWrite(wfs, path, strings.NewReader(string(script)), 0644)
+	if err != nil {
+		return err
+	}
+
+	st.Lock()
+	st.Cache(ExecArgsKey(execTask), &args)
+	st.Unlock()
+
+	return nil
 }

@@ -701,15 +701,16 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 
 	var execSet *state.TaskSet
 	if script {
-		file, err := project.Workshop(name)
-		if err != nil {
-			return nil, fmt.Errorf("script %q: %w", args.Command[0], err)
-		}
+		name := args.Command[0]
+		cp := w.state.NewTask("copy-script", fmt.Sprintf("Copy script %q", name))
+		exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
 
-		execSet, err = w.run(file, args)
-		if err != nil {
-			return nil, err
-		}
+		// copy-script will modify args and pass it to exec.
+		w.state.Cache(cmdstate.ExecArgsKey(cp.ID()), args)
+		cp.Set("exec-task", exec.ID())
+
+		exec.WaitFor(cp)
+		execSet = state.NewTaskSet(cp, exec)
 	} else {
 		exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
 
@@ -723,31 +724,6 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		task.Set("project", project)
 	}
 	return execSet, nil
-}
-
-func (w *WorkshopManager) run(file *workshop.File, args *workshop.ExecArgs) (*state.TaskSet, error) {
-	name := args.Command[0]
-	script, ok := file.Scripts[name]
-	if !ok {
-		return nil, fmt.Errorf("script %q not found", name)
-	}
-
-	cp := w.state.NewTask("copy-script", fmt.Sprintf("Copy script %q", name))
-	cp.Set("name", name)
-	cp.Set("script", script)
-
-	path := filepath.Join(dirs.WorkshopScriptsDir, name)
-	command := []string{"bash", "-ue", "-o", "pipefail", path}
-	command = append(command, args.Command[1:]...)
-	execArgs := *args
-	execArgs.Command = command
-
-	exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
-
-	w.state.Cache(cmdstate.ExecArgsKey(exec.ID()), &execArgs)
-
-	exec.WaitFor(cp)
-	return state.NewTaskSet(cp, exec), nil
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
