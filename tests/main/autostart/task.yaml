@@ -1,0 +1,24 @@
+summary: Ensure that workshop autostart behavior performs correctly
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-autostart
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove ws-autostart
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Make sure a running workshop automatically starts after reboot"
+  if [ $SPREAD_REBOOT = 0 ]; then
+    REBOOT
+  fi
+  if [ $SPREAD_REBOOT = 1 ]; then
+    workshop_exec list | MATCH 'Ready'
+  fi
+
+  echo "Make sure a stopped workshop remains stopped after reboot"
+  workshop_exec stop ws-autostart
+  if [ $SPREAD_REBOOT = 1 ]; then
+    REBOOT
+  fi
+  workshop_exec list | MATCH 'Stopped'
