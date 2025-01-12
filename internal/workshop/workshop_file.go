@@ -131,16 +131,16 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 		var name string
 		if err := value.Content[i].Decode(&name); err != nil {
 			return err
-		} else {
-			if _, ok := seen[name]; ok {
-				return fmt.Errorf("%q SDK must only be included once", name)
-			}
-			seen[name] = true
-			res.Name = name
 		}
+		if _, ok := seen[name]; ok {
+			return fmt.Errorf("%q SDK must only be included once", name)
+		}
+		seen[name] = true
+
 		if err := value.Content[i+1].Decode(&res); err != nil {
 			return err
 		}
+		res.Name = name
 	}
 	return nil
 }
