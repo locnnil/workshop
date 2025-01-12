@@ -1,10 +1,12 @@
 summary: Ensure that workshop autostart behavior performs correctly
 prepare: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec launch ws-autostart
+  workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove ws-autostart
+  workshop_exec remove
+  # We need to restart the store after a spread REBOOT for the next task
+  start_sdk_store
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -16,9 +18,19 @@ execute: |
     workshop_exec list | MATCH 'Ready'
   fi
 
+  echo "Make sure a workshop can start independently of the workshop daemon"
+  if [ $SPREAD_REBOOT = 1 ]; then
+    snap stop --disable workshop
+    REBOOT
+  fi
+  if [ $SPREAD_REBOOT = 2 ]; then
+    snap start --enable workshop
+    workshop_exec list | MATCH 'Ready'
+  fi
+
   echo "Make sure a stopped workshop remains stopped after reboot"
   workshop_exec stop ws-autostart
-  if [ $SPREAD_REBOOT = 1 ]; then
+  if [ $SPREAD_REBOOT = 2 ]; then
     REBOOT
   fi
   workshop_exec list | MATCH 'Stopped'

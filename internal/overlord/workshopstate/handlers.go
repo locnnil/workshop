@@ -90,7 +90,15 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
 		return err
 	}
-	return nil
+
+	// Create workshop base and run directories
+	fs, err := m.backend.WorkshopFs(ctx, wf.Name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	return fs.MkdirAll(dirs.WorkshopRunDir, 0755)
 }
 
 func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) error {

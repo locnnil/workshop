@@ -666,7 +666,7 @@ func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
 		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-		"workshop.socket":      {"type": "disk", "source": shostpath, "path": swspath},
+		"workshop.socket":      {"type": "proxy", "connect": "unix:" + shostpath, "listen": "unix:" + swspath, "bind": "instance", "mode": "0666"},
 		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
 	}
 }
