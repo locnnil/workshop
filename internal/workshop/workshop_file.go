@@ -90,44 +90,14 @@ type Connection struct {
 	SlotRef SlotRef `yaml:"slot"`
 }
 
-type SdkList []SdkRecord
-
 type Script string
 
 type File struct {
 	Name        string            `yaml:"name"`
 	Base        string            `yaml:"base"`
-	Sdks        SdkList           `yaml:"sdks,omitempty"`
+	Sdks        []SdkRecord       `yaml:"sdks,omitempty"`
 	Connections []Connection      `yaml:"connections,omitempty"`
 	Scripts     map[string]Script `yaml:"scripts,omitempty"`
-}
-
-func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
-	if value.Kind == yaml.SequenceNode {
-		var sdks []SdkRecord
-		if err := value.Decode(&sdks); err != nil {
-			return err
-		}
-		*p = sdks
-		return nil
-	}
-	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("`sdks` must contain YAML sequence or mapping, has %s", value.ShortTag())
-	}
-	*p = make([]SdkRecord, len(value.Content)/2)
-	for i := 0; i < len(value.Content); i += 2 {
-		var res = &(*p)[i/2]
-		var name string
-		if err := value.Content[i].Decode(&name); err != nil {
-			return err
-		}
-
-		if err := value.Content[i+1].Decode(&res); err != nil {
-			return err
-		}
-		res.Name = name
-	}
-	return nil
 }
 
 func (p Script) MarshalYAML() (interface{}, error) {
@@ -217,7 +187,7 @@ func readWorkshop(path string) (*File, error) {
 	return &file, nil
 }
 
-func validateSdks(sdks SdkList) error {
+func validateSdks(sdks []SdkRecord) error {
 	seen := map[string]bool{}
 	for _, s := range sdks {
 		if slices.Contains(sdkBlocklist, s.Name) {
@@ -248,7 +218,7 @@ func validateSdks(sdks SdkList) error {
 	return nil
 }
 
-func validateBinding(sdks SdkList) error {
+func validateBinding(sdks []SdkRecord) error {
 	// All bindings must refer to the existing SDKs and meet the name validity
 	// checks (at this stage). Later, when SDK metadata will be received, the
 	// plugs must be checked again (e.g. ensure all those plugs actually exist).

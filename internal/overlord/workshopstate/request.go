@@ -565,16 +565,16 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	return disconnectSet
 }
 
-func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList,
+func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord,
 ) *state.TaskSet {
 	return createStateHooks(st, w, content, newContent, hookstate.SaveState)
 }
 
-func restoreStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList) *state.TaskSet {
+func restoreStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord) *state.TaskSet {
 	return createStateHooks(st, w, content, newContent, hookstate.RestoreState)
 }
 
-func createStateHooks(st *state.State, w string, content []sdk.Setup, newContent workshop.SdkList, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func createStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
 	for _, newsdk := range newContent {

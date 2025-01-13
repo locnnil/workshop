@@ -270,7 +270,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, check.DeepEquals, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: &workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
 		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
@@ -294,7 +294,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, check.DeepEquals, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Attributes: map[string]interface{}{"attr1": "val"}}}},
 		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
@@ -458,7 +458,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, check.DeepEquals, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
 }
 
