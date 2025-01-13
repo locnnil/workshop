@@ -68,9 +68,9 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug            Slot  Notes
+     Interface  Plug            Slot           Notes
      ...
-     gpu        ws/gpu-sdk:gpu  :gpu  -
+     gpu        ws/gpu-sdk:gpu  ws/system:gpu  -
 
 
 This means the host's GPUs are directly available inside the workshop:

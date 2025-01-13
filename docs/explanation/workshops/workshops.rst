@@ -197,9 +197,9 @@ along with the line number of the target plug:
 
    $ workshop connections digits
 
-     Interface  Plug                        Slot    Notes
-     mount      digits/pytorch:datasets     :mount  bind.2
-     mount      digits/tensorflow:datasets  :mount  bind.2
+     Interface  Plug                        Slot                 Notes
+     mount      digits/pytorch:datasets     digits/system:mount  bind.2
+     mount      digits/tensorflow:datasets  digits/system:mount  bind.2
 
 
 Here, both plugs are listed as :samp:`bind.2`,

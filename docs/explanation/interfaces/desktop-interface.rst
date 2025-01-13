@@ -65,9 +65,9 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                   Slot       Notes
+     Interface  Plug                   Slot                Notes
      ...
-     desktop    ws/desktop-sdk:desktop :desktop   manual
+     desktop    ws/desktop-sdk:desktop ws/system:desktop   manual
 
 
 This means the host's display socket (Wayland, X11 or both) is available inside the workshop:
