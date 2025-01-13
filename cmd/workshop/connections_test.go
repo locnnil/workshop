@@ -369,10 +369,10 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 	err := cmd.Run(cmd.Command(), []string{})
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
-		"Interface  Plug                              Slot                                 Notes\n" +
-		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led  -\n" +
-		"leds       keyboard-lights/lights:numlock    :numlock-led                         manual\n" +
-		"leds       keyboard-lights/lights:scrollock  :scrollock-led                       -\n"
+		"Interface  Plug                              Slot                                  Notes\n" +
+		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led   -\n" +
+		"leds       keyboard-lights/lights:numlock    keyboard-lights/system:numlock-led    manual\n" +
+		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led  -\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }
@@ -508,10 +508,10 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 	err := cmd.Run(cmd.Command(), []string{})
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
-		"Interface  Plug                              Slot                                 Notes\n" +
-		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led  -\n" +
-		"leds       keyboard-lights/lights:numlock    :numlock-led                         manual,bind.3\n" +
-		"leds       keyboard-lights/lights:scrollock  :scrollock-led                       manual,bind.3\n"
+		"Interface  Plug                              Slot                                  Notes\n" +
+		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led   -\n" +
+		"leds       keyboard-lights/lights:numlock    keyboard-lights/system:numlock-led    manual,bind.3\n" +
+		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led  manual,bind.3\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }
@@ -647,12 +647,12 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
-		"leds       -                                 :capslock-led                                 -\n" +
-		"leds       -                                 :numlock-led                                  -\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
+		"leds       -                                 keyboard-lights/system:numlock-led            -\n" +
+		"leds       -                                 leds-provider/system:capslock-led             -\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             -\n" +
-		"leds       keyboard-lights/lights:scrollock  :scrollock-led                                -\n"
+		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led          -\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }
@@ -778,9 +778,9 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
-		"leds       -                                 :numlock-led                                  -\n" +
-		"leds       -                                 :scrollock-led                                -\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
+		"leds       -                                 keyboard-lights/system:numlock-led            -\n" +
+		"leds       -                                 keyboard-lights/system:scrollock-led          -\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             bind.6\n" +
 		"leds       keyboard-lights/lights:scrollock  -                                             bind.6\n"
@@ -1126,16 +1126,16 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 	c.Assert(err, IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                         Slot                           Notes\n" +
-		"desktop    abc/foo:desktop-plug         :desktop                       -\n" +
+		"desktop    abc/foo:desktop-plug         abc/system:desktop             -\n" +
 		"leds       -                            abc/leds-provider:numlock-led  -\n" +
 		"leds       abc/keyboard-lights:numlock  -                              -\n" +
 		"mount      -                            abc/c-content-provider:data    -\n" +
 		"mount      abc/a-foo:plug               abc/a-content-provider:data    -\n" +
 		"mount      abc/foo:plug                 abc/a-content-provider:data    -\n" +
 		"mount      abc/foo:plug                 abc/b-content-provider:data    -\n" +
-		"x11        abc/foo:x11-plug             :x11                           -\n" +
-		"x11        def/foo:a-x11-plug           :x11                           -\n" +
-		"x11        def/keyboard-app:x11         :x11                           manual\n"
+		"x11        abc/foo:x11-plug             abc/system:x11                 -\n" +
+		"x11        def/foo:a-x11-plug           def/system:x11                 -\n" +
+		"x11        def/keyboard-app:x11         def/system:x11                 manual\n"
 	c.Assert(s.Stdout(), Equals, expectedStdout)
 	c.Assert(s.Stderr(), Equals, "")
 }
