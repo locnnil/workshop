@@ -96,6 +96,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	if err != nil {
 		return err
 	}
+	slices.SortFunc(workshop.Content, func(a, b *client.Sdk) int { return cmp.Compare(a.Name, b.Name) })
 
 	w := tabWriter()
 

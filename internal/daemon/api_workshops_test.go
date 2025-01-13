@@ -2,12 +2,14 @@ package daemon
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -303,6 +305,9 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
 	info := rsp.Result.(Workshops)
+	for _, w := range info.Workshops {
+		slices.SortFunc(w.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+	}
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
 		Name:      "manysdks",
 		Base:      "ubuntu@22.04",
@@ -391,7 +396,12 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	build2 := time.Date(2020, 5, 3, 22, 5, 35, 811829000, time.UTC)
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, Workshop{
+	result := rsp.Result.(Workshop)
+	slices.SortFunc(result.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+	for _, c := range result.Content {
+		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
+	}
+	c.Check(result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
 			Name:      "manysdks",
 			Base:      "ubuntu@22.04",
@@ -491,7 +501,12 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	build2 := time.Date(2020, 5, 3, 22, 5, 35, 811829000, time.UTC)
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
-	c.Check(rsp.Result, check.DeepEquals, Workshop{
+	result := rsp.Result.(Workshop)
+	slices.SortFunc(result.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+	for _, c := range result.Content {
+		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
+	}
+	c.Check(result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
 			Name:      "somebound",
 			Base:      "ubuntu@22.04",

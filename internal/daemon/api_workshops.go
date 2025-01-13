@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -115,7 +114,6 @@ func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health h
 		}
 
 		sdkMounts := mounts[sk.Name]
-		slices.SortFunc(sdkMounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 
 		info.Content = append(info.Content, &SdkInfo{
 			Name:        sk.Name,
@@ -134,7 +132,6 @@ func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health h
 	}
 	info.Status = health.Status.String()
 
-	slices.SortFunc(info.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
 	return &info
 }
 
