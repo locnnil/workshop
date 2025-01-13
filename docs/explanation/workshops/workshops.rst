@@ -77,7 +77,7 @@ A simple definition might look like this:
    name: golang
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 
@@ -144,12 +144,12 @@ is bound to the :samp:`datasets` plug under :samp:`tensorflow`:
    name: digits
    base: ubuntu@22.04
    sdks:
-     pytorch:
+     - name: pytorch
        channel: latest/stable
        plugs:
          datasets:
            bind: tensorflow:datasets
-     tensorflow:
+     - name: tensorflow
        channel: latest/stable
 
 
@@ -225,18 +225,18 @@ This example adds a slot, a plug and two connections to its SDKs:
    base: ubuntu@22.04
    name: digits-cuda
    sdks:
-     system:
+     - name: system
        slots:
          images:
            interface: mount
            workshop-source: /project/training-data/low-res
-     tensorflow:
+     - name: tensorflow
        channel: latest/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
-     cuda:
+     - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda

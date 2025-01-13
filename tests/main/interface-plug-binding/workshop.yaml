@@ -1,17 +1,17 @@
 name: ws-bind
 base: ubuntu@22.04
 sdks:
-  test-sdk-mount:
+  - name: test-sdk-mount
     channel: latest/stable
     plugs:
       two:
         bind: test-sdk-multiple-plugs:cache
-  test-sdk-multiple-plugs:
+  - name: test-sdk-multiple-plugs
     channel: latest/stable
     plugs:
       data:
         bind: test-sdk-mount:one
-  test-sdk-ssh-agent:
+  - name: test-sdk-ssh-agent
     channel: latest/stable
     plugs:
       ssh-agent:

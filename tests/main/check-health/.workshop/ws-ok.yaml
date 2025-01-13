@@ -1,5 +1,5 @@
 name: ws-ok
 base: ubuntu@22.04
 sdks:
-  test-sdk-health-ok:
+  - name: test-sdk-health-ok
     channel: latest/stable

@@ -22,7 +22,7 @@ Things change *after* you run :command:`workshop launch`:
    name: golang
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 

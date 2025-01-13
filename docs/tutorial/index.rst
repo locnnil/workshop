@@ -201,7 +201,7 @@ create a workshop definition named :file:`workshop.yaml`:
    name: golang
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 
@@ -390,7 +390,7 @@ and refresh the workshop:
    name: golang
    base: ubuntu@24.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 

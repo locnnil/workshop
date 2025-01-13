@@ -54,10 +54,10 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 var workshopTemplate = `name: %s
 base: ubuntu@20.04
 sdks:
-  {{ range . }}
-  {{- .Name}}:
-      channel: {{.Channel}}
-  {{ end }} 
+  {{- range . }}
+  - name: {{ .Name}}
+    channel: {{.Channel}}
+  {{- end }}
 `
 
 var sdkTemplate = `name: %s

@@ -53,15 +53,15 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 var marshalledWorkshop = `name: test
 base: ubuntu@22.04
 sdks:
-    one:
-        channel: latest/stable
-        plugs:
-            one-plug:
-                bind: two:two-plug
-            one-plug-two:
-                bind: two:two-plug
-    two:
-        channel: latest/edge
+    - name: one
+      channel: latest/stable
+      plugs:
+        one-plug:
+            bind: two:two-plug
+        one-plug-two:
+            bind: two:two-plug
+    - name: two
+      channel: latest/edge
 `
 
 func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {

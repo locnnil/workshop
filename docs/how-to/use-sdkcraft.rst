@@ -437,7 +437,7 @@ The resulting SDK can be accessed by |ws_markup| as follows:
    name: golang
    base: ubuntu@24.04
    sdks:
-     go:
+     - name: go
        channel: latest/beta
 
 

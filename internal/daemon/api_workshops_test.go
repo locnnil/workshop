@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -37,94 +38,102 @@ base: ubuntu@22.04
 	basic_refreshed = `name: basic
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	manysdks = `name: manysdks
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 	manysdks_refreshed = `name: manysdks
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 connections:
   - plug: test-sdk:data-non-existent
     slot: system:mount
 `
+	manysdks_reversed = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-2
+    channel: latest/stable
+  - name: test-sdk
+    channel: latest/stable
+`
 
 	somebound = `name: somebound
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       data:
         bind: test-sdk-2:photos
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	masterunknown = `name: masterunknown
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       unknown-data:
         bind: test-sdk-2:unknown
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	slaveunknown = `name: slaveunknown
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       unknown:
         bind: test-sdk-2:photos
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	bindincompatible = `name: bindincompatible
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       data:
         bind: test-sdk-2:gpu
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	workshopplug = `name: workshopplug
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       training-slot:
         interface: mount
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       training-plug:
         interface: mount
         workshop-target: /opt
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 connections:
   - plug: test-sdk:training-plug
@@ -134,11 +143,11 @@ connections:
 	workshopplugbound = `name: workshopplugbound
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       training-slot:
         interface: mount
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
     plugs:
       training-plug:
@@ -146,7 +155,7 @@ sdks:
         workshop-target: /opt
       data:
         bind: test-sdk:training-plug
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 connections:
   - plug: test-sdk:training-plug
@@ -156,27 +165,27 @@ connections:
 	workshopslot = `name: workshopslot
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       training:
         interface: mount
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 `
 
 	workshopconns = `name: workshopconns
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       training:
         interface: mount
         workshop-source: /project
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 connections:
   - plug: test-sdk:data
@@ -186,9 +195,9 @@ connections:
 	workshopbrokenconn = `name: workshopbrokenconn
 base: ubuntu@22.04
 sdks:
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
 connections:
   - plug: test-sdk:data-unknown-plug
@@ -198,16 +207,16 @@ connections:
 	connsplugbound = `name: connsplugbound
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       training:
         interface: mount
       photos:
         interface: mount
         workshop-source: /project/photos
-  test-sdk:
+  - name: test-sdk
     channel: latest/stable
-  test-sdk-2:
+  - name: test-sdk-2
     channel: latest/stable
     plugs:
       photos:
@@ -653,6 +662,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 }
 
 func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]string) func() {
+	order := 0
 	s.b.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		// check if the command is to install an SDK
 		if args.Command[0] != "tar" {
@@ -669,10 +679,10 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		c.Check(found, check.Equals, true)
 
 		// Install meta.
-		metadir := filepath.Join(sdk.SdkRootPath(sdkname), "1", "meta")
+		metadir := filepath.Join(sdk.SdkRevPath(sdkname, "1"), "meta")
 		err = fs.MkdirAll(metadir, 0755)
 		c.Check(err, check.IsNil)
-		err = fs.Symlink(filepath.Join(sdk.SdkRootPath(sdkname), "1"), filepath.Join(sdk.SdkRootPath(sdkname), "current"))
+		err = fs.Symlink(sdk.SdkRevPath(sdkname, "1"), sdk.SdkCurrentPath(sdkname))
 		c.Check(err, check.IsNil)
 		file, err := fs.OpenFile(filepath.Join(metadir, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 		c.Check(err, check.IsNil)
@@ -680,6 +690,12 @@ func (s *apiSuite) mockDoInstallSdk(c *check.C, ws string, sdks map[string]strin
 		syaml, exists := sdks[sdkname]
 		c.Check(exists, check.Equals, true)
 		_, err = file.Write([]byte(syaml))
+		c.Check(err, check.IsNil)
+
+		// Record installation order.
+		order += 1
+		orderPath := filepath.Join(sdk.SdkRevPath(sdkname, "1"), "order")
+		err = afero.WriteFile(fs, orderPath, []byte(fmt.Sprintln(order)), 0644)
 		c.Check(err, check.IsNil)
 
 		// Install hooks.
@@ -1847,6 +1863,67 @@ base: ubuntu@22.04
 	}
 
 	s.runActionTest(c, requests, expected)
+}
+
+func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Install test-sdk-2 first.
+	s.createWFile(c, "manysdks", manysdks_reversed)
+	defer s.mockDoInstallSdk(c, "manysdks", testsdks)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	fs, err := s.b.WorkshopFs(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+
+	order, err := afero.ReadFile(fs, filepath.Join(sdk.SdkCurrentPath("test-sdk-2"), "order"))
+	c.Assert(err, check.IsNil)
+	c.Check(string(order), check.Equals, "1\n")
+
+	order, err = afero.ReadFile(fs, filepath.Join(sdk.SdkCurrentPath("test-sdk"), "order"))
+	c.Assert(err, check.IsNil)
+	c.Check(string(order), check.Equals, "2\n")
+
+	// Install test-sdk first this time.
+	s.createWFile(c, "manysdks", manysdks)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	fs, err = s.b.WorkshopFs(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+
+	order, err = afero.ReadFile(fs, filepath.Join(sdk.SdkCurrentPath("test-sdk"), "order"))
+	c.Assert(err, check.IsNil)
+	c.Check(string(order), check.Equals, "3\n")
+
+	order, err = afero.ReadFile(fs, filepath.Join(sdk.SdkCurrentPath("test-sdk-2"), "order"))
+	c.Assert(err, check.IsNil)
+	c.Check(string(order), check.Equals, "4\n")
 }
 
 func (s *apiSuite) TestStartWorkshop(c *check.C) {

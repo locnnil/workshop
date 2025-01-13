@@ -1,9 +1,9 @@
 name: ws-camera-fail
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       user-camera:
         interface: camera
-  test-sdk-camera:
+  - name: test-sdk-camera
     channel: latest/stable

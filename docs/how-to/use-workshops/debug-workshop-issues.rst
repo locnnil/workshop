@@ -22,7 +22,7 @@ from the :samp:`latest/edge` channel:
    name: golang-volatile
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/edge
 
 

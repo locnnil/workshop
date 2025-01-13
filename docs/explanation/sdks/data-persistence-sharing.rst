@@ -89,7 +89,7 @@ Here's a corresponding workshop definition:
    name: data
    base: ubuntu@22.04
    sdks:
-     data-science:
+     - name: data-science
        channel: latest/stable
 
 

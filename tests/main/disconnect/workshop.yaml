@@ -1,5 +1,5 @@
 name: ws-disconn
 base: ubuntu@22.04
 sdks:
-  test-sdk-mount:
+  - name: test-sdk-mount
     channel: latest/stable
