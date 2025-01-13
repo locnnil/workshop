@@ -73,9 +73,9 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                  Slot        Notes
+     Interface  Plug                  Slot                 Notes
      ...
-     ssh-agent  ws/ssh-sdk:ssh-agent  :ssh-agent  manual
+     ssh-agent  ws/ssh-sdk:ssh-agent  ws/system:ssh-agent  manual
 
 
 So the host's SSH identities and configuration

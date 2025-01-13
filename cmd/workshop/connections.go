@@ -59,9 +59,6 @@ func isDefaultSystemSlot(slot client.Slot) bool {
 }
 
 func endpoint(workshop, sdkName, name string) string {
-	if isSystemSdk(sdkName) {
-		return ":" + name
-	}
 	return workshop + "/" + sdkName + ":" + name
 }
 

@@ -73,7 +73,7 @@ To check if the interface is connected:
 
      Interface  Plug              Slot     Notes
      ...
-     camera     ws/camera:camera  :camera  manual
+     camera     ws/camera:camera  ws/system:camera  manual
 
 
 This means the host's cameras are available inside the workshop:

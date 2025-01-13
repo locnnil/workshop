@@ -532,7 +532,7 @@ use :ref:`connections <ref_workshop_connections>`:
    $ workshop connections
 
      Interface  Plug                 Slot    Notes
-     mount      golang/go:mod-cache  :mount  -
+     mount      golang/go:mod-cache  golang/system:mount  -
 
 
 This lists a :ref:`mount interface <exp_mount_interface>` plug
