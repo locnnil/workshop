@@ -702,10 +702,10 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	var execSet *state.TaskSet
 	if script {
 		name := args.Command[0]
-		cp := w.state.NewTask("copy-script", fmt.Sprintf("Copy script %q", name))
+		cp := w.state.NewTask("install-script", fmt.Sprintf("Install script %q", name))
 		exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
 
-		// copy-script will modify args and pass it to exec.
+		// install-script will modify args and pass it to exec.
 		w.state.Cache(cmdstate.ExecArgsKey(cp.ID()), args)
 		cp.Set("exec-task", exec.ID())
 

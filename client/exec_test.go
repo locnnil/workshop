@@ -471,7 +471,7 @@ func (s *execSuite) addRunResponses(changeID string, exitCode int) {
 	}`, changeID, taskID))
 
 	// Add /v1/changes/{id}/wait response
-	copyID := "C" + changeID
+	installID := "I" + changeID
 	s.rsps = append(s.rsps, fmt.Sprintf(`{
 		"result": {
 			"id": "%s",
@@ -479,7 +479,7 @@ func (s *execSuite) addRunResponses(changeID string, exitCode int) {
 			"ready": true,
 			"tasks": [{
 				"id": "%s",
-				"kind": "copy-script"
+				"kind": "install-script"
 			}, {
 				"data": {"exit-code": %d},
 				"id": "%s",
@@ -489,5 +489,5 @@ func (s *execSuite) addRunResponses(changeID string, exitCode int) {
 		"status": "OK",
 		"status-code": 200,
 		"type": "sync"
-	}`, changeID, copyID, exitCode, taskID))
+	}`, changeID, installID, exitCode, taskID))
 }

@@ -350,7 +350,7 @@ func (e *execution) controlLoop(execId string, conn *websocket.Conn, stop <-chan
 	}
 }
 
-func (m *CommandManager) doCopyScript(task *state.Task, tomb *tomb.Tomb) error {
+func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err

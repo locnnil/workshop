@@ -170,7 +170,7 @@ func (f *wsExec) TestLxdBackendExecMissingScript(c *check.C) {
 		WorkingDir: "/",
 	}
 	_, _, err := f.exec("", "test", f.project.ProjectId, opts)
-	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Copy script "missing" \(script not found\)`)
+	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install script "missing" \(script not found\)`)
 }
 
 func (f *wsExec) TestLxdBackendExecCannotReadScript(c *check.C) {
@@ -186,7 +186,7 @@ func (f *wsExec) TestLxdBackendExecCannotReadScript(c *check.C) {
 		WorkingDir: "/",
 	}
 	_, _, err = f.exec("", "test", f.project.ProjectId, opts)
-	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Copy script "info" \(multiple workshops found.*\)`)
+	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install script "info" \(multiple workshops found.*\)`)
 }
 
 func (f *wsExec) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {

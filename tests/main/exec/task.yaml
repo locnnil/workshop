@@ -70,12 +70,12 @@ execute: |
   sed -i 's/oneline/line1/' workshop.yaml
   workshop_exec run line1 | MATCH '^1 LINE$'
 
-  echo "Check copy-script error message"
+  echo "Check install-script error message"
   workshop_exec exec --uid 0 --gid 0 -- rm -f /var/lib/workshop/run/scripts/line1
   workshop_exec exec --uid 0 --gid 0 -- mkdir /var/lib/workshop/run/scripts/line1
   ! workshop_exec run line1 > line1.log
   MATCH '^error: cannot perform the following tasks:$' < line1.log
-  MATCH '^- Copy script "line1" \(.*\)$' < line1.log
+  MATCH '^- Install script "line1" \(.*\)$' < line1.log
 
   echo "Check stopped workshop"
   workshop_exec stop
