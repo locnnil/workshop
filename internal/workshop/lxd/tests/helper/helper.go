@@ -18,6 +18,11 @@ import (
 
 var testYaml = `name: test
 base: ubuntu@22.04
+scripts:
+  info: |
+    pwd
+    whoami
+    printf '%s\n' "$@"
 `
 
 var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
@@ -91,7 +96,18 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 	err = bd.Download(ctx, "ubuntu@24.04", nil)
 	c.Assert(err, check.IsNil)
 
-	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
+	wf := &workshop.File{
+		Name: "test",
+		Base: "ubuntu@24.04",
+		Scripts: map[string]workshop.Script{"info": `
+
+
+
+pwd
+whoami
+printf '%s\n' "$@"
+`},
+	}
 
 	path := workshop.Filepath(dir, "test")
 

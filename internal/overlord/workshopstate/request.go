@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -668,19 +669,14 @@ func stopMany(st *state.State, names []string, project workshop.Project) ([]*sta
 	return taskset, nil
 }
 
-type ExecMeta struct {
-	Environment map[string]string
-	WorkingDir  string
-}
-
-func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs) (*state.Task, error) {
+func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs, script bool) (*state.TaskSet, error) {
 	err := w.CheckStatus(
 		ctx,
 		name,
 		projectId,
 		[]healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus})
 	if err != nil {
-		return nil, fmt.Errorf("cannot exec command in %q: %w", name, err)
+		return nil, err
 	}
 
 	project, err := w.loadProject(ctx, projectId)
@@ -697,19 +693,37 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 
 	info, err := wrkspc.Stat(args.WorkDir)
 	if err != nil {
-		return nil, fmt.Errorf("cannot exec command in %q: working directory %q not found", name, args.WorkDir)
+		return nil, fmt.Errorf("working directory %q not found", args.WorkDir)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("cannot exec command in %q: %q is not a directory", name, args.WorkDir)
+		return nil, fmt.Errorf("%q is not a directory", args.WorkDir)
 	}
 
-	exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
+	var execSet *state.TaskSet
+	if script {
+		name := args.Command[0]
+		cp := w.state.NewTask("install-script", fmt.Sprintf("Install script %q", name))
+		exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
 
-	exec.Set("exec-setup", args)
-	exec.Set("project", project)
-	exec.Set("workshop", name)
+		// install-script will modify args and pass it to exec.
+		w.state.Cache(cmdstate.ExecArgsKey(cp.ID()), args)
+		cp.Set("exec-task", exec.ID())
 
-	return exec, nil
+		exec.WaitFor(cp)
+		execSet = state.NewTaskSet(cp, exec)
+	} else {
+		exec := w.state.NewTask("exec", fmt.Sprintf("Exec command %q", args.Command[0]))
+
+		w.state.Cache(cmdstate.ExecArgsKey(exec.ID()), args)
+
+		execSet = state.NewTaskSet(exec)
+	}
+
+	for _, task := range execSet.Tasks() {
+		task.Set("workshop", name)
+		task.Set("project", project)
+	}
+	return execSet, nil
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {

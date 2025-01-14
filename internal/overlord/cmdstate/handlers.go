@@ -22,6 +22,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/gorilla/websocket"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -66,19 +69,19 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	var setup workshop.ExecArgs
 	st := task.State()
 	st.Lock()
-	err = task.Get("exec-setup", &setup)
+	argsObj := st.Cached(ExecArgsKey(task.ID()))
 	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("cannot get exec setup object for task %q: %v", task.ID(), err)
+	args, ok := argsObj.(*workshop.ExecArgs)
+	if !ok || args == nil {
+		return fmt.Errorf("cannot get exec args for task %q: task was probably interrupted", task.ID())
 	}
 
 	// Set up the object that will track the execution.
 	e := &execution{
 		workshop:         w,
-		execArgs:         &setup,
+		execArgs:         args,
 		websockets:       make(map[string]*websocket.Conn),
 		ioConnected:      make(chan struct{}),
 		controlConnected: make(chan struct{}),
@@ -118,7 +121,7 @@ func (e *execution) connect(r *http.Request, w http.ResponseWriter, id string) e
 		return os.ErrNotExist
 	}
 	if conn != nil {
-		return fmt.Errorf("websocket %q already connected", id)
+		return fmt.Errorf("%s websocket already connected", id)
 	}
 
 	// Upgrade the HTTP connection to a websocket connection.
@@ -345,4 +348,68 @@ func (e *execution) controlLoop(execId string, conn *websocket.Conn, stop <-chan
 			logger.Noticef("Exec %s: cannot send control websocket command: %v", execId, err)
 		}
 	}
+}
+
+func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	var execTask string
+	st := task.State()
+	st.Lock()
+	err = task.Get("exec-task", &execTask)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("cannot get exec task for task %q: %w", task.ID(), err)
+	}
+	st.Lock()
+	argsObj := st.Cached(ExecArgsKey(task.ID()))
+	st.Unlock()
+	argsOld, ok := argsObj.(*workshop.ExecArgs)
+	if !ok || argsOld == nil {
+		return fmt.Errorf("cannot get exec args for task %q: task was probably interrupted", task.ID())
+	}
+	// Shallow copy to avoid modifying original object.
+	args := *argsOld
+
+	name := args.Command[0]
+	file, err := prj.Workshop(w)
+	if err != nil {
+		return err
+	}
+
+	script, ok := file.Scripts[name]
+	if !ok {
+		return errors.New("script not found")
+	}
+
+	path := filepath.Join(dirs.WorkshopScriptsDir, name)
+	command := []string{"bash", "-ue", "-o", "pipefail", path}
+	args.Command = append(command, args.Command[1:]...)
+
+	wfs, err := m.backend.WorkshopFs(ctx, w)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	if err := wfs.MkdirAll(dirs.WorkshopScriptsDir, 0755); err != nil {
+		return err
+	}
+
+	err = workshop.AtomicWrite(wfs, path, strings.NewReader(string(script)), 0644)
+	if err != nil {
+		return err
+	}
+
+	st.Lock()
+	st.Cache(ExecArgsKey(execTask), &args)
+	st.Unlock()
+
+	return nil
 }

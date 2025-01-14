@@ -3,3 +3,10 @@ base: ubuntu@22.04
 sdks:
     test-sdk-basic:
         channel: latest/stable
+scripts:
+    oneline: echo one line
+    multiline: |
+      echo multi
+      echo line
+    fail: "false"
+    file: ./script.sh

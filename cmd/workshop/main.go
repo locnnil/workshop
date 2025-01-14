@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/logger"
 )
 
@@ -22,6 +23,10 @@ func main() {
 	rootCmd := (&CmdRoot{}).Command(cwd)
 
 	if err = rootCmd.Execute(); err != nil {
+		exitError, ok := err.(*client.ExitError)
+		if ok {
+			os.Exit(exitError.ExitCode())
+		}
 		fmt.Fprintf(Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}

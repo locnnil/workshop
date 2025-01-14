@@ -182,6 +182,11 @@ func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error
 		HandshakeTimeout: 5 * time.Second,
 	}
 	conn, resp, err := dialer.Dial(url, nil)
+	if errors.Is(err, websocket.ErrBadHandshake) {
+		// FIXME: gorilla truncates the response body to 1024 characters.
+		// If parsing fails, the real error should appear in the server logs.
+		return conn, parseError(resp)
+	}
 	logger.Debugf("response: %v", resp)
 	return conn, err
 }

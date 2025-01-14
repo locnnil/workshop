@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -65,6 +66,11 @@ sdks:
     channel: latest/candidate
   automotive:
     channel: latest/beta
+scripts:
+  oneline: echo one line
+  multiline: |
+    echo multi
+    echo line
 `
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
@@ -82,6 +88,11 @@ sdks:
 	c.Assert(file.Sdks[2].Channel, check.Equals, "latest/stable")
 	c.Assert(file.Sdks[3].Name, check.Equals, "zookeeper")
 	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/candidate")
+	lines := len(strings.Split(yaml, "\n"))
+	skip := strings.Repeat("\n", lines-5)
+	c.Assert(string(file.Scripts["oneline"]), check.Equals, skip+"echo one line\n")
+	skip = strings.Repeat("\n", lines-3)
+	c.Assert(string(file.Scripts["multiline"]), check.Equals, skip+"echo multi\necho line\n")
 }
 
 func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
@@ -91,6 +102,10 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Sdks: []workshop.SdkRecord{
 			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
 			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
+		},
+		Scripts: map[string]workshop.Script{
+			"oneline":   "\n\n\necho one line\n",
+			"multiline": "\n\n\n\n\necho multi\necho line\n",
 		},
 	}
 	out, err := yaml.Marshal(fl)
@@ -108,6 +123,11 @@ sdks:
         plugs:
             plug:
                 bind: one:plug
+scripts:
+    multiline: |
+        echo multi
+        echo line
+    oneline: echo one line
 `)
 }
 

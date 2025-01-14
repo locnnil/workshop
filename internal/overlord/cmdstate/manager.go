@@ -18,6 +18,8 @@ import (
 	"net/http"
 	"sync"
 
+	"gopkg.in/tomb.v2"
+
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -40,8 +42,24 @@ func New(st *state.State, runner *state.TaskRunner) *CommandManager {
 	st.Unlock()
 
 	runner.AddHandler("exec", manager.doExec, nil)
+	runner.AddHandler("install-script", manager.doInstallScript, nil)
+
+	// Delete in-memory ExecArgs objects when the tasks are done.
+	runner.AddCleanup("exec", deleteExecArgs)
+	runner.AddCleanup("install-script", deleteExecArgs)
+
 	return manager
 }
+
+func deleteExecArgs(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+	st.Cache(ExecArgsKey(task.ID()), nil)
+	return nil
+}
+
+type ExecArgsKey string
 
 // Ensure is part of the overlord.StateManager interface.
 func (m *CommandManager) Ensure() error {
@@ -65,12 +83,21 @@ func (m *CommandManager) Connect(r *http.Request, w http.ResponseWriter, task *s
 		}
 	}()
 
+	st := task.State()
+	st.Lock()
+	change := task.Change()
+	st.Unlock()
+
 	// Wait till the execution object is ready or the request is cancelled.
 	select {
 	case e := <-executionCh:
 		return e.connect(r, w, websocketID)
 	case <-r.Context().Done():
 		return r.Context().Err()
+	case <-change.Ready():
+		st.Lock()
+		defer st.Unlock()
+		return change.Err()
 	}
 }
 

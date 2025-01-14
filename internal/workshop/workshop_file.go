@@ -92,11 +92,14 @@ type Connection struct {
 
 type SdkList []SdkRecord
 
+type Script string
+
 type File struct {
-	Name        string       `yaml:"name"`
-	Base        string       `yaml:"base"`
-	Sdks        SdkList      `yaml:"sdks,omitempty"`
-	Connections []Connection `yaml:"connections,omitempty"`
+	Name        string            `yaml:"name"`
+	Base        string            `yaml:"base"`
+	Sdks        SdkList           `yaml:"sdks,omitempty"`
+	Connections []Connection      `yaml:"connections,omitempty"`
+	Scripts     map[string]Script `yaml:"scripts,omitempty"`
 }
 
 func (p SdkList) MarshalYAML() (interface{}, error) {
@@ -142,6 +145,46 @@ func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (p Script) MarshalYAML() (interface{}, error) {
+	// Trim newlines, then append a newline for multi-line scripts.
+	script := strings.Trim(string(p), "\n")
+	if strings.ContainsRune(script, '\n') {
+		script += "\n"
+	}
+
+	node := &yaml.Node{}
+	err := node.Encode(script)
+	return node, err
+}
+
+func (p *Script) UnmarshalYAML(value *yaml.Node) error {
+	var script string
+	if err := value.Decode(&script); err != nil {
+		return err
+	}
+
+	// Scripts should have trailing newlines,
+	// but YAML one-liners don't.
+	if !strings.HasSuffix(script, "\n") {
+		script += "\n"
+	}
+
+	// Adjust line numbers to improve error messages.
+	// Only accurate for literals (|) and one-liners.
+	if (value.Kind & yaml.ScalarNode) != 0 {
+		line := value.Line
+		if (value.Style & (yaml.LiteralStyle | yaml.FoldedStyle)) != 0 {
+			line += 1
+		}
+		if line > 1 {
+			script = strings.Repeat("\n", line-1) + script
+		}
+	}
+
+	*p = Script(script)
+	return nil
+}
+
 func readWorkshop(path string) (*File, error) {
 	var err error
 	var file File
@@ -183,6 +226,10 @@ func readWorkshop(path string) (*File, error) {
 	}
 
 	if err = validateConnections(&file); err != nil {
+		return nil, err
+	}
+
+	if err = validateScripts(&file); err != nil {
 		return nil, err
 	}
 
@@ -286,6 +333,15 @@ func validateConnections(wfile *File) error {
 		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.System.String() }) {
 			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
 				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.SlotRef.Sdk)
+		}
+	}
+	return nil
+}
+
+func validateScripts(wfile *File) error {
+	for name := range wfile.Scripts {
+		if !workshopName.MatchString(name) {
+			return fmt.Errorf("script name %q must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens", name)
 		}
 	}
 	return nil

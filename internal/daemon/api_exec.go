@@ -5,13 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
 type execPayload struct {
 	Command     []string          `json:"command"`
+	Script      bool              `json:"script"`
 	Environment map[string]string `json:"environment"`
 	WorkingDir  string            `json:"working-dir"`
 	Timeout     string            `json:"timeout"`
@@ -57,16 +60,23 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("cannot exec: failed to decode data from request body: %v", err)
 	}
 
+	action := "exec"
+	subject := "command"
+	if reqData.Script {
+		action = "run"
+		subject = "script"
+	}
+
 	if len(reqData.Command) < 1 {
-		return statusBadRequest("cannot exec: must specify command")
+		return statusBadRequest("cannot %s %s in %q: must specify %s", action, subject, wrkspc, subject)
 	}
 
 	if reqData.Terminal {
-		return statusBadRequest("cannot exec: terminal mode is not supported")
+		return statusBadRequest("cannot %s %s in %q: terminal mode is not supported", action, subject, wrkspc)
 	}
 
 	if reqData.SplitStderr {
-		return statusBadRequest("cannot exec: splitting stderr is not supported")
+		return statusBadRequest("cannot %s %s in %q: splitting stderr is not supported", action, subject, wrkspc)
 	}
 
 	if reqData.WorkingDir == "" {
@@ -90,7 +100,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	userId, groupId, err := normaliseUserGroupIds(reqData.UserId, reqData.GroupId)
 	if err != nil {
-		return statusBadRequest("cannot exec: %v", err)
+		return statusBadRequest("cannot %s %s in %q: %v", action, subject, wrkspc, err)
 	}
 
 	// We do not set PATH here as it's something LXD takes care of. Set HOME and
@@ -112,7 +122,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	user, ok := r.Context().Value(workshop.ContextUser).(string)
 	if !ok {
-		return statusBadRequest("cannot exec: user is not in context")
+		return statusBadRequest("cannot %s %s in %q: user is not in context", action, subject, wrkspc)
 	}
 
 	var execArgs = &workshop.ExecArgs{
@@ -134,21 +144,26 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	wsmgr := c.d.overlord.WorkshopManager()
-	task, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs)
+	taskset, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs, reqData.Script)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("cannot %s %s in %q: %v", action, subject, wrkspc, err)
 	}
 
-	change := st.NewChange("exec", fmt.Sprintf("Execute command %q", execArgs.Command[0]))
-	change.AddTask(task)
+	change := st.NewChange("exec", fmt.Sprintf("Execute %s %q", subject, execArgs.Command[0]))
+	change.AddAll(taskset)
 
 	change.Set("user", user)
 	change.Set("project-id", projectId)
 
 	ensureStateSoon(st, 0)
 
+	tasks := taskset.Tasks()
+	idx := slices.IndexFunc(tasks, func(t *state.Task) bool { return t.Kind() == "exec" })
+	if idx < 0 {
+		return statusInternalError(`cannot find "exec" task`)
+	}
 	result := map[string]interface{}{
-		"task-id": task.ID(),
+		"task-id": tasks[idx].ID(),
 	}
 
 	return AsyncResponse(result, change.ID())

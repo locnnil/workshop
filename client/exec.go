@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"time"
 
@@ -34,6 +35,8 @@ type ExecOptions struct {
 	Workshop string
 	// Required: command and arguments (first element is the executable).
 	Command []string
+	// True to treat command as a workshop script with arguments.
+	Script bool
 
 	// Optional environment variables.
 	Environment map[string]string
@@ -78,6 +81,7 @@ type ExecOptions struct {
 
 type execPayload struct {
 	Command     []string          `json:"command"`
+	Script      bool              `json:"script,omitempty"`
 	Environment map[string]string `json:"environment,omitempty"`
 	WorkingDir  string            `json:"working-dir,omitempty"`
 	UserId      *int              `json:"user-id,omitempty"`
@@ -105,10 +109,6 @@ type ExecProcess struct {
 	stdinDone   chan bool // only used by tests
 }
 
-func (p *ExecProcess) ChangeId() string {
-	return p.changeID
-}
-
 // Exec starts a command with the given options, returning a value
 // representing the process.
 func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*ExecProcess, error) {
@@ -133,6 +133,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 
 	payload := execPayload{
 		Command:     opts.Command,
+		Script:      opts.Script,
 		Environment: opts.Environment,
 		WorkingDir:  opts.WorkingDir,
 		UserId:      opts.UserId,
@@ -166,7 +167,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	taskID := result.TaskID
 	controlConn, err := client.getTaskWebsocket(taskID, "control")
 	if err != nil {
-		return nil, fmt.Errorf(`cannot connect to "control" websocket: %w`, err)
+		return nil, err
 	}
 
 	// Forward stdin and stdout.
@@ -175,7 +176,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 
 	stdioConn, err = client.getTaskWebsocket(taskID, "stdio")
 	if err != nil {
-		return nil, fmt.Errorf(`cannot connect to "stdio" websocket: %w`, err)
+		return nil, err
 	}
 	stdinDone = wsutil.WebsocketSendStream(stdioConn, stdin, -1)
 
@@ -184,13 +185,13 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	} else {
 		stdoutConn, err = client.getTaskWebsocket(taskID, "stdout")
 		if err != nil {
-			return nil, fmt.Errorf(`cannot connect to "stdout" websocket: %w`, err)
+			return nil, err
 		}
 		stdoutDone = wsutil.WebsocketRecvStream(stdout, stdoutConn)
 
 		stderrConn, err = client.getTaskWebsocket(taskID, "stderr")
 		if err != nil {
-			return nil, fmt.Errorf(`cannot connect to "stderr" websocket: %w`, err)
+			return nil, err
 		}
 		stderrDone = wsutil.WebsocketRecvStream(stderr, stderrConn)
 	}
@@ -252,12 +253,12 @@ func (p *ExecProcess) Wait() error {
 	// Wait for any remaining I/O to be flushed to stdout/stderr.
 	<-p.writesDone
 
-	var exitCode int
-	if len(change.Tasks) == 0 {
-		return fmt.Errorf("expected exec change to contain at least one task")
+	idx := slices.IndexFunc(change.Tasks, func(t *Task) bool { return t.Kind == "exec" })
+	if idx < 0 {
+		return fmt.Errorf("expected exec change to contain an exec task")
 	}
-	task := change.Tasks[0]
-	err = task.Get("exit-code", &exitCode)
+	var exitCode int
+	err = change.Tasks[idx].Get("exit-code", &exitCode)
 	if err != nil {
 		return fmt.Errorf("cannot get exit code: %w", err)
 	}

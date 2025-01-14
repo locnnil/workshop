@@ -489,7 +489,7 @@ func (s *apiSuite) testWaitChange(ctx context.Context, c *check.C, query string,
 	st.Lock()
 	change := st.NewChange("exec", "Exec")
 	task := st.NewTask("exec", "Exec")
-	change.AddAll(state.NewTaskSet(task))
+	change.AddTask(task)
 	st.Unlock()
 
 	if markReady != nil {
