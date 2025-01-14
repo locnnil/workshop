@@ -300,21 +300,11 @@ func (m *InterfaceManager) ResolveDisconnect(
 	}
 }
 
-// Ensure the mounts required by a workshop to function properly were created:
-// workshopctl, socket. These mounts are created at the time of launch but can
-// become invalid on the daemon restart / update. Thus, recreating them upon
-// every daemon restart makes sure they still point to the correct files.
+// Ensure the workshopctl mount (required by a workshop to function properly)
+// is created. This mount is created at the time of launch but can become
+// invalid on the daemon restart / update. Thus, recreating it upon every
+// daemon restart makes sure it still points to the correct files.
 func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string) error {
-	hostpath := dirs.SocketPath + ".untrusted"
-	sname := filepath.Base(hostpath)
-	wspath := filepath.Join(dirs.WorkshopRunDir, sname)
-	socket := workshop.Mount{Name: "workshop.socket", What: hostpath, Where: wspath}
-
-	_ = m.backend.RemoveWorkshopMount(pctx, w, socket.Name)
-	if err := m.backend.AddWorkshopMount(pctx, w, socket); err != nil {
-		return err
-	}
-
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.

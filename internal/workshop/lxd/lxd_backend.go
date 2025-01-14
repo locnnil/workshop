@@ -131,10 +131,7 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 		return err
 	}
 
-	if err = op.WaitContext(ctx); err != nil {
-		return err
-	}
-	return nil
+	return op.WaitContext(ctx)
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
@@ -175,6 +172,11 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
+	// Workshop started, enable autostart
+	if err = s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "true"}); err != nil {
+		return err
+	}
+
 	if err = s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
 		return err
 	}
@@ -205,6 +207,11 @@ func (s *Backend) StopWorkshop(ctx context.Context, name string, force bool) err
 	}
 	defer conn.Disconnect()
 
+	// Workshop stopped, disable autostart
+	if err = s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); err != nil {
+		return err
+	}
+
 	return s.updateInstanceState(conn, ctx, name, "stop", force)
 }
 
@@ -215,6 +222,10 @@ func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *work
 	}
 	defer conn.Disconnect()
 
+	return s.addWorkshopConfig(conn, ctx, name, item)
+}
+
+func (s *Backend) addWorkshopConfig(conn lxd.InstanceServer, ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -224,6 +235,7 @@ func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *work
 	if err != nil {
 		return err
 	}
+
 	inst.Config[item.Name] = item.Value
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
@@ -654,7 +666,7 @@ func createDefaultDevices() map[string]map[string]string {
 	return map[string]map[string]string{
 		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
 		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
-		"workshop.socket":      {"type": "disk", "source": shostpath, "path": swspath},
+		"workshop.socket":      {"type": "proxy", "connect": "unix:" + shostpath, "listen": "unix:" + swspath, "bind": "instance", "mode": "0666"},
 		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
 	}
 }
