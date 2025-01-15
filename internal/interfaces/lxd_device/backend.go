@@ -59,6 +59,14 @@ func lxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 
 func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (reload bool, err error) {
 	if dev.Type == workshop.WorkshopWorkshop {
+		if _, err = fs.Stat(dev.What); err != nil {
+			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
+		}
+
+		if _, err = fs.Stat(dev.Where); err != nil {
+			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
+		}
+
 		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
 		if err != nil {
 			return false, err
@@ -70,21 +78,15 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			return false, err
 		}
 
-		if _, err = fs.Stat(dev.What); err != nil {
-			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
-		}
-
-		if _, err = fs.Stat(dev.Where); err != nil {
-			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
-		}
-
 		check := func(me osutil.MountEntry) bool { return me.Name == dev.What && me.Dir == dev.Where }
-		if !slices.ContainsFunc(mounts.Entries, check) {
-			entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
-			mounts.Entries = append(mounts.Entries, entry)
-			if _, err = mounts.WriteTo(fstab); err != nil {
-				return false, err
-			}
+		if slices.ContainsFunc(mounts.Entries, check) {
+			return false, nil
+		}
+
+		entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
+		mounts.Entries = append(mounts.Entries, entry)
+		if _, err = mounts.WriteTo(fstab); err != nil {
+			return false, err
 		}
 		return true, nil
 	}
