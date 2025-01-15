@@ -167,45 +167,38 @@ func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 }
 
 func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, mnt workshop.Mount) error {
-	if mnt.Type == workshop.WorkshopWorkshop {
-		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
-		if err != nil {
-			return err
-		}
-		defer fstab.Close()
-
-		mounts, err := osutil.ReadMountProfile(fstab)
-		if err != nil {
-			return err
-		}
-
-		cnt := 0
-		deleter := func(me osutil.MountEntry) bool {
-			if me.Name == mnt.What && me.Dir == mnt.Where {
-				cnt++
-				return true
-			}
-			return false
-		}
-		mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
-		if cnt == 0 {
-			return nil
-		}
-
-		if err = workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644); err != nil {
-			return err
-		}
-
-		err = runMountCommand(conn, pid, w, []string{
-			"umount",
-			mnt.Where,
-		})
-
-		if err != nil {
-			return err
-		}
+	if mnt.Type != workshop.WorkshopWorkshop {
+		return nil
 	}
-	return nil
+
+	fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
+	if err != nil {
+		return err
+	}
+	defer fstab.Close()
+
+	mounts, err := osutil.ReadMountProfile(fstab)
+	if err != nil {
+		return err
+	}
+
+	cnt := len(mounts.Entries)
+	deleter := func(me osutil.MountEntry) bool {
+		return me.Name == mnt.What && me.Dir == mnt.Where
+	}
+	mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
+	if cnt == len(mounts.Entries) {
+		return nil
+	}
+
+	if err = workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644); err != nil {
+		return err
+	}
+
+	return runMountCommand(conn, pid, w, []string{
+		"umount",
+		mnt.Where,
+	})
 }
 
 func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop string) error {
