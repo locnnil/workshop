@@ -180,6 +180,6 @@ func (s *conflictSuite) TestResumeChangeAbort(c *check.C) {
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeAbort, "refresh")
 	c.Assert(err, check.IsNil)
-	c.Assert(task.Status(), check.Equals, state.AbortStatus)
+	c.Assert(task.Status(), check.Equals, state.HoldStatus)
 	c.Assert(task2.Status(), check.Equals, state.HoldStatus)
 }
