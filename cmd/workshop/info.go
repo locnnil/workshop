@@ -36,7 +36,7 @@ details for a workshop, formatting them as YAML. Specifically, it prints:
 
 - Individual SDK details, such as name, channel, installation date and revision
 
-- Currently mounted content interface plugs
+- Currently connected mount interface plugs
 
 
 Notes:

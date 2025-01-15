@@ -1,10 +1,10 @@
-name: test-sdk-content-broken
-title: test-sdk-content-broken
+name: test-sdk-mount-broken
+title: test-sdk-mount-broken
 base: ubuntu@20.04
 
-summary: test-sdk-content-broken SDK
+summary: test-sdk-mount-broken SDK
 description: |
-  test-sdk-content-broken SDK
+  test-sdk-mount-broken SDK
 
 sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
 slots:

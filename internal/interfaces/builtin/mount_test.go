@@ -32,7 +32,7 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type contentSuite struct {
+type mountSuite struct {
 	iface     interfaces.Interface
 	projectId string
 }
@@ -41,124 +41,124 @@ func Test(t *testing.T) {
 	check.TestingT(t)
 }
 
-var _ = check.Suite(&contentSuite{
+var _ = check.Suite(&mountSuite{
 	iface: builtin.MustInterface("mount"),
 })
 
-func (s *contentSuite) SetUpTest(c *check.C) {
+func (s *mountSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
 }
 
-func (s *contentSuite) TestName(c *check.C) {
+func (s *mountSuite) TestName(c *check.C) {
 	c.Assert(s.iface.Name(), check.Equals, "mount")
 }
 
-func (s *contentSuite) TestSanitizeSlotSimple(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizeSlotSimple(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
- content-slot:
+ mount-slot:
   interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	slot := info.Slots["content-slot"]
+	slot := info.Slots["mount-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
 
-func (s *contentSuite) TestSanitizePlugSimple(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizePlugSimple(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 plugs:
- content-plug:
+ mount-plug:
   interface: mount
   workshop-target: import
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	plug := info.Plugs["content-plug"]
+	plug := info.Plugs["mount-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 }
 
-func (s *contentSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 plugs:
- content-plug:
+ mount-plug:
   interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	plug := info.Plugs["content-plug"]
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content plug must contain target path")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount plug must contain target path")
 }
 
-func (s *contentSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 plugs:
- content-plug:
+ mount-plug:
   interface: mount
   workshop-target: ../foo
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	plug := info.Plugs["content-plug"]
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "content interface path is not clean:.*")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount interface path is not clean:.*")
 }
 
-func (s *contentSuite) TestSanitizeSlotOK(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizeSlotOK(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
- content-slot:
+ mount-slot:
   interface: mount
   workshop-source: /images/low-res
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	slot := info.Slots["content-slot"]
+	slot := info.Slots["mount-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
 
-func (s *contentSuite) TestSanitizeSlotNoSource(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizeSlotNoSource(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
- content-slot:
+ mount-slot:
   interface: mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	slot := info.Slots["content-slot"]
+	slot := info.Slots["mount-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
 
-func (s *contentSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
- content-slot:
+ mount-slot:
   interface: mount
   workshop-source: root
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be absolute`)
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *contentSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
-	const mockSdkYaml = `name: content-slot-sdk
+func (s *mountSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
- content-slot:
+ mount-slot:
   interface: mount
   workshop-source: ../../../../../../../../root/
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
-	slot := info.Slots["content-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `content slot \"workshop-source\" must be absolute`)
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *contentSuite) TestInterfaces(c *check.C) {
+func (s *mountSuite) TestInterfaces(c *check.C) {
 	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
 }
 
-func (s *contentSuite) TestContentInterface(c *check.C) {
+func (s *mountSuite) TestMountInterface(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:

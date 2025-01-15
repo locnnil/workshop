@@ -1,4 +1,4 @@
-name: ws-remove-content
+name: ws-remove-mount
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-mount

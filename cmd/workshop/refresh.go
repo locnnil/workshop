@@ -54,7 +54,7 @@ Notes:
 
 - Updated and newly added SDKs are installed in alphabetical order
 
-- For content interface plugs, mounts the last source
+- For mount interface plugs, mounts the last source
   set by 'workshop remount', if any
 
 - If the optional <SDK> is supplied,

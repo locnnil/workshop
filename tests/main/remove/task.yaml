@@ -27,9 +27,9 @@ execute: |
   workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"
   
   echo "Check the workshop can be removed and SDKs disconnected"
-  workshop_exec launch ws-remove-content
-  workshop_exec remove ws-remove-content
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-remove-content[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec launch ws-remove-mount
+  workshop_exec remove ws-remove-mount
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-remove-mount[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Error"
   workshop_exec launch ws-remove

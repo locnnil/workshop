@@ -31,7 +31,7 @@ Notes:
 
 - If any listed workshop is 'Off' or 'Pending', none are removed
 - To rebuild a removed workshop from scratch, use 'workshop launch'
-- For content interface plugs, non-default sources set by 'workshop remount'
+- For mount interface plugs, non-default sources set by 'workshop remount'
   aren't removed
 `,
 		Example: `

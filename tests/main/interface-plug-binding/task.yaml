@@ -18,7 +18,7 @@ execute: |
   workshop_exec connections ws-bind > conns.log
   check_original_binding
 
-  echo "Check bound content plugs use host directories of the plug they are bound to"
+  echo "Check bound mount plugs use host directories of the plug they are bound to"
   workshop_exec info | grep -v notes > mounts.log
   yq '.content["test-sdk-multiple-plugs"].mounts["data"]' < mounts.log | MATCH "^host-source:.*ws-bind_test-sdk-mount_one.sdk"
   yq '.content["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*ws-bind_test-sdk-multiple-plugs_cache.sdk"

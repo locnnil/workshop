@@ -362,7 +362,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	c.Assert(conns, check.HasLen, 0)
 }
 
-func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingContentTargets(c *check.C) {
+func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c *check.C) {
 	// Setup
 	s.launchWorkshop(c, "ws", []testSdkSetup{
 		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable"}, conflictingTarget1},
@@ -870,7 +870,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	// Setup
-	// Create an already installed workshop with a connected content plug
+	// Create an already installed workshop with a connected mount plug
 	repo := s.mgr.Repository()
 	source := c.MkDir()
 	s.launchRemountWorkshop(c, source)
@@ -905,7 +905,6 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestAutoDisconnectDisconnected(c *check.C) {
 	// Setup
-	// Create an already installed workshop with a content plug
 	repo := s.mgr.Repository()
 	s.launchWorkshop(c, "ws", []testSdkSetup{
 		{csetup, consumer},

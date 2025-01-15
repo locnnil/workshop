@@ -35,7 +35,7 @@ func autoConnectChecker(workshopConns []interfaces.ConnRef) checker {
 
 		// The pair is not explicitly connected but the plug is used in other
 		// explicit workshop connections; reject this candidate pair. Example:
-		// content interface plug connected explicitly should reject connections
+		// mount interface plug connected explicitly should reject connections
 		// to other slots.
 		if slices.ContainsFunc(workshopConns, func(conn interfaces.ConnRef) bool {
 			return conn.PlugRef == *p.Ref()

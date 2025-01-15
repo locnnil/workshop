@@ -87,7 +87,7 @@ func cleanSubPath(path string) bool {
 
 func validatePath(path string) error {
 	if ok := cleanSubPath(path); !ok {
-		return fmt.Errorf("content interface path is not clean: %q", path)
+		return fmt.Errorf("mount interface path is not clean: %q", path)
 	}
 	return nil
 }
@@ -95,12 +95,12 @@ func validatePath(path string) error {
 func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	for name := range plug.Attrs {
 		if !slices.Contains(knownPlugAttributes, name) {
-			return fmt.Errorf(`unknown attribute for content interface plug: %q`, name)
+			return fmt.Errorf(`unknown attribute for mount interface plug: %q`, name)
 		}
 	}
 	target, ok := plug.Attrs["workshop-target"].(string)
 	if !ok || len(target) == 0 {
-		return fmt.Errorf("content plug must contain target path")
+		return fmt.Errorf("mount plug must contain target path")
 	}
 	if err := validatePath(target); err != nil {
 		return err
@@ -111,17 +111,17 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	for name := range slot.Attrs {
 		if !slices.Contains(knownSlotAttributes, name) {
-			return fmt.Errorf(`unknown attribute for content interface slot: %q`, name)
+			return fmt.Errorf(`unknown attribute for mount interface slot: %q`, name)
 		}
 	}
 	source, exist := slot.Attrs["workshop-source"]
 	if !exist {
-		// perfectly fine scenario for the default content slot
+		// perfectly fine scenario for the default mount slot
 		return nil
 	}
 	path, ok := source.(string)
 	if !ok {
-		return fmt.Errorf(`content slot "workshop-source" is not a string (found %T)`, source)
+		return fmt.Errorf(`mount slot "workshop-source" is not a string (found %T)`, source)
 	}
 
 	if strings.HasPrefix(path, "$SDK") {
@@ -129,7 +129,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	}
 
 	if !filepath.IsAbs(path) {
-		return fmt.Errorf(`content slot "workshop-source" must be absolute`)
+		return fmt.Errorf(`mount slot "workshop-source" must be absolute`)
 	}
 	return nil
 }

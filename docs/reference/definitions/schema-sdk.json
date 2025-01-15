@@ -111,7 +111,7 @@
       "additionalProperties": {
         "anyOf": [
           {
-            "$ref": "#/definitions/ContentPlug"
+            "$ref": "#/definitions/MountPlug"
           },
           {}
         ]
@@ -152,9 +152,9 @@
       },
       "additionalProperties": false
     },
-    "ContentPlug": {
-      "title": "ContentPlug",
-      "description": "Sdkcraft project content plug definition.",
+    "MountPlug": {
+      "title": "MountPlug",
+      "description": "Sdkcraft project mount plug definition.",
       "type": "object",
       "properties": {
         "interface": {
