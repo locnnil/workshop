@@ -67,13 +67,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
 		}
 
-		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
-		if err != nil {
-			return false, err
-		}
-		defer fstab.Close()
-
-		mounts, err := osutil.ReadMountProfile(fstab)
+		mounts, err := readMountProfile(fs)
 		if err != nil {
 			return false, err
 		}
@@ -85,7 +79,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 
 		entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
 		mounts.Entries = append(mounts.Entries, entry)
-		if _, err = mounts.WriteTo(fstab); err != nil {
+		if err = writeMountProfile(fs, mounts); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -138,6 +132,22 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	return false, fmt.Errorf(`unknown device type: %v`, dev.Type)
 }
 
+func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, error) {
+	fstab, err := fs.Open("/etc/fstab")
+	if errors.Is(err, os.ErrNotExist) {
+		return &osutil.MountProfile{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer fstab.Close()
+
+	return osutil.ReadMountProfile(fstab)
+}
+
+func writeMountProfile(fs workshop.WorkshopFs, mounts *osutil.MountProfile) error {
+	return workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644)
+}
+
 func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
 	var out bytes.Buffer
 
@@ -171,13 +181,7 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 		return nil
 	}
 
-	fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
-	if err != nil {
-		return err
-	}
-	defer fstab.Close()
-
-	mounts, err := osutil.ReadMountProfile(fstab)
+	mounts, err := readMountProfile(fs)
 	if err != nil {
 		return err
 	}
@@ -191,7 +195,7 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 		return nil
 	}
 
-	if err = workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644); err != nil {
+	if err = writeMountProfile(fs, mounts); err != nil {
 		return err
 	}
 

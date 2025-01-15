@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	lxd "github.com/canonical/lxd/client"
@@ -113,6 +114,9 @@ plugs:
     one:
         interface: mount
         workshop-target: /opt
+    two:
+        interface: mount
+        workshop-target: /mnt
     ssh-agent:
         interface: ssh-agent
 `)
@@ -123,7 +127,10 @@ type: system
 slots:
     slot:
         interface: mount
-        workshop-source: /mnt
+        workshop-source: /usr/local
+    home:
+        interface: mount
+        workshop-source: /home
     ssh-agent:
         interface: ssh-agent
 `)
@@ -155,6 +162,14 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
 	c.Assert(err, check.IsNil)
 
+	connref = &interfaces.ConnRef{
+		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["two"]),
+		SlotRef: interfaces.NewSlotRef(pinfo.Slots["home"]),
+	}
+
+	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
+	c.Assert(err, check.IsNil)
+
 	b := lxd_device.Backend{}
 	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
 
@@ -164,15 +179,25 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	// Check the LXD profile correctness
 	prof, err := lxdbackend.Profile(f.client, f.pid, "test", "consumer")
 	c.Assert(err, check.IsNil)
-	c.Assert(prof.Mounts, check.HasLen, 1)
+	c.Assert(prof.Mounts, check.HasLen, 2)
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
-	c.Check(prof.Mounts["one"].What, check.Equals, "/mnt")
+	c.Check(prof.Mounts["one"].What, check.Equals, "/usr/local")
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.WorkshopWorkshop)
+	c.Check(prof.Mounts["two"].Name, check.Equals, "two")
+	c.Check(prof.Mounts["two"].What, check.Equals, "/home")
+	c.Check(prof.Mounts["two"].Where, check.Equals, "/mnt")
+	c.Check(prof.Mounts["two"].Type, check.Equals, workshop.WorkshopWorkshop)
 
 	// Check /etc/fstab and mount
 	fstab := f.readWorkshopFile(c, "/etc/fstab")
-	c.Check(string(fstab), check.Equals, "/mnt /opt none bind,x-systemd.requires=/project 0 0\n")
+	lines := strings.Split(string(fstab), "\n")
+	c.Check(lines, check.HasLen, 3)
+	c.Check(lines[2], check.Equals, "")
+	c.Check(lines[:2], testutil.DeepUnsortedMatches, []string{
+		"/usr/local /opt none bind,x-systemd.requires=/project 0 0",
+		"/home /mnt none bind,x-systemd.requires=/project 0 0",
+	})
 
 	// Check the LXD profile is removed
 	err = b.Remove(f.ctx, "test", "consumer")
