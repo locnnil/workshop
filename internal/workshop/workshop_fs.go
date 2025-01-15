@@ -75,6 +75,10 @@ func AtomicWrite(fs afero.Fs, filename string, source io.WriterTo, perm os.FileM
 	rev.Add(func() { _ = fs.Remove(temp) })
 
 	_, err = source.WriteTo(file)
+	// TODO: Call file.Sync() here. This is currently a no-op for sftpfs,
+	// see https://github.com/spf13/afero/pull/429.
+	// Also, LXD uses pkg/sftp as its SFTP server,
+	// and that doesn't support the fsync@openssh.com extension.
 	file.Close()
 	if err != nil {
 		return err
