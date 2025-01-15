@@ -1,9 +1,9 @@
 name: ws-gpu-fail
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       user-gpu:
         interface: gpu
-  test-sdk-gpu:
+  - name: test-sdk-gpu
     channel: latest/stable

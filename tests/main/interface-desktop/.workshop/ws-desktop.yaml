@@ -1,7 +1,7 @@
 name: ws-desktop
 base: ubuntu@22.04
 sdks:
-  test-sdk-desktop:
+  - name: test-sdk-desktop
     channel: latest/stable
 connections:
   - plug: test-sdk-desktop:desktop

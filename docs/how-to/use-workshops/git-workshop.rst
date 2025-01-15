@@ -26,7 +26,7 @@ in your repository:
    name: golang
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 
@@ -135,7 +135,7 @@ to change the base image:
    name: golang
    base: ubuntu@24.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
 
 

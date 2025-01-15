@@ -17,10 +17,10 @@ func (c *CmdRemount) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE>",
 		Args:  cobra.ExactArgs(2),
-		Short: "Mount a new source location to the content interface plug's target",
+		Short: "Mount a new source location to the mount interface plug's target",
 		Long: `
 This command mounts a new source location on the host to the target directory
-of the specified content interface plug, qualified by the SDK name.
+of the specified mount interface plug, qualified by the SDK name.
 Specifically, it does the following:
 
 - Attempts the mount operation atomically;
@@ -35,7 +35,7 @@ Notes:
 
 - To stop the workshop, use 'workshop stop'
 
-- 'workshop info' lists any mounted content interface plugs for the workshop
+- 'workshop info' lists any connected mount interface plugs for the workshop
 
 - 'workshop refresh' mounts the last source set by 'workshop remount', if any
 

@@ -54,10 +54,10 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	chg := task.Change()
 	// If auto-connect is executed during refresh, chances are, that there are
 	// SDKs that are going to be reinstalled without any changes to their
-	// content interface plugs. In this case, their 'source' directories must be
+	// mount interface plugs. In this case, their 'source' directories must be
 	// set to how it was in the previous workshop instance as some of those
 	// plugs may have been remounted with `workshop remount`. To preserve that,
-	// we store the content interface connection's 'source' directories when the
+	// we store the mount interface connection's 'source' directories when the
 	// old workshop/SDK is removed (see the 'disconnect' task handler) and check
 	// if any of those are still relevant for the new workshop.
 	var remounts map[string]string
@@ -87,7 +87,7 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	return m.connectAuto(task, wp, info, remounts)
 }
 
-// Returns content interface connection IDs of the SDK and their corresponding
+// Returns mount interface connection IDs of the SDK and their corresponding
 // plug's dynamic attributes.
 func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]string {
 	// [ref.ID]source
@@ -270,7 +270,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 		}
 	}
 
-	// remounts may be not nil when a previously existing content
+	// remounts may be not nil when a previously existing mount
 	// interface connection (e.g. pre-refresh) needs to be recreated
 	// without changes to its 'source' attribute in the new workshop
 	// (given the new workshop also has an SDK with exactly the same
@@ -339,7 +339,7 @@ func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.T
 		return err
 	}
 
-	// Save 'source' attributes for the content interface connections as some of
+	// Save 'source' attributes for the mount interface connections as some of
 	// them may have been remounted to a non-default locations, so these can be
 	// set after refresh for this SDK.
 	cattrs := m.remountSources(project.ProjectId, w, s)

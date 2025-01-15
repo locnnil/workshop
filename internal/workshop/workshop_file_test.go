@@ -1,7 +1,6 @@
 package workshop_test
 
 import (
-	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/spf13/afero"
-	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
@@ -58,13 +56,13 @@ func (f *workshopFile) TestWorkshopFileParse(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  huggingface:
+  - name: huggingface
     channel: latest/stable
-  cuda:
+  - name: cuda
     channel: latest/edge
-  zookeeper:
+  - name: zookeeper
     channel: latest/candidate
-  automotive:
+  - name: automotive
     channel: latest/beta
 scripts:
   oneline: echo one line
@@ -77,17 +75,14 @@ scripts:
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
-	c.Assert(slices.IsSortedFunc(file.Sdks, func(a, b workshop.SdkRecord) int {
-		return cmp.Compare(a.Name, b.Name)
-	}), check.Equals, true)
-	c.Assert(file.Sdks[0].Name, check.Equals, "automotive")
-	c.Assert(file.Sdks[0].Channel, check.Equals, "latest/beta")
+	c.Assert(file.Sdks[0].Name, check.Equals, "huggingface")
+	c.Assert(file.Sdks[0].Channel, check.Equals, "latest/stable")
 	c.Assert(file.Sdks[1].Name, check.Equals, "cuda")
 	c.Assert(file.Sdks[1].Channel, check.Equals, "latest/edge")
-	c.Assert(file.Sdks[2].Name, check.Equals, "huggingface")
-	c.Assert(file.Sdks[2].Channel, check.Equals, "latest/stable")
-	c.Assert(file.Sdks[3].Name, check.Equals, "zookeeper")
-	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/candidate")
+	c.Assert(file.Sdks[2].Name, check.Equals, "zookeeper")
+	c.Assert(file.Sdks[2].Channel, check.Equals, "latest/candidate")
+	c.Assert(file.Sdks[3].Name, check.Equals, "automotive")
+	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/beta")
 	lines := len(strings.Split(yaml, "\n"))
 	skip := strings.Repeat("\n", lines-5)
 	c.Assert(string(file.Scripts["oneline"]), check.Equals, skip+"echo one line\n")
@@ -113,16 +108,16 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 	c.Assert(string(out), check.Equals, `name: test-workshop
 base: ubuntu@22.04
 sdks:
-    one:
-        channel: latest/stable
-        plugs:
-            plug:
-                bind: two:plug
-    two:
-        channel: latest/stable
-        plugs:
-            plug:
-                bind: one:plug
+    - name: one
+      channel: latest/stable
+      plugs:
+        plug:
+            bind: two:plug
+    - name: two
+      channel: latest/stable
+      plugs:
+        plug:
+            bind: one:plug
 scripts:
     multiline: |
         echo multi
@@ -220,9 +215,9 @@ func (f *workshopFile) TestWorkshopFileDuplicateSdks(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  cuda:
+  - name: cuda
     channel: latest/stable
-  cuda:
+  - name: cuda
     channel: latest/edge
 `
 	f.createWFile(c, "xbert-gpu", yaml)
@@ -235,7 +230,7 @@ func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  agent:
+  - name: agent
     channel: latest/stable
 `
 	f.createWFile(c, "xbert-gpu", yaml)
@@ -248,7 +243,7 @@ func (f *workshopFile) TestWorkshopUnsupportedChannel(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  cuda:
+  - name: cuda
     channel: latest/foo
 `
 	f.createWFile(c, "xbert-gpu", yaml)
@@ -261,12 +256,12 @@ func (f *workshopFile) TestBindPlug(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       cache:
         bind: etl-sdk:cache
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       data: 
@@ -275,7 +270,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: &workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
 		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
@@ -285,12 +280,12 @@ func (f *workshopFile) TestPlugDefinedButNotBound(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       cache:
         attr1: val
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       data: 
@@ -299,7 +294,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Attributes: map[string]interface{}{"attr1": "val"}}}},
 		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
@@ -309,9 +304,9 @@ func (f *workshopFile) TestPlugDefinedAndBoundFails(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       data: 
@@ -327,12 +322,12 @@ func (f *workshopFile) TestBindPlugNoSdk(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       cache:
         bind: no-sdk:cache
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       data: 
@@ -347,7 +342,7 @@ func (f *workshopFile) TestBindPlugToItself(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       cache:
@@ -362,14 +357,14 @@ func (f *workshopFile) TestBindPlugToBoundPlug(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  one:
+  - name: one
     channel: latest/stable
-  two:
+  - name: two
     channel: latest/stable
     plugs:
       data:
         bind: one:data
-  three:
+  - name: three
     channel: latest/stable
     plugs:
       data:
@@ -384,7 +379,7 @@ func (f *workshopFile) TestBindPlugInvalidPlugRef(c *check.C) {
 	templ := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       %s
@@ -411,14 +406,14 @@ func (f *workshopFile) TestBindToAlreadyBoundPlug(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       cache:
         bind: etl-sdk:cache
       aux:
         bind: etl-sdk:data
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       cache: 
@@ -433,14 +428,14 @@ func (f *workshopFile) TestIndirectBindToAlreadyBoundPlug(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       data:
         bind: data-sdk:aux
       aux:
         bind: etl-sdk:cache
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
     plugs:
       cache:
@@ -455,7 +450,7 @@ func (f *workshopFile) TestHostSdkSlot(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  system:   
+  - name: system
     slots:
       training-data:
         workshop-source: relative/path
@@ -463,7 +458,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
-	c.Assert(file.Sdks, testutil.DeepUnsortedMatches, workshop.SdkList{
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
 }
 
@@ -471,9 +466,9 @@ func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: data-sdk:data
@@ -494,9 +489,9 @@ func (f *workshopFile) TestWorkshopConnectionsInvalidRefs(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: data-sdk
@@ -513,9 +508,9 @@ func (f *workshopFile) TestWorkshopConnectionsSlotSdkNotInTheList(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: data-sdk:data
@@ -530,9 +525,9 @@ func (f *workshopFile) TestWorkshopConnectionsPlugSdkNotInTheList(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: lost-sdk:data
@@ -547,9 +542,9 @@ func (f *workshopFile) TestWorkshopConnectionsImplicitHostSdkPlugSlot(c *check.C
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: system:data
@@ -564,12 +559,12 @@ func (f *workshopFile) TestWorkshopConnectionsBoundPlugCannotBeConnected(c *chec
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
 sdks:
-  data-sdk:
+  - name: data-sdk
     channel: latest/stable
     plugs:
       data: 
         bind: etl-sdk:data
-  etl-sdk:
+  - name: etl-sdk
     channel: latest/stable
 connections:
   - plug: data-sdk:data

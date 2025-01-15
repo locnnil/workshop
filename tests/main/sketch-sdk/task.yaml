@@ -13,16 +13,16 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.content["sketch"].tracking' | MATCH '^~/.local/share/workshop/project/.*/sdk/sketch/ws-sketch$'
-  workshop_exec info | grep -v notes | yq '.content["sketch"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/project/.*/sdk/sketch/ws-sketch$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   echo "Stash current sketch SDK"
   workshop_exec sketch-sdk --stash
-  workshop_exec info | grep -v notes | yq '.content["sketch"].installed' | NOMATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | NOMATCH '\(x1\)$'
 
   echo "Restore sketch SDK"
   workshop_exec sketch-sdk --restore
-  workshop_exec info | grep -v notes | yq '.content["sketch"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   echo "Add setup-base"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
@@ -34,7 +34,7 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.content["sketch"].installed' | MATCH '\(x2\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
 
   echo "Add a new mount"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
@@ -47,6 +47,6 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.content["sketch"].installed' | MATCH '\(x3\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x3\)$'
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
   workshop_exec exec -- test -d /home/workshop/ws-sketch-test

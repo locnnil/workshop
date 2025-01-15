@@ -1,5 +1,5 @@
 name: ws-waiting
 base: ubuntu@22.04
 sdks:
-  test-sdk-health-waiting:
+  - name: test-sdk-health-waiting
     channel: latest/stable

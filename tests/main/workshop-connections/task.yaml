@@ -17,9 +17,9 @@ execute: |
 
   echo "Check mounts"
   workshop_exec info | grep -v notes > mounts.log
-  yq '.content["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*mount/ws-user-conns_test-sdk-mount_one.sdk" 
-  yq '.content["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
-  yq '.content["test-sdk-mount"].mounts["wp-plug"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
+  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*mount/ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
+  yq '.sdks["test-sdk-mount"].mounts["wp-plug"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
 
   echo "Check refresh that removes a connection"
   mv -f .workshop/ws-user-conns.yaml.new .workshop/ws-user-conns.yaml
@@ -29,5 +29,5 @@ execute: |
 
   echo "Check mounts"
   workshop_exec info | grep -v notes > mounts.log
-  yq '.content["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*ws-user-conns_test-sdk-mount_one.sdk" 
-  yq '.content["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
+  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"

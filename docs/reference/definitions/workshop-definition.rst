@@ -79,8 +79,6 @@ and includes a number of mandatory and optional keys:
        are set by default.
 
 
-Any entry in :samp:`sdks` must be named after an existing SDK
-that is available from the SDK store.
 Each SDK is described with the following keys:
 
 .. list-table::
@@ -91,6 +89,11 @@ Each SDK is described with the following keys:
    * - Key
      - Value
      - Description
+
+   * - :samp:`name` (required)
+     - string
+     - Name of an existing SDK
+       that is available from the SDK store.
 
    * - :samp:`channel` (required)
      - string
@@ -162,7 +165,7 @@ and some useful scripts:
    name: golang
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/stable
    scripts:
      lint: |
@@ -182,9 +185,9 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
    name: go-dev
    base: ubuntu@22.04
    sdks:
-     go:
+     - name: go
        channel: latest/candidate
-     dev-tunnel:
+     - name: dev-tunnel
        channel: latest/edge
        plugs:
          data:
@@ -207,18 +210,18 @@ and two connections:
    base: ubuntu@22.04
    name: digits-cuda
    sdks:
-     system:
+     - name: system
        slots:
          images:
            interface: mount
            workshop-source: /project/training-data/low-res
-     tensorflow:
+     - name: tensorflow
        channel: latest/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
-     cuda:
+     - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda

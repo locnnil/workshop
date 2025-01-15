@@ -54,7 +54,7 @@ put this file in the project root:
    name: ros2-humble
    base: ubuntu@22.04
    sdks:
-     ros2:
+     - name: ros2
        channel: latest/edge
 
 

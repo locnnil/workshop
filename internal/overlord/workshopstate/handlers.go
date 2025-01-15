@@ -342,11 +342,11 @@ func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
 		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", w, err))
 	}
 
-	// Remove all the possible workshop default content interface 'source'
+	// Remove all the possible workshop default mount interface 'source'
 	// locations that could have existed over the workshop's lifecycle. These
 	// are not only the ones that exist by the time we remove the workshop.
 	// Imagine the following scenario. An SDK added to a workshop and created a
-	// content interface plug. Then, the SDK was removed from the workshop via
+	// mount interface plug. Then, the SDK was removed from the workshop via
 	// refresh. When we call 'workshop remove', the plug does not exist anymore
 	// (nor the SDK profile for this plug); however, the content is still stored
 	// on the host and must also be removed alongside the workshop.

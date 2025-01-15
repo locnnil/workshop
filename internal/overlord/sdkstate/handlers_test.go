@@ -403,7 +403,7 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.Equals, nil)
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Content
+	info := props.Sdks
 	c.Check(info["test"], check.DeepEquals, testSdk)
 
 	sdkInfo, err := props.SdkInfo(s.ctx, info["test"].Name)
@@ -451,10 +451,10 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	_, err = wfs.Stat(sdk.SdkCurrentPath("test-broken"))
 	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
 
-	// not in the content (unlinked)
+	// not in the SDK list (unlinked)
 	wp, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, ok := wp.Content["test-broken"]
+	_, ok := wp.Sdks["test-broken"]
 	c.Check(ok, check.Equals, false)
 
 	// not in the repo (removed)
@@ -493,7 +493,7 @@ func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, ok := props.Content["test"]
+	_, ok := props.Sdks["test"]
 	c.Check(ok, check.Equals, false)
 	c.Check(link.Status(), check.Equals, state.UndoneStatus)
 
@@ -545,7 +545,7 @@ func (s *sdkStateSuite) TestUndoLinkSdkRestorePreviousRev(c *check.C) {
 	wp, err = s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 
-	setup, ok := wp.Content["test"]
+	setup, ok := wp.Sdks["test"]
 	c.Assert(ok, check.Equals, true)
 	c.Assert(setup.Revision.N, check.Equals, 1)
 	c.Assert(setup.RevisionSequence, check.HasLen, 0)

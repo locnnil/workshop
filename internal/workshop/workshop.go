@@ -22,7 +22,7 @@ import (
 var (
 	ConfigProjectId         = "user.workshop.project-id"
 	ConfigWorkshopFile      = "user.workshop.file"
-	ConfigWorkshopContent   = "user.workshop.content"
+	ConfigWorkshopSdks      = "user.workshop.sdks"
 	ConfigProjectPathDevice = "workshop.project"
 )
 
@@ -38,13 +38,13 @@ type Workshop struct {
 	Base    string
 	Running bool
 	// Installed SDKs.
-	Content map[string]sdk.Setup
+	Sdks map[string]sdk.Setup
 	// Workshop devices installed.
 	Profiles map[string]SdkProfile
 }
 
 // Associate an SDK with the workshop by creating a 'current' symlink and adding
-// the SDK to the workshop content.
+// the SDK to the Sdks field.
 func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
 	if err != nil {
@@ -77,30 +77,30 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	rev.Add(func() { _ = fs.Remove(current) })
 
-	// We do not track the system SDK in the content field; this is only for the
+	// We do not track the system SDK in the Sdks field; this is only for the
 	// user-defined SDKs as the system SDK is a special case (e.g. cannot be
 	// removed from the workshop).
 	if s.Name != sdk.System.String() {
 		now := InstallTimeNow()
 		s.InstallTime = &now
 
-		sdksetup, exist := w.Content[s.Name]
+		sdksetup, exist := w.Sdks[s.Name]
 		if exist {
 			sdksetup.RevisionSequence = append(sdksetup.RevisionSequence, sdksetup.Revision)
 			sdksetup.Revision = s.Revision
-			w.Content[s.Name] = sdksetup
+			w.Sdks[s.Name] = sdksetup
 		} else {
-			w.Content[s.Name] = s
+			w.Sdks[s.Name] = s
 		}
 
-		sequenceValue, err := json.Marshal(w.Content)
+		sequenceValue, err := json.Marshal(w.Sdks)
 		if err != nil {
 			return err
 		}
 
 		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
 			&WorkshopConfigValue{
-				Name:  ConfigWorkshopContent,
+				Name:  ConfigWorkshopSdks,
 				Value: string(sequenceValue),
 			})
 
@@ -114,26 +114,26 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 }
 
 // Stops associating an SDK with the workshop by removing a 'current' symlink and
-// removing the SDK from the workshop "installed" content if there are no more
+// removing the SDK from the workshop "installed" SDKs if there are no more
 // revisions left.
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	if name != sdk.System.String() {
-		setup := w.Content[name]
+		setup := w.Sdks[name]
 		if len(setup.RevisionSequence) > 0 {
 			setup.Revision = setup.RevisionSequence[len(setup.RevisionSequence)-1]
 			setup.RevisionSequence = setup.RevisionSequence[:len(setup.RevisionSequence)-1]
-			w.Content[name] = setup
+			w.Sdks[name] = setup
 		} else {
-			delete(w.Content, name)
+			delete(w.Sdks, name)
 		}
-		newSequence, err := json.Marshal(w.Content)
+		newSequence, err := json.Marshal(w.Sdks)
 		if err != nil {
 			return err
 		}
 
 		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
 			&WorkshopConfigValue{
-				Name:  ConfigWorkshopContent,
+				Name:  ConfigWorkshopSdks,
 				Value: string(newSequence),
 			})
 		if err != nil {
@@ -148,7 +148,7 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 	}
 	defer fs.Close()
 
-	if setup, exist := w.Content[name]; exist {
+	if setup, exist := w.Sdks[name]; exist {
 		if err = fs.Remove(sdk.SdkCurrentPath(name)); err != nil {
 			return err
 		}
@@ -188,7 +188,7 @@ func AptCacheVolumeName(ws, pid string) string {
 
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
-	setup, ok := w.Content[sdkName]
+	setup, ok := w.Sdks[sdkName]
 	if sdkName != sdk.System.String() && !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
 	}
@@ -263,9 +263,9 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 // Returns a map of SDK info for installed SDKs. The info includes SDK details
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
-func (w *Workshop) ContentInfo(ctx context.Context) (map[string]*sdk.Info, error) {
-	var infos = make(map[string]*sdk.Info, len(w.Content))
-	for _, sdk := range w.Content {
+func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
+	var infos = make(map[string]*sdk.Info, len(w.Sdks))
+	for _, sdk := range w.Sdks {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err

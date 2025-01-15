@@ -1,14 +1,14 @@
 name: ws-user-conns
 base: ubuntu@22.04
 sdks:
-  system:
+  - name: system
     slots:
       user-slot:
         interface: mount
       user-slot-2:
         interface: mount
         workshop-source: /project/user-data-2
-  test-sdk-mount:
+  - name: test-sdk-mount
     channel: latest/stable
     plugs:
       wp-plug:

@@ -15,10 +15,10 @@ execute: |
   workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-launch-abort\"..."
 
   echo "Ensure SDKs are unlinked successfully during abort"
-  echo "Update the workshop file to use test-sdk-content-broken"
-  sed -i 's/test-sdk-setup-fail/test-sdk-content-broken/g' workshop.yaml
+  echo "Update the workshop file to use test-sdk-mount-broken"
+  sed -i 's/test-sdk-setup-fail/test-sdk-mount-broken/g' workshop.yaml
   workshop_exec launch --wait-on-error || true
-  sed -i 's/test-sdk-content-broken/test-sdk-setup-fail/g' workshop.yaml
+  sed -i 's/test-sdk-mount-broken/test-sdk-setup-fail/g' workshop.yaml
 
   workshop_exec launch --abort
   workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -2 | MATCH ".*ERROR installation denied by \"one\" slot rule of interface \"mount\""

@@ -1411,37 +1411,37 @@ func (s *DisconnectSdkSuite) TestParallelInstances(c *C) {
 	c.Check(affected, testutil.DeepContains, s.s2Instance)
 }
 
-func contentPolicyCheck(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) {
+func mountPolicyCheck(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) {
 	return true, nil
 }
 
-func contentAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
+func mountAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	return plug.Attrs["mount"] == slot.Attrs["mount"]
 }
 
 // internal helper that creates a new repository with two snaps, one
-// is a content plug and one a content slot
-func makeContentConnectionTestSdks(c *C, projectId, plugContentToken, slotContentToken string) (*Repository, *sdk.Info, *sdk.Info) {
+// is a mount plug and one a mount slot
+func makeMountConnectionTestSdks(c *C, projectId, plugMountToken, slotMountToken string) (*Repository, *sdk.Info, *sdk.Info) {
 	repo := NewRepository()
-	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "mount", AutoConnectCallback: contentAutoConnect})
+	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "mount", AutoConnectCallback: mountAutoConnect})
 	c.Assert(err, IsNil)
 
 	plugSdk := sdk.MockInfo(c, fmt.Sprintf(`
-name: content-plug-sdk
+name: mount-plug-sdk
 base: ubuntu@22.04
 plugs:
   imported-content:
     interface: mount
     mount: %s
-`, plugContentToken), projectId, "ws-importer")
+`, plugMountToken), projectId, "ws-importer")
 	slotSdk := sdk.MockInfo(c, fmt.Sprintf(`
-name: content-slot-sdk
+name: mount-slot-sdk
 base: ubuntu@22.04
 slots:
   exported-content:
     interface: mount
     mount: %s
-`, slotContentToken), projectId, "ws-exporter")
+`, slotMountToken), projectId, "ws-exporter")
 
 	err = repo.AddSdk(plugSdk)
 	c.Assert(err, IsNil)
@@ -1451,30 +1451,21 @@ slots:
 	return repo, plugSdk, slotSdk
 }
 
-func (s *RepositorySuite) TestAutoConnectContentInterfaceSimple(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "mylib")
-	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
+func (s *RepositorySuite) TestAutoConnectMountInterfaceSimple(c *C) {
+	repo, _, _ := makeMountConnectionTestSdks(c, s.projectId, "mylib", "mylib")
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "mount-plug-sdk", "imported-content", mountPolicyCheck)
 	c.Assert(candidateSlots, HasLen, 1)
 	c.Check(candidateSlots[0].Name, Equals, "exported-content")
-	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "mount-slot-sdk", "exported-content", mountPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 1)
 	c.Check(candidatePlugs[0].Name, Equals, "imported-content")
 }
 
-func (s *RepositorySuite) TestAutoConnectContentInterfaceOSWorksCorrectly(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "otherlib")
-
-	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
+func (s *RepositorySuite) TestAutoConnectMountInterfaceNoMatches(c *C) {
+	repo, _, _ := makeMountConnectionTestSdks(c, s.projectId, "mylib", "otherlib")
+	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "mount-plug-sdk", "imported-content", mountPolicyCheck)
 	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
-	c.Assert(candidatePlugs, HasLen, 0)
-}
-
-func (s *RepositorySuite) TestAutoConnectContentInterfaceNoMatchingContent(c *C) {
-	repo, _, _ := makeContentConnectionTestSdks(c, s.projectId, "mylib", "otherlib")
-	candidateSlots := repo.AutoConnectCandidateSlots(s.projectId, "ws-importer", "content-plug-sdk", "imported-content", contentPolicyCheck)
-	c.Check(candidateSlots, HasLen, 0)
-	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "content-slot-sdk", "exported-content", contentPolicyCheck)
+	candidatePlugs := repo.AutoConnectCandidatePlugs(s.projectId, "ws-exporter", "mount-slot-sdk", "exported-content", mountPolicyCheck)
 	c.Assert(candidatePlugs, HasLen, 0)
 }
 

@@ -1,5 +1,5 @@
 name: ws-gpu
 base: ubuntu@22.04
 sdks:
-    test-sdk-gpu:
-        channel: latest/stable
+  - name: test-sdk-gpu
+    channel: latest/stable

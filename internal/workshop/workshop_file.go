@@ -90,59 +90,14 @@ type Connection struct {
 	SlotRef SlotRef `yaml:"slot"`
 }
 
-type SdkList []SdkRecord
-
 type Script string
 
 type File struct {
 	Name        string            `yaml:"name"`
 	Base        string            `yaml:"base"`
-	Sdks        SdkList           `yaml:"sdks,omitempty"`
+	Sdks        []SdkRecord       `yaml:"sdks,omitempty"`
 	Connections []Connection      `yaml:"connections,omitempty"`
 	Scripts     map[string]Script `yaml:"scripts,omitempty"`
-}
-
-func (p SdkList) MarshalYAML() (interface{}, error) {
-	type sdkDef struct {
-		Channel string                 `yaml:"channel"`
-		Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
-		Slots   map[string]interface{} `yaml:"slots,omitempty"`
-		Hooks   map[string]string      `yaml:"hooks,omitempty"`
-	}
-	b := map[string]sdkDef{}
-
-	for _, v := range p {
-		b[v.Name] = sdkDef{Channel: v.Channel, Plugs: v.Plugs, Slots: v.Slots, Hooks: v.Hooks}
-	}
-
-	node := &yaml.Node{}
-	err := node.Encode(b)
-	return node, err
-}
-
-func (p *SdkList) UnmarshalYAML(value *yaml.Node) error {
-	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("`sdks` must contain YAML mapping, has %v", value.Kind)
-	}
-	*p = make([]SdkRecord, len(value.Content)/2)
-	seen := map[string]bool{}
-	for i := 0; i < len(value.Content); i += 2 {
-		var res = &(*p)[i/2]
-		var name string
-		if err := value.Content[i].Decode(&name); err != nil {
-			return err
-		} else {
-			if _, ok := seen[name]; ok {
-				return fmt.Errorf("%q SDK must only be included once", name)
-			}
-			seen[name] = true
-			res.Name = name
-		}
-		if err := value.Content[i+1].Decode(&res); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (p Script) MarshalYAML() (interface{}, error) {
@@ -205,10 +160,6 @@ func readWorkshop(path string) (*File, error) {
 		return nil, err
 	}
 
-	slices.SortFunc(file.Sdks, func(a, b SdkRecord) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-
 	if !workshopName.MatchString(file.Name) {
 		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens")
 	}
@@ -236,11 +187,17 @@ func readWorkshop(path string) (*File, error) {
 	return &file, nil
 }
 
-func validateSdks(sdks SdkList) error {
+func validateSdks(sdks []SdkRecord) error {
+	seen := map[string]bool{}
 	for _, s := range sdks {
 		if slices.Contains(sdkBlocklist, s.Name) {
 			return fmt.Errorf("%q is a reserved SDK name", s.Name)
 		}
+
+		if _, ok := seen[s.Name]; ok {
+			return fmt.Errorf("%q SDK must only be included once", s.Name)
+		}
+		seen[s.Name] = true
 
 		// An SDK installed from a local source (e.g. system SDK) does not have a
 		// channel.
@@ -261,7 +218,7 @@ func validateSdks(sdks SdkList) error {
 	return nil
 }
 
-func validateBinding(sdks SdkList) error {
+func validateBinding(sdks []SdkRecord) error {
 	// All bindings must refer to the existing SDKs and meet the name validity
 	// checks (at this stage). Later, when SDK metadata will be received, the
 	// plugs must be checked again (e.g. ensure all those plugs actually exist).

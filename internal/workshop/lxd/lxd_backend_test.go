@@ -53,15 +53,15 @@ func (f *LxdBeTests) TestReadProjectsSuccess(c *check.C) {
 var marshalledWorkshop = `name: test
 base: ubuntu@22.04
 sdks:
-    one:
-        channel: latest/stable
-        plugs:
-            one-plug:
-                bind: two:two-plug
-            one-plug-two:
-                bind: two:two-plug
-    two:
-        channel: latest/edge
+    - name: one
+      channel: latest/stable
+      plugs:
+        one-plug:
+            bind: two:two-plug
+        one-plug-two:
+            bind: two:two-plug
+    - name: two
+      channel: latest/edge
 `
 
 func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
@@ -70,7 +70,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	file := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@22.04",
-		Sdks: workshop.SdkList{
+		Sdks: []workshop.SdkRecord{
 			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{
 				"one-plug":     {Bind: &workshop.PlugRef{Sdk: "two", Name: "two-plug"}},
 				"one-plug-two": {Bind: &workshop.PlugRef{Sdk: "two", Name: "two-plug"}},

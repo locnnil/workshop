@@ -460,15 +460,15 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
 	}
 
-	c := map[string]sdk.Setup{}
-	if buf, exist := inst.Config[workshop.ConfigWorkshopContent]; exist {
-		if err := json.Unmarshal([]byte(buf), &c); err != nil {
+	sdks := map[string]sdk.Setup{}
+	if buf, exist := inst.Config[workshop.ConfigWorkshopSdks]; exist {
+		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
 			return nil, err
 		}
 	}
 
-	profs := make(map[string]workshop.SdkProfile, len(c))
-	for _, s := range c {
+	profs := make(map[string]workshop.SdkProfile, len(sdks))
+	for _, s := range sdks {
 		sp, err := Profile(conn, p.ProjectId, f.Name, s.Name)
 		if err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return nil, err
@@ -486,7 +486,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		Name:     f.Name,
 		Base:     f.Base,
 		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
-		Content:  c,
+		Sdks:     sdks,
 		Profiles: profs,
 		File:     f,
 	}, nil

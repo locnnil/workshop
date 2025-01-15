@@ -24,76 +24,78 @@
     "sdks": {
       "type": "object",
       "description": "List of SDKs used in the workshop.",
-      "patternProperties": {
-        "^[a-z_][a-z0-9_-]*$": {
-          "type": "object",
-          "properties": {
-            "channel": {
-              "type": "string",
-              "description": "Channel used for the SDK.",
-              "pattern": "^[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)$",
-              "errorMessage": "Channel must follow the pattern <track>/<risk> (e.g., 'latest/stable')."
-            },
-            "plugs": {
-              "type": "object",
-              "description": "Plugs for the SDK.",
-              "patternProperties": {
-                "^[a-z_][a-z0-9_-]*$": {
-                  "type": "object",
-                  "properties": {
-                    "bind": {
-                      "type": "string",
-                      "description": "Reference to a plug in the form <sdk>:<plug>.",
-                      "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
-                      "errorMessage": "Bind reference must follow the pattern <sdk>:<plug>."
-                    },
-                    "attributes": {
-                      "type": "object",
-                      "description": "Dynamic attributes for the plug, must be empty if 'bind' is set.",
-                      "additionalProperties": true
-                    }
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the SDK.",
+            "pattern": "^[a-z_][a-z0-9_-]*$",
+            "errorMessage": "An SDK's name must start with a letter or underscore and can only include digits, lowercase letters, underscores and hyphens."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Channel used for the SDK.",
+            "pattern": "^[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)$",
+            "errorMessage": "Channel must follow the pattern <track>/<risk> (e.g., 'latest/stable')."
+          },
+          "plugs": {
+            "type": "object",
+            "description": "Plugs for the SDK.",
+            "patternProperties": {
+              "^[a-z_][a-z0-9_-]*$": {
+                "type": "object",
+                "properties": {
+                  "bind": {
+                    "type": "string",
+                    "description": "Reference to a plug in the form <sdk>:<plug>.",
+                    "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+                    "errorMessage": "Bind reference must follow the pattern <sdk>:<plug>."
                   },
-                  "allOf": [
-                    {
-                      "if": {
-                        "properties": {
-                          "bind": {
-                            "type": "string"
-                          }
+                  "attributes": {
+                    "type": "object",
+                    "description": "Dynamic attributes for the plug, must be empty if 'bind' is set.",
+                    "additionalProperties": true
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "bind": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "attributes": {
+                          "type": "object",
+                          "maxProperties": 0
                         }
                       },
-                      "then": {
-                        "properties": {
-                          "attributes": {
-                            "type": "object",
-                            "maxProperties": 0
-                          }
-                        },
-                        "errorMessage": "If 'bind' is set, 'attributes' must be empty."
-                      }
+                      "errorMessage": "If 'bind' is set, 'attributes' must be empty."
                     }
-                  ]
-                }
+                  }
+                ]
               }
-            },
-            "slots": {
-              "type": "object",
-              "description": "Slots available for the SDK.",
-              "additionalProperties": true
             }
           },
-          "required": [
-            "channel"
-          ],
-          "errorMessage": {
-            "required": {
-              "channel": "SDK must specify a channel unless it is installed from a local source."
-            }
+          "slots": {
+            "type": "object",
+            "description": "Slots available for the SDK.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "errorMessage": {
+          "required": {
+            "channel": "SDK must specify a channel unless it is installed from a local source."
           }
         }
-      },
-      "additionalProperties": false,
-      "errorMessage": "SDK names must be unique and only appear once."
+      }
     },
     "connections": {
       "type": "array",

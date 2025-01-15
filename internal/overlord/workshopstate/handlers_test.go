@@ -201,7 +201,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 
-	// create content plugs directories
+	// create content directories
 	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "mount")
 	var plugs = []string{"ws_test_plug1.sdk", "ws_test_plug2.sdk", "another-ws_test_plug3.sdk"}
 	for _, p := range plugs {
