@@ -24,7 +24,7 @@ func (m *workshopInfo) SetUpTest(c *check.C) {
 
 var mockSingleWorkshop = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
-var mockWorkshopWithContent = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","content":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopWithSdks = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","sdks":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -47,7 +47,7 @@ func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			fmt.Fprintln(w, mockWorkshopWithSdks)
 		default:
 			c.Errorf("expected 3 calls, now on %d", n)
 		}
@@ -60,7 +60,7 @@ base:     ubuntu@22.04
 project:  %s
 status:   error
 notes:    missing-project
-content:
+sdks:
   go:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
@@ -71,7 +71,7 @@ content:
 	c.Check(n, check.Equals, 3)
 }
 
-var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"content":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
+var mockWorkshopWithHealth = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Pending","notes":["workshop-note"],"sdks":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z","health-check":{"message":"Waiting for all required modules to be installed","code":"try-later"}}]}}`
 
 func (m *workshopInfo) TestWorkshopInfoWithSdkHealthReport(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -102,7 +102,7 @@ base:     ubuntu@22.04
 project:  %s
 status:   pending
 notes:    workshop-note,try-later
-content:
+sdks:
   go:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
@@ -112,7 +112,7 @@ content:
 }
 
 var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready",
-"content":[
+"sdks":[
 	{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z",
 	"mounts":[{"host-source":"/home/user/src","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-name"}},
 	{"host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk","workshop-target":"/home/workshop/target", "plug":{"project-id":"42ws42ws","workshop":"workshop","sdk":"go","plug":"plug-default"}}]
@@ -149,7 +149,7 @@ base:     ubuntu@22.04
 project:  %s
 status:   ready
 notes:    -
-content:
+sdks:
   go:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)

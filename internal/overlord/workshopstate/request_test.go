@@ -305,7 +305,7 @@ func (s *requestSuite) TestRefreshSdkRemovedMakingWorkshopEmpty(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), toinst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Sdks), toinst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -334,7 +334,7 @@ func (s *requestSuite) TestRefreshSdkReplaced(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), inst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Sdks), inst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -363,7 +363,7 @@ func (s *requestSuite) TestRefreshSdkChannelUpdated(c *check.C) {
 	w := s.launchWorkshopWithSDKs(c, "ws", existingSdks)
 
 	// Execute
-	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Content), toninst, s.project)
+	ts, err := workshopstate.Refresh(s.state, file, maps.Values(w.Sdks), toninst, s.project)
 	c.Assert(err, check.IsNil)
 
 	// Validate
@@ -389,7 +389,7 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 			Sdks: []workshop.SdkRecord{test_sdk}},
 	}
 
-	content := [][]sdk.Setup{
+	sdks := [][]sdk.Setup{
 		nil,
 		{{
 			Name:    "sdk",
@@ -398,9 +398,9 @@ func (s *requestSuite) TestRefreshManyOneWorkshopHasNoSdks(c *check.C) {
 		},
 	}
 
-	toninst := content
+	toninst := sdks
 
-	ts, err := workshopstate.RefreshManyImpl(s.state, files, content, toninst, s.project)
+	ts, err := workshopstate.RefreshManyImpl(s.state, files, sdks, toninst, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected_ws := []string{
@@ -485,7 +485,7 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		},
 	}
 
-	content := [][]sdk.Setup{
+	sdks := [][]sdk.Setup{
 		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -497,9 +497,9 @@ func (s *requestSuite) TestRefreshManyAllWorkshopsHaveSdks(c *check.C) {
 		},
 		},
 	}
-	toinst := content
+	toinst := sdks
 
-	ts, err := workshopstate.RefreshManyImpl(s.state, files, content, toinst, s.project)
+	ts, err := workshopstate.RefreshManyImpl(s.state, files, sdks, toinst, s.project)
 	c.Assert(err, check.IsNil)
 
 	expected := []string{
@@ -553,7 +553,7 @@ func (s *requestSuite) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c 
 		},
 	}
 
-	content := [][]sdk.Setup{
+	sdks := [][]sdk.Setup{
 		{{
 			Name:    "sdk",
 			Channel: "latest/stable",
@@ -565,9 +565,9 @@ func (s *requestSuite) TestRefreshManyWaitsOnAllSuccessfulBeforeRemovingStash(c 
 		},
 		},
 	}
-	toinst := content
+	toinst := sdks
 
-	ts, err := workshopstate.RefreshManyImpl(s.state, files, content, toinst, s.project)
+	ts, err := workshopstate.RefreshManyImpl(s.state, files, sdks, toinst, s.project)
 	c.Assert(err, check.IsNil)
 
 	lastChanceWs := ts[0].MaybeEdge(workshopstate.EdgeLastTaskBeforeRefreshIrreversible)
@@ -727,12 +727,12 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	defer s.state.Unlock()
 
 	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
-	content := []workshop.SdkRecord{
+	sdks := []workshop.SdkRecord{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
 	source := c.MkDir()
 
-	s.launchWorkshopWithSDKs(c, "ws-1", content)
+	s.launchWorkshopWithSDKs(c, "ws-1", sdks)
 
 	ts, err := s.mgr.Remount(s.ctx, s.state, plug, source, s.project.ProjectId)
 	c.Assert(err, check.IsNil)
@@ -760,11 +760,11 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	defer s.state.Unlock()
 
 	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
-	content := []workshop.SdkRecord{
+	sdks := []workshop.SdkRecord{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
 
-	s.launchWorkshopWithSDKs(c, "ws-1", content)
+	s.launchWorkshopWithSDKs(c, "ws-1", sdks)
 
 	// pretend there is another change running that would conflict with this one.
 	change := s.state.NewChange("refresh", "test")

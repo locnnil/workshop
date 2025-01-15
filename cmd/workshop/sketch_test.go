@@ -23,7 +23,7 @@ type workshopSketch struct {
 
 var _ = check.Suite(&workshopSketch{})
 
-var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","content":[{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"nosketch","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"},{"name":"both","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","content":[{"name":"sketch","channel":"","revision":"x3","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"none","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"nosketch","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"},{"name":"both","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x3","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"none","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 var simpleSketchMeta = `name: sketch
 base: ubuntu@22.04
@@ -76,7 +76,7 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithContent)
+			fmt.Fprintln(w, mockWorkshopWithSdks)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))

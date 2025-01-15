@@ -164,7 +164,7 @@ func (m *InterfaceManager) StartUp() error {
 					continue
 				}
 
-				infos, err := workshop.ContentInfo(pctx)
+				infos, err := workshop.SdkInfos(pctx)
 				if err != nil {
 					logger.Noticef("Cannot obtain the installed SDKs for %q workshop: %v", workshop.Name, err)
 					continue

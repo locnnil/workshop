@@ -306,9 +306,9 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		if err != nil {
 			return nil, err
 		}
-		var newContent []sdk.Setup
+		var newSdks []sdk.Setup
 		for _, s := range res {
-			newContent = append(newContent, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+			newSdks = append(newSdks, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
 		found, err := maybeSketch(ctx, projectId, ws)
@@ -316,11 +316,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 			return nil, err
 		}
 		if found {
-			newContent = append(newContent, sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
+			newSdks = append(newSdks, sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
 		}
 
-		toinstall = append(toinstall, newContent)
-		installed = append(installed, maps.Values(workshops[idx].Content))
+		toinstall = append(toinstall, newSdks)
+		installed = append(installed, maps.Values(workshops[idx].Sdks))
 	}
 
 	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, *project)
@@ -354,7 +354,7 @@ func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn s
 }
 
 func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*state.TaskSet, error) {
-	cur, installed := wp.Content[sdkn]
+	cur, installed := wp.Sdks[sdkn]
 	var setup sdk.Setup
 	if installed {
 		setup = sdk.Setup{Name: sdkn, Revision: sdk.Revision{N: cur.Revision.N - 1}}
@@ -551,11 +551,11 @@ func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInst
 	return refresh, nil
 }
 
-func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
+func disconnectSdks(sdks []sdk.Setup, st *state.State) *state.TaskSet {
 	prev := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, sdk.System.String()))
 	prev.Set("sdk", sdk.System.String())
 	disconnectSet := state.NewTaskSet(prev)
-	for _, s := range content {
+	for _, s := range sdks {
 		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
 		disc.Set("sdk", s.Name)
 		disc.WaitFor(prev)
@@ -565,22 +565,22 @@ func disconnectSdks(content []sdk.Setup, st *state.State) *state.TaskSet {
 	return disconnectSet
 }
 
-func saveStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord,
+func saveStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord,
 ) *state.TaskSet {
-	return createStateHooks(st, w, content, newContent, hookstate.SaveState)
+	return createStateHooks(st, w, sdks, newSdks, hookstate.SaveState)
 }
 
-func restoreStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord) *state.TaskSet {
-	return createStateHooks(st, w, content, newContent, hookstate.RestoreState)
+func restoreStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord) *state.TaskSet {
+	return createStateHooks(st, w, sdks, newSdks, hookstate.RestoreState)
 }
 
-func createStateHooks(st *state.State, w string, content []sdk.Setup, newContent []workshop.SdkRecord, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func createStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet([]*state.Task{}...)
 	prevRestore := (*state.Task)(nil)
-	for _, newsdk := range newContent {
+	for _, newsdk := range newSdks {
 		// the state hooks will only be set for the SDKs that were installed AND
 		// were not removed from the workshop file at the time of refresh
-		if slices.IndexFunc(content, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
+		if slices.IndexFunc(sdks, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
 			continue
 		}
 		stateHook := hookstate.Hook(st, w, newsdk.Name, hooktype)
@@ -775,7 +775,7 @@ func removeMany(st *state.State, workshops []*workshop.Workshop, project worksho
 
 func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
-	disconnectSet := disconnectSdks(maps.Values(w.Content), st)
+	disconnectSet := disconnectSdks(maps.Values(w.Sdks), st)
 
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	discard.WaitAll(disconnectSet)

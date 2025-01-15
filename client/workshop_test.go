@@ -16,7 +16,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 		"project-id":"42ws42ws",
 		"status":"Ready",
 		"notes":["missing-project"],
-		"content":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z","health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
+		"sdks":[{"name":"go","channel":"latest/stable","revision":"453","install-time":"2023-04-25T01:02:03Z","health-check":{"timestamp":"2023-04-25T01:02:03Z", "message":"hello from health-check", "code":"check-waiting"}}]
 	}]}}`
 	workshops, _, err := cs.cli.List(&client.ListOptions{ProjectId: "42ws42ws"})
 	c.Assert(err, check.IsNil)
@@ -27,7 +27,7 @@ func (cs *clientSuite) TestClientListProjectWorkshops(c *check.C) {
 			Base:      "ubuntu@20.04",
 			Status:    "Ready",
 			Notes:     []string{"missing-project"},
-			Content: []*client.Sdk{
+			Sdks: []*client.Sdk{
 				{
 					Name:        "go",
 					Channel:     "latest/stable",
@@ -52,12 +52,12 @@ func (cs *clientSuite) TestClientSingleWorkshop(c *check.C) {
 		Name:      "workshop",
 		Base:      "ubuntu@20.04",
 		Status:    "Ready",
-		Content:   []*client.Sdk{},
+		Sdks:      []*client.Sdk{},
 		Notes:     []string{},
 	}
 
 	// Workshop only
-	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"content":[]}]}}`
+	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"sdks":[]}]}}`
 	workshop, err := cs.cli.SingleWorkshop(project)
 	c.Assert(err, check.IsNil)
 	c.Assert(workshop, check.DeepEquals, &client.Workshop{WorkshopInfo: expectedInfo})
@@ -81,7 +81,7 @@ func (cs *clientSuite) TestClientSingleWorkshop(c *check.C) {
 	c.Check(cs.req.Method, check.Equals, "GET")
 
 	// Workshop and file
-	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"content":[]}], "files":[{"name":"workshop","project-id":"42ws42ws","path":"/home/user/project/workshop.yaml"}]}}`
+	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"sdks":[]}], "files":[{"name":"workshop","project-id":"42ws42ws","path":"/home/user/project/workshop.yaml"}]}}`
 	workshop, err = cs.cli.SingleWorkshop(project)
 	c.Assert(err, check.IsNil)
 	c.Assert(workshop, check.DeepEquals, &client.Workshop{
@@ -108,14 +108,14 @@ func (cs *clientSuite) TestClientMultipleWorkshops(c *check.C) {
 	project := &client.Project{Id: "42ws42ws", Path: "/home/user/project"}
 
 	// Two workshops
-	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"ci","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"content":[]},{"name":"dev","base":"ubuntu@24.04","project-id":"42ws42ws","status":"Ready","notes":[],"content":[]}]}}`
+	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"ci","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"sdks":[]},{"name":"dev","base":"ubuntu@24.04","project-id":"42ws42ws","status":"Ready","notes":[],"sdks":[]}]}}`
 	workshop, err := cs.cli.SingleWorkshop(project)
 	c.Assert(workshop, check.IsNil)
 	c.Assert(err, check.ErrorMatches, `cannot infer workshop name: multiple workshops found: "ci", "dev"`)
 	c.Check(cs.req.Method, check.Equals, "GET")
 
 	// Workshop and file
-	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"ci","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"content":[]}],"files":[{"name":"dev","project-id":"42ws42ws","path":"/home/user/project/.workshop/dev.yaml"}]}}`
+	cs.rsp = `{"type": "sync", "result": {"workshops":[{"name":"ci","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready","notes":[],"sdks":[]}],"files":[{"name":"dev","project-id":"42ws42ws","path":"/home/user/project/.workshop/dev.yaml"}]}}`
 	workshop, err = cs.cli.SingleWorkshop(project)
 	c.Assert(workshop, check.IsNil)
 	c.Assert(err, check.ErrorMatches, `cannot infer workshop name: multiple workshops found: "ci", "dev"`)
@@ -131,7 +131,7 @@ func (cs *clientSuite) TestClientMultipleWorkshops(c *check.C) {
 
 func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 	cs.rsp = `{"type": "sync", "result": {"name":"workshop","base":"ubuntu@20.04","project-id":"42ws42ws","status":"Ready",
-	"content":[
+	"sdks":[
 		{"name":"go",
 		"version":"1.20.3",
 		"channel":"latest/stable",
@@ -149,7 +149,7 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 			Name:      "workshop",
 			Base:      "ubuntu@20.04",
 			Status:    "Ready",
-			Content: []*client.Sdk{
+			Sdks: []*client.Sdk{
 				{
 					Name:        "go",
 					Version:     "1.20.3",

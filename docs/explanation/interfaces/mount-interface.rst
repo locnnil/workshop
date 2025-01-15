@@ -123,7 +123,7 @@ This means a source directory is mounted to the target:
      project:  /home/user/workshops/ws
      status:   ready
      notes:    -
-     content:
+     sdks:
        mount-sdk:
          tracking:   latest/edge
          installed:  2022-03-04  (1)

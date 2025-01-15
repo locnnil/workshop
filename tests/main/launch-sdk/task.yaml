@@ -7,8 +7,8 @@ execute: |
   workshop_exec list | MATCH "$(pwd)[[:space:]]*ws-basic[[:space:]]*Ready[[:space:]]*-"
   
   # Ensure there is one installed SDK that was provided in the workshop definition
-  workshop_exec info | grep -v notes | yq ".content | length == 1"
-  workshop_exec info | grep -v notes | yq '.content["test-sdk-basic"].tracking' | MATCH "latest/stable"
-  workshop_exec info | grep -v notes | yq '.content["test-sdk-basic"].installed' | MATCH '^1\.0[[:space:]]+2025-04-03[[:space:]]+\([[:digit:]]+\)$'
+  workshop_exec info | grep -v notes | yq ".sdks | length == 1"
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].tracking' | MATCH "latest/stable"
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '^1\.0[[:space:]]+2025-04-03[[:space:]]+\([[:digit:]]+\)$'
 
   workshop_exec remove

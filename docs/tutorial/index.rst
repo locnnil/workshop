@@ -258,7 +258,7 @@ to see what went into your workshop:
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
-     content:
+     sdks:
        go:
          tracking:   latest/stable
          installed:  1.23.0  2024-08-15  (51)
@@ -569,7 +569,7 @@ to a new location on the host:
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
-     content:
+     sdks:
        go:
          tracking:   latest/stable
          installed:  1.23.3  2024-11-09  (54)
@@ -644,7 +644,7 @@ includes lines similar to the following:
 
 .. code-block:: console
 
-   content:
+   sdks:
      sketch:
        tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/sketch
        installed:  2024-12-15  (x1)

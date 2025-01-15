@@ -67,7 +67,7 @@ type WorkshopInfo struct {
 	Name      string     `json:"name"`
 	Base      string     `json:"base"`
 	Status    string     `json:"status"`
-	Content   []*SdkInfo `json:"content,omitempty"`
+	Sdks      []*SdkInfo `json:"sdks,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
 
@@ -92,14 +92,14 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
+func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
 
-	for _, sk := range w.Content {
-		sdkInfo := content[sk.Name]
+	for _, sk := range w.Sdks {
+		sdkInfo := sdks[sk.Name]
 		if sdkInfo == nil {
 			sdkInfo = &sdk.Info{}
 		}
@@ -115,7 +115,7 @@ func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health h
 
 		sdkMounts := mounts[sk.Name]
 
-		info.Content = append(info.Content, &SdkInfo{
+		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
 			Version:     sdkInfo.Version,
 			Channel:     sk.Channel,
@@ -135,11 +135,11 @@ func workshopToInfo(w *workshop.Workshop, content map[string]*sdk.Info, health h
 	return &info
 }
 
-func mounts(w *workshop.Workshop, content map[string]*sdk.Info) (map[string][]*Mount, error) {
+func mounts(w *workshop.Workshop, sdks map[string]*sdk.Info) (map[string][]*Mount, error) {
 	var mnts = map[string][]*Mount{}
 
 	masters := map[interfaces.PlugRef][]interfaces.PlugRef{}
-	for _, sk := range content {
+	for _, sk := range sdks {
 		for s, m := range sk.PlugBinds {
 			ref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Sdk, Name: m.Name}
 			sref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: s}
@@ -434,12 +434,12 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	health := wrkmgr.WorkshopHealth(w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	content, err := w.ContentInfo(ctx)
+	sdks, err := w.SdkInfos(ctx)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
 
-	ms, err := mounts(w, content)
+	ms, err := mounts(w, sdks)
 	if err != nil {
 		return statusBadRequest(err.Error())
 	}
@@ -450,7 +450,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	rsp := Workshop{
-		WorkshopInfo: *workshopToInfo(w, content, health, ms),
+		WorkshopInfo: *workshopToInfo(w, sdks, health, ms),
 		Path:         files[w.Name],
 	}
 

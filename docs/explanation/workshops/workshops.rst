@@ -169,7 +169,7 @@ because they reference the same entity:
    $ workshop info digits
 
      ...
-     content:
+     sdks:
        pytorch:
          tracking:   latest/stable
          installed:  2.5.1  2024-11-02  (42)

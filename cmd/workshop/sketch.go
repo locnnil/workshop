@@ -418,9 +418,9 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) []str
 	rev := "-"
 	notes := ""
 	exists := false
-	idx := slices.IndexFunc(w.Content, func(s *client.Sdk) bool { return s.Name == sdk.Sketch })
+	idx := slices.IndexFunc(w.Sdks, func(s *client.Sdk) bool { return s.Name == sdk.Sketch })
 	if idx != -1 {
-		info := w.Content[idx]
+		info := w.Sdks[idx]
 		rev = info.Revision
 		notes = "current"
 		exists = true

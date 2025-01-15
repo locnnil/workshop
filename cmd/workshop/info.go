@@ -96,7 +96,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	if err != nil {
 		return err
 	}
-	slices.SortFunc(workshop.Content, func(a, b *client.Sdk) int { return cmp.Compare(a.Name, b.Name) })
+	slices.SortFunc(workshop.Sdks, func(a, b *client.Sdk) int { return cmp.Compare(a.Name, b.Name) })
 
 	w := tabWriter()
 
@@ -109,7 +109,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	notes := workshop.Notes
 
 	// get the SDKs notes (if there is an ongoing health check)
-	for _, sdk := range workshop.Content {
+	for _, sdk := range workshop.Sdks {
 		if sdk.Health != nil && sdk.Health.Code != "" {
 			notes = append(notes, sdk.Health.Code)
 		}
@@ -123,9 +123,9 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	fmt.Fprintf(w, "notes:\t%s\n", notesFormatted)
 
-	if len(workshop.Content) > 0 {
-		fmt.Fprintf(w, "content:\n")
-		for _, sk := range workshop.Content {
+	if len(workshop.Sdks) > 0 {
+		fmt.Fprintf(w, "sdks:\n")
+		for _, sk := range workshop.Sdks {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
 			if sk.Name == sdk.Sketch {
 				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)

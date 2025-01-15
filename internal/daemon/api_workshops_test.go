@@ -315,14 +315,14 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	install1, install2 := s.installTime, s.installTime
 	info := rsp.Result.(Workshops)
 	for _, w := range info.Workshops {
-		slices.SortFunc(w.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+		slices.SortFunc(w.Sdks, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
 	}
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
 		Name:      "manysdks",
 		Base:      "ubuntu@22.04",
 		ProjectId: s.project.ProjectId,
 		Status:    "Ready",
-		Content: []*SdkInfo{
+		Sdks: []*SdkInfo{
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
@@ -406,8 +406,8 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
 	result := rsp.Result.(Workshop)
-	slices.SortFunc(result.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
-	for _, c := range result.Content {
+	slices.SortFunc(result.Sdks, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+	for _, c := range result.Sdks {
 		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 	}
 	c.Check(result, check.DeepEquals, Workshop{
@@ -417,7 +417,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 			ProjectId: s.project.ProjectId,
 			Status:    "Ready",
 			Notes:     nil,
-			Content: []*SdkInfo{
+			Sdks: []*SdkInfo{
 				{
 					Name:        "test-sdk",
 					Version:     "0.1.2",
@@ -511,8 +511,8 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
 	result := rsp.Result.(Workshop)
-	slices.SortFunc(result.Content, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
-	for _, c := range result.Content {
+	slices.SortFunc(result.Sdks, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
+	for _, c := range result.Sdks {
 		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 	}
 	c.Check(result, check.DeepEquals, Workshop{
@@ -522,7 +522,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			ProjectId: s.project.ProjectId,
 			Status:    "Ready",
 			Notes:     nil,
-			Content: []*SdkInfo{
+			Sdks: []*SdkInfo{
 				{
 					Name:        "test-sdk",
 					Version:     "0.1.2",
@@ -1268,9 +1268,9 @@ func (s *apiSuite) TestRefreshWorkshopReturnsPreviousWorkshopIfFailed(c *check.C
 	wp, err := s.b.Workshop(s.ctx, "manysdks")
 	c.Assert(err, check.IsNil)
 
-	content, err := wp.ContentInfo(s.ctx)
+	sdks, err := wp.SdkInfos(s.ctx)
 	c.Assert(err, check.IsNil)
-	c.Assert(content, check.HasLen, 2)
+	c.Assert(sdks, check.HasLen, 2)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
 	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
@@ -1798,7 +1798,7 @@ plugs:
 	c.Assert(err, check.IsNil)
 	c.Assert(wp.Running, check.Equals, true)
 
-	sketchsetup := wp.Content["sketch"]
+	sketchsetup := wp.Sdks["sketch"]
 	c.Assert(sketchsetup.RevisionSequence, check.HasLen, 1)
 	c.Assert(sketchsetup.RevisionSequence[0].String(), check.Equals, "x1")
 	c.Assert(sketchsetup.Revision.String(), check.Equals, "x2")
