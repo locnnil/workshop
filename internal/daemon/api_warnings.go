@@ -53,7 +53,7 @@ func v1PostWarnings(c *Command, r *http.Request, _ *userState) Response {
 	}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&op); err != nil {
-		return statusBadRequest("cannot decode request body into warnings operation: %v", err)
+		return statusBadRequest("cannot decode request body into warnings operation: %w", err)
 	}
 	if op.Action != "okay" {
 		return statusBadRequest("unknown warning action %q", op.Action)

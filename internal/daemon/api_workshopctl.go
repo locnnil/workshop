@@ -38,12 +38,12 @@ func v1PostWorkshopCtl(c *Command, r *http.Request, _ *userState) Response {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %w", err)
 	}
 
 	_, uid, _, err := ucrednetGet(r.RemoteAddr)
 	if err != nil {
-		return statusForbidden("cannot get remote user: %s", err)
+		return statusForbidden("cannot get remote user: %w", err)
 	}
 
 	// Ignore missing context error to allow 'workshopctl -h' without a context;
@@ -61,7 +61,7 @@ func v1PostWorkshopCtl(c *Command, r *http.Request, _ *userState) Response {
 		if e, ok := err.(*flags.Error); ok && e.Type == flags.ErrHelp {
 			stdout = []byte(e.Error())
 		} else {
-			return statusBadRequest("%s", err)
+			return statusBadRequest("%w", err)
 		}
 	}
 

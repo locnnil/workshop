@@ -45,6 +45,7 @@ import (
 )
 
 var (
+	ErrAccessDenied  = errors.New("access denied")
 	ErrRestartSocket = fmt.Errorf("daemon stop requested to wait for socket activation")
 
 	systemdSdNotify = systemd.SdNotify
@@ -224,7 +225,7 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check if we are in degradedMode
 	if c.d.degradedErr != nil && r.Method != "GET" {
-		statusInternalError(c.d.degradedErr.Error()).ServeHTTP(w, r)
+		statusInternalError("%w", c.d.degradedErr).ServeHTTP(w, r)
 		return
 	}
 
@@ -232,7 +233,7 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case accessOK:
 		// nothing
 	case accessUnauthorized:
-		statusUnauthorized("access denied").ServeHTTP(w, r)
+		statusUnauthorized("%w", ErrAccessDenied).ServeHTTP(w, r)
 		return
 	case accessForbidden:
 		statusForbidden("forbidden").ServeHTTP(w, r)
@@ -255,13 +256,13 @@ func (c *Command) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_, uid, _, err := ucrednetGet(r.RemoteAddr)
 	if err != nil {
-		statusInternalError("cannot get an associated uid: %v", err).ServeHTTP(w, r)
+		statusInternalError("cannot get an associated uid: %w", err).ServeHTTP(w, r)
 		return
 	}
 
 	username, err := LookupUserId(strconv.FormatUint(uint64(uid), 10))
 	if err != nil {
-		statusInternalError("cannot get an associated user name: %v", err).ServeHTTP(w, r)
+		statusInternalError("cannot get an associated user name: %w", err).ServeHTTP(w, r)
 		return
 	}
 

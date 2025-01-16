@@ -223,14 +223,14 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	} else {
 		status, err = healthstate.StatusLookup(wstate)
 		if err != nil {
-			return statusBadRequest(`%v, "all", "available"`, err)
+			return statusBadRequest(`%w, "all", "available"`, err)
 		}
 	}
 
 	wrkmgr := c.d.overlord.WorkshopManager()
 	workshops, err := wrkmgr.Workshops(r.Context(), projectId)
 	if err != nil {
-		return statusInternalError("%v", err)
+		return statusInternalError("%w", err)
 	}
 
 	info := Workshops{}
@@ -254,7 +254,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		if wstate == "available" && errors.As(err, &fileErr) {
 			state.Warnf("%v", err)
 		} else if err != nil {
-			return statusInternalError("%v", err)
+			return statusInternalError("%w", err)
 		} else {
 			info.Files = make([]*WorkshopFileInfo, 0, len(files))
 			for name, path := range files {
@@ -335,7 +335,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	var reqData workshopReq
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %w", err)
 	}
 
 	if len(reqData.Names) == 0 {
@@ -358,7 +358,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	mode, err := actionMode(&reqData)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	user, ok := r.Context().Value(workshop.ContextUser).(string)
@@ -395,7 +395,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	for _, tset := range taskset {
@@ -429,24 +429,24 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	wrkmgr := c.d.overlord.WorkshopManager()
 	w, err := wrkmgr.Workshop(r.Context(), name, projectId)
 	if err != nil {
-		return statusNotFound("%v", err)
+		return statusNotFound("%w", err)
 	}
 	health := wrkmgr.WorkshopHealth(w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
 	sdks, err := w.SdkInfos(ctx)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	ms, err := mounts(w, sdks)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	rsp := Workshop{

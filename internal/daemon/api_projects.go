@@ -15,7 +15,7 @@ func v1GetProjects(c *Command, r *http.Request, _ *userState) Response {
 
 	projects, err := c.d.overlord.WorkshopBackend().Projects(r.Context())
 	if err != nil {
-		return statusInternalError("cannot get projects list: %v", err)
+		return statusInternalError("cannot get projects list: %w", err)
 	}
 
 	result := make([]workshop.Project, 0)
@@ -37,16 +37,16 @@ func v1PostProjects(c *Command, r *http.Request, _ *userState) Response {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %w", err)
 	}
 
 	wBackend := c.d.overlord.WorkshopBackend()
 
 	prj, created, err := wBackend.CreateOrLoadProject(r.Context(), reqData.Path)
 	if err != nil && !errors.Is(err, workshop.ErrNotProject) {
-		return statusInternalError("cannot create or load project at %q: %v", reqData.Path, err)
+		return statusInternalError("cannot create or load project at %q: %w", reqData.Path, err)
 	} else if errors.Is(err, workshop.ErrNotProject) {
-		return statusBadRequest("%v", err)
+		return statusBadRequest("%w", err)
 	}
 
 	if created {

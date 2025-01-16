@@ -54,7 +54,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	var reqData mountRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %w", err)
 	}
 	if reqData.Action != "remount" {
 		return statusBadRequest("unknown action %q", reqData.Action)
@@ -63,7 +63,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	reqData.Plug.ProjectId = projectId
 
 	if err := checkWorkshopExists(r.Context(), o.WorkshopManager(), projectId, w); err != nil {
-		return statusNotFound("cannot access workshop %q: %v", w, err)
+		return statusNotFound("cannot access workshop %q: %w", w, err)
 	}
 
 	change := newMountChange(st, user, &reqData)
@@ -76,7 +76,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 	repo := o.InterfaceManager().Repository()
 	connRef, err := repo.Connected(reqData.Plug.ProjectId, reqData.Plug.Workshop, reqData.Plug.Sdk, reqData.Plug.Name)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	if len(connRef) == 0 {
@@ -85,7 +85,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 
 	conn, err := repo.Connection(connRef[0])
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	if conn.Plug.Interface() != "mount" {
@@ -94,7 +94,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 
 	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.HostSource, projectId)
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	change.AddAll(taskset)
