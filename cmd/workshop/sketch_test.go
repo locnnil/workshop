@@ -224,6 +224,103 @@ plugs:
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, sketchContent)
 }
 
+func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}}
+
+	// Runs sketch-sdk with a failing setup-base hook,
+	// then immediately re-runs it to fix the hook.
+	// The second run should automatically abort the first refresh.
+	// The API calls break down as follows:
+	// 1-2: get workshop info
+	// 3-5: refresh --wait-on-error (fails due to setup-base)
+	// 6-7: get workshop info
+	// 8-9. refresh --wait-on-error (fails due to earlier refresh)
+	// 10-12. refresh --abort
+	// 13-15. refresh --wait-on-error
+	n := 0
+	change := 42
+	workshop := "ws"
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1, 3, 6, 8, 10, 13:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2, 7:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopWithSdks)
+		case 4, 9, 11, 14:
+			mode := "wait-on-error"
+			name := fmt.Sprintf("%s/sketch", workshop)
+			if n == 11 {
+				mode = "abort"
+				name = workshop
+			}
+
+			change += 1
+			status := 202
+			response := fmt.Sprintf(`{"type":"async", "change": "%d", "status-code": 202}`, change)
+			if n == 9 {
+				status = 400
+				response = `{"type":"error", "result": {"message":"already waiting on error", "kind":"waiting-on-error"}, "status-code": 400}`
+			}
+
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
+				"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
+			w.WriteHeader(status)
+			fmt.Fprintln(w, response)
+		case 5, 12, 15:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/changes/%d", change))
+			if n == 5 {
+				fmt.Fprintln(w, mockWaitChangeJSON)
+			} else if n == 12 {
+				fmt.Fprintln(w, mockAbortedChangeJSON)
+			} else {
+				fmt.Fprintln(w, mockReadyChangeJSON)
+			}
+		default:
+			c.Errorf("expected 15 calls, now on %d", n)
+		}
+	})
+
+	attempts := 0
+	sketchSetup := `name: sketch
+base: ubuntu@22.04
+
+hooks:
+    setup-base: |
+        %s
+`
+	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		attempts += 1
+		switch attempts {
+		case 1:
+			return []byte(fmt.Sprintf(sketchSetup, "false")), nil
+		case 2:
+			return []byte(fmt.Sprintf(sketchSetup, "true")), nil
+		default:
+			return nil, fmt.Errorf("expected 2 attempts, now on %d", attempts)
+		}
+	})
+	defer restore()
+
+	err := cmd.Run(cmd.Command(), []string{"ws"})
+	c.Assert(err, check.ErrorMatches, `cannot refresh; fix the errors reported,\nthen run "workshop refresh --continue ws".\nTo abort and revert, run "workshop refresh --abort ws"`)
+
+	err = cmd.Run(cmd.Command(), []string{"ws"})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(n, check.Equals, 15)
+	c.Assert(attempts, check.Equals, 2)
+}
+
 func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 	restore := sdk.WorkshopSketchSdkStash(m.user.HomeDir, m.prjId, "ws")

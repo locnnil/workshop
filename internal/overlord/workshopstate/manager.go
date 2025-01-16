@@ -2,6 +2,7 @@ package workshopstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+var ErrWaitingOnError = errors.New("waiting on error")
 
 type WorkshopManager struct {
 	backend workshop.Backend
@@ -68,7 +71,7 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 			return fmt.Errorf("workshop already running")
 		case healthstate.PendingStatus:
 			if health.Code == "wait-on-error" {
-				return fmt.Errorf("waiting on error")
+				return ErrWaitingOnError
 			}
 			return fmt.Errorf("other changes in progress")
 		case healthstate.ErrorStatus:
