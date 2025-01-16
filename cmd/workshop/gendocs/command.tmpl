@@ -5,7 +5,7 @@
 
 {{ .Short }}.
 
-.. rubric:: Synopsis
+.. rubric:: Usage
 
 .. code-block:: console
 
@@ -15,18 +15,6 @@
 
 {{ .Long }}
 
-{{- if .Flags }}
-
-.. rubric:: Options
-
-{{ range .Flags }}
---{{ .Name }}
-
-{{ .Usage | indent 3 }}
-
-{{ end }}
-{{- end }}
-
 {{- if .Examples }}
 
 .. rubric:: Examples
@@ -35,6 +23,18 @@
 {{ .Info }}
 
 .. code-block:: console
+
+{{ .Usage | indent 3 }}
+
+{{ end }}
+{{- end }}
+
+{{- if .Flags }}
+
+.. rubric:: Flags
+
+{{ range .Flags }}
+--{{ .Name }}
 
 {{ .Usage | indent 3 }}
 
