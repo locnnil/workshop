@@ -57,6 +57,7 @@ and includes a number of mandatory and optional keys:
 
        Each entry points to an existing SDK
        and specifies its retrieval channel.
+       The SDKs are installed in the order they appear in this list.
 
    * - :samp:`connections`
      - array

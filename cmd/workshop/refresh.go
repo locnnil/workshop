@@ -52,7 +52,8 @@ Notes:
 
 - If the refresh removes an SDK from the workshop, the SDK state isn't saved
 
-- Updated and newly added SDKs are installed in alphabetical order
+- Updated and newly added SDKs are installed in the order
+  they are listed in the workshop definition.
 
 - For mount interface plugs, mounts the last source
   set by 'workshop remount', if any
