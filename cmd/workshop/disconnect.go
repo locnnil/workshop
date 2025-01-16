@@ -56,11 +56,11 @@ $ workshop disconnect nimble/system:mount`,
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
 		false,
-		"Reconnect the plugs at 'workshop refresh' if auto-connected initially")
+		"Reconnect the plugs at 'workshop refresh' if auto-connected initially.")
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Return the change ID, don't wait for the operation to finish")
+		"Return the change ID, don't wait for the operation to finish.")
 
 	return cmd
 }

@@ -53,7 +53,7 @@ $ workshop list --global`,
 		RunE: c.Run,
 	}
 
-	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system")
+	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system.")
 
 	return cmd
 }

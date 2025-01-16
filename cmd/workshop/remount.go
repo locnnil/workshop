@@ -52,7 +52,7 @@ $ workshop remount nimble/go:mod-cache ~/new-cache-mount`,
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Return the change ID, don't wait for the operation to finish")
+		"Return the change ID, don't wait for the operation to finish.")
 
 	return cmd
 }
