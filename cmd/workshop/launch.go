@@ -41,11 +41,11 @@ the operation is aborted and no workshops are constructed.
 
 Notes:
 
-- Names listed as arguments must match respective 'name:' values in definitions
+- Names listed as arguments must match respective 'name:' values in definitions.
 
-- To update an existing workshop, use 'workshop refresh' instead
+- To update an existing workshop, use 'workshop refresh' instead.
 
-- SDKs are installed in alphabetical order
+- SDKs are installed in the order they are listed in the definition.
 `,
 		Example: `
 Launch the 'nimble' and 'jazzy' workshops in the current project directory:

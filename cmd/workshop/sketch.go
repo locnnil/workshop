@@ -48,13 +48,13 @@ The '--remove' option removes the SDK permanently.
 Notes:
 
 - The 'sketch' SDK doesn't appear in the workshop definition
-  and cannot include build-time data such as parts
+  and cannot include build-time data such as parts.
 
 - In addition to hooks, the 'sketch' SDK can use interfaces,
-  define plugs, slots, connections and bindings
+  define plugs, slots, connections and bindings.
 
 - You can partially refresh the workshop, targeting the 'sketch' SDK
-  with the 'workshop refresh <WORKSHOP>/sketch' command
+  with the 'workshop refresh <WORKSHOP>/sketch' command.
 `,
 		Example: `
 Edit the sketch SDK definition for the 'nimble' workshop

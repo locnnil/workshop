@@ -93,10 +93,10 @@ This syntax is required if the workshop name is omitted.
 
 Notes:
 
-- To start a workshop before running commands in it, use 'workshop start'
+- To start a workshop before running commands in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the command in the workshop; reasonable defaults are provided
+  for running the command in the workshop; reasonable defaults are provided.
 `
 
 var shortShellHelp = "Start an interactive terminal session for the workshop"
@@ -109,11 +109,11 @@ To accept a 'shell' command, the workshop must be 'Ready' or 'Pending'.
 
 Notes:
 
-- To start a workshop before running a terminal session, use 'workshop start'
+- To start a workshop before running a terminal session, use 'workshop start'.
 
 - The subcommand is a shorthand for 'workshop exec';
   it launches the login shell for 'workshop',
-  the default non-privileged user in a workshop
+  the default non-privileged user in a workshop.
 `
 
 var shortRunHelp = "Run a workshop script and wait for it to complete"
@@ -147,10 +147,10 @@ and the script takes one or more arguments.
 
 Notes:
 
-- To start a workshop before running scripts in it, use 'workshop start'
+- To start a workshop before running scripts in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the script in the workshop; reasonable defaults are provided
+  for running the script in the workshop; reasonable defaults are provided.
 `
 
 func (c *CmdExec) Command() *cobra.Command {

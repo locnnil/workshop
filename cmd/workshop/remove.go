@@ -29,10 +29,12 @@ This command removes the workshops listed as arguments. For each workshop, it:
 
 Notes:
 
-- If any listed workshop is 'Off' or 'Pending', none are removed
-- To rebuild a removed workshop from scratch, use 'workshop launch'
-- For mount interface plugs, non-default sources set by 'workshop remount'
-  aren't removed
+- If any listed workshop is 'Off' or 'Pending', none are removed.
+
+- To rebuild a removed workshop from scratch, use 'workshop launch'.
+
+- For mount interface plugs,
+  non-default sources set by 'workshop remount' aren't removed.
 `,
 		Example: `
 Remove the 'nimble' and 'jazzy' workshops in the current project directory:
