@@ -20,7 +20,26 @@ This is achieved with a hidden :file:`.lock` file,
 which must remain in the project directory
 and must not be copied or stored externally, e.g. in a repository.
 
-When the workshop is then started with :command:`workshop start`,
+You can store workshop definitions in two ways:
+
+- If you use a single workshop in the project,
+  store its definition in the project directory as :file:`workshop.yaml`.
+  This allows you to omit the workshop name in :ref:`the CLI <exp_workshop_cli>`.
+
+- If your project involves multiple workshops,
+  store their definitions in files with the same name as the workshops
+  under the :file:`.workshop/` subdirectory of the project directory:
+
+  .. code-block:: none
+
+     .workshop/foo.yaml
+     .workshop/bar.yaml
+
+  When multiple workshop definitions are present,
+  you can't omit the workshop name in commands.
+
+
+When a workshop is then started with :command:`workshop start`,
 the project directory is mounted to it as :file:`/project/`;
 conversely, the :command:`workshop stop` command unmounts it.
 
