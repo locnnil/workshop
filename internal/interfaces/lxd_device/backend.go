@@ -59,17 +59,6 @@ func lxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 
 func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (reload bool, err error) {
 	if dev.Type == workshop.WorkshopWorkshop {
-		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
-		if err != nil {
-			return false, err
-		}
-		defer fstab.Close()
-
-		mounts, err := osutil.ReadMountProfile(fstab)
-		if err != nil {
-			return false, err
-		}
-
 		if _, err = fs.Stat(dev.What); err != nil {
 			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
 		}
@@ -78,13 +67,20 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
 		}
 
+		mounts, err := readMountProfile(fs)
+		if err != nil {
+			return false, err
+		}
+
 		check := func(me osutil.MountEntry) bool { return me.Name == dev.What && me.Dir == dev.Where }
-		if !slices.ContainsFunc(mounts.Entries, check) {
-			entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
-			mounts.Entries = append(mounts.Entries, entry)
-			if _, err = mounts.WriteTo(fstab); err != nil {
-				return false, err
-			}
+		if slices.ContainsFunc(mounts.Entries, check) {
+			return false, nil
+		}
+
+		entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: []string{"bind", "x-systemd.requires=/project"}}
+		mounts.Entries = append(mounts.Entries, entry)
+		if err = writeMountProfile(fs, mounts); err != nil {
+			return false, err
 		}
 		return true, nil
 	}
@@ -136,6 +132,22 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	return false, fmt.Errorf(`unknown device type: %v`, dev.Type)
 }
 
+func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, error) {
+	fstab, err := fs.Open("/etc/fstab")
+	if errors.Is(err, os.ErrNotExist) {
+		return &osutil.MountProfile{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer fstab.Close()
+
+	return osutil.ReadMountProfile(fstab)
+}
+
+func writeMountProfile(fs workshop.WorkshopFs, mounts *osutil.MountProfile) error {
+	return workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644)
+}
+
 func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
 	var out bytes.Buffer
 
@@ -165,45 +177,32 @@ func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 }
 
 func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, mnt workshop.Mount) error {
-	if mnt.Type == workshop.WorkshopWorkshop {
-		fstab, err := fs.OpenFile("/etc/fstab", os.O_CREATE|os.O_RDWR, 0744)
-		if err != nil {
-			return err
-		}
-		defer fstab.Close()
-
-		mounts, err := osutil.ReadMountProfile(fstab)
-		if err != nil {
-			return err
-		}
-
-		cnt := 0
-		deleter := func(me osutil.MountEntry) bool {
-			if me.Name == mnt.What && me.Dir == mnt.Where {
-				cnt++
-				return true
-			}
-			return false
-		}
-		mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
-		if cnt == 0 {
-			return nil
-		}
-
-		if err = workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644); err != nil {
-			return err
-		}
-
-		err = runMountCommand(conn, pid, w, []string{
-			"umount",
-			mnt.Where,
-		})
-
-		if err != nil {
-			return err
-		}
+	if mnt.Type != workshop.WorkshopWorkshop {
+		return nil
 	}
-	return nil
+
+	mounts, err := readMountProfile(fs)
+	if err != nil {
+		return err
+	}
+
+	cnt := len(mounts.Entries)
+	deleter := func(me osutil.MountEntry) bool {
+		return me.Name == mnt.What && me.Dir == mnt.Where
+	}
+	mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
+	if cnt == len(mounts.Entries) {
+		return nil
+	}
+
+	if err = writeMountProfile(fs, mounts); err != nil {
+		return err
+	}
+
+	return runMountCommand(conn, pid, w, []string{
+		"umount",
+		mnt.Where,
+	})
 }
 
 func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop string) error {
