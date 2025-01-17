@@ -23,21 +23,21 @@ func (c *CmdDisconnect) Command() *cobra.Command {
 This command disconnects a plug from its slot, or a slot from all its plugs.
 
 - A single argument can be a fully qualified plug or slot reference;
-  with two arguments, the first one is the plug, and the second one is the slot
+  with two arguments, the first one is the plug, and the second one is the slot.
 
 - If the second argument only names the slot itself, the target is
-  <WORKSHOP>/system:<SLOT>; <WORKSHOP> comes from the first argument
+  <WORKSHOP>/system:<SLOT>; <WORKSHOP> comes from the first argument.
 
 - If the second argument only names the workshop and SDK, the target is
   <WORKSHOP>/<SDK>:<INTERFACE>;
-  <INTERFACE> is the interface in the plug's definition
+  <INTERFACE> is the interface in the plug's definition.
 
 
   Notes:
 
 - After an auto-connected plug is thus disconnected,
   it is reconnected during 'workshop refresh'
-  only if the '--forget' option was used with 'workshop disconnect'
+  only if the '--forget' option was used with 'workshop disconnect'.
 `,
 		Example: `
 Disconnect the 'mod-cache' mount interface plug of the 'go' SDK
@@ -56,11 +56,11 @@ $ workshop disconnect nimble/system:mount`,
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
 		false,
-		"Reconnect the plugs at 'workshop refresh' if auto-connected initially")
+		"Reconnect the plugs at 'workshop refresh' if auto-connected initially.")
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Return the change ID, don't wait for the operation to finish")
+		"Return the change ID, don't wait for the operation to finish.")
 
 	return cmd
 }

@@ -49,6 +49,13 @@ and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
+Check whether it's configured:
+
+.. code-block:: console
+
+   $ lxc info
+
+
 If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
 and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_

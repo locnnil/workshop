@@ -93,10 +93,10 @@ This syntax is required if the workshop name is omitted.
 
 Notes:
 
-- To start a workshop before running commands in it, use 'workshop start'
+- To start a workshop before running commands in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the command in the workshop; reasonable defaults are provided
+  for running the command in the workshop; reasonable defaults are provided.
 `
 
 var shortShellHelp = "Start an interactive terminal session for the workshop"
@@ -109,11 +109,11 @@ To accept a 'shell' command, the workshop must be 'Ready' or 'Pending'.
 
 Notes:
 
-- To start a workshop before running a terminal session, use 'workshop start'
+- To start a workshop before running a terminal session, use 'workshop start'.
 
 - The subcommand is a shorthand for 'workshop exec';
   it launches the login shell for 'workshop',
-  the default non-privileged user in a workshop
+  the default non-privileged user in a workshop.
 `
 
 var shortRunHelp = "Run a workshop script and wait for it to complete"
@@ -147,10 +147,10 @@ and the script takes one or more arguments.
 
 Notes:
 
-- To start a workshop before running scripts in it, use 'workshop start'
+- To start a workshop before running scripts in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the script in the workshop; reasonable defaults are provided
+  for running the script in the workshop; reasonable defaults are provided.
 `
 
 func (c *CmdExec) Command() *cobra.Command {
@@ -333,13 +333,13 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 }
 
 func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
-	f.StringVarP(&flags.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop")
+	f.StringVarP(&flags.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop.")
 	f.StringArrayVar(&flags.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
-	f.IntVar(&flags.UserId, "uid", 1000, "Run as a specific workshop user")
-	f.IntVar(&flags.GroupId, "gid", 1000, "Run as a member of a specific workshop group")
-	f.DurationVar(&flags.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h")
-	f.BoolVarP(&flags.Interactive, "interactive", "i", false, "Force interactive mode")
-	f.BoolVarP(&flags.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode")
+	f.IntVar(&flags.UserId, "uid", 1000, "Run as a specific workshop user.")
+	f.IntVar(&flags.GroupId, "gid", 1000, "Run as a member of a specific workshop group.")
+	f.DurationVar(&flags.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h.")
+	f.BoolVarP(&flags.Interactive, "interactive", "i", false, "Force interactive mode.")
+	f.BoolVarP(&flags.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode.")
 }
 
 func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {

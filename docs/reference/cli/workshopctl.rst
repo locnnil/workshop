@@ -12,7 +12,7 @@ workshopctl set-health
 
 Report the health of the SDK.
 
-.. rubric:: Synopsis
+.. rubric:: Usage
 
 .. code-block:: console
 
@@ -20,7 +20,6 @@ Report the health of the SDK.
 
 
 .. rubric:: Description
-
 
 This command is essential for the :samp:`check-health` hook
 that runs after launch or refresh operations in a workshop.
@@ -39,13 +38,8 @@ The arguments are as follows:
      - Required
      - Can be :samp:`okay`, :samp:`waiting` or :samp:`error`.
 
-   * - :samp:`<ERROR CODE>`
-     - Optional, can't go with :samp:`okay`
-     - Short code of lowercase letters, hyphens and digits;
-       3–30 characters, starts with a letter.
-
    * - :samp:`<MESSAGE>`
-     - Required with :samp:`error-code`
+     - Required with :option:`!--code`
      - Arbitrary string explaining the context of the error code;
        7–70 characters.
 
@@ -58,6 +52,15 @@ note only the message is quoted:
 .. code-block:: console
 
    $ workshopctl set-health --code=missing-cuda error "CUDA libraries not found"
+
+
+.. rubric:: Flags
+
+--code
+
+   Optional, can't go with :samp:`okay`.
+   Short code of lowercase letters, hyphens and digits;
+   3–30 characters, starts with a letter.
 
 
 See also

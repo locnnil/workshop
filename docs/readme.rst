@@ -31,7 +31,19 @@ Installation
 
 Workshop requires
 `LXD 5.21+ <https://canonical.com/lxd>`_
-for low-level operation:
+for low-level operation.
+
+Check whether it's configured:
+
+.. code-block:: console
+
+   $ lxc info
+
+
+If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+and
+`initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
+LXD:
 
 .. code-block:: console
 

@@ -41,11 +41,11 @@ the operation is aborted and no workshops are constructed.
 
 Notes:
 
-- Names listed as arguments must match respective 'name:' values in definitions
+- Names listed as arguments must match respective 'name:' values in definitions.
 
-- To update an existing workshop, use 'workshop refresh' instead
+- To update an existing workshop, use 'workshop refresh' instead.
 
-- SDKs are installed in alphabetical order
+- SDKs are installed in the order they are listed in the definition.
 `,
 		Example: `
 Launch the 'nimble' and 'jazzy' workshops in the current project directory:
@@ -67,7 +67,7 @@ $ workshop launch`,
 		"Abort the previously paused operation, reverting any changes.")
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
 		false,
-		"Return the change ID, don't wait for the operation to finish")
+		"Return the change ID, don't wait for the operation to finish.")
 
 	return cmd
 }

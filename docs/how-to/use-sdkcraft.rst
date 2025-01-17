@@ -27,13 +27,22 @@ using its
 `REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
 to craft the SDKs.
 
-First, install and
+Check whether it's configured:
+
+.. code-block:: console
+
+   $ lxc info
+
+
+If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+and
 `initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
 LXD.
-It's available as a snap:
 
 .. tabs::
    .. group-tab:: Using :program:`snap`
+
+      It's available as a snap:
 
       .. code-block:: console
 
