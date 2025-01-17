@@ -9,7 +9,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Install empty sketch SDK"
-  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF  
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   wq
   EOF
 
@@ -50,3 +50,24 @@ execute: |
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x3\)$'
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
   workshop_exec exec -- test -d /home/workshop/ws-sketch-test
+
+  echo "Remove the sketch"
+  workshop_exec sketch-sdk --remove
+
+  echo "Install empty sketch SDK"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  wq
+  EOF
+
+  echo "Add a breaking change to sketch"
+  ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  i
+    plugs:
+      test:
+        interface: mount
+  .
+  wq
+  EOF
+
+  echo "Abort the change"
+  workshop_exec refresh --abort
