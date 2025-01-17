@@ -54,7 +54,7 @@ func (wr websocketResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rsp.ServeHTTP(w, r)
 	} else if err != nil {
 		logger.Noticef("Websocket %s: cannot connect to %s websocket: %v", wr.task.ID(), wr.websocketID, err)
-		rsp := statusInternalError("%v", err)
+		rsp := statusInternalError("%w", err)
 		rsp.ServeHTTP(w, r)
 	}
 	// In the success case, Connect takes over the connection and upgrades to

@@ -16,12 +16,14 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"time"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 )
 
 type ResponseType string
@@ -124,6 +126,7 @@ const (
 	errorKindNotFound          = errorKind("not-found")
 	errorKindPermissionDenied  = errorKind("permission-denied")
 	errorKindGenericFileError  = errorKind("generic-file-error")
+	errorKindWaitingOnError    = errorKind("waiting-on-error")
 )
 
 type errorValue interface{}
@@ -136,7 +139,7 @@ type errorResult struct {
 
 func SyncResponse(result interface{}, status int) Response {
 	if err, ok := result.(error); ok {
-		return statusInternalError("internal error: %v", err)
+		return statusInternalError("internal error: %w", err)
 	}
 
 	if rsp, ok := result.(Response); ok {
@@ -172,19 +175,27 @@ func (f fileResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func makeErrorResponder(status int) errorResponder {
 	return func(format string, v ...interface{}) Response {
 		res := &errorResult{}
-		if len(v) == 0 {
-			res.Message = format
-		} else {
-			res.Message = fmt.Sprintf(format, v...)
-		}
-		if status == 401 {
-			res.Kind = errorKindLoginRequired
-		}
-		return &resp{
+		response := &resp{
 			Type:   ResponseTypeError,
 			Result: res,
 			Status: status,
 		}
+
+		if len(v) == 0 {
+			res.Message = format
+			return response
+		}
+
+		err := fmt.Errorf(format, v...)
+		res.Message = err.Error()
+
+		if errors.Is(err, ErrAccessDenied) {
+			res.Kind = errorKindLoginRequired
+		} else if errors.Is(err, workshopstate.ErrWaitingOnError) {
+			res.Kind = errorKindWaitingOnError
+		}
+
+		return response
 	}
 }
 

@@ -434,6 +434,7 @@ const (
 	ErrorKindDaemonRestart     = "daemon-restart"
 	ErrorKindNoDefaultServices = "no-default-services"
 	ErrorKindUnsuccessful      = "unsuccessful"
+	ErrorKindWaitingOnError    = "waiting-on-error"
 )
 
 func (rsp *response) err(cli *Client) error {

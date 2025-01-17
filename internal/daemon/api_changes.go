@@ -220,7 +220,7 @@ func v1PostChange(c *Command, r *http.Request, _ *userState) Response {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot decode data from request body: %v", err)
+		return statusBadRequest("cannot decode data from request body: %w", err)
 	}
 
 	if reqData.Action != "abort" {
@@ -256,7 +256,7 @@ func v1GetChangeWait(c *Command, r *http.Request, _ *userState) Response {
 		// whichever is first.
 		timeout, err := time.ParseDuration(timeoutStr)
 		if err != nil {
-			return statusBadRequest("invalid timeout %q: %v", timeoutStr, err)
+			return statusBadRequest("invalid timeout %q: %w", timeoutStr, err)
 		}
 		timer := time.NewTimer(timeout)
 		select {

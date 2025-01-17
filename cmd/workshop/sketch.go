@@ -294,8 +294,20 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
+	refreshArgs := []string{fmt.Sprintf("%s/sketch", wp.Name)}
 
-	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
+	err = cmdrefresh.Run(cmd, refreshArgs)
+	if e, ok := err.(*client.Error); ok && e.Kind == client.ErrorKindWaitingOnError {
+		cmdabort := &CmdRefresh{root: c.root}
+		cmdabort.Abort = true
+		err = cmdabort.Run(cmd, []string{wp.Name})
+		if err != nil {
+			return err
+		}
+
+		err = cmdrefresh.Run(cmd, refreshArgs)
+	}
+	return err
 }
 
 func writeSketchSdk(sketchdir string, content []byte) error {

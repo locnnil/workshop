@@ -57,7 +57,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqData); err != nil {
-		return statusBadRequest("cannot exec: failed to decode data from request body: %v", err)
+		return statusBadRequest("cannot exec: failed to decode data from request body: %w", err)
 	}
 
 	action := "exec"
@@ -94,13 +94,13 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 		var err error
 		timeout, err = time.ParseDuration(reqData.Timeout)
 		if err != nil {
-			return statusBadRequest("invalid timeout: %v", err)
+			return statusBadRequest("invalid timeout: %w", err)
 		}
 	}
 
 	userId, groupId, err := normaliseUserGroupIds(reqData.UserId, reqData.GroupId)
 	if err != nil {
-		return statusBadRequest("cannot %s %s in %q: %v", action, subject, wrkspc, err)
+		return statusBadRequest("cannot %s %s in %q: %w", action, subject, wrkspc, err)
 	}
 
 	// We do not set PATH here as it's something LXD takes care of. Set HOME and
@@ -146,7 +146,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	wsmgr := c.d.overlord.WorkshopManager()
 	taskset, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs, reqData.Script)
 	if err != nil {
-		return statusBadRequest("cannot %s %s in %q: %v", action, subject, wrkspc, err)
+		return statusBadRequest("cannot %s %s in %q: %w", action, subject, wrkspc, err)
 	}
 
 	change := st.NewChange("exec", fmt.Sprintf("Execute %s %q", subject, execArgs.Command[0]))

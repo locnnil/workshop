@@ -603,6 +603,7 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 		c.Check(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 
 		if rsp.Type == ResponseTypeError {
+			c.Check(string(rsp.Result.(*errorResult).Kind), check.Equals, expected[num].Kind)
 			c.Check(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
 		}
 
@@ -1858,6 +1859,7 @@ base: ubuntu@22.04
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: `cannot refresh "manysdks": waiting on error`,
+			Kind:    "waiting-on-error",
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}

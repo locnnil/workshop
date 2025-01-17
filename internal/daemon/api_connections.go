@@ -261,7 +261,7 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 
 	if workshop != "" {
 		if err := checkWorkshopExists(r.Context(), c.d.overlord.WorkshopManager(), projectId, workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %v", workshop, err)
+			return statusNotFound("cannot access workshop %q: %w", workshop, err)
 		}
 	}
 
@@ -272,7 +272,7 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 		connected: onlyConnected,
 	})
 	if err != nil {
-		return statusInternalError("collecting connection information failed: %v", err)
+		return statusInternalError("collecting connection information failed: %w", err)
 	}
 	sort.Sort(byCrefConnJSON(connsjson.Established))
 	sort.Sort(byCrefConnJSON(connsjson.Undesired))
@@ -297,7 +297,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 	var a interfaceAction
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&a); err != nil {
-		return statusBadRequest("cannot decode request body into an interface action: %v", err)
+		return statusBadRequest("cannot decode request body into an interface action: %w", err)
 	}
 	if a.Action == "" {
 		return statusBadRequest("interface action not specified")
@@ -336,7 +336,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			continue
 		}
 		if err := checkInstalled(a.Plugs[i].ProjectId, a.Plugs[i].Workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %v", a.Plugs[i].Workshop, err)
+			return statusNotFound("cannot access workshop %q: %w", a.Plugs[i].Workshop, err)
 		}
 	}
 	for i := range a.Slots {
@@ -344,7 +344,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			continue
 		}
 		if err := checkInstalled(a.Slots[i].ProjectId, a.Slots[i].Workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %v", a.Slots[i].Workshop, err)
+			return statusNotFound("cannot access workshop %q: %w", a.Slots[i].Workshop, err)
 		}
 	}
 
@@ -362,7 +362,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			ts, connErr := ifacestate.Connect(st, plugW, connRef)
 			if connErr != nil {
 				if _, ok := connErr.(*ifacestate.ErrAlreadyConnected); !ok {
-					return statusBadRequest(connErr.Error())
+					return statusBadRequest("%w", connErr)
 				}
 			} else {
 				tasksets = append(tasksets, ts)
@@ -407,7 +407,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		}
 	}
 	if err != nil {
-		return statusBadRequest(err.Error())
+		return statusBadRequest("%w", err)
 	}
 
 	change := newConnectionChange(st, user, tasksets, &a)
