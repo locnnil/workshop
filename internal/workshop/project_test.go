@@ -139,6 +139,21 @@ func (p *projectSuite) TestTrackNewProject(c *check.C) {
 	_, _, err = tracker.Track(d)
 	c.Assert(err, check.ErrorMatches, `not a project \(no workshop files found\)`)
 	c.Assert(tracker.Projects, check.HasLen, 3)
+
+	// Workshop named "workshop"
+	d = c.MkDir()
+	subdir := filepath.Join(d, ".workshop")
+	c.Assert(os.Mkdir(subdir, os.ModePerm), check.IsNil)
+	_, err = os.Create(filepath.Join(subdir, "workshop.yaml"))
+	c.Assert(err, check.IsNil)
+
+	project, result, err = tracker.Track(subdir)
+	c.Assert(err, check.IsNil)
+	c.Check(result, check.Equals, workshop.ProjectAdded)
+	c.Check(project.Path, check.Equals, d)
+	c.Check(project.ProjectId, check.Not(check.Equals), "")
+	c.Check(tracker.Projects, check.HasLen, 4)
+	c.Assert(workshop.LockPath(d), testutil.FilePresent)
 }
 
 func (p *projectSuite) TestTrackProjectSubDirectory(c *check.C) {

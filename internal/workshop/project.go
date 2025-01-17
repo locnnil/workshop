@@ -306,6 +306,11 @@ func isProject(dir string) bool {
 		}
 		files = nil
 	}
+
+	// Special case for <PROJECT>/.workshop/workshop.yaml.
+	if len(files) == 0 && filepath.Base(dir) == Directory && isProject(filepath.Dir(dir)) {
+		return false
+	}
 	for _, name := range Filenames {
 		files = append(files, filepath.Join(dir, name))
 	}
