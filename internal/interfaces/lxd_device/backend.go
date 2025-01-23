@@ -225,8 +225,7 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	}
 	defer env.Close()
 
-	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen.Address, "unix:"))
-	_, err = env.Write([]byte(varline))
+	_, err = fmt.Fprintf(env, "export SSH_AUTH_SOCK=%s\n", dev.Listen.Address)
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
 	}

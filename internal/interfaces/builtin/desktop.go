@@ -106,6 +106,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 				Address:  filepath.Join("/run/user/1000/", wayland),
 				Protocol: "unix",
 			},
+			Direction: workshop.WorkshopToHost,
 		}
 	}
 
@@ -118,9 +119,10 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 			Protocol: "unix",
 		}
 		desktop.X11 = &workshop.ProxyEntry{
-			Name:    plug.Sdk().Name + "-" + "x11",
-			Connect: proxyTarget,
-			Listen:  proxyTarget,
+			Name:      plug.Sdk().Name + "-" + "x11",
+			Connect:   proxyTarget,
+			Listen:    proxyTarget,
+			Direction: workshop.WorkshopToHost,
 		}
 	}
 

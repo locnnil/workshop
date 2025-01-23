@@ -43,7 +43,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					},
 					Listen: workshop.ProxyTarget{
 						Address:  ".workshop.socket",
-						Protocol: "unix"}}},
+						Protocol: "unix",
+					},
+					Direction: workshop.WorkshopToHost}},
 		}, {
 			Sdk:    "sdk",
 			Mounts: map[string]workshop.Mount{},
@@ -56,7 +58,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					},
 					Listen: workshop.ProxyTarget{
 						Address:  ".workshop.socket",
-						Protocol: "unix"}}},
+						Protocol: "unix",
+					},
+					Direction: workshop.WorkshopToHost}},
 		}, {
 			Sdk: "sdk",
 			Mounts: map[string]workshop.Mount{

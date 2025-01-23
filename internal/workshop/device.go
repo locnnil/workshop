@@ -13,10 +13,18 @@ type ProxyTarget struct {
 	Protocol string
 }
 
+type ProxyDirection int
+
+const (
+	HostToWorkshop ProxyDirection = iota
+	WorkshopToHost
+)
+
 type ProxyEntry struct {
-	Name    string
-	Connect ProxyTarget
-	Listen  ProxyTarget
+	Name      string
+	Connect   ProxyTarget
+	Listen    ProxyTarget
+	Direction ProxyDirection
 }
 
 func (p *ProxyEntry) Equal(other *ProxyEntry) bool {

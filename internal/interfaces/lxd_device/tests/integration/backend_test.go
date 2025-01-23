@@ -369,6 +369,7 @@ exit 0
 	c.Check(prof.Agent.Connect.Protocol, check.Equals, "unix")
 	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/consumer-ssh-agent.ssh")
 	c.Check(prof.Agent.Listen.Protocol, check.Equals, "unix")
+	c.Check(prof.Agent.Direction, check.Equals, workshop.WorkshopToHost)
 
 	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer-ssh-agent.sh")
 	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer-ssh-agent.ssh\n")

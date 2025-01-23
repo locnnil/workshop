@@ -83,6 +83,7 @@ exit 0`)
 			Address:  "/var/lib/workshop/run/consumer-ssh-agent.ssh",
 			Protocol: "unix",
 		},
+		Direction: workshop.WorkshopToHost,
 	}}
 	c.Assert(deviceSpec.Profile.Agent, check.DeepEquals, expectedProxy)
 }

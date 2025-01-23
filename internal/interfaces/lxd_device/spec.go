@@ -170,12 +170,24 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 
 func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
-	s.devices[entry.Name] = map[string]string{
+	device := map[string]string{
 		"type":    "proxy",
 		"connect": entry.Connect.Protocol + ":" + entry.Connect.Address,
 		"listen":  entry.Listen.Protocol + ":" + entry.Listen.Address,
-		"uid":     "1000",
-		"gid":     "1000",
-		"bind":    "instance",
 	}
+	switch entry.Direction {
+	case workshop.WorkshopToHost:
+		device["bind"] = "instance"
+		if entry.Listen.Protocol == "unix" {
+			device["uid"] = "1000"
+			device["gid"] = "1000"
+		}
+	case workshop.HostToWorkshop:
+		device["bind"] = "host"
+		if entry.Listen.Protocol == "unix" {
+			device["uid"] = s.User.Uid
+			device["gid"] = s.User.Gid
+		}
+	}
+	s.devices[entry.Name] = device
 }

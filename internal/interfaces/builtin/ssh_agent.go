@@ -101,6 +101,7 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specificatio
 				Address:  toSocket,
 				Protocol: "unix",
 			},
+			Direction: workshop.WorkshopToHost,
 		},
 	})
 }
