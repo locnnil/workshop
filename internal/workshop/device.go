@@ -47,6 +47,10 @@ type Mount struct {
 	ReadOnly bool      `json:"readonly"`
 }
 
+type Tunnel struct {
+	ProxyEntry
+}
+
 type SshAgent struct {
 	ProxyEntry
 }
@@ -81,6 +85,7 @@ type SdkProfile struct {
 
 	Camera  *Camera
 	Mounts  map[string]Mount
+	Tunnels []Tunnel
 	Agent   *SshAgent
 	Gpu     *Gpu
 	Desktop *Desktop

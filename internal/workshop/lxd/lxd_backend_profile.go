@@ -49,6 +49,12 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		case "proxy":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			switch devtype {
+			case "tunnel":
+				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
+				if err != nil {
+					return pr, err
+				}
+				pr.Tunnels = append(pr.Tunnels, workshop.Tunnel{ProxyEntry: *proxyEntry})
 			case "ssh-agent":
 				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
 				if err != nil {

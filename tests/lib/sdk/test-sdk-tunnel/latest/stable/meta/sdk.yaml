@@ -1,0 +1,27 @@
+name: test-sdk-tunnel
+title: test-sdk-tunnel
+base: ubuntu@22.04
+
+summary: test-sdk-tunnel SDK
+description: |
+  test-sdk-tunnel SDK
+
+sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
+plugs:
+  alias:
+    interface: tunnel
+  conflict:
+    interface: tunnel
+    endpoint: 5432
+  postgres:
+    interface: tunnel
+    endpoint: 5432
+slots:
+  http:
+    interface: tunnel
+    endpoint: '[::1]:8000'
+  unix-abstract:
+    interface: tunnel
+    endpoint: '@abstract'
+  unused:
+    interface: tunnel

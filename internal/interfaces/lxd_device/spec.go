@@ -84,11 +84,17 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	return nil
 }
 
-// Ssh Agent and Desktop are both of the lxc 'proxy' type
+// Tunnel, SSH Agent and Desktop are all of the lxc 'proxy' type
 // These are network protocol proxy devices that open a port on the host or in a workhop.
-// 'from', 'to' are the source and destination addresses (paths in the case of unix sockets),
+// 'listen', 'connect' are the source and destination addresses (paths in the case of unix sockets),
 // see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
 // bind denotes where the port is open (can be: instance, host)
+
+func (s *Specification) AddTunnelEntry(tunnel workshop.Tunnel) error {
+	s.Profile.Tunnels = append(s.Profile.Tunnels, tunnel)
+	s.addProxyEntry(&tunnel.ProxyEntry, "tunnel")
+	return nil
+}
 
 func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
 	s.Profile.Agent = &agent

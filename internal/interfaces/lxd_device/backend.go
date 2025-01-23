@@ -329,7 +329,7 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkInfo)
 	if err != nil {
-		return fmt.Errorf("cannot obtain device snippets for workshop %q: %w", sdkInfo.Workshop, err)
+		return err
 	}
 	spec := s.(*Specification)
 

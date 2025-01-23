@@ -254,6 +254,12 @@
     - SK028
     - SK039
 
+"tunnel interface":
+  category: interface
+  type: concept
+  specs:
+  - SK033
+
 "workshop (CLI)":
   category: "workshop (CLI)"
   type: tool

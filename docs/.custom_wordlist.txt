@@ -32,12 +32,15 @@ gopkg
 GPG
 GPUs
 GUIs
+hostname
+hostnames
 html
 http
 https
 IDEs
 init
 IoT
+IPv
 iteratively
 Jupyter
 JupyterLab
@@ -83,8 +86,10 @@ subcommand
 subcommands
 subdirectory
 sudo
+TCP
 transactional
 ubuntu
+UDP
 uid
 uncomment
 unicode

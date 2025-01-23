@@ -1,0 +1,23 @@
+name: ws-tunnel
+base: ubuntu@22.04
+sdks:
+  - name: system
+    plugs:
+      conflict:
+        interface: tunnel
+        endpoint: '0.0.0.0:8000'
+      test-sdk-http:
+        interface: tunnel
+        endpoint: 8001
+      tunnel:
+      unix-path:
+        interface: tunnel
+        endpoint: /home/ubuntu/test-tunnel.sock
+    slots:
+      postgres:
+        interface: tunnel
+        endpoint: 54321
+      unused:
+        interface: tunnel
+  - name: test-sdk-tunnel
+    channel: latest/stable
