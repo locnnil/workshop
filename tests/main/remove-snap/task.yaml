@@ -24,7 +24,8 @@ execute: |
   sudo deluser --remove-home abc
 
   echo "Check that workshop storage pool has been removed"
-  $(lxc storage list -f compact | awk 'NR>1 {print $1}' | grep -q workshop) && (echo "workshop storage pool must be removed" && exit 1) 
+  (lxc storage list -f compact | awk 'NR>1 {print $1}' | (! grep -q workshop)) || (echo "workshop storage pool must be removed" && exit 1)
+  (lxc network list -f compact | awk 'NR>1 {print $1}' | (! grep -q workshopbr0)) || (echo "workshop network must be removed" && exit 1)
 
   snap install --dangerous --classic /workshop/tests/*.snap
   [[ $(workshop_exec list --global | wc -c) -eq 0 ]] || (echo "no workshops must remain after snap removal" && exit 1)

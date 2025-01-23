@@ -31,8 +31,8 @@ var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/
 
 func DefaultTestDevices() map[string]map[string]string {
 	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "default", "path": "/"},
-		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"root":             {"type": "disk", "pool": "workshop", "path": "/"},
+		"workshop.network": {"type": "nic", "network": "workshopbr0", "name": "eth0"},
 	}
 }
 
