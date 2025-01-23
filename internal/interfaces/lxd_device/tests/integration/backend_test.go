@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	lxd "github.com/canonical/lxd/client"
+	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -62,12 +63,21 @@ func (f *backendDeviceSuite) setupRepo(c *check.C) {
 func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	fstab, err := fs.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0744)
+	file, err := fs.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0744)
 	c.Assert(err, check.IsNil)
-	defer fstab.Close()
-	buf, err := io.ReadAll(fstab)
+	defer file.Close()
+	buf, err := io.ReadAll(file)
 	c.Assert(err, check.IsNil)
 	return string(buf)
+}
+
+func defaultTestDevices() map[string]map[string]string {
+	cwd, _ := os.Getwd()
+	return map[string]map[string]string{
+		"root":             {"type": "disk", "pool": "default", "path": "/"},
+		"project":          {"type": "disk", "source": cwd, "path": "/project"},
+		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+	}
 }
 
 func (f *backendDeviceSuite) SetUpTest(c *check.C) {
@@ -95,7 +105,7 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 		return u, nil
 	}, &workshop.LookupUsername)
 
-	defer lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)()
+	defer lxdbackend.FakeDefaultDevices(defaultTestDevices)()
 	helper.LaunchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 }
 
@@ -194,10 +204,27 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	lines := strings.Split(string(fstab), "\n")
 	c.Check(lines, check.HasLen, 3)
 	c.Check(lines[2], check.Equals, "")
-	c.Check(lines[:2], testutil.DeepUnsortedMatches, []string{
+	c.Check(lines, testutil.DeepUnsortedMatches, []string{
 		"/usr/local /opt none bind,x-systemd.requires=/project 0 0",
 		"/home /mnt none bind,x-systemd.requires=/project 0 0",
+		"",
 	})
+
+	fs, err := f.be.WorkshopFs(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	// Check that the bind mount is created for /usr/local -> /opt
+	file, err := fs.Create("/opt/tmp")
+	c.Assert(err, check.IsNil)
+	file.Close()
+	_, err = fs.Stat("/usr/local/tmp")
+	c.Assert(err, check.IsNil)
+
+	// Check that the bind mount is created for /home -> /mnt
+	file, err = fs.Create("/home/tmp")
+	c.Assert(err, check.IsNil)
+	file.Close()
+	_, err = fs.Stat("/mnt/tmp")
+	c.Assert(err, check.IsNil)
 
 	// Check the LXD profile is removed
 	err = b.Remove(f.ctx, "test", "consumer")
@@ -208,6 +235,14 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	// Check the fstab record was removed
 	fstab = f.readWorkshopFile(c, "/etc/fstab")
 	c.Check(string(fstab), check.Equals, "")
+
+	// Check that the bind mount is removed for /usr/local -> /opt
+	_, err = fs.Stat("/opt/tmp")
+	c.Assert(err, check.Equals, afero.ErrFileNotFound)
+
+	// Check that the bind mount is removed for /home -> /mnt
+	_, err = fs.Stat("/mnt/tmp")
+	c.Assert(err, check.Equals, afero.ErrFileNotFound)
 }
 
 func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
