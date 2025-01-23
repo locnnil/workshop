@@ -95,6 +95,14 @@ func New() (*Backend, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Workshop does not require an existing storage pool.
+	// However, once the workshop storage pool exists,
+	// `lxd init --auto` won't add another one,
+	// and non-Workshop LXD containers can't be launched
+	// without further manual configuration.
+	if len(pools) == 0 {
+		return nil, errors.New("LXD not initialized")
+	}
 
 	poolExists := false
 	for _, pool := range pools {
