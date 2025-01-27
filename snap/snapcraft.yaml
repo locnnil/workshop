@@ -26,6 +26,7 @@ apps:
     environment:
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: bin/workshop
+    completer: workshop-completer.sh
   workshopd:
     environment:
       WORKSHOP: ${SNAP_DATA}
@@ -63,10 +64,14 @@ parts:
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshop" ./cmd/workshop
       go build -o "${CRAFT_PART_INSTALL}/bin/workshopd" ./cmd/workshopd
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
+
+      # Generate completions script
+      "${CRAFT_PART_INSTALL}/bin/workshop" completion bash > "${CRAFT_PART_INSTALL}/workshop-completer.sh"
     prime:
       - bin/workshop
       - bin/workshopd
       - bin/workshopctl
+      - workshop-completer.sh
   wrappers:
     plugin: dump
     source: snap/local/
