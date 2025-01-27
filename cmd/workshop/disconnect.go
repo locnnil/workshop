@@ -1,6 +1,8 @@
 package main
 
 import (
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -51,7 +53,8 @@ $ workshop disconnect nimble/go:mod-cache nimble/system:mount
 Disconnect all plugs connected to the 'mount' slot of the 'system' SDK
 under the 'nimble' workshop in the current project directory:
 $ workshop disconnect nimble/system:mount`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.complete(),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.forget, "forget",
@@ -113,4 +116,46 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	return nil
+}
+
+func (c *CmdDisconnect) complete() ValidArgsFunction {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		cli, err := c.root.client()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		project, err := cli.Project(c.root.project)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, All: true})
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		// Create map of endpoint strings and associated plugs
+		connectedPlugs := make(map[string]client.Plug)
+		for _, plug := range connections.Plugs {
+			if len(plug.Connections) > 0 {
+				ref := endpoint(plug.Workshop, plug.Sdk, plug.Name)
+				connectedPlugs[ref] = plug
+			}
+		}
+
+		var completion []string
+		switch len(args) {
+		case 0:
+			// No arguments, show list of plugs
+			completion = slices.Collect(maps.Keys(connectedPlugs))
+		case 1:
+			if plug, ok := connectedPlugs[args[0]]; ok {
+				for _, slot := range plug.Connections {
+					completion = append(completion, endpoint(slot.Workshop, slot.Sdk, slot.Name))
+				}
+			}
+		}
+		return completion, cobra.ShellCompDirectiveNoFileComp
+	}
 }

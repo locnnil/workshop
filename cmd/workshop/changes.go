@@ -57,24 +57,10 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	clientOpts := client.ChangesOptions{
-		ProjectPath: c.root.project,
-		Selector:    client.ChangesAll,
-	}
-
-	chngs, err := cli.Changes(&clientOpts)
+	chngs, err := c.changes(cli)
 	if err != nil {
 		return err
 	}
-
-	slices.SortFunc(chngs, func(a, b *client.Change) int {
-		if a.SpawnTime.Before(b.SpawnTime) {
-			return -1
-		} else if a.SpawnTime.After(b.SpawnTime) {
-			return 1
-		}
-		return 0
-	})
 
 	if len(chngs) > 0 {
 		w := tabWriter()
@@ -98,4 +84,26 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	return nil
+}
+
+func (c *CmdChanges) changes(cli *client.Client) ([]*client.Change, error) {
+	clientOpts := client.ChangesOptions{
+		ProjectPath: c.root.project,
+		Selector:    client.ChangesAll,
+	}
+
+	chngs, err := cli.Changes(&clientOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	slices.SortFunc(chngs, func(a, b *client.Change) int {
+		if a.SpawnTime.Before(b.SpawnTime) {
+			return -1
+		} else if a.SpawnTime.After(b.SpawnTime) {
+			return 1
+		}
+		return 0
+	})
+	return chngs, nil
 }

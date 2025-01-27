@@ -182,7 +182,8 @@ $ workshop exec -I -- sh
 
 Run a command as root (the default is 'workshop'):
 $ workshop exec --uid 0 nimble id`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Pending"}),
 	}
 
 	cmd.Flags().SortFlags = false

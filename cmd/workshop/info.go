@@ -49,7 +49,8 @@ $ workshop info nimble
 
 The name is optional if the project has only one workshop:
 $ workshop info`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName(nil),
 	}
 
 	return cmd

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/spf13/cobra"
 
@@ -87,6 +88,42 @@ func (c *CmdRoot) preRun(cmd *cobra.Command, args []string) error {
 func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
 	if c.cli != nil {
 		maybePresentWarnings(c.cli.WarningsSummary())
+	}
+}
+
+type ValidArgsFunction func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
+
+func (c *CmdRoot) completeWorkshopName(status []string) ValidArgsFunction {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		cli, err := c.client()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		project, err := cli.Project(c.project)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		desiredStatus := func(s string) bool {
+			if status == nil {
+				return true
+			}
+			return slices.Contains(status, s)
+		}
+
+		var workshops []string
+		for _, workshop := range workshopInfo {
+			if desiredStatus(workshop.Status) && !slices.Contains(args, workshop.Name) {
+				workshops = append(workshops, workshop.Name)
+			}
+		}
+		return workshops, cobra.ShellCompDirectiveNoFileComp
 	}
 }
 
