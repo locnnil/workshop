@@ -123,7 +123,7 @@ func New() (*Backend, error) {
 	for _, pool := range pools {
 		if pool.Name == storagePool {
 			if pool.Driver != storagePoolDriver {
-				return nil, fmt.Errorf("storage pool %q already exists with different driver %q", storagePool, pool.Driver)
+				return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q", storagePool, pool.Driver)
 			}
 
 			poolExists = true
@@ -146,7 +146,7 @@ func New() (*Backend, error) {
 	for _, network := range networks {
 		if network.Name == networkName {
 			if network.Type != networkType {
-				return nil, fmt.Errorf("network %q already exists with different type %q", networkName, network.Type)
+				return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
 			}
 
 			networkExists = true
