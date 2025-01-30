@@ -59,10 +59,10 @@ func checkPlugInstallationAltConstraints(plug *sdk.PlugInfo, altConstraints []*a
 }
 
 func checkPlugConnectionConstraints1(connc *ConnectCandidate, constraints *asserts.PlugConnectionConstraints) error {
-	if err := checkNameConstraints(constraints.PlugNames, connc.Plug.Interface(), "plug name", connc.Plug.Name()); err != nil {
+	if err := checkPlugNameConstraints(constraints.PlugNames, connc.Plug.Interface(), connc.Slot.Name(), "plug name", connc.Plug.Name()); err != nil {
 		return err
 	}
-	if err := checkNameConstraints(constraints.SlotNames, connc.Slot.Interface(), "slot name", connc.Slot.Name()); err != nil {
+	if err := checkSlotNameConstraints(constraints.SlotNames, connc.Slot.Interface(), connc.Plug.Name(), "slot name", connc.Slot.Name()); err != nil {
 		return err
 	}
 
@@ -124,6 +124,28 @@ func checkNameConstraints(c *asserts.NameConstraints, iface, which, name string)
 	return c.Check(which, name, special)
 }
 
+func checkPlugNameConstraints(c *asserts.NameConstraints, iface, slot, which, name string) error {
+	if c == nil {
+		return nil
+	}
+	special := map[string]string{
+		"$INTERFACE": iface,
+		"$SLOT":      slot,
+	}
+	return c.Check(which, name, special)
+}
+
+func checkSlotNameConstraints(c *asserts.NameConstraints, iface, plug, which, name string) error {
+	if c == nil {
+		return nil
+	}
+	special := map[string]string{
+		"$INTERFACE": iface,
+		"$PLUG":      plug,
+	}
+	return c.Check(which, name, special)
+}
+
 func checkSlotInstallationConstraints(slot *sdk.SlotInfo, constraints *asserts.SlotInstallationConstraints) error {
 	if err := checkNameConstraints(constraints.SlotNames, slot.Interface, "slot name", slot.Name); err != nil {
 		return err
@@ -170,10 +192,10 @@ func checkSlotConnectionAltConstraints(connc *ConnectCandidate, altConstraints [
 }
 
 func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asserts.SlotConnectionConstraints) error {
-	if err := checkNameConstraints(constraints.PlugNames, connc.Plug.Interface(), "plug name", connc.Plug.Name()); err != nil {
+	if err := checkPlugNameConstraints(constraints.PlugNames, connc.Plug.Interface(), connc.Slot.Name(), "plug name", connc.Plug.Name()); err != nil {
 		return err
 	}
-	if err := checkNameConstraints(constraints.SlotNames, connc.Slot.Interface(), "slot name", connc.Slot.Name()); err != nil {
+	if err := checkSlotNameConstraints(constraints.SlotNames, connc.Slot.Interface(), connc.Plug.Name(), "slot name", connc.Slot.Name()); err != nil {
 		return err
 	}
 
