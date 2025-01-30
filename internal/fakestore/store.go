@@ -29,7 +29,7 @@ var (
 )
 
 var (
-	SDK_STORE_BUCKET_NAME = "sdk-store"
+	SDK_STORE_BUCKET_NAME = "sdkstore"
 
 	storeSdkInfo   = storeSdkInfoImpl
 	storeConnect   = storeConnectImpl
