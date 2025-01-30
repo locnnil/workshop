@@ -72,10 +72,19 @@ func checkPlugConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	if err := constraints.SlotAttributes.Check(connc.Slot, connc); err != nil {
 		return err
 	}
+
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
+	if err := checkSdkType(plugSdk, constraints.PlugSdkTypes); err != nil {
+		return err
+	}
+	if err := checkSdkType(slotSdk, constraints.SlotSdkTypes); err != nil {
+		return err
+	}
+
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
 		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
+
 	return nil
 }
 
@@ -167,6 +176,7 @@ func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	if err := checkNameConstraints(constraints.SlotNames, connc.Slot.Interface(), "slot name", connc.Slot.Name()); err != nil {
 		return err
 	}
+
 	if err := constraints.PlugAttributes.Check(connc.Plug, connc); err != nil {
 		return err
 	}
@@ -175,6 +185,13 @@ func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	}
 
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
+	if err := checkSdkType(plugSdk, constraints.PlugSdkTypes); err != nil {
+		return err
+	}
+	if err := checkSdkType(slotSdk, constraints.SlotSdkTypes); err != nil {
+		return err
+	}
+
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
 		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
