@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	LxdSock     = "/var/snap/lxd/common/lxd/unix.socket"
-	storagePool = "default"
+	LxdSock           = "/var/snap/lxd/common/lxd/unix.socket"
+	storagePool       = "workshop"
+	storagePoolDriver = "zfs"
 )
 
 var (
@@ -35,11 +36,19 @@ var (
 	checkNvidiaRuntime = checkNvidia
 )
 
+type volumeGuard struct {
+	c       chan struct{}
+	counter int32
+}
+
 var (
 	// However many backend instances are created, downloads are always a single
 	// instance map with the LXD backend.
 	imageLock        sync.Mutex
 	currentDownloads map[string]*downloadOp
+
+	volumeGuardsLock sync.Mutex
+	volumeGuards     map[string]*volumeGuard
 )
 
 //go:embed start_command.sh
@@ -51,6 +60,10 @@ func init() {
 	if currentDownloads == nil {
 		currentDownloads = make(map[string]*downloadOp)
 	}
+
+	volumeGuardsLock.Lock()
+	defer volumeGuardsLock.Unlock()
+	volumeGuards = make(map[string]*volumeGuard)
 }
 
 type Backend struct {
@@ -69,6 +82,41 @@ func New() (*Backend, error) {
 
 	if srv := os.Getenv("WORKSHOP_IMAGE_SERVER"); srv != "" {
 		imageServer = srv
+	}
+
+	// Create LXD storage pool if it doesn't exist
+	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Disconnect()
+
+	pools, err := conn.GetStoragePools()
+	if err != nil {
+		return nil, err
+	}
+
+	poolExists := false
+	for _, pool := range pools {
+		if pool.Name == storagePool {
+			if pool.Driver != storagePoolDriver {
+				return nil, fmt.Errorf("storage pool %q already exists with different driver %q", storagePool, pool.Driver)
+			}
+
+			poolExists = true
+			break
+		}
+	}
+
+	if !poolExists {
+		req := api.StoragePoolsPost{
+			Name:   storagePool,
+			Driver: storagePoolDriver,
+		}
+		err := conn.CreateStoragePool(req)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &server, nil
@@ -316,12 +364,13 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device work
 	}
 	if device.Type == workshop.Volume {
 		inst.Devices[device.Name] = map[string]string{"type": "disk",
-			"pool":   "default",
-			"path":   device.What,
-			"source": device.Where}
+			"pool":     storagePool,
+			"path":     device.What,
+			"source":   device.Where,
+			"readonly": fmt.Sprint(device.ReadOnly)}
 	} else {
 		inst.Devices[device.Name] = map[string]string{"type": "disk", "source": device.What,
-			"path": device.Where}
+			"path": device.Where, "readonly": fmt.Sprint(device.ReadOnly)}
 	}
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
@@ -628,45 +677,6 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.Worksho
 	}
 
 	return workshop.NewWorkshopFs(sftp), nil
-}
-
-func (s *Backend) CreateVolume(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	// Create the storage volume entry
-	vol := api.StorageVolumesPost{}
-	vol.Name = name
-	vol.Type = "custom"
-	vol.ContentType = "filesystem"
-	vol.Config = map[string]string{}
-
-	err = conn.CreateStoragePoolVolume(storagePool, vol)
-	if api.StatusErrorCheck(err, http.StatusConflict) {
-		return workshop.ErrVolumeAlreadyExists
-	}
-	return err
-}
-
-func (s *Backend) AttachVolume(ctx context.Context, wp, name, what string) error {
-	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: what, Where: name, Type: workshop.Volume})
-}
-
-func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {
-	return s.RemoveWorkshopMount(ctx, wp, name)
-}
-
-func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	return conn.DeleteStoragePoolVolume(storagePool, "custom", name)
 }
 
 func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {

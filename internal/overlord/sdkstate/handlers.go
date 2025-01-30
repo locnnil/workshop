@@ -1,7 +1,6 @@
 package sdkstate
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -79,7 +77,17 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	return store.DownloadSdk(ctx, rec, reporter)
+	if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
+		return err
+	}
+
+	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision.String()), rec.Filepath())
+	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
+		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision.String()))
+		return nil
+	}
+
+	return err
 }
 
 func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -153,71 +161,20 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	// The install tasks should hold the lock until the SDK is unpacked in the
-	// workshop. There are could be multiple of them reading the file
-	// concurrently and, hence, TryLock, so a writer (e.g. DownloadSdk) would
-	// not corrupt the file before it is installed.
-	fl, err := sdk.OpenLock(sdkSetup.Name)
+	// Directory: /var/lib/workshop/sdk/<name>/<revision>/
+	fs, err := m.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
 	}
-	if err = fl.TryLock(); err != nil && !errors.Is(err, osutil.ErrAlreadyLocked) {
+	defer fs.Close()
+	if err = fs.MkdirAll(dirs.WorkshopSdksDir, 0755); err != nil {
 		return err
 	}
-	defer fl.Close()
 
-	target := filepath.Join("/root", filepath.Base(sdkSetup.Filename()))
-	sdkMount := workshop.Mount{Name: sdkSetup.Name, What: sdkSetup.Filename(), Where: target}
-	if err = m.backend.AddWorkshopMount(ctx, w, sdkMount); err != nil {
-		return err
-	}
-	umount := func() {
-		// Make sure the SDK file will be unmounted once installed into the workshop
-		if err := m.backend.RemoveWorkshopMount(ctx, w, sdkMount.Name); err != nil {
-			logger.Debugf("cannot unmount SDK %q from workshop %q: %v", sdkMount.Name, w, err)
-		}
-	}
-	defer umount()
-
-	// example: /var/lib/workshop/sdk/cuda/712/
+	// Mount the SDK content at the workshop location.
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
 
-	// create a memory out/err to log the hook output into the task's log
-	var out bytes.Buffer
-
-	// Unpack the SDK to the desired location in the workshop
-	//   Note: the following command requires ~ tar >= 1.29 due to --one-top-level
-	args := workshop.Execution{
-		ExecArgs: workshop.ExecArgs{
-			UserId:  0,
-			GroupId: 0,
-			Command: []string{
-				"tar",
-				"--extract",
-				"--file",
-				target,
-				"--one-top-level=" + sdkPath,
-				"--no-same-owner",
-			},
-			WorkDir: "/",
-		},
-		ExecControls: workshop.ExecControls{
-			Stdin:  nil,
-			Stdout: nil,
-			Stderr: &out,
-		},
-	}
-
-	exectx, err := m.backend.Exec(ctx, w, &args)
-	if err != nil {
-		return err
-	}
-
-	if err = exectx.WaitExecution(ctx); err != nil {
-		return fmt.Errorf("%w: %v", err, out.String())
-	}
-
-	return err
+	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()), sdkPath, true)
 }
 
 func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -234,17 +191,7 @@ func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	fs, err := m.backend.WorkshopFs(ctx, w)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	if err = fs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String())); err != nil {
-		return fmt.Errorf("cannot undo SDK %q installation: %w", sdkSetup.Name, err)
-	}
-
-	return nil
+	return m.backend.DetachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()))
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {

@@ -29,13 +29,16 @@ for p in $(echo "$projects" | xargs -L1 echo); do
     # shellcheck disable=SC2086
     lxc image delete $images --project "$p"
   fi
-
-  lxc storage volume list default --project "$p"
-  volumes=$(lxc storage volume list default type=custom -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
-  echo "Removing storage volumes: $volumes"
-  for volume in $(echo "$volumes" | xargs -L1 echo); do
-    lxc storage volume delete default "$volume" --project "$p"
-  done
-
-  lxc project delete "$p" 
 done 
+
+# Storage pool volumes are shared among projects and removed last.
+storage_pool="workshop"
+volumes=$(lxc storage volume list "$storage_pool" -c pnt type=custom -f compact --all-projects | awk 'NR>1 {printf "%s ", $1}')
+echo "$volumes" | xargs -n1 -r | while read -r volume; do
+  lxc storage volume delete "$storage_pool" "$volume"
+done
+lxc storage delete "$storage_pool"
+
+for p in $(echo "$projects" | xargs -L1 echo); do
+  lxc project delete "$p" 
+done

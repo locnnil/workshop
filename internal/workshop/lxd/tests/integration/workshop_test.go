@@ -5,9 +5,11 @@ package lxdbackend_integration_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/user"
 	"sync"
+	"sync/atomic"
 
 	"gopkg.in/check.v1"
 
@@ -128,6 +130,106 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	err = f.bd.DeleteVolume(f.ctx, "test")
 
 	// Validate
+	c.Assert(err, check.IsNil)
+}
+
+var testsdk = `name: test-sdk
+title: title
+base: ubuntu@20.04
+version: '0.1.2'
+summary: summary
+description: SDK
+sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+`
+
+func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
+	// Execute
+	sdkfs := c.MkDir()
+	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
+
+	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
+
+	var wg sync.WaitGroup
+
+	var successCnt, existCnt int32
+	wg.Add(5)
+	for i := 0; i < 5; i++ {
+		go func() {
+			err := f.bd.ImportVolume(f.ctx, "test-1", tarball)
+			if err == nil {
+				atomic.AddInt32(&successCnt, 1)
+			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
+				atomic.AddInt32(&existCnt, 1)
+			} else {
+				c.Logf("unexpected error: %v", err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(4))
+
+	c.Check(cmd.Calls(), check.HasLen, 2)
+
+	vinfo, err := f.bd.Volume(f.ctx, "test-1")
+	c.Check(err, check.IsNil)
+	c.Check(vinfo.Name, check.Equals, "test-1")
+	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+
+	err = f.bd.DeleteVolume(f.ctx, "test-1")
+	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
+	// Execute
+	sdkfs := c.MkDir()
+	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
+
+	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
+
+	var wg sync.WaitGroup
+
+	var successCnt, existCnt, canceled int32
+	wg.Add(5)
+	for i := 0; i < 5; i++ {
+		newctx, cancel := context.WithCancel(f.ctx)
+
+		if i%2 == 0 {
+			cancel()
+		} else {
+			defer cancel()
+		}
+
+		go func() {
+			err := f.bd.ImportVolume(newctx, "test-1", tarball)
+			if err == nil {
+				atomic.AddInt32(&successCnt, 1)
+			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
+				atomic.AddInt32(&existCnt, 1)
+			} else if errors.Is(err, context.Canceled) {
+				atomic.AddInt32(&canceled, 1)
+			} else {
+				c.Logf("unexpected error: %v", err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&canceled), check.Equals, int32(3))
+
+	c.Check(cmd.Calls(), check.HasLen, 2)
+
+	vinfo, err := f.bd.Volume(f.ctx, "test-1")
+	c.Check(err, check.IsNil)
+	c.Check(vinfo.Name, check.Equals, "test-1")
+	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+
+	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
 }
 

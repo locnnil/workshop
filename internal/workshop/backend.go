@@ -26,7 +26,8 @@ const (
 
 var (
 	ErrWorkshopNotLaunched = errors.New("workshop not launched")
-	ErrVolumeAlreadyExists = errors.New("storage volume already exists")
+	ErrVolumeNotFound      = errors.New("volume not found")
+	ErrVolumeAlreadyExists = errors.New("volume already exists")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
 	LookupUsername = user.Lookup
@@ -69,19 +70,32 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
+type VolumeInfo struct {
+	Name   string
+	Config map[string]string
+}
+
 type VolumeManager interface {
 	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
 	CreateVolume(ctx context.Context, name string) error
 
-	AttachVolume(ctx context.Context, wp, name, what string) error
+	// Import a tarball into the volume. The tarball must be a valid tarball filepath.
+	ImportVolume(ctx context.Context, name string, tarball string) error
 
+	// Attach the volume to the workshop. The volume must be created before.
+	AttachVolume(ctx context.Context, wp, name, what string, ro bool) error
+
+	// Detach the volume from the workshop.
 	DetachVolume(ctx context.Context, wp, name string) error
 
 	// Delete a temporary storage volume for the workshop. It does not
 	// unmount the volume from the workshop if mounted.
 	DeleteVolume(ctx context.Context, name string) error
+
+	// Get the volume information.
+	Volume(ctx context.Context, name string) (VolumeInfo, error)
 }
 
 type BaseImageManager interface {
