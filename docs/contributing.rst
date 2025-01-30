@@ -277,7 +277,7 @@ however, the remainder of the structure and naming convention is mandatory.
 
 .. code-block:: console
 
-   $ mkdir -p fake-store/sdk-store/<SDK>/<RELEASE>/<CHANNEL>
+   $ mkdir -p fake-store/sdkstore/<SDK>/<RELEASE>/<CHANNEL>
 
 Here:
 
@@ -292,13 +292,13 @@ Copy the SDK
 ~~~~~~~~~~~~
 
 Place the SDK files in the deepest directory from the previous step
-(e.g. :file:`fake-store/sdk-store/my-sdk/latest/edge/my-sdk/`).
+(e.g. :file:`fake-store/sdkstore/my-sdk/latest/edge/my-sdk/`).
 Rename the SDK definition (e.g. :file:`my-sdk.yaml`) to :file:`sdk.yaml`
 and place it at the same nesting level:
 
 .. code-block:: console
 
-   $ ls fake-store/sdk-store/my-sdk/latest/edge
+   $ ls fake-store/sdkstore/my-sdk/latest/edge
 
      my-sdk.sdk  sdk.yaml
 

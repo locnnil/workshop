@@ -23,7 +23,7 @@ and securely confines the SDK build process to a container.
 
 Packaged SDKs are uploaded to the SDK Store.
 Currently, it's implemented using `GCP
-<https://console.cloud.google.com/storage/browser/sdk-store>`_,
+<https://console.cloud.google.com/storage/browser/sdkstore>`_,
 so access is managed by `GCP IAM
 <https://cloud.google.com/security/products/iam>`_.
 
