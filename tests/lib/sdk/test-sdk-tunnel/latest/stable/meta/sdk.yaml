@@ -17,6 +17,9 @@ plugs:
     interface: tunnel
     endpoint: 5432
 slots:
+  auto-connect-by-name:
+    interface: tunnel
+    endpoint: 9999
   http:
     interface: tunnel
     endpoint: '[::1]:8000'

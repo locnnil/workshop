@@ -11,22 +11,22 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Check manual connections"
+  echo "Check automatic connection"
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+\-.+\-$"
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+\-.+ws-tunnel/system:postgres.+\-$"
-  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+\-.+\-$"
-  workshop_exec connections ws-tunnel | MATCH "^tunnel.+\-.+ws-tunnel/test-sdk-tunnel:http.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:auto-connect-by-name.+ws-tunnel/test-sdk-tunnel:auto-connect-by-name.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+\-$"
+
+  echo "Check manual connection"
   workshop_exec connect ws-tunnel/test-sdk-tunnel:postgres
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+ws-tunnel/system:postgres.+manual$"
-  workshop_exec connect ws-tunnel/system:test-sdk-http ws-tunnel/test-sdk-tunnel:http
-  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+manual$"
 
   echo "Check multiple plugs can connect to one slot"
   workshop_exec connect ws-tunnel/test-sdk-tunnel:alias :postgres
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+ws-tunnel/system:postgres.+manual$"
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:alias.+ws-tunnel/system:postgres.+manual$"
   workshop_exec connect ws-tunnel/system:tunnel ws-tunnel/test-sdk-tunnel:http
-  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+manual$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+\-$"
   workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:tunnel.+ws-tunnel/test-sdk-tunnel:http.+manual$"
 
   echo "Check workshop can connect to host"

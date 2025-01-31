@@ -3,6 +3,9 @@ base: ubuntu@22.04
 sdks:
   - name: system
     plugs:
+      auto-connect-by-name:
+        interface: tunnel
+        endpoint: 9999
       conflict:
         interface: tunnel
         endpoint: '0.0.0.0:8000'
@@ -21,3 +24,6 @@ sdks:
         interface: tunnel
   - name: test-sdk-tunnel
     channel: latest/stable
+connections:
+  - plug: system:test-sdk-http
+    slot: test-sdk-tunnel:http

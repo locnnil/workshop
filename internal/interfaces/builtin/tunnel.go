@@ -30,6 +30,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -40,14 +41,28 @@ const tunnelBaseDeclarationSlots = `
   tunnel:
     allow-installation: true
     allow-connection: true
-    deny-auto-connection: true
+    allow-auto-connection: true
 `
 
 const tunnelBaseDeclarationPlugs = `
   tunnel:
     allow-installation: true
     allow-connection: true
-    deny-auto-connection: true
+    allow-auto-connection:
+      -
+        plug-sdk-type:
+          - system
+        slot-sdk-type:
+          - regular
+        slot-names:
+          - $PLUG
+      -
+        plug-sdk-type:
+          - system
+        slot-sdk-type:
+          - regular
+        plug-attributes:
+          auto-explicit: true
 `
 
 var knownTunnelAttributes = []string{"endpoint"}
@@ -202,8 +217,26 @@ func parseAddress(address string) (string, string) {
 }
 
 func (iface *tunnelInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
-	// allow what declarations allowed
-	return true
+	var endpoint string
+	if err := plug.Attr("endpoint", &endpoint); err != nil {
+		logger.Noticef("Cannot auto-connect: %v", err)
+		return false
+	}
+
+	target := parseEndpoint(endpoint)
+	if !isIP(target.Protocol) {
+		// Allow what declarations allowed.
+		return true
+	}
+
+	host, _ := parseAddress(target.Address)
+	if ip := net.ParseIP(host); ip != nil {
+		// Avoid automatically exposing workshop services to other hosts.
+		return ip.IsLoopback()
+	}
+
+	logger.Noticef("Cannot auto-connect plug %q: invalid IP address %q", plug.Ref().ShortRef(), host)
+	return false
 }
 
 func (iface *tunnelInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {

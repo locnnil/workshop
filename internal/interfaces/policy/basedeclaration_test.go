@@ -102,6 +102,7 @@ func (s *baseDeclSuite) TestAutoConnection(c *C) {
 	snowflakes := map[string]bool{
 		"mount":     true,
 		"ssh-agent": true,
+		"tunnel":    true,
 	}
 
 	// these simply auto-connect, anything else doesn't
@@ -160,7 +161,16 @@ slots:
 func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *check.C) {
 	all := builtin.Interfaces()
 
+	// these have more complex or in flux policies and have their
+	// own separate tests
+	snowflakes := map[string]bool{
+		"tunnel": true,
+	}
+
 	for _, iface := range all {
+		if snowflakes[iface.Name()] {
+			continue
+		}
 		c.Check(iface.AutoConnect(nil, nil), Equals, true)
 	}
 }

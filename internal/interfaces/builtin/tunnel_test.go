@@ -20,9 +20,11 @@
 package builtin_test
 
 import (
+	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -831,4 +833,246 @@ slots:
 		Direction: workshop.WorkshopToHost,
 	}
 	c.Check(deviceSpec.Profile.Tunnels, check.DeepEquals, []workshop.Tunnel{{ProxyEntry: expectedEntry}})
+}
+
+func (s *tunnelSuite) TestAutoConnectHostToWorkshop(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "system", "web")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "service", "web")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+}
+
+func (s *tunnelSuite) TestAutoConnectWorkshopToHost(c *check.C) {
+	plug := builtin.MockPlug(c, `name: client
+base: ubuntu@22.04
+plugs:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "client", "web")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "system", "web")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "tunnel"`)
+}
+
+func (s *tunnelSuite) TestAutoConnectHostToHost(c *check.C) {
+	info := sdk.MockInfo(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+slots:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8000/tcp
+`, s.projectId, "ws")
+
+	plug := info.Plugs["web"]
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := info.Slots["web"]
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "tunnel"`)
+}
+
+func (s *tunnelSuite) TestAutoConnectWorkshopToWorkshop(c *check.C) {
+	plug := builtin.MockPlug(c, `name: client
+base: ubuntu@22.04
+plugs:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "client", "web")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "service", "web")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "tunnel"`)
+}
+
+func (s *tunnelSuite) TestAutoConnectDifferentName(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "system", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "service", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "tunnel"`)
+}
+
+func (s *tunnelSuite) TestAutoConnectExplicit(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "system", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	// Simulate a workshop definition file with:
+	// connections:
+	//   - plug: system:tunnel-plug
+	//     slot: service:tunnel-slot
+	connectedPlug.SetAttr("auto-explicit", "true")
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "service", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+}
+
+func (s *tunnelSuite) TestAutoConnectExplicitAndSameName(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "system", "web")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	// Simulate a workshop definition file with:
+	// connections:
+	//   - plug: system:web
+	//     slot: service:web
+	connectedPlug.SetAttr("auto-explicit", "true")
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  web:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+`, s.projectId, "ws", "service", "web")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	cc := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := cc.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+}
+
+func (s *tunnelSuite) TestAutoConnectLocalhost(c *check.C) {
+	info := sdk.MockInfo(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  loopback4:
+    interface: tunnel
+    endpoint: 127.0.0.1:8080/tcp
+  loopback6:
+    interface: tunnel
+    endpoint: '[::1]:8080/tcp'
+  wildcard4:
+    interface: tunnel
+    endpoint: 0.0.0.0:8080/tcp
+  wildcard6:
+    interface: tunnel
+    endpoint: '[::]:8080/tcp'
+`, s.projectId, "ws")
+
+	iface, err := interfaces.ByName("tunnel")
+	c.Assert(err, check.IsNil)
+
+	c.Check(iface.AutoConnect(info.Plugs["loopback4"], nil), check.Equals, true)
+	c.Check(iface.AutoConnect(info.Plugs["loopback6"], nil), check.Equals, true)
+	c.Check(iface.AutoConnect(info.Plugs["wildcard4"], nil), check.Equals, false)
+	c.Check(iface.AutoConnect(info.Plugs["wildcard6"], nil), check.Equals, false)
 }

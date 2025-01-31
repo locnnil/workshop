@@ -62,10 +62,25 @@ The system SDK relies on the user to run this service on the host.
 Connection
 ----------
 
-The interface isn't connected automatically at launch and refresh
+The interface is connected automatically at launch or refresh,
+provided that:
+
+- The plug is declared in the system SDK
+
+- The slot is declared in a regular SDK
+
+- The plug listens on :samp:`localhost` or a Unix domain socket
+
+- The plug can be matched to the slot by its name
+  or via a :samp:`connections` entry in the :ref:`definition <exp_workshop_definition>`,
+  both subject to |ws_markup|'s
+  :ref:`validation rules <exp_interfaces_validation>`.
+
+
+Otherwise, it isn't connected automatically,
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands
-can be invoked manually after the workshop has started:
+can be invoked after the workshop has started:
 
 .. @artefact workshop connect
 .. @artefact workshop disconnect
