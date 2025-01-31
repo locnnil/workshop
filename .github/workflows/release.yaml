@@ -59,7 +59,6 @@ jobs:
             git commit -m "Update CLI reference docs"
             git push --set-upstream origin $pr_branch
 
-            pr_branch="docs/reference-cli-$(date +'%Y%m%d%H%M%S')"
             gh pr create --title "Update CLI reference docs" --body "This PR updates the generated CLI reference documentation." --base main
           fi
         env:
