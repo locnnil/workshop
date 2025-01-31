@@ -57,6 +57,9 @@ and also has a number of global flags:
 .. include:: workshop-run.rst
 
 
+.. include:: workshop-scripts.rst
+
+
 .. include:: workshop-shell.rst
 
 
