@@ -29,6 +29,8 @@ const (
 	LxdSock           = "/var/snap/lxd/common/lxd/unix.socket"
 	storagePool       = "workshop"
 	storagePoolDriver = "zfs"
+	networkName       = "workshopbr0"
+	networkType       = "bridge"
 )
 
 var (
@@ -95,12 +97,33 @@ func New() (*Backend, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Workshop does not require an existing storage pool.
+	// However, once the workshop storage pool exists,
+	// `lxd init --auto` won't add another one,
+	// and non-Workshop LXD containers can't be launched
+	// without further manual configuration.
+	if len(pools) == 0 {
+		return nil, errors.New("LXD not initialized")
+	}
+
+	networks, err := conn.GetNetworks()
+	if err != nil {
+		return nil, err
+	}
+	// Workshop does not require an existing network.
+	// However, once the workshopbr0 network pool exists,
+	// `lxd init --auto` won't add another one,
+	// and non-Workshop LXD containers won't have network access
+	// without further manual configuration.
+	if len(networks) == 0 {
+		return nil, errors.New("LXD not initialized")
+	}
 
 	poolExists := false
 	for _, pool := range pools {
 		if pool.Name == storagePool {
 			if pool.Driver != storagePoolDriver {
-				return nil, fmt.Errorf("storage pool %q already exists with different driver %q", storagePool, pool.Driver)
+				return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q", storagePool, pool.Driver)
 			}
 
 			poolExists = true
@@ -115,6 +138,35 @@ func New() (*Backend, error) {
 		}
 		err := conn.CreateStoragePool(req)
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	networkExists := false
+	for _, network := range networks {
+		if network.Name == networkName {
+			if network.Type != networkType {
+				return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
+			}
+
+			networkExists = true
+			break
+		}
+	}
+
+	if !networkExists {
+		req := api.NetworksPost{
+			Name: networkName,
+			Type: networkType,
+			NetworkPut: api.NetworkPut{
+				Config: map[string]string{
+					"dns.domain": "workshop",
+				},
+				Description: "Bridge network for workshops",
+			},
+		}
+
+		if err := conn.CreateNetwork(req); err != nil {
 			return nil, err
 		}
 	}
@@ -701,7 +753,7 @@ func createDefaultDevices() map[string]map[string]string {
 	swspath := filepath.Join(dirs.WorkshopRunDir, filepath.Base(shostpath))
 	return map[string]map[string]string{
 		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
-		"workshop.network":     {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"workshop.network":     {"type": "nic", "network": networkName, "name": "eth0"},
 		"workshop.socket":      {"type": "proxy", "connect": "unix:" + shostpath, "listen": "unix:" + swspath, "bind": "instance", "mode": "0666"},
 		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
 	}

@@ -74,9 +74,9 @@ func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 func defaultTestDevices() map[string]map[string]string {
 	cwd, _ := os.Getwd()
 	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "default", "path": "/"},
+		"root":             {"type": "disk", "pool": "workshop", "path": "/"},
 		"project":          {"type": "disk", "source": cwd, "path": "/project"},
-		"workshop.network": {"type": "nic", "network": "lxdbr0", "name": "eth0"},
+		"workshop.network": {"type": "nic", "network": "workshopbr0", "name": "eth0"},
 	}
 }
 

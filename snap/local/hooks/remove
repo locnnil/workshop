@@ -31,6 +31,8 @@ for p in $(echo "$projects" | xargs -L1 echo); do
   fi
 done 
 
+lxc network delete workshopbr0
+
 # Storage pool volumes are shared among projects and removed last.
 storage_pool="workshop"
 volumes=$(lxc storage volume list "$storage_pool" -c pnt type=custom -f compact --all-projects | awk 'NR>1 {printf "%s ", $1}')
