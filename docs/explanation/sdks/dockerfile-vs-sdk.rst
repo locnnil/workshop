@@ -126,8 +126,9 @@ and the publisher-focused |sdk_markup|.
 
 Important Dockerfile instructions are mapped to |sdk_markup| as follows:
 
-.. @artefact SDK definition
 .. @artefact check-health
+.. @artefact SDK definition
+
 
 .. list-table::
    :header-rows: 1

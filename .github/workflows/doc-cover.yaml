@@ -16,8 +16,15 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install dependencies
+        run: |
+          if [ -f docs/coverage_requirements.txt ]; then
+            pip install -r docs/coverage_requirements.txt
+          fi
+
       - name: Run coverage
-        run: python docs/coverage.py
+        run: python coverage.py
+        working-directory: docs
 
       - name: Check for changes, commit, and create PR if any
         run: |
