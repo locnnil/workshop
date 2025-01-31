@@ -221,6 +221,15 @@ SDK hooks
 |ws_markup| supports the following life cycle hooks,
 which can be defined when the SDK's is built using |sdk_markup|:
 
+.. @artefact workshopctl
+.. @artefact check-health
+.. @artefact workshop status
+.. @artefact restore-state
+.. @artefact save-state
+.. @artefact SDK base image
+.. @artefact setup-base
+.. @artefact workshop base image
+
 .. list-table::
    :header-rows: 1
    :width: 95
@@ -242,10 +251,6 @@ which can be defined when the SDK's is built using |sdk_markup|:
        using :ref:`workshopctl <ref_workshopctl>`,
        which affects the :ref:`status <ref_workshop_status>` of the workshop.
 
-.. @artefact workshopctl
-.. @artefact check-health
-.. @artefact workshop status
-
    * - :samp:`restore-state`
 
      - At :ref:`ref_workshop_refresh`:
@@ -255,8 +260,6 @@ which can be defined when the SDK's is built using |sdk_markup|:
      - Restores SDK-specific data from the :ref:`state directory <ref_sdk_state>`.
        The hook itself comes from the *new* SDK version.
 
-.. @artefact restore-state
-
    * - :samp:`save-state`
 
      - At :ref:`ref_workshop_refresh`:
@@ -265,18 +268,12 @@ which can be defined when the SDK's is built using |sdk_markup|:
      - Saves SDK-specific data to the :ref:`state directory <ref_sdk_state>`.
        The hook itself comes from the *old* SDK version.
 
-.. @artefact save-state
-
    * - :samp:`setup-base`
 
      - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
        after unpacking the base image
        and starting the workshop,
        but before setting its status to *Ready*.
-
-.. @artefact SDK base image
-.. @artefact setup-base
-.. @artefact workshop base image
 
      - Configures the base image for the SDK to become operational.
 

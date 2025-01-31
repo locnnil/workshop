@@ -64,6 +64,8 @@ by controlling access between the workshop's components and the host system;
 the implementation is largely similar to :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__:
 
+.. @artefact SDK publisher
+
 - Interfaces define and control what resources a workshop can use,
   ensuring that permissions are explicitly granted and limited in scope.
 
@@ -77,8 +79,6 @@ the implementation is largely similar to :program:`snapd`'s
 - Some interfaces, such as mounts, are connected automatically by default;
   others require manual approval by the user.
   All connections are subject to built-in validation policies.
-
-.. @artefact SDK publisher
 
 - The use of interfaces reflects the least privilege principle,
   allowing publishers and users to request only the necessary permissions,

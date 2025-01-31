@@ -92,6 +92,9 @@ and includes a number of mandatory and optional keys:
 
 Each SDK is described with the following keys:
 
+.. @artefact mount interface attributes
+.. @artefact plug binding
+
 .. list-table::
    :header-rows: 1
    :width: 95
@@ -134,9 +137,6 @@ Each SDK is described with the following keys:
          it requires the :samp:`workshop-target` property
          to specify a path inside the workshop
          to be used as the plug's target directory.
-
-.. @artefact mount interface attributes
-.. @artefact plug binding
 
    * - :samp:`slots`
      - object

@@ -26,6 +26,8 @@ and include these top-level fields:
 :samp:`description`, :samp:`license`, :samp:`platforms` and :samp:`parts`.
 The :samp:`plugs` field is optional.
 
+.. @artefact SDK base image
+
 .. list-table::
    :header-rows: 1
    :width: 95
@@ -47,8 +49,6 @@ The :samp:`plugs` field is optional.
 
        It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
        or :samp:`ubuntu@24.04`.
-
-.. @artefact SDK base image
 
    * - :samp:`version`
      - string
