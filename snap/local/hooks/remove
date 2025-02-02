@@ -35,7 +35,7 @@ lxc network delete workshopbr0
 
 # Storage pool volumes are shared among projects and removed last.
 storage_pool="workshop"
-volumes=$(lxc storage volume list "$storage_pool" -c pnt type=custom -f compact --all-projects | awk 'NR>1 {printf "%s ", $1}')
+volumes=$(lxc storage volume list "$storage_pool" -c nt type=custom -f compact --all-projects | awk 'NR>1 {printf "%s ", $1}')
 echo "$volumes" | xargs -n1 -r | while read -r volume; do
   lxc storage volume delete "$storage_pool" "$volume"
 done
