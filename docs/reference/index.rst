@@ -50,3 +50,14 @@ it's crucial to know how SDKs are structured and operated:
 
    sdks
    workshop-status
+
+
+Release notes
+-------------
+
+Explore a complete archive of past versions:
+
+.. toctree::
+   :maxdepth: 1
+
+   Release notes <release-notes>
