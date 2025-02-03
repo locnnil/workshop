@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,11 +27,13 @@ import (
 )
 
 const (
-	LxdSock           = "/var/snap/lxd/common/lxd/unix.socket"
-	storagePool       = "workshop"
-	storagePoolDriver = "zfs"
-	networkName       = "workshopbr0"
-	networkType       = "bridge"
+	LxdSock               = "/var/snap/lxd/common/lxd/unix.socket"
+	storagePool           = "workshop"
+	storagePoolDriver     = "zfs"
+	storagePoolMinimalGiB = 5
+
+	networkName = "workshopbr0"
+	networkType = "bridge"
 )
 
 var (
@@ -139,6 +142,31 @@ func New() (*Backend, error) {
 		err := conn.CreateStoragePool(req)
 		if err != nil {
 			return nil, err
+		}
+
+		// Ensure the new pool has enough total space available.
+		pool, etag, err := conn.GetStoragePool(storagePool)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := conn.GetStoragePoolResources(storagePool)
+		if err != nil {
+			return nil, err
+		}
+
+		gibTotal := uint64(res.Space.Total) / (1024 * 1024 * 1024)
+		if gibTotal < storagePoolMinimalGiB {
+			// Ensure the storage pool is no less than 5GiB, otherwise it makes
+			// it running out of space in tests and environments with less than
+			// ~14GiB of available space. LXD defaults to 20% in those cases
+			// which results in a ~2GiB pool size for workshop.
+			pool.Config["size"] = strconv.FormatUint(storagePoolMinimalGiB*1024*1024*1024, 10)
+			if err = conn.UpdateStoragePool(storagePool, pool.Writable(), etag); err != nil {
+				logger.Noticef("On Backend.New: failed to set storage pool to the minimal size: %dGiB, %s", storagePoolMinimalGiB, err)
+				return nil, err
+			}
+			logger.Noticef("On Backend.New: set storage pool to the minimal size: %dGiB", storagePoolMinimalGiB)
 		}
 	}
 
