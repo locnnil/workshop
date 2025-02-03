@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -389,7 +390,17 @@ func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	path := filepath.Join(dirs.WorkshopScriptsDir, name)
-	command := []string{"bash", "-ue", "-o", "pipefail", path}
+	command := []string{"sudo",
+		"-u",
+		"#" + strconv.Itoa(args.UserId),
+		"-g", "#" + strconv.Itoa(args.GroupId),
+		"--preserve-env",
+		"--",
+		"bash",
+		"-elo",
+		"pipefail",
+		path,
+	}
 	args.Command = append(command, args.Command[1:]...)
 
 	wfs, err := m.backend.WorkshopFs(ctx, w)

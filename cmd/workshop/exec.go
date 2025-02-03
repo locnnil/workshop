@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -251,7 +252,7 @@ $ workshop shell`,
 }
 
 func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
-	args := &ExecArgs{command: []string{"sudo", "-i", "-u", "workshop", "bash", "-c", "cd /project; exec bash"}}
+	args := &ExecArgs{command: []string{"bash"}}
 
 	if len(av) > 0 {
 		args.workshop = av[0]
@@ -259,7 +260,13 @@ func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
 		args.implicit = true
 	}
 
-	return exec(c.root, &ExecFlags{WorkingDir: "/project"}, args)
+	flags := &ExecFlags{
+		WorkingDir: "/project",
+		UserId:     1000,
+		GroupId:    1000,
+	}
+
+	return exec(c.root, flags, args)
 }
 
 func (c *CmdRun) Command() *cobra.Command {
@@ -374,15 +381,46 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	if args.script {
 		logger.Debugf("Running script %q", args.command)
 	} else {
+		// Obtain an exec session as close to a real login shell as possible.
+		// This is required as an lxd exec call is a simple namespace exec, and LXD
+		// ignores the instance configuration by design:
+		// https://documentation.ubuntu.com/lxd/en/latest/instance-exec/#user-groups-and-working-directory
+
+		command := []string{"sudo",
+			"-u",
+			"#" + strconv.Itoa(flags.UserId),
+			"-g",
+			"#" + strconv.Itoa(flags.GroupId),
+			"--preserve-env",
+			"--",
+			"bash",
+			"-l",
+			"-c",
+			`exec -- "$0" "$@"`,
+		}
+		args.command = append(command, args.command...)
 		logger.Debugf("Running %q", args.command)
 	}
 
 	// Set up environment variables.
 	env := make(map[string]string)
+
 	term, ok := os.LookupEnv("TERM")
 	if ok {
 		env["TERM"] = term
 	}
+
+	// The runtime directory will most likely only be valid for the 'workshop'
+	// user. This is created due to enabling lingering for this user during the
+	// workshop start script and will not exist for other users. See:
+	// https://github.com/systemd/systemd/blob/7419291670dd4066594350cce585031f60bc4f0a/src/login/pam_systemd.c#L1288
+	env["XDG_RUNTIME_DIR"] = "/run/user/" + strconv.Itoa(flags.UserId)
+
+	// The session bus address is often determined programatically, however some
+	// programs rely on an explicit environment variable. We set that here. Like
+	// the runtime dir above, we only guarantee that the bus exists for the
+	// workshop user.
+	env["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/run/user/" + strconv.Itoa(flags.UserId) + "/bus"
 
 	for _, kv := range flags.Env {
 		parts := strings.SplitN(kv, "=", 2)
@@ -441,8 +479,8 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
 		Command:     args.command,
-		Script:      args.script,
 		Environment: env,
+		Script:      args.script,
 		WorkingDir:  flags.WorkingDir,
 		UserId:      &flags.UserId,
 		GroupId:     &flags.GroupId,
