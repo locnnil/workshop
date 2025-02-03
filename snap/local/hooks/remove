@@ -1,46 +1,52 @@
 #!/bin/sh -e
 
+# Enforce local unix socket and the default project (if not specified).
+run_lxc() {
+    lxc --force-local "$@"
+}
+
 # The workshop services are stopped by the moment the remove 
 # hook is called. Therefore, for now, we walk the LXD projects created 
 # by the workshop and remove all instances/profiles/images/volumes.
-projects=$(lxc project list -f compact | awk '$1 ~ /^workshop\..*/ {print $1}')
+projects=$(run_lxc project list -f compact | awk '$1 ~ /^workshop\..*/ {print $1}')
 
 for p in $(echo "$projects" | xargs -L1 echo); do
   echo "Found LXD project: $p" 
-  instances=$(lxc list -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
+  instances=$(run_lxc list -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
   if [ -n "$instances" ]; then
     echo "Removing instances: $instances"
     # shellcheck disable=SC2086
-    lxc delete --force $instances --project "$p" 
+    run_lxc delete --force $instances --project "$p" 
   fi
   
-  profiles=$(lxc profile list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
+  profiles=$(run_lxc profile list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
   echo "Removing profiles: $profiles"
   for profile in $(echo "$profiles" | xargs -L1 echo); do
     # default profiles are protected
     if [ "$profile" != "default" ]; then
-      lxc profile delete "$profile" --project "$p"
+      run_lxc profile delete "$profile" --project "$p"
     fi
   done
   
-  images=$(lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
+  images=$(run_lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
   if [ -n "$images" ]; then
     echo "Removing images: $images"
     # shellcheck disable=SC2086
-    lxc image delete $images --project "$p"
+    run_lxc image delete $images --project "$p"
   fi
 done 
 
-lxc network delete workshopbr0
+run_lxc network delete workshopbr0
 
-# Storage pool volumes are shared among projects and removed last.
+# Storage pool custom volumes are shared among projects and removed last. These
+# belong to the default LXD project.
 storage_pool="workshop"
-volumes=$(lxc storage volume list "$storage_pool" -c nt type=custom -f compact --all-projects | awk 'NR>1 {printf "%s ", $1}')
+volumes=$(run_lxc storage volume list "$storage_pool" -c nt type=custom -f compact | awk 'NR>1 {printf "%s ", $1}')
 echo "$volumes" | xargs -n1 -r | while read -r volume; do
-  lxc storage volume delete "$storage_pool" "$volume"
+  run_lxc storage volume delete "$storage_pool" "$volume"
 done
-lxc storage delete "$storage_pool"
+run_lxc storage delete "$storage_pool"
 
 for p in $(echo "$projects" | xargs -L1 echo); do
-  lxc project delete "$p" 
+  run_lxc project delete "$p" 
 done
