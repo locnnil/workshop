@@ -121,6 +121,40 @@ To check if a plug or slot is connected:
      tunnel     ws/system:app         ws/service-sdk:app  manual
 
 
+This means that :samp:`client-sdk` can access
+the :samp:`shared` service running on the host,
+and the host can access the :samp:`app` service
+provided by :samp:`service-sdk`.
+
+.. @artefact workshop info
+
+.. code-block:: console
+
+   $ workshop info dev
+
+     name:     dev
+     base:     ubuntu@22.04
+     project:  /home/user/workshop/dev
+     status:   ready
+     notes:    -
+     sdks:
+       system:
+         tunnels:
+           app:
+             from:  0.0.0.0:8081/tcp
+             to:    127.0.0.1:8080/tcp
+       client-sdk:
+         tracking:   latest/stable
+         installed:  2024-03-02  (1)
+         tunnels:
+           shared:
+             from:  [::1]:1080/tcp
+             to:    127.0.0.1:18080/tcp
+       service-sdk:
+         tracking:   latest/edge
+         installed:  2025-06-07  (2)
+
+
 See also
 --------
 
@@ -138,5 +172,6 @@ Reference:
 - :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_disconnect`
+- :ref:`ref_workshop_info`
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`

@@ -3,10 +3,12 @@ package main
 import (
 	"cmp"
 	"fmt"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,6 +128,28 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if len(workshop.Sdks) > 0 {
 		fmt.Fprintf(w, "sdks:\n")
+
+		var tunnels []*client.Tunnel
+		for _, sk := range workshop.Sdks {
+			if sk.Tunnels == nil {
+				continue
+			}
+			tunnels = append(tunnels, sk.Tunnels.Slots...)
+		}
+		if len(tunnels) > 0 {
+			fmt.Fprintf(w, "  system:\n")
+			fmt.Fprintf(w, "    tunnels:\n")
+
+			slices.SortFunc(tunnels, func(a, b *client.Tunnel) int {
+				return cmp.Compare(a.Plug.Name, b.Plug.Name)
+			})
+			for _, tunnel := range tunnels {
+				fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
+				fmt.Fprintf(w, "        from:\t%s\n", formatEndpoint(tunnel.From))
+				fmt.Fprintf(w, "        to:\t%s\n", formatEndpoint(tunnel.To))
+			}
+		}
+
 		for _, sk := range workshop.Sdks {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
 			if sk.Name == sdk.Sketch {
@@ -169,6 +193,18 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 					}
 				}
 			}
+
+			if sk.Tunnels != nil && len(sk.Tunnels.Plugs) > 0 {
+				fmt.Fprintf(w, "    tunnels:\n")
+				slices.SortFunc(sk.Tunnels.Plugs, func(a, b *client.Tunnel) int {
+					return cmp.Compare(a.Plug.Name, b.Plug.Name)
+				})
+				for _, tunnel := range sk.Tunnels.Plugs {
+					fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
+					fmt.Fprintf(w, "        from:\t%s\n", formatEndpoint(tunnel.From))
+					fmt.Fprintf(w, "        to:\t%s\n", formatEndpoint(tunnel.To))
+				}
+			}
 		}
 	}
 
@@ -185,4 +221,14 @@ func sketchSdkChannel(projectId, workshop string) string {
 
 	path := sdk.WorkshopSketchSdk(home, projectId, workshop)
 	return contractHomeDirectory(path)
+}
+
+func formatEndpoint(endpoint client.Endpoint) string {
+	if endpoint.Protocol == "unix" {
+		return endpoint.Path
+	}
+
+	port := strconv.FormatUint(uint64(endpoint.Port), 10)
+	hostPort := net.JoinHostPort(endpoint.Host, port)
+	return fmt.Sprintf("%s/%s", hostPort, endpoint.Protocol)
 }
