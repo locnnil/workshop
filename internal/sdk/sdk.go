@@ -331,17 +331,17 @@ func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
 	return v, true
 }
 
-func getAttribute(sdkName string, ifaceName string, attrs map[string]interface{}, key string, val interface{}) error {
-	v, ok := lookupAttr(attrs, key)
+func (slot *SlotInfo) Attr(key string, val interface{}) error {
+	v, ok := slot.Lookup(key)
 	if !ok {
-		return AttributeNotFoundError{fmt.Errorf("SDK %q does not have attribute %q for interface %q", sdkName, key, ifaceName)}
+		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
+		return AttributeNotFoundError{Err: err}
 	}
 
-	return metautil.SetValueFromAttribute(sdkName, ifaceName, key, v, val)
-}
-
-func (slot *SlotInfo) Attr(key string, val interface{}) error {
-	return getAttribute(slot.Sdk.Name, slot.Interface, slot.Attrs, key, val)
+	if err := metautil.SetValueFromAttribute(v, val); err != nil {
+		return fmt.Errorf("invalid attribute %q for slot %q: %w", key, slot.Ref().ShortRef(), err)
+	}
+	return nil
 }
 
 func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
@@ -396,7 +396,16 @@ type PlugInfo struct {
 }
 
 func (plug *PlugInfo) Attr(key string, val interface{}) error {
-	return getAttribute(plug.Sdk.Name, plug.Interface, plug.Attrs, key, val)
+	v, ok := plug.Lookup(key)
+	if !ok {
+		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
+		return AttributeNotFoundError{Err: err}
+	}
+
+	if err := metautil.SetValueFromAttribute(v, val); err != nil {
+		return fmt.Errorf("invalid attribute %q for plug %q: %w", key, plug.Ref().ShortRef(), err)
+	}
+	return nil
 }
 
 func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {

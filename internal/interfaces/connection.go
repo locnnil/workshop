@@ -100,16 +100,6 @@ func lookupAttr(staticAttrs map[string]interface{}, dynamicAttrs map[string]inte
 	return v, true
 }
 
-func getAttribute(sdkName string, ifaceName string, staticAttrs map[string]interface{}, dynamicAttrs map[string]interface{}, path string, val interface{}) error {
-	v, ok := lookupAttr(staticAttrs, dynamicAttrs, path)
-	if !ok {
-		err := fmt.Errorf("SDK %q does not have attribute %q for interface %q", sdkName, path, ifaceName)
-		return sdk.AttributeNotFoundError{Err: err}
-	}
-
-	return metautil.SetValueFromAttribute(sdkName, ifaceName, path, v, val)
-}
-
 // NewConnectedSlot creates an object representing a connected slot.
 func NewConnectedSlot(slot *sdk.SlotInfo, staticAttrs, dynamicAttrs map[string]interface{}) *ConnectedSlot {
 	var static map[string]interface{}
@@ -157,7 +147,7 @@ func (plug *ConnectedPlug) Sdk() *sdk.Info {
 
 // StaticAttr returns a static attribute with the given key, or error if attribute doesn't exist.
 func (plug *ConnectedPlug) StaticAttr(key string, val interface{}) error {
-	return getAttribute(plug.Sdk().Name, plug.Interface(), plug.staticAttrs, nil, key, val)
+	return plug.getAttribute(nil, key, val)
 }
 
 // StaticAttrs returns all static attributes.
@@ -174,7 +164,20 @@ func (plug *ConnectedPlug) DynamicAttrs() map[string]interface{} {
 // attribute if dynamic one doesn't exist. Error is returned if neither dynamic nor static
 // attribute exist.
 func (plug *ConnectedPlug) Attr(key string, val interface{}) error {
-	return getAttribute(plug.Sdk().Name, plug.Interface(), plug.staticAttrs, plug.dynamicAttrs, key, val)
+	return plug.getAttribute(plug.dynamicAttrs, key, val)
+}
+
+func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
+	v, ok := lookupAttr(plug.staticAttrs, dynamicAttrs, key)
+	if !ok {
+		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
+		return sdk.AttributeNotFoundError{Err: err}
+	}
+
+	if err := metautil.SetValueFromAttribute(v, val); err != nil {
+		return fmt.Errorf("invalid attribute %q for plug %q: %w", key, plug.Ref().ShortRef(), err)
+	}
+	return nil
 }
 
 func (plug *ConnectedPlug) Lookup(path string) (interface{}, bool) {
@@ -215,7 +218,7 @@ func (slot *ConnectedSlot) Sdk() *sdk.Info {
 
 // StaticAttr returns a static attribute with the given key, or error if attribute doesn't exist.
 func (slot *ConnectedSlot) StaticAttr(key string, val interface{}) error {
-	return getAttribute(slot.Sdk().Name, slot.Interface(), slot.staticAttrs, nil, key, val)
+	return slot.getAttribute(nil, key, val)
 }
 
 // StaticAttrs returns all static attributes.
@@ -232,7 +235,20 @@ func (slot *ConnectedSlot) DynamicAttrs() map[string]interface{} {
 // attribute if dynamic one doesn't exist. Error is returned if neither dynamic nor static
 // attribute exist.
 func (slot *ConnectedSlot) Attr(key string, val interface{}) error {
-	return getAttribute(slot.Sdk().Name, slot.Interface(), slot.staticAttrs, slot.dynamicAttrs, key, val)
+	return slot.getAttribute(slot.dynamicAttrs, key, val)
+}
+
+func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
+	v, ok := lookupAttr(slot.staticAttrs, dynamicAttrs, key)
+	if !ok {
+		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
+		return sdk.AttributeNotFoundError{Err: err}
+	}
+
+	if err := metautil.SetValueFromAttribute(v, val); err != nil {
+		return fmt.Errorf("invalid attribute %q for slot %q: %w", key, slot.Ref().ShortRef(), err)
+	}
+	return nil
 }
 
 func (slot *ConnectedSlot) Lookup(path string) (interface{}, bool) {

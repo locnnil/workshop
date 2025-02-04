@@ -20,6 +20,7 @@
 package metautil
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -70,23 +71,20 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 }
 
 // SetValueFromAttribute attempts to convert the attribute value read from the
-// given sdk/interface into the desired type.
-//
-// The sdkName, ifaceName and attrName are only used to produce contextual
-// error messages, but are not otherwise significant. This function only
+// given sdk/interface into the desired type. This function only
 // operates converting the attrVal parameter into a value which can fit into
 // the val parameter, which therefore must be a pointer.
-func SetValueFromAttribute(sdkName string, ifaceName string, attrName string, attrVal interface{}, val interface{}) error {
+func SetValueFromAttribute(attrVal interface{}, val interface{}) error {
 	rt := reflect.TypeOf(val)
 	if rt.Kind() != reflect.Ptr || val == nil {
-		return fmt.Errorf("internal error: cannot get %q attribute of interface %q with non-pointer value", attrName, ifaceName)
+		return errors.New("internal error: value must be a pointer")
 	}
 
 	converted, err := convertValue(reflect.ValueOf(attrVal), rt.Elem())
 	if err != nil {
-		return fmt.Errorf("SDK %q has interface %q with invalid value type %q for %q attribute: %s", sdkName, ifaceName, reflect.TypeOf(attrVal), attrName, reflect.TypeOf(val))
+		return fmt.Errorf("expected %s but found %s", rt.Elem().Name(), reflect.TypeOf(attrVal).Name())
 	}
-	rv := reflect.ValueOf(val)
-	rv.Elem().Set(converted)
+
+	reflect.ValueOf(val).Elem().Set(converted)
 	return nil
 }
