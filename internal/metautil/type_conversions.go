@@ -69,25 +69,6 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 	return nullValue, fmt.Errorf(`cannot convert value "%v" into a %v`, value, outputType)
 }
 
-// AttributeNotCompatibleError represents a type mismatch error between an interface
-// attribute and an expected type.
-type AttributeNotCompatibleError struct {
-	SdkName       string
-	InterfaceName string
-	AttributeName string
-	AttributeType reflect.Type
-	ExpectedType  reflect.Type
-}
-
-func (e AttributeNotCompatibleError) Error() string {
-	return fmt.Sprintf("SDK %q has interface %q with invalid value type %q for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
-}
-
-func (e AttributeNotCompatibleError) Is(target error) bool {
-	_, ok := target.(AttributeNotCompatibleError)
-	return ok
-}
-
 // SetValueFromAttribute attempts to convert the attribute value read from the
 // given sdk/interface into the desired type.
 //
@@ -103,13 +84,7 @@ func SetValueFromAttribute(sdkName string, ifaceName string, attrName string, at
 
 	converted, err := convertValue(reflect.ValueOf(attrVal), rt.Elem())
 	if err != nil {
-		return AttributeNotCompatibleError{
-			SdkName:       sdkName,
-			InterfaceName: ifaceName,
-			AttributeName: attrName,
-			AttributeType: reflect.TypeOf(attrVal),
-			ExpectedType:  reflect.TypeOf(val),
-		}
+		return fmt.Errorf("SDK %q has interface %q with invalid value type %q for %q attribute: %s", sdkName, ifaceName, reflect.TypeOf(attrVal), attrName, reflect.TypeOf(val))
 	}
 	rv := reflect.ValueOf(val)
 	rv.Elem().Set(converted)
