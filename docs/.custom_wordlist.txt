@@ -26,6 +26,7 @@ gcs
 gid
 gocheck
 golang
+golangci
 gopkg
 GPG
 GPUs

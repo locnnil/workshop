@@ -196,6 +196,35 @@ Code structure
   This improves its structure and makes it easier to comprehend.
 
 
+Linting
+-------
+
+Code should be formatted consistently
+and avoid common pitfalls.
+Contributions will be checked for some of these issues
+using `golangci-lint <https://golangci-lint.run/>`_.
+To run these checks locally:
+
+.. code-block:: console
+
+   golangci-lint run
+
+
+Some issues can be fixed automatically:
+
+.. code-block:: console
+
+   golangci-lint run --fix
+
+
+If `pre-commit <https://pre-commit.com/index.html#install>`_ is available,
+:command:`git` can run these checks on every commit:
+
+.. code-block:: console
+
+   pre-commit install
+
+
 Testing
 -------
 
