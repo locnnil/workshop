@@ -166,7 +166,7 @@
                 <td>action</td>
                 <td></td>
                 <td><a href="how-to/use-sdkcraft.rst#L353">[use-sdkcraft.rst]</a></td>
-                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L130">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/hooks.rst#L10">[hooks.rst]</a><br><a href="explanation/sdks/workshopctl.rst#L60">[workshopctl.rst]</a></td>
+                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L129">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/hooks.rst#L10">[hooks.rst]</a><br><a href="explanation/sdks/workshopctl.rst#L60">[workshopctl.rst]</a></td>
                 <td><a href="reference/cli/workshopctl.rst#L27">[workshopctl.rst]</a><br><a href="reference/sdks.rst#L225">[sdks.rst]</a></td>
                 <td>SK023</td>
             </tr><tr>
@@ -229,7 +229,7 @@
                 <td>file</td>
                 <td><a href="tutorial/index.rst#L651">[index.rst]</a></td>
                 <td><a href="how-to/index.rst#L42">[index.rst]</a><br><a href="how-to/ros2/ros2-design-sdk.rst#L27">[ros2-design-sdk.rst]</a><br><a href="how-to/use-sdkcraft.rst#L127">[use-sdkcraft.rst]</a></td>
-                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L129">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/sdks.rst#L53">[sdks.rst]</a></td>
+                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L130">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/sdks.rst#L53">[sdks.rst]</a></td>
                 <td><a href="reference/definitions/sdk-definition.rst#L7">[sdk-definition.rst]</a></td>
                 <td>SK001<br>SK004<br>SK026</td>
             </tr><tr>
@@ -427,7 +427,7 @@
                 <td>command</td>
                 <td><a href="tutorial/index.rst#L262">[index.rst]</a></td>
                 <td><a href="how-to/ros2/ros2-create-workshop.rst#L77">[ros2-create-workshop.rst]</a><br><a href="how-to/use-workshops/git-workshop.rst#L39">[git-workshop.rst]</a><br><a href="how-to/use-workshops/moving-projects.rst#L31">[moving-projects.rst]</a></td>
-                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L261">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/sdks.rst#L189">[sdks.rst]</a></td>
+                <td><a href="explanation/sdks/dockerfile-vs-sdk.rst#L262">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/sdks.rst#L189">[sdks.rst]</a></td>
                 <td></td>
                 <td>SK001<br>SK003<br>SK008<br>SK020</td>
             </tr><tr>
@@ -463,7 +463,7 @@
                 <td>command</td>
                 <td><a href="tutorial/index.rst#L614">[index.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/interfaces/mount-interface.rst#L155">[mount-interface.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L133">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L320">[dockerfile-vs-sdk.rst]</a></td>
+                <td><a href="explanation/interfaces/mount-interface.rst#L155">[mount-interface.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L133">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L321">[dockerfile-vs-sdk.rst]</a></td>
                 <td></td>
                 <td>SK027</td>
             </tr><tr>
