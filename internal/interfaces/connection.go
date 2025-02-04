@@ -143,8 +143,8 @@ func (plug *ConnectedPlug) Attr(key string, val interface{}) error {
 func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
 	v, ok := metautil.LookupAttr(plug.staticAttrs, dynamicAttrs, key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
-		return sdk.AttributeNotFoundError{Err: err}
+		ref := plug.Ref()
+		return &sdk.AttributeNotFoundError{Attribute: key, Plug: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {
@@ -214,8 +214,8 @@ func (slot *ConnectedSlot) Attr(key string, val interface{}) error {
 func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
 	v, ok := metautil.LookupAttr(slot.staticAttrs, dynamicAttrs, key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
-		return sdk.AttributeNotFoundError{Err: err}
+		ref := slot.Ref()
+		return &sdk.AttributeNotFoundError{Attribute: key, Slot: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {

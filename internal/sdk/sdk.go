@@ -299,22 +299,25 @@ type SlotInfo struct {
 	Label     string
 }
 
-type AttributeNotFoundError struct{ Err error }
-
-func (e AttributeNotFoundError) Error() string {
-	return e.Err.Error()
+type AttributeNotFoundError struct {
+	Attribute string
+	Plug      *PlugRef
+	Slot      *SlotRef
 }
 
-func (e AttributeNotFoundError) Is(target error) bool {
-	_, ok := target.(AttributeNotFoundError)
-	return ok
+func (e *AttributeNotFoundError) Error() string {
+	if e.Slot == nil {
+		return fmt.Sprintf("attribute %q not found for plug %q", e.Attribute, e.Plug.ShortRef())
+	}
+	return fmt.Sprintf("attribute %q not found for slot %q", e.Attribute, e.Slot.ShortRef())
+
 }
 
 func (slot *SlotInfo) Attr(key string, val interface{}) error {
 	v, ok := slot.Lookup(key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
-		return AttributeNotFoundError{Err: err}
+		ref := slot.Ref()
+		return &AttributeNotFoundError{Attribute: key, Slot: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {
@@ -377,8 +380,8 @@ type PlugInfo struct {
 func (plug *PlugInfo) Attr(key string, val interface{}) error {
 	v, ok := plug.Lookup(key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
-		return AttributeNotFoundError{Err: err}
+		ref := plug.Ref()
+		return &AttributeNotFoundError{Attribute: key, Plug: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {
