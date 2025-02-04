@@ -310,27 +310,6 @@ func (e AttributeNotFoundError) Is(target error) bool {
 	return ok
 }
 
-func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
-	var v interface{}
-	comps := strings.FieldsFunc(path, func(r rune) bool { return r == '.' })
-	if len(comps) == 0 {
-		return nil, false
-	}
-	v = attrs
-	for _, comp := range comps {
-		m, ok := v.(map[string]interface{})
-		if !ok {
-			return nil, false
-		}
-		v, ok = m[comp]
-		if !ok {
-			return nil, false
-		}
-	}
-
-	return v, true
-}
-
 func (slot *SlotInfo) Attr(key string, val interface{}) error {
 	v, ok := slot.Lookup(key)
 	if !ok {
@@ -345,7 +324,7 @@ func (slot *SlotInfo) Attr(key string, val interface{}) error {
 }
 
 func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
-	return lookupAttr(slot.Attrs, key)
+	return metautil.LookupAttr(slot.Attrs, nil, key)
 }
 
 func (slot *SlotInfo) Ref() SlotRef {
@@ -409,7 +388,7 @@ func (plug *PlugInfo) Attr(key string, val interface{}) error {
 }
 
 func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
-	return lookupAttr(plug.Attrs, key)
+	return metautil.LookupAttr(plug.Attrs, nil, key)
 }
 
 func (plug *PlugInfo) Ref() PlugRef {

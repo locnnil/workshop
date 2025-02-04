@@ -21,7 +21,6 @@ package interfaces
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces/utils"
 	"github.com/canonical/workshop/internal/metautil"
@@ -72,32 +71,6 @@ type Attrer interface {
 	Attr(path string, value interface{}) error
 	// Lookup returns attribute value for given path, or false. Dotted paths are supported.
 	Lookup(path string) (value interface{}, ok bool)
-}
-
-func lookupAttr(staticAttrs map[string]interface{}, dynamicAttrs map[string]interface{}, path string) (interface{}, bool) {
-	var v interface{}
-	comps := strings.FieldsFunc(path, func(r rune) bool { return r == '.' })
-	if len(comps) == 0 {
-		return nil, false
-	}
-	if _, ok := dynamicAttrs[comps[0]]; ok {
-		v = dynamicAttrs
-	} else {
-		v = staticAttrs
-	}
-
-	for _, comp := range comps {
-		m, ok := v.(map[string]interface{})
-		if !ok {
-			return nil, false
-		}
-		v, ok = m[comp]
-		if !ok {
-			return nil, false
-		}
-	}
-
-	return v, true
 }
 
 // NewConnectedSlot creates an object representing a connected slot.
@@ -168,7 +141,7 @@ func (plug *ConnectedPlug) Attr(key string, val interface{}) error {
 }
 
 func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
-	v, ok := lookupAttr(plug.staticAttrs, dynamicAttrs, key)
+	v, ok := metautil.LookupAttr(plug.staticAttrs, dynamicAttrs, key)
 	if !ok {
 		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
 		return sdk.AttributeNotFoundError{Err: err}
@@ -181,7 +154,7 @@ func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key
 }
 
 func (plug *ConnectedPlug) Lookup(path string) (interface{}, bool) {
-	return lookupAttr(plug.staticAttrs, plug.dynamicAttrs, path)
+	return metautil.LookupAttr(plug.staticAttrs, plug.dynamicAttrs, path)
 }
 
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
@@ -239,7 +212,7 @@ func (slot *ConnectedSlot) Attr(key string, val interface{}) error {
 }
 
 func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
-	v, ok := lookupAttr(slot.staticAttrs, dynamicAttrs, key)
+	v, ok := metautil.LookupAttr(slot.staticAttrs, dynamicAttrs, key)
 	if !ok {
 		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
 		return sdk.AttributeNotFoundError{Err: err}
@@ -252,7 +225,7 @@ func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key
 }
 
 func (slot *ConnectedSlot) Lookup(path string) (interface{}, bool) {
-	return lookupAttr(slot.staticAttrs, slot.dynamicAttrs, path)
+	return metautil.LookupAttr(slot.staticAttrs, slot.dynamicAttrs, path)
 }
 
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
