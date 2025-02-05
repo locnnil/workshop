@@ -42,7 +42,8 @@ $ workshop remove nimble jazzy
 
 The name is optional if the project has only one workshop:
 $ workshop remove`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Stopped"}),
 	}
 
 	return cmd

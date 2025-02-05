@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/spf13/cobra"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 type remountSuite struct {
 	BaseWorkshopSuite
+	client *client.Client
 	prjDir string
 	prjId  string
 }
@@ -19,6 +23,7 @@ func (m *remountSuite) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
+	m.client = &client.Client{}
 }
 
 func (m *remountSuite) TestRemountSuccess(c *check.C) {
@@ -65,4 +70,51 @@ func (m *remountSuite) TestRemountBrokenReference(c *check.C) {
 	cmd := &CmdRemount{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"ws:sdk:plug", "/new/source"})
 	c.Assert(err, check.ErrorMatches, `invalid plug or slot reference "ws:sdk:plug" \(expected <WORKSHOP>/<SDK>:<PLUG>\)`)
+}
+
+func (m *remountSuite) TestRemountCompletions(c *check.C) {
+	plugs, slots := testPlugsSlots(m.prjId)
+
+	conns := client.Connections{
+		Established: []client.Connection{plugSlotToConn(plugs[2], slots[2], false)},
+		Plugs:       plugs,
+		Slots:       slots,
+	}
+
+	m.connectionsRedirectHelper(c, conns, m.prjId, m.prjDir, 4)
+
+	cmd := CmdRemount{
+		root: &CmdRoot{},
+	}
+
+	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveFilterDirs)
+	c.Check(completions, check.DeepEquals, []string{"workshop/sdk:mount"})
+
+	// Check slot completion, note this is only ensuring that we don't return the
+	// plug multiple times. Directory completion can only be instrumented with
+	// end-to-end testing
+	completions, compDirective = cmd.complete()(cmd.Command(), []string{"workshop/sdk:mount"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveFilterDirs)
+	c.Assert(len(completions), check.Equals, 0)
+}
+
+func (m *remountSuite) TestRemountCompletionsNoComp(c *check.C) {
+	plugs, slots := testPlugsSlots(m.prjId)
+
+	conns := client.Connections{
+		Established: nil,
+		Plugs:       plugs,
+		Slots:       slots,
+	}
+
+	m.connectionsRedirectHelper(c, conns, m.prjId, m.prjDir, 4)
+
+	cmd := CmdRemount{
+		root: &CmdRoot{},
+	}
+
+	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(completions, check.DeepEquals, []string(nil))
 }

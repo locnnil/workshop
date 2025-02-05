@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -54,7 +56,8 @@ $ workshop connect nimble/go:mod-cache :mount
 
 A full version of the command that also lists the target SDK ('system'):
 $ workshop connect nimble/go:mod-cache nimble/system:mount`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.complete(),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -131,4 +134,50 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	return nil
+}
+
+func (c *CmdConnect) complete() ValidArgsFunction {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		cli, err := c.root.client()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		project, err := cli.Project(c.root.project)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, All: true})
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		// Create map of endpoint string and associated plugs
+		disconnectedPlugs := make(map[string]client.Plug)
+		for _, plug := range connections.Plugs {
+			if len(plug.Connections) == 0 {
+				plugString := endpoint(plug.Workshop, plug.Sdk, plug.Name)
+				disconnectedPlugs[plugString] = plug
+			}
+		}
+
+		var completions []string
+		switch len(args) {
+		case 0:
+			// No arguments, show list of plugs
+			completions = slices.Collect(maps.Keys(disconnectedPlugs))
+		case 1:
+			plug, ok := disconnectedPlugs[args[0]]
+			if !ok {
+				break
+			}
+			for _, slot := range connections.Slots {
+				if plug.Interface == slot.Interface && plug.Workshop == slot.Workshop {
+					completions = append(completions, endpoint(slot.Workshop, slot.Sdk, slot.Name))
+				}
+			}
+		}
+		return completions, cobra.ShellCompDirectiveNoFileComp
+	}
 }

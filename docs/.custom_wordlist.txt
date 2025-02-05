@@ -102,3 +102,4 @@ X11
 XAUTHORITY
 yaml
 YYYY
+zsh

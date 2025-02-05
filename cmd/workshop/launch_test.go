@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/spf13/cobra"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 type workshopLaunch struct {
 	BaseWorkshopSuite
+	client *client.Client
 	prjDir string
 	prjId  string
 }
@@ -19,6 +23,7 @@ func (m *workshopLaunch) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
+	m.client = &client.Client{}
 }
 
 func (m *workshopLaunch) TestLaunchSuccess(c *check.C) {
@@ -181,4 +186,42 @@ func (m *workshopLaunch) TestLaunchIncompatibleOptions(c *check.C) {
 
 	err = cmd.Run(nil, []string{"ws", "ws-1"})
 	c.Assert(err, check.ErrorMatches, "cannot launch: '--wait-on-error' incompatible with multiple workshops")
+}
+
+func (m *workshopLaunch) TestLaunchCompletions(c *check.C) {
+	wsInfo := []*client.WorkshopInfo{
+		{
+			ProjectId: m.prjId,
+			Name:      "workshop-exists",
+			Status:    "Ready",
+		},
+	}
+
+	wsFile := []*client.WorkshopFile{
+		{
+			ProjectId: m.prjId,
+			Name:      "workshop-exists",
+			Path:      "/tmp/workshop",
+		},
+		{
+			ProjectId: m.prjId,
+			Name:      "workshop-notexists",
+			Path:      "/tmp/workshop1",
+		},
+	}
+
+	w := client.Workshops{
+		Workshops: wsInfo,
+		Files:     wsFile,
+	}
+
+	cmd := CmdLaunch{
+		root: &CmdRoot{},
+	}
+
+	m.listRedirectHelper(c, w, m.prjId, m.prjDir, len(wsFile))
+
+	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(completions, check.DeepEquals, []string{"workshop-notexists"})
 }
