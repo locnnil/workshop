@@ -40,7 +40,7 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockSingleWorkshop)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 3, 5:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))

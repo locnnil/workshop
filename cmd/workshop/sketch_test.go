@@ -23,6 +23,7 @@ type workshopSketch struct {
 
 var _ = check.Suite(&workshopSketch{})
 
+var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"nosketch","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"},{"name":"both","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x3","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"none","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
 
 var simpleSketchMeta = `name: sketch
@@ -76,7 +77,7 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithSdks)
+			fmt.Fprintln(w, mockWorkshopWithSdksReady)
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -252,7 +253,7 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithSdks)
+			fmt.Fprintln(w, mockWorkshopWithSdksReady)
 		case 4, 9, 11, 14:
 			mode := "wait-on-error"
 			name := fmt.Sprintf("%s/sketch", workshop)
@@ -377,7 +378,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockSingleWorkshop)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 4:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -474,7 +475,7 @@ func (m *workshopSketch) TestRemoveRemovesSketch(c *check.C) {
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
-			fmt.Fprintln(w, mockSingleWorkshop)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -548,4 +549,35 @@ func (m *workshopSketch) TestSketchesEmpty(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(m.stdout.String(), check.Matches, "")
+}
+
+func (m *workshopSketch) TestSketchSdkWorkshopStatusNotReady(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+
+	status := []string{"Pending", "Error", "Off", "Stopped"}
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1, 3, 5, 7:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2, 4, 6, 8:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus(status[n/2-1]))
+		default:
+			c.Errorf("expected 8 calls, now on %d", n)
+		}
+	})
+
+	for i := 1; i <= len(status); i++ {
+		err := cmd.Run(nil, nil)
+		c.Assert(err, check.NotNil)
+		c.Assert(n, check.Equals, i*2)
+	}
 }
