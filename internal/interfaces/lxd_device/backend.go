@@ -311,6 +311,7 @@ func removeDesktop(fs workshop.WorkshopFs) error {
 		}
 	}
 
+	// The Xauth cookie may not always exist. Ignore any errors relating to this
 	if err := fs.Remove("/tmp/.Xauthority"); err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
 			return err
@@ -409,20 +410,19 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 				}
 			}
 		}
-		if prevp.Agent != nil {
-			if spec.Profile.Agent == nil || *prevp.Agent != *spec.Profile.Agent {
-				if err = removeSshAgent(fs, *prevp.Agent); err != nil {
-					return err
-				}
+
+		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
+			if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+				return err
 			}
 		}
-		if prevp.Desktop != nil {
-			if spec.Profile.Desktop == nil || *prevp.Desktop != *spec.Profile.Desktop {
-				if err = removeDesktop(fs); err != nil {
-					return err
-				}
+
+		if prevp.Desktop != nil && !prevp.Desktop.Equal(spec.Profile.Desktop) {
+			if err = removeDesktop(fs); err != nil {
+				return err
 			}
 		}
+
 		return conn.UpdateProfile(name, newp, "")
 	}
 

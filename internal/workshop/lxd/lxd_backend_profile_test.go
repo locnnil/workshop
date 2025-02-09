@@ -18,8 +18,8 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		{Sdk: "sdk", Camera: &workshop.Camera{Name: "camera"}, Mounts: map[string]workshop.Mount{}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Gpu: &workshop.Gpu{Name: "gpu"}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"userdisk": {Name: "userdisk", What: "/home", Where: "/opt", Type: workshop.HostWorkshop}}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Agent: &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: "ssh-agent", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Desktop: &workshop.Desktop{Wayland: &workshop.ProxyEntry{Name: "desktop", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}}},
+		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Agent: &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: "ssh-agent", Connect: ".host.socket", Listen: ".workshop.socket"}}},
+		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Desktop: &workshop.Desktop{Wayland: &workshop.ProxyEntry{Name: "desktop", Connect: ".host.socket", Listen: ".workshop.socket"}}},
 		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"plug": {Name: "plug", What: "/var", Where: "/etc", Type: workshop.WorkshopWorkshop}}},
 	}
 

@@ -129,6 +129,8 @@ plugs:
         workshop-target: /mnt
     ssh-agent:
         interface: ssh-agent
+    desktop:
+        interface: desktop
 `)
 
 var producer = []byte(`name: producer
@@ -143,6 +145,8 @@ slots:
         workshop-source: /home
     ssh-agent:
         interface: ssh-agent
+    desktop:
+        interface: desktop
 `)
 
 var producer2 = []byte(`name: producer2
@@ -325,11 +329,7 @@ func (f *backendDeviceSuite) TestSetupUpdateProfile(c *check.C) {
 
 func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	old := dirs.WorkshopRunDir
-	dirs.WorkshopRunDir = "/run"
-	defer func() {
-		dirs.WorkshopRunDir = old
-	}()
+	defer mockWorkshopRunDir()()
 
 	cinfo, err := sdk.ReadSdkInfo(consumer, f.pid, "test")
 	c.Assert(err, check.IsNil)
@@ -365,8 +365,8 @@ exit 0
 	c.Assert(err, check.IsNil)
 	c.Assert(prof.Agent, check.NotNil)
 	c.Check(prof.Agent.Name, check.Equals, "consumer-ssh-agent")
-	c.Check(prof.Agent.Connect, check.Equals, "unix:/run/.workshop.socket")
-	c.Check(prof.Agent.Listen, check.Equals, "unix:/run/consumer-ssh-agent.ssh")
+	c.Check(prof.Agent.Connect, check.Equals, "/run/.workshop.socket")
+	c.Check(prof.Agent.Listen, check.Equals, "/run/consumer-ssh-agent.ssh")
 
 	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer-ssh-agent.sh")
 	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer-ssh-agent.ssh\n")
@@ -381,4 +381,97 @@ exit 0
 	c.Assert(err, check.IsNil)
 	_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
+}
+
+func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+	defer mockWorkshopRunDir()()
+
+	cinfo, err := sdk.ReadSdkInfo(consumer, f.pid, "test")
+	c.Assert(err, check.IsNil)
+
+	pinfo, err := sdk.ReadSdkInfo(producer, f.pid, "test")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(f.repo.AddSdk(cinfo), check.IsNil)
+	c.Assert(f.repo.AddSdk(pinfo), check.IsNil)
+
+	sshConnRef := &interfaces.ConnRef{
+		PlugRef: cinfo.Plugs["ssh-agent"].Ref(),
+		SlotRef: pinfo.Slots["ssh-agent"].Ref(),
+	}
+
+	desktopConnRef := &interfaces.ConnRef{
+		PlugRef: cinfo.Plugs["desktop"].Ref(),
+		SlotRef: pinfo.Slots["desktop"].Ref(),
+	}
+
+	b := lxd_device.Backend{}
+	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
+
+	systemdCmd := testutil.FakeCommand(c, "sudo", `
+echo XDG_RUNTIME_DIR=/run/user/1000
+echo SSH_AUTH_SOCK=/run/.workshop.socket
+echo DISPLAY=:0
+echo WAYLAND_DISPLAY=1
+exit 0
+`)
+	defer systemdCmd.Restore()
+
+	setupSshAgent := func() {
+		_, err = f.repo.Connect(sshConnRef, nil, nil, nil, nil, nil)
+		c.Assert(err, check.IsNil)
+		err = b.Setup(f.ctx, cref, f.repo)
+		c.Assert(err, check.IsNil)
+	}
+
+	setupDesktop := func() {
+		_, err = f.repo.Connect(desktopConnRef, nil, nil, nil, nil, nil)
+		c.Assert(err, check.IsNil)
+		err = b.Setup(f.ctx, cref, f.repo)
+		c.Assert(err, check.IsNil)
+	}
+
+	validateAndDisconnect := func() {
+		// Validate Profile
+		prof, err := lxdbackend.Profile(f.client, f.pid, "test", "consumer")
+		c.Assert(err, check.IsNil)
+
+		c.Assert(prof.Agent, check.NotNil)
+		c.Assert(prof.Desktop, check.NotNil)
+
+		// Validate Filesystem
+		fs, err := f.be.WorkshopFs(f.ctx, "test")
+		c.Assert(err, check.IsNil)
+		_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
+		c.Assert(err, check.IsNil)
+		_, err = fs.Stat("/etc/profile.d/desktop.sh")
+		c.Assert(err, check.IsNil)
+
+		// Disconnect and setup
+		f.repo.DisconnectAll([]*interfaces.ConnRef{sshConnRef, desktopConnRef})
+		err = b.Setup(f.ctx, cref, f.repo)
+		c.Assert(err, check.IsNil)
+		_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
+		c.Assert(err, check.NotNil)
+		_, err = fs.Stat("/etc/profile.d/desktop.sh")
+		c.Assert(err, check.NotNil)
+	}
+
+	setupSshAgent()
+	setupDesktop()
+	validateAndDisconnect()
+
+	// Repeat with interfaces in reverse order
+	setupDesktop()
+	setupSshAgent()
+	validateAndDisconnect()
+}
+
+func mockWorkshopRunDir() (restore func()) {
+	old := dirs.WorkshopRunDir
+	dirs.WorkshopRunDir = "/run"
+	return func() {
+		dirs.WorkshopRunDir = old
+	}
 }

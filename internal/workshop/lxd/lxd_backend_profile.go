@@ -50,17 +50,17 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			switch devtype {
 			case "ssh-agent":
-				pr.Agent = &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}}
+				pr.Agent = &workshop.SshAgent{ProxyEntry: *proxyEntryFromLxdDevice(name, dev)}
 			case "desktop-wayland":
 				if pr.Desktop == nil {
 					pr.Desktop = &workshop.Desktop{}
 				}
-				pr.Desktop.Wayland = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+				pr.Desktop.Wayland = proxyEntryFromLxdDevice(name, dev)
 			case "desktop-x11":
 				if pr.Desktop == nil {
 					pr.Desktop = &workshop.Desktop{}
 				}
-				pr.Desktop.X11 = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+				pr.Desktop.X11 = proxyEntryFromLxdDevice(name, dev)
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
@@ -100,4 +100,14 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		}
 	}
 	return pr, nil
+}
+
+// Constructs a ProxyEntry from an LXD device entry. Removes the 'unix:' prefix
+// if present.
+func proxyEntryFromLxdDevice(name string, dev map[string]string) *workshop.ProxyEntry {
+	return &workshop.ProxyEntry{
+		Name:    name,
+		Connect: strings.TrimPrefix(dev["connect"], "unix:"),
+		Listen:  strings.TrimPrefix(dev["listen"], "unix:"),
+	}
 }
