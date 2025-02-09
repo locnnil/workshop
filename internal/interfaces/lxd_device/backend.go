@@ -306,9 +306,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 
 func removeDesktop(fs workshop.WorkshopFs) error {
 	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
-		if !errors.Is(err, afero.ErrFileNotFound) {
-			return err
-		}
+		return err
 	}
 
 	// The Xauth cookie may not always exist. Ignore any errors relating to this
