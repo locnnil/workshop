@@ -1,6 +1,9 @@
 import datetime
 import ast
+from pathlib import Path
+import sys
 import warnings
+
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -15,6 +18,8 @@ import warnings
 # to keep all documentation based on it consistent and on brand:
 # https://github.com/canonical/canonical-sphinx
 
+# Allow local extensions.
+sys.path.append(str((Path.cwd() / __file__).with_name(".sphinx") / "exts"))
 
 ###########################
 ### Project information ###
@@ -193,10 +198,15 @@ linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
 #       - terminal-output
 #       - youtube-links
 
+# The insert_console_prompts extension adds prompts to console code blocks.
+# This improves the appearance of HTML code blocks,
+# without adding extraneous prompts to commands copied from GitHub.
+
 extensions = [
     "canonical_sphinx",
     "sphinxcontrib.cairosvgconverter",
     "sphinxcontrib.mermaid",
+    "insert_console_prompts",
 ]
 
 
@@ -254,7 +264,7 @@ rst_prolog = """
 
 # Workaround for https://github.com/canonical/canonical-sphinx/issues/34
 
-if not "discourse_prefix" in html_context and "discourse" in html_context:
+if "discourse_prefix" not in html_context and "discourse" in html_context:
     html_context["discourse_prefix"] = html_context["discourse"] + "/t/"
 
 

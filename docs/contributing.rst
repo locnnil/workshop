@@ -40,7 +40,6 @@ Environment setup
 
    .. code-block:: console
 
-
       export WORKSHOP=~/workshop
       workshop list
 
@@ -197,6 +196,35 @@ Code structure
   This improves its structure and makes it easier to comprehend.
 
 
+Linting
+-------
+
+Code should be formatted consistently
+and avoid common pitfalls.
+Contributions will be checked for some of these issues
+using `golangci-lint <https://golangci-lint.run/>`_.
+To run these checks locally:
+
+.. code-block:: console
+
+   golangci-lint run
+
+
+Some issues can be fixed automatically:
+
+.. code-block:: console
+
+   golangci-lint run --fix
+
+
+If `pre-commit <https://pre-commit.com/index.html#install>`_ is available,
+:command:`git` can run these checks on every commit:
+
+.. code-block:: console
+
+   pre-commit install
+
+
 Testing
 -------
 
@@ -225,7 +253,11 @@ To check code coverage:
 
    go test --coverpkg=<./...|package> covermode=<set|count|atomic> -coverprofile=<OutputFile> <./...|package>
 
-   // For example to measure coverage using all tests:
+
+For example, to measure coverage using all tests:
+
+.. code-block:: console
+
    go test covermode=count -coverprofile=cover.out ./...
 
 
@@ -235,10 +267,18 @@ To generate an HTML representation:
 
    go tool cover -html=<OutputFile> -o <OutputHTML>
 
-   // For example:
+
+For example:
+
+.. code-block:: console
+
    go tool cover -html=cover.out -o cover.html
 
-   // The output flag can be omitted to open in the default browser:
+
+The output flag can be omitted to open in the default browser:
+
+.. code-block:: console
+
    go tool cover -html=cover.out
 
 
@@ -277,7 +317,7 @@ however, the remainder of the structure and naming convention is mandatory.
 
 .. code-block:: console
 
-   $ mkdir -p fake-store/sdkstore/<SDK>/<RELEASE>/<CHANNEL>
+   mkdir -p fake-store/sdkstore/<SDK>/<RELEASE>/<CHANNEL>
 
 Here:
 
@@ -298,7 +338,7 @@ and place it at the same nesting level:
 
 .. code-block:: console
 
-   $ ls fake-store/sdkstore/my-sdk/latest/edge
+   ls fake-store/sdkstore/my-sdk/latest/edge
 
      my-sdk.sdk  sdk.yaml
 
@@ -310,7 +350,7 @@ Pass the top-level SDK store directory to this :command:`go run` command:
 
 .. code-block:: console
 
-   $ go run github.com/fsouza/fake-gcs-server@latest \
+   go run github.com/fsouza/fake-gcs-server@latest \
      -data fake-store/ \
      -filesystem-root fake-store/ \
      -scheme http -port 8080 \
@@ -329,8 +369,8 @@ adding :samp:`/storage/v1/` as the path:
 
 .. code-block:: console
 
-   $ sudo snap set workshop store.url=http://localhost:8080/storage/v1/
-   $ sudo snap restart workshop
+   sudo snap set workshop store.url=http://localhost:8080/storage/v1/
+   sudo snap restart workshop
 
 
 |ws_markup| will now use the local store.
@@ -343,7 +383,7 @@ To go back to the default store:
 
 .. code-block:: console
 
-   $ sudo snap set workshop store.url=""
+   sudo snap set workshop store.url=""
 
 
 |ws_markup| will now use the default URL.
