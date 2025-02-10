@@ -24,6 +24,9 @@ execute: |
   sudo -u ubuntu 2>&1 -- env Foo= workshop exec --env Foo -- bash -c '[ -z "${Foo-x}" ]'
   sudo -u ubuntu 2>&1 -- env --unset=Foo workshop exec --env Foo ws-exec bash -c '[ -z "${Foo+x}" ]'
 
+  echo "Check environment variables from interfaces are present"
+  workshop_exec exec -- env | MATCH FOO=BAR
+
   echo "Check default user and group"
   workshop_exec exec -- bash -c 'id -u -n' | MATCH workshop
   workshop_exec exec ws-exec bash -c 'id -g -n' | MATCH workshop
@@ -63,6 +66,7 @@ execute: |
   MATCH '^line$' < multiline.log
   ! workshop_exec run ws-exec fail
   workshop_exec run -- file | MATCH '^script$'
+  workshop_exec run env | MATCH 'FOO=BAR' 
 
   echo "Check scripts can be updated without refreshing"
   sed -i 's/one line/1 LINE/g' workshop.yaml

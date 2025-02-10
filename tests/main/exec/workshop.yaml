@@ -3,6 +3,8 @@ base: ubuntu@22.04
 sdks:
   - name: test-sdk-basic
     channel: latest/stable
+  - name: test-sdk-environment
+    channel: latest/stable
 scripts:
   oneline: echo one line
   multiline: |
@@ -10,3 +12,4 @@ scripts:
     echo line
   fail: "false"
   file: ./script.sh
+  env: env
