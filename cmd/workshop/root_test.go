@@ -263,5 +263,15 @@ func plugSlotToConn(plug client.Plug, slot client.Slot, manual bool) client.Conn
 }
 
 func mockSingleWorkshopSpecifyStatus(status string) string {
-	return fmt.Sprintf(`{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":%q,"notes":["missing-project"]}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`, status)
+	return fmt.Sprintf(`{"type":"sync","status-code":200,"status":"OK","result":{
+      "workshops":[{
+          "name":"ws",
+          "base":"ubuntu@22.04",
+          "project-id":"42424242",
+          "status":%q,
+          "notes":["missing-project"
+          ]}
+      ]}
+  }`, status,
+	)
 }

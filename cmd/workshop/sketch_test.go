@@ -23,8 +23,64 @@ type workshopSketch struct {
 
 var _ = check.Suite(&workshopSketch{})
 
-var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK","result":{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"go","version":"1.8.0","channel":"latest/edge","revision":"1","build-time":"2017-02-19T17:23:05.592623Z","install-time":"2017-03-22T09:01:00.0Z"},{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}],"notes":["missing-project"],"path":"/home/project/.workshop/ws.yaml"},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
-var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x1","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"nosketch","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"},{"name":"both","base":"ubuntu@22.04","project-id":"42424242","status":"Ready","sdks":[{"name":"sketch","channel":"","revision":"x3","install-time":"2017-03-22T09:01:00.0Z"}]},{"name":"none","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]},"warning-timestamp":"2017-03-22T10:01:00.0Z","warning-count":1}`
+var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "name":"ws",
+    "base":"ubuntu@22.04",
+    "project-id":"42424242",
+    "status":"Ready",
+    "sdks":[{
+      "name":"go",
+      "version":"1.8.0",
+      "channel":"latest/edge",
+      "revision":"1",
+      "build-time":"2017-02-19T17:23:05.592623Z",
+      "install-time":"2017-03-22T09:01:00.0Z"
+    },{  
+      "name":"sketch",
+      "channel":"",
+      "revision":"x1",
+      "install-time":"2017-03-22T09:01:00.0Z"
+    }],
+    "path":"/home/project/.workshop/ws.yaml"
+}}`
+
+var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "workshops":[{
+        "name":"ws",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready",
+        "sdks":[{
+            "name":"sketch",
+            "channel":"",
+            "revision":"x1",
+            "install-time":"2017-03-22T09:01:00.0Z"
+        }]
+        },{
+        "name":"nosketch",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready"
+        },{
+        "name":"both",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready",
+        "sdks":[{
+            "name":"sketch",
+            "channel":"",
+            "revision":"x3",
+            "install-time":"2017-03-22T09:01:00.0Z"
+        }]
+        },{
+        "name":"none",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready"
+    }]
+},
+"warning-timestamp":"2017-03-22T10:01:00.0Z",
+"warning-count":1}`
 
 var simpleSketchMeta = `name: sketch
 base: ubuntu@22.04

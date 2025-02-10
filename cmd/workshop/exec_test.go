@@ -16,7 +16,14 @@ type workshopExec struct {
 var _ = check.Suite(&workshopExec{})
 
 var mockWorkshopNoScripts = `{"type":"sync","status-code":200,"status":"OK","result":{}}`
-var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","result":{"foo":{"script":"echo foo"},"bar":{"script":"echo bar\n"}}}`
+var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "foo":{
+        "script":"echo foo"
+    },
+    "bar":{
+        "script":"echo bar\n"
+    }
+}}`
 
 func (m *workshopExec) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)

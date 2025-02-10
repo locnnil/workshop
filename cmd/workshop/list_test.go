@@ -32,14 +32,71 @@ func (m *workshopList) TestHomeDirectoryPathContraction(c *C) {
 	*/
 }
 
-var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Error","notes":["missing-project"]}, {"name":"as-1","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}],"files":[
-{"name":"ws","project-id":"2","path":"/home/projects/.workshop/ws.yaml"},{"name":"as-1","project-id":"2","path":"/home/projects/.workshop/as-1.yaml"},{"name":"zs-1","project-id":"2","path":"/home/projects/.workshop/zs-1.yaml"},{"name":"ds-1","project-id":"2","path":"/home/projects/.workshop/ds-1.yaml"}]},"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
+var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "workshops":[{
+        "name":"ws",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Error",
+        "notes":["missing-project"]
+    },{
+        "name":"as-1",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready"
+    }],
+    "files":[{
+        "name":"ws",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/ws.yaml"
+    },{
+        "name":"as-1",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/as-1.yaml"
+    },{
+        "name":"zs-1",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/zs-1.yaml"
+    },{
+        "name":"ds-1",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/ds-1.yaml"
+    }]
+},
+"warning-timestamp":"1970-01-01T00:00:00.00000000Z",
+"warning-count":1}`
 
-var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"2","status":"Ready"}],"files":[
-{"name":"ws","project-id":"2","path":"/home/projects/ws"},{"name":"ws2","project-id":"2","path":"/home/projects/ws"}]},"warning-timestamp":"1970-01-01T00:00:00.00000000Z","warning-count":1}`
+var mockWorkshopList2 = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "workshops":[{
+        "name":"ws",
+        "base":"ubuntu@22.04",
+        "project-id":"2",
+        "status":"Ready"
+    }],
+    "files":[{
+        "name":"ws",
+        "project-id":"2",
+        "path":"/home/projects/ws"
+    },{
+        "name":"ws2",
+        "project-id":"2",
+        "path":"/home/projects/ws"
+    }]
+},
+"warning-timestamp":"1970-01-01T00:00:00.00000000Z",
+"warning-count":1}`
 
-var mockWorkshopList3 = `{"type":"sync","status-code":200,"status":"OK","result":{"files":[
-{"name":"ws","project-id":"2","path":"/home/projects/.workshop/ws.yaml"},{"name":"as-1","project-id":"2","path":"/home/projects/.workshop/as-1.yaml"}]}}`
+var mockWorkshopList3 = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "files":[{
+        "name":"ws",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/ws.yaml"
+    },{
+        "name":"as-1",
+        "project-id":"2",
+        "path":"/home/projects/.workshop/as-1.yaml"
+    }]
+}}`
 
 func (m *workshopInfo) TestWorkshopListFilesOnly(c *check.C) {
 	cmd := &CmdList{root: &CmdRoot{}}

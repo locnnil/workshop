@@ -15,7 +15,14 @@ type workshopRefresh struct {
 
 var _ = check.Suite(&workshopRefresh{})
 
-var mockSingleWorkshopJSON = `{"type":"sync","status-code":200,"status":"OK","result":{"workshops":[{"name":"ws","base":"ubuntu@22.04","project-id":"42424242","status":"Ready"}]}}`
+var mockSingleWorkshopJSON = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "workshops":[{
+        "name":"ws",
+        "base":"ubuntu@22.04",
+        "project-id":"42424242",
+        "status":"Ready"
+    }]
+}}`
 
 var mockReadyChangeJSON = `{"type": "sync", "result":{
     "id":   "four",
