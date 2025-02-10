@@ -21,10 +21,9 @@ const (
 	PendingStatus
 	ErrorStatus
 	StoppedStatus
-	OffStatus
 )
 
-var knownStatuses = []string{"Unknown", "Ready", "Pending", "Error", "Stopped", "Off"}
+var knownStatuses = []string{"Unknown", "Ready", "Pending", "Error", "Stopped"}
 
 func StatusLookup(str string) (Status, error) {
 	switch str {
@@ -38,8 +37,6 @@ func StatusLookup(str string) (Status, error) {
 		return ErrorStatus, nil
 	case "stopped":
 		return StoppedStatus, nil
-	case "off":
-		return OffStatus, nil
 	}
 
 	return -1, fmt.Errorf("invalid status %q, must be one of %s",

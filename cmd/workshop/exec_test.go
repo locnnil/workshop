@@ -16,7 +16,14 @@ type workshopExec struct {
 var _ = check.Suite(&workshopExec{})
 
 var mockWorkshopNoScripts = `{"type":"sync","status-code":200,"status":"OK","result":{}}`
-var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","result":{"foo":{"script":"echo foo"},"bar":{"script":"echo bar\n"}}}`
+var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "foo":{
+        "script":"echo foo"
+    },
+    "bar":{
+        "script":"echo bar\n"
+    }
+}}`
 
 func (m *workshopExec) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
@@ -40,7 +47,7 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockSingleWorkshop)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 3, 5:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))

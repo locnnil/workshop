@@ -206,6 +206,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
+	// Ensure that the workshop is Ready
+	if wp.Status != "Ready" {
+		return fmt.Errorf(`error: cannot sketch %q: workshop currently %q, must be "Ready"`, wp.Name, wp.Status)
+	}
+
 	user, err := osutil.UserMaybeSudoUser()
 	if err != nil {
 		return err

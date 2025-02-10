@@ -109,7 +109,7 @@ func (c *CmdList) runList() error {
 			// --global flag does not list files for consistency. We may not be
 			// aware of all the project directories on the system and, thus,
 			// will not know all the available "Off" workshops (contrary to the
-			// workshops that are in any other state, i.e. running instances,
+			// workshops that are in any known state, i.e. running instances,
 			// which we always know about from the workshop backend).
 			print(w, workshops, nil, p)
 		}

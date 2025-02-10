@@ -280,7 +280,7 @@ func (s *managerSuite) TestCheckStatusReady(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
 	c.Assert(err, check.ErrorMatches, "workshop already running")
 }
 
@@ -302,7 +302,7 @@ func (s *managerSuite) TestCheckStatusPending(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.OffStatus, healthstate.ReadyStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
 	c.Assert(err, testutil.ErrorIs, workshopstate.ErrWaitingOnError)
 }
 
@@ -317,7 +317,7 @@ func (s *managerSuite) TestCheckStatusError(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
 	c.Assert(err, check.ErrorMatches, "workshop is unhealthy")
 }
 
@@ -332,6 +332,6 @@ func (s *managerSuite) TestCheckStatusStopped(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.OffStatus, healthstate.PendingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
 	c.Assert(err, check.ErrorMatches, "workshop not running")
 }
