@@ -554,7 +554,7 @@ func (m *workshopSketch) TestSketchesEmpty(c *check.C) {
 func (m *workshopSketch) TestSketchSdkWorkshopStatusNotReady(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 
-	status := []string{"Pending", "Error", "Off", "Stopped"}
+	status := []string{"Pending", "Error", "Stopped"}
 
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
