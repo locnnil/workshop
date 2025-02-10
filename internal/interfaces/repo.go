@@ -606,7 +606,7 @@ func (r *Repository) Disconnect(plugProjectId, plugWorkshop, plugSdkName, plugNa
 	if r.slotPlugs[slot][plug] == nil {
 		return &NotConnectedError{
 			message: fmt.Sprintf("cannot disconnect %q from %q: not connected",
-				NewPlugRef(plug).ShortRef(), NewSlotRef(slot).ShortRef()),
+				plug.Ref().ShortRef(), slot.Ref().ShortRef()),
 		}
 	}
 	r.disconnect(plug, slot)
@@ -914,12 +914,12 @@ func (r *Repository) RemoveSdk(projectId, workshop, sdkName string) error {
 
 	for _, plug := range r.plugs[key] {
 		if len(r.plugSlots[plug]) > 0 {
-			return fmt.Errorf("cannot remove connected plug %q", NewPlugRef(plug).ShortRef())
+			return fmt.Errorf("cannot remove connected plug %q", plug.Ref().ShortRef())
 		}
 	}
 	for _, slot := range r.slots[key] {
 		if len(r.slotPlugs[slot]) > 0 {
-			return fmt.Errorf("cannot remove connected slot %q", NewSlotRef(slot).ShortRef())
+			return fmt.Errorf("cannot remove connected slot %q", slot.Ref().ShortRef())
 		}
 	}
 
@@ -1117,7 +1117,7 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 	// Ensure that plug and slot are compatible
 	if slot.Interface != plug.Interface {
 		return nil, fmt.Errorf("cannot connect %q (%q interface) to %q (%q interface)",
-			NewPlugRef(plug).ShortRef(), plug.Interface, NewSlotRef(slot).ShortRef(), slot.Interface)
+			plug.Ref().ShortRef(), plug.Interface, slot.Ref().ShortRef(), slot.Interface)
 	}
 	return NewConnRef(plug, slot), nil
 }

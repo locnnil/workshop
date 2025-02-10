@@ -14,7 +14,6 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -51,10 +50,10 @@ type SdkInfo struct {
 }
 
 type Mount struct {
-	Plug           interfaces.PlugRef `json:"plug"`
-	WorkshopSource string             `json:"workshop-source,omitempty"`
-	HostSource     string             `json:"host-source,omitempty"`
-	WorkshopTarget string             `json:"workshop-target,omitempty"`
+	Plug           sdk.PlugRef `json:"plug"`
+	WorkshopSource string      `json:"workshop-source,omitempty"`
+	HostSource     string      `json:"host-source,omitempty"`
+	WorkshopTarget string      `json:"workshop-target,omitempty"`
 }
 
 type Workshops struct {
@@ -142,25 +141,25 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 func mounts(w *workshop.Workshop, sdks map[string]*sdk.Info) (map[string][]*Mount, error) {
 	var mnts = map[string][]*Mount{}
 
-	masters := map[interfaces.PlugRef][]interfaces.PlugRef{}
+	masters := map[sdk.PlugRef][]sdk.PlugRef{}
 	for _, sk := range sdks {
-		for s, m := range sk.PlugBinds {
-			ref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Sdk, Name: m.Name}
-			sref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: s}
-			masters[ref] = append(masters[ref], sref)
+		for name, m := range sk.PlugBinds {
+			s := sdk.PlugRef{ProjectId: sk.ProjectId, Workshop: sk.Workshop, Sdk: sk.Name, Name: name}
+			masters[m] = append(masters[m], s)
 		}
 	}
 
-	for name, prof := range w.Profiles {
+	for _, prof := range w.Profiles {
 		for _, dev := range prof.Mounts {
+			pref := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: dev.Name}
+
 			if dev.Type == workshop.HostWorkshop {
-				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: dev.Name}
 				mnt := &Mount{
 					Plug:           pref,
 					HostSource:     dev.What,
 					WorkshopTarget: dev.Where,
 				}
-				mnts[name] = append(mnts[name], mnt)
+				mnts[prof.Sdk] = append(mnts[prof.Sdk], mnt)
 				if slaves, ok := masters[pref]; ok {
 					for _, slave := range slaves {
 						mnt := &Mount{
@@ -172,14 +171,15 @@ func mounts(w *workshop.Workshop, sdks map[string]*sdk.Info) (map[string][]*Moun
 					}
 				}
 			}
+
 			if dev.Type == workshop.WorkshopWorkshop {
-				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: name, Name: dev.Name}
+				pref := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: dev.Name}
 				mnt := &Mount{
 					Plug:           pref,
 					WorkshopSource: dev.What,
 					WorkshopTarget: dev.Where,
 				}
-				mnts[name] = append(mnts[name], mnt)
+				mnts[prof.Sdk] = append(mnts[prof.Sdk], mnt)
 			}
 		}
 	}

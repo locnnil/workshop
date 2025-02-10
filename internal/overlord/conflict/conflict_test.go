@@ -5,9 +5,9 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	conflict "github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -32,8 +32,8 @@ func (s *conflictSuite) newChange(kind string) *state.Change {
 func (s *conflictSuite) newChangeDisconnect(kind string) *state.Change {
 	change := s.state.NewChange(kind, "test")
 	task := s.state.NewTask("disconnect", "test")
-	task.Set("slot", interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "ws"})
-	task.Set("plug", interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "another-ws"})
+	task.Set("slot", sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "ws"})
+	task.Set("plug", sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "another-ws"})
 	change.AddTask(task)
 	change.Set("project-id", s.project.ProjectId)
 	return change

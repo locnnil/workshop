@@ -120,7 +120,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	if xauth != "" {
 		m := workshop.Mount{}
 		m.Name = plug.Sdk().Name + "-" + "xauth"
-		m.Type = 0
+		m.Type = workshop.HostWorkshop
 		m.What = workshopdXauth
 		m.Where = filepath.Join(dirs.WorkshopRunDir, "Xauthority")
 		spec.AddMountEntry(m)

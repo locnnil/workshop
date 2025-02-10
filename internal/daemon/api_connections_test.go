@@ -118,7 +118,7 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 
 func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, from, to string) *workshop.Workshop {
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
-	info.PlugBinds[from] = &sdk.PlugBind{
+	info.PlugBinds[from] = sdk.PlugRef{
 		ProjectId: s.project.ProjectId,
 		Workshop:  w,
 		Sdk:       info.Name,
@@ -1106,8 +1106,8 @@ func (s *apiSuite) TestConnectPlugSuccess(c *check.C) {
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}})
 }
 
@@ -1165,12 +1165,12 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 	c.Assert(ifaces.Connections, check.HasLen, 2)
 
 	mainConn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	boundConn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug2"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug2"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{mainConn, boundConn})
 
@@ -1336,8 +1336,8 @@ func (s *apiSuite) TestConnectAlreadyConnected(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	st := d.Overlord().State()
 	st.Lock()
@@ -1440,8 +1440,8 @@ type disconnectOpts struct {
 func (s *apiSuite) connect(c *check.C, plug string) *interfaces.ConnRef {
 	repo := s.d.Overlord().InterfaceManager().Repository()
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: plug},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: plug},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, check.IsNil)
@@ -1612,8 +1612,8 @@ func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {
 
 	repo := d.Overlord().InterfaceManager().Repository()
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, check.IsNil)
@@ -1830,8 +1830,8 @@ func (s *apiSuite) TestDisconnectFailureOnConflict(c *check.C) {
 
 	repo := d.Overlord().InterfaceManager().Repository()
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
 	}
 	_, err := repo.Connect(connRef, nil, nil, nil, nil, nil)
 	c.Assert(err, check.IsNil)

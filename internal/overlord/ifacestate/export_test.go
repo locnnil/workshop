@@ -14,8 +14,8 @@ var (
 
 func UpdateConnectionInConnState(conns map[string]*schema.ConnState, conn *interfaces.Connection, autoConnect, undesired bool) {
 	connRef := &interfaces.ConnRef{
-		PlugRef: *conn.Plug.Ref(),
-		SlotRef: *conn.Slot.Ref(),
+		PlugRef: conn.Plug.Ref(),
+		SlotRef: conn.Slot.Ref(),
 	}
 
 	conns[connRef.ID()] = &schema.ConnState{

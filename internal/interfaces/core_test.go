@@ -55,25 +55,25 @@ func (s *CoreSuite) TearDownTest(c *C) {
 
 // PlugRef.String works as expected
 func (s *CoreSuite) TestPlugRefString(c *C) {
-	ref := interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	ref := sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
 	c.Check(ref.String(), Equals, s.projectId+"/ws/sdk:plug")
-	refPtr := &interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
+	refPtr := &sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "plug"}
 	c.Check(refPtr.String(), Equals, s.projectId+"/ws/sdk:plug")
 }
 
 // SlotRef.String works as expected
 func (s *CoreSuite) TestSlotRefString(c *C) {
-	ref := interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	ref := sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
 	c.Check(ref.String(), Equals, s.projectId+"/ws/sdk:slot")
-	refPtr := &interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
+	refPtr := &sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "sdk", Name: "slot"}
 	c.Check(refPtr.String(), Equals, s.projectId+"/ws/sdk:slot")
 }
 
 // ConnRef.ID works as expected
 func (s *CoreSuite) TestConnRefID(c *C) {
 	conn := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
 	}
 	c.Check(conn.ID(), Equals, fmt.Sprintf("%s/ws/consumer:plug %s/ws/producer:slot", s.projectId, s.projectId))
 }
@@ -83,8 +83,8 @@ func (s *CoreSuite) TestParseConnRef(c *C) {
 	ref, err := interfaces.ParseConnRef("42424242/ws/consumer:plug 42424242/ws/producer:slot")
 	c.Assert(err, IsNil)
 	c.Check(ref, DeepEquals, &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"},
 	})
 	_, err = interfaces.ParseConnRef("garbage")
 	c.Assert(err, ErrorMatches, `malformed connection identifier: "garbage"`)
@@ -204,7 +204,7 @@ plugs:
 	}, plug), ErrorMatches, "broken")
 	c.Assert(interfaces.BeforePreparePlug(&ifacetest.TestInterface{
 		InterfaceName: "other",
-	}, plug), ErrorMatches, fmt.Sprintf(`cannot sanitize plug "%s/ws/sdk:plug" \(interface "iface"\) using interface "other"`, s.projectId))
+	}, plug), ErrorMatches, `cannot sanitize plug "ws/sdk:plug" \(interface "iface"\) using interface "other"`)
 }
 
 func (s *CoreSuite) TestSanitizeSlot(c *C) {

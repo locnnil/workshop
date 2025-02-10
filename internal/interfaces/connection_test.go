@@ -108,13 +108,13 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 func (s *connSuite) TestSlotRef(c *check.C) {
 	slot := interfaces.NewConnectedSlot(s.slot, nil, nil)
 	c.Assert(slot, check.NotNil)
-	c.Assert(*slot.Ref(), check.DeepEquals, interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(slot.Ref(), check.DeepEquals, sdk.SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "producer", Name: "slot"})
 }
 
 func (s *connSuite) TestPlugRef(c *check.C) {
 	plug := interfaces.NewConnectedPlug(s.plug, nil, nil)
 	c.Assert(plug, check.NotNil)
-	c.Assert(*plug.Ref(), check.DeepEquals, interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(plug.Ref(), check.DeepEquals, sdk.PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "consumer", Name: "plug"})
 }
 
 func (s *connSuite) TestStaticPlugAttrs(c *check.C) {

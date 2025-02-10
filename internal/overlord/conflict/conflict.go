@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type ChangeSetup struct {
@@ -68,8 +68,8 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 
 	if task.Kind() == "disconnect" {
 		// disconnect can affect more then one workshop
-		var plugRef interfaces.PlugRef
-		var slotRef interfaces.SlotRef
+		var plugRef sdk.PlugRef
+		var slotRef sdk.SlotRef
 		if err := task.Get("plug", &plugRef); err != nil {
 			return false, err
 		}

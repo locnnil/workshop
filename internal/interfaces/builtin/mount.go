@@ -178,7 +178,7 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	}
 
 	if strings.HasPrefix(source, "$SDK") {
-		return strings.Replace(source, "$SDK", sdk.SdkCurrentPath(slot.Ref().Sdk), 1), nil
+		return strings.Replace(source, "$SDK", sdk.SdkCurrentPath(slot.Sdk().Name), 1), nil
 	}
 	return source, nil
 }

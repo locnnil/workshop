@@ -74,7 +74,7 @@ func checkPlugConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	}
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
-		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
 	return nil
 }
@@ -176,7 +176,7 @@ func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
-		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
 
 	return nil

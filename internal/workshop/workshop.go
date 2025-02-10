@@ -269,13 +269,13 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
 	}
 
-	binds := map[string]*sdk.PlugBind{}
+	binds := map[string]sdk.PlugRef{}
 	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
 		if m.Bind == nil {
 			plugs[name] = m.Attributes
 		} else {
-			binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+			binds[name] = sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
 		}
 	}
 

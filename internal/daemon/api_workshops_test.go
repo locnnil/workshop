@@ -446,7 +446,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
 							WorkshopTarget: "/opt/data",
-							Plug: interfaces.PlugRef{
+							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "manysdks",
 								Sdk:       "test-sdk",
@@ -466,7 +466,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
 							WorkshopTarget: "/opt/data2",
-							Plug: interfaces.PlugRef{
+							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "manysdks",
 								Sdk:       "test-sdk-2",
@@ -476,7 +476,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 						{
 							WorkshopSource: "/photos",
 							WorkshopTarget: "/opt/data2",
-							Plug: interfaces.PlugRef{
+							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "manysdks",
 								Sdk:       "test-sdk-2",
@@ -551,7 +551,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 							WorkshopTarget: "/opt/data2",
-							Plug: interfaces.PlugRef{
+							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "somebound",
 								Sdk:       "test-sdk",
@@ -571,7 +571,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 						{
 							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
 							WorkshopTarget: "/opt/data2",
-							Plug: interfaces.PlugRef{
+							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "somebound",
 								Sdk:       "test-sdk-2",
@@ -1129,8 +1129,8 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "training"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "training"},
 		},
 	})
 
@@ -1138,11 +1138,11 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "mount"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "mount"},
 		}, {
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "gpu"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "gpu"},
 		},
 	})
 }
@@ -1266,8 +1266,8 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
 		},
 	})
 
@@ -1275,11 +1275,11 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
 		}, {
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "gpu"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "gpu"},
 		},
 	})
 }
@@ -1330,8 +1330,8 @@ func (s *apiSuite) TestRefreshWorkshopRestoresPreviousWorkshopIfFailed(c *check.
 
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
 		},
 	})
 
@@ -1339,12 +1339,12 @@ func (s *apiSuite) TestRefreshWorkshopRestoresPreviousWorkshopIfFailed(c *check.
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
 		},
 		{
-			PlugRef: interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: interfaces.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
 		},
 	})
 }

@@ -12,7 +12,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -806,7 +805,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 	return removeSet, nil
 }
 
-func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug interfaces.PlugRef, source string, projectId string) (*state.TaskSet, error) {
+func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug sdk.PlugRef, source string, projectId string) (*state.TaskSet, error) {
 	if !filepath.IsAbs(source) {
 		return nil, fmt.Errorf("cannot remount: the `source` path must be absolute")
 	}

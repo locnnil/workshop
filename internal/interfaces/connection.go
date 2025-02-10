@@ -194,8 +194,8 @@ func (plug *ConnectedPlug) SetAttr(key string, value interface{}) error {
 }
 
 // Ref returns the PlugRef for this plug.
-func (plug *ConnectedPlug) Ref() *PlugRef {
-	return &PlugRef{ProjectId: plug.Sdk().ProjectId, Workshop: plug.Sdk().Workshop, Sdk: plug.Sdk().Name, Name: plug.Name()}
+func (plug *ConnectedPlug) Ref() sdk.PlugRef {
+	return plug.plugInfo.Ref()
 }
 
 // Interface returns the name of the interface for this slot.
@@ -252,8 +252,8 @@ func (slot *ConnectedSlot) SetAttr(key string, value interface{}) error {
 }
 
 // Ref returns the SlotRef for this slot.
-func (slot *ConnectedSlot) Ref() *SlotRef {
-	return &SlotRef{ProjectId: slot.Sdk().ProjectId, Workshop: slot.Sdk().Workshop, Sdk: slot.Sdk().Name, Name: slot.Name()}
+func (slot *ConnectedSlot) Ref() sdk.SlotRef {
+	return slot.slotInfo.Ref()
 }
 
 // Interface returns the name of the interface for this connection.

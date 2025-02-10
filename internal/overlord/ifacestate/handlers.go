@@ -160,8 +160,8 @@ func workshopConns(wp *workshop.Workshop) []interfaces.ConnRef {
 	conns := []interfaces.ConnRef{}
 	for _, wconn := range wp.File.Connections {
 		conns = append(conns, interfaces.ConnRef{
-			PlugRef: interfaces.PlugRef{ProjectId: wp.Project.ProjectId, Workshop: wp.Name, Sdk: wconn.PlugRef.Sdk, Name: wconn.PlugRef.Name},
-			SlotRef: interfaces.SlotRef{ProjectId: wp.Project.ProjectId, Workshop: wp.Name, Sdk: wconn.SlotRef.Sdk, Name: wconn.SlotRef.Name},
+			PlugRef: sdk.PlugRef{ProjectId: wp.Project.ProjectId, Workshop: wp.Name, Sdk: wconn.PlugRef.Sdk, Name: wconn.PlugRef.Name},
+			SlotRef: sdk.SlotRef{ProjectId: wp.Project.ProjectId, Workshop: wp.Name, Sdk: wconn.SlotRef.Sdk, Name: wconn.SlotRef.Name},
 		})
 	}
 	return conns
@@ -179,7 +179,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 	var slotDynamic = make(map[string]map[string]interface{})
 
 	for _, plug := range info.Plugs {
-		ref := interfaces.NewPlugRef(plug)
+		ref := plug.Ref()
 		master, slaves := MaybeBound(wp, ref)
 		if master != ref {
 			// the plug is bound to, its connection will be setup together with
@@ -199,7 +199,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				slotDynamic[connRef.ID()]["host-source"] = src
 			}
 
-			slotRef := interfaces.NewSlotRef(slot)
+			slotRef := slot.Ref()
 			// save associated binds as a dynamic attribute
 			for _, slave := range slaves {
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
@@ -224,7 +224,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 		candidates := m.repo.AutoConnectCandidatePlugs(info.ProjectId, info.Workshop,
 			info.Name, slot.Name, autoConnectChecker(wconns))
 		for _, plug := range candidates {
-			ref := interfaces.NewPlugRef(plug)
+			ref := plug.Ref()
 			master, slaves := MaybeBound(wp, ref)
 			if master != ref {
 				// the plug is bound to, its connection will be setup together with
@@ -241,7 +241,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				slotDynamic[connRef.ID()]["host-source"] = src
 			}
 
-			slotRef := interfaces.NewSlotRef(slot)
+			slotRef := slot.Ref()
 			for _, slave := range slaves {
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
 
@@ -375,9 +375,9 @@ func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.T
 	return nil
 }
 
-func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRef, error) {
-	var plugRef interfaces.PlugRef
-	var slotRef interfaces.SlotRef
+func getPlugAndSlotRefs(task *state.Task) (sdk.PlugRef, sdk.SlotRef, error) {
+	var plugRef sdk.PlugRef
+	var slotRef sdk.SlotRef
 	if err := task.Get("plug", &plugRef); err != nil {
 		return plugRef, slotRef, err
 	}
@@ -387,18 +387,18 @@ func getPlugAndSlotRefs(task *state.Task) (interfaces.PlugRef, interfaces.SlotRe
 	return plugRef, slotRef, nil
 }
 
-func MaybeBound(w *workshop.Workshop, ref interfaces.PlugRef) (interfaces.PlugRef, []interfaces.PlugRef) {
-	var masters = make(map[interfaces.PlugRef][]interfaces.PlugRef)
-	var slaves = make(map[interfaces.PlugRef]interfaces.PlugRef)
+func MaybeBound(w *workshop.Workshop, ref sdk.PlugRef) (sdk.PlugRef, []sdk.PlugRef) {
+	var masters = make(map[sdk.PlugRef][]sdk.PlugRef)
+	var slaves = make(map[sdk.PlugRef]sdk.PlugRef)
 
 	for _, s := range w.File.Sdks {
 		for name, pl := range s.Plugs {
 			if pl.Bind == nil {
 				continue
 			}
-			sdk, plug := pl.Bind.Sdk, pl.Bind.Name
-			mkey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sdk, Name: plug}
-			skey := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name, Name: name}
+			sk, plug := pl.Bind.Sdk, pl.Bind.Name
+			mkey := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk, Name: plug}
+			skey := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name, Name: name}
 			masters[mkey] = append(masters[mkey], skey)
 			slaves[skey] = mkey
 		}
@@ -984,7 +984,7 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 	st.Lock()
 	defer st.Unlock()
 
-	var plug interfaces.PlugRef
+	var plug sdk.PlugRef
 	if err := task.Get("plug", &plug); err != nil {
 		return err
 	}
@@ -1002,7 +1002,7 @@ func (m *InterfaceManager) doRemount(task *state.Task, tomb *tomb.Tomb) error {
 	return m.remount(ctx, task, &plug, source, inst.Running)
 }
 
-func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *interfaces.PlugRef, source string, workshopRunning bool) error {
+func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *sdk.PlugRef, source string, workshopRunning bool) error {
 	revert := revert.New()
 	defer revert.Fail()
 

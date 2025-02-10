@@ -70,7 +70,7 @@ type Info struct {
 	BuildTime *time.Time
 
 	Plugs     map[string]*PlugInfo
-	PlugBinds map[string]*PlugBind
+	PlugBinds map[string]PlugRef
 	Slots     map[string]*SlotInfo
 	// Plugs or slots with issues (they are not included in Plugs or Slots)
 	BadInterfaces map[string]string
@@ -84,7 +84,7 @@ func (i *Info) Ref() Ref {
 	}
 }
 
-func (i *Info) SetupPlugBinds(binds map[string]*PlugBind) error {
+func (i *Info) SetupPlugBinds(binds map[string]PlugRef) error {
 	if i.Type == System {
 		return nil
 	}
@@ -186,7 +186,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Type:          Type(sdkYaml.Type),
 		BuildTime:     sdkYaml.BuildTime,
 		Plugs:         make(map[string]*PlugInfo),
-		PlugBinds:     make(map[string]*PlugBind),
+		PlugBinds:     make(map[string]PlugRef),
 		Slots:         make(map[string]*SlotInfo),
 		BadInterfaces: make(map[string]string),
 	}
@@ -348,9 +348,41 @@ func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
 	return lookupAttr(slot.Attrs, key)
 }
 
-// String returns the representation of the slot as sdk:slot string.
-func (slot *SlotInfo) String() string {
-	return fmt.Sprintf("%s:%s", slot.Sdk.Name, slot.Name)
+func (slot *SlotInfo) Ref() SlotRef {
+	return SlotRef{ProjectId: slot.Sdk.ProjectId, Workshop: slot.Sdk.Workshop, Sdk: slot.Sdk.Name, Name: slot.Name}
+}
+
+// SlotRef is a reference to a slot.
+type SlotRef struct {
+	ProjectId string `json:"project-id"`
+	Workshop  string `json:"workshop"`
+	Sdk       string `json:"sdk"`
+	Name      string `json:"slot"`
+}
+
+func (ref SlotRef) SdkRef() Ref {
+	return Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
+}
+
+// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
+func (ref SlotRef) String() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
+}
+
+// ShortRef returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
+func (ref SlotRef) ShortRef() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
+}
+
+// SortsBefore returns true when slot should be sorted before the other
+func (ref SlotRef) SortsBefore(other SlotRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
+	if ref.Sdk != other.Sdk {
+		return ref.Sdk < other.Sdk
+	}
+	return ref.Name < other.Name
 }
 
 // PlugInfo provides information about a plug.
@@ -371,11 +403,41 @@ func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
 	return lookupAttr(plug.Attrs, key)
 }
 
-type PlugBind struct {
-	ProjectId string
-	Workshop  string
-	Sdk       string
-	Name      string
+func (plug *PlugInfo) Ref() PlugRef {
+	return PlugRef{ProjectId: plug.Sdk.ProjectId, Workshop: plug.Sdk.Workshop, Sdk: plug.Sdk.Name, Name: plug.Name}
+}
+
+// PlugRef is a reference to a plug.
+type PlugRef struct {
+	ProjectId string `json:"project-id"`
+	Workshop  string `json:"workshop"`
+	Sdk       string `json:"sdk"`
+	Name      string `json:"plug"`
+}
+
+func (ref PlugRef) SdkRef() Ref {
+	return Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
+}
+
+// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
+func (ref PlugRef) String() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
+}
+
+// ShortRef returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
+func (ref PlugRef) ShortRef() string {
+	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
+}
+
+// SortsBefore returns true when plug should be sorted before the other
+func (ref PlugRef) SortsBefore(other PlugRef) bool {
+	if ref.Workshop != other.Workshop {
+		return ref.Workshop < other.Workshop
+	}
+	if ref.Sdk != other.Sdk {
+		return ref.Sdk < other.Sdk
+	}
+	return ref.Name < other.Name
 }
 
 func SdkRootPath(sdkName string) string {
