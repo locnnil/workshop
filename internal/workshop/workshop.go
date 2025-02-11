@@ -308,6 +308,40 @@ func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
 	return infos, nil
 }
 
+// Mounts returns a map of active mounts,
+// given a map of SDK info as returned by SdkInfos.
+func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
+	if sdks == nil {
+		return nil
+	}
+
+	masters := map[sdk.PlugRef][]PlugRef{}
+	for _, sk := range sdks {
+		for name, m := range sk.PlugBinds {
+			s := PlugRef{Sdk: sk.Name, Name: name}
+			masters[m] = append(masters[m], s)
+		}
+	}
+
+	mnts := map[string][]Mount{}
+	for _, prof := range w.Profiles {
+		for _, mnt := range prof.Mounts {
+			mnts[prof.Sdk] = append(mnts[prof.Sdk], mnt)
+			if mnt.Type != HostWorkshop {
+				continue
+			}
+
+			pref := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: mnt.Name}
+			for _, slave := range masters[pref] {
+				mnt.Name = slave.Name
+				mnts[slave.Sdk] = append(mnts[slave.Sdk], mnt)
+			}
+		}
+	}
+
+	return mnts
+}
+
 func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {
 	dstdir := filepath.Dir(dst)
 	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
