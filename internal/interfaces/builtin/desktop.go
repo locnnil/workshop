@@ -96,20 +96,32 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	}
 
 	if wayland != "" {
-		desktop.Wayland = &workshop.ProxyEntry{}
-		desktop.Wayland.Name = plug.Sdk().Name + "-" + "wayland"
-		desktop.Wayland.Connect = filepath.Join(xdg, wayland)
-		desktop.Wayland.Listen = filepath.Join("/run/user/1000/", wayland)
+		desktop.Wayland = &workshop.ProxyEntry{
+			Name: plug.Sdk().Name + "-" + "wayland",
+			Connect: workshop.ProxyTarget{
+				Address:  filepath.Join(xdg, wayland),
+				Protocol: "unix",
+			},
+			Listen: workshop.ProxyTarget{
+				Address:  filepath.Join("/run/user/1000/", wayland),
+				Protocol: "unix",
+			},
+		}
 	}
 
 	// We pass through the X11 socket regardless of whether XAUTHORITY is present
 	// on the host. This then gives users the option to modify their xhost
 	// settings to allow connections from the container and container user.
 	if display != "" {
-		desktop.X11 = &workshop.ProxyEntry{}
-		desktop.X11.Name = plug.Sdk().Name + "-" + "x11"
-		desktop.X11.Connect = filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":"))
-		desktop.X11.Listen = desktop.X11.Connect
+		proxyTarget := workshop.ProxyTarget{
+			Address:  filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":")),
+			Protocol: "unix",
+		}
+		desktop.X11 = &workshop.ProxyEntry{
+			Name:    plug.Sdk().Name + "-" + "x11",
+			Connect: proxyTarget,
+			Listen:  proxyTarget,
+		}
 	}
 
 	// We mount the Xauthority inside a parent folder to ensure that the mounted

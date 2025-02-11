@@ -225,7 +225,7 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	}
 	defer env.Close()
 
-	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen, "unix:"))
+	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen.Address, "unix:"))
 	_, err = env.Write([]byte(varline))
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
@@ -268,11 +268,11 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.Wayland != nil {
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen, "/run/user/1000/")
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/run/user/1000/")
 	}
 
 	if dev.X11 != nil {
-		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen), "X")
+		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen.Address), "X")
 	}
 
 	// The .Xauthority cookie contains a 128bit key used to authenticate consumers

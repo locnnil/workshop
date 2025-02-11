@@ -8,10 +8,15 @@ const (
 	Volume
 )
 
+type ProxyTarget struct {
+	Address  string
+	Protocol string
+}
+
 type ProxyEntry struct {
 	Name    string
-	Connect string
-	Listen  string
+	Connect ProxyTarget
+	Listen  ProxyTarget
 }
 
 type Camera struct {
@@ -71,4 +76,3 @@ func NewSdkProfile(sdkName string) SdkProfile {
 		Mounts: make(map[string]Mount),
 	}
 }
-

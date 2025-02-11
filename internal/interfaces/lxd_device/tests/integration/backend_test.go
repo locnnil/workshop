@@ -365,8 +365,10 @@ exit 0
 	c.Assert(err, check.IsNil)
 	c.Assert(prof.Agent, check.NotNil)
 	c.Check(prof.Agent.Name, check.Equals, "consumer-ssh-agent")
-	c.Check(prof.Agent.Connect, check.Equals, "/run/.workshop.socket")
-	c.Check(prof.Agent.Listen, check.Equals, "/run/consumer-ssh-agent.ssh")
+	c.Check(prof.Agent.Connect.Address, check.Equals, "/run/.workshop.socket")
+	c.Check(prof.Agent.Connect.Protocol, check.Equals, "unix")
+	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/consumer-ssh-agent.ssh")
+	c.Check(prof.Agent.Listen.Protocol, check.Equals, "unix")
 
 	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer-ssh-agent.sh")
 	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer-ssh-agent.ssh\n")
