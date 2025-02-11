@@ -482,7 +482,7 @@ func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Chang
 
 	t1 := s.state.NewTask("remount", "remount")
 	t1.Set("host-source", newSource)
-	t1.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
+	t1.Set("plug", sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
 	setWorkshopProject("ws-consumer", s.prj, t1)
 
 	chg := s.state.NewChange("sample", "...")
@@ -805,9 +805,9 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 
 func (s *interfaceHandlersSuite) newDisconnectInterfacesChange(sdkName string) *state.Change {
 	t1 := s.state.NewTask("auto-disconnect", "...")
-	t1.Set("plug", interfaces.PlugRef{
+	t1.Set("plug", sdk.PlugRef{
 		ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"})
-	t1.Set("slot", interfaces.PlugRef{
+	t1.Set("slot", sdk.PlugRef{
 		ProjectId: s.prj.ProjectId, Workshop: "ws-consumer", Sdk: "producer", Name: "slot"})
 	t1.Set("sdk", sdkName)
 	setWorkshopProject("ws-consumer", s.prj, t1)
@@ -828,8 +828,8 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	})
 
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
 	}
 
 	s.state.Lock()
@@ -982,8 +982,8 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
 	}
 
 	s.state.Lock()
@@ -1033,8 +1033,8 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesManualRestored(c *c
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
 	connRef := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
+		PlugRef: sdk.PlugRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "42424242", Workshop: "ws-consumer", Sdk: "producer", Name: "slot"},
 	}
 
 	s.state.Lock()
@@ -1076,8 +1076,8 @@ func (s *interfaceHandlersSuite) disconnectChange(c *check.C, workshop string, f
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("disconnect", "...")
-	plugRef := interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "consumer", Name: "plug"}
-	slotRef := interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "producer", Name: "slot"}
+	plugRef := sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "consumer", Name: "plug"}
+	slotRef := sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "producer", Name: "slot"}
 	t1.Set("plug", plugRef)
 	t1.Set("slot", slotRef)
 	t1.Set("forget", forget)
@@ -1345,8 +1345,8 @@ func (s *interfaceHandlersSuite) connectChange(workshop string, auto bool, delay
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("connect", "...")
-	plugRef := interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "consumer", Name: "plug"}
-	slotRef := interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "producer", Name: "slot"}
+	plugRef := sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "consumer", Name: "plug"}
+	slotRef := sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: workshop, Sdk: "producer", Name: "slot"}
 	t1.Set("plug", plugRef)
 	t1.Set("slot", slotRef)
 	t1.Set("auto", auto)
@@ -1383,8 +1383,8 @@ func (s *interfaceHandlersSuite) TestConnectSuccess(c *check.C) {
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].PlugRef, check.DeepEquals, interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
-	c.Assert(conns[0].SlotRef, check.DeepEquals, interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(conns[0].PlugRef, check.DeepEquals, sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(conns[0].SlotRef, check.DeepEquals, sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
@@ -1414,8 +1414,8 @@ func (s *interfaceHandlersSuite) TestConnectSuccessSetupBackend(c *check.C) {
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].PlugRef, check.DeepEquals, interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
-	c.Assert(conns[0].SlotRef, check.DeepEquals, interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(conns[0].PlugRef, check.DeepEquals, sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(conns[0].SlotRef, check.DeepEquals, sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
@@ -1490,8 +1490,8 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].PlugRef, check.DeepEquals, interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
-	c.Assert(conns[0].SlotRef, check.DeepEquals, interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(conns[0].PlugRef, check.DeepEquals, sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(conns[0].SlotRef, check.DeepEquals, sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
 
 	conn, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
@@ -1525,8 +1525,8 @@ func (s *interfaceHandlersSuite) TestConnectAuto(c *check.C) {
 	conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].PlugRef, check.DeepEquals, interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
-	c.Assert(conns[0].SlotRef, check.DeepEquals, interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(conns[0].PlugRef, check.DeepEquals, sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(conns[0].SlotRef, check.DeepEquals, sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
 
 	stateConns, err := ifacestate.GetConns(s.state)
 	c.Assert(err, check.IsNil)
@@ -1777,8 +1777,8 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 	s.state.Lock()
 	c1 := s.state.NewChange("sample", "")
 	t1 := s.state.NewTask("connect", "")
-	t1.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
-	t1.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	t1.Set("slot", sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t1.Set("plug", sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
 	setWorkshopProject("ws", s.prj, t1)
 	c1.AddTask(t1)
 	c1.Set("project-id", s.prj.ProjectId)
@@ -1807,8 +1807,8 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 	c2 := s.state.NewChange("sample", "")
 	t2 := s.state.NewTask("disconnect", "")
 
-	t2.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
-	t2.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	t2.Set("slot", sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t2.Set("plug", sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
 	setWorkshopProject("ws", s.prj, t2)
 	c2.AddTask(t2)
 	c2.Set("project-id", s.prj.ProjectId)
@@ -1851,8 +1851,8 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 	s.state.Lock()
 	c1 := s.state.NewChange("sample", "")
 	t1 := s.state.NewTask("connect", "")
-	t1.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
-	t1.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	t1.Set("slot", sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t1.Set("plug", sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
 	t1.Set("auto", true)
 	setWorkshopProject("ws", s.prj, t1)
 	c1.AddTask(t1)
@@ -1882,8 +1882,8 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 	c2 := s.state.NewChange("sample", "")
 	t2 := s.state.NewTask("disconnect", "")
 
-	t2.Set("slot", interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
-	t2.Set("plug", interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
+	t2.Set("slot", sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "producer", Name: "slot"})
+	t2.Set("plug", sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug-ssh"})
 	setWorkshopProject("ws", s.prj, t2)
 	c2.AddTask(t2)
 	c2.Set("project-id", s.prj.ProjectId)

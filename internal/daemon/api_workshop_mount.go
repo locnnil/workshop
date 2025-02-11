@@ -8,15 +8,15 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
 type mountRequest struct {
-	Action     string             `json:"action"`
-	Plug       interfaces.PlugRef `json:"plug"`
-	HostSource string             `json:"host-source"`
+	Action     string      `json:"action"`
+	Plug       sdk.PlugRef `json:"plug"`
+	HostSource string      `json:"host-source"`
 }
 
 func newMountChange(st *state.State, user string, reqData *mountRequest) *state.Change {

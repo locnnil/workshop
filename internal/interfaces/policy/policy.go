@@ -37,10 +37,10 @@ type InstallCandidate struct {
 }
 
 func (ic *InstallCandidate) checkSlotRule(slot *sdk.SlotInfo, rule *asserts.SlotRule) error {
-	if checkSlotInstallationAltConstraints(ic, slot, rule.DenyInstallation) == nil {
+	if checkSlotInstallationAltConstraints(slot, rule.DenyInstallation) == nil {
 		return fmt.Errorf("installation denied by %q slot rule of interface %q", slot.Name, slot.Interface)
 	}
-	if checkSlotInstallationAltConstraints(ic, slot, rule.AllowInstallation) != nil {
+	if checkSlotInstallationAltConstraints(slot, rule.AllowInstallation) != nil {
 		return fmt.Errorf("installation not allowed by %q slot rule of interface %q", slot.Name, slot.Interface)
 	}
 	return nil
@@ -48,10 +48,10 @@ func (ic *InstallCandidate) checkSlotRule(slot *sdk.SlotInfo, rule *asserts.Slot
 
 func (ic *InstallCandidate) checkPlugRule(plug *sdk.PlugInfo, rule *asserts.PlugRule) error {
 	context := ""
-	if checkPlugInstallationAltConstraints(ic, plug, rule.DenyInstallation) == nil {
+	if checkPlugInstallationAltConstraints(plug, rule.DenyInstallation) == nil {
 		return fmt.Errorf("installation denied by %q plug rule of interface %q%s", plug.Name, plug.Interface, context)
 	}
-	if checkPlugInstallationAltConstraints(ic, plug, rule.AllowInstallation) != nil {
+	if checkPlugInstallationAltConstraints(plug, rule.AllowInstallation) != nil {
 		return fmt.Errorf("installation not allowed by %q plug rule of interface %q%s", plug.Name, plug.Interface, context)
 	}
 	return nil
@@ -118,7 +118,7 @@ func (connc *ConnectCandidate) PlugAttr(arg string) (interface{}, error) {
 func (connc *ConnectCandidate) SlotAttr(arg string) (interface{}, error) {
 	return nestedGet("slot", connc.Slot, arg)
 }
-func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule, sdkRule bool) (interfaces.SideArity, error) {
+func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule) (interfaces.SideArity, error) {
 	context := ""
 	denyConst := rule.DenyConnection
 	allowConst := rule.AllowConnection
@@ -137,7 +137,7 @@ func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule
 	return sideArity{allowedConstraints.SlotsPerPlug}, nil
 }
 
-func (connc *ConnectCandidate) checkSlotRule(kind string, rule *asserts.SlotRule, sdkRule bool) (interfaces.SideArity, error) {
+func (connc *ConnectCandidate) checkSlotRule(kind string, rule *asserts.SlotRule) (interfaces.SideArity, error) {
 	denyConst := rule.DenyConnection
 	allowConst := rule.AllowConnection
 	if kind == "auto-connection" {
@@ -168,10 +168,10 @@ func (connc *ConnectCandidate) check(kind string) (interfaces.SideArity, error) 
 	}
 
 	if rule := baseDecl.PlugRule(iface); rule != nil {
-		return connc.checkPlugRule(kind, rule, false)
+		return connc.checkPlugRule(kind, rule)
 	}
 	if rule := baseDecl.SlotRule(iface); rule != nil {
-		return connc.checkSlotRule(kind, rule, false)
+		return connc.checkSlotRule(kind, rule)
 	}
 	return nil, nil
 }

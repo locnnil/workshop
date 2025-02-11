@@ -42,7 +42,3 @@ type ByInterfaceName byInterfaceName
 func (c ByInterfaceName) Len() int           { return byInterfaceName(c).Len() }
 func (c ByInterfaceName) Swap(i, j int)      { byInterfaceName(c).Swap(i, j) }
 func (c ByInterfaceName) Less(i, j int) bool { return byInterfaceName(c).Less(i, j) }
-
-var (
-	GetAttribute = getAttribute
-)

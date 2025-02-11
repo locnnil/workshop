@@ -20,7 +20,7 @@
 package daemon
 
 import (
-	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 // plugJSON aids in marshaling snap.PlugInfo into JSON.
@@ -32,9 +32,9 @@ type plugJSON struct {
 	Interface string                 `json:"interface,omitempty"`
 	Attrs     map[string]interface{} `json:"attrs,omitempty"`
 	Label     string                 `json:"label,omitempty"`
-	Bind      *interfaces.PlugRef    `json:"bind,omitempty"`
+	Bind      *sdk.PlugRef    `json:"bind,omitempty"`
 	// Connections are synthesized, they are not on the original type.
-	Connections []interfaces.SlotRef `json:"connections,omitempty"`
+	Connections []sdk.SlotRef `json:"connections,omitempty"`
 }
 
 // slotJSON aids in marshaling snap.SlotInfo into JSON.
@@ -47,7 +47,7 @@ type slotJSON struct {
 	Attrs     map[string]interface{} `json:"attrs,omitempty"`
 	Label     string                 `json:"label,omitempty"`
 	// Connections are synthesized, they are not on the original type.
-	Connections []interfaces.PlugRef `json:"connections,omitempty"`
+	Connections []sdk.PlugRef `json:"connections,omitempty"`
 }
 
 // interfaceAction is an action performed on the interface system.
@@ -61,8 +61,8 @@ type interfaceAction struct {
 // connectionsJSON aids in marshalling information about a single connection
 // into JSON
 type connectionJSON struct {
-	Slot      interfaces.SlotRef     `json:"slot"`
-	Plug      interfaces.PlugRef     `json:"plug"`
+	Slot      sdk.SlotRef     `json:"slot"`
+	Plug      sdk.PlugRef     `json:"plug"`
 	Interface string                 `json:"interface"`
 	Manual    bool                   `json:"manual,omitempty"`
 	SlotAttrs map[string]interface{} `json:"slot-attrs,omitempty"`

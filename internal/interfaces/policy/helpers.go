@@ -28,7 +28,7 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
-func checkPlugInstallationConstraints1(ic *InstallCandidate, plug *sdk.PlugInfo, constraints *asserts.PlugInstallationConstraints) error {
+func checkPlugInstallationConstraints1(plug *sdk.PlugInfo, constraints *asserts.PlugInstallationConstraints) error {
 	if err := checkNameConstraints(constraints.PlugNames, plug.Interface, "plug name", plug.Name); err != nil {
 		return err
 	}
@@ -43,11 +43,11 @@ func checkPlugInstallationConstraints1(ic *InstallCandidate, plug *sdk.PlugInfo,
 	return nil
 }
 
-func checkPlugInstallationAltConstraints(ic *InstallCandidate, plug *sdk.PlugInfo, altConstraints []*asserts.PlugInstallationConstraints) error {
+func checkPlugInstallationAltConstraints(plug *sdk.PlugInfo, altConstraints []*asserts.PlugInstallationConstraints) error {
 	var firstErr error
 	// OR of constraints
 	for _, constraints := range altConstraints {
-		err := checkPlugInstallationConstraints1(ic, plug, constraints)
+		err := checkPlugInstallationConstraints1(plug, constraints)
 		if err == nil {
 			return nil
 		}
@@ -74,7 +74,7 @@ func checkPlugConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 	}
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
-		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func checkNameConstraints(c *asserts.NameConstraints, iface, which, name string)
 	return c.Check(which, name, special)
 }
 
-func checkSlotInstallationConstraints(ic *InstallCandidate, slot *sdk.SlotInfo, constraints *asserts.SlotInstallationConstraints) error {
+func checkSlotInstallationConstraints(slot *sdk.SlotInfo, constraints *asserts.SlotInstallationConstraints) error {
 	if err := checkNameConstraints(constraints.SlotNames, slot.Interface, "slot name", slot.Name); err != nil {
 		return err
 	}
@@ -130,11 +130,11 @@ func checkSlotInstallationConstraints(ic *InstallCandidate, slot *sdk.SlotInfo, 
 	return nil
 }
 
-func checkSlotInstallationAltConstraints(ic *InstallCandidate, slot *sdk.SlotInfo, altConstraints []*asserts.SlotInstallationConstraints) error {
+func checkSlotInstallationAltConstraints(slot *sdk.SlotInfo, altConstraints []*asserts.SlotInstallationConstraints) error {
 	var firstErr error
 	// OR of constraints
 	for _, constraints := range altConstraints {
-		err := checkSlotInstallationConstraints(ic, slot, constraints)
+		err := checkSlotInstallationConstraints(slot, constraints)
 		if err == nil {
 			return nil
 		}
@@ -176,7 +176,7 @@ func checkSlotConnectionConstraints1(connc *ConnectCandidate, constraints *asser
 
 	plugSdk, slotSdk := connc.Plug.Sdk(), connc.Slot.Sdk()
 	if plugSdk.ProjectId != slotSdk.ProjectId || plugSdk.Workshop != slotSdk.Workshop {
-		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref(), connc.Slot.Ref())
+		return fmt.Errorf("%q cannot be connected to the %q (SDK from a different workshop)", connc.Plug.Ref().String(), connc.Slot.Ref().String())
 	}
 
 	return nil

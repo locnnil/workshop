@@ -269,13 +269,13 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("internal error: %q SDK is installed but not declared in the workshop file", info.Name)
 	}
 
-	binds := map[string]*sdk.PlugBind{}
+	binds := map[string]sdk.PlugRef{}
 	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
 		if m.Bind == nil {
 			plugs[name] = m.Attributes
 		} else {
-			binds[name] = &sdk.PlugBind{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
+			binds[name] = sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
 		}
 	}
 
@@ -306,6 +306,40 @@ func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
 		infos[info.Name] = info
 	}
 	return infos, nil
+}
+
+// Mounts returns a map of active mounts,
+// given a map of SDK info as returned by SdkInfos.
+func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
+	if sdks == nil {
+		return nil
+	}
+
+	masters := map[sdk.PlugRef][]PlugRef{}
+	for _, sk := range sdks {
+		for name, m := range sk.PlugBinds {
+			s := PlugRef{Sdk: sk.Name, Name: name}
+			masters[m] = append(masters[m], s)
+		}
+	}
+
+	mnts := map[string][]Mount{}
+	for _, prof := range w.Profiles {
+		for _, mnt := range prof.Mounts {
+			mnts[prof.Sdk] = append(mnts[prof.Sdk], mnt)
+			if mnt.Type != HostWorkshop {
+				continue
+			}
+
+			pref := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: mnt.Name}
+			for _, slave := range masters[pref] {
+				mnt.Name = slave.Name
+				mnts[slave.Sdk] = append(mnts[slave.Sdk], mnt)
+			}
+		}
+	}
+
+	return mnts
 }
 
 func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {

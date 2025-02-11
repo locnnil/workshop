@@ -20,8 +20,6 @@
 package interfaces_test
 
 import (
-	"errors"
-
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -84,7 +82,7 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 
 	var val string
 	var intVal int
-	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
+	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `attribute "unknown" not found for slot "ws/producer:slot"`)
 
 	attrs := slot.StaticAttrs()
 	c.Assert(attrs, check.DeepEquals, map[string]interface{}{
@@ -95,9 +93,9 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 	slot.StaticAttr("attr", &val)
 	c.Assert(val, check.Equals, "value")
 
-	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(slot.StaticAttr("attr", &intVal), check.ErrorMatches, `SDK "producer" has interface "interface" with invalid value type "string" for "attr" attribute: \*int`)
-	c.Check(slot.StaticAttr("attr", val), check.ErrorMatches, `internal error: cannot get "attr" attribute of interface "interface" with non-pointer value`)
+	c.Assert(slot.StaticAttr("unknown", &val), check.ErrorMatches, `attribute "unknown" not found for slot "ws/producer:slot"`)
+	c.Check(slot.StaticAttr("attr", &intVal), check.ErrorMatches, `invalid attribute "attr" for slot "ws/producer:slot": expected int but found string`)
+	c.Check(slot.StaticAttr("attr", val), check.ErrorMatches, `invalid attribute "attr" for slot "ws/producer:slot": internal error: value must be a pointer`)
 
 	// static attributes passed via args take precedence over slot.Attrs
 	slot2 := interfaces.NewConnectedSlot(s.slot, map[string]interface{}{"foo": "bar"}, nil)
@@ -108,13 +106,13 @@ func (s *connSuite) TestStaticSlotAttrs(c *check.C) {
 func (s *connSuite) TestSlotRef(c *check.C) {
 	slot := interfaces.NewConnectedSlot(s.slot, nil, nil)
 	c.Assert(slot, check.NotNil)
-	c.Assert(*slot.Ref(), check.DeepEquals, interfaces.SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "producer", Name: "slot"})
+	c.Assert(slot.Ref(), check.DeepEquals, sdk.SlotRef{ProjectId: "42424242", Workshop: "ws", Sdk: "producer", Name: "slot"})
 }
 
 func (s *connSuite) TestPlugRef(c *check.C) {
 	plug := interfaces.NewConnectedPlug(s.plug, nil, nil)
 	c.Assert(plug, check.NotNil)
-	c.Assert(*plug.Ref(), check.DeepEquals, interfaces.PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "consumer", Name: "plug"})
+	c.Assert(plug.Ref(), check.DeepEquals, sdk.PlugRef{ProjectId: "42424242", Workshop: "ws", Sdk: "consumer", Name: "plug"})
 }
 
 func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
@@ -123,7 +121,7 @@ func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
 
 	var val string
 	var intVal int
-	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
+	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `attribute "unknown" not found for plug "ws/consumer:plug"`)
 
 	attrs := plug.StaticAttrs()
 	c.Assert(attrs, check.DeepEquals, map[string]interface{}{
@@ -133,9 +131,9 @@ func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
 	plug.StaticAttr("attr", &val)
 	c.Assert(val, check.Equals, "value")
 
-	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(plug.StaticAttr("attr", &intVal), check.ErrorMatches, `SDK "consumer" has interface "interface" with invalid value type "string" for "attr" attribute: \*int`)
-	c.Check(plug.StaticAttr("attr", val), check.ErrorMatches, `internal error: cannot get "attr" attribute of interface "interface" with non-pointer value`)
+	c.Assert(plug.StaticAttr("unknown", &val), check.ErrorMatches, `attribute "unknown" not found for plug "ws/consumer:plug"`)
+	c.Check(plug.StaticAttr("attr", &intVal), check.ErrorMatches, `invalid attribute "attr" for plug "ws/consumer:plug": expected int but found string`)
+	c.Check(plug.StaticAttr("attr", val), check.ErrorMatches, `invalid attribute "attr" for plug "ws/consumer:plug": internal error: value must be a pointer`)
 
 	// static attributes passed via args take precedence over plug.Attrs
 	plug2 := interfaces.NewConnectedPlug(s.plug, map[string]interface{}{"foo": "bar"}, nil)
@@ -146,7 +144,7 @@ func (s *connSuite) TestStaticPlugAttrs(c *check.C) {
 func (s *connSuite) TestDynamicSlotAttrs(c *check.C) {
 	attrs := map[string]interface{}{
 		"foo":    "bar",
-		"number": int(100),
+		"number": int(101),
 	}
 	slot := interfaces.NewConnectedSlot(s.slot, nil, attrs)
 	c.Assert(slot, check.NotNil)
@@ -162,7 +160,7 @@ func (s *connSuite) TestDynamicSlotAttrs(c *check.C) {
 	c.Assert(strVal, check.Equals, "value")
 
 	c.Assert(slot.Attr("number", &intVal), check.IsNil)
-	c.Assert(intVal, check.Equals, int64(100))
+	c.Assert(intVal, check.Equals, int64(101))
 
 	err := slot.SetAttr("other", map[string]interface{}{"number-two": int(222)})
 	c.Assert(err, check.IsNil)
@@ -170,9 +168,9 @@ func (s *connSuite) TestDynamicSlotAttrs(c *check.C) {
 	num := mapVal["number-two"]
 	c.Assert(num, check.Equals, int64(222))
 
-	c.Check(slot.Attr("unknown", &strVal), check.ErrorMatches, `SDK "producer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(slot.Attr("foo", &intVal), check.ErrorMatches, `SDK "producer" has interface "interface" with invalid value type "string" for "foo" attribute: \*int64`)
-	c.Check(slot.Attr("number", intVal), check.ErrorMatches, `internal error: cannot get "number" attribute of interface "interface" with non-pointer value`)
+	c.Check(slot.Attr("unknown", &strVal), check.ErrorMatches, `attribute "unknown" not found for slot "ws/producer:slot"`)
+	c.Check(slot.Attr("foo", &intVal), check.ErrorMatches, `invalid attribute "foo" for slot "ws/producer:slot": expected int64 but found string`)
+	c.Check(slot.Attr("number", intVal), check.ErrorMatches, `invalid attribute "number" for slot "ws/producer:slot": internal error: value must be a pointer`)
 }
 
 func (s *connSuite) TestDottedPathSlot(c *check.C) {
@@ -292,9 +290,9 @@ func (s *connSuite) TestDynamicPlugAttrs(c *check.C) {
 	num := mapVal["number-two"]
 	c.Assert(num, check.Equals, int64(222))
 
-	c.Check(plug.Attr("unknown", &strVal), check.ErrorMatches, `SDK "consumer" does not have attribute "unknown" for interface "interface"`)
-	c.Check(plug.Attr("foo", &intVal), check.ErrorMatches, `SDK "consumer" has interface "interface" with invalid value type "string" for "foo" attribute: \*int64`)
-	c.Check(plug.Attr("number", intVal), check.ErrorMatches, `internal error: cannot get "number" attribute of interface "interface" with non-pointer value`)
+	c.Check(plug.Attr("unknown", &strVal), check.ErrorMatches, `attribute "unknown" not found for plug "ws/consumer:plug"`)
+	c.Check(plug.Attr("foo", &intVal), check.ErrorMatches, `invalid attribute "foo" for plug "ws/consumer:plug": expected int64 but found string`)
+	c.Check(plug.Attr("number", intVal), check.ErrorMatches, `invalid attribute "number" for plug "ws/consumer:plug": internal error: value must be a pointer`)
 }
 
 func (s *connSuite) TestOverwriteStaticAttrError(c *check.C) {
@@ -356,28 +354,4 @@ func (s *connSuite) TestNewConnectedSlotExplicitStaticAttrs(c *check.C) {
 	c.Assert(slot, check.NotNil)
 	c.Assert(slot.StaticAttrs(), check.DeepEquals, map[string]interface{}{"baz": "boom"})
 	c.Assert(slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"foo": "bar"})
-}
-
-func (s *connSuite) TestGetAttributeUnhappy(c *check.C) {
-	attrs := map[string]interface{}{}
-	var stringVal string
-	err := interfaces.GetAttribute("sdk0", "iface0", attrs, attrs, "non-existent", &stringVal)
-	c.Check(stringVal, check.Equals, "")
-	c.Check(err, check.ErrorMatches, `SDK "sdk0" does not have attribute "non-existent" for interface "iface0"`)
-	c.Check(errors.Is(err, sdk.AttributeNotFoundError{}), check.Equals, true)
-}
-
-func (s *connSuite) TestGetAttributeHappy(c *check.C) {
-	staticAttrs := map[string]interface{}{
-		"attr0": "a string",
-		"attr1": 12,
-	}
-	dynamicAttrs := map[string]interface{}{
-		"attr0": "second string",
-		"attr1": 42,
-	}
-	var intVal int
-	err := interfaces.GetAttribute("sdk0", "iface0", staticAttrs, dynamicAttrs, "attr1", &intVal)
-	c.Check(err, check.IsNil)
-	c.Check(intVal, check.Equals, 42)
 }

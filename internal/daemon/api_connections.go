@@ -33,6 +33,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -43,7 +44,7 @@ type collectFilter struct {
 	connected bool
 }
 
-func (c *collectFilter) plugOrConnectedSlotMatches(plug *interfaces.PlugRef, connectedSlots []interfaces.SlotRef) bool {
+func (c *collectFilter) plugOrConnectedSlotMatches(plug *sdk.PlugRef, connectedSlots []sdk.SlotRef) bool {
 	for _, slot := range connectedSlots {
 		if c.slotOrConnectedPlugMatches(&slot, nil) {
 			return true
@@ -55,7 +56,7 @@ func (c *collectFilter) plugOrConnectedSlotMatches(plug *interfaces.PlugRef, con
 	return true
 }
 
-func (c *collectFilter) slotOrConnectedPlugMatches(slot *interfaces.SlotRef, connectedPlugs []interfaces.PlugRef) bool {
+func (c *collectFilter) slotOrConnectedPlugMatches(slot *sdk.SlotRef, connectedPlugs []sdk.PlugRef) bool {
 	for _, plug := range connectedPlugs {
 		if c.plugOrConnectedSlotMatches(&plug, nil) {
 			return true
@@ -74,7 +75,7 @@ func (c *collectFilter) ifaceMatches(ifaceName string) bool {
 	return true
 }
 
-type bySlotRef []interfaces.SlotRef
+type bySlotRef []sdk.SlotRef
 
 func (b bySlotRef) Len() int      { return len(b) }
 func (b bySlotRef) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -82,7 +83,7 @@ func (b bySlotRef) Less(i, j int) bool {
 	return b[i].SortsBefore(b[j])
 }
 
-type byPlugRef []interfaces.PlugRef
+type byPlugRef []sdk.PlugRef
 
 func (b byPlugRef) Len() int      { return len(b) }
 func (b byPlugRef) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -109,8 +110,8 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 
 	var connsjson connectionsJSON
 	var connStates map[string]ifacestate.ConnectionState
-	plugConns := map[string][]interfaces.SlotRef{}
-	slotConns := map[string][]interfaces.PlugRef{}
+	plugConns := map[string][]sdk.SlotRef{}
+	slotConns := map[string][]sdk.PlugRef{}
 
 	var err error
 	connStates, err = ifaceMgr.ConnectionStates()
@@ -143,8 +144,8 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 		if !filter.ifaceMatches(cstate.Interface) {
 			continue
 		}
-		plugRef := interfaces.PlugRef{ProjectId: cref.PlugRef.ProjectId, Workshop: cref.PlugRef.Workshop, Sdk: cref.PlugRef.Sdk, Name: cref.PlugRef.Name}
-		slotRef := interfaces.SlotRef{ProjectId: cref.SlotRef.ProjectId, Workshop: cref.SlotRef.Workshop, Sdk: cref.SlotRef.Sdk, Name: cref.SlotRef.Name}
+		plugRef := cref.PlugRef
+		slotRef := cref.SlotRef
 		plugID := plugRef.String()
 		slotID := slotRef.String()
 
@@ -169,7 +170,7 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 	}
 
 	for _, plug := range ifaces.Plugs {
-		plugRef := interfaces.PlugRef{ProjectId: plug.Sdk.ProjectId, Workshop: plug.Sdk.Workshop, Sdk: plug.Sdk.Name, Name: plug.Name}
+		plugRef := plug.Ref()
 		connectedSlots, connected := plugConns[plugRef.String()]
 		if !connected && filter.connected {
 			continue
@@ -178,14 +179,9 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 			continue
 		}
 		sort.Sort(bySlotRef(connectedSlots))
-		var bind *interfaces.PlugRef
+		var bind *sdk.PlugRef
 		if pb, ok := plug.Sdk.PlugBinds[plug.Name]; ok {
-			bind = &interfaces.PlugRef{
-				ProjectId: pb.ProjectId,
-				Workshop:  pb.Workshop,
-				Sdk:       pb.Sdk,
-				Name:      pb.Name,
-			}
+			bind = &pb
 		}
 		pj := &plugJSON{
 			ProjectId:   plugRef.ProjectId,
@@ -201,7 +197,7 @@ func collectConnections(ifaceMgr *ifacestate.InterfaceManager, filter collectFil
 		connsjson.Plugs = append(connsjson.Plugs, pj)
 	}
 	for _, slot := range ifaces.Slots {
-		slotRef := interfaces.SlotRef{ProjectId: slot.Sdk.ProjectId, Workshop: slot.Sdk.Workshop, Sdk: slot.Sdk.Name, Name: slot.Name}
+		slotRef := slot.Ref()
 		connectedPlugs, connected := slotConns[slotRef.String()]
 		if !connected && filter.connected {
 			continue

@@ -14,7 +14,6 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -51,10 +50,10 @@ type SdkInfo struct {
 }
 
 type Mount struct {
-	Plug           interfaces.PlugRef `json:"plug"`
-	WorkshopSource string             `json:"workshop-source,omitempty"`
-	HostSource     string             `json:"host-source,omitempty"`
-	WorkshopTarget string             `json:"workshop-target,omitempty"`
+	Plug           sdk.PlugRef `json:"plug"`
+	WorkshopSource string      `json:"workshop-source,omitempty"`
+	HostSource     string      `json:"host-source,omitempty"`
+	WorkshopTarget string      `json:"workshop-target,omitempty"`
 }
 
 type Workshops struct {
@@ -96,11 +95,13 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health healthstate.HealthState, mounts map[string][]*Mount) *WorkshopInfo {
+func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health healthstate.HealthState) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
+
+	mnts := w.Mounts(sdks)
 
 	for _, sk := range w.Sdks {
 		sdkInfo := sdks[sk.Name]
@@ -117,7 +118,8 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 			}
 		}
 
-		sdkMounts := mounts[sk.Name]
+		ref := sdk.Ref{ProjectId: info.ProjectId, Workshop: info.Name, Sdk: sk.Name}
+		mntInfos := mountInfos(ref, mnts[sk.Name])
 
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
@@ -127,7 +129,7 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 			BuildTime:   sdkInfo.BuildTime,
 			InstallTime: sk.InstallTime,
 			Health:      healthInfo,
-			Mounts:      sdkMounts,
+			Mounts:      mntInfos,
 		})
 	}
 
@@ -139,52 +141,33 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 	return &info
 }
 
-func mounts(w *workshop.Workshop, sdks map[string]*sdk.Info) (map[string][]*Mount, error) {
-	var mnts = map[string][]*Mount{}
+func mountInfos(sk sdk.Ref, mnts []workshop.Mount) []*Mount {
+	if mnts == nil {
+		return nil
+	}
 
-	masters := map[interfaces.PlugRef][]interfaces.PlugRef{}
-	for _, sk := range sdks {
-		for s, m := range sk.PlugBinds {
-			ref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Sdk, Name: m.Name}
-			sref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: sk.Name, Name: s}
-			masters[ref] = append(masters[ref], sref)
+	infos := make([]*Mount, 0, len(mnts))
+	for _, mnt := range mnts {
+		pref := sdk.PlugRef{ProjectId: sk.ProjectId, Workshop: sk.Workshop, Sdk: sk.Sdk, Name: mnt.Name}
+		switch mnt.Type {
+		case workshop.HostWorkshop:
+			info := &Mount{
+				Plug:           pref,
+				HostSource:     mnt.What,
+				WorkshopTarget: mnt.Where,
+			}
+			infos = append(infos, info)
+		case workshop.WorkshopWorkshop:
+			info := &Mount{
+				Plug:           pref,
+				WorkshopSource: mnt.What,
+				WorkshopTarget: mnt.Where,
+			}
+			infos = append(infos, info)
 		}
 	}
 
-	for name, prof := range w.Profiles {
-		for _, dev := range prof.Mounts {
-			if dev.Type == workshop.HostWorkshop {
-				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: dev.Name}
-				mnt := &Mount{
-					Plug:           pref,
-					HostSource:     dev.What,
-					WorkshopTarget: dev.Where,
-				}
-				mnts[name] = append(mnts[name], mnt)
-				if slaves, ok := masters[pref]; ok {
-					for _, slave := range slaves {
-						mnt := &Mount{
-							Plug:           slave,
-							HostSource:     dev.What,
-							WorkshopTarget: dev.Where,
-						}
-						mnts[slave.Sdk] = append(mnts[slave.Sdk], mnt)
-					}
-				}
-			}
-			if dev.Type == workshop.WorkshopWorkshop {
-				pref := interfaces.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: name, Name: dev.Name}
-				mnt := &Mount{
-					Plug:           pref,
-					WorkshopSource: dev.What,
-					WorkshopTarget: dev.Where,
-				}
-				mnts[name] = append(mnts[name], mnt)
-			}
-		}
-	}
-
-	return mnts, nil
+	return infos
 }
 
 func newWorkshopChange(st *state.State, kind string, user, projectId, action string, names []string) *state.Change {
@@ -242,7 +225,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	for _, w := range workshops {
 		health := wrkmgr.WorkshopHealth(w)
 		if ignoreStatus || health.Status == status {
-			wi := workshopToInfo(w, nil, health, nil)
+			wi := workshopToInfo(w, nil, health)
 			info.Workshops = append(info.Workshops, wi)
 		}
 	}
@@ -442,11 +425,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	if err != nil {
 		return statusBadRequest("%w", err)
 	}
-
-	ms, err := mounts(w, sdks)
-	if err != nil {
-		return statusBadRequest("%w", err)
-	}
+	info := workshopToInfo(w, sdks, health)
 
 	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
 	if err != nil {
@@ -454,7 +433,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	rsp := Workshop{
-		WorkshopInfo: *workshopToInfo(w, sdks, health, ms),
+		WorkshopInfo: *info,
 		Path:         files[w.Name],
 	}
 

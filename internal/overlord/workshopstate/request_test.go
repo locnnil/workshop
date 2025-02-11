@@ -14,7 +14,6 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -726,7 +725,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
+	plug := sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
 	sdks := []workshop.SdkRecord{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}
@@ -747,7 +746,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	c.Assert(w, check.Equals, "ws-1")
 	c.Assert(p, check.DeepEquals, s.project)
 
-	var plugRef interfaces.PlugRef
+	var plugRef sdk.PlugRef
 	var src string
 	c.Assert(task.Get("plug", &plugRef), check.IsNil)
 	c.Assert(plugRef, check.DeepEquals, plug)
@@ -759,7 +758,7 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	plug := interfaces.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
+	plug := sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "ws-1", Sdk: "sdk-1", Name: "plug"}
 	sdks := []workshop.SdkRecord{
 		{Name: "sdk-1", Channel: "latest/stable"},
 	}

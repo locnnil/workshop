@@ -196,8 +196,8 @@ plugs:
 	ifaces := repo.Interfaces()
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	cref := &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: interfaces.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: sdk.System.String(), Name: "slot"}}
+		PlugRef: sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: sdk.System.String(), Name: "slot"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)

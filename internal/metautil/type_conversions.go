@@ -20,6 +20,7 @@
 package metautil
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -69,49 +70,21 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 	return nullValue, fmt.Errorf(`cannot convert value "%v" into a %v`, value, outputType)
 }
 
-// AttributeNotCompatibleError represents a type mismatch error between an interface
-// attribute and an expected type.
-type AttributeNotCompatibleError struct {
-	SdkName       string
-	InterfaceName string
-	AttributeName string
-	AttributeType reflect.Type
-	ExpectedType  reflect.Type
-}
-
-func (e AttributeNotCompatibleError) Error() string {
-	return fmt.Sprintf("SDK %q has interface %q with invalid value type %q for %q attribute: %s", e.SdkName, e.InterfaceName, e.AttributeType, e.AttributeName, e.ExpectedType)
-}
-
-func (e AttributeNotCompatibleError) Is(target error) bool {
-	_, ok := target.(AttributeNotCompatibleError)
-	return ok
-}
-
 // SetValueFromAttribute attempts to convert the attribute value read from the
-// given sdk/interface into the desired type.
-//
-// The sdkName, ifaceName and attrName are only used to produce contextual
-// error messages, but are not otherwise significant. This function only
+// given sdk/interface into the desired type. This function only
 // operates converting the attrVal parameter into a value which can fit into
 // the val parameter, which therefore must be a pointer.
-func SetValueFromAttribute(sdkName string, ifaceName string, attrName string, attrVal interface{}, val interface{}) error {
+func SetValueFromAttribute(attrVal interface{}, val interface{}) error {
 	rt := reflect.TypeOf(val)
 	if rt.Kind() != reflect.Ptr || val == nil {
-		return fmt.Errorf("internal error: cannot get %q attribute of interface %q with non-pointer value", attrName, ifaceName)
+		return errors.New("internal error: value must be a pointer")
 	}
 
 	converted, err := convertValue(reflect.ValueOf(attrVal), rt.Elem())
 	if err != nil {
-		return AttributeNotCompatibleError{
-			SdkName:       sdkName,
-			InterfaceName: ifaceName,
-			AttributeName: attrName,
-			AttributeType: reflect.TypeOf(attrVal),
-			ExpectedType:  reflect.TypeOf(val),
-		}
+		return fmt.Errorf("expected %s but found %s", rt.Elem().Name(), reflect.TypeOf(attrVal).Name())
 	}
-	rv := reflect.ValueOf(val)
-	rv.Elem().Set(converted)
+
+	reflect.ValueOf(val).Elem().Set(converted)
 	return nil
 }

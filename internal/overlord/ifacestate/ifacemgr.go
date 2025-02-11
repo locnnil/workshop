@@ -210,8 +210,8 @@ func (m *InterfaceManager) ResolveDisconnect(
 		}
 		connected = func(plugPrj, plugWs, plugSdk, plug, slotPrj, slotWs, slotSdk, slot string) (bool, error) {
 			cref := interfaces.ConnRef{
-				PlugRef: interfaces.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
-				SlotRef: interfaces.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
+				PlugRef: sdk.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
+				SlotRef: sdk.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
 			}
 			_, ok := conns[cref.ID()]
 			return ok, nil
@@ -236,8 +236,8 @@ func (m *InterfaceManager) ResolveDisconnect(
 	} else {
 		connected = func(plugPrj, plugWs, plugSdk, plug, slotPrj, slotWs, slotSdk, slot string) (bool, error) {
 			_, err := m.repo.Connection(&interfaces.ConnRef{
-				PlugRef: interfaces.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
-				SlotRef: interfaces.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
+				PlugRef: sdk.PlugRef{ProjectId: plugPrj, Workshop: plugWs, Sdk: plugSdk, Name: plug},
+				SlotRef: sdk.SlotRef{ProjectId: slotPrj, Workshop: slotWs, Sdk: slotSdk, Name: slot},
 			})
 			if _, notConnected := err.(*interfaces.NotConnectedError); notConnected {
 				return false, nil
@@ -270,8 +270,8 @@ func (m *InterfaceManager) ResolveDisconnect(
 		if err != nil {
 			return nil, err
 		}
-		plugRef := interfaces.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}
-		slotRef := interfaces.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}
+		plugRef := sdk.PlugRef{ProjectId: plugProject, Workshop: plugWorkshop, Sdk: plugSdk, Name: plugName}
+		slotRef := sdk.SlotRef{ProjectId: slotProject, Workshop: slotWorkshop, Sdk: slotSdk, Name: slotName}
 		if !isConnected {
 			if forget {
 				return nil, fmt.Errorf("cannot forget connection between %q and %q: not connected",
@@ -447,8 +447,8 @@ func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
 		})
 		if idx != -1 {
 			return fmt.Errorf(`cannot connect %q: target %q is also mounted by %q`,
-				interfaces.NewPlugRef(plug).ShortRef(), candidateTarget,
-				interfaces.NewPlugRef(allPlugs[idx]).ShortRef())
+				plug.Ref().ShortRef(), candidateTarget,
+				allPlugs[idx].Ref().ShortRef())
 		}
 	}
 	return nil

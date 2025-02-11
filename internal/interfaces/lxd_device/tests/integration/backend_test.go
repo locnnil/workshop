@@ -165,16 +165,16 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	c.Assert(f.repo.AddSdk(pinfo), check.IsNil)
 
 	connref := &interfaces.ConnRef{
-		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["one"]),
-		SlotRef: interfaces.NewSlotRef(pinfo.Slots["slot"]),
+		PlugRef: cinfo.Plugs["one"].Ref(),
+		SlotRef: pinfo.Slots["slot"].Ref(),
 	}
 
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
 	c.Assert(err, check.IsNil)
 
 	connref = &interfaces.ConnRef{
-		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["two"]),
-		SlotRef: interfaces.NewSlotRef(pinfo.Slots["home"]),
+		PlugRef: cinfo.Plugs["two"].Ref(),
+		SlotRef: pinfo.Slots["home"].Ref(),
 	}
 
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
@@ -258,8 +258,8 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	c.Assert(f.repo.AddSdk(pinfo), check.IsNil)
 
 	connref := &interfaces.ConnRef{
-		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["one"]),
-		SlotRef: interfaces.NewSlotRef(pinfo.Slots["slot"]),
+		PlugRef: cinfo.Plugs["one"].Ref(),
+		SlotRef: pinfo.Slots["slot"].Ref(),
 	}
 
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
@@ -293,8 +293,8 @@ func (f *backendDeviceSuite) TestSetupUpdateProfile(c *check.C) {
 	c.Assert(f.repo.AddSdk(pinfo), check.IsNil)
 
 	connref := &interfaces.ConnRef{
-		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["one"]),
-		SlotRef: interfaces.NewSlotRef(pinfo.Slots["slot"]),
+		PlugRef: cinfo.Plugs["one"].Ref(),
+		SlotRef: pinfo.Slots["slot"].Ref(),
 	}
 
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)
@@ -341,8 +341,8 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 	c.Assert(f.repo.AddSdk(pinfo), check.IsNil)
 
 	connref := &interfaces.ConnRef{
-		PlugRef: interfaces.NewPlugRef(cinfo.Plugs["ssh-agent"]),
-		SlotRef: interfaces.NewSlotRef(pinfo.Slots["ssh-agent"]),
+		PlugRef: cinfo.Plugs["ssh-agent"].Ref(),
+		SlotRef: pinfo.Slots["ssh-agent"].Ref(),
 	}
 
 	_, err = f.repo.Connect(connref, nil, nil, nil, nil, nil)

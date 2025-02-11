@@ -30,7 +30,7 @@ import (
 func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 	if iface.Name() != plugInfo.Interface {
 		return fmt.Errorf("cannot sanitize plug %q (interface %q) using interface %q",
-			PlugRef{ProjectId: plugInfo.Sdk.ProjectId, Workshop: plugInfo.Sdk.Workshop, Sdk: plugInfo.Sdk.Name, Name: plugInfo.Name}, plugInfo.Interface, iface.Name())
+			plugInfo.Ref().ShortRef(), plugInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(PlugSanitizer); ok {
@@ -42,7 +42,7 @@ func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 func BeforeConnectPlug(iface Interface, plug *ConnectedPlug) error {
 	if iface.Name() != plug.plugInfo.Interface {
 		return fmt.Errorf("cannot sanitize connection for plug %q (interface %q) using interface %q",
-			PlugRef{ProjectId: plug.Sdk().Name, Workshop: plug.plugInfo.Sdk.Workshop, Sdk: plug.plugInfo.Sdk.Name, Name: plug.plugInfo.Name}, plug.plugInfo.Interface, iface.Name())
+			plug.plugInfo.Ref().ShortRef(), plug.plugInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(ConnPlugSanitizer); ok {
@@ -58,91 +58,17 @@ var ByName = func(name string) (iface Interface, err error) {
 	panic("ByName is unset, import interfaces/builtin to initialize this")
 }
 
-// PlugRef is a reference to a plug.
-type PlugRef struct {
-	ProjectId string `json:"project-id"`
-	Workshop  string `json:"workshop"`
-	Sdk       string `json:"sdk"`
-	Name      string `json:"plug"`
-}
-
-func NewPlugRef(info *sdk.PlugInfo) PlugRef {
-	return PlugRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
-}
-
-func (ref PlugRef) SdkRef() sdk.Ref {
-	return sdk.Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
-}
-
-// String returns the "project-id/workshop/sdk:plug" representation of a plug reference.
-func (ref PlugRef) String() string {
-	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
-}
-
-// ShortRef returns the "workshop/sdk:plug" representation of a plug reference (human-friendly).
-func (ref PlugRef) ShortRef() string {
-	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
-}
-
-// SortsBefore returns true when plug should be sorted before the other
-func (ref PlugRef) SortsBefore(other PlugRef) bool {
-	if ref.Workshop != other.Workshop {
-		return ref.Workshop < other.Workshop
-	}
-	if ref.Sdk != other.Sdk {
-		return ref.Sdk < other.Sdk
-	}
-	return ref.Name < other.Name
-}
-
 // Sanitize slot with a given interface.
 func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 	if iface.Name() != slotInfo.Interface {
 		return fmt.Errorf("cannot sanitize slot %q (interface %q) using interface %q",
-			SlotRef{ProjectId: slotInfo.Sdk.ProjectId, Workshop: slotInfo.Sdk.Workshop, Sdk: slotInfo.Sdk.Name, Name: slotInfo.Name}, slotInfo.Interface, iface.Name())
+			slotInfo.Ref(), slotInfo.Interface, iface.Name())
 	}
 	var err error
 	if iface, ok := iface.(SlotSanitizer); ok {
 		err = iface.BeforePrepareSlot(slotInfo)
 	}
 	return err
-}
-
-// SlotRef is a reference to a slot.
-type SlotRef struct {
-	ProjectId string `json:"project-id"`
-	Workshop  string `json:"workshop"`
-	Sdk       string `json:"sdk"`
-	Name      string `json:"slot"`
-}
-
-func NewSlotRef(info *sdk.SlotInfo) SlotRef {
-	return SlotRef{ProjectId: info.Sdk.ProjectId, Workshop: info.Sdk.Workshop, Sdk: info.Sdk.Name, Name: info.Name}
-}
-
-func (ref SlotRef) SdkRef() sdk.Ref {
-	return sdk.Ref{ProjectId: ref.ProjectId, Workshop: ref.Workshop, Sdk: ref.Sdk}
-}
-
-// String returns the "project-id/workshop/sdk:slot" representation of a slot reference.
-func (ref SlotRef) String() string {
-	return fmt.Sprintf("%s:%s", ref.SdkRef().String(), ref.Name)
-}
-
-// ShortRef returns the "workshop/sdk:slot" representation of a slot reference (human-friendly).
-func (ref SlotRef) ShortRef() string {
-	return fmt.Sprintf("%s:%s", ref.SdkRef().ShortRef(), ref.Name)
-}
-
-// SortsBefore returns true when slot should be sorted before the other
-func (ref SlotRef) SortsBefore(other SlotRef) bool {
-	if ref.Workshop != other.Workshop {
-		return ref.Workshop < other.Workshop
-	}
-	if ref.Sdk != other.Sdk {
-		return ref.Sdk < other.Sdk
-	}
-	return ref.Name < other.Name
 }
 
 // Interfaces holds information about a list of plugs, slots and their connections.
@@ -163,16 +89,13 @@ type Info struct {
 
 // ConnRef holds information about plug and slot reference that form a particular connection.
 type ConnRef struct {
-	PlugRef PlugRef
-	SlotRef SlotRef
+	PlugRef sdk.PlugRef
+	SlotRef sdk.SlotRef
 }
 
 // NewConnRef creates a connection reference for given plug and slot
 func NewConnRef(plug *sdk.PlugInfo, slot *sdk.SlotInfo) *ConnRef {
-	return &ConnRef{
-		PlugRef: PlugRef{ProjectId: plug.Sdk.ProjectId, Workshop: plug.Sdk.Workshop, Sdk: plug.Sdk.Name, Name: plug.Name},
-		SlotRef: SlotRef{ProjectId: slot.Sdk.ProjectId, Workshop: slot.Sdk.Workshop, Sdk: slot.Sdk.Name, Name: slot.Name},
-	}
+	return &ConnRef{PlugRef: plug.Ref(), SlotRef: slot.Ref()}
 }
 
 // ID returns a string identifying a given connection.

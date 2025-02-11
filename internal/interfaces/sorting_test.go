@@ -26,6 +26,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type SortingSuite struct{}
@@ -34,8 +35,8 @@ var _ = Suite(&SortingSuite{})
 
 func newConnRef(plugWs, plugSdk, plug, slotWs, slotSdk, slot string) *interfaces.ConnRef {
 	return &interfaces.ConnRef{
-		PlugRef: interfaces.PlugRef{Workshop: plugWs, Sdk: plugSdk, Name: plug},
-		SlotRef: interfaces.SlotRef{Workshop: slotWs, Sdk: slotSdk, Name: slot}}
+		PlugRef: sdk.PlugRef{Workshop: plugWs, Sdk: plugSdk, Name: plug},
+		SlotRef: sdk.SlotRef{Workshop: slotWs, Sdk: slotSdk, Name: slot}}
 }
 
 func (s *SortingSuite) TestByInterfaceName(c *C) {
@@ -73,11 +74,11 @@ func (s *SortingSuite) TestByConnRef(c *C) {
 	})
 }
 
-func newSlotRef(workshop, sdk, name string) *interfaces.SlotRef {
-	return &interfaces.SlotRef{Workshop: workshop, Sdk: sdk, Name: name}
+func newSlotRef(workshop, sk, name string) *sdk.SlotRef {
+	return &sdk.SlotRef{Workshop: workshop, Sdk: sk, Name: name}
 }
 
-type bySlotRef []*interfaces.SlotRef
+type bySlotRef []*sdk.SlotRef
 
 func (b bySlotRef) Len() int      { return len(b) }
 func (b bySlotRef) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -86,7 +87,7 @@ func (b bySlotRef) Less(i, j int) bool {
 }
 
 func (s *SortingSuite) TestSortSlotRef(c *C) {
-	list := []*interfaces.SlotRef{
+	list := []*sdk.SlotRef{
 		newSlotRef("abc", "name-2", "slot-3"),
 		newSlotRef("def", "name-2_instance", "slot-1"),
 		newSlotRef("def", "name-2", "slot-2"),
@@ -95,7 +96,7 @@ func (s *SortingSuite) TestSortSlotRef(c *C) {
 	}
 	sort.Sort(bySlotRef(list))
 
-	c.Assert(list, DeepEquals, []*interfaces.SlotRef{
+	c.Assert(list, DeepEquals, []*sdk.SlotRef{
 		newSlotRef("abc", "name-2", "slot-3"),
 		newSlotRef("abc", "name-2", "slot-4"),
 		newSlotRef("def", "name-2", "slot-1"),
@@ -104,7 +105,7 @@ func (s *SortingSuite) TestSortSlotRef(c *C) {
 	})
 }
 
-type byPlugRef []*interfaces.PlugRef
+type byPlugRef []*sdk.PlugRef
 
 func (b byPlugRef) Len() int      { return len(b) }
 func (b byPlugRef) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -112,12 +113,12 @@ func (b byPlugRef) Less(i, j int) bool {
 	return b[i].SortsBefore(*b[j])
 }
 
-func newPlugRef(workshop, sdk, name string) *interfaces.PlugRef {
-	return &interfaces.PlugRef{Workshop: workshop, Sdk: sdk, Name: name}
+func newPlugRef(workshop, sk, name string) *sdk.PlugRef {
+	return &sdk.PlugRef{Workshop: workshop, Sdk: sk, Name: name}
 }
 
 func (s *SortingSuite) TestSortPlugRef(c *C) {
-	list := []*interfaces.PlugRef{
+	list := []*sdk.PlugRef{
 		newPlugRef("abc", "name-2", "plug-3"),
 		newPlugRef("def", "name-2_instance", "plug-1"),
 		newPlugRef("abc", "name-2", "plug-4"),
@@ -126,7 +127,7 @@ func (s *SortingSuite) TestSortPlugRef(c *C) {
 	}
 	sort.Sort(byPlugRef(list))
 
-	c.Assert(list, DeepEquals, []*interfaces.PlugRef{
+	c.Assert(list, DeepEquals, []*sdk.PlugRef{
 		newPlugRef("abc", "name-2", "plug-3"),
 		newPlugRef("abc", "name-2", "plug-4"),
 		newPlugRef("def", "name-2", "plug-1"),

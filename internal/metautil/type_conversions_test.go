@@ -20,13 +20,11 @@
 package metautil_test
 
 import (
-	"errors"
 	"reflect"
 
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/metautil"
-	"github.com/canonical/workshop/internal/testutil"
 )
 
 type conversionssSuite struct{}
@@ -101,7 +99,7 @@ func (s *conversionssSuite) TestConvertUnhappy(c *C) {
 func (s *conversionssSuite) TestSetValueFromAttributeHappy(c *C) {
 	interfaceArray := []interface{}{12, -3}
 	var outputValue []int
-	err := metautil.SetValueFromAttribute("sdk0", "iface0", "attr0", interfaceArray, &outputValue)
+	err := metautil.SetValueFromAttribute(interfaceArray, &outputValue)
 	c.Assert(err, IsNil)
 	c.Check(outputValue, DeepEquals, []int{12, -3})
 }
@@ -109,41 +107,27 @@ func (s *conversionssSuite) TestSetValueFromAttributeHappy(c *C) {
 func (s *conversionssSuite) TestSetValueFromAttributeUnhappy(c *C) {
 	var outputBool bool
 	data := []struct {
-		sdkName       string
-		ifaceName     string
-		attrName      string
 		inputValue    interface{}
 		outputValue   interface{}
 		expectedError string
 	}{
 		// error if output value parameter is not a pointer
 		{
-			"sdk1",
-			"iface1",
-			"attr1",
 			"input value",
 			"I'm not a pointer",
-			`internal error: cannot get "attr1" attribute of interface "iface1" with non-pointer value`,
+			"internal error: value must be a pointer",
 		},
 
 		// error if value cannot be converted
 		{
-			"sdk2",
-			"iface2",
-			"attr2",
 			"input value",
 			&outputBool,
-			`SDK "sdk2" has interface "iface2" with invalid value type "string" for "attr2" attribute: \*bool`,
+			`expected bool but found string`,
 		},
 	}
 
 	for _, td := range data {
-		err := metautil.SetValueFromAttribute(td.sdkName, td.ifaceName, td.attrName, td.inputValue, td.outputValue)
+		err := metautil.SetValueFromAttribute(td.inputValue, td.outputValue)
 		c.Check(err, ErrorMatches, td.expectedError, Commentf("input value %v", td.inputValue))
 	}
-}
-
-func (s *conversionssSuite) TestAttributeNotCompatibleIsTypeCheck(c *C) {
-	c.Assert(metautil.AttributeNotCompatibleError{}, testutil.ErrorIs, metautil.AttributeNotCompatibleError{})
-	c.Assert(metautil.AttributeNotCompatibleError{}, Not(testutil.ErrorIs), errors.New(""))
 }

@@ -89,7 +89,7 @@ func (s *helpersSuite) TestAutoConnectChecker(c *check.C) {
 	_, err = policyCheck(plugMount, slotMount)
 	c.Assert(err, check.NotNil)
 
-	connRef := interfaces.ConnRef{PlugRef: *plugMount.Ref(), SlotRef: *slotMount.Ref()}
+	connRef := interfaces.ConnRef{PlugRef: plugMount.Ref(), SlotRef: slotMount.Ref()}
 	workshopConns = append(workshopConns, connRef)
 	policyCheck = ifacestate.AutoConnectChecker(workshopConns)
 

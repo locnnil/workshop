@@ -20,7 +20,7 @@ type checker = func(plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSl
 
 func autoConnectChecker(workshopConns []interfaces.ConnRef) checker {
 	return func(p *interfaces.ConnectedPlug, s *interfaces.ConnectedSlot) (bool, error) {
-		conn := interfaces.ConnRef{PlugRef: *p.Ref(), SlotRef: *s.Ref()}
+		conn := interfaces.ConnRef{PlugRef: p.Ref(), SlotRef: s.Ref()}
 		// The pair is explicitly connected in a workshop file.
 		if slices.Contains(workshopConns, conn) {
 			// The interface's policy will be able to determine whether the
@@ -38,7 +38,7 @@ func autoConnectChecker(workshopConns []interfaces.ConnRef) checker {
 		// mount interface plug connected explicitly should reject connections
 		// to other slots.
 		if slices.ContainsFunc(workshopConns, func(conn interfaces.ConnRef) bool {
-			return conn.PlugRef == *p.Ref()
+			return conn.PlugRef == p.Ref()
 		}) {
 			return false, nil
 		}
