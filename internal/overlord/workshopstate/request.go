@@ -36,22 +36,22 @@ const (
 
 var checkHealthTimeout = 5 * time.Second
 
-func (w *WorkshopManager) loadProject(ctx context.Context, id string) (*workshop.Project, error) {
+func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key user not found")
+		return workshop.Project{}, fmt.Errorf("context key user not found")
 	}
 
 	projects, err := w.backend.Projects(ctx)
 	if err != nil {
-		return nil, err
+		return workshop.Project{}, err
 	}
 
 	idx := slices.IndexFunc(projects[username], func(p workshop.Project) bool { return p.ProjectId == id })
 	if idx == -1 {
-		return nil, fmt.Errorf("no project found with \"id\" %v", id)
+		return workshop.Project{}, fmt.Errorf("no project found with \"id\" %v", id)
 	}
-	return &projects[username][idx], nil
+	return projects[username][idx], nil
 }
 
 func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
@@ -77,7 +77,7 @@ func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
 	return true, nil
 }
 
-func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -104,12 +104,12 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, err
 		}
 
-		sets := []sdk.Setup{}
+		setups := make([]sdk.Setup, 0, len(sdks))
 		for _, s := range sdks {
-			sets = append(sets, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+			setups = append(setups, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
 
-		tasks := launch(w.state, file, sets, *project)
+		tasks := launch(w.state, file, setups, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
@@ -127,11 +127,7 @@ func sdkStoreInfo(st *state.State, ctx context.Context, projectid string, file *
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
 		acts = append(acts, act)
 	}
-	res, err := sto.SdkAction(ctx, acts)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return sto.SdkAction(ctx, acts)
 }
 
 func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
@@ -323,7 +319,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		installed = append(installed, maps.Values(workshops[idx].Sdks))
 	}
 
-	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, *project)
+	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, project)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +589,7 @@ func createStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []wor
 	return stateHooks
 }
 
-func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	// check if all the workshops are stopped
 	for _, name := range names {
 		err := w.CheckStatus(
@@ -610,7 +606,7 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := startMany(w.state, names, *project)
+	taskset, err := startMany(w.state, names, project)
 	if err != nil {
 		return nil, err
 	}
@@ -631,7 +627,7 @@ func startMany(st *state.State, names []string, project workshop.Project) ([]*st
 	return taskset, nil
 }
 
-func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	for _, name := range names {
 		err := w.CheckStatus(
 			ctx,
@@ -647,7 +643,7 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := stopMany(w.state, names, *project)
+	taskset, err := stopMany(w.state, names, project)
 	if err != nil {
 		return nil, err
 	}
@@ -726,7 +722,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	return execSet, nil
 }
 
-func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string, opChangeId string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
 	for _, name := range names {
 		err := w.CheckStatus(
 			ctx,
@@ -754,7 +750,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		}
 	}
 
-	taskset, err := removeMany(w.state, workshops, *project)
+	taskset, err := removeMany(w.state, workshops, project)
 	if err != nil {
 		return nil, err
 	}

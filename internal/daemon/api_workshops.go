@@ -379,20 +379,20 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		switch reqData.Action {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId, change.ID())
+			taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
 		case "refresh":
 			change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
 		case "start":
 			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId, change.ID())
+			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId)
 		case "stop":
 			change = newWorkshopChange(st, "stop", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId, change.ID())
+			taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId)
 		case "remove":
 			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId, change.ID())
+			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId)
 		default:
 			return statusBadRequest("internal error: action passed validation but was not matched during dispatch")
 		}

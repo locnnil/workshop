@@ -670,8 +670,7 @@ func (s *requestSuite) TestSaveStateHooks(c *check.C) {
 	defer s.state.Unlock()
 
 	// the SDK list to be refreshed (i.e. coming from a workshop file)
-	installed := []workshop.SdkRecord{workshop.SdkRecord{Name: "one"},
-		workshop.SdkRecord{Name: "two"}}
+	installed := []workshop.SdkRecord{{Name: "one"}, {Name: "two"}}
 
 	// installed SDKs
 	one := sdk.Setup{Name: "one", Channel: "latest/stable"}
