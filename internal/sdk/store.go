@@ -28,6 +28,7 @@ type SdkAction struct {
 	Workshop  string
 	Action    StoreAction
 	Name      string
+	Base      string
 	Channel   string
 }
 

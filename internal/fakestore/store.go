@@ -92,6 +92,10 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 				actError.errors[act.Name] = err
 				continue
 			}
+			if act.Base != info.Base {
+				return nil, fmt.Errorf("%q SDK from %q has %q base; required: %q", act.Name, act.Channel, info.Base, act.Base)
+			}
+
 			info.Revision = s.Revision
 			info.Channel = s.Channel
 

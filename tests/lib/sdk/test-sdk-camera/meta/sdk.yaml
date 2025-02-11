@@ -1,12 +1,12 @@
 name: test-sdk-camera
 title: test-sdk-camera
-base: ubuntu@20.04
+base: ubuntu@22.04
 
 summary: test-sdk-camera SDK
 description: |
   test-sdk-camera SDK
 
-sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
+sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
 plugs:
   camera:
     interface: camera

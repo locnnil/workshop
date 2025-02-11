@@ -86,7 +86,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	taskset := make([]*state.TaskSet, 0, len(names))
 	var sdks []sdk.SdkResult
 	for _, name := range names {
-		// Make sure the workshop doesn't exist
+		// Make sure the workshop doesn't exist.
 		_, err := w.Workshop(ctx, name, projectId)
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
@@ -99,7 +99,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
 
-		sdks, err = launchStoreInfo(w.state, ctx, projectId, file)
+		sdks, err = sdkStoreInfo(w.state, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func launchStoreInfo(st *state.State, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
+func sdkStoreInfo(st *state.State, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
 	sto := sdk.StoreService(st)
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
@@ -124,7 +124,7 @@ func launchStoreInfo(st *state.State, ctx context.Context, projectid string, fil
 		if sd.Name == sdk.System.String() {
 			continue
 		}
-		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Channel: sd.Channel, Action: sdk.Install}
+		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
 		acts = append(acts, act)
 	}
 	res, err := sto.SdkAction(ctx, acts)
@@ -302,7 +302,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, proje
 		}
 		files = append(files, file)
 
-		res, err := launchStoreInfo(w.state, ctx, projectId, file)
+		res, err := sdkStoreInfo(w.state, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}

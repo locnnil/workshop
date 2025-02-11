@@ -1,12 +1,12 @@
 name: test-sdk-mount-broken
 title: test-sdk-mount-broken
-base: ubuntu@20.04
+base: ubuntu@22.04
 
 summary: test-sdk-mount-broken SDK
 description: |
   test-sdk-mount-broken SDK
 
-sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
+sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
 slots:
   one:
     interface: mount

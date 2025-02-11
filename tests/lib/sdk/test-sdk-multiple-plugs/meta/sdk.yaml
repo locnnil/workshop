@@ -1,12 +1,12 @@
 name: test-sdk-multiple-plugs
 title: test-sdk-multiple-plugs
-base: ubuntu@20.04
+base: ubuntu@22.04
 
 summary: test-sdk-multiple-plugs SDK
 description: |
   test-sdk-multiple-plugs SDK
 
-sdkcraft-started-at: '2025-04-03T02:01:00.123456Z'
+sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
 plugs:
   data:
     interface: mount
