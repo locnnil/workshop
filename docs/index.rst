@@ -106,4 +106,6 @@ we'll help you get it out there.
 
 - :ref:`Contribution and participation <contributing>`
 
+- :ref:`Release notes <release_notes>`
+
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
