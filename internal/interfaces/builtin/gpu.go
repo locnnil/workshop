@@ -65,17 +65,9 @@ func (iface *gpuInterface) StaticInfo() interfaces.StaticInfo {
 	}
 }
 
-func (iface *gpuInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
-	return nil
-}
-
 func (iface *gpuInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	// allow what declarations allowed
 	return true
-}
-
-func (iface *gpuInterface) MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	return nil
 }
 
 func (iface *gpuInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {

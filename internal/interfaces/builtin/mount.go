@@ -209,10 +209,6 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 	return true
 }
 
-func (iface *mountInterface) MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	return nil
-}
-
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	if slot.Sdk().Type == sdk.System {
