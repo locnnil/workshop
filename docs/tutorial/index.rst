@@ -135,12 +135,15 @@ The command installs two main components:
   which uses this API to command |ws_markup|
 
 
-After installation, the daemon should automatically.
-Make sure it's running:
+After installation, the daemon should start and stop on demand.
+Make sure it's enabled:
 
 .. code-block:: console
 
    $ snap services workshop.workshopd
+
+     Service             Startup  Current   Notes
+     workshop.workshopd  enabled  inactive  socket-activated
 
 
 Run
