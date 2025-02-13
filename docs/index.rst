@@ -1,5 +1,5 @@
 :slug: home-page
-:relatedlinks: [SDKcraft](https://github.com/canonical/sdkcraft/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
+:relatedlinks: [Workshop](https://github.com/canonical/workshop/), [SDKcraft](https://github.com/canonical/sdkcraft/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
 
 .. _home:
 
@@ -15,6 +15,7 @@
    explanation/index
    reference/index
    Contribution <contributing>
+   Release notes <release-notes>
 
 
 **A tool for defining and handling ephemeral development environments**.
@@ -105,5 +106,7 @@ we'll help you get it out there.
 - `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
 
 - :ref:`Contribution and participation <contributing>`
+
+- :ref:`Release notes <release_notes>`
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
