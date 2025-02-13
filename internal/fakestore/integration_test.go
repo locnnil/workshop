@@ -53,7 +53,7 @@ func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
 	done, total := 0, 0
 	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
-		done += d
+		done = d
 		total = t
 	}}
 	err := s.DownloadSdk(context.Background(), setup, r)

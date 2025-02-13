@@ -1,0 +1,13 @@
+name: test-sdk-go
+title: test-sdk-go
+base: ubuntu@20.04
+
+summary: test-sdk-go SDK
+description: |
+  test-sdk-go SDK
+
+sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
+plugs:
+  mod-cache:
+    interface: mount
+    workshop-target: /home/workshop/go/pkg/mod

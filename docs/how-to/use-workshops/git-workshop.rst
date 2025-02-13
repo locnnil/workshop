@@ -25,7 +25,7 @@ in your repository:
 .. code-block:: yaml
    :caption: workshop.yaml
 
-   name: golang
+   name: dev
    base: ubuntu@22.04
    sdks:
      - name: go
@@ -64,7 +64,7 @@ should now occur inside the workshop:
 .. code-block:: console
 
    $ git add . && git commit -m "initial commit"
-   $ workshop exec golang go build -x main.go
+   $ workshop exec dev go build -x main.go
 
 
 .. @artefact project
@@ -142,13 +142,13 @@ to change the base image:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 2
+   :emphasize-lines: 2,5
 
-   name: golang
+   name: dev
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: noble/stable
 
 
 Next, launch the redefined workshop to work on the problem:
@@ -174,8 +174,8 @@ As with regular directories,
    $ workshop list --global
 
      Project                 Workshop  Status  Notes
-     /home/user/original     golang    Ready   -
-     /home/user/resolved     golang    Ready   -
+     /home/user/original     dev       Ready   -
+     /home/user/resolved     dev       Ready   -
 
 
 Similarly,

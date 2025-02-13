@@ -14,14 +14,14 @@ List workshop changes
 
 .. @artefact workshop changes
 
-Consider a workshop named :samp:`golang-volatile`,
+Consider a workshop named :samp:`dev-volatile`,
 which uses an unstable SDK
 from the :samp:`latest/edge` channel:
 
 .. code-block:: yaml
    :caption: workshop.yaml
 
-   name: golang-volatile
+   name: dev-volatile
    base: ubuntu@22.04
    sdks:
      - name: go
@@ -48,7 +48,7 @@ list the *changes* in the workshop to find the one that failed:
 
      ID  Status  Spawn                Ready                Summary
      ...
-     81  Error   today at 12:20       today at 12:23       Refresh workshops "golang-volatile"
+     81  Error   today at 12:20       today at 12:23       Refresh workshops "dev-volatile"
 
 
 List tasks in a change
@@ -147,7 +147,7 @@ which can be accessed with :command:`workshop warnings`:
 
      last-occurrence:  4 days ago, at 17:52 GMT
      warning: |
-       golang-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
+       dev-volatile/go:mod-cache mount is broken: /home/user/mod-cache does not exist
 
 
 Multiple warnings about the same problem aren't stacked;

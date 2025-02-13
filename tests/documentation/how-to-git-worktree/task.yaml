@@ -2,7 +2,7 @@ summary: Test 'How to use workshops with Git' to ensure it's operational
 execute: |
   . "$TESTSLIB"/utils.sh
   PROJECT=$(pwd)
-  
+
   git config --global user.email "wsuser@example.com"
   git config --global user.name "Workshop User"
   git init original
@@ -11,7 +11,7 @@ execute: |
   workshop_exec --project "$PROJECT/original" launch
   git add . && git commit -m "initial commit"
   chown -R ubuntu:ubuntu $PROJECT/original
-  workshop_exec --project "$PROJECT/original" exec golang go build -x main.go
+  workshop_exec --project "$PROJECT/original" exec dev -- go build -x main.go
   workshop_exec --project "$PROJECT/original" remove
   ./main
   workshop_exec --project "$PROJECT/original" launch
@@ -19,6 +19,7 @@ execute: |
   git worktree add $PROJECT/hotfix
   cd $PROJECT/hotfix/
   sed -i "s/22\.04/20.04/g" workshop.yaml
+  sed -i "s/latest/foxy/g" workshop.yaml
   workshop_exec --project "$PROJECT/hotfix" launch
   sleep 1
   git commit -am "solve problem with hotfix"
