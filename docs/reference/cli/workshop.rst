@@ -84,7 +84,6 @@ and also has a number of global flags:
 
 
 
-.. _ref_workshop_cli_completion:
 
 Shell completion
 ----------------
@@ -95,14 +94,6 @@ follow the instructions offered by **workshop completion**:
 .. code-block:: console
 
    $ workshop completion -h
-
-
-To see instructions for a specific shell:
-
-.. code-block:: console
-
-   $ workshop completion zsh -h
-
 
 For example, in your :file:`~/.bashrc` file:
 

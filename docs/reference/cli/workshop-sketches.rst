@@ -3,6 +3,8 @@
 workshop sketches
 -----------------
 
+.. @artefact workshop sketches
+
 List sketches.
 
 .. rubric:: Usage

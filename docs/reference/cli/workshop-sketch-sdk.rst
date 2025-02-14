@@ -3,6 +3,8 @@
 workshop sketch-sdk
 -------------------
 
+.. @artefact workshop sketch-sdk
+
 Edit the sketch SDK and graft it onto the workshop.
 
 .. rubric:: Usage

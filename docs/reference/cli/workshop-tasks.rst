@@ -3,6 +3,8 @@
 workshop tasks
 --------------
 
+.. @artefact workshop tasks
+
 List tasks for a specific change.
 
 .. rubric:: Usage

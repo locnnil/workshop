@@ -3,6 +3,8 @@
 workshop run
 ------------
 
+.. @artefact workshop run
+
 Run a workshop script and wait for it to complete.
 
 .. rubric:: Usage

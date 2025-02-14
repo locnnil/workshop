@@ -3,6 +3,8 @@
 workshop exec
 -------------
 
+.. @artefact workshop exec
+
 Run a command and wait for it to complete.
 
 .. rubric:: Usage
