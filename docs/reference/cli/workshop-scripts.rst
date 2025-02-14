@@ -3,6 +3,8 @@
 workshop scripts
 ----------------
 
+.. @artefact workshop scripts
+
 List workshop scripts.
 
 .. rubric:: Usage

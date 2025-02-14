@@ -3,6 +3,8 @@
 workshop warnings
 -----------------
 
+.. @artefact workshop warnings
+
 List warnings.
 
 .. rubric:: Usage

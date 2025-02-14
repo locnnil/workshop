@@ -3,6 +3,8 @@
 workshop start
 --------------
 
+.. @artefact workshop start
+
 Start one or many workshops.
 
 .. rubric:: Usage
