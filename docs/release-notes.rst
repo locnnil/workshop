@@ -21,11 +21,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- `Workshop v0.1.8 <https://github.com/canonical/workshop/releases/tag/v0.1.8>`_
-
+- `Workshop v0.1.9 <https://github.com/canonical/workshop/releases/tag/v0.1.9>`_
 
 Older versions:
 
+- `Workshop v0.1.8 <https://github.com/canonical/workshop/releases/tag/v0.1.8>`_
 - `Workshop v0.1.7 <https://github.com/canonical/workshop/releases/tag/v0.1.7>`_
 - `Workshop v0.1.6 <https://github.com/canonical/workshop/releases/tag/v0.1.6>`_
 - `Workshop v0.1.5 <https://github.com/canonical/workshop/releases/tag/v0.1.5>`_
