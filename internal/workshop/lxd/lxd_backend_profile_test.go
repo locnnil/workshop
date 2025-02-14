@@ -15,12 +15,56 @@ var _ = check.Suite(&ProfileSuite{})
 
 func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 	expected := []workshop.SdkProfile{
-		{Sdk: "sdk", Camera: &workshop.Camera{Name: "camera"}, Mounts: map[string]workshop.Mount{}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Gpu: &workshop.Gpu{Name: "gpu"}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"userdisk": {Name: "userdisk", What: "/home", Where: "/opt", Type: workshop.HostWorkshop}}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Agent: &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: "ssh-agent", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{}, Desktop: &workshop.Desktop{Wayland: &workshop.ProxyEntry{Name: "desktop", Connect: "unix:.host.socket", Listen: "unix:.workshop.socket"}}},
-		{Sdk: "sdk", Mounts: map[string]workshop.Mount{"plug": {Name: "plug", What: "/var", Where: "/etc", Type: workshop.WorkshopWorkshop}}},
+		{
+			Sdk:    "sdk",
+			Camera: &workshop.Camera{Name: "camera"},
+			Mounts: map[string]workshop.Mount{},
+		}, {
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
+			Gpu:    &workshop.Gpu{Name: "gpu"},
+		}, {
+			Sdk: "sdk",
+			Mounts: map[string]workshop.Mount{
+				"userdisk": {
+					Name:  "userdisk",
+					What:  "/home",
+					Where: "/opt",
+					Type:  workshop.HostWorkshop}},
+		}, {
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
+			Agent: &workshop.SshAgent{
+				ProxyEntry: workshop.ProxyEntry{
+					Name: "ssh-agent",
+					Connect: workshop.ProxyTarget{
+						Address:  ".host.socket",
+						Protocol: "unix",
+					},
+					Listen: workshop.ProxyTarget{
+						Address:  ".workshop.socket",
+						Protocol: "unix"}}},
+		}, {
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
+			Desktop: &workshop.Desktop{
+				Wayland: &workshop.ProxyEntry{
+					Name: "desktop",
+					Connect: workshop.ProxyTarget{
+						Address:  ".host.socket",
+						Protocol: "unix",
+					},
+					Listen: workshop.ProxyTarget{
+						Address:  ".workshop.socket",
+						Protocol: "unix"}}},
+		}, {
+			Sdk: "sdk",
+			Mounts: map[string]workshop.Mount{
+				"plug": {
+					Name:  "plug",
+					What:  "/var",
+					Where: "/etc",
+					Type:  workshop.WorkshopWorkshop}}},
 	}
 
 	for i, t := range []struct {
@@ -28,12 +72,79 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		devs map[string]map[string]string
 		cfg  map[string]string
 	}{
-		{"sdk", map[string]map[string]string{"camera": {"type": "none"}, "camera/video0": {"type": "unix-char", "source": "/dev/video0", "path": "/dev/video0", "required": "false", "uid": "1000", "gid": "1000"}}, map[string]string{"user.workshop.sdk.camera": `{"name": "camera"}`, "user.workshop.sdk.camera.type": "camera", "user.workshop.sdk.camera/video0.type": "camera"}},
-		{"sdk", map[string]map[string]string{"gpu": {"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}}, map[string]string{}},
-		{"sdk", map[string]map[string]string{"userdisk": {"type": "disk", "source": "/home", "path": "/opt"}}, map[string]string{}},
-		{"sdk", map[string]map[string]string{"ssh-agent": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{"user.workshop.sdk.ssh-agent.type": "ssh-agent"}},
-		{"sdk", map[string]map[string]string{"desktop": {"type": "proxy", "connect": "unix:.host.socket", "listen": "unix:.workshop.socket", "uid": "1000", "gid": "1000", "bind": "instance"}}, map[string]string{"user.workshop.sdk.desktop.type": "desktop-wayland"}},
-		{"sdk", map[string]map[string]string{"plug": {"type": "none"}}, map[string]string{"user.workshop.sdk.plug": `{"name": "plug", "what": "/var", "where": "/etc", "type": 1}`, "user.workshop.sdk.plug.type": "mount"}},
+		{
+			"sdk",
+			map[string]map[string]string{
+				"camera": {
+					"type": "none",
+				},
+				"camera/video0": {
+					"type":     "unix-char",
+					"source":   "/dev/video0",
+					"path":     "/dev/video0",
+					"required": "false",
+					"uid":      "1000",
+					"gid":      "1000"}},
+			map[string]string{
+				"user.workshop.sdk.camera": `{
+          "name": "camera"
+        }`,
+				"user.workshop.sdk.camera.type":        "camera",
+				"user.workshop.sdk.camera/video0.type": "camera"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"gpu": {
+					"type":    "gpu",
+					"gputype": "physical",
+					"uid":     "1000",
+					"gid":     "1000"}},
+			map[string]string{},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"userdisk": {
+					"type":   "disk",
+					"source": "/home",
+					"path":   "/opt"}},
+			map[string]string{},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"ssh-agent": {
+					"type":    "proxy",
+					"connect": "unix:.host.socket",
+					"listen":  "unix:.workshop.socket",
+					"uid":     "1000",
+					"gid":     "1000",
+					"bind":    "instance"}},
+			map[string]string{
+				"user.workshop.sdk.ssh-agent.type": "ssh-agent"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"desktop": {
+					"type":    "proxy",
+					"connect": "unix:.host.socket",
+					"listen":  "unix:.workshop.socket",
+					"uid":     "1000",
+					"gid":     "1000",
+					"bind":    "instance"}},
+			map[string]string{
+				"user.workshop.sdk.desktop.type": "desktop-wayland"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"plug": {
+					"type": "none"}},
+			map[string]string{
+				"user.workshop.sdk.plug": `{
+          "name": "plug",
+          "what": "/var",
+          "where": "/etc", 
+          "type": 1}`,
+				"user.workshop.sdk.plug.type": "mount"},
+		},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)
 		c.Assert(err, check.IsNil)

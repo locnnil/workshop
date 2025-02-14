@@ -4,13 +4,14 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type desktopSuite struct {
@@ -76,11 +77,15 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := &workshop.Desktop{}
-	expectedProxy.Wayland = &workshop.ProxyEntry{}
-	expectedProxy.Wayland.Name = "consumer-wayland"
-	expectedProxy.Wayland.Connect = "/tmp/wayland-1"
-	expectedProxy.Wayland.Listen = "/run/user/1000/wayland-1"
+	expectedProxy := &workshop.Desktop{
+		Wayland: &workshop.ProxyEntry{
+			Name: "consumer-wayland",
+			Connect: workshop.ProxyTarget{
+				Address:  "/tmp/wayland-1",
+				Protocol: "unix"},
+			Listen: workshop.ProxyTarget{
+				Address:  "/run/user/1000/wayland-1",
+				Protocol: "unix"}}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 
@@ -108,11 +113,15 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := &workshop.Desktop{}
-	expectedProxy.X11 = &workshop.ProxyEntry{}
-	expectedProxy.X11.Name = "consumer-x11"
-	expectedProxy.X11.Connect = "/tmp/.X11-unix/X0"
-	expectedProxy.X11.Listen = "/tmp/.X11-unix/X0"
+	expectedProxy := &workshop.Desktop{
+		X11: &workshop.ProxyEntry{
+			Name: "consumer-x11",
+			Connect: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix"},
+			Listen: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix"}}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 
@@ -141,15 +150,23 @@ exit 0`)
 	defer fake.Restore()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedProxy := &workshop.Desktop{}
-	expectedProxy.Wayland = &workshop.ProxyEntry{}
-	expectedProxy.X11 = &workshop.ProxyEntry{}
-	expectedProxy.Wayland.Name = "consumer-wayland"
-	expectedProxy.Wayland.Connect = "/tmp/wayland-0"
-	expectedProxy.Wayland.Listen = "/run/user/1000/wayland-0"
-	expectedProxy.X11.Name = "consumer-x11"
-	expectedProxy.X11.Connect = "/tmp/.X11-unix/X0"
-	expectedProxy.X11.Listen = "/tmp/.X11-unix/X0"
+	expectedProxy := &workshop.Desktop{
+		X11: &workshop.ProxyEntry{
+			Name: "consumer-x11",
+			Connect: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix"},
+			Listen: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix"}},
+		Wayland: &workshop.ProxyEntry{
+			Name: "consumer-wayland",
+			Connect: workshop.ProxyTarget{
+				Address:  "/tmp/wayland-0",
+				Protocol: "unix"},
+			Listen: workshop.ProxyTarget{
+				Address:  "/run/user/1000/wayland-0",
+				Protocol: "unix"}}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 

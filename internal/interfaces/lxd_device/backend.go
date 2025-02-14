@@ -225,7 +225,7 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	}
 	defer env.Close()
 
-	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen, "unix:"))
+	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen.Address, "unix:"))
 	_, err = env.Write([]byte(varline))
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
@@ -268,11 +268,11 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.Wayland != nil {
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen, "/run/user/1000/")
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/run/user/1000/")
 	}
 
 	if dev.X11 != nil {
-		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen), "X")
+		envVars["DISPLAY"] = ":" + strings.TrimPrefix(filepath.Base(dev.X11.Listen.Address), "X")
 	}
 
 	// The .Xauthority cookie contains a 128bit key used to authenticate consumers
@@ -306,11 +306,10 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 
 func removeDesktop(fs workshop.WorkshopFs) error {
 	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
-		if !errors.Is(err, afero.ErrFileNotFound) {
-			return err
-		}
+		return err
 	}
 
+	// The Xauth cookie may not always exist. Ignore any errors relating to this
 	if err := fs.Remove("/tmp/.Xauthority"); err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
 			return err
@@ -409,20 +408,19 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 				}
 			}
 		}
-		if prevp.Agent != nil {
-			if spec.Profile.Agent == nil || *prevp.Agent != *spec.Profile.Agent {
-				if err = removeSshAgent(fs, *prevp.Agent); err != nil {
-					return err
-				}
+
+		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
+			if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+				return err
 			}
 		}
-		if prevp.Desktop != nil {
-			if spec.Profile.Desktop == nil || *prevp.Desktop != *spec.Profile.Desktop {
-				if err = removeDesktop(fs); err != nil {
-					return err
-				}
+
+		if prevp.Desktop != nil && !prevp.Desktop.Equal(spec.Profile.Desktop) {
+			if err = removeDesktop(fs); err != nil {
+				return err
 			}
 		}
+
 		return conn.UpdateProfile(name, newp, "")
 	}
 

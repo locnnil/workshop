@@ -172,8 +172,8 @@ func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey stri
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
 	s.devices[entry.Name] = map[string]string{
 		"type":    "proxy",
-		"connect": "unix:" + entry.Connect,
-		"listen":  "unix:" + entry.Listen,
+		"connect": entry.Connect.Protocol + ":" + entry.Connect.Address,
+		"listen":  entry.Listen.Protocol + ":" + entry.Listen.Address,
 		"uid":     "1000",
 		"gid":     "1000",
 		"bind":    "instance",

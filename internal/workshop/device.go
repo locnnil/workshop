@@ -8,10 +8,15 @@ const (
 	Volume
 )
 
+type ProxyTarget struct {
+	Address  string
+	Protocol string
+}
+
 type ProxyEntry struct {
 	Name    string
-	Connect string
-	Listen  string
+	Connect ProxyTarget
+	Listen  ProxyTarget
 }
 
 type Camera struct {
@@ -30,9 +35,25 @@ type SshAgent struct {
 	ProxyEntry
 }
 
+func (s *SshAgent) Equal(other *SshAgent) bool {
+	if s == nil || other == nil {
+		return s == other
+	}
+
+	return *s == *other
+}
+
 type Desktop struct {
 	Wayland *ProxyEntry
 	X11     *ProxyEntry
+}
+
+func (d *Desktop) Equal(other *Desktop) bool {
+	if d == nil || other == nil {
+		return d == other
+	}
+
+	return *d.Wayland == *other.Wayland && *d.X11 == *other.X11
 }
 
 type Gpu struct {

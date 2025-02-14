@@ -50,17 +50,29 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			switch devtype {
 			case "ssh-agent":
-				pr.Agent = &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}}
+				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
+				if err != nil {
+					return pr, err
+				}
+				pr.Agent = &workshop.SshAgent{ProxyEntry: *proxyEntry}
 			case "desktop-wayland":
 				if pr.Desktop == nil {
 					pr.Desktop = &workshop.Desktop{}
 				}
-				pr.Desktop.Wayland = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
+				if err != nil {
+					return pr, err
+				}
+				pr.Desktop.Wayland = proxyEntry
 			case "desktop-x11":
 				if pr.Desktop == nil {
 					pr.Desktop = &workshop.Desktop{}
 				}
-				pr.Desktop.X11 = &workshop.ProxyEntry{Name: name, Connect: dev["connect"], Listen: dev["listen"]}
+				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
+				if err != nil {
+					return pr, err
+				}
+				pr.Desktop.X11 = proxyEntry
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
@@ -100,4 +112,28 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		}
 	}
 	return pr, nil
+}
+
+// Constructs a ProxyEntry from an LXD device entry
+func proxyEntryFromLxdDevice(name string, dev map[string]string) (*workshop.ProxyEntry, error) {
+	connect := strings.SplitN(dev["connect"], ":", 2)
+	listen := strings.SplitN(dev["listen"], ":", 2)
+	if len(connect) != 2 {
+		return nil, fmt.Errorf("internal error: cannot deserialise proxy device in lxd profile: connect entry %q invalid", connect)
+	}
+	if len(listen) != 2 {
+		return nil, fmt.Errorf("internal error: cannot deserialise proxy device in lxd profile: listen entry %q invalid", listen)
+	}
+
+	return &workshop.ProxyEntry{
+		Name: name,
+		Connect: workshop.ProxyTarget{
+			Address:  connect[1],
+			Protocol: connect[0],
+		},
+		Listen: workshop.ProxyTarget{
+			Address:  listen[1],
+			Protocol: listen[0],
+		},
+	}, nil
 }
