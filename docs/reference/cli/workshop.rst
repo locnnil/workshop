@@ -85,6 +85,8 @@ and also has a number of global flags:
 
 
 
+.. _ref_workshop_cli_completion:
+
 Shell completion
 ----------------
 
