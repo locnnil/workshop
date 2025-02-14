@@ -53,7 +53,7 @@ func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
 	done, total := 0, 0
 	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
-		done += d
+		done = d
 		total = t
 	}}
 	err := s.DownloadSdk(context.Background(), setup, r)
@@ -147,6 +147,7 @@ func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
 		Name:      "test-sdk-unknown",
+		Base:      "ubuntu@22.04",
 		Channel:   "latest/stable",
 	}}
 	res, err := store.SdkAction(context.Background(), acts)
@@ -165,6 +166,7 @@ func (f *storeIntegration) TestSdkActionTimeout(c *check.C) {
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
 		Name:      "test-sdk-unknown",
+		Base:      "ubuntu@22.04",
 		Channel:   "latest/stable",
 	}}
 	_, err := s.SdkAction(context.Background(), acts)

@@ -126,7 +126,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 
-	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId, "1")
+	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")

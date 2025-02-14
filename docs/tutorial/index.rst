@@ -226,16 +226,16 @@ create a workshop definition named :file:`workshop.yaml`:
    :caption: workshop.yaml
    :emphasize-lines: 4
 
-   name: golang
+   name: dev
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: jammy/stable
 
 
 Here, the SDK is referenced as :samp:`go`,
 and the specific version to retrieve from the SDK Store
-comes from the :samp:`latest/stable` channel.
+comes from the :samp:`jammy/stable` channel.
 
 To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
@@ -248,7 +248,7 @@ in the project directory:
    $ workshop list
 
      Project                Workshop   Status  Notes
-     ~/hello-workshop       golang     Off     -
+     ~/hello-workshop       dev        Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
@@ -287,18 +287,18 @@ to see what went into your workshop:
 
    $ workshop info
 
-     name:     golang
+     name:     dev
      base:     ubuntu@22.04
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
      sdks:
        go:
-         tracking:   latest/stable
+         tracking:   jammy/stable
          installed:  1.23.0  2024-08-15  (51)
          mounts:
            mod-cache:
-             host-source:      .../6b79e889/mount/golang_go_mod-cache.sdk
+             host-source:      .../6b79e889/mount/dev_go_mod-cache.sdk
              workshop-target:  /home/workshop/go/pkg/mod
 
 
@@ -323,7 +323,7 @@ to see how |ws_markup| keeps track of the project directory:
    $ workshop changes
 
      ID  Status  Spawn               Ready               Summary
-     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "golang" workshop
+     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
 
 
 To find out what launching a workshop implies,
@@ -336,9 +336,9 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
    $ workshop tasks 34
 
      ID   Status  Spawn               Ready               Summary
-     133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "golang" workshop
+     133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "dev" workshop
      134  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "hello-workshop"
-     135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "golang" workshop
+     135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "dev" workshop
      136  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
      137  Done    today at 11:32 GMT  today at 11:32 GMT  Install "go" SDK
      138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
@@ -424,18 +424,18 @@ In either case,
 you should :ref:`refresh <ref_workshop_refresh>` the workshop
 to apply the updates.
 
-To do so, change the base in your definition
+To do so, change the base and the SDK channel in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 2
+   :emphasize-lines: 2,5
 
-   name: golang
+   name: dev
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: noble/stable
 
 .. @artefact workshop refresh
 
@@ -484,11 +484,11 @@ Next, build it *inside the workshop* using :ref:`exec <ref_workshop_exec>`:
 
 .. code-block:: console
 
-   $ workshop exec golang go build main.go
+   $ workshop exec dev go build main.go
 
 .. tip::
 
-   Since :samp:`golang` is the only workshop in the project,
+   Since :samp:`dev` is the only workshop in the project,
    it can be omitted from most :command:`workshop` commands.
    For :ref:`exec <ref_workshop_exec>`,
    a name or a separator (:samp:`--`) is required to avoid ambiguity.
@@ -506,7 +506,7 @@ or separate it from :command:`workshop exec` options for clarity:
 
 .. code-block:: console
 
-   $ workshop exec --env GO111MODULE=off golang -- go build -x
+   $ workshop exec --env GO111MODULE=off dev -- go build -x
 
 The binary, built within the workshop environment,
 is now available in the project directory.
@@ -535,12 +535,12 @@ who's also named :samp:`workshop`:
 .. code-block:: console
 
    $ workshop shell
-   workshop@golang-6b79e889:~$ pwd
+   workshop@dev-6b79e889:~$ pwd
 
      /home/workshop
 
-   workshop@golang-6b79e889:~$ uname -a
-   workshop@golang-6b79e889:~$ exit
+   workshop@dev-6b79e889:~$ uname -a
+   workshop@dev-6b79e889:~$ exit
 
 
 Project directory updates
@@ -584,15 +584,15 @@ use :ref:`connections <ref_workshop_connections>`:
 
    $ workshop connections
 
-     Interface  Plug                 Slot    Notes
-     mount      golang/go:mod-cache  golang/system:mount  -
+     Interface  Plug              Slot              Notes
+     mount      dev/go:mod-cache  dev/system:mount  -
 
 
 This lists a :ref:`mount interface <exp_mount_interface>` plug
-named :samp:`golang/go:mod-cache`.
+named :samp:`dev/go:mod-cache`.
 As seen in the :command:`workshop info` output,
 it was automatically connected at :ref:`launch <tut_launch>`
-to the :samp:`golang/system:mount` slot,
+to the :samp:`dev/system:mount` slot,
 indicated by the ellipsis in the :samp:`host-source` path
 and abbreviated here as :samp:`:mount` by convention.
 
@@ -607,8 +607,8 @@ and :ref:`disconnect <ref_workshop_disconnect>` interfaces at will:
 
 .. code-block:: console
 
-   $ workshop disconnect golang/go:mod-cache
-   $ workshop connect golang/go:mod-cache :mount
+   $ workshop disconnect dev/go:mod-cache
+   $ workshop connect dev/go:mod-cache :mount
 
 
 You can :ref:`remount <ref_workshop_remount>` a mount interface plug
@@ -619,17 +619,17 @@ to a new location on the host:
 .. code-block:: console
    :emphasize-lines: 14
 
-   $ workshop remount golang/go:mod-cache ~/mod/
+   $ workshop remount dev/go:mod-cache ~/mod/
    $ workshop info
 
-     name:     golang
+     name:     dev
      base:     ubuntu@24.04
      project:  /home/user/hello-workshop
      status:   ready
      notes:    -
      sdks:
        go:
-         tracking:   latest/stable
+         tracking:   noble/stable
          installed:  1.23.3  2024-11-09  (54)
          mounts:
            mod-cache:
@@ -694,7 +694,7 @@ opens an :ref:`SDK definition <exp_sdk_definition>`:
 
 .. code-block:: console
 
-   $ workshop sketch-sdk golang
+   $ workshop sketch-sdk
 
 
 The editor shows a very basic setup consisting of :samp:`name`, :samp:`base`,
@@ -742,7 +742,7 @@ includes lines similar to the following:
 
    sdks:
      sketch:
-       tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/sketch
+       tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/dev
        installed:  2024-12-15  (x1)
 
 
@@ -759,7 +759,7 @@ Run the command again:
 
 .. code-block:: console
 
-   $ workshop sketch-sdk golang
+   $ workshop sketch-sdk
 
 .. @artefact SDK base image
 
@@ -794,15 +794,15 @@ To undo or redo the changes, you can stash and restore the sketch SDK:
 
 .. code-block:: console
 
-   $ workshop sketch-sdk golang --stash
-   $ workshop sketch-sdk golang --restore
+   $ workshop sketch-sdk --stash
+   $ workshop sketch-sdk --restore
 
 
 When you're done experimenting, you can remove the sketch SDK entirely:
 
 .. code-block:: console
 
-   $ workshop sketch-sdk golang --remove
+   $ workshop sketch-sdk --remove
 
 
 While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`

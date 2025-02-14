@@ -1,85 +1,89 @@
 #!/bin/bash
 
 function setup_lxd() {
-  snap install --classic lxd
-  snap refresh --channel=5.21/stable lxd
-  lxd waitready --timeout=180
+    snap install --classic lxd
+    snap refresh --channel=5.21/stable lxd
+    lxd waitready --timeout=180
 
-  # can already be initialised if reused
-  # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
-  if [ "$(lxc storage list -f compact | grep -c default)" -eq 0  ]; then
-      lxd init --auto --storage-backend=zfs
-  fi
+    # can already be initialised if reused
+    # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
+    if [ "$(lxc storage list -f compact | grep -c default)" -eq 0 ]; then
+        lxd init --auto --storage-backend=zfs
+    fi
 }
 
 function prepare_environment() {
-  systemctl unmask snapd.service
-  systemctl start snapd.service
-  snap wait system seed.loaded
-  # The /snap directory does not exist in some environments
-  [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
+    systemctl unmask snapd.service
+    systemctl start snapd.service
+    snap wait system seed.loaded
+    # The /snap directory does not exist in some environments
+    [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
 
-  setup_lxd
+    setup_lxd
 
-  snap install --classic --channel=1.23/stable go
-  snap install yq
-  # The unattended upgrades hold locks on reusable instances
-  # and can break a spread run.
-  apt-get remove -y unattended-upgrades
-  apt-get update
-  apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq
+    snap install --classic --channel=1.23/stable go
+    snap install yq
+    # The unattended upgrades hold locks on reusable instances
+    # and can break a spread run.
+    apt-get remove -y unattended-upgrades
+    apt-get update
+    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq
 
-  snap install --dangerous --classic /workshop/tests/*.snap
-  snap set workshop store.url=http://localhost:8080/storage/v1/
-  snap set workshop workshop.image.server.url="$IMAGE_SERVER"
-  snap restart workshop
+    snap install --dangerous --classic /workshop/tests/*.snap
+    snap set workshop store.url=http://localhost:8080/storage/v1/
+    snap set workshop workshop.image.server.url="$IMAGE_SERVER"
+    snap restart workshop
 }
 
 function cleanup_environment() {
-  snap remove workshop --purge
-  find /workshop -name .workshop.lock -delete
+    snap remove workshop --purge
+    find /workshop -name .workshop.lock -delete
 }
 
 function start_sdk_store() {
-  # run fake GCS bucket storage to emulate SDK store
-  publish_test_sdk_content "$SDKS" "$SDK_STORE_BUCKET_DIR"
-  # a bug with fake-gcs-server that returns 404 if not owned by the user
-  chown -R ubuntu.ubuntu /data
-  mkdir -p /storage
-  chown -R ubuntu.ubuntu /storage
+    # run fake GCS bucket storage to emulate SDK store
+    publish_test_sdks "$TESTS_SDKS" "$SDK_STORE_BUCKET_DIR"
+    # a bug with fake-gcs-server that returns 404 if not owned by the user
+    chown -R ubuntu.ubuntu /data
+    mkdir -p /storage
+    chown -R ubuntu.ubuntu /storage
 
-  /bin/sh -c "nohup go run github.com/fsouza/fake-gcs-server@latest -data /data -scheme http -port 8080 -public-host localhost:8080 > ~/fake_sdk_store.log 2>&1 &"
+    go install github.com/fsouza/fake-gcs-server@latest
+    fake-gcs-server -data /data -scheme http -port 8080 -public-host localhost:8080 >~/fake_sdk_store.log 2>&1 &
 
-  echo "Waiting for the fake SDK store to start on port 8080..."
-  while ! nc -z localhost 8080; do
-    sleep 2
-  done
+    echo "Waiting for the fake SDK store to start on port 8080..."
+    while ! nc -z localhost 8080; do
+        sleep 2
+    done
 }
 
 function stop_sdk_store() {
-  pkill -f fake-gcs-server || true
-  rm -rf /data
-  rm -rf /storage
+    pkill -f fake-gcs-server || true
+    rm -rf /data
+    rm -rf /storage
 }
 
 # Publish test SDKs in the fake SDK Store
-function publish_test_sdk_content() {
+function publish_test_sdks() {
     for i in "$1"/*; do
-      SDK_NAME=$(basename "$i")
-      SDK_FILE=$SDK_NAME.sdk
-      SDK_PATH=$(readlink -f "$i")
-      STORE_PATH="$2"/"$SDK_NAME"/latest/stable/
+        SDK_NAME=$(basename "$i")
+        SDK_FILE=$SDK_NAME.sdk
+        SDK_PATH=$(readlink -f "$i")
+        STORE_PATH="$2"/"$SDK_NAME"
 
-      # we want word splitting when reading the output of `ls -A $SDK_PATH`
-      # shellcheck disable=SC2046
-      tar czf "$SDK_FILE" -C "$SDK_PATH" $(ls -A "$SDK_PATH")
-      mkdir -p "$STORE_PATH"
-      mv "$SDK_FILE" "$STORE_PATH"
-      cp -f "$SDK_PATH"/meta/sdk.yaml "$STORE_PATH"
+        echo "$SDK_NAME:"
+        find "$SDK_PATH/" -mindepth 2 -maxdepth 2 -type d -printf "%P\n" | while IFS= read -r track; do
+            printf "\t%s -> %s\n" "$track" "$STORE_PATH/$track"
+            mkdir -p "$STORE_PATH"/"$track"
+
+            # shellcheck disable=SC2046
+            tar cf "$STORE_PATH"/"$track"/"$SDK_FILE" -C "$SDK_PATH"/"$track" $(ls -A "$SDK_PATH"/"$track")
+            cp -f "$SDK_PATH"/"$track"/meta/sdk.yaml "$STORE_PATH"/"$track"
+        done
     done
 }
 
 # Workshop sub-command wrappers
 function workshop_exec() {
-  sudo -u ubuntu 2>&1 -- workshop "$@"
+    sudo -u ubuntu -- workshop "$@" 2>&1
 }

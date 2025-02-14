@@ -53,11 +53,13 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
 		Name:      "test-sdk",
+		Base:      "ubuntu@20.04",
 		Channel:   "latest/stable",
 	},
 	}
-	res, _ := store.SdkAction(context.Background(), acts)
+	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
@@ -87,15 +89,44 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
 		Name:      "test-sdk-broken",
+		Base:      "ubuntu@20.04",
 		Channel:   "latest/stable",
 	}, {
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
 		Name:      "test-sdk-valid",
+		Base:      "ubuntu@20.04",
 		Channel:   "latest/stable",
 	}}
 	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
 	c.Assert(err, check.ErrorMatches, "(?s)*.test-sdk-broken: yaml: block sequence entries are not allowed in this context")
+}
+
+func (s *storeSuite) TestSdkActionInstallIncompatibleBase(c *check.C) {
+	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
+		var s = store.StoreSdk{
+			Name:     "test-sdk",
+			Channel:  channel,
+			Revision: sdk.Revision{N: 123},
+			SdkYAML:  testSdk,
+		}
+		return s, nil
+	})
+	defer r()
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	store := store.New()
+	acts := []sdk.SdkAction{{
+		ProjectId: "24242424",
+		Workshop:  "test-workshop",
+		Action:    sdk.Install,
+		Name:      "test-sdk",
+		Base:      "ubuntu@22.04",
+		Channel:   "latest/stable",
+	},
+	}
+	_, err := store.SdkAction(context.Background(), acts)
+	c.Assert(err, check.ErrorMatches, `"test-sdk" SDK from "latest/stable" has "ubuntu@20.04" base; required: "ubuntu@22.04"`)
 }
