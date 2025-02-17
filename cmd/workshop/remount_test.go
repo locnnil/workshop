@@ -87,16 +87,20 @@ func (m *remountSuite) TestRemountCompletions(c *check.C) {
 		root: &CmdRoot{},
 	}
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveFilterDirs)
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(completions, check.DeepEquals, []string{"workshop/sdk:mount"})
 
 	// Check slot completion, note this is only ensuring that we don't return the
 	// plug multiple times. Directory completion can only be instrumented with
 	// end-to-end testing
-	completions, compDirective = cmd.complete()(cmd.Command(), []string{"workshop/sdk:mount"}, "")
+	completions, compDirective = cmd.complete(cmd.Command(), []string{"workshop/sdk:mount"}, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveFilterDirs)
-	c.Assert(len(completions), check.Equals, 0)
+	c.Assert(completions, check.HasLen, 0)
+
+	completions, compDirective = cmd.complete(cmd.Command(), []string{"workshop/sdk:mount", "/new/source"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(completions, check.HasLen, 0)
 }
 
 func (m *remountSuite) TestRemountCompletionsNoComp(c *check.C) {
@@ -114,7 +118,7 @@ func (m *remountSuite) TestRemountCompletionsNoComp(c *check.C) {
 		root: &CmdRoot{},
 	}
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(completions, check.DeepEquals, []string(nil))
 }

@@ -43,7 +43,7 @@ Notes:
 List the tasks under change ID 42:
 $ workshop tasks 42`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.complete(),
+		ValidArgsFunction: c.complete,
 	}
 
 	return cmd
@@ -114,35 +114,33 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func (c *CmdTasks) complete() ValidArgsFunction {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) > 0 {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
-		cli, err := c.root.client()
-
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		changesCmd := CmdChanges{
-			root: c.root,
-		}
-
-		changes, err := changesCmd.changes(cli)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		l := len(changes)
-		num := min(l, 10)
-		completions := make([]string, l)
-
-		for _, chg := range changes[l-num : l] {
-			completions = append(completions, fmt.Sprintf("%s\t%-5s %s\n", chg.ID, chg.Status, chg.Summary))
-		}
-
-		return completions, cobra.ShellCompDirectiveNoFileComp
+func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
+
+	cli, err := c.root.client()
+
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	changesCmd := CmdChanges{
+		root: c.root,
+	}
+
+	changes, err := changesCmd.changes(cli)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	l := len(changes)
+	num := min(l, 10)
+	completions := make([]string, l)
+
+	for _, chg := range changes[l-num : l] {
+		completions = append(completions, fmt.Sprintf("%s\t%-5s %s\n", chg.ID, chg.Status, chg.Summary))
+	}
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }

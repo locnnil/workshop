@@ -48,7 +48,7 @@ under the 'nimble' workshop in the current project directory
 to '~/new-cache-mount/' on the host:
 $ workshop remount nimble/go:mod-cache ~/new-cache-mount`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.complete(),
+		ValidArgsFunction: c.complete,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
@@ -98,38 +98,38 @@ func (c *CmdRemount) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func (c *CmdRemount) complete() ValidArgsFunction {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		cli, err := c.root.client()
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		project, err := cli.Project(c.root.project)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, All: true})
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		var completions []string
-		if len(args) == 0 {
-			// A mount must be connected for remount to work, only show currently
-			// connected mounts
-			for _, conn := range connections.Established {
-				if conn.Interface == "mount" {
-					completions = append(completions, endpoint(conn.Plug.Workshop, conn.Plug.Sdk, conn.Plug.Name))
-				}
-			}
-			// We don't want file comp if there was no workshop name provided and
-			// no completion was generated
-			if len(completions) == 0 {
-				return completions, cobra.ShellCompDirectiveNoFileComp
-			}
-		}
+func (c *CmdRemount) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	var completions []string
+	switch len(args) {
+	case 0:
+		// continue below
+	case 1:
 		return completions, cobra.ShellCompDirectiveFilterDirs
+	default:
+		return completions, cobra.ShellCompDirectiveNoFileComp
 	}
+
+	cli, err := c.root.client()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	project, err := cli.Project(c.root.project)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, Interface: "mount"})
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	// A mount must be connected for remount to work, only show currently
+	// connected mounts
+	for _, conn := range connections.Established {
+		completions = append(completions, endpoint(conn.Plug.Workshop, conn.Plug.Sdk, conn.Plug.Name))
+	}
+	// We don't want file comp if there was no workshop name provided and
+	// no completion was generated
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
