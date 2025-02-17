@@ -28,7 +28,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          args: "--out-format=colored-line-number --enable-only errcheck"
+          args: "--out-format=colored-line-number --config=.golangci.errcheck.yaml"
           only-new-issues: true
           skip-cache: true
 

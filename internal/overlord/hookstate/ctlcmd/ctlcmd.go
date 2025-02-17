@@ -53,20 +53,22 @@ func (c *baseCommand) setStdout(w io.Writer) {
 	c.stdout = w
 }
 
-func (c *baseCommand) printf(format string, a ...interface{}) {
+func (c *baseCommand) printf(format string, a ...interface{}) (int, error) {
 	if c.stdout != nil {
-		fmt.Fprintf(c.stdout, format, a...)
+		return fmt.Fprintf(c.stdout, format, a...)
 	}
+	return 0, nil
 }
 
 func (c *baseCommand) setStderr(w io.Writer) {
 	c.stderr = w
 }
 
-func (c *baseCommand) errorf(format string, a ...interface{}) {
+func (c *baseCommand) errorf(format string, a ...interface{}) (int, error) {
 	if c.stderr != nil {
-		fmt.Fprintf(c.stderr, format, a...)
+		return fmt.Fprintf(c.stderr, format, a...)
 	}
+	return 0, nil
 }
 
 func (c *baseCommand) setContext(context *hookstate.Context) {
