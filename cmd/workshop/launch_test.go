@@ -221,7 +221,7 @@ func (m *workshopLaunch) TestLaunchCompletions(c *check.C) {
 
 	m.listRedirectHelper(c, w, m.prjId, m.prjDir, len(wsFile))
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(completions, check.DeepEquals, []string{"workshop-notexists"})
 }

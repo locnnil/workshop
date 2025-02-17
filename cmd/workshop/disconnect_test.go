@@ -164,13 +164,13 @@ func (m *disconnectSuite) TestDisconnectCompletionAllDisconnected(c *check.C) {
 
 	m.connectionsRedirectHelper(c, conns, m.prjId, m.prjDir, 10)
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Assert(len(completions), check.Equals, 0)
 
 	// Test slots
 	for _, plug := range plugs {
-		completions, compDirective := cmd.complete()(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
+		completions, compDirective := cmd.complete(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
 		c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 		c.Assert(len(completions), check.Equals, 0)
 	}
@@ -200,7 +200,7 @@ func (m *disconnectSuite) TestDisconnectCompletionSomeDisconnected(c *check.C) {
 
 	m.connectionsRedirectHelper(c, conns, m.prjId, m.prjDir, 10)
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	for _, completion := range completions {
 		c.Check(slices.Contains(expected, completion), check.Equals, true)
@@ -208,7 +208,7 @@ func (m *disconnectSuite) TestDisconnectCompletionSomeDisconnected(c *check.C) {
 
 	// Test slots
 	for _, plug := range plugs {
-		completions, compDirective := cmd.complete()(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
+		completions, compDirective := cmd.complete(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
 		c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 		if len(completions) == 1 {
 			c.Check(slices.Contains(expected, completions[0]), check.Equals, true)
@@ -247,7 +247,7 @@ func (m *disconnectSuite) TestDisconnectCompletionAllConnected(c *check.C) {
 		root: &CmdRoot{},
 	}
 
-	completions, compDirective := cmd.complete()(cmd.Command(), nil, "")
+	completions, compDirective := cmd.complete(cmd.Command(), nil, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	for _, completion := range completions {
 		c.Check(slices.Contains(expected, completion), check.Equals, true)
@@ -255,7 +255,7 @@ func (m *disconnectSuite) TestDisconnectCompletionAllConnected(c *check.C) {
 
 	// Test slots
 	for _, plug := range plugs {
-		completions, compDirective := cmd.complete()(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
+		completions, compDirective := cmd.complete(cmd.Command(), []string{endpoint(plug.Workshop, plug.Sdk, plug.Name)}, "")
 		c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 		if len(completions) == 1 {
 			c.Check(slices.Contains(expected, completions[0]), check.Equals, true)
@@ -312,7 +312,7 @@ func (m *disconnectSuite) TestDisconnectCompletionWorkshopMismatch(c *check.C) {
 		root: &CmdRoot{},
 	}
 
-	completions, compDirective := cmd.complete()(cmd.Command(), []string{"another-workshop/sdk:desktop"}, "")
+	completions, compDirective := cmd.complete(cmd.Command(), []string{"another-workshop/sdk:desktop"}, "")
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(len(completions), check.Equals, 0)
 }

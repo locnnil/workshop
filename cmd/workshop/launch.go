@@ -57,7 +57,7 @@ $ workshop launch nimble jazzy
 The name is optional if the project has only one workshop:
 $ workshop launch`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.complete(),
+		ValidArgsFunction: c.complete,
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
@@ -155,37 +155,35 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func (c *CmdLaunch) complete() ValidArgsFunction {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		cli, err := c.root.client()
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		project, err := cli.Project(c.root.project)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		instances, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		var workshops []string
-		for _, file := range files {
-			isInstance := false
-			for _, instance := range instances {
-				if file.Name == instance.Name {
-					isInstance = true
-					break
-				}
-			}
-			if !isInstance && !slices.Contains(args, file.Name) {
-				workshops = append(workshops, file.Name)
-			}
-		}
-
-		return workshops, cobra.ShellCompDirectiveNoFileComp
+func (c *CmdLaunch) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cli, err := c.root.client()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
 	}
+
+	project, err := cli.Project(c.root.project)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	instances, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	var workshops []string
+	for _, file := range files {
+		isInstance := false
+		for _, instance := range instances {
+			if file.Name == instance.Name {
+				isInstance = true
+				break
+			}
+		}
+		if !isInstance && !slices.Contains(args, file.Name) {
+			workshops = append(workshops, file.Name)
+		}
+	}
+
+	return workshops, cobra.ShellCompDirectiveNoFileComp
 }
