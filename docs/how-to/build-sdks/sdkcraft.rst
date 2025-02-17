@@ -1,7 +1,7 @@
-.. _how_use_sdkcraft:
+.. _how_sdkcraft:
 
-How to use SDKcraft
-===================
+How to craft an SDK with |sdk_markup|
+=====================================
 
 .. @artefact sdkcraft (CLI)
 .. @artefact SDK

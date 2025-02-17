@@ -41,6 +41,8 @@ IoT
 iteratively
 Jupyter
 JupyterLab
+linter
+linters
 localhost
 lxc
 lxd
@@ -70,6 +72,7 @@ SDKcraft
 SDK's
 SDK’s
 SDKs
+shellcheck
 snapcraft
 snapctl
 snapd

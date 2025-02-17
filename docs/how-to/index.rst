@@ -21,6 +21,27 @@ moving projects within the file system or using |ws_markup| with Git:
    Use workshops <use-workshops/index>
 
 
+Build SDKs
+----------
+
+.. @artefact SDK definition
+.. @artefact SDK publisher
+.. @artefact SDK Store
+
+To iterate on an local draft of an SDK,
+you can use the :command:`workshop sketch-sdk` command
+for quick experimentation.
+
+A more elaborate option is |sdk_markup|, intended for SDK publishers.
+This tool is installed separately and accepts an SDK definition
+to build and publish the SDK in the SDK Store (credentials provided on request):
+
+.. toctree::
+   :maxdepth: 2
+
+   Build SDKs <build-sdks/index>
+
+
 Study examples
 --------------
 
@@ -34,20 +55,3 @@ The articles discuss the design of a ROS 2-oriented SDK and its practical usage
    :maxdepth: 2
 
    ros2/index
-
-
-Build SDKs
-----------
-
-.. @artefact SDK definition
-.. @artefact SDK publisher
-.. @artefact SDK Store
-
-To create SDKs for |ws_markup|, SDK publishers use |sdk_markup|.
-This tool is installed separately and accepts an SDK definition
-to build and publish the SDK in the SDK Store (credentials provided on request):
-
-.. toctree::
-   :maxdepth: 1
-
-   Build SDKs <use-sdkcraft>
