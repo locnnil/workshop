@@ -6,7 +6,7 @@ execute: |
 
   function check_apt() {
     workshop_exec exec "$1" -- test -f /etc/apt/apt.conf.d/01norecommend
-    workshop_exec exec "$1" -- bash -c 'sudo apt update && diff <(sudo apt-get -o DPkg::Lock::Timeout=60 install --no-install-recommends --no-install-suggests gnome <<< n) <(sudo apt-get -o DPkg::Lock::Timeout=60 install gnome <<< n | grep -v "Waiting for cache")'
+    workshop_exec exec "$1" -- bash -c 'sudo apt update && diff <(sudo apt-get --assume-no --no-install-recommends --no-install-suggests -o Debug::NoLocking=true install gnome) <(sudo apt-get --assume-no -o Debug::NoLocking=true install gnome)'
   }
 
   function launch_and_validate() {
