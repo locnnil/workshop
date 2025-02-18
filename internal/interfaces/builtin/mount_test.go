@@ -20,8 +20,11 @@
 package builtin_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -31,7 +34,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type mountSuite struct {
@@ -303,7 +305,7 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *mountSuite) TestConnectHostWorkshop(c *check.C) {
+func (s *mountSuite) TestConnectHostWorkshopXdgUnset(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -323,10 +325,51 @@ slots:
 
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
+	systemCmd := testutil.FakeCommand(c, "sudo", `
+  echo XDG_DATA_HOME=""
+  exit 0
+  `)
+	defer systemCmd.Restore()
+
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
+	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/id/42424242/ws/mount/consumer/mount")
+	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
+	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
+}
+
+func (s *mountSuite) TestConnectHostWorkshopXdgSet(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+`, s.projectId, "ws", "consumer", "mount")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ mount:
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+
+	xdgDir := c.MkDir()
+	systemCmd := testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
+  echo XDG_DATA_HOME=%s
+  exit 0
+  `, xdgDir))
+	defer systemCmd.Restore()
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the mount specification.
+	sourceDir := filepath.Join(testuser.HomeDir, xdgDir+"/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }

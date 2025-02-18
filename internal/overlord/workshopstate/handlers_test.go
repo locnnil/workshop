@@ -40,8 +40,9 @@ type workshopHandlers struct {
 	wrkmgr            *workshopstate.WorkshopManager
 	ctx               context.Context
 	project           workshop.Project
-	homeDir           string
+	user              *user.User
 	lookupUserRestore func()
+	sudoRestore       func()
 }
 
 var _ = check.Suite(&workshopHandlers{})
@@ -81,17 +82,19 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
-	s.homeDir = c.MkDir()
+	s.user = &user.User{
+		Name:     "testuser",
+		Username: "testuser",
+		Uid:      "1000",
+		Gid:      "1000",
+		HomeDir:  c.MkDir(),
+	}
 	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     "testuser",
-			Username: "testuser",
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  s.homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+		return s.user, nil
+	})
+
+	s.sudoRestore = testutil.FakeCommand(c, "sudo", `
+exit 0`).Restore
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -193,54 +196,68 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
-		{Name: "test", Channel: "latest/stable"},
-		{Name: "test2", Channel: "latest/stable"},
+	wFiles := []*workshop.File{{
+		Name: "ws", Base: "ubuntu@20.04",
+		Sdks: []workshop.SdkRecord{
+			{Name: "test", Channel: "latest/stable"},
+			{Name: "test2", Channel: "latest/stable"},
+		}}, {
+		Name: "another-ws", Base: "ubuntu@20.04",
+		Sdks: []workshop.SdkRecord{
+			{Name: "test", Channel: "latest/stable"},
+			{Name: "test2", Channel: "latest/stable"},
+		},
 	}}
 
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
-	c.Check(err, check.IsNil)
-
-	// create content directories
-	projectContent := filepath.Join(s.homeDir, ".local", "share", "workshop", "project", s.project.ProjectId, "mount")
-	var plugs = []string{"ws_test_plug1.sdk", "ws_test_plug2.sdk", "another-ws_test_plug3.sdk"}
-	for _, p := range plugs {
-		err = os.MkdirAll(filepath.Join(projectContent, p), 0744)
-		c.Assert(err, check.IsNil)
-	}
-	_, err = os.Create(filepath.Join(projectContent, "ws_test_plug4.sdk"))
+	rootDir, err := workshop.UserDataRootDir(s.user)
 	c.Assert(err, check.IsNil)
 
-	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("remove-workshop", "...")
+	for _, wf := range wFiles {
+		err := s.backend.LaunchWorkshop(s.ctx, wf)
+		c.Check(err, check.IsNil)
 
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
+		// create content directories
+		sdkMountData := workshop.SdkMountDir(rootDir, s.project.ProjectId, wf.Name, "test")
+		var plugs = []string{"plug1", "plug2"}
+		for _, p := range plugs {
+			err = os.MkdirAll(filepath.Join(sdkMountData, p), 0744)
+			c.Assert(err, check.IsNil)
+		}
 	}
-	s.state.Lock()
 
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-	ws, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(ws, check.IsNil)
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+	for _, wf := range wFiles {
+		// Make sure content exists, we only care about this at a directory level
+		workshopUserData := workshop.UserData(rootDir, s.project.ProjectId, wf.Name)
+		exist, _, _ := osutil.ExistsIsDir(workshopUserData)
+		c.Assert(exist, check.Equals, true)
 
-	exist, _, _ := osutil.ExistsIsDir(filepath.Join(projectContent, plugs[0]))
+		chg := s.state.NewChange("sample", "...")
+		t1 := s.state.NewTask("remove-workshop", "...")
+
+		setWorkshopProject(wf.Name, s.project, t1)
+		chg.Set("user", "testuser")
+		chg.AddTask(t1)
+
+		s.state.Unlock()
+		for i := 0; i < 6; i = i + 1 {
+			c.Assert(s.se.Ensure(), check.IsNil)
+			s.se.Wait()
+		}
+		s.state.Lock()
+
+		c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+		ws, err := s.backend.Workshop(s.ctx, wf.Name)
+		c.Assert(ws, check.IsNil)
+		c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+
+		exist, _, _ = osutil.ExistsIsDir(workshopUserData)
+		c.Assert(exist, check.Equals, false)
+	}
+
+	// Make sure project directory is cleaned up
+	projectContent := workshop.ProjectUserData(rootDir, s.project.ProjectId)
+	exist, _, _ := osutil.ExistsIsDir(projectContent)
 	c.Assert(exist, check.Equals, false)
-
-	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, plugs[1]))
-	c.Assert(exist, check.Equals, false)
-
-	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, plugs[2]))
-	c.Assert(exist, check.Equals, true)
-
-	exist, _, _ = osutil.ExistsIsDir(filepath.Join(projectContent, "ws_test_plug4.sdk"))
-	c.Assert(exist, check.Equals, true)
 
 }
 

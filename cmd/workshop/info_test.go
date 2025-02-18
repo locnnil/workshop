@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os/user"
+	"os"
+	"path/filepath"
 
 	"gopkg.in/check.v1"
 )
@@ -85,7 +86,7 @@ sdks:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
   sketch:
-    tracking:   ~/.local/share/workshop/project/42424242/sdk/sketch/ws
+    tracking:   ~/.local/share/workshop/id/42424242/ws/sdk/sketch
     installed:  2017-03-22  \(x1\)
 `, m.prjDir))
 	c.Check(n, check.Equals, 3)
@@ -168,7 +169,7 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
                 "plug":"plug-name"
             }
         },{
-            "host-source":"%s/.local/share/workshop/project/17942561/mount/ws_go_mod-cache.sdk",
+            "host-source":"%s/workshop/id/17942561/ws/mount/go/mod-cache",
             "workshop-target":"/home/workshop/target", 
             "plug":{
                 "project-id":"42ws42ws",
@@ -180,12 +181,35 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
     }]
 }}`
 
-func (m *workshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
+var mockWorkshopWithMountsOutput = `name:     ws
+base:     ubuntu@22.04
+project:  %s
+status:   ready
+notes:    -
+sdks:
+  go:
+    tracking:   latest/edge
+    installed:  1.8.0  2017-02-19  \(1\)
+    mounts:
+      plug-default:
+        host-source:      .../17942561/ws/mount/go/mod-cache
+        workshop-target:  /home/workshop/target
+      plug-name:
+        host-source:      /home/user/src
+        workshop-target:  /home/workshop/target
+`
+
+func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgUnset(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
 	n := 0
-	user, err := user.Current()
-	c.Assert(err, check.IsNil)
+	home := "/home/testuser"
+	xdg := filepath.Join(home, ".local", "share")
+	defer os.Setenv("XDG_DATA_HOME", os.Getenv("XDG_DATA_HOME"))
+	os.Setenv("XDG_DATA_HOME", "")
+	defer os.Setenv("HOME", os.Getenv("HOME"))
+	os.Setenv("HOME", home)
+
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
@@ -198,31 +222,50 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMounts(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithMounts, user.HomeDir))
+			fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithMounts, xdg))
 		default:
 			c.Errorf("expected 2 calls, now on %d", n)
 		}
 	})
 
-	err = cmd.Run(cmd.Command(), []string{workshop})
+	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
-base:     ubuntu@22.04
-project:  %s
-status:   ready
-notes:    -
-sdks:
-  go:
-    tracking:   latest/edge
-    installed:  1.8.0  2017-02-19  \(1\)
-    mounts:
-      plug-default:
-        host-source:      .../17942561/mount/ws_go_mod-cache.sdk
-        workshop-target:  /home/workshop/target
-      plug-name:
-        host-source:      /home/user/src
-        workshop-target:  /home/workshop/target
-`, m.prjDir))
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir))
+	c.Check(n, check.Equals, 2)
+}
+
+func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
+	cmd := &CmdInfo{root: &CmdRoot{}}
+	workshop := "ws"
+	n := 0
+	home := "/home/testuser"
+	xdg := filepath.Join(home, "xdghomedir")
+	defer os.Setenv("XDG_DATA_HOME", os.Getenv("XDG_DATA_HOME"))
+	os.Setenv("XDG_DATA_HOME", xdg)
+	defer os.Setenv("HOME", os.Getenv("HOME"))
+	os.Setenv("HOME", home)
+
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithMounts, xdg))
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{workshop})
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir))
 	c.Check(n, check.Equals, 2)
 }
 

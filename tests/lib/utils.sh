@@ -61,11 +61,15 @@ function prepare_environment() {
     snap set workshop store.url=http://localhost:8080/storage/v1/
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
     snap restart workshop
+
+    # required to keep /lib/systemd/systemd --user running for a regular user
+    loginctl enable-linger ubuntu
 }
 
 function cleanup_environment() {
     snap remove workshop --purge
     find /workshop -name .workshop.lock -delete
+    loginctl disable-linger ubuntu
 }
 
 function start_sdk_store() {

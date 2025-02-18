@@ -3,18 +3,19 @@ package builtin_test
 import (
 	"os/user"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type sshAgentSuite struct {
-	iface     interfaces.Interface
-	projectId string
-	restore   func()
+	iface       interfaces.Interface
+	projectId   string
+	restoreUser func()
 }
 
 var _ = check.Suite(&sshAgentSuite{
@@ -23,23 +24,17 @@ var _ = check.Suite(&sshAgentSuite{
 
 func (s *sshAgentSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
-	usr, err := user.Current()
-	c.Assert(err, check.IsNil)
 	homeDir := c.MkDir()
-	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
+	s.restoreUser = testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
-			Name:     usr.Name,
-			Username: usr.Name,
-			Uid:      usr.Uid,
-			Gid:      usr.Gid,
-			HomeDir:  homeDir,
+			HomeDir: homeDir,
 		}
 		return u, nil
 	}, &workshop.LookupUsername)
 }
 
-func (s *sshAgentSuite) TearDown(c *check.C) {
-	s.restore()
+func (s *sshAgentSuite) TearDownTest(c *check.C) {
+	s.restoreUser()
 }
 
 func (s *sshAgentSuite) TestName(c *check.C) {

@@ -108,12 +108,12 @@ is pre-defined as follows:
 
 .. code-block:: none
 
-   $XDG_DATA_HOME/workshop/project/<PROJECT ID>/mount/<WORKSHOP>_<SDK>_<PLUG>.sdk/
+   $XDG_DATA_HOME/workshop/id/<PROJECT ID>/<WORKSHOP>/mount/<SDK>/<PLUG>/
 
 
 In the above example,
 this would be
-:file:`~/.local/share/workshop/project/<PROJECT ID>/mount/data_data-science_share-cache.sdk/`.
+:file:`~/.local/share/workshop/id/<PROJECT ID>/<WORKSHOP>/mount/data-science/share-cache/`.
 In particular,
 this means that the SDK's plug in each workshop
 will have its own unique source directory.

@@ -298,7 +298,7 @@ to see what went into your workshop:
          installed:  1.23.0  2024-08-15  (51)
          mounts:
            mod-cache:
-             host-source:      .../6b79e889/mount/dev_go_mod-cache.sdk
+             host-source:      .../6b79e889/dev/mount/go/mod-cache
              workshop-target:  /home/workshop/go/pkg/mod
 
 

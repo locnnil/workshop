@@ -154,17 +154,17 @@ although :command:`workshop refresh` rebuilds the workshop from scratch,
 including any SDK updates.
 
 The host-mapped contents of the workshop can actually be seen
-in |ws_markup|'s default content directory on the host
+in |ws_markup|'s default mount directory on the host
 (use your project ID from the shell prompt; here, it's :samp:`8584e57d`):
 
 .. code-block:: console
 
    workshop@ros2-humble-8584e57d$ exit
-   $ ls ~/.local/share/workshop/project/8584e57d/mount/
+   $ ls ~/.local/share/workshop/id/8584e57d/ros2-humble/mount/ros2
 
-     ros2-humble_ros2_apt-archives.sdk  ros2-humble_ros2_colcon-cache.sdk  ros2-humble_ros2_ros-cache.sdk
+     apt-archives  colcon-cache  ros-cache
 
-   $ ls ~/.local/share/workshop/project/8584e57d/mount/ros2-humble_ros2_colcon-cache.sdk/
+   $ ls ~/.local/share/workshop/id/8584e57d/ros2-humble/mount/ros2/colcon-cache/
 
      build  install  log
 

@@ -322,7 +322,13 @@ func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	sketchdir := sdk.WorkshopSketchSdkCurrent(usr.HomeDir, pid, wp)
+
+	rootDir, err := workshop.UserDataRootDir(usr)
+	if err != nil {
+		return false, err
+	}
+
+	sketchdir := workshop.SketchSdkCurrent(rootDir, pid, wp)
 
 	recs, err := os.ReadDir(sketchdir)
 	// no Sketch SDK exists for the workshop and it is not an error.

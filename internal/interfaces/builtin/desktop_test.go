@@ -15,9 +15,9 @@ import (
 )
 
 type desktopSuite struct {
-	iface     interfaces.Interface
-	projectId string
-	restore   func()
+	iface       interfaces.Interface
+	projectId   string
+	restoreUser func()
 }
 
 var _ = check.Suite(&desktopSuite{
@@ -26,23 +26,13 @@ var _ = check.Suite(&desktopSuite{
 
 func (s *desktopSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
-	usr, err := user.Current()
-	c.Assert(err, check.IsNil)
-	homeDir := c.MkDir()
-	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     usr.Name,
-			Username: usr.Name,
-			Uid:      usr.Uid,
-			Gid:      usr.Gid,
-			HomeDir:  homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 }
 
-func (s *desktopSuite) TearDown(c *check.C) {
-	s.restore()
+func (s *desktopSuite) TearDownTest(c *check.C) {
+	s.restoreUser()
 }
 
 func (s *desktopSuite) TestName(c *check.C) {
@@ -71,8 +61,8 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo "XDG_RUNTIME_DIR=/tmp"
-echo "WAYLAND_DISPLAY=wayland-1"
+echo XDG_RUNTIME_DIR=/tmp
+echo WAYLAND_DISPLAY=wayland-1
 exit 0`)
 	defer fake.Restore()
 
@@ -108,8 +98,8 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo "XDG_RUNTIME_DIR=/tmp"
-echo "DISPLAY=:0"
+echo XDG_RUNTIME_DIR=/tmp
+echo DISPLAY=:0
 exit 0`)
 	defer fake.Restore()
 
@@ -145,9 +135,9 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo "XDG_RUNTIME_DIR=/tmp"
-echo "DISPLAY=:0"
-echo "WAYLAND_DISPLAY=wayland-0"
+echo XDG_RUNTIME_DIR=/tmp
+echo DISPLAY=:0
+echo WAYLAND_DISPLAY=wayland-0
 exit 0`)
 	defer fake.Restore()
 
@@ -192,9 +182,9 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo "XDG_RUNTIME_DIR=/tmp"
-echo "DISPLAY=:0"
-echo "XAUTHORITY=/tmp/.Xauthority"
+echo XDG_RUNTIME_DIR=/tmp
+echo DISPLAY=:0
+echo XAUTHORITY=/tmp/.Xauthority
 exit 0`)
 	defer fake.Restore()
 
@@ -221,8 +211,8 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo "XDG_RUNTIME_DIR=/tmp"
-echo "DISPLAY=:0"
+echo XDG_RUNTIME_DIR=/tmp
+echo DISPLAY=:0
 exit 0`)
 	defer fake.Restore()
 
@@ -249,8 +239,7 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo XDG_RUNTIME_DIR="/tmp"
-echo WAYLAND_DISPLAY=""
+echo XDG_RUNTIME_DIR=/tmp
 exit 0`)
 	defer fake.Restore()
 
@@ -275,8 +264,7 @@ slots:
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
 
 	fake := testutil.FakeCommand(c, "sudo", `
-echo XDG_RUNTIME_DIR="/tmp"
-echo DISPLAY=""
+echo XDG_RUNTIME_DIR=/tmp
 exit 0`)
 	defer fake.Restore()
 
@@ -302,7 +290,6 @@ slots:
 
 	fake := testutil.FakeCommand(c, "sudo", `
 echo XDG_RUNTIME_DIR=""
-echo WAYLAND_DISPLAY="wayland-1"
 exit 0`)
 	defer fake.Restore()
 

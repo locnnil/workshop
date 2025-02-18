@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/canonical/lxd/shared"
 	"github.com/spf13/cobra"
@@ -229,10 +228,15 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	sketchdir := sdk.WorkshopSketchSdkCurrent(user.HomeDir, p.Id, wp.Name)
+	rootDir, err := workshop.UserDataRootDir(user)
+	if err != nil {
+		return err
+	}
+	sketchdir := workshop.SketchSdkCurrent(rootDir, p.Id, wp.Name)
 
 	if c.stash {
-		stashdir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
+		stashdir := workshop.SketchSdkStash(rootDir, p.Id, wp.Name)
+
 		reverter, err := stashSketch(sketchdir, stashdir)
 		if err != nil {
 			return err
@@ -254,7 +258,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
 
-		storedir := sdk.WorkshopSketchSdkStash(user.HomeDir, p.Id, wp.Name)
+		storedir := workshop.SketchSdkStash(rootDir, p.Id, wp.Name)
 
 		if err = restoreSketch(sketchdir, storedir); err != nil {
 			return err
@@ -400,10 +404,6 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 	}
 
 	w := tabWriter()
-	var header sync.Once
-	printHeader := func() {
-		fmt.Fprintf(w, "Project\tWorkshop\tRev\tNotes\n")
-	}
 
 	p, err := cli.Project(c.root.project)
 	if err != nil {
@@ -420,12 +420,21 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	var entries []string
 	for _, wp := range wps {
-		entry := stashEntry(user, wp, p)
-		if entry != nil {
-			header.Do(printHeader)
-			fmt.Fprintln(w, strings.Join(entry, "\t"))
+		entry, err := stashEntry(user, wp, p)
+		if err != nil {
+			return err
 		}
+
+		if entry != nil {
+			entries = append(entries, strings.Join(entry, "\t"))
+		}
+	}
+
+	if entries != nil {
+		fmt.Fprintln(w, "Project\tWorkshop\tRev\tNotes")
+		fmt.Fprintln(w, strings.Join(entries, "\n"))
 	}
 
 	w.Flush()
@@ -433,7 +442,7 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) []string {
+func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) ([]string, error) {
 	rev := "-"
 	notes := ""
 	exists := false
@@ -445,7 +454,13 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) []str
 		exists = true
 	}
 
-	stashdir := sdk.WorkshopSketchSdkStash(usr.HomeDir, p.Id, w.Name)
+	rootDir, err := workshop.UserDataRootDir(usr)
+	if err != nil {
+		return nil, err
+	}
+
+	stashdir := workshop.SketchSdkStash(rootDir, p.Id, w.Name)
+
 	if osutil.IsDir(stashdir) {
 		if len(notes) > 0 {
 			notes += ","
@@ -453,8 +468,10 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) []str
 		notes += "stashed"
 		exists = true
 	}
+
 	if !exists {
-		return nil
+		return nil, nil
 	}
-	return []string{contractHomeDirectory(p.Path), w.Name, rev, notes}
+
+	return []string{contractHomeDirectory(p.Path), w.Name, rev, notes}, nil
 }

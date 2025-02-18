@@ -1,9 +1,8 @@
 #!/bin/sh -e
 
-# Enforce local unix socket and the default project (if not specified).
-run_lxc() {
-    lxc --force-local "$@"
-}
+# disable check for relative dir following
+# shellcheck disable=SC1091
+. "$(dirname "$0")/lxc-utils"
 
 # The workshop services are stopped by the moment the remove 
 # hook is called. Therefore, for now, we walk the LXD projects created 
@@ -47,6 +46,3 @@ echo "$volumes" | xargs -n1 -r | while read -r volume; do
 done
 run_lxc storage delete "$storage_pool"
 
-for p in $(echo "$projects" | xargs -L1 echo); do
-  run_lxc project delete "$p" 
-done

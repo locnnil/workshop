@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -15,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type CmdInfo struct {
@@ -62,14 +63,13 @@ $ workshop info`,
 // client checks if that path is a lengthy default and substitutes its common
 // prefix with .../. Hence something like:
 //
-//	/home/dmitry/.local/share/workshop/project/17942561/mount/albert_go_mod-cache.sdk
+//	/home/dmitry/.local/share/workshop/id/17942561/ws/mount/go/mod-cache
 //
 // becomes:
 //
-//	.../17942561/mount/albert_go_mod-cache.sdk
-func shortenDefaulPath(source string) string {
-	user, _ := user.Current()
-	defaultPathPrefix := filepath.Join(user.HomeDir, ".local", "share", "workshop", "project")
+//	.../17942561/mount/go_mod-cache
+func shortenDefaultPath(source, xdg string) string {
+	defaultPathPrefix := filepath.Join(xdg, "workshop", "id")
 	if after, ok := strings.CutPrefix(source, defaultPathPrefix); ok {
 		return "..." + after
 	}
@@ -87,6 +87,17 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	home, _ := os.LookupEnv("HOME")
+	if home == "" {
+		return fmt.Errorf("cannot show info: $HOME is not set")
+	}
+
+	xdg, _ := os.LookupEnv("XDG_DATA_HOME")
+	if xdg == "" {
+		// If XDG_DATA_HOME is unset, fallback to $HOME/.local/share
+		xdg = filepath.Join(home, ".local", "share")
+	}
+
 	if len(av) == 0 {
 		name, err := cli.SingleWorkshopName(project)
 		if err != nil {
@@ -102,7 +113,6 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	slices.SortFunc(workshop.Sdks, func(a, b *client.Sdk) int { return cmp.Compare(a.Name, b.Name) })
 
 	w := tabWriter()
-
 	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
 	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
 	fmt.Fprintf(w, "project:\t%s\n", project.Path)
@@ -179,9 +189,10 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				fmt.Fprintf(w, "    mounts:\n")
 				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 				for _, mount := range sk.Mounts {
+					hostSource := shortenDefaultPath(mount.HostSource, xdg)
 					if mount.HostSource != "" {
 						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-						fmt.Fprintf(w, "        host-source:\t%s\n", shortenDefaulPath(mount.HostSource))
+						fmt.Fprintf(w, "        host-source:\t%s\n", hostSource)
 						fmt.Fprintf(w, "        workshop-target:\t%s\n", mount.WorkshopTarget)
 						continue
 					}
@@ -213,14 +224,18 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func sketchSdkChannel(projectId, workshop string) string {
-	home, err := os.UserHomeDir()
+func sketchSdkChannel(projectId, w string) string {
+	user, err := osutil.UserMaybeSudoUser()
 	if err != nil {
 		return "~"
 	}
 
-	path := sdk.WorkshopSketchSdk(home, projectId, workshop)
-	return contractHomeDirectory(path)
+	rootDir, err := workshop.UserDataRootDir(user)
+	if err != nil {
+		return "~"
+	}
+
+	return contractHomeDirectory(workshop.SketchSdkDir(rootDir, projectId, w))
 }
 
 func formatEndpoint(endpoint client.Endpoint) string {

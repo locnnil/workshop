@@ -459,35 +459,6 @@ func SdkHookPath(sdkName, hookName string) string {
 	return filepath.Join(SdkHooksDir(sdkName), hookName)
 }
 
-func ProjectUserData(homedir, pid string) string {
-	return filepath.Join(homedir, ".local", "share", "workshop", "project", pid)
-}
-
-func ProjectContentDir(homedir, pid string) string {
-	return filepath.Join(ProjectUserData(homedir, pid), "mount")
-}
-
-func ProjectSketchSdkDir(homedir, pid string) string {
-	return filepath.Join(ProjectUserData(homedir, pid), "sdk", "sketch")
-}
-
-func WorkshopSketchSdk(homedir, pid, wp string) string {
-	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp)
-}
-
-func WorkshopSketchSdkCurrent(homedir, pid, wp string) string {
-	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "current")
-}
-
-func WorkshopSketchSdkStash(homedir, pid, wp string) string {
-	return filepath.Join(ProjectSketchSdkDir(homedir, pid), wp, "stash")
-}
-
-func SdkMountHostSource(homedir, pid, wp, sdk, plug string) string {
-	dir := strings.Join([]string{wp, sdk, plug}, "_") + ".sdk"
-	return filepath.Join(ProjectContentDir(homedir, pid), dir)
-}
-
 func MockSanitizePlugsSlots(f func(sdkInfo *Info)) (restore func()) {
 	old := SanitizePlugsSlots
 	SanitizePlugsSlots = f

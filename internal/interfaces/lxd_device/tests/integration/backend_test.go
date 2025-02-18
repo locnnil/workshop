@@ -39,6 +39,7 @@ type backendDeviceSuite struct {
 	pid      string
 
 	lookupUserRestore func()
+	sudoRestore       func()
 }
 
 var _ = check.Suite(&backendDeviceSuite{})
@@ -85,7 +86,23 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 	f.username = "testuser"
 	f.userhome = c.MkDir()
 	f.pid = "42424242"
-	f.ctx = helper.CreateTestContext(f.username, "42424242")
+	f.usr = &user.User{
+		Name:     "testuser",
+		Username: "testuser",
+		Uid:      "1000",
+		Gid:      "1000",
+		HomeDir:  c.MkDir(),
+	}
+
+	f.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return f.usr, nil
+	})
+
+	f.sudoRestore = testutil.FakeCommand(c, "sudo", `
+exit 0
+`).Restore
+
+	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
 	f.be, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
@@ -272,6 +289,13 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	b := lxd_device.Backend{}
 	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
 
+	systemCmd := testutil.FakeCommand(c, "sudo", `
+  echo XDG_RUNTIME_DIR=/run/user/1000
+  exit 0
+  `)
+
+	defer systemCmd.Restore()
+
 	err = b.Setup(f.ctx, cref, f.repo)
 	c.Assert(err, check.IsNil)
 
@@ -279,7 +303,7 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(prof.Mounts, check.HasLen, 1)
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
-	c.Check(prof.Mounts["one"].What, check.Equals, filepath.Join(f.userhome, ".local/share/workshop/project/42424242/mount/test_consumer_one.sdk"))
+	c.Check(prof.Mounts["one"].What, check.Equals, filepath.Join(f.usr.HomeDir, ".local/share/workshop/id/42424242/test/mount/consumer/one"))
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.HostWorkshop)
 }

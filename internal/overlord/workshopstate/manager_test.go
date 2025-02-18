@@ -28,6 +28,7 @@ type managerSuite struct {
 	project workshop.Project
 
 	lookupUserRestore func()
+	sudoRestore       func()
 }
 
 var _ = check.Suite(&managerSuite{})
@@ -41,16 +42,12 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
-	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     "testuser",
-			Username: "testuser",
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  c.MkDir(),
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
+	s.sudoRestore = testutil.FakeCommand(c, "sudo", `
+exit 0`).Restore
+
 	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.project = *project
@@ -60,6 +57,7 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 
 func (s *managerSuite) TearDownTest(c *check.C) {
 	s.lookupUserRestore()
+	s.sudoRestore()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {

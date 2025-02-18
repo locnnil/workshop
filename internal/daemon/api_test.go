@@ -16,8 +16,10 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os/user"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -43,8 +45,8 @@ type apiSuite struct {
 	store      *sdk.FakeStore
 
 	workshopDir string
-	username    string
-	userhome    string
+	rootDir     string
+	user        *user.User
 	installTime time.Time
 	project     workshop.Project
 	ctx         context.Context
@@ -57,6 +59,7 @@ type apiSuite struct {
 	restoreTime       func()
 	restoreSanitize   func()
 	restoreSecBackend func()
+	restoreSudo       func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -65,13 +68,10 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 
-	s.username = "testuser"
-	s.userhome = c.MkDir()
-	cur, err := user.Current()
-	c.Assert(err, check.IsNil)
+	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir()}
 	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		c.Check(name, check.Equals, s.username)
-		return &user.User{Name: s.username, HomeDir: s.userhome, Uid: cur.Uid, Gid: cur.Gid}, nil
+		c.Check(name, check.Equals, s.user.Name)
+		return s.user, nil
 	})
 
 	s.project = workshop.Project{
@@ -81,6 +81,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.store = &sdk.FakeStore{}
 
+	var err error
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
@@ -91,7 +92,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.username)
+	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.user.Username)
 
 	_, _, err = s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
@@ -99,6 +100,13 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
 	s.secBackend = &ifacetest.TestSecurityBackend{BackendName: "api-suite"}
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
+
+	xdgDir := c.MkDir()
+	s.rootDir = filepath.Join(xdgDir, "workshop")
+	s.restoreSudo = testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
+  echo XDG_DATA_HOME=%s
+  exit 0
+  `, xdgDir)).Restore
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -110,6 +118,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.restoreTime()
 	s.restoreSanitize()
 	s.restoreSecBackend()
+	s.restoreSudo()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {

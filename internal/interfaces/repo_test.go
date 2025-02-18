@@ -101,7 +101,7 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
 		u := &user.User{
 			Name:     usr.Name,
-			Username: usr.Name,
+			Username: usr.Username,
 			Uid:      usr.Uid,
 			Gid:      usr.Gid,
 			HomeDir:  homeDir,
