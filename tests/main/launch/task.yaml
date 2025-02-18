@@ -3,7 +3,12 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Test launch for all the supported bases"
-  
+
+  function check_apt() {
+    workshop_exec exec "$1" -- test -f /etc/apt/apt.conf.d/01norecommend
+    workshop_exec exec "$1" -- bash -c 'sudo apt update && diff <(sudo apt-get -o DPkg::Lock::Timeout=60 install --no-install-recommends --no-install-suggests gnome <<< n) <(sudo apt-get -o DPkg::Lock::Timeout=60 install gnome <<< n | grep -v "Waiting for cache")'
+  }
+
   function launch_and_validate() {
     workshop_exec launch "$1"
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
@@ -11,6 +16,8 @@ execute: |
     workshop_exec exec "$1" test -S /var/lib/workshop/run/workshop.socket.untrusted
     # ensure the apt cache is mounted
     workshop_exec exec "$1" mountpoint /var/cache/apt/archives
+    # ensure apt is configured to exclude suggested and recommended packages
+    check_apt "$1"
     workshop_exec remove "$1"
   }
   

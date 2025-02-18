@@ -304,6 +304,11 @@ named :file:`setup-base`:
 It runs when the workshop is launched or refreshed,
 installing the prerequisites and preparing it for use.
 
+.. note::
+
+   For workshops, apt is configured to exclude recommended and suggested 
+   packages by default.
+
 
 Persist: save and restore
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -860,6 +860,15 @@ write_files:
     [Install]
     WantedBy=multi-user.target
   path: /etc/systemd/system/xauth-copy.service
+- content: |
+    # Installed by workshop
+    
+    # Don't automatically install recommended packages
+    APT::Install-Recommends "0";
+
+    # Don't automatically install suggested packages
+    APT::Install-Suggests "0";
+  path: /etc/apt/apt.conf.d/01norecommend
 runcmd:
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
