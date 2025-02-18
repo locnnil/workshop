@@ -848,7 +848,7 @@ and have had your first taste of what it can do for you.
 
 - If you wish to try building and publishing a full-fledged SDK,
   continue to the |sdk_markup| :ref:`how-to guide <how_use_sdkcraft>`;
-  the :ref:`ROS2 case study <how_ros2>`
+  the :ref:`ROS 2 case study <how_ros2>`
   describes the entire process of building an SDK and using it in |ws_markup|
   in extra detail.
 
