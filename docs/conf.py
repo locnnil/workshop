@@ -279,6 +279,8 @@ warnings.filterwarnings(
     message="The str interface for _JavaScript objects is deprecated. Use js.filename instead.",
 )
 
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes_action
+smartquotes_action = "qe"
 
 ############################################################
 ### PDF configuration

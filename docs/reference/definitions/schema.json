@@ -22,7 +22,7 @@
       "errorMessage": "The base must be one of the supported values: ubuntu@20.04, ubuntu@22.04, ubuntu@24.04."
     },
     "sdks": {
-      "type": "object",
+      "type": "array",
       "description": "List of SDKs used in the workshop.",
       "items": {
         "type": "object",
@@ -30,8 +30,8 @@
           "name": {
             "type": "string",
             "description": "Name of the SDK.",
-            "pattern": "^[a-z_][a-z0-9_-]*$",
-            "errorMessage": "An SDK's name must start with a letter or underscore and can only include digits, lowercase letters, underscores and hyphens."
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "errorMessage": "An SDK's name must start with a letter and can only include digits, lowercase letters, and hyphens."
           },
           "channel": {
             "type": "string",
@@ -49,7 +49,7 @@
                   "bind": {
                     "type": "string",
                     "description": "Reference to a plug in the form <sdk>:<plug>.",
-                    "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+                    "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
                     "errorMessage": "Bind reference must follow the pattern <sdk>:<plug>."
                   },
                   "attributes": {
@@ -85,14 +85,23 @@
             "type": "object",
             "description": "Slots available for the SDK.",
             "additionalProperties": true
+          },
+          "hooks": {
+            "type": "object",
+            "description": "Hooks available for the SDK.",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "required": [
+          "name",
           "channel"
         ],
         "errorMessage": {
           "required": {
-            "channel": "SDK must specify a channel unless it is installed from a local source."
+            "name": "Each SDK must specify a name.",
+            "channel": "SDK must specify a channel unless installed from a local source."
           }
         }
       }
@@ -106,13 +115,13 @@
           "plug": {
             "type": "string",
             "description": "Reference to a plug in the form <sdk>:<plug>.",
-            "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+            "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
             "errorMessage": "Plug reference must follow the pattern <sdk>:<plug>."
           },
           "slot": {
             "type": "string",
             "description": "Reference to a slot in the form <sdk>:<slot>.",
-            "pattern": "^[a-z_][a-z0-9_-]*:[a-z_][a-z0-9_-]*$",
+            "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
             "errorMessage": "Slot reference must follow the pattern <sdk>:<slot>."
           }
         },
@@ -126,8 +135,7 @@
             "slot": "Each connection must specify a slot."
           }
         }
-      },
-      "errorMessage": "Connections must define both plug and slot references."
+      }
     },
     "scripts": {
       "type": "object",

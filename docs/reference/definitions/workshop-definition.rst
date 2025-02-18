@@ -156,6 +156,8 @@ Each SDK is described with the following keys:
 JSON Schema
 -----------
 
+.. The schema can be exported from internal/workshop/workshop_file.go
+
 The following
 `JSON Schema`
 formalises the description above:
