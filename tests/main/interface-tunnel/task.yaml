@@ -32,17 +32,17 @@ execute: |
   echo "Check workshop can connect to host"
   systemd-run --unit fakepostgres.service -- \
     systemd-socket-activate --accept --inetd --listen '127.0.0.1:54321' -- \
-    sed s/foo/bar/
-  workshop_exec exec ws-tunnel -- bash -c 'echo fooFOOfoo | nc -N localhost 5432' | MATCH '^barFOOfoo$'
-  workshop_exec exec ws-tunnel -- bash -c 'echo barFOOfoo | nc -N localhost 54321' | MATCH '^barFOObar$'
+    bash -c 'head -n1 | sed s/foo/bar/'
+  workshop_exec exec ws-tunnel -- bash -c 'echo fooFOOfoo | nc localhost 5432' | MATCH '^barFOOfoo$'
+  workshop_exec exec ws-tunnel -- bash -c 'echo barFOOfoo | nc localhost 54321' | MATCH '^barFOObar$'
 
   echo "Check host can connect to workshop"
   workshop_exec exec ws-tunnel -- \
     systemd-run --user -- \
     systemd-socket-activate --accept --inetd --listen '[::1]:8000' -- \
-    sed s/FOO/BAR/g
-  echo fooFOOfooFOO | nc -N localhost 8000 | MATCH '^fooBARfooBAR$'
-  echo BARFOOBAR | nc -N localhost 8001 | MATCH '^BARBARBAR$'
+    bash -c 'head -n1 | sed s/FOO/BAR/g'
+  echo fooFOOfooFOO | nc localhost 8000 | MATCH '^fooBARfooBAR$'
+  echo BARFOOBAR | nc localhost 8001 | MATCH '^BARBARBAR$'
 
   echo "Check that plugs cannot bind to same address"
   (! workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused) | MATCH 'listen tcp 127.0.0.1:5432: bind: address already in use|Failed to receive file descriptor via abstract unix socket|Please look in'
