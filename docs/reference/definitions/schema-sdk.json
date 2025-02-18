@@ -1,176 +1,368 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://canonical.com/sdkcraft.yaml",
-  "title": "Project",
-  "description": "SDKcraft project definition.",
-  "type": "object",
-  "properties": {
-    "name": {
-      "title": "Name",
-      "minLength": 1,
-      "maxLength": 40,
-      "pattern": "^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$",
-      "type": "string"
-    },
-    "title": {
-      "title": "Title",
-      "minLength": 2,
-      "maxLength": 40,
-      "type": "string"
-    },
-    "version": {
-      "title": "Version",
-      "maxLength": 32,
-      "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$",
-      "type": "string"
-    },
-    "summary": {
-      "title": "Summary",
-      "maxLength": 78,
-      "type": "string"
-    },
-    "description": {
-      "title": "Description",
-      "type": "string"
-    },
-    "base": {
-      "title": "Base"
-    },
-    "build-base": {
-      "title": "Build-Base"
-    },
-    "platforms": {
-      "title": "Platforms",
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/Platform"
-      }
-    },
-    "contact": {
-      "title": "Contact",
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        }
-      ]
-    },
-    "issues": {
-      "title": "Issues",
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        }
-      ]
-    },
-    "source-code": {
-      "title": "Source-Code",
-      "minLength": 1,
-      "maxLength": 65536,
-      "format": "uri",
-      "type": "string"
-    },
-    "license": {
-      "title": "License",
-      "type": "string"
-    },
-    "adopt-info": {
-      "title": "Adopt-Info",
-      "type": "string"
-    },
-    "parts": {
-      "title": "Parts",
-      "type": "object",
-      "additionalProperties": {
-        "type": "object"
-      }
-    },
-    "package-repositories": {
-      "title": "Package-Repositories",
-      "type": "array",
-      "items": {
-        "type": "object"
-      }
-    },
-    "plugs": {
-      "title": "Plugs",
-      "type": "object",
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "$ref": "#/definitions/MountPlug"
-          },
-          {}
-        ]
-      }
-    }
-  },
-  "required": [
-    "name",
-    "platforms",
-    "parts"
-  ],
-  "additionalProperties": false,
-  "definitions": {
-    "Platform": {
-      "title": "Platform",
-      "description": "Project platform definition.",
-      "type": "object",
-      "properties": {
-        "build-on": {
-          "title": "Build-On",
-          "minItems": 1,
-          "uniqueItems": true,
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "build-for": {
-          "title": "Build-For",
-          "minItems": 1,
-          "maxItems": 1,
-          "uniqueItems": true,
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
+  "$defs": {
     "MountPlug": {
-      "title": "MountPlug",
+      "additionalProperties": false,
       "description": "Sdkcraft project mount plug definition.",
-      "type": "object",
       "properties": {
         "interface": {
           "title": "Interface",
           "type": "string"
         },
-        "target": {
-          "title": "Target",
+        "workshop-target": {
+          "title": "Workshop-Target",
+          "type": "string"
+        },
+        "read-only": {
+          "title": "Read-Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "interface",
+        "workshop-target",
+        "read-only"
+      ],
+      "title": "MountPlug",
+      "type": "object"
+    },
+    "MountSlot": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project mount slot definition.",
+      "properties": {
+        "interface": {
+          "title": "Interface",
+          "type": "string"
+        },
+        "workshop-source": {
+          "title": "Workshop-Source",
           "type": "string"
         }
       },
       "required": [
         "interface",
-        "target"
+        "workshop-source"
       ],
-      "additionalProperties": false
+      "title": "MountSlot",
+      "type": "object"
+    },
+    "Platform": {
+      "additionalProperties": false,
+      "description": "Project platform definition.",
+      "properties": {
+        "build-on": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Build-On"
+        },
+        "build-for": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 1,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Build-For"
+        }
+      },
+      "required": [
+        "build-on"
+      ],
+      "title": "Platform",
+      "type": "object"
     }
-  }
+  },
+  "additionalProperties": false,
+  "description": "Sdkcraft project definition.",
+  "properties": {
+    "name": {
+      "description": "The name of this project. This is used when uploading, publishing, or installing.\n\nProject name rules:\n* Valid characters are lower-case ASCII letters, numerals and hyphens.\n* Must contain at least one letter\n* May not start or end with a hyphen\n* May not have two hyphens in a row\n",
+      "examples": [
+        "ubuntu",
+        "jupyterlab-desktop",
+        "lxd",
+        "digikam",
+        "kafka",
+        "mysql-router-k8s"
+      ],
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Project Name",
+      "type": "string"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "description": "A human-readable title.",
+          "examples": [
+            "Ubuntu Linux",
+            "Jupyter Lab Desktop",
+            "LXD",
+            "DigiKam",
+            "Apache Kafka",
+            "MySQL Router K8s charm"
+          ],
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Title",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "description": "A string containing the version of the project",
+          "examples": [
+            "0.1",
+            "1.0.0",
+            "v1.0.0",
+            "24.04"
+          ],
+          "maxLength": 32,
+          "title": "version string",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "description": "A short description of your project.",
+          "examples": [
+            "Linux for Human Beings",
+            "The cross-platform desktop application for JupyterLab",
+            "Container and VM manager",
+            "Photo Management Program",
+            "Charm for routing MySQL databases in Kubernetes",
+            "An open-source event streaming platform for high-performance data pipelines"
+          ],
+          "maxLength": 78,
+          "title": "Summary",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Summary"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Base"
+    },
+    "build-base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Build-Base"
+    },
+    "platforms": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Platform"
+      },
+      "title": "Platforms",
+      "type": "object"
+    },
+    "contact": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Contact"
+    },
+    "issues": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Issues"
+    },
+    "source-code": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source-Code"
+    },
+    "license": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "License"
+    },
+    "adopt-info": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adopt-Info"
+    },
+    "parts": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "title": "Parts",
+      "type": "object"
+    },
+    "package-repositories": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Package-Repositories"
+    },
+    "plugs": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/MountPlug"
+              },
+              {}
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Plugs"
+    },
+    "slots": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/MountSlot"
+              },
+              {}
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Slots"
+    }
+  },
+  "required": [
+    "name",
+    "platforms",
+    "parts",
+    "plugs",
+    "slots"
+  ],
+  "title": "Project",
+  "type": "object"
 }
