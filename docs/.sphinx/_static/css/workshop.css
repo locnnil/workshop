@@ -2,7 +2,8 @@
     font-weight: normal;
 }
 
-.command {
+.command,
+blockquote{
     font-family: monospace;
     font-size: large;
     font-weight: normal;
