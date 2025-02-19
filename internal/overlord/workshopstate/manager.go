@@ -15,8 +15,6 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-var ErrWaitingOnError = errors.New("waiting on error")
-
 type WorkshopManager struct {
 	backend workshop.Backend
 	state   *state.State
@@ -72,7 +70,7 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 		case healthstate.PendingStatus:
 			return errors.New("other changes in progress")
 		case healthstate.WaitingStatus:
-			return ErrWaitingOnError
+			return errors.New("waiting on error")
 		case healthstate.ErrorStatus:
 			return errors.New("workshop unhealthy")
 		case healthstate.StoppedStatus:

@@ -325,7 +325,7 @@ func (s *managerSuite) TestCheckStatusWaiting(c *check.C) {
 
 	// All other status' should return an error
 	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, testutil.ErrorIs, workshopstate.ErrWaitingOnError)
+	c.Assert(err, check.ErrorMatches, "waiting on error")
 }
 
 func (s *managerSuite) TestCheckStatusError(c *check.C) {

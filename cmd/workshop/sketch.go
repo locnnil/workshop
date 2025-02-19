@@ -206,8 +206,14 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
-	// Ensure that the workshop is Ready
-	if wp.Status != "Ready" {
+	// Ensure that the workshop is Ready,
+	// aborting previous sketch if necessary.
+	if wp.Status == "Waiting" {
+		cmdabort := &CmdRefresh{root: c.root, Abort: true}
+		if err = cmdabort.Run(cmd, []string{wp.Name}); err != nil {
+			return err
+		}
+	} else if wp.Status != "Ready" {
 		return fmt.Errorf(`error: cannot sketch %q: workshop currently %q, must be "Ready"`, wp.Name, wp.Status)
 	}
 
@@ -300,20 +306,8 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
-	refreshArgs := []string{fmt.Sprintf("%s/sketch", wp.Name)}
 
-	err = cmdrefresh.Run(cmd, refreshArgs)
-	if e, ok := err.(*client.Error); ok && e.Kind == client.ErrorKindWaitingOnError {
-		cmdabort := &CmdRefresh{root: c.root}
-		cmdabort.Abort = true
-		err = cmdabort.Run(cmd, []string{wp.Name})
-		if err != nil {
-			return err
-		}
-
-		err = cmdrefresh.Run(cmd, refreshArgs)
-	}
-	return err
+	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
 }
 
 func writeSketchSdk(sketchdir string, content []byte) error {

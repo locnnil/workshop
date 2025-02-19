@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/overlord/workshopstate"
 )
 
 type ResponseType string
@@ -126,7 +125,6 @@ const (
 	errorKindNotFound          = errorKind("not-found")
 	errorKindPermissionDenied  = errorKind("permission-denied")
 	errorKindGenericFileError  = errorKind("generic-file-error")
-	errorKindWaitingOnError    = errorKind("waiting-on-error")
 )
 
 type errorValue interface{}
@@ -191,8 +189,6 @@ func makeErrorResponder(status int) errorResponder {
 
 		if errors.Is(err, ErrAccessDenied) {
 			res.Kind = errorKindLoginRequired
-		} else if errors.Is(err, workshopstate.ErrWaitingOnError) {
-			res.Kind = errorKindWaitingOnError
 		}
 
 		return response

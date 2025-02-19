@@ -1901,7 +1901,6 @@ base: ubuntu@22.04
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: `cannot refresh "manysdks": waiting on error`,
-			Kind:    "waiting-on-error",
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}
