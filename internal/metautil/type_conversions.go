@@ -82,9 +82,17 @@ func SetValueFromAttribute(attrVal interface{}, val interface{}) error {
 
 	converted, err := convertValue(reflect.ValueOf(attrVal), rt.Elem())
 	if err != nil {
-		return fmt.Errorf("expected %s but found %s", rt.Elem().Name(), reflect.TypeOf(attrVal).Name())
+		return fmt.Errorf("expected %s but found %s", nameOrString(rt.Elem()), nameOrString(reflect.TypeOf(attrVal)))
 	}
 
 	reflect.ValueOf(val).Elem().Set(converted)
 	return nil
+}
+
+func nameOrString(t reflect.Type) string {
+	name := t.Name()
+	if name != "" {
+		return name
+	}
+	return t.String()
 }
