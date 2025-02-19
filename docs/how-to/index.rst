@@ -26,9 +26,9 @@ Study examples
 
 .. @artefact SDK
 
-This section presents a case study for `ROS 2 <https://www.ros.org/>`_,
+This section presents a case study for `ROS 2 <https://www.ros.org/>`_,
 a popular robotics-oriented framework.
-The articles discuss the design of a ROS 2-oriented SDK and its practical usage:
+The articles discuss the design of a ROS 2-oriented SDK and its practical usage:
 
 .. toctree::
    :maxdepth: 2
