@@ -112,7 +112,7 @@ func (s *managerSuite) TestRefreshManyOK(c *check.C) {
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
+	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
 	c.Assert(err, check.IsNil)
 }
 
@@ -124,7 +124,7 @@ func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
+	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not running`)
 }
 
@@ -133,6 +133,6 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	defer s.state.Unlock()
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, []string{"test-1", "test-2"}, s.project.ProjectId)
+	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not launched`)
 }

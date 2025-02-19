@@ -269,8 +269,7 @@ For example, to measure coverage using all tests:
 
 .. code-block:: console
 
-   go test covermode=count -coverprofile=cover.out ./...
-
+   go test -covermode=count -coverpkg=./... -coverprofile=cover.out ./...
 
 To generate an HTML representation:
 

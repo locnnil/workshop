@@ -43,11 +43,12 @@ execute: |
   yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*$new_source"
 
   echo "Check refresh respects binding"
+  sed -i -e "0,/stable/s/stable/edge/" workshop.yaml
   workshop_exec refresh
   workshop_exec connections ws-bind > conns.log
   check_original_binding
 
-  echo "Check a plug maybe unbound"
+  echo "Check a plug can be unbound"
   cat workshop.yaml | yq '.sdks[0].plugs = ~' | sponge workshop.yaml
   workshop_exec refresh
   workshop_exec connections ws-bind > conns.log
