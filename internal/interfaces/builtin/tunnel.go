@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os/user"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -176,7 +177,7 @@ func normalizeAddress(address string) (string, error) {
 
 func parseEndpoint(endpoint string) workshop.ProxyTarget {
 	// Leave unix sockets untouched.
-	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") {
+	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") || strings.HasPrefix(endpoint, "$") {
 		return workshop.ProxyTarget{Address: endpoint, Protocol: "unix"}
 	}
 
@@ -273,6 +274,24 @@ func (iface *tunnelInterface) MountConnectedPlug(spec *lxd_device.Specification,
 	if err := checkListenPort(entry.Listen, entry.Direction); err != nil {
 		return err
 	}
+	if entry.Direction == workshop.HostToWorkshop {
+		if err := expandPath(&entry.Listen, spec.User); err != nil {
+			return err
+		}
+		if err := authorizePath(entry.Listen, spec.User); err != nil {
+			return err
+		}
+		if err := expandPath(&entry.Connect, &workshop.User); err != nil {
+			return err
+		}
+	} else if entry.Direction == workshop.WorkshopToHost {
+		if err := expandPath(&entry.Listen, &workshop.User); err != nil {
+			return err
+		}
+		if err := expandPath(&entry.Connect, spec.User); err != nil {
+			return err
+		}
+	}
 
 	return spec.AddTunnelEntry(workshop.Tunnel{ProxyEntry: entry})
 }
@@ -342,6 +361,47 @@ func checkListenPort(listen workshop.ProxyTarget, direction workshop.ProxyDirect
 	}
 
 	return nil
+}
+
+func expandPath(target *workshop.ProxyTarget, user *user.User) error {
+	if target.Protocol != "unix" || !strings.HasPrefix(target.Address, "$") {
+		return nil
+	}
+
+	if strings.HasPrefix(target.Address, "$HOME/") {
+		target.Address = strings.Replace(target.Address, "$HOME", user.HomeDir, 1)
+		return nil
+	}
+	if strings.HasPrefix(target.Address, "$XDG_RUNTIME_DIR/") {
+		runtimeDir := filepath.Join("/run/user", user.Uid)
+		target.Address = strings.Replace(target.Address, "$XDG_RUNTIME_DIR", runtimeDir, 1)
+		return nil
+	}
+
+	variable, _, _ := strings.Cut(target.Address[1:], "/")
+	return fmt.Errorf("unexpected variable %q", variable)
+}
+
+// authorizePath attempts to ensure that the user is allowed to create the given socket.
+// The parent directory has to exist for LXD to create the socket,
+// so we can evaluate symlinks to ensure it belongs to $HOME or $XDG_RUNTIME_DIR.
+// FIXME: this doesn't take bind mounts into account.
+func authorizePath(listen workshop.ProxyTarget, user *user.User) error {
+	if listen.Protocol != "unix" || strings.HasPrefix(listen.Address, "@") {
+		return nil
+	}
+
+	realDir, err := filepath.EvalSymlinks(filepath.Dir(listen.Address))
+	if err != nil {
+		return fmt.Errorf("cannot create socket %q: %w", listen.Address, err)
+	}
+
+	runtimeDir := filepath.Join("/run/user", user.Uid)
+	if strings.HasPrefix(realDir, user.HomeDir) || strings.HasPrefix(realDir, runtimeDir) {
+		return nil
+	}
+
+	return fmt.Errorf("user %q cannot create socket %q for security reasons", user.Username, listen.Address)
 }
 
 func init() {

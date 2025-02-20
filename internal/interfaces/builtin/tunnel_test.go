@@ -20,6 +20,11 @@
 package builtin_test
 
 import (
+	"fmt"
+	"os"
+	"os/user"
+	"path/filepath"
+
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
@@ -173,6 +178,27 @@ plugs:
 `, s.projectId, "ws", "system", "tunnel-plug")
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 	c.Check(plug.Attrs["endpoint"], check.Equals, "/tmp/unix.sock")
+
+	plug = builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: $HOME/.local/state/tunnel-sdk/unix.sock
+`, s.projectId, "ws", "system", "tunnel-plug")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["endpoint"], check.Equals, "$HOME/.local/state/tunnel-sdk/unix.sock")
+
+	plug = builtin.MockPlug(c, `name: tunnel-sdk
+base: ubuntu@22.04
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: $XDG_RUNTIME_DIR/tunnel-sdk.sock
+`, s.projectId, "ws", "tunnel-sdk", "tunnel-plug")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["endpoint"], check.Equals, "$XDG_RUNTIME_DIR/tunnel-sdk.sock")
 }
 
 func (s *tunnelSuite) TestSanitizePlugUnknownAttribute(c *check.C) {
@@ -833,6 +859,169 @@ slots:
 		Direction: workshop.WorkshopToHost,
 	}
 	c.Check(deviceSpec.Profile.Tunnels, check.DeepEquals, []workshop.Tunnel{{ProxyEntry: expectedEntry}})
+}
+
+func (s *tunnelSuite) TestExpandHomeDirectory(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: $HOME/.local/state/app/unix.sock
+`, s.projectId, "ws", "system", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: $HOME/app/unix.sock
+`, s.projectId, "ws", "service", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	u := user.User{
+		Uid:      "1111",
+		Gid:      "2222",
+		Username: "testuser",
+		HomeDir:  c.MkDir(),
+	}
+	socket := filepath.Join(u.HomeDir, ".local", "state", "app", "unix.sock")
+	c.Assert(os.MkdirAll(filepath.Dir(socket), os.ModePerm), check.IsNil)
+	deviceSpec := lxd_device.NewSpecification(&u, "system")
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the tunnel specification.
+	expectedEntry := workshop.ProxyEntry{
+		Name: "tunnel-plug",
+		Connect: workshop.ProxyTarget{
+			Address:  "/home/workshop/app/unix.sock",
+			Protocol: "unix"},
+		Listen: workshop.ProxyTarget{
+			Address:  socket,
+			Protocol: "unix"},
+		Direction: workshop.HostToWorkshop,
+	}
+	c.Check(deviceSpec.Profile.Tunnels, check.DeepEquals, []workshop.Tunnel{{ProxyEntry: expectedEntry}})
+}
+
+func (s *tunnelSuite) TestExpandRuntimeDirectory(c *check.C) {
+	plug := builtin.MockPlug(c, `name: client
+base: ubuntu@22.04
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: $XDG_RUNTIME_DIR/app.sock
+`, s.projectId, "ws", "client", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: $XDG_RUNTIME_DIR/app/unix.sock
+`, s.projectId, "ws", "system", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	u := user.User{
+		Uid:      "1111",
+		Gid:      "2222",
+		Username: "testuser",
+		HomeDir:  "/home/testhome",
+	}
+	deviceSpec := lxd_device.NewSpecification(&u, "client")
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the tunnel specification.
+	expectedEntry := workshop.ProxyEntry{
+		Name: "tunnel-plug",
+		Connect: workshop.ProxyTarget{
+			Address:  "/run/user/1111/app/unix.sock",
+			Protocol: "unix"},
+		Listen: workshop.ProxyTarget{
+			Address:  "/run/user/1000/app.sock",
+			Protocol: "unix"},
+		Direction: workshop.WorkshopToHost,
+	}
+	c.Check(deviceSpec.Profile.Tunnels, check.DeepEquals, []workshop.Tunnel{{ProxyEntry: expectedEntry}})
+}
+
+func (s *tunnelSuite) TestExpandOtherDirectory(c *check.C) {
+	plug := builtin.MockPlug(c, `name: client
+base: ubuntu@22.04
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: $PWD/app.sock
+`, s.projectId, "ws", "client", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: $PWD/app/unix.sock
+`, s.projectId, "ws", "system", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	u := user.User{
+		Uid:      "1111",
+		Gid:      "2222",
+		Username: "testuser",
+		HomeDir:  "/home/testhome",
+	}
+	deviceSpec := lxd_device.NewSpecification(&u, "client")
+
+	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	c.Check(err, check.ErrorMatches, `unexpected variable "PWD"`)
+}
+
+func (s *tunnelSuite) TestUnauthorizedUnixPath(c *check.C) {
+	plug := builtin.MockPlug(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+  tunnel-plug:
+    interface: tunnel
+    endpoint: /etc/shadow
+`, s.projectId, "ws", "system", "tunnel-plug")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: service
+base: ubuntu@22.04
+slots:
+  tunnel-slot:
+    interface: tunnel
+    endpoint: /run/app.sock
+`, s.projectId, "ws", "service", "tunnel-slot")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	u := user.User{
+		Uid:      "1111",
+		Gid:      "2222",
+		Username: "testuser",
+		HomeDir:  c.MkDir(),
+	}
+	deviceSpec := lxd_device.NewSpecification(&u, "system")
+
+	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	c.Check(err, check.ErrorMatches, `user "testuser" cannot create socket "/etc/shadow" for security reasons`)
+
+	fakeEtc := c.MkDir()
+	shadowLink := filepath.Join(u.HomeDir, "etc", "shadow")
+	c.Assert(os.Symlink(fakeEtc, filepath.Dir(shadowLink)), check.IsNil)
+	plug.Attrs["endpoint"] = shadowLink
+	connectedPlug = interfaces.NewConnectedPlug(plug, nil, nil)
+
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	c.Check(err, check.ErrorMatches, fmt.Sprintf(`user "testuser" cannot create socket %q for security reasons`, shadowLink))
 }
 
 func (s *tunnelSuite) TestAutoConnectHostToWorkshop(c *check.C) {

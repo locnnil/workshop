@@ -259,6 +259,7 @@ TCP and UDP endpoints look like :samp:`<IPv4>:<PORT>/<PROTOCOL>` or :samp:`'[<IP
 but supports the aliases :samp:`localhost`, :samp:`ip6-localhost` and :samp:`ip6-loopback`.
 
 Unix domain socket endpoints are either paths to a socket file or abstract sockets of the form :samp:`'@<STRING>'`.
+The :envvar:`$HOME` and :envvar:`$XDG_RUNTIME_DIR` variables can be used in paths.
 
 Attributes can be abbreviated by omitting :samp:`tcp` and :samp:`localhost`:
 

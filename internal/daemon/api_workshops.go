@@ -300,7 +300,7 @@ func endpoints(conn connectionJSON) (*Endpoint, *Endpoint, error) {
 
 func parseEndpoint(endpoint string) (*Endpoint, error) {
 	// Leave unix sockets untouched.
-	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") {
+	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") || strings.HasPrefix(endpoint, "$") {
 		return &Endpoint{Protocol: "unix", Path: endpoint}, nil
 	}
 

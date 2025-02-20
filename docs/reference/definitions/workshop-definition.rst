@@ -336,6 +336,14 @@ Endpoints are formatted as follows:
    * - Path
      - An absolute path to a Unix domain socket.
 
+       :envvar:`$HOME` expands into the user's home directory and
+       :envvar:`$XDG_RUNTIME_DIR` expands into the user runtime directory
+       (e.g. :file:`/run/user/1000`).
+
+       For security reasons,
+       tunnel interface plugs in the system SDK
+       cannot listen on sockets outside these two directories.
+
    * - String
      - An abstract socket name.
 

@@ -15,7 +15,7 @@ sdks:
       tunnel:
       unix-path:
         interface: tunnel
-        endpoint: /home/ubuntu/test-tunnel.sock
+        endpoint: $HOME/test-tunnel.sock
     slots:
       postgres:
         interface: tunnel
