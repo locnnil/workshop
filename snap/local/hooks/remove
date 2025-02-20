@@ -7,42 +7,14 @@
 # The workshop services are stopped by the moment the remove 
 # hook is called. Therefore, for now, we walk the LXD projects created 
 # by the workshop and remove all instances/profiles/images/volumes.
-projects=$(run_lxc project list -f compact | awk '$1 ~ /^workshop\..*/ {print $1}')
+projects=$(get_projects)
 
 for p in $(echo "$projects" | xargs -L1 echo); do
-  echo "Found LXD project: $p" 
-  instances=$(run_lxc list -c n -f compact --project "$p" | awk 'NR>1 {printf "%s ", $1}')
-  if [ -n "$instances" ]; then
-    echo "Removing instances: $instances"
-    # shellcheck disable=SC2086
-    run_lxc delete --force $instances --project "$p" 
-  fi
-  
-  profiles=$(run_lxc profile list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
-  echo "Removing profiles: $profiles"
-  for profile in $(echo "$profiles" | xargs -L1 echo); do
-    # default profiles are protected
-    if [ "$profile" != "default" ]; then
-      run_lxc profile delete "$profile" --project "$p"
-    fi
-  done
-  
-  images=$(run_lxc image list -f compact --project "$p"| awk 'NR>1 {printf "%s ", $1}')
-  if [ -n "$images" ]; then
-    echo "Removing images: $images"
-    # shellcheck disable=SC2086
-    run_lxc image delete $images --project "$p"
-  fi
-done 
-
-run_lxc network delete workshopbr0
-
-# Storage pool custom volumes are shared among projects and removed last. These
-# belong to the default LXD project.
-storage_pool="workshop"
-volumes=$(run_lxc storage volume list "$storage_pool" -c nt type=custom -f compact | awk 'NR>1 {printf "%s ", $1}')
-echo "$volumes" | xargs -n1 -r | while read -r volume; do
-  run_lxc storage volume delete "$storage_pool" "$volume"
+  remove_instances "$p"
+  remove_profiles "$p"
+  remove_images "$p"
+  remove_project "$p"
 done
-run_lxc storage delete "$storage_pool"
 
+remove_network
+remove_volumes
