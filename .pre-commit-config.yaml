@@ -1,10 +1,10 @@
 repos:
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.63.4
+    rev: v1.64.5
     hooks:
       - id: golangci-lint
       - id: golangci-lint
         alias: errcheck
         name: errcheck
         args:
-          - --enable-only=errcheck
+          - --config=.golangci.errcheck.yaml

@@ -31,11 +31,17 @@ func (c *MockCommand) Execute(args []string) error {
 	c.Args = args
 
 	if c.FakeStdout != "" {
-		c.printf("%s", c.FakeStdout)
+		_, err := c.printf("%s", c.FakeStdout)
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.FakeStderr != "" {
-		c.errorf("%s", c.FakeStderr)
+		_, err := c.errorf("%s", c.FakeStderr)
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.ExecuteError {
