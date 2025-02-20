@@ -22,6 +22,9 @@ type WorkshopConfigFilter func(config map[string]string) bool
 const (
 	ContextProjectId = ContextKeyProjectId("project-id")
 	ContextUser      = ContextKeyUser("user")
+
+	Uid = 1000
+	Gid = 1000
 )
 
 var (
@@ -31,6 +34,13 @@ var (
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
 	LookupUsername = user.Lookup
+
+	User = user.User{
+		Uid:      "1000",
+		Gid:      "1000",
+		Username: "workshop",
+		HomeDir:  "/home/workshop",
+	}
 )
 
 func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {

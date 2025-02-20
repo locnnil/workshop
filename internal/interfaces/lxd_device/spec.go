@@ -132,7 +132,12 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	// card*/render* dri devices by LXD properly. Both will be assigned to
 	// the group provided in "gid"; there is no way to assign video to card*
 	// and render to render* devices.
-	s.devices[gpu.Name] = map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}
+	s.devices[gpu.Name] = map[string]string{
+		"type":    "gpu",
+		"gputype": "physical",
+		"uid":     workshop.User.Uid,
+		"gid":     workshop.User.Gid,
+	}
 
 	return nil
 }
@@ -165,8 +170,8 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 			"source":   path,
 			"path":     path,
 			"required": "false",
-			"uid":      "1000",
-			"gid":      "1000",
+			"uid":      workshop.User.Uid,
+			"gid":      workshop.User.Gid,
 		}
 		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, name)] = "camera"
 	}
@@ -185,8 +190,8 @@ func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey stri
 	case workshop.WorkshopToHost:
 		device["bind"] = "instance"
 		if entry.Listen.Protocol == "unix" {
-			device["uid"] = "1000"
-			device["gid"] = "1000"
+			device["uid"] = workshop.User.Uid
+			device["gid"] = workshop.User.Gid
 		}
 	case workshop.HostToWorkshop:
 		device["bind"] = "host"

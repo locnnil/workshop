@@ -267,7 +267,8 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.Wayland != nil {
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/run/user/1000/")
+		prefix := filepath.Join("/run/user", workshop.User.Uid) + "/"
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, prefix)
 	}
 
 	if dev.X11 != nil {
