@@ -19,6 +19,14 @@ type ProxyEntry struct {
 	Listen  ProxyTarget
 }
 
+func (p *ProxyEntry) Equal(other *ProxyEntry) bool {
+	if p == nil || other == nil {
+		return p == other
+	}
+
+	return *p == *other
+}
+
 type Camera struct {
 	Name string `json:"name"`
 }
@@ -53,7 +61,7 @@ func (d *Desktop) Equal(other *Desktop) bool {
 		return d == other
 	}
 
-	return *d.Wayland == *other.Wayland && *d.X11 == *other.X11
+	return d.Wayland.Equal(other.Wayland) && d.X11.Equal(other.X11)
 }
 
 type Gpu struct {
