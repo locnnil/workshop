@@ -17,8 +17,8 @@ execute: |
   echo "Ensure SDKs are unlinked successfully during abort"
   echo "Update the workshop file to use test-sdk-mount-broken"
   sed -i 's/test-sdk-setup-fail/test-sdk-mount-broken/g' workshop.yaml
-  workshop_exec launch --wait-on-error || true
+  ! workshop_exec launch --wait-on-error
   sed -i 's/test-sdk-mount-broken/test-sdk-setup-fail/g' workshop.yaml
 
   workshop_exec launch --abort
-  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -2 | MATCH ".*ERROR installation denied by \"one\" slot rule of interface \"mount\""
+  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -2 | MATCH '.*"test-sdk-mount-broken" SDK has bad plugs or slots: one \(unknown attribute for mount interface slot: "host-source"\)'

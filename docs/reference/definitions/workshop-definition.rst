@@ -212,14 +212,12 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
            bind: go:mod-cache
 
 
-.. @artefact system SDK
-
-This YAML file, besides using the :samp:`tensorflow` and :samp:`cuda` SDKs,
-defines an additional slot under the system SDK, a plug under :samp:`tensorflow`
+This YAML file, besides using the :samp:`tensorflow`, :samp:`imagenet` and :samp:`cuda` SDKs,
+defines an additional slot under the :samp:`imagenet` SDK, a plug under :samp:`tensorflow`
 and two connections:
 
 - One that connects the :samp:`tensorflow:images` plug
-  to the newly defined :samp:`system:images` slot.
+  to the newly defined :samp:`imagenet:images` slot.
 
 - Another that connects the :samp:`tensorflow:cuda` plug
   to the pre-existing :samp:`cuda:libs`.
@@ -230,24 +228,25 @@ and two connections:
    base: ubuntu@22.04
    name: digits-cuda
    sdks:
-     - name: system
-       slots:
-         images:
-           interface: mount
-           workshop-source: /project/training-data/low-res
      - name: tensorflow
        channel: latest/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
+     - name: imagenet
+       channel: latest/stable
+       slots:
+         images:
+           interface: mount
+           workshop-source: $SDK/images
      - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
      - plug: tensorflow:images
-       slot: system:images
+       slot: imagenet:images
 
 
 See also

@@ -20,7 +20,6 @@
 package builtin
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -38,12 +37,14 @@ const mountSummary = `allows sharing host code and data with SDKs`
 const mountBaseDeclarationSlots = `
   mount:
     allow-installation:
-      slot-sdk-type:
-        - system
-        - regular
-    deny-installation:
-      slot-attributes:
-        host-source: .*
+      -
+        slot-sdk-type:
+          - system
+        slot-names:
+          - $INTERFACE
+      -
+        slot-sdk-type:
+          - regular
     allow-connection: true
     allow-auto-connection: true
 `
@@ -56,15 +57,15 @@ const mountBaseDeclarationPlugs = `
     allow-connection: true
     allow-auto-connection:
       -
-        slot-names:
-          - $INTERFACE
+        slot-sdk-type:
+          - system
       -
         plug-attributes:
           auto-explicit: true
 `
 
 var knownPlugAttributes = []string{"workshop-target", "read-only"}
-var knownSlotAttributes = []string{"workshop-source", "host-source"}
+var knownSlotAttributes = []string{"workshop-source"}
 
 // mountInterface allows sharing content between sdks
 type mountInterface struct{}
@@ -130,6 +131,13 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 }
 
 func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
+	if slot.Sdk.Type == sdk.System {
+		for name := range slot.Attrs {
+			return fmt.Errorf(`unknown attribute for system mount interface slot: %q`, name)
+		}
+		return nil
+	}
+
 	for name := range slot.Attrs {
 		if !slices.Contains(knownSlotAttributes, name) {
 			return fmt.Errorf(`unknown attribute for mount interface slot: %q`, name)
@@ -137,8 +145,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	}
 	source, exist := slot.Attrs["workshop-source"]
 	if !exist {
-		// perfectly fine scenario for the default mount slot
-		return nil
+		return fmt.Errorf("mount slot must contain source path")
 	}
 	path, ok := source.(string)
 	if !ok {
@@ -208,20 +215,19 @@ func (iface *mountInterface) MountConnectedSlot(spec *lxd_device.Specification, 
 
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	source, err := iface.workshopSource(slot)
-	if err != nil && !errors.Is(err, sdk.AttributeNotFoundError{}) {
-		return err
-	}
-	if err == nil {
-		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.WorkshopWorkshop, ReadOnly: iface.readOnly(plug)})
-	}
-
-	source, err = iface.hostSource(spec.User.HomeDir, plug, slot)
-	if err == nil {
+	if slot.Sdk().Type == sdk.System {
+		source, err := iface.hostSource(spec.User.HomeDir, plug, slot)
+		if err != nil {
+			return err
+		}
 		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.HostWorkshop, ReadOnly: iface.readOnly(plug)})
 	}
 
-	return err
+	source, err := iface.workshopSource(slot)
+	if err != nil {
+		return err
+	}
+	return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.WorkshopWorkshop, ReadOnly: iface.readOnly(plug)})
 }
 
 func init() {

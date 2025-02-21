@@ -144,11 +144,12 @@ func (s *baseDeclSuite) TestManualConnection(c *C) {
 }
 
 func (s *baseDeclSuite) TestMountAutoConnection(c *check.C) {
-	slotYaml := fmt.Sprintf(`name: slot-sdk
+	slotYaml := `name: slot-sdk
 base: ubuntu@22.04
+type: system
 slots:
-    %s:
-`, "mount")
+    mount:
+`
 
 	cand := s.connectCand(c, "mount", slotYaml, "", "mock424242", "mock424242", "ws", "ws")
 	arity, err := cand.CheckAutoConnect()

@@ -94,8 +94,7 @@ plugs:
     attr2: value2
 slots:
   slot:
-    interface: mount
-    host-source: /root
+    interface: ssh-agent
 `
 
 func (s *sdkStateSuite) SetUpTest(c *check.C) {
@@ -411,7 +410,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	}
 	s.state.Lock()
 
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation denied by "slot" slot rule of interface "mount".*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "ssh-agent".*`)
 
 	// not in the fs (removed)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")

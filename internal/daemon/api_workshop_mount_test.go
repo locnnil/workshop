@@ -238,7 +238,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*attribute "host-source" not found for slot "workshopconns/system:training".*`,
+			ChangeErr: `(?s).*attribute "host-source" not found for slot "workshopconns/test-sdk-2:training".*`,
 		},
 	}
 

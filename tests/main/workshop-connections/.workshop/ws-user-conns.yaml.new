@@ -1,13 +1,14 @@
 name: ws-user-conns
 base: ubuntu@22.04
 sdks:
-  - name: system
+  - name: test-sdk-basic
+    channel: latest/stable
     slots:
-      user-slot-2:
+      user-slot:
         interface: mount
         workshop-source: /project/user-data-2
   - name: test-sdk-mount
     channel: latest/stable
 connections:
   - plug: test-sdk-mount:two
-    slot: system:user-slot-2
+    slot: test-sdk-basic:user-slot
