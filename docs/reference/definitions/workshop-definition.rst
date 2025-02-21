@@ -31,6 +31,9 @@ Structure
 The definition in the file is written in `YAML <https://yaml.org/>`__
 and includes a number of mandatory and optional keys:
 
+.. @artefact workshop base image
+.. @artefact SDK
+
 .. list-table::
    :header-rows: 1
    :width: 95
@@ -53,8 +56,6 @@ and includes a number of mandatory and optional keys:
      - Workshop's base image
        that provides the underlying OS capabilities.
 
-.. @artefact workshop base image
-
        It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
        or :samp:`ubuntu@24.04`.
 
@@ -62,8 +63,6 @@ and includes a number of mandatory and optional keys:
      - object
      - List of individual SDKs
        from the SDK Store to include in the workshop.
-
-.. @artefact SDK
 
        Each entry points to an existing SDK
        and specifies its retrieval channel.
@@ -94,6 +93,7 @@ Each SDK is described with the following keys:
 
 .. @artefact mount interface attributes
 .. @artefact plug binding
+.. @artefact $SDK
 
 .. list-table::
    :header-rows: 1
@@ -151,7 +151,6 @@ Each SDK is described with the following keys:
        :file:`/project` or :envvar:`$SDK`-based paths can be used;
        :envvar:`$SDK` expands into the SDK's installation path in the workshop.
 
-.. @artefact $SDK
 
 JSON Schema
 -----------
