@@ -91,7 +91,6 @@ and includes a number of mandatory and optional keys:
 
 Each SDK is described with the following keys:
 
-.. @artefact mount interface attributes
 .. @artefact plug binding
 .. @artefact $SDK
 
@@ -132,24 +131,117 @@ Each SDK is described with the following keys:
          using the :samp:`<SDK>:<PLUG>` format.
 
        - A plug definition must specify the :samp:`interface`
-         and the relevant attributes.
-         The only interface with additional attributes is :samp:`mount`;
-         it requires the :samp:`workshop-target` property
-         to specify a path inside the workshop
-         to be used as the plug's target directory.
+         and the relevant attributes (described below).
 
    * - :samp:`slots`
      - object
      - Defines additional slots under the SDK;
        each entry must specify the :samp:`interface`
-       and the relevant attributes.
+       and the relevant attributes (described below).
 
-       The only interface with additional attributes is :samp:`mount`;
-       it requires the :samp:`workshop-source` property
-       to specify a path inside the workshop
-       for the slot's source directory;
+
+Camera interface
+~~~~~~~~~~~~~~~~
+
+.. @artefact camera interface
+
+Camera interface plugs must be named :samp:`camera`
+and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+They have no attributes.
+
+The only camera interface slot is :samp:`system:camera`.
+
+
+Desktop interface
+~~~~~~~~~~~~~~~~~
+
+.. @artefact desktop interface
+
+Desktop interface plugs must be named :samp:`desktop`
+and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+They have no attributes.
+
+The only desktop interface slot is :samp:`system:desktop`.
+
+
+GPU interface
+~~~~~~~~~~~~~
+
+.. @artefact GPU interface
+
+GPU interface plugs must be named :samp:`gpu`
+and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+They have no attributes.
+
+The only GPU interface slot is :samp:`system:gpu`.
+
+
+Mount interface
+~~~~~~~~~~~~~~~
+
+.. @artefact mount interface
+
+Mount interface plugs can't belong to the :ref:`system SDK <exp_system_sdk>`.
+They are described by the following attributes:
+
+.. @artefact mount interface attributes
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`workshop-target` (required)
+     - string
+     - A path inside the workshop
+       to be used as the plug's target directory.
+
+   * - :samp:`read-only`
+     - Boolean
+     - Whether the target directory should be read-only.
+
+
+The only mount interface slot in the :ref:`system SDK <exp_system_sdk>` is :samp:`system:mount`.
+It has a single dynamic attribute named :samp:`host-source`,
+which can be only configured at :ref:`remount <ref_workshop_remount>`.
+
+Regular SDKs can declare additional mount interface slots.
+They are described by the following attributes:
+
+.. @artefact mount interface attributes
+.. @artefact $SDK
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`workshop-source` (required)
+     - string
+     - A path inside the workshop
+       to be used as the slot's source directory;
        :file:`/project` or :envvar:`$SDK`-based paths can be used;
        :envvar:`$SDK` expands into the SDK's installation path in the workshop.
+
+
+SSH interface
+~~~~~~~~~~~~~
+
+.. @artefact SSH interface
+
+SSH interface plugs must be named :samp:`ssh-agent`
+and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+They have no attributes.
+
+The only SSH interface slot is :samp:`system:ssh-agent`.
 
 
 JSON Schema
