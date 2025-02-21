@@ -53,6 +53,10 @@ func (s *mountSuite) TestName(c *check.C) {
 	c.Assert(s.iface.Name(), check.Equals, "mount")
 }
 
+func (s *mountSuite) TestInterfaces(c *check.C) {
+	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
+}
+
 func (s *mountSuite) TestSanitizeSlotSimple(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
@@ -101,6 +105,39 @@ plugs:
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["mount-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount interface path is not clean:.*")
+}
+
+func (s *mountSuite) TestSanitizePlugReadOnlyBool(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  workshop-target: /project/training
+  read-only: true
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizePlugReadOnlyString(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  workshop-target: /project/training
+  read-only: "true"
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizePlugReadOnlyInvalid(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  workshop-target: /project/training
+  read-only: "invalid"
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"invalid\" in key \"read-only\" for mount interface plug.*")
 }
 
 func (s *mountSuite) TestSanitizeSlotOK(c *check.C) {
@@ -154,11 +191,7 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *mountSuite) TestInterfaces(c *check.C) {
-	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
-}
-
-func (s *mountSuite) TestMountInterface(c *check.C) {
+func (s *mountSuite) TestConnectHostWorkshop(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -182,37 +215,4 @@ slots:
 	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
-}
-
-func (s *mountSuite) TestMountInterfaceReadOnlyBool(c *check.C) {
-	plug := builtin.MockPlug(c, `name: consumer
-base: ubuntu@22.04
-plugs:
- mount:
-  workshop-target: /project/training
-  read-only: true
-`, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
-}
-
-func (s *mountSuite) TestMountInterfaceReadOnlyString(c *check.C) {
-	plug := builtin.MockPlug(c, `name: consumer
-base: ubuntu@22.04
-plugs:
- mount:
-  workshop-target: /project/training
-  read-only: "true"
-`, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
-}
-
-func (s *mountSuite) TestMountInterfaceReadOnlyInvalid(c *check.C) {
-	plug := builtin.MockPlug(c, `name: consumer
-base: ubuntu@22.04
-plugs:
- mount:
-  workshop-target: /project/training
-  read-only: "invalid"
-`, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"invalid\" in key \"read-only\" for mount interface plug.*")
 }
