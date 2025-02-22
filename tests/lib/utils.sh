@@ -10,6 +10,21 @@ function setup_lxd() {
     if [ "$(lxc storage list -f compact | grep -c default)" -eq 0 ]; then
         lxd init --auto --storage-backend=zfs
     fi
+
+    # Import LXD base images instead of downloading in every spread instance.
+    # This assumes images are mounted into the spread instance at /mnt.
+    image_dir="/mnt"
+    versions=("20.04" "22.04" "24.04")
+
+    for version in "${versions[@]}"; do
+        image_file="$image_dir/ubuntu-$version.tar.gz"
+        image_root="$image_dir/ubuntu-$version.tar.gz.root"
+        image_alias="workshop-ubuntu@$version-amd64"
+
+        if [ -f "$image_file" ] && ! lxc image info "$image_alias" &>/dev/null; then
+            lxc image import "$image_file" "$image_root" --alias "$image_alias"
+        fi
+    done
 }
 
 function prepare_environment() {
@@ -23,9 +38,22 @@ function prepare_environment() {
 
     snap install --classic --channel=1.23/stable go
     snap install yq
-    # The unattended upgrades hold locks on reusable instances
-    # and can break a spread run.
-    apt-get remove -y unattended-upgrades
+
+    # The unattended upgrades hold locks on reusable instances and can break a
+    # spread run. This is to prevent the prepare script from failing (e.g. when
+    # reusing an existing spread instance). Since workshops don't currently
+    # interact with apt/dpkg on the host, it shouldn't have implications for the
+    # tests.
+    systemctl stop unattended-upgrades.service || true
+    systemctl disable unattended-upgrades.service || true
+    systemctl disable apt-daily.timer || true
+    systemctl disable apt-daily-upgrade.timer || true
+
+    while pgrep -f "apt|dpkg" >/dev/null; do
+        echo "Waiting for any apt-related process to release the lock..."
+        sleep 5
+    done
+
     apt-get update
     apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq
 

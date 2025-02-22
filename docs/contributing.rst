@@ -246,6 +246,17 @@ of ``Spread``:
 
    spread tests/<TestPathName>
 
+When running locally, you can accelerate the test runs by reusing instances 
+and local LXD base images. For more examples, see the ``spread`` GitHub workflow.
+
+.. code-block:: console
+
+   image_dir=$HOME/images
+   lxc image export <fingerprint> "$image_dir/ubuntu-22.04.tar.gz"   
+   lxc profile device add default mnt-image disk source=$image_dir path=/mnt
+   
+   spread -reuse -resend tests/<TestPathName>
+
 
 To check code coverage:
 

@@ -27,11 +27,25 @@ jobs:
       - name: Install LXD
         uses: canonical/setup-lxd@main
         with:
-          channel: 5.21/stable
+          channel: 6/stable
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
           mkdir "${{ github.workspace }}"
+      - name: Pre-download LXD images
+        run: |
+          image_dir="$HOME/images"
+          mkdir -p "$image_dir"
+
+          for version in 22.04 24.04; do
+            if [ ! -f "$image_dir/ubuntu-$version.tar.gz" ]; then
+              lxc image copy "ubuntu:$version/amd64" local: --alias "$version/amd64"
+              lxc image export "$version/amd64" "$image_dir/ubuntu-$version.tar.gz"
+            fi
+          done
+
+          lxc project switch default
+          lxc profile device add default mnt-image disk source=$image_dir path=/mnt
       - name: Checkout Workshop
         uses: actions/checkout@v4
         with:
