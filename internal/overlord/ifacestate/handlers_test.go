@@ -119,16 +119,9 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	err := s.o.StartUp()
 	c.Assert(err, check.IsNil)
 
-	s.restoreUserLookup = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     name,
-			Username: name,
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  c.MkDir(),
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.restoreUserLookup = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 }
 
 func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {

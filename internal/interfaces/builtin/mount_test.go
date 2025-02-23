@@ -21,6 +21,7 @@ package builtin_test
 
 import (
 	"fmt"
+	"os/user"
 	"path/filepath"
 	"testing"
 
@@ -37,8 +38,9 @@ import (
 )
 
 type mountSuite struct {
-	iface     interfaces.Interface
-	projectId string
+	iface       interfaces.Interface
+	projectId   string
+	restoreUser func()
 }
 
 func Test(t *testing.T) {
@@ -49,8 +51,16 @@ var _ = check.Suite(&mountSuite{
 	iface: builtin.MustInterface("mount"),
 })
 
-func (s *mountSuite) SetUpTest(c *check.C) {
+func (s *mountSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
+	testuser.HomeDir = c.MkDir()
+	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
+}
+
+func (s *mountSuite) TearDownSuite(c *check.C) {
+	s.restoreUser()
 }
 
 func (s *mountSuite) TestName(c *check.C) {
@@ -369,7 +379,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(testuser.HomeDir, xdgDir+"/workshop/id/42424242/ws/mount/consumer/mount")
+	sourceDir := filepath.Join(xdgDir, "/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }

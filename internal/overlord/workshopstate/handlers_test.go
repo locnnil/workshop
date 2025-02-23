@@ -83,13 +83,9 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 	s.user = &user.User{
-		Name:     "testuser",
-		Username: "testuser",
-		Uid:      "1000",
-		Gid:      "1000",
-		HomeDir:  c.MkDir(),
+		HomeDir: c.MkDir(),
 	}
-	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
+	s.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
 		return s.user, nil
 	})
 

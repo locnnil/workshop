@@ -28,7 +28,7 @@ type wsExec struct {
 	lxdClient           lxd.InstanceServer
 	be                  workshop.Backend
 	ctx                 context.Context
-	username            string
+	usr                 *user.User
 	client              *client.Client
 	daemon              *daemon.Daemon
 	project             workshop.Project
@@ -77,31 +77,26 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}
-	f.username = "testuser"
-	f.ctx = helper.CreateTestContext(f.username, f.project.ProjectId)
+
+	f.usr = &user.User{
+		Name:     "testuser",
+		Username: "testuser",
+		Uid:      "1000",
+		Gid:      "1000",
+	}
+
+	f.ctx = helper.CreateTestContext(f.usr.Username, f.project.ProjectId)
 
 	f.lxdClient, _ = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
-	err = lxdbackend.InitLxdProject(f.lxdClient, f.username)
+	err = lxdbackend.InitLxdProject(f.lxdClient, f.usr.Username)
 	c.Check(err, check.IsNil)
 
-	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     f.username,
-			Username: f.username,
-			Uid:      "1000",
-			Gid:      "1000",
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	f.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return f.usr, nil
+	})
 
 	f.lookupUserIdRestore = testutil.FakeFunc(func(uid string) (*user.User, error) {
-		u := &user.User{
-			Name:     f.username,
-			Username: f.username,
-			Uid:      "1000",
-			Gid:      "1000",
-		}
-		return u, nil
+		return f.usr, nil
 	}, &daemon.LookupUserId)
 
 	f.restoreDevices = lxdbackend.FakeDefaultDevices(execTestDevices(c.MkDir()))
@@ -122,8 +117,8 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.newProjectidRestore()
 	f.restoreImageServer()
 	f.restoreDevices()
-	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.username))
-	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.usr.Username))
 }
 
 func (f *wsExec) exec(stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {

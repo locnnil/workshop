@@ -95,19 +95,9 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	s.projectId = "42424242"
 	s.context = ifacetest.CreateTestContext("user", s.projectId)
 
-	usr, err := user.Current()
-	c.Assert(err, IsNil)
-	homeDir := c.MkDir()
-	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     usr.Name,
-			Username: usr.Username,
-			Uid:      usr.Uid,
-			Gid:      usr.Gid,
-			HomeDir:  homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.restore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 }
 
 func (s *RepositorySuite) TearDownTest(c *C) {

@@ -26,8 +26,9 @@ var _ = check.Suite(&desktopSuite{
 
 func (s *desktopSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
+	testuser.HomeDir = c.MkDir()
 	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		return &user.User{HomeDir: c.MkDir()}, nil
+		return &testuser, nil
 	})
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
@@ -18,6 +19,7 @@ type workshopSketch struct {
 	prjId       string
 	rootDir     string
 	restoreSudo func()
+	restoreUser func()
 }
 
 var _ = check.Suite(&workshopSketch{})
@@ -117,6 +119,9 @@ func (m *workshopSketch) SetUpTest(c *check.C) {
 echo XDG_DATA_HOME=%s
 exit 0
 `, xdgHome)).Restore
+	m.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 }
 
 func (m *workshopSketch) TearDownTest(c *check.C) {
@@ -124,6 +129,7 @@ func (m *workshopSketch) TearDownTest(c *check.C) {
 	err := os.RemoveAll(sketch)
 	c.Assert(err, check.IsNil)
 	m.restoreSudo()
+	m.restoreUser()
 }
 
 func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current bool, meta []byte) (metapath string, hookspath string) {

@@ -288,12 +288,12 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 	restoreId := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	defer restoreId()
 
-	restoreLookup := testutil.FakeFunc(func(username string) (*user.User, error) {
+	restoreLookup := workshop.FakeUserLookup(func(username string) (*user.User, error) {
 		if username == f.username {
 			return &user.User{Name: username}, nil
 		}
 		return nil, user.UnknownUserError("not found")
-	}, &workshop.LookupUsername)
+	})
 	defer restoreLookup()
 
 	projectDir := c.MkDir()

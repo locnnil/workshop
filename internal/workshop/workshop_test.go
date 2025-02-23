@@ -10,7 +10,6 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
@@ -33,17 +32,9 @@ func (f *workshopSuite) SetUpTest(c *check.C) {
 	f.bend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	userhomedir := c.MkDir()
-	f.restoreUserLookup = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     name,
-			Username: name,
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  userhomedir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	f.restoreUserLookup = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 

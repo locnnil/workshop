@@ -23,7 +23,7 @@ import (
 type wsOps struct {
 	bd                 *lxdbackend.Backend
 	ctx                context.Context
-	username           string
+	usr                *user.User
 	project            workshop.Project
 	restoreLookupUsr   func()
 	restoreNewId       func()
@@ -39,19 +39,18 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	f.bd, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
 
-	f.username = "testuser"
+	f.usr = &user.User{Name: "testuser", Username: "testuser", Uid: "1000", Gid: "1000"}
 	f.project = workshop.Project{
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
 	}
-	f.ctx = helper.CreateTestContext(f.username, "42424242")
+	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
 	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
-	f.restoreLookupUsr = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{Name: f.username, Username: f.username, Uid: "1000", Gid: "1000"}
-		return u, nil
-	}, &workshop.LookupUsername)
+	f.restoreLookupUsr = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return f.usr, nil
+	})
 	f.restoreNewId = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
 	}, &workshop.NewProjectId)
@@ -61,8 +60,8 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	lxdclient, err := f.bd.LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
 
-	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.username))
-	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, lxdclient, lxdbackend.LxdSystemProjectName(f.usr.Username))
 	f.restoreLookupUsr()
 	f.restoreNewId()
 

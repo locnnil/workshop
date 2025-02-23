@@ -30,13 +30,12 @@ import (
 )
 
 type backendDeviceSuite struct {
-	ctx      context.Context
-	be       *lxdbackend.Backend
-	client   lxd.InstanceServer
-	repo     *interfaces.Repository
-	username string
-	userhome string
-	pid      string
+	ctx    context.Context
+	be     *lxdbackend.Backend
+	client lxd.InstanceServer
+	repo   *interfaces.Repository
+	usr    *user.User
+	pid    string
 
 	lookupUserRestore func()
 	sudoRestore       func()
@@ -83,8 +82,6 @@ func defaultTestDevices() map[string]map[string]string {
 
 func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 	var err error
-	f.username = "testuser"
-	f.userhome = c.MkDir()
 	f.pid = "42424242"
 	f.usr = &user.User{
 		Name:     "testuser",
@@ -111,24 +108,13 @@ exit 0
 
 	f.setupRepo(c)
 
-	f.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     f.username,
-			Username: f.username,
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  f.userhome,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
-
 	defer lxdbackend.FakeDefaultDevices(defaultTestDevices)()
 	helper.LaunchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 }
 
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
-	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.username))
-	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.usr.Username))
 	f.lookupUserRestore()
 	f.client.Disconnect()
 }

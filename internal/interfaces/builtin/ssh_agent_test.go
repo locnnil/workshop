@@ -24,13 +24,10 @@ var _ = check.Suite(&sshAgentSuite{
 
 func (s *sshAgentSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
-	homeDir := c.MkDir()
-	s.restoreUser = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			HomeDir: homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	testuser.HomeDir = c.MkDir()
+	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
 }
 
 func (s *sshAgentSuite) TearDownTest(c *check.C) {
