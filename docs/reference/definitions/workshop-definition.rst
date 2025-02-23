@@ -106,7 +106,8 @@ Each SDK is described with the following keys:
    * - :samp:`name` (required)
      - string
      - Name of an existing SDK
-       that is available from the SDK store.
+       that is available from the SDK store,
+       or :samp:`system`.
 
    * - :samp:`channel` (required)
      - string
@@ -120,6 +121,8 @@ Each SDK is described with the following keys:
        `snap-like format <https://snapcraft.io/docs/channels>`__
        of :samp:`<TRACK>/<RISK>`
        without the :samp:`<BRANCH>` part.
+
+       Not required for the :ref:`system SDK <ref_system_sdk>`.
 
    * - :samp:`plugs`
      - object
@@ -140,13 +143,31 @@ Each SDK is described with the following keys:
        and the relevant attributes (described below).
 
 
+.. _ref_system_sdk:
+
+System SDK
+~~~~~~~~~~
+
+.. @artefact system SDK
+
+The system SDK is built in to every workshop,
+and isn't available in the SDK store,
+so it doesn't require a :samp:`channel`.
+
+The system SDK declares slots for many interfaces.
+These represent resources provided by the host system.
+The workshop definition can define additional plugs and slots
+for all SDKs,
+including the system SDK.
+
+
 Camera interface
 ~~~~~~~~~~~~~~~~
 
 .. @artefact camera interface
 
 Camera interface plugs must be named :samp:`camera`
-and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They have no attributes.
 
 The only camera interface slot is :samp:`system:camera`.
@@ -158,7 +179,7 @@ Desktop interface
 .. @artefact desktop interface
 
 Desktop interface plugs must be named :samp:`desktop`
-and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They have no attributes.
 
 The only desktop interface slot is :samp:`system:desktop`.
@@ -170,7 +191,7 @@ GPU interface
 .. @artefact GPU interface
 
 GPU interface plugs must be named :samp:`gpu`
-and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They have no attributes.
 
 The only GPU interface slot is :samp:`system:gpu`.
@@ -181,7 +202,7 @@ Mount interface
 
 .. @artefact mount interface
 
-Mount interface plugs can't belong to the :ref:`system SDK <exp_system_sdk>`.
+Mount interface plugs can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They are described by the following attributes:
 
 .. @artefact mount interface attributes
@@ -205,7 +226,7 @@ They are described by the following attributes:
      - Whether the target directory should be read-only.
 
 
-The only mount interface slot in the :ref:`system SDK <exp_system_sdk>` is :samp:`system:mount`.
+The only mount interface slot in the :ref:`system SDK <ref_system_sdk>` is :samp:`system:mount`.
 It has a single dynamic attribute named :samp:`host-source`,
 which can be only configured at :ref:`remount <ref_workshop_remount>`.
 
@@ -238,7 +259,7 @@ SSH interface
 .. @artefact SSH interface
 
 SSH interface plugs must be named :samp:`ssh-agent`
-and can't belong to the :ref:`system SDK <exp_system_sdk>`.
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They have no attributes.
 
 The only SSH interface slot is :samp:`system:ssh-agent`.
