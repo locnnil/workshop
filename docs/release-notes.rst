@@ -16,8 +16,18 @@ For additional guidance, see the
 Releases
 --------
 
-Currently, |ws_markup| is not yet publicly available,
+We provide two binaries: |ws_markup| and |sdk_markup|.
+
+- |ws_markup| (**AArch64** and **x86_64**) is designed for common users.
+- |sdk_markup| (**x86_64** only) is intended for SDK publishers.
+
+
+Currently, neither is publicly available,
 but you can confidently use the pre-release versions.
+
+
+|ws_markup|
+~~~~~~~~~~~
 
 Latest version:
 
@@ -34,6 +44,22 @@ Older versions:
 - `Workshop v0.1.3 <https://github.com/canonical/workshop/releases/tag/v0.1.3>`_
 - `Workshop v0.1.2 <https://github.com/canonical/workshop/releases/tag/v0.1.2>`_
 - `Workshop v0.1.0 <https://github.com/canonical/workshop/releases/tag/v0.1.0>`_
+
+
+|sdk_markup|
+~~~~~~~~~~~~
+
+Latest version:
+
+- `SDKcraft v0.1.5 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.5>`_
+
+Older versions:
+
+- `SDKcraft v0.1.4 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.4>`_
+- `SDKcraft v0.1.3 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.3>`_
+- `SDKcraft v0.1.2 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.2>`_
+- `SDKcraft v0.1.1 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.1>`_
+- `SDKcraft v0.1.0 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.0>`_
 
 
 Release policy and schedule
