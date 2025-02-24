@@ -118,7 +118,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return retrieve
 }
 
-func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
+func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	install := state.NewTaskSet()
 
@@ -143,7 +143,7 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 		install.AddAll(installTs)
 
 		// Make sure that the hook tasks are not concurrent
-		setupHookTask := hookstate.Hook(st, w, setup.Name, hookstate.SetupBase)
+		setupHookTask := hookstate.Hook(st, pid, w, setup.Name, 0, hookstate.SetupBase)
 		if prevSetup != nil {
 			setupHookTask.WaitFor(prevSetup)
 		}
@@ -158,11 +158,11 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 	return all
 }
 
-func checkSdksHealth(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet {
+func checkSdksHealth(st *state.State, pid, w string, sdks []sdk.Setup) *state.TaskSet {
 	var prev *state.Task
 	checkHealth := state.NewTaskSet()
 	for _, sk := range sdks {
-		check := hookstate.HookWithTimeout(st, w, sk.Name, hookstate.CheckHealth, checkHealthTimeout)
+		check := hookstate.Hook(st, pid, w, sk.Name, checkHealthTimeout, hookstate.CheckHealth)
 		if prev != nil {
 			check.WaitFor(prev)
 		}
@@ -203,7 +203,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	system := sdkstate.InstallSystemSdk(st)
 	system.WaitAll(create)
 
-	install := installSdks(st, file.Name, sdks, retrieve)
+	install := installSdks(st, project.ProjectId, file.Name, sdks, retrieve)
 	install.WaitAll(system)
 
 	full := slices.Clone(sdks)
@@ -213,7 +213,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	connect.WaitAll(install)
 	connect.WaitAll(system)
 
-	checkHealth := checkSdksHealth(st, file.Name, sdks)
+	checkHealth := checkSdksHealth(st, project.ProjectId, file.Name, sdks)
 	checkHealth.WaitAll(connect)
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
@@ -524,7 +524,7 @@ func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Wo
 
 		// Call save-state hooks for the SDKs that are installed and will not be
 		// removed after this refresh.
-		saveState := createStateHooks(st, file.Name, plan.Refresh(), hookstate.SaveState)
+		saveState := createStateHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), hookstate.SaveState)
 		saveState.WaitFor(stateStorage)
 		saveStateTs.AddAll(saveState)
 
@@ -552,7 +552,7 @@ func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Wo
 		addTaskSet(system)
 	}
 
-	install := installSdks(st, file.Name, plan.InstallOrRefresh(), retrieve)
+	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), retrieve)
 	addTaskSet(install)
 
 	if plan.RecreateWorkshop() {
@@ -566,11 +566,11 @@ func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Wo
 	}
 
 	if len(plan.Refresh()) > 0 {
-		restoreState := createStateHooks(st, file.Name, plan.Refresh(), hookstate.RestoreState)
+		restoreState := createStateHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), hookstate.RestoreState)
 		addTaskSet(restoreState)
 	}
 
-	checkHealth := checkSdksHealth(st, file.Name, plan.InstallOrRefresh())
+	checkHealth := checkSdksHealth(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh())
 	addTaskSet(checkHealth)
 
 	length := len(refresh.Tasks())
@@ -657,7 +657,7 @@ func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*
 		createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 		ts.AddTask(createStateStorage)
 
-		saveStateHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SaveState)
+		saveStateHook := hookstate.Hook(st, wp.Project.ProjectId, wp.Name, setup.Name, 0, hookstate.SaveState)
 		saveStateHook.WaitFor(createStateStorage)
 
 		disconnect := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, setup.Name))
@@ -671,7 +671,7 @@ func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*
 	install.WaitAll(ts)
 	ts.AddAll(install)
 
-	setupHook := hookstate.Hook(st, wp.Name, setup.Name, hookstate.SetupBase)
+	setupHook := hookstate.Hook(st, wp.Project.ProjectId, wp.Name, setup.Name, 0, hookstate.SetupBase)
 	setupHook.WaitAll(install)
 	ts.AddTask(setupHook)
 
@@ -681,12 +681,12 @@ func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*
 	ts.AddTask(autoconnect)
 
 	if installed {
-		restoreState := hookstate.Hook(st, wp.Name, setup.Name, hookstate.RestoreState)
+		restoreState := hookstate.Hook(st, wp.Project.ProjectId, wp.Name, setup.Name, 0, hookstate.RestoreState)
 		restoreState.WaitFor(autoconnect)
 		ts.AddTask(restoreState)
 	}
 
-	checkHealth := hookstate.Hook(st, wp.Name, setup.Name, hookstate.CheckHealth)
+	checkHealth := hookstate.Hook(st, wp.Project.ProjectId, wp.Name, setup.Name, 0, hookstate.CheckHealth)
 	checkHealth.WaitAll(ts)
 	ts.AddTask(checkHealth)
 
@@ -736,7 +736,7 @@ func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return disconnSet
 }
 
-func createStateHooks(st *state.State, w string, installed []sdk.Setup, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func createStateHooks(st *state.State, pid, w string, installed []sdk.Setup, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	stateHooks := state.NewTaskSet()
 	prev := (*state.Task)(nil)
 	for _, sk := range installed {
@@ -744,7 +744,7 @@ func createStateHooks(st *state.State, w string, installed []sdk.Setup, hooktype
 			continue
 		}
 
-		stateHook := hookstate.Hook(st, w, sk.Name, hooktype)
+		stateHook := hookstate.Hook(st, pid, w, sk.Name, 0, hooktype)
 		stateHooks.AddTask(stateHook)
 		if prev != nil {
 			stateHook.WaitFor(prev)

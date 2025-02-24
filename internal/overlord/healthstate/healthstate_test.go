@@ -354,7 +354,7 @@ func (s *healthSuite) TestCheckStatusStopped(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthNotProvided(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -375,7 +375,7 @@ func (s *healthSuite) TestExecCheckHealthNotProvided(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthSetHealthNotCalled(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -399,7 +399,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthNotCalled(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -457,7 +457,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -523,7 +523,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -589,7 +589,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.CheckHealth)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.CheckHealth)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
