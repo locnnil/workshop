@@ -351,11 +351,17 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		connRef, err = repo.ResolveConnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
 			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name)
 		if err == nil {
-			plugW, err := c.d.overlord.WorkshopManager().Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
+			wsmgr := c.d.overlord.WorkshopManager()
+			var plugW, slotW *workshop.Workshop
+			plugW, err = wsmgr.Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
 			if err != nil {
 				break
 			}
-			ts, connErr := ifacestate.Connect(st, plugW, connRef)
+			slotW, err = wsmgr.Workshop(r.Context(), connRef.SlotRef.Workshop, connRef.SlotRef.ProjectId)
+			if err != nil {
+				break
+			}
+			ts, connErr := ifacestate.Connect(st, plugW, slotW, connRef)
 			if connErr != nil {
 				if _, ok := connErr.(*ifacestate.ErrAlreadyConnected); !ok {
 					return statusBadRequest("%w", connErr)
@@ -377,8 +383,14 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		seen := map[interfaces.ConnRef]bool{}
 		for _, connRef := range conns {
 			var ts *state.TaskSet
-			plugW, werr := c.d.overlord.WorkshopManager().Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
-			if werr != nil {
+			wsmgr := c.d.overlord.WorkshopManager()
+			var plugW, slotW *workshop.Workshop
+			plugW, err = wsmgr.Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
+			if err != nil {
+				break
+			}
+			slotW, err = wsmgr.Workshop(r.Context(), connRef.SlotRef.Workshop, connRef.SlotRef.ProjectId)
+			if err != nil {
 				break
 			}
 
@@ -391,7 +403,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 					break
 				}
 			}
-			ts, err = ifacestate.Disconnect(st, plugW, connRef, a.Forget, seen)
+			ts, err = ifacestate.Disconnect(st, plugW, slotW, connRef, a.Forget, seen)
 			if err != nil {
 				break
 			}

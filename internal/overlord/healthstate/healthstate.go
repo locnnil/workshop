@@ -121,7 +121,7 @@ func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {
 		return healthState
 	}
 
-	if err := conflict.CheckChangeConflict(st, ws.Project.ProjectId, ws.Name, ""); err != nil {
+	if err := conflict.CheckChangeConflict(st, ws.Project.ProjectId, ws.Name, []string{"exec"}); err != nil {
 		conflict, ok := err.(*conflict.ChangeConflictError)
 		if !ok || conflict.ChangeID == "" {
 			healthState.Status = ErrorStatus

@@ -5,6 +5,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -19,17 +20,20 @@ func (e ErrAlreadyConnected) Error() string {
 }
 
 // Connect returns a set of tasks for connecting an interface.
-func Connect(st *state.State, plugW *workshop.Workshop, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
-	plugProject, plugWorkshop := connRef.PlugRef.ProjectId, connRef.PlugRef.Workshop
-	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
-	if err != nil {
-		return nil, err
+func Connect(st *state.State, plugW *workshop.Workshop, slotW *workshop.Workshop, connRef *interfaces.ConnRef) (*state.TaskSet, error) {
+	allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus}
+	if err := healthstate.CheckWorkshopHealth(st, plugW, allowed); err != nil {
+		return nil, fmt.Errorf("cannot connect %q: %w", connRef.PlugRef.ShortRef(), err)
+	}
+	if err := healthstate.CheckWorkshopHealth(st, slotW, allowed); err != nil {
+		return nil, fmt.Errorf("cannot connect %q: %w", connRef.SlotRef.ShortRef(), err)
 	}
 
-	slotProject, slotWorkshop := connRef.SlotRef.ProjectId, connRef.SlotRef.Workshop
-	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
-	if err != nil {
-		return nil, err
+	if _, err := conflict.FindChangeByKind(st, plugW.Project.ProjectId, plugW.Name, "exec"); err == nil {
+		st.Warnf("active shell sessions in %q may need restarting for new connections to take effect", plugW.Name)
+	}
+	if _, err := conflict.FindChangeByKind(st, slotW.Project.ProjectId, slotW.Name, "exec"); err == nil {
+		st.Warnf("active shell sessions in %q may need restarting for new connections to take effect", slotW.Name)
 	}
 
 	// check if the connection already exists
@@ -109,17 +113,13 @@ func disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.Conn
 }
 
 // Disconnect returns a set of tasks for disconnecting an interface.
-func Disconnect(st *state.State, plugW *workshop.Workshop, conn *interfaces.ConnRef, forget bool, seen map[interfaces.ConnRef]bool) (*state.TaskSet, error) {
-	plugProject, plugWorkshop := conn.PlugRef.ProjectId, conn.PlugRef.Workshop
-	err := conflict.CheckChangeConflict(st, plugProject, plugWorkshop, "")
-	if err != nil {
-		return nil, err
+func Disconnect(st *state.State, plugW *workshop.Workshop, slotW *workshop.Workshop, conn *interfaces.ConnRef, forget bool, seen map[interfaces.ConnRef]bool) (*state.TaskSet, error) {
+	allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus}
+	if err := healthstate.CheckWorkshopHealth(st, plugW, allowed); err != nil {
+		return nil, fmt.Errorf("cannot disconnect %q: %w", conn.PlugRef.ShortRef(), err)
 	}
-
-	slotProject, slotWorkshop := conn.SlotRef.ProjectId, conn.SlotRef.Workshop
-	err = conflict.CheckChangeConflict(st, slotProject, slotWorkshop, "")
-	if err != nil {
-		return nil, err
+	if err := healthstate.CheckWorkshopHealth(st, slotW, allowed); err != nil {
+		return nil, fmt.Errorf("cannot disconnect %q: %w", conn.SlotRef.ShortRef(), err)
 	}
 
 	return disconnect(st, plugW, conn, forget, seen)
