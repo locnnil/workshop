@@ -70,8 +70,7 @@ execute: |
   i
     setup-base: |
       apt-get update
-      apt-get install -y --no-install-recommends delve
-      apt-get install -y --no-install-recommends clang
+      apt-get install -y delve clang
   .
   wq
   EOF

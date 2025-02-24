@@ -774,8 +774,7 @@ Add commands that install a debugger and an alternative compiler:
    hooks:
      setup-base: |
        apt-get update
-       apt-get install -y --no-install-recommends delve
-       apt-get install -y --no-install-recommends clang
+       apt-get install -y delve clang
 
 
 Saving and exiting should refresh the workshop again.
