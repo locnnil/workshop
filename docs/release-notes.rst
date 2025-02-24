@@ -80,7 +80,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.8_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.10_amd64.snap
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 
