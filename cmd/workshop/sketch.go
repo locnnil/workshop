@@ -67,7 +67,7 @@ $ workshop sketch-sdk
 Stash the sketch SDK, temporarily reverting the changes in the workshop:
 $ workshop sketch-sdk nimble --stash`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Pending"}),
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
 
 	cmd.Flags().BoolVar(&c.stash, "stash", false, "Stash the sketch SDK and remove it from the workshop.")

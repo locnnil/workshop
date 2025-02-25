@@ -19,7 +19,7 @@ Run a command and wait for it to complete.
 The 'exec' subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept an 'exec' command, the workshop must be 'Ready' or 'Pending'.
+To accept an 'exec' command, the workshop must be 'Ready' or 'Waiting'.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)

@@ -76,28 +76,20 @@ func (s *BaseWorkshopSuite) TestWorkshopInfoList(c *check.C) {
 	prjId := "42424242"
 	prjDir := c.MkDir()
 
-	status := []string{"Ready", "Pending", "Stopped", "Error"}
+	statuses := []string{"Ready", "Pending", "Waiting", "Stopped", "Error"}
 	expected := make(map[string][]string)
 
 	var wsInfo []*client.WorkshopInfo
 	for i := range 20 {
-		index := rand.Intn(len(status) - 1)
+		index := rand.Intn(len(statuses) - 1)
+		status := statuses[index]
 		info := &client.WorkshopInfo{
 			ProjectId: "42424242",
 			Name:      "test" + strconv.Itoa(i),
-			Status:    status[index],
+			Status:    status,
 		}
 		wsInfo = append(wsInfo, info)
-		switch index {
-		case 0:
-			expected["Ready"] = append(expected["Ready"], info.Name)
-		case 1:
-			expected["Pending"] = append(expected["Pending"], info.Name)
-		case 2:
-			expected["Stopped"] = append(expected["Stopped"], info.Name)
-		case 3:
-			expected["Error"] = append(expected["Error"], info.Name)
-		}
+		expected[status] = append(expected[status], info.Name)
 	}
 
 	w := client.Workshops{
@@ -106,9 +98,9 @@ func (s *BaseWorkshopSuite) TestWorkshopInfoList(c *check.C) {
 
 	cmd := &CmdRoot{}
 
-	s.listRedirectHelper(c, w, prjId, prjDir, len(status)*2)
+	s.listRedirectHelper(c, w, prjId, prjDir, len(statuses)*2)
 
-	for _, st := range status {
+	for _, st := range statuses {
 		result, compDirective := cmd.completeWorkshopName([]string{st})(cmd.Command(prjDir), nil, "")
 		c.Check(result, check.DeepEquals, expected[st])
 		c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)

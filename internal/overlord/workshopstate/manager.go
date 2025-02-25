@@ -68,18 +68,17 @@ func (w *WorkshopManager) CheckStatus(ctx context.Context, name, pId string, all
 	if !slices.Contains(allowedStatuses, health.Status) {
 		switch health.Status {
 		case healthstate.ReadyStatus:
-			return fmt.Errorf("workshop already running")
+			return errors.New("workshop already running")
 		case healthstate.PendingStatus:
-			if health.Code == "wait-on-error" {
-				return ErrWaitingOnError
-			}
-			return fmt.Errorf("other changes in progress")
+			return errors.New("other changes in progress")
+		case healthstate.WaitingStatus:
+			return ErrWaitingOnError
 		case healthstate.ErrorStatus:
-			return fmt.Errorf("workshop is unhealthy")
+			return errors.New("workshop unhealthy")
 		case healthstate.StoppedStatus:
-			return fmt.Errorf("workshop not running")
+			return errors.New("workshop not running")
 		default:
-			return fmt.Errorf("workshop health is unknown")
+			return errors.New("workshop health unknown")
 		}
 	}
 	return nil
@@ -216,10 +215,12 @@ func (w *WorkshopManager) WorkshopHealth(ws *workshop.Workshop) healthstate.Heal
 		change := w.state.Change(conflict.ChangeID)
 		if change.Status() == state.WaitStatus {
 			healthState.Code = "wait-on-error"
+			healthState.Status = healthstate.WaitingStatus
+		} else {
+			healthState.Status = healthstate.PendingStatus
 		}
 
 		healthState.SdkHealth = sdksHealthCheckSummary(change)
-		healthState.Status = healthstate.PendingStatus
 	} else {
 		if ws.Running {
 			healthState.Status = healthstate.ReadyStatus

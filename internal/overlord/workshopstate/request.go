@@ -669,7 +669,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 		ctx,
 		name,
 		projectId,
-		[]healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus})
+		[]healthstate.Status{healthstate.ReadyStatus, healthstate.WaitingStatus})
 	if err != nil {
 		return nil, err
 	}

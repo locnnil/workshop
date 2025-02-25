@@ -192,7 +192,7 @@ func (s *managerSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	c.Check(health.Code, check.HasLen, 0)
 }
 
-func (s *managerSuite) TestWorkshopHealthOperationInProgressWithNotes(c *check.C) {
+func (s *managerSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -206,7 +206,7 @@ func (s *managerSuite) TestWorkshopHealthOperationInProgressWithNotes(c *check.C
 	workshop := s.launchWorkshopWithSDKs(c, "test", nil)
 	health := s.manager.WorkshopHealth(workshop)
 
-	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Assert(health.Status, check.Equals, healthstate.WaitingStatus)
 	c.Check(health.SdkHealth, check.HasLen, 0)
 	c.Check(health.Message, check.HasLen, 0)
 	c.Check(health.Code, check.Equals, "wait-on-error")
@@ -280,7 +280,7 @@ func (s *managerSuite) TestCheckStatusReady(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
 	c.Assert(err, check.ErrorMatches, "workshop already running")
 }
 
@@ -289,7 +289,7 @@ func (s *managerSuite) TestCheckStatusPending(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("refresh", "test")
-	chg.SetStatus(state.WaitStatus)
+	chg.SetStatus(state.DoingStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "test")
 	chg.Set("project-id", s.project.ProjectId)
@@ -302,7 +302,29 @@ func (s *managerSuite) TestCheckStatusPending(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "other changes in progress")
+}
+
+func (s *managerSuite) TestCheckStatusWaiting(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "test")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	s.launchWorkshopWithSDKs(c, "test", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+
+	// Waiting status should not return an error
+	err := s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.WaitingStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
 	c.Assert(err, testutil.ErrorIs, workshopstate.ErrWaitingOnError)
 }
 
@@ -317,8 +339,8 @@ func (s *managerSuite) TestCheckStatusError(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "workshop is unhealthy")
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop unhealthy")
 }
 
 func (s *managerSuite) TestCheckStatusStopped(c *check.C) {
@@ -332,6 +354,6 @@ func (s *managerSuite) TestCheckStatusStopped(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// All other status' should return an error
-	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
+	err = s.manager.CheckStatus(s.ctx, "test", s.project.ProjectId, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
 	c.Assert(err, check.ErrorMatches, "workshop not running")
 }

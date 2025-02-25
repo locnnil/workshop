@@ -19,11 +19,12 @@ const (
 	UnknownStatus Status = iota
 	ReadyStatus
 	PendingStatus
+	WaitingStatus
 	ErrorStatus
 	StoppedStatus
 )
 
-var knownStatuses = []string{"Unknown", "Ready", "Pending", "Error", "Stopped"}
+var knownStatuses = []string{"Unknown", "Ready", "Pending", "Waiting", "Error", "Stopped"}
 
 func StatusLookup(str string) (Status, error) {
 	switch str {
@@ -33,6 +34,8 @@ func StatusLookup(str string) (Status, error) {
 		return ReadyStatus, nil
 	case "pending":
 		return PendingStatus, nil
+	case "waiting":
+		return WaitingStatus, nil
 	case "error":
 		return ErrorStatus, nil
 	case "stopped":

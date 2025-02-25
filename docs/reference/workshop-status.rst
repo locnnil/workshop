@@ -28,7 +28,7 @@ there is no container yet.
    stateDiagram-v2
        OFF --> READY: launch
        OFF --> ERROR: launch (on error)
-       OFF --> PENDING: launch --wait-on-error (on error)
+       OFF --> WAITING: launch --wait-on-error (on error)
 
 
 Ready
@@ -49,7 +49,7 @@ up and ready to do some work.
        READY --> READY: remount
        READY --> READY: refresh
        READY --> ERROR: refresh (on error)
-       READY --> PENDING: refresh --wait-on-error (on error)
+       READY --> WAITING: refresh --wait-on-error (on error)
 
 
 Stopped
@@ -68,23 +68,32 @@ but is still linked to the project directory.
        STOPPED --> STOPPED: remount
 
 
-Pending
+Waiting
 -------
 
-The workshop is being updated or changing its status;
-only a few commands will be accepted,
-and the container itself is non-operational.
+The workshop is paused
+in the middle of a change
+to allow for interactive debugging;
+only a few commands will be accepted.
 
 .. mermaid::
-   :alt: Pending state
-   :caption: Pending state
+   :alt: Waiting state
+   :caption: Waiting state
    :align: center
 
     stateDiagram-v2
-        PENDING --> OFF: launch --abort
-        PENDING --> READY: launch --continue
-        PENDING --> READY: refresh --abort
-        PENDING --> READY: refresh --continue
+        WAITING --> OFF: launch --abort
+        WAITING --> READY: launch --continue
+        WAITING --> READY: refresh --abort
+        WAITING --> READY: refresh --continue
+
+
+Pending
+-------
+
+An intermediate state
+while the workshop is being updated or changing its status;
+only a few commands will be accepted.
 
 
 Error
