@@ -75,21 +75,21 @@ The name is optional if the project has only one workshop:
    $ workshop refresh
 
 
-Refresh workshop, but stop on any errors (won’t accept multiple workshops):
+Refresh workshop, but pause on any errors (won’t accept multiple workshops):
 
 .. code-block:: console
 
    $ workshop refresh --wait-on-error
 
 
-After refresh stopped on error, abort the operation:
+After refresh paused on error, abort the operation:
 
 .. code-block:: console
 
    $ workshop refresh --abort
 
 
-After refresh stopped on error and the workshop was fixed,
+After refresh paused on error and the workshop was fixed,
 continue the operation:
 
 .. code-block:: console
