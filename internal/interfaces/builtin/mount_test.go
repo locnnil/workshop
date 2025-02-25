@@ -23,9 +23,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -53,9 +55,92 @@ func (s *mountSuite) TestName(c *check.C) {
 	c.Assert(s.iface.Name(), check.Equals, "mount")
 }
 
-func (s *mountSuite) TestSanitizeSlotSimple(c *check.C) {
+func (s *mountSuite) TestInterfaces(c *check.C) {
+	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
+}
+
+func (s *mountSuite) TestInstallSystemSdkSlot(c *check.C) {
+	info := sdk.MockInfo(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ mount:
+`, s.projectId, "ws")
+
+	ic := policy.InstallCandidate{
+		Sdk:             info,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	c.Check(ic.Check(), check.IsNil)
+}
+
+func (s *mountSuite) TestInstallOtherSystemSdkSlot(c *check.C) {
+	info := sdk.MockInfo(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ m:
+  interface: mount
+`, s.projectId, "ws")
+
+	ic := policy.InstallCandidate{
+		Sdk:             info,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	c.Check(ic.Check(), check.ErrorMatches, `installation not allowed by "m" slot rule of interface "mount"`)
+}
+
+func (s *mountSuite) TestInstallRegularSdkSlot(c *check.C) {
+	info := sdk.MockInfo(c, `name: producer
+base: ubuntu@22.04
+slots:
+ m:
+  interface: mount
+  workshop-source: /opt
+`, s.projectId, "ws")
+
+	ic := policy.InstallCandidate{
+		Sdk:             info,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	c.Check(ic.Check(), check.IsNil)
+}
+
+func (s *mountSuite) TestInstallSystemSdkPlug(c *check.C) {
+	info := sdk.MockInfo(c, `name: system
+base: ubuntu@22.04
+type: system
+plugs:
+ mount:
+`, s.projectId, "ws")
+
+	ic := policy.InstallCandidate{
+		Sdk:             info,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	c.Check(ic.Check(), check.ErrorMatches, `installation not allowed by "mount" plug rule of interface "mount"`)
+}
+
+func (s *mountSuite) TestInstallRegularSdkPlug(c *check.C) {
+	info := sdk.MockInfo(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /mnt
+`, s.projectId, "ws")
+
+	ic := policy.InstallCandidate{
+		Sdk:             info,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	c.Check(ic.Check(), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizeSlotSystem(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
+type: system
 slots:
  mount-slot:
   interface: mount
@@ -63,6 +148,34 @@ slots:
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["mount-slot"]
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizeSlotSystemWorkshopSource(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+type: system
+slots:
+ mount-slot:
+  interface: mount
+  workshop-source: /opt
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `unknown attribute for system mount interface slot: "workshop-source"`)
+}
+
+func (s *mountSuite) TestSanitizeSlotSystemHostSource(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+type: system
+slots:
+ mount-slot:
+  interface: mount
+  host-source: /usr
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `unknown attribute for system mount interface slot: "host-source"`)
 }
 
 func (s *mountSuite) TestSanitizePlugSimple(c *check.C) {
@@ -103,6 +216,42 @@ plugs:
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount interface path is not clean:.*")
 }
 
+func (s *mountSuite) TestSanitizePlugReadOnlyBool(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  read-only: true
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizePlugReadOnlyString(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  read-only: "true"
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *mountSuite) TestSanitizePlugReadOnlyInvalid(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  read-only: "invalid"
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"invalid\" in key \"read-only\" for mount interface plug.*")
+}
+
 func (s *mountSuite) TestSanitizeSlotOK(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
@@ -125,7 +274,7 @@ slots:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["mount-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, "mount slot must contain source path")
 }
 
 func (s *mountSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {
@@ -154,24 +303,22 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *mountSuite) TestInterfaces(c *check.C) {
-	c.Check(builtin.Interfaces(), testutil.DeepContains, s.iface)
-}
-
-func (s *mountSuite) TestMountInterface(c *check.C) {
+func (s *mountSuite) TestConnectHostWorkshop(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
  mount:
+  interface: mount
   workshop-target: /project/training
 `, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
-	slot := builtin.MockSlot(c, `name: producer
+	slot := builtin.MockSlot(c, `name: system
 base: ubuntu@22.04
+type: system
 slots:
  mount:
-`, s.projectId, "ws", "producer", "mount")
+`, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
 	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
@@ -184,35 +331,152 @@ slots:
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 
-func (s *mountSuite) TestMountInterfaceReadOnlyBool(c *check.C) {
+func (s *mountSuite) TestConnectWorkshopWorkshop(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
  mount:
+  interface: mount
   workshop-target: /project/training
-  read-only: true
 `, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+ mount:
+  interface: mount
+  workshop-source: $SDK/training
+`, s.projectId, "ws", "producer", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the mount specification.
+	expectedMnt := workshop.Mount{Name: plug.Name, What: "/var/lib/workshop/sdk/producer/current/training", Where: "/project/training", Type: workshop.WorkshopWorkshop}
+	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 
-func (s *mountSuite) TestMountInterfaceReadOnlyString(c *check.C) {
+func (s *mountSuite) TestAutoConnectHostWorkshop(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
  mount:
+  interface: mount
   workshop-target: /project/training
-  read-only: "true"
 `, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ mount:
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	ic := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := ic.CheckAutoConnect()
+	c.Check(err, check.IsNil)
 }
 
-func (s *mountSuite) TestMountInterfaceReadOnlyInvalid(c *check.C) {
+func (s *mountSuite) TestAutoConnectHostWorkshopExplicit(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
  mount:
+  interface: mount
   workshop-target: /project/training
-  read-only: "invalid"
 `, s.projectId, "ws", "consumer", "mount")
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"invalid\" in key \"read-only\" for mount interface plug.*")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	// Simulate a workshop definition file with:
+	// connections:
+	//   - plug: consumer:mount
+	//     slot: system:mount
+	connectedPlug.SetAttr("auto-explicit", "true")
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ mount:
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	ic := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := ic.CheckAutoConnect()
+	c.Check(err, check.IsNil)
+}
+
+func (s *mountSuite) TestAutoConnectWorkshopWorkshop(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+`, s.projectId, "ws", "consumer", "mount")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+ mount:
+  interface: mount
+  workshop-source: $SDK/training
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	ic := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := ic.CheckAutoConnect()
+	c.Check(err, check.ErrorMatches, `auto-connection not allowed by plug rule of interface "mount"`)
+}
+
+func (s *mountSuite) TestAutoConnectWorkshopWorkshopExplicit(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+`, s.projectId, "ws", "consumer", "mount")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	// Simulate a workshop definition file with:
+	// connections:
+	//   - plug: consumer:mount
+	//     slot: producer:mount
+	connectedPlug.SetAttr("auto-explicit", "true")
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+ mount:
+  interface: mount
+  workshop-source: $SDK/training
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	ic := policy.ConnectCandidate{
+		Plug:            connectedPlug,
+		Slot:            connectedSlot,
+		BaseDeclaration: asserts.BuiltinBaseDeclaration(),
+	}
+	_, err := ic.CheckAutoConnect()
+	c.Check(err, check.IsNil)
 }

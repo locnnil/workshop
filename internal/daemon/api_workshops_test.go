@@ -134,10 +134,6 @@ sdks:
 	workshopplug = `name: workshopplug
 base: ubuntu@22.04
 sdks:
-  - name: system
-    slots:
-      training-slot:
-        interface: mount
   - name: test-sdk
     channel: latest/stable
     plugs:
@@ -146,18 +142,11 @@ sdks:
         workshop-target: /opt
   - name: test-sdk-2
     channel: latest/stable
-connections:
-  - plug: test-sdk:training-plug
-    slot: system:training-slot
 `
 
 	workshopplugbound = `name: workshopplugbound
 base: ubuntu@22.04
 sdks:
-  - name: system
-    slots:
-      training-slot:
-        interface: mount
   - name: test-sdk
     channel: latest/stable
     plugs:
@@ -168,20 +157,17 @@ sdks:
         bind: test-sdk:training-plug
   - name: test-sdk-2
     channel: latest/stable
-connections:
-  - plug: test-sdk:training-plug
-    slot: system:training-slot
 `
 
 	workshopslot = `name: workshopslot
 base: ubuntu@22.04
 sdks:
-  - name: system
+  - name: test-sdk
+    channel: latest/stable
     slots:
       training:
         interface: mount
-  - name: test-sdk
-    channel: latest/stable
+        workshop-source: /project/training
   - name: test-sdk-2
     channel: latest/stable
 `
@@ -189,18 +175,17 @@ sdks:
 	workshopconns = `name: workshopconns
 base: ubuntu@22.04
 sdks:
-  - name: system
-    slots:
-      training:
-        interface: mount
-        workshop-source: /project
   - name: test-sdk
     channel: latest/stable
   - name: test-sdk-2
     channel: latest/stable
+    slots:
+      training:
+        interface: mount
+        workshop-source: /project
 connections:
   - plug: test-sdk:data
-    slot: system:training
+    slot: test-sdk-2:training
 `
 
 	workshopbrokenconn = `name: workshopbrokenconn
@@ -218,23 +203,23 @@ connections:
 	connsplugbound = `name: connsplugbound
 base: ubuntu@22.04
 sdks:
-  - name: system
+  - name: test-sdk
+    channel: latest/stable
     slots:
-      training:
-        interface: mount
       photos:
         interface: mount
         workshop-source: /project/photos
-  - name: test-sdk
-    channel: latest/stable
   - name: test-sdk-2
     channel: latest/stable
     plugs:
       photos:
         bind: test-sdk:data
+    slots:
+      training:
+        interface: mount
 connections:
   - plug: test-sdk:data
-    slot: system:training
+    slot: test-sdk-2:training
 `
 
 	testsdk = `
@@ -863,7 +848,7 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", sdk.System.String(), "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "test-sdk", "training"), check.Not(check.IsNil))
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
@@ -1054,7 +1039,7 @@ func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 	conns, err := repo.Connected(s.project.ProjectId, "workshopplug", "test-sdk", "training-plug")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplug/test-sdk:training-plug %s/workshopplug/system:training-slot`, s.project.ProjectId, s.project.ProjectId))
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplug/test-sdk:training-plug %s/workshopplug/system:mount`, s.project.ProjectId, s.project.ProjectId))
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
@@ -1087,12 +1072,12 @@ func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
 	conns, err := repo.Connected(s.project.ProjectId, "workshopplugbound", "test-sdk", "training-plug")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:training-plug %s/workshopplugbound/system:training-slot`, s.project.ProjectId, s.project.ProjectId))
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:training-plug %s/workshopplugbound/system:mount`, s.project.ProjectId, s.project.ProjectId))
 
 	conns, err = repo.Connected(s.project.ProjectId, "workshopplugbound", "test-sdk", "data")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
-	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:data %s/workshopplugbound/system:training-slot`, s.project.ProjectId, s.project.ProjectId))
+	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplugbound/test-sdk:data %s/workshopplugbound/system:mount`, s.project.ProjectId, s.project.ProjectId))
 }
 
 func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
@@ -1123,14 +1108,14 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", sdk.System.String(), "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "test-sdk-2", "training"), check.Not(check.IsNil))
 
 	conns, err := repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
 		{
 			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "training"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "training"},
 		},
 	})
 
@@ -1143,6 +1128,10 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 		}, {
 			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "gpu"},
 			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: sdk.System.String(), Name: "gpu"},
+		},
+		{
+			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk", Name: "data"},
+			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "workshopconns", Sdk: "test-sdk-2", Name: "training"},
 		},
 	})
 }

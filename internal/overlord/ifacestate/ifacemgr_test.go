@@ -88,9 +88,8 @@ var systemYaml = `name: system
 base: ubuntu@22.04
 type: system
 slots:
-  slot:
+  mount:
     interface: mount
-    attr: slot-value
 `
 
 func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev int64) {
@@ -171,7 +170,7 @@ plugs:
 	})
 
 	s.state.Lock()
-	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/system:slot", s.prj.ProjectId, s.prj.ProjectId)
+	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/system:mount", s.prj.ProjectId, s.prj.ProjectId)
 	s.state.Set("conns", map[string]interface{}{
 		key: map[string]interface{}{
 			"interface": "mount",
@@ -197,7 +196,7 @@ plugs:
 	c.Assert(ifaces.Connections, check.HasLen, 1)
 	cref := &interfaces.ConnRef{
 		PlugRef: sdk.PlugRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
-		SlotRef: sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: sdk.System.String(), Name: "slot"}}
+		SlotRef: sdk.SlotRef{ProjectId: s.prj.ProjectId, Workshop: "ws", Sdk: sdk.System.String(), Name: "mount"}}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{cref})
 
 	conn, err := repo.Connection(cref)
@@ -207,7 +206,7 @@ plugs:
 		"mount": "foo",
 		"attr":  "stored-value",
 	})
-	c.Assert(conn.Slot.Name(), check.Equals, "slot")
+	c.Assert(conn.Slot.Name(), check.Equals, "mount")
 	c.Assert(conn.Slot.StaticAttrs(), check.DeepEquals, map[string]interface{}{
 		"mount": "foo",
 		"attr":  "stored-value",

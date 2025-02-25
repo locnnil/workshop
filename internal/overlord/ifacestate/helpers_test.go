@@ -63,18 +63,19 @@ plugs:
 var producerYaml = `name: producer
 base: ubuntu@22.04
 slots:
-  mount:
-    interface: mount
   slot-mount:
     interface: mount
+    workshop-source: $SDK/produce
 `
 
 func (s *helpersSuite) TestAutoConnectChecker(c *check.C) {
 	consumer := sdk.MockInfo(c, consumerYaml, "42424242", "ws")
 	plugMount := interfaces.NewConnectedPlug(consumer.Plugs["plug-mount"], nil, nil)
 
+	system := sdk.MockInfo(c, systemYaml, "42424242", "ws")
+	autoMount := interfaces.NewConnectedSlot(system.Slots["mount"], nil, nil)
+
 	producer := sdk.MockInfo(c, producerYaml, "42424242", "ws")
-	autoMount := interfaces.NewConnectedSlot(producer.Slots["mount"], nil, nil)
 	slotMount := interfaces.NewConnectedSlot(producer.Slots["slot-mount"], nil, nil)
 
 	workshopConns := []interfaces.ConnRef{}

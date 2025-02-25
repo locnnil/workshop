@@ -127,32 +127,33 @@ This example adds a slot, a plug and two connections to its SDKs:
 
 .. code-block:: yaml
    :caption: .workshop/digits-cuda.yaml
-   :emphasize-lines: 5-8, 11-14, 17-21
+   :emphasize-lines: 6-9, 12-15, 18-22
 
    base: ubuntu@22.04
    name: digits-cuda
    sdks:
-     - name: system
-       slots:
-         images:
-           interface: mount
-           workshop-source: /project/training-data/low-res
      - name: tensorflow
        channel: latest/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
+     - name: imagenet
+       channel: latest/stable
+       slots:
+         images:
+           interface: mount
+           workshop-source: $SDK/images
      - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
      - plug: tensorflow:images
-       slot: system:images
+       slot: imagenet:images
 
 
-Here, :samp:`system:images`
+Here, :samp:`imagenet:images`
 is a :ref:`mount interface <exp_mount_interface>` slot,
 whose :samp:`workshop-source` attribute points to a directory in the workshop.
 At run-time, the :samp:`tensorflow:images` plug is connected to the slot

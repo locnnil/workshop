@@ -645,6 +645,7 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleInstallationConstraintsPlugNames
 func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]interface{}{
 		"allow-connection": map[string]interface{}{
+			"plug-sdk-type": []interface{}{sdk.Regular.String()},
 			"slot-sdk-type": []interface{}{sdk.System.String(), sdk.Regular.String()},
 		},
 	})
@@ -652,7 +653,8 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsIDConstrain
 
 	c.Assert(rule.AllowConnection, check.HasLen, 1)
 	cstrs := rule.AllowConnection[0]
-	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
+	c.Check(cstrs.PlugSdkTypes, check.DeepEquals, []string{sdk.Regular.String()})
+	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), sdk.Regular.String()})
 }
 
 func (s *plugSlotRulesSuite) TestCompilePlugRuleConnectionConstraintsPlugNamesSlotNames(c *check.C) {
@@ -1062,7 +1064,22 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleInstallationConstraintsIDConstra
 
 	c.Assert(rule.AllowInstallation, check.HasLen, 1)
 	cstrs := rule.AllowInstallation[0]
-	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), "regular"})
+	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String(), sdk.Regular.String()})
+}
+
+func (s *plugSlotRulesSuite) TestCompileSlotRuleConnectionConstraintsIDConstraints(c *check.C) {
+	rule, err := asserts.CompileSlotRule("iface", map[string]interface{}{
+		"allow-connection": map[string]interface{}{
+			"plug-sdk-type": []interface{}{sdk.Regular.String()},
+			"slot-sdk-type": []interface{}{sdk.System.String()},
+		},
+	})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(rule.AllowConnection, check.HasLen, 1)
+	cstrs := rule.AllowConnection[0]
+	c.Check(cstrs.PlugSdkTypes, check.DeepEquals, []string{sdk.Regular.String()})
+	c.Check(cstrs.SlotSdkTypes, check.DeepEquals, []string{sdk.System.String()})
 }
 
 func checkBoolSlotConnConstraints(c *check.C, subrule string, cstrs []*asserts.SlotConnectionConstraints, always bool) {
@@ -1212,11 +1229,11 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleErrors(c *check.C) {
 		{`iface:
   allow-connection:
     plug-sdk-ids:
-      - foo`, `allow-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slots-per-plug, plugs-per-slot`},
+      - foo`, `allow-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slot-sdk-type, slots-per-plug, plugs-per-slot`},
 		{`iface:
   deny-connection:
     plug-sdk-ids:
-        - foo`, `deny-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slots-per-plug, plugs-per-slot`},
+        - foo`, `deny-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slot-sdk-type, slots-per-plug, plugs-per-slot`},
 		{`iface:
   allow-connect: true`, `slot rule for interface "iface" must specify at least one of allow-installation, deny-installation, allow-connection, deny-connection, allow-auto-connection, deny-auto-connection`},
 		{`iface:
@@ -1228,7 +1245,7 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleErrors(c *check.C) {
 		{`iface:
   deny-auto-connection:
     plug-sdk-ids:
-      - foo`, `deny-auto-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slots-per-plug, plugs-per-slot`},
+      - foo`, `deny-auto-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slot-sdk-type, slots-per-plug, plugs-per-slot`},
 		{`iface:
   allow-auto-connection:
     plugs-per-slot: any`, `plugs-per-slot in allow-auto-connection in slot rule for interface "iface" must be an integer >=1 or \*`},
@@ -1251,7 +1268,7 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleErrors(c *check.C) {
 		{`iface:
   allow-auto-connection:
     plug-sdk-ids:
-      - foo`, `allow-auto-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slots-per-plug, plugs-per-slot`},
+      - foo`, `allow-auto-connection in slot rule for interface "iface" must specify at least one of plug-names, slot-names, plug-attributes, slot-attributes, plug-sdk-type, slot-sdk-type, slots-per-plug, plugs-per-slot`},
 	}
 
 	for i, t := range tests {

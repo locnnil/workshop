@@ -83,7 +83,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mount
-    workshop-target: /home/workshop
+    workshop-target: /opt
 `
 
 var conflictingTarget2 = `name: conflict-2
@@ -91,7 +91,7 @@ base: ubuntu@22.04
 plugs:
   plug:
     interface: mount
-    workshop-target: /home/workshop
+    workshop-target: /opt
 `
 
 var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
@@ -392,7 +392,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/home/workshop" is also mounted by.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/opt" is also mounted by.*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
@@ -501,14 +501,14 @@ base: ubuntu@22.04
 plugs:
     plug:
         interface: mount
-        workshop-target: /home/workshop
+        workshop-target: /opt
 `
 	var systemYaml = `
 name: system
 base: ubuntu@22.04
 type: system
 slots:
-    slot:
+    mount:
         interface: mount
 `
 	wm, err := s.launchWorkshop(c, "ws-consumer", []testSdkSetup{{csetup, sdkYaml}})
@@ -519,10 +519,10 @@ slots:
 
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot": map[string]interface{}{
+		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount": map[string]interface{}{
 			"interface":    "mount",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"target": "/opt"},
+			"plug-static":  map[string]interface{}{"workshop-target": "/opt"},
 			"slot-dynamic": map[string]interface{}{"host-source": source},
 		},
 	})
@@ -571,7 +571,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 		Auto:             true,
 		Interface:        "mount",
 		Undesired:        false,
-		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
+		StaticPlugAttrs:  map[string]interface{}{"workshop-target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
 		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
@@ -617,7 +617,7 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 		Auto:             true,
 		Interface:        "mount",
 		Undesired:        false,
-		StaticPlugAttrs:  map[string]interface{}{"target": "/opt"},
+		StaticPlugAttrs:  map[string]interface{}{"workshop-target": "/opt"},
 		DynamicPlugAttrs: map[string]interface{}{},
 		StaticSlotAttrs:  map[string]interface{}{},
 		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
@@ -897,7 +897,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	var attrs map[string]interface{}
 	c.Assert(chg.Get("remounts", &attrs), check.IsNil)
 	c.Assert(attrs, check.HasLen, 1)
-	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:slot"],
+	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount"],
 		check.DeepEquals, source)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)

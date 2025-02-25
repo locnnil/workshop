@@ -38,9 +38,7 @@ var (
 
 	nameConstraints      = []string{"plug-names", "slot-names"}
 	attributeConstraints = []string{"plug-attributes", "slot-attributes"}
-
-	slotIDConstraints = []string{"plug-sdk-type"}
-	plugIDConstraints = []string{"slot-sdk-type"}
+	idConstraints        = []string{"plug-sdk-type", "slot-sdk-type"}
 
 	sideArityConstraints        = []string{"slots-per-plug", "plugs-per-slot"}
 	sideArityConstraintsSetters = map[string]func(sideArityConstraintsHolder, SideArityConstraint){
@@ -121,6 +119,7 @@ func (ac SideArityConstraint) Any() bool {
 // interface slot for a sdk relevant to its connection or
 // auto-connection.
 type SlotConnectionConstraints struct {
+	SlotSdkTypes []string
 	PlugSdkTypes []string
 
 	SlotNames *NameConstraints
@@ -157,6 +156,8 @@ func (c *SlotConnectionConstraints) setIDConstraints(field string, cstrs []strin
 	switch field {
 	case "plug-sdk-type":
 		c.PlugSdkTypes = cstrs
+	case "slot-sdk-type":
+		c.SlotSdkTypes = cstrs
 	default:
 		panic("unknown SlotConnectionConstraints field " + field)
 	}
@@ -376,7 +377,7 @@ func compileSlotInstallationConstraints(context *subruleContext, cDef constraint
 
 func compileSlotConnectionConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	slotConnCstrs := &SlotConnectionConstraints{}
-	err := baseCompileConstraints(context, cDef, slotConnCstrs, nameConstraints, attributeConstraints, slotIDConstraints)
+	err := baseCompileConstraints(context, cDef, slotConnCstrs, nameConstraints, attributeConstraints, idConstraints)
 	if err != nil {
 		return nil, err
 	}
@@ -597,6 +598,7 @@ func compilePlugInstallationConstraints(context *subruleContext, cDef constraint
 // interface plug for a snap relevant to its connection or
 // auto-connection.
 type PlugConnectionConstraints struct {
+	PlugSdkTypes []string
 	SlotSdkTypes []string
 
 	PlugNames *NameConstraints
@@ -642,6 +644,8 @@ func (c *PlugConnectionConstraints) setAttributeConstraints(field string, cstrs 
 
 func (c *PlugConnectionConstraints) setIDConstraints(field string, cstrs []string) {
 	switch field {
+	case "plug-sdk-type":
+		c.PlugSdkTypes = cstrs
 	case "slot-sdk-type":
 		c.SlotSdkTypes = cstrs
 	default:
@@ -667,7 +671,7 @@ func (c *PlugConnectionConstraints) plugsPerSlot() SideArityConstraint {
 
 func compilePlugConnectionConstraints(context *subruleContext, cDef constraintsDef) (constraintsHolder, error) {
 	plugConnCstrs := &PlugConnectionConstraints{}
-	err := baseCompileConstraints(context, cDef, plugConnCstrs, nameConstraints, attributeConstraints, plugIDConstraints)
+	err := baseCompileConstraints(context, cDef, plugConnCstrs, nameConstraints, attributeConstraints, idConstraints)
 	if err != nil {
 		return nil, err
 	}

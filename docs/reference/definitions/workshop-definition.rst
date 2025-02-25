@@ -91,7 +91,6 @@ and includes a number of mandatory and optional keys:
 
 Each SDK is described with the following keys:
 
-.. @artefact mount interface attributes
 .. @artefact plug binding
 .. @artefact $SDK
 
@@ -107,7 +106,8 @@ Each SDK is described with the following keys:
    * - :samp:`name` (required)
      - string
      - Name of an existing SDK
-       that is available from the SDK store.
+       that is available from the SDK store,
+       or :samp:`system`.
 
    * - :samp:`channel` (required)
      - string
@@ -122,6 +122,8 @@ Each SDK is described with the following keys:
        of :samp:`<TRACK>/<RISK>`
        without the :samp:`<BRANCH>` part.
 
+       Not required for the :ref:`system SDK <ref_system_sdk>`.
+
    * - :samp:`plugs`
      - object
      - Lists plug bindings or additional plug definitions under the SDK.
@@ -132,24 +134,135 @@ Each SDK is described with the following keys:
          using the :samp:`<SDK>:<PLUG>` format.
 
        - A plug definition must specify the :samp:`interface`
-         and the relevant attributes.
-         The only interface with additional attributes is :samp:`mount`;
-         it requires the :samp:`workshop-target` property
-         to specify a path inside the workshop
-         to be used as the plug's target directory.
+         and the relevant attributes (described below).
 
    * - :samp:`slots`
      - object
      - Defines additional slots under the SDK;
        each entry must specify the :samp:`interface`
-       and the relevant attributes.
+       and the relevant attributes (described below).
 
-       The only interface with additional attributes is :samp:`mount`;
-       it requires the :samp:`workshop-source` property
-       to specify a path inside the workshop
-       for the slot's source directory;
+
+.. _ref_system_sdk:
+
+System SDK
+~~~~~~~~~~
+
+.. @artefact system SDK
+
+The system SDK is built in to every workshop,
+and isn't available in the SDK store,
+so it doesn't require a :samp:`channel`.
+
+The system SDK declares slots for many interfaces.
+These represent resources provided by the host system.
+The workshop definition can define additional plugs and slots
+for all SDKs,
+including the system SDK.
+
+
+Camera interface
+~~~~~~~~~~~~~~~~
+
+.. @artefact camera interface
+
+Camera interface plugs must be named :samp:`camera`
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They have no attributes.
+
+The only camera interface slot is :samp:`system:camera`.
+
+
+Desktop interface
+~~~~~~~~~~~~~~~~~
+
+.. @artefact desktop interface
+
+Desktop interface plugs must be named :samp:`desktop`
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They have no attributes.
+
+The only desktop interface slot is :samp:`system:desktop`.
+
+
+GPU interface
+~~~~~~~~~~~~~
+
+.. @artefact GPU interface
+
+GPU interface plugs must be named :samp:`gpu`
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They have no attributes.
+
+The only GPU interface slot is :samp:`system:gpu`.
+
+
+Mount interface
+~~~~~~~~~~~~~~~
+
+.. @artefact mount interface
+
+Mount interface plugs can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They are described by the following attributes:
+
+.. @artefact mount interface attributes
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`workshop-target` (required)
+     - string
+     - A path inside the workshop
+       to be used as the plug's target directory.
+
+   * - :samp:`read-only`
+     - Boolean
+     - Whether the target directory should be read-only.
+
+
+The only mount interface slot in the :ref:`system SDK <ref_system_sdk>` is :samp:`system:mount`.
+It has a single dynamic attribute named :samp:`host-source`,
+which can be only configured at :ref:`remount <ref_workshop_remount>`.
+
+Regular SDKs can declare additional mount interface slots.
+They are described by the following attributes:
+
+.. @artefact mount interface attributes
+.. @artefact $SDK
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`workshop-source` (required)
+     - string
+     - A path inside the workshop
+       to be used as the slot's source directory;
        :file:`/project` or :envvar:`$SDK`-based paths can be used;
        :envvar:`$SDK` expands into the SDK's installation path in the workshop.
+
+
+SSH interface
+~~~~~~~~~~~~~
+
+.. @artefact SSH interface
+
+SSH interface plugs must be named :samp:`ssh-agent`
+and can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They have no attributes.
+
+The only SSH interface slot is :samp:`system:ssh-agent`.
 
 
 JSON Schema
@@ -212,14 +325,12 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
            bind: go:mod-cache
 
 
-.. @artefact system SDK
-
-This YAML file, besides using the :samp:`tensorflow` and :samp:`cuda` SDKs,
-defines an additional slot under the system SDK, a plug under :samp:`tensorflow`
+This YAML file, besides using the :samp:`tensorflow`, :samp:`imagenet` and :samp:`cuda` SDKs,
+defines an additional slot under the :samp:`imagenet` SDK, a plug under :samp:`tensorflow`
 and two connections:
 
 - One that connects the :samp:`tensorflow:images` plug
-  to the newly defined :samp:`system:images` slot.
+  to the newly defined :samp:`imagenet:images` slot.
 
 - Another that connects the :samp:`tensorflow:cuda` plug
   to the pre-existing :samp:`cuda:libs`.
@@ -230,24 +341,25 @@ and two connections:
    base: ubuntu@22.04
    name: digits-cuda
    sdks:
-     - name: system
-       slots:
-         images:
-           interface: mount
-           workshop-source: /project/training-data/low-res
      - name: tensorflow
        channel: latest/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
+     - name: imagenet
+       channel: latest/stable
+       slots:
+         images:
+           interface: mount
+           workshop-source: $SDK/images
      - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
      - plug: tensorflow:images
-       slot: system:images
+       slot: imagenet:images
 
 
 See also

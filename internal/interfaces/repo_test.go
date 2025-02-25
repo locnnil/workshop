@@ -1420,8 +1420,8 @@ func mountAutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	return plug.Attrs["mount"] == slot.Attrs["mount"]
 }
 
-// internal helper that creates a new repository with two snaps, one
-// is a mount plug and one a mount slot
+// internal helper that creates a new repository with two SDKs, one
+// has a mount plug and one a mount slot
 func makeMountConnectionTestSdks(c *C, projectId, plugMountToken, slotMountToken string) (*Repository, *sdk.Info, *sdk.Info) {
 	repo := NewRepository()
 	err := repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "mount", AutoConnectCallback: mountAutoConnect})
