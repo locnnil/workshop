@@ -16,15 +16,26 @@ For additional guidance, see the
 Releases
 --------
 
-Currently, |ws_markup| is not yet publicly available,
+We provide two binaries: |ws_markup| and |sdk_markup|.
+
+- |ws_markup| (**AArch64** and **x86_64**) is designed for common users.
+- |sdk_markup| (**x86_64** only) is intended for SDK publishers.
+
+
+Currently, neither is publicly available,
 but you can confidently use the pre-release versions.
+
+
+|ws_markup|
+~~~~~~~~~~~
 
 Latest version:
 
-- `Workshop v0.1.9 <https://github.com/canonical/workshop/releases/tag/v0.1.9>`_
+- `Workshop v0.1.10 <https://github.com/canonical/workshop/releases/tag/v0.1.10>`_
 
 Older versions:
 
+- `Workshop v0.1.9 <https://github.com/canonical/workshop/releases/tag/v0.1.9>`_
 - `Workshop v0.1.8 <https://github.com/canonical/workshop/releases/tag/v0.1.8>`_
 - `Workshop v0.1.7 <https://github.com/canonical/workshop/releases/tag/v0.1.7>`_
 - `Workshop v0.1.6 <https://github.com/canonical/workshop/releases/tag/v0.1.6>`_
@@ -33,6 +44,22 @@ Older versions:
 - `Workshop v0.1.3 <https://github.com/canonical/workshop/releases/tag/v0.1.3>`_
 - `Workshop v0.1.2 <https://github.com/canonical/workshop/releases/tag/v0.1.2>`_
 - `Workshop v0.1.0 <https://github.com/canonical/workshop/releases/tag/v0.1.0>`_
+
+
+|sdk_markup|
+~~~~~~~~~~~~
+
+Latest version:
+
+- `SDKcraft v0.1.5 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.5>`_
+
+Older versions:
+
+- `SDKcraft v0.1.4 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.4>`_
+- `SDKcraft v0.1.3 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.3>`_
+- `SDKcraft v0.1.2 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.2>`_
+- `SDKcraft v0.1.1 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.1>`_
+- `SDKcraft v0.1.0 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.0>`_
 
 
 Release policy and schedule
@@ -53,7 +80,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.8_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.10_amd64.snap
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 

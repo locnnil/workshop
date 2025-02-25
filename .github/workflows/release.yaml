@@ -28,6 +28,13 @@ jobs:
         with:
           files: |
             ${{ steps.snapcraft.outputs.snap }}
+          body: |
+            ## Docs Checklist
+            - [ ] JSON for SDKs
+            - [ ] JSON for workshops
+            - [ ] Release notes
+            - [ ] Version bump
+            - [ ] Coverage map update
   generate-docs:
     runs-on:
       - self-hosted
