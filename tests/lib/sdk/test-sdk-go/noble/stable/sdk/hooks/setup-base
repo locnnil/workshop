@@ -1,4 +1,3 @@
-#!/usr/bin/bash
 echo "setup-base ran successfully!"
 sudo snap install go --classic
 echo "PATH=/home/workshop/go/bin:$PATH" >> /home/workshop/.bashrc

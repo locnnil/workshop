@@ -278,17 +278,10 @@ which can be defined when the SDK's is built using |sdk_markup|:
      - Configures the base image for the SDK to become operational.
 
 
-Each hooks is defined in a text file of the same name
+Each hook is defined in a text file of the same name
 under :samp:`hooks/` in the :ref:`source directory <ref_sdk_directory>`.
-At run-time, they are executed as shell scripts
-under :samp:`root` inside the workshop,
-so each hook must start with a shebang directive,
-for example:
-
-.. code-block:: shell
-
-   #!/usr/bin/bash
-
+At run-time, they are executed by :command:`bash`
+as :samp:`root` inside the workshop.
 
 A hook can signal an error by returning a non-zero exit code;
 a zero code indicates success.

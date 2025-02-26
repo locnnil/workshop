@@ -1,5 +1,3 @@
-#!/usr/bin/bash
-
 if [ -f /home/workshop/setup-base-pass ]; then
     exit 0
 else

@@ -1,5 +1,3 @@
-#!/usr/bin/bash
-
 state=$(cat "$SDK_STATE_DIR/state")
 echo "latest/stable restore-state to ~/state: $state"
 cp -f "$SDK_STATE_DIR"/state ~/ || true

@@ -1,2 +1,1 @@
-#!/usr/bin/bash
 workshopctl set-health error --code unknown-problem "Health check failed"
