@@ -28,18 +28,14 @@ Build SDKs
 .. @artefact SDK publisher
 .. @artefact SDK Store
 
-To iterate on an local draft of an SDK,
-you can use the :command:`workshop sketch-sdk` command
-for quick experimentation.
-
-A more elaborate option is |sdk_markup|, intended for SDK publishers.
+To create SDKs for |ws_markup|, SDK publishers use |sdk_markup|.
 This tool is installed separately and accepts an SDK definition
 to build and publish the SDK in the SDK Store (credentials provided on request):
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   Build SDKs <build-sdks/index>
+   Craft SDKs <craft-sdks>
 
 
 Study examples
