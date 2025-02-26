@@ -97,7 +97,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
