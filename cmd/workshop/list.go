@@ -105,6 +105,9 @@ func (c *CmdList) runList() error {
 			if err != nil {
 				return err
 			}
+			if len(workshops) == 0 {
+				continue
+			}
 			header.Do(printHeader)
 			// --global flag does not list files for consistency. We may not be
 			// aware of all the project directories on the system and, thus,
