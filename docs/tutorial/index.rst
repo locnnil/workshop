@@ -191,7 +191,7 @@ and is stored in your project directory.
 
 We'll be focusing on :ref:`SDKs <exp_sdk>`,
 which are the basic units of a workshop's functionality.
-They are :ref:`built with SDKcraft <how_use_sdkcraft>` by SDK publishers
+They are :ref:`built with SDKcraft <how_sdkcraft>` by SDK publishers
 to be published on the SDK Store.
 At run-time, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
@@ -685,130 +685,11 @@ This process grafts a :ref:`special SDK <exp_sketch_sdk>` onto the workshop,
 so you can run a quick local experiment
 and circumvent the usual SDK Store publishing workflow.
 
-.. @artefact SDK definition
-
-The core form of the :command:`workshop sketch-sdk` command
-opens an :ref:`SDK definition <exp_sdk_definition>`:
-
-.. @artefact workshop sketch-sdk
-
-.. code-block:: console
-
-   $ workshop sketch-sdk
-
-
-The editor shows a very basic setup consisting of :samp:`name`, :samp:`base`,
-empty :samp:`hooks` and :samp:`plugs`:
-
-.. code-block:: yaml
-   :caption: sketch.yaml
-
-   name: sketch
-   base: ubuntu@24.04
-   # ...
-
-
-The comments are self-explanatory,
-but let's walk through the basic steps of sketching an SDK.
-
-Suppose you want to use the SSH interface in your workshop.
-While you can add a :ref:`corresponding plug <exp_ssh_interface>`
-immediately in the workshop definition,
-adding extra functionality such as testing would require hooks.
-This implies an experiment with an SDK can be the solution;
-let's see how it's done.
-
-First, adjust the SDK definition, adding a plug under :samp:`plugs`
-(you can simply uncomment the section):
-
-.. code-block:: yaml
-   :caption: sketch.yaml
-   :emphasize-lines: 4-6
-
-   name: sketch
-   base: ubuntu@24.04
-
-   plugs:
-     ssh-agent:
-       interface: ssh-agent
-
-
-After saving and exiting,
-the workshop is automatically refreshed,
-and the :command:`workshop info` output
-includes lines similar to the following:
-
-.. code-block:: console
-
-   sdks:
-     sketch:
-       tracking:   ~/.local/share/workshop/project/6b79e889/sdk/sketch/dev
-       installed:  2024-12-15  (x1)
-
-
-.. @artefact sketch SDK
-
-Note that the sketch SDK entry lists the time of last update
-and the revision (:samp:`x1`).
-Instead of a channel,
-:samp:`tracking` displays the path of the SDK definition.
-If you edit the definition, the revision is incremented.
-
-The next step would be to edit a :ref:`hook <exp_hooks>` under :samp:`hooks`.
-Run the command again:
-
-.. code-block:: console
-
-   $ workshop sketch-sdk
-
-.. @artefact SDK base image
-
-Browse to the commented :samp:`setup-base`;
-this is the hook that |ws_markup| runs at launch or refresh
-to set up the base image for the SDK.
-Add commands that install a debugger and an alternative compiler:
-
-.. code-block:: yaml
-   :caption: sketch.yaml
-
-   hooks:
-     setup-base: |
-       apt-get update
-       apt-get install -y delve clang
-
-
-Saving and exiting should refresh the workshop again.
-During the refresh, the hook runs in due order:
-
-.. code-block:: console
-
-   Run hook "setup-base" for "sketch" SDK
-
-
-At this point, you've built a real, albeit simple, SDK from scratch in minutes;
-in a real-life scenario, you would iterate over errors and issues that pop up
-until the SDK is good enough for your purposes.
-
-To undo or redo the changes, you can stash and restore the sketch SDK:
-
-.. code-block:: console
-
-   $ workshop sketch-sdk --stash
-   $ workshop sketch-sdk --restore
-
-
-When you're done experimenting, you can remove the sketch SDK entirely:
-
-.. code-block:: console
-
-   $ workshop sketch-sdk --remove
-
-
-While the entire process for :ref:`building a complete SDK <how_use_sdkcraft>`
-is beyond the scope of this tutorial,
-consider diving further into the basic SDK concepts
+Sketching an SDK involves finer details
+covered in the :ref:`how-to guide <how_sketch>`.
+You'll also need a basic understanding of SDK concepts
 such as :ref:`plugs, slots <exp_plugs_slots>` and :ref:`hooks <exp_hooks>`
-to successfully use them with :command:`workshop sketch-sdk`.
+to use them effectively with :command:`workshop sketch-sdk`.
 
 
 .. _tut_remove:
@@ -849,7 +730,7 @@ you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
 
 - If you wish to try building and publishing a full-fledged SDK,
-  continue to the |sdk_markup| :ref:`how-to guide <how_use_sdkcraft>`;
+  continue to the |sdk_markup| :ref:`how-to guide <how_sdkcraft>`;
   the :ref:`ROS 2 case study <how_ros2>`
   describes the entire process of building an SDK and using it in |ws_markup|
   in extra detail.

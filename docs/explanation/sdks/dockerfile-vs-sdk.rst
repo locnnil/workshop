@@ -19,7 +19,7 @@ maps to a workshop and its SDKs.
 .. note::
 
    We assume you're familiar
-   with |sdk_markup| basics covered in the :ref:`how-to guide <how_use_sdkcraft>`
+   with |sdk_markup| basics covered in the :ref:`how-to guide <how_sdkcraft>`
    and have an understanding of Docker.
 
 
