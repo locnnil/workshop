@@ -58,7 +58,7 @@ you can create a local SDK that automates these tasks with |ws_markup|.
 
 Running :command:`workshop sketch-sdk`
 opens a simplified version of an :ref:`SDK definition <exp_sdk_definition>`.
-This defines all SDK components in a single file named :file:`sketch.yaml`:
+This defines all SDK components in a single file named :file:`sdk.yaml`:
 
 .. @artefact workshop sketch-sdk
 
