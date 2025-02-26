@@ -109,7 +109,7 @@ Uncomment :samp:`setup-base` and add the installation commands for our tools:
    the environment handles this automatically.
 
 
-Once you save and exit :file:`sketch.yaml`,
+Once you save and exit :file:`sdk.yaml`,
 |ws_markup| refreshes the workshop, running the new hook:
 
 .. code-block:: console
