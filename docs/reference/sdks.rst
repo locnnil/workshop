@@ -258,7 +258,7 @@ which can be defined when the SDK's is built using |sdk_markup|:
        and running the :samp:`setup-base` hook for the SDK.
 
      - Restores SDK-specific data from the :ref:`state directory <ref_sdk_state>`.
-       The hook itself comes from the *new* SDK version.
+       The hook itself comes from the *new* SDK revision.
 
    * - :samp:`save-state`
 
@@ -266,7 +266,7 @@ which can be defined when the SDK's is built using |sdk_markup|:
        before destroying the old workshop.
 
      - Saves SDK-specific data to the :ref:`state directory <ref_sdk_state>`.
-       The hook itself comes from the *old* SDK version.
+       The hook itself comes from the *old* SDK revision.
 
    * - :samp:`setup-base`
 
@@ -344,6 +344,10 @@ Risks represent a choice of maturity levels for a particular track:
 
 - :samp:`edge`: for unstable software that's still in active development;
   nothing is guaranteed
+
+.. attention::
+
+   SDK channels should not be confused with SDK revisions.
 
 
 See also
