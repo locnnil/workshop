@@ -122,7 +122,7 @@ printf '%s\n' "$@"
 	prj, _, err := bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
 
-	err = bd.LaunchWorkshop(ctx, wf)
+	err = bd.LaunchOrRebuildWorkshop(ctx, wf)
 	c.Assert(err, check.IsNil)
 
 	volume := workshop.AptCacheVolumeName(wf.Name, prj.ProjectId)

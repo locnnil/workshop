@@ -46,7 +46,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	if err = s.moveInstance(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+	if err = s.copyInstance(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	if err := s.moveInstance(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
+	if err := s.copyInstance(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 }
 
 // Moves the instance between LXD projects.
-func (s *Backend) moveInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string) error {
+func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string) error {
 	conn = conn.UseProject(sourceProject)
 	instance, _, err := conn.GetInstance(srcName)
 	if err != nil {
@@ -107,12 +107,7 @@ func (s *Backend) moveInstance(conn lxd.InstanceServer, srcName, dstName, source
 		return err
 	}
 
-	op, err := conn.DeleteInstance(srcName)
-	if err != nil {
-		return err
-	}
-
-	return op.Wait()
+	return nil
 }
 
 func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {

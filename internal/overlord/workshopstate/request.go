@@ -541,10 +541,10 @@ func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Wo
 		addTaskSet(disconnect)
 	}
 
-	if plan.RecreateWorkshop() {
-		stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
-		addTaskSet(state.NewTaskSet(stash))
+	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
+	addTaskSet(state.NewTaskSet(stash))
 
+	if plan.RecreateWorkshop() {
 		launch := constructWorkshop(st, file, w.Project)
 		addTaskSet(launch)
 
@@ -590,29 +590,27 @@ func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Wo
 		refresh.AddTask(removeStateStorage)
 	}
 
-	if plan.RecreateWorkshop() {
-		// remove the workshop from stash after the state storage was detached
-		removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
-		// if the change was aborted during the cleanup stage execution,
-		// there is a chance that some of the workshop copies that had
-		// been created during the refresh were already deleted. If we
-		// start to Undo those workshops' refresh progress we will
-		// endup deleting the workshops that finished their refresh.
-		// Given that they have no copy already, the undo logic
-		// (stash-workshop) will delete the existing workshop
-		// and fail to restore from the copy. We don't want that. Hence,
-		// all the cleanup tasks are extracted into a separate lane. If
-		// any problem happens, the workshops that had finished their
-		// refresh will not be affected.
-		removeStash.JoinLane(cleanupLane)
-		removeStash.WaitFor(lastRefreshTsk)
+	// remove the workshop from stash after the state storage was detached
+	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
+	// if the change was aborted during the cleanup stage execution,
+	// there is a chance that some of the workshop copies that had
+	// been created during the refresh were already deleted. If we
+	// start to Undo those workshops' refresh progress we will
+	// endup deleting the workshops that finished their refresh.
+	// Given that they have no copy already, the undo logic
+	// (stash-workshop) will delete the existing workshop
+	// and fail to restore from the copy. We don't want that. Hence,
+	// all the cleanup tasks are extracted into a separate lane. If
+	// any problem happens, the workshops that had finished their
+	// refresh will not be affected.
+	removeStash.JoinLane(cleanupLane)
+	removeStash.WaitFor(lastRefreshTsk)
 
-		if refresh.MaybeEdge(EdgeRefreshCleanup) == nil {
-			refresh.MarkEdge(removeStash, EdgeRefreshCleanup)
-		}
-
-		refresh.AddTask(removeStash)
+	if refresh.MaybeEdge(EdgeRefreshCleanup) == nil {
+		refresh.MarkEdge(removeStash, EdgeRefreshCleanup)
 	}
+
+	refresh.AddTask(removeStash)
 
 	for _, task := range refresh.Tasks() {
 		task.Set("workshop", file.Name)

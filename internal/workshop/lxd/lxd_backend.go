@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -203,7 +204,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
 	var err error
 	var image *api.Image
 
@@ -213,14 +214,14 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
 	userName, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key user not found")
+	}
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	// Check if we have the base image stored locally
@@ -257,13 +258,34 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 		},
 	}
 
-	op, err := conn.CreateInstance(req)
-	if err != nil {
-		return err
-	}
+	inst, _, err := conn.GetInstance(InstanceName(file.Name, projectId))
+	if err == nil {
+		rop, err := conn.RebuildInstanceFromImage(conn, *image, InstanceName(file.Name, projectId), api.InstanceRebuildPost{})
+		if err != nil {
+			return err
+		}
+		if err = rop.Wait(); err != nil {
+			return err
+		}
+		maps.Copy(inst.Config, req.Config)
+		inst.Devices = req.Devices
 
-	// CreateInstance cannot be cancelled in LXD.
-	return op.Wait()
+		op, err := conn.UpdateInstance(InstanceName(file.Name, projectId), inst.Writable(), "")
+		if err != nil {
+			return err
+		}
+		if err = op.Wait(); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		op, err := conn.CreateInstance(req)
+		if err != nil {
+			return err
+		}
+
+		return op.Wait()
+	}
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {

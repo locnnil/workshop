@@ -116,7 +116,7 @@ var (
 
 func (s *healthSuite) launchWorkshopWithSDKs(c *check.C, sdks []workshop.SdkRecord) *workshop.Workshop {
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: sdks}
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)

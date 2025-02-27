@@ -66,7 +66,7 @@ func (f *workshopSuite) TestInstallLocalSdkMetaOnlyOK(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")
@@ -93,7 +93,7 @@ func (f *workshopSuite) TestInstallLocalSdkNoMetaFails(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")
@@ -118,7 +118,7 @@ func (f *workshopSuite) TestInstallLocalSdkWithHooksOK(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")

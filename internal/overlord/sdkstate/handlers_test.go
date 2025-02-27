@@ -146,7 +146,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	err = s.backend.LaunchWorkshop(s.ctx, wf)
+	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 }
 

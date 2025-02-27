@@ -88,7 +88,7 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	rev := revert.New()
 	defer rev.Fail()
 
-	if err = m.backend.LaunchWorkshop(ctx, &wf); err != nil {
+	if err = m.backend.LaunchOrRebuildWorkshop(ctx, &wf); err != nil {
 		return err
 	}
 
@@ -96,8 +96,8 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	rev.Add(func() {
 		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
 		defer cancel()
-		if err1 := m.backend.RemoveWorkshop(cleanupCtx, w); err1 != nil {
-			logger.Noticef("On doCreateWorkshop: cannot remove %q workshop on cleanup: %v", w, err1)
+		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w); reverr != nil {
+			logger.Noticef("On doCreateWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
 		}
 	})
 

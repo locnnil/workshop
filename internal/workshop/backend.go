@@ -165,8 +165,11 @@ type Backend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
-	// Launch a barebone workshop instance using the base provided.
-	LaunchWorkshop(ctx context.Context, file *File) error
+	// Launch a barebone workshop instance. If the workshop exists, wipe out its
+	// rootfs and rebuild it from the workshop file's base image. The
+	// configuration and devices of the rebuilt workshop will be reset to the
+	// default one.
+	LaunchOrRebuildWorkshop(ctx context.Context, file *File) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

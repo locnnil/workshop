@@ -134,7 +134,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -146,7 +146,8 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
 	if _, ok := f.Workshops[projectId][file.Name]; ok {
-		return errors.New("workshop exists")
+		// rebuild the workshop
+		delete(f.Workshops[projectId], file.Name)
 	}
 
 	ws := &FakeWorkshop{}
@@ -335,6 +336,16 @@ func DoExecDefault(ctx context.Context, name string, args *workshop.Execution) (
 }
 
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	wp := s.StashedWorkshops[projectId][workshop.StashNamePrefix+name]
+	if wp == nil {
+		return fmt.Errorf("stashed workshop %q not found", name)
+	}
+	delete(s.StashedWorkshops[projectId], workshop.StashNamePrefix+name)
 	return nil
 }
 
@@ -368,9 +379,12 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	if s.StashedWorkshops[projectId] == nil {
 		s.StashedWorkshops[projectId] = make(map[string]*FakeWorkshop)
 	}
-	s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] = wp
-	wp.Name = workshop.StashNamePrefix + name
-	delete(s.Workshops[projectId], name)
+	wcpy := *wp.Workshop
+	stashed := *wp
+	stashed.Workshop = &wcpy
+	stashed.Name = workshop.StashNamePrefix + name
+
+	s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] = &stashed
 	return nil
 }
 
