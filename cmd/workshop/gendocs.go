@@ -1,14 +1,17 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/canonical/gencodo"
 	"github.com/spf13/cobra"
-
-	"github.com/canonical/workshop/cmd/workshop/gendocs"
 )
+
+//go:embed gendocs/cli.rst gendocs/command.rst
+var templates embed.FS
 
 type CmdDocs struct {
 	root *CmdRoot
@@ -45,7 +48,28 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		log.Fatalf("failed to create docs directory: %v", err)
 	}
 
-	err = gendocs.GenReSTTreeCustom(c.root.Command(c.root.project), docDir, filePrepender, linkHandler)
+	indexTemplate, err := templates.ReadFile("gendocs/cli.rst")
+	if err != nil {
+		return err
+	}
+	singleCommandTemplate, err := templates.ReadFile("gendocs/command.rst")
+	if err != nil {
+		return err
+	}
+
+	td := gencodo.TemplateDetail{
+		IndexFileName:         "workshop.rst",
+		IndexTemplate:         string(indexTemplate),
+		SingleCommandTemplate: string(singleCommandTemplate),
+	}
+
+	err = gencodo.GenReSTTreeCustom(
+		c.root.Command(c.root.project),
+		docDir,
+		td,
+		filePrepender,
+		linkHandler,
+	)
 	if err != nil {
 		log.Fatalf("failed to generate documentation: %v", err)
 	}
