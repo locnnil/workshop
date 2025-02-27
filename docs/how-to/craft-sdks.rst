@@ -288,8 +288,6 @@ named :file:`setup-base`:
 .. code-block:: shell
    :caption: setup-base
 
-   #!/usr/bin/bash
-
    snap install --classic go
    echo "PATH=/home/workshop/go/bin:$PATH" >> /home/workshop/.bashrc
    
@@ -323,14 +321,12 @@ named :file:`save-state` and :file:`restore-state`:
 .. code-block:: shell
    :caption: save-state
 
-   #!/usr/bin/bash
    rsync -a /home/workshop/my_work/ $SDK_STATE_DIR
 
 
 .. code-block:: shell
    :caption: restore-state
 
-   #!/usr/bin/bash
    rsync -a $SDK_STATE_DIR/ /home/workshop/my_work
 
 
@@ -363,8 +359,6 @@ Finally, create a hook named :file:`check-health`:
 
 .. code-block:: shell
    :caption: check-health
-
-   #!/usr/bin/bash
 
    if go version > /dev/null 2>&1; then
      workshopctl set-health okay

@@ -1,2 +1,1 @@
-#!/usr/bin/bash
 echo "export FOO=BAR" > /etc/profile.d/environment.sh

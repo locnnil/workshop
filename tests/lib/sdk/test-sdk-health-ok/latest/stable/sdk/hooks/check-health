@@ -1,3 +1,2 @@
-#!/usr/bin/bash
 workshopctl set-health okay
 echo -n "Health check finished successfully"
