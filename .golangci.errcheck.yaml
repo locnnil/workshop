@@ -8,6 +8,11 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 
+  exclude-rules:
+    - path: _test\.go$
+      linters: [errcheck]
+      text: Error return value of `\(\*github.com/canonical/workshop/internal/overlord\.Overlord\)\.Stop` is not checked
+
 run:
   build-tags: [integration]
   timeout: 5m
