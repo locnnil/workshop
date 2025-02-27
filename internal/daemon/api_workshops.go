@@ -223,7 +223,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	info := Workshops{}
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
 	for _, w := range workshops {
-		health := wrkmgr.WorkshopHealth(w)
+		health := healthstate.WorkshopHealth(state, w)
 		if ignoreStatus || health.Status == status {
 			wi := workshopToInfo(w, nil, health)
 			info.Workshops = append(info.Workshops, wi)
@@ -418,7 +418,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	if err != nil {
 		return statusNotFound("%w", err)
 	}
-	health := wrkmgr.WorkshopHealth(w)
+	health := healthstate.WorkshopHealth(state, w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
 	sdks, err := w.SdkInfos(ctx)

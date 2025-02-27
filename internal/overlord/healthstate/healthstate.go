@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"time"
 
 	"github.com/canonical/x-go/strutil"
 
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type Status int
@@ -100,6 +103,86 @@ type HealthState struct {
 	Message   string                 `json:"message,omitempty"`
 	Code      string                 `json:"code,omitempty"`
 	SdkHealth map[string]HealthCheck `json:"sdk-health,omitempty"`
+}
+
+// Infers the state of a workshop based on the container's state and any of the
+// operations in progress for the workshop. The state must be locked.
+func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {
+	var healthState = HealthState{
+		Timestamp: time.Now(),
+	}
+
+	// Check the project directory exists.
+	if !ws.Project.Exists() {
+		st.Warnf("cannot find project directory %q for workshop %q", ws.Project.Path, ws.Name)
+
+		healthState.Status = ErrorStatus
+		healthState.Code = "missing-project"
+		return healthState
+	}
+
+	if err := conflict.CheckChangeConflict(st, ws.Project.ProjectId, ws.Name, ""); err != nil {
+		conflict, ok := err.(*conflict.ChangeConflictError)
+		if !ok || conflict.ChangeID == "" {
+			healthState.Status = ErrorStatus
+			return healthState
+		}
+
+		change := st.Change(conflict.ChangeID)
+		if change.Status() == state.WaitStatus {
+			healthState.Code = "wait-on-error"
+			healthState.Status = WaitingStatus
+		} else {
+			healthState.Status = PendingStatus
+		}
+
+		healthState.SdkHealth = sdksHealthCheckSummary(change)
+	} else {
+		if ws.Running {
+			healthState.Status = ReadyStatus
+		} else {
+			healthState.Status = StoppedStatus
+		}
+	}
+	return healthState
+}
+
+// Examine the tasks of the change to fetch possible check-health hook results
+// for the workshop's SDKs.
+func sdksHealthCheckSummary(chg *state.Change) map[string]HealthCheck {
+	var sdkChecks = map[string]HealthCheck{}
+	for _, task := range chg.Tasks() {
+		if task.Kind() == "run-hook" {
+			var healthCheck HealthCheck
+			if err := task.Get("health", &healthCheck); err == nil {
+				sdkChecks[healthCheck.Sdk] = healthCheck
+			}
+		}
+	}
+	return sdkChecks
+}
+
+// Checks the provided workshop has one of the allowed health statuses.
+func CheckWorkshopHealth(st *state.State, ws *workshop.Workshop, allowedStatuses []Status) error {
+	health := WorkshopHealth(st, ws)
+
+	if !slices.Contains(allowedStatuses, health.Status) {
+		switch health.Status {
+		case ReadyStatus:
+			return errors.New("workshop already running")
+		case PendingStatus:
+			return errors.New("other changes in progress")
+		case WaitingStatus:
+			return errors.New("waiting on error")
+		case ErrorStatus:
+			return errors.New("workshop unhealthy")
+		case StoppedStatus:
+			return errors.New("workshop not running")
+		default:
+			return errors.New("workshop health unknown")
+		}
+	}
+	return nil
 }
 
 func Init(hookManager *hookstate.HookManager) {

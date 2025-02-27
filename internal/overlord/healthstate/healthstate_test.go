@@ -19,9 +19,12 @@ package healthstate_test
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -101,19 +104,36 @@ func ensureTaskHealthIsSet(t *state.Task, expected *healthstate.HealthCheck, c *
 	c.Assert(expected, check.DeepEquals, &health)
 }
 
-func (s *healthSuite) launchWorkshop(c *check.C, newsdk string, createHealthCheck bool) {
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
+var (
+	oneSdk = []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}
+
+	oneSdkWithHealthCheck = []workshop.SdkRecord{{
+		Name:    "one",
+		Channel: "latest/stable",
+		Hooks:   map[string]string{hookstate.CheckHealth.String(): ""},
+	}}
+)
+
+func (s *healthSuite) launchWorkshopWithSDKs(c *check.C, sdks []workshop.SdkRecord) *workshop.Workshop {
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: sdks}
 	err := s.backend.LaunchWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
-	err = ws.MkdirAll(sdk.SdkHooksDir(newsdk), 0744)
-	c.Check(err, check.IsNil)
 
-	if createHealthCheck {
-		_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.CheckHealth.String()))
+	for _, sk := range sdks {
+		err = ws.MkdirAll(sdk.SdkHooksDir(sk.Name), 0744)
 		c.Check(err, check.IsNil)
+
+		for name, hook := range sk.Hooks {
+			c.Assert(afero.WriteFile(ws, sdk.SdkHookPath(sk.Name, name), []byte(hook), 0644), check.IsNil)
+		}
 	}
+
+	workshop, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	workshop.Running = true
+	return workshop
 }
 
 func (*healthSuite) TestStatusHappy(c *check.C) {
@@ -131,6 +151,206 @@ func (*healthSuite) TestStatusUnhappy(c *check.C) {
 	c.Check(status.String(), check.Equals, "invalid (-1)")
 }
 
+func (s *healthSuite) TestWorkshopHealthReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.ReadyStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *healthSuite) TestWorkshopHealthStopped(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	c.Assert(s.backend.StopWorkshop(s.ctx, "ws", true), check.IsNil)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.StoppedStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *healthSuite) TestWorkshopHealthMissingProject(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	c.Assert(os.RemoveAll(s.project.Path), check.IsNil)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.ErrorStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.Equals, "missing-project")
+
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	warning := fmt.Sprintf(`cannot find project directory %q for workshop "ws"`, s.project.Path)
+	c.Check(warnings[0].String(), check.Equals, warning)
+}
+
+func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("launch", "test")
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "ws")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "ws")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.WaitingStatus)
+	c.Check(health.SdkHealth, check.HasLen, 0)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.Equals, "wait-on-error")
+}
+
+func (s *healthSuite) TestWorkshopHealthSdkHealth(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("launch", "test")
+	task := s.state.NewTask("run-hook", "test task")
+	healthCheck := healthstate.HealthCheck{
+		Sdk:         "one",
+		CheckResult: healthstate.CheckWaiting,
+		Message:     "still waiting",
+		Code:        "how-much-longer",
+	}
+	task.Set("health", healthCheck)
+	task.Set("workshop", "ws")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	workshop := s.launchWorkshopWithSDKs(c, oneSdk)
+	health := healthstate.WorkshopHealth(s.state, workshop)
+
+	c.Assert(health.Status, check.Equals, healthstate.PendingStatus)
+	c.Assert(health.SdkHealth, check.HasLen, 1)
+	c.Assert(health.SdkHealth["one"], check.DeepEquals, healthCheck)
+	c.Check(health.Message, check.HasLen, 0)
+	c.Check(health.Code, check.HasLen, 0)
+}
+
+func (s *healthSuite) TestCheckStatusReady(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+
+	// Ready status should not return an error
+	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ReadyStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop already running")
+}
+
+func (s *healthSuite) TestCheckStatusPending(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.DoingStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "ws")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+
+	// Pending status should not return an error
+	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.PendingStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "other changes in progress")
+}
+
+func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	chg := s.state.NewChange("refresh", "test")
+	chg.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop", "ws")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.AddTask(task)
+
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+
+	// Waiting status should not return an error
+	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.WaitingStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "waiting on error")
+}
+
+func (s *healthSuite) TestCheckStatusError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	c.Assert(os.RemoveAll(s.project.Path), check.IsNil)
+
+	// Error status should not return an error
+	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop unhealthy")
+}
+
+func (s *healthSuite) TestCheckStatusStopped(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	workshop := s.launchWorkshopWithSDKs(c, nil)
+	c.Assert(s.backend.StopWorkshop(s.ctx, "ws", true), check.IsNil)
+
+	// Stopped status should not return an error
+	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.StoppedStatus})
+	c.Assert(err, check.IsNil)
+
+	// All other status' should return an error
+	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
+	c.Assert(err, check.ErrorMatches, "workshop not running")
+}
+
 func (s *healthSuite) TestExecCheckHealthNotProvided(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -141,7 +361,7 @@ func (s *healthSuite) TestExecCheckHealthNotProvided(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkshop(c, "one", false)
+	s.launchWorkshopWithSDKs(c, oneSdk)
 
 	s.state.Unlock()
 	s.se.Ensure()
@@ -162,7 +382,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthNotCalled(c *check.C) {
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
-	s.launchWorkshop(c, "one", true)
+	s.launchWorkshopWithSDKs(c, oneSdkWithHealthCheck)
 	restore := healthstate.FakeRetryTimeout(0 * time.Second)
 	defer restore()
 
@@ -214,7 +434,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
-	s.launchWorkshop(c, "one", true)
+	s.launchWorkshopWithSDKs(c, oneSdkWithHealthCheck)
 	s.state.Unlock()
 	s.se.Ensure()
 	s.se.Wait()
@@ -287,7 +507,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
-	s.launchWorkshop(c, "one", true)
+	s.launchWorkshopWithSDKs(c, oneSdkWithHealthCheck)
 	s.state.Unlock()
 	for i := 0; i < 2; i = i + 1 {
 		s.se.Ensure()
@@ -344,7 +564,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
-	s.launchWorkshop(c, "one", true)
+	s.launchWorkshopWithSDKs(c, oneSdkWithHealthCheck)
 	s.state.Unlock()
 	for i := 0; i < 3; i = i + 1 {
 		s.se.Ensure()
@@ -387,7 +607,7 @@ func (s *healthSuite) TestExecCheckHealthTimeout(c *check.C) {
 		s.backend.ExecCallback = fakebackend.DoExecDefault
 	}()
 
-	s.launchWorkshop(c, "one", true)
+	s.launchWorkshopWithSDKs(c, oneSdkWithHealthCheck)
 	s.state.Unlock()
 	s.se.Ensure()
 	s.se.Wait()

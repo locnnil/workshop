@@ -92,7 +92,7 @@ func v1PostWorkshopMount(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest(`cannot remount %q: interface type should be "mount" (now: %q)`, reqData.Plug.ShortRef(), conn.Plug.Interface())
 	}
 
-	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.HostSource, projectId)
+	taskset, err := o.WorkshopManager().Remount(r.Context(), st, reqData.Plug, reqData.HostSource)
 	if err != nil {
 		return statusBadRequest("%w", err)
 	}
