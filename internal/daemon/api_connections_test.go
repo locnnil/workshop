@@ -1423,12 +1423,80 @@ func (s *apiSuite) TestConnectFailureOnConflict(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": `workshop "producer-ws" has "conflict" change in progress`,
+			"message": `cannot connect "producer-ws/producer:slot": other changes in progress`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
 		"type":        "error",
 	})
+}
+
+func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
+	d := s.daemon(c)
+
+	mockIface(c, d, &ifacetest.TestInterface{InterfaceName: "test"})
+
+	cmd := apiCmd("/v1/connections")
+
+	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
+	s.mockInstalledSDK(c, producerYaml, "producer-ws")
+
+	d.Overlord().Loop()
+	defer d.Overlord().Stop()
+
+	action := &client.InterfaceAction{
+		Action: "connect",
+		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
+		Slots:  []client.Slot{{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"}},
+	}
+
+	st := s.d.state
+	st.Lock()
+	chg := st.NewChange("exec", "...")
+	tsk := st.NewTask("exec", "...")
+	chg.AddTask(tsk)
+	tsk.Set("workshop", "producer-ws")
+	chg.Set("project-id", "b8639dea")
+	st.Unlock()
+
+	text, err := json.Marshal(action)
+	c.Assert(err, check.IsNil)
+	buf := bytes.NewBuffer(text)
+	req, err := http.NewRequest("POST", cmd.Path, buf)
+	c.Assert(err, check.IsNil)
+	rec := httptest.NewRecorder()
+	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
+	c.Check(rec.Code, check.Equals, 202)
+	var body map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &body)
+	c.Check(err, check.IsNil)
+	id := body["change"].(string)
+
+	st.Lock()
+	chg = st.Change(id)
+	st.Unlock()
+	c.Assert(chg, check.NotNil)
+
+	<-chg.Ready()
+
+	st.Lock()
+	err = chg.Err()
+	st.Unlock()
+	c.Assert(err, check.IsNil)
+
+	repo := d.Overlord().InterfaceManager().Repository()
+	ifaces := repo.Interfaces()
+	c.Assert(ifaces.Connections, check.HasLen, 1)
+	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{{
+		PlugRef: sdk.PlugRef{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"},
+		SlotRef: sdk.SlotRef{ProjectId: "b8639dea", Workshop: "producer-ws", Sdk: "producer", Name: "slot"},
+	}})
+
+	st.Lock()
+	warnings := st.AllWarnings()
+	st.Unlock()
+	c.Check(warnings, check.HasLen, 1)
+	c.Check(warnings[0].String(), check.Equals, `active shell sessions in "producer-ws" may need restarting for new connections to take effect`)
 }
 
 type disconnectOpts struct {
@@ -1864,7 +1932,7 @@ func (s *apiSuite) TestDisconnectFailureOnConflict(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]interface{}{
 		"result": map[string]interface{}{
-			"message": `workshop "consumer-ws" has "conflict" change in progress`,
+			"message": `cannot disconnect "consumer-ws/consumer:plug": other changes in progress`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,

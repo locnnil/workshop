@@ -70,7 +70,7 @@ var longExecHelp = `
 The 'exec' subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept an 'exec' command, the workshop must be 'Ready' or 'Pending'.
+To accept an 'exec' command, the workshop must be 'Ready' or 'Waiting'.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
@@ -106,7 +106,7 @@ var longShellHelp = `
 The 'shell' subcommand runs an interactive terminal session
 in the specified workshop.
 
-To accept a 'shell' command, the workshop must be 'Ready' or 'Pending'.
+To accept a 'shell' command, the workshop must be 'Ready' or 'Waiting'.
 
 
 Notes:
@@ -123,7 +123,7 @@ var longRunHelp = `
 The 'run' subcommand runs a script specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept a 'run' command, the workshop must be 'Ready' or 'Pending'.
+To accept a 'run' command, the workshop must be 'Ready' or 'Waiting'.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
@@ -184,7 +184,7 @@ $ workshop exec -I -- sh
 Run a command as root (the default is 'workshop'):
 $ workshop exec --uid 0 nimble id`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Pending"}),
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
 
 	cmd.Flags().SortFlags = false

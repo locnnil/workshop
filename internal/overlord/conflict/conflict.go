@@ -3,6 +3,7 @@ package conflict
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -106,30 +107,44 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 	return false, nil
 }
 
-// Iterates over the list of running tasks and returns a ChangeConflictError if
-// there is another change running for the provided projectID / workshop pair.
-func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreChange string) error {
+// Iterates over the list of running tasks and returns either nil or
+// a change running for the provided projectID / workshop pair.
+// Ignores certain kinds of changes based on the ignoreKinds argument.
+func findRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
-		if chg.IsReady() || chg.ID() == ignoreChange {
+		if chg.IsReady() || slices.Contains(ignoreKinds, chg.Kind()) {
 			continue
 		}
 
 		ok, err := checkWorkshop(task, projectId, workshop)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if ok {
-			return &ChangeConflictError{
-				ProjectId:  projectId,
-				Workshop:   workshop,
-				ChangeKind: chg.Kind(),
-				ChangeID:   chg.ID(),
-			}
+			return chg, nil
 		}
-
 	}
-	return nil
+	return nil, nil
+}
+
+// Iterates over the list of running tasks and returns a ChangeConflictError if
+// there is a change running for the provided projectID / workshop pair.
+// Ignores certain kinds of changes based on the ignoreKinds argument.
+func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKinds []string) error {
+	chg, err := findRunningChange(st, projectId, workshop, ignoreKinds)
+	if err != nil {
+		return err
+	}
+	if chg == nil {
+		return nil
+	}
+	return &ChangeConflictError{
+		ProjectId:  projectId,
+		Workshop:   workshop,
+		ChangeKind: chg.Kind(),
+		ChangeID:   chg.ID(),
+	}
 }
 
 // Attempt to resume the change associated with the Resume/Launch operation
@@ -141,18 +156,9 @@ func ResumeAfterWait(st *state.State,
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
 
-	var chg *state.Change
-	for _, task := range st.Tasks() {
-		if task.Change().IsReady() {
-			continue
-		}
-
-		if ok, err := checkWorkshop(task, projectId, workshop); err != nil {
-			return nil, err
-		} else if ok {
-			chg = task.Change()
-			break
-		}
+	chg, err := findRunningChange(st, projectId, workshop, []string{"exec"})
+	if err != nil {
+		return nil, err
 	}
 	if chg == nil {
 		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
@@ -188,4 +194,24 @@ func ResumeAfterWait(st *state.State,
 	}
 
 	return chg, nil
+}
+
+// Iterates over the list of running tasks and returns a change ID if
+// there is a change running for the provided projectID, workshop and kind.
+func FindChangeByKind(st *state.State, projectId, workshop, kind string) (string, error) {
+	for _, task := range st.Tasks() {
+		chg := task.Change()
+		if chg.IsReady() || chg.Kind() != kind {
+			continue
+		}
+
+		ok, err := checkWorkshop(task, projectId, workshop)
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			return chg.ID(), nil
+		}
+	}
+	return "", errors.New("change not found")
 }

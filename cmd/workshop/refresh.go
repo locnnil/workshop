@@ -69,20 +69,20 @@ $ workshop refresh nimble jazzy
 The name is optional if the project has only one workshop:
 $ workshop refresh
 
-Refresh workshop, but stop on any errors (won’t accept multiple workshops):
+Refresh workshop, but pause on any errors (won’t accept multiple workshops):
 $ workshop refresh --wait-on-error
 
-After refresh stopped on error, abort the operation:
+After refresh paused on error, abort the operation:
 $ workshop refresh --abort
 
-After refresh stopped on error and the workshop was fixed,
+After refresh paused on error and the workshop was fixed,
 continue the operation:
 $ workshop refresh --continue
 
 Refresh the sketch SDK in the 'nimble' workshop:
 $ workshop refresh nimble/sketch`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Pending"}),
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",

@@ -19,7 +19,7 @@ Start an interactive terminal session for the workshop.
 The 'shell' subcommand runs an interactive terminal session
 in the specified workshop.
 
-To accept a 'shell' command, the workshop must be 'Ready' or 'Pending'.
+To accept a 'shell' command, the workshop must be 'Ready' or 'Waiting'.
 
 
 Notes:

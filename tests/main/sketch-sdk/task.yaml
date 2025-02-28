@@ -61,10 +61,27 @@ execute: |
 
   echo "Add a breaking change to sketch"
   ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  i
-    plugs:
-      test:
-        interface: mount
+  $
+  a
+    test:
+      interface: mount
+      workshop-typo: /mnt
+  .
+  wq
+  EOF
+
+  echo "Fix the breaking change"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  $
+  s/typo/target/
+  wq
+  EOF
+
+  echo "Add another breaking change to sketch"
+  ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  $
+  a
+      unknown-attribute: true
   .
   wq
   EOF

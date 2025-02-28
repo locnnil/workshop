@@ -7,8 +7,8 @@ execute: |
 
   workshop_exec launch --wait-on-error || true
 
-  echo "Check the workshop is in Pending state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-cont[[:space:]]+Pending[[:space:]]+wait-on-error$"
+  echo "Check the workshop is in Waiting state"
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-cont[[:space:]]+Waiting[[:space:]]+wait-on-error$"
 
   echo "\"Fix\" the SDK error by creating an expected file"
   workshop_exec exec -- touch /home/workshop/setup-base-pass

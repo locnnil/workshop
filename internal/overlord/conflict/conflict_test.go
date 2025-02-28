@@ -48,8 +48,7 @@ func (s *conflictSuite) TestCheckChangeConflictNotFound(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", nil), check.IsNil)
 }
 
 func (s *conflictSuite) TestCheckChangeConflictFound(c *check.C) {
@@ -58,7 +57,7 @@ func (s *conflictSuite) TestCheckChangeConflictFound(c *check.C) {
 
 	change := s.newChange("launch")
 
-	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", "")
+	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", nil)
 	c.Assert(err, check.NotNil)
 	conflictErr, ok := err.(*conflict.ChangeConflictError)
 	c.Assert(ok, check.Equals, true)
@@ -74,7 +73,7 @@ func (s *conflictSuite) TestCheckChangeDisconnectConflictFound(c *check.C) {
 
 	change := s.newChangeDisconnect("disconnect")
 
-	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", "")
+	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", nil)
 	c.Assert(err, check.NotNil)
 	conflictErr, ok := err.(*conflict.ChangeConflictError)
 	c.Assert(ok, check.Equals, true)
@@ -83,7 +82,7 @@ func (s *conflictSuite) TestCheckChangeDisconnectConflictFound(c *check.C) {
 	c.Assert(conflictErr.Workshop, check.Equals, "ws")
 	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
 
-	err = conflict.CheckChangeConflict(s.state, s.project.ProjectId, "another-ws", "")
+	err = conflict.CheckChangeConflict(s.state, s.project.ProjectId, "another-ws", nil)
 	c.Assert(err, check.NotNil)
 	conflictErr, ok = err.(*conflict.ChangeConflictError)
 	c.Assert(ok, check.Equals, true)
@@ -100,18 +99,69 @@ func (s *conflictSuite) TestCheckChangeNoConflictWithReadyChange(c *check.C) {
 	change := s.newChange("launch")
 	change.SetStatus(state.DoneStatus)
 
-	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", nil), check.IsNil)
 }
 
-func (s *conflictSuite) TestCheckChangeConflictIgnoreChange(c *check.C) {
+func (s *conflictSuite) TestCheckChangeConflictIgnoreKinds(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	change := s.newChange("launch")
+	launch := s.newChange("launch")
+	launch.SetStatus(state.DoneStatus)
+	s.newChange("exec")
+	s.newChange("connect")
 
-	err := conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", change.ID())
+	c.Assert(conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", nil), check.NotNil)
+
+	c.Assert(conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", []string{"connect", "exec"}), check.IsNil)
+}
+
+func (s *conflictSuite) TestFindChangeByKindNotFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	id, err := conflict.FindChangeByKind(s.state, s.project.ProjectId, "ws", "exec")
+	c.Check(err, check.ErrorMatches, "change not found")
+	c.Check(id, check.Equals, "")
+}
+
+func (s *conflictSuite) TestFindChangeByKindFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	change := s.newChange("exec")
+
+	id, err := conflict.FindChangeByKind(s.state, s.project.ProjectId, "ws", "exec")
 	c.Assert(err, check.IsNil)
+	c.Check(id, check.Equals, change.ID())
+}
+
+func (s *conflictSuite) TestFindChangeByKindIgnoreReadyChanges(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	done := s.newChange("launch")
+	done.SetStatus(state.DoneStatus)
+	doing := s.newChange("launch")
+	done = s.newChange("launch")
+	done.SetStatus(state.DoneStatus)
+
+	id, err := conflict.FindChangeByKind(s.state, s.project.ProjectId, "ws", "launch")
+	c.Assert(err, check.IsNil)
+	c.Check(id, check.Equals, doing.ID())
+}
+
+func (s *conflictSuite) TestFindChangeByKindIgnoreOtherKinds(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.newChange("launch")
+	change := s.newChange("exec")
+	s.newChange("launch")
+
+	id, err := conflict.FindChangeByKind(s.state, s.project.ProjectId, "ws", "exec")
+	c.Assert(err, check.IsNil)
+	c.Check(id, check.Equals, change.ID())
 }
 
 func (s *conflictSuite) TestResumeAfterWaitNothingInProgress(c *check.C) {

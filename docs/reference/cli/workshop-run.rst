@@ -19,7 +19,7 @@ Run a workshop script and wait for it to complete.
 The 'run' subcommand runs a script specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept a 'run' command, the workshop must be 'Ready' or 'Pending'.
+To accept a 'run' command, the workshop must be 'Ready' or 'Waiting'.
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)

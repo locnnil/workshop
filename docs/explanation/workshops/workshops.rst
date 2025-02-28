@@ -51,6 +51,11 @@ A workshop's life-cycle can see it switch between several statuses:
      - In the project directory
      - Running, being updated
 
+   * - *Waiting*
+     - Paused for debugging a launch or refresh error
+     - In the project directory
+     - Running
+
    * - *Error*
      - Non-operational
      - Can be missing

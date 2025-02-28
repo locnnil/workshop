@@ -35,10 +35,32 @@ var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK",
       "revision":"1",
       "build-time":"2017-02-19T17:23:05.592623Z",
       "install-time":"2017-03-22T09:01:00.0Z"
-    },{  
+    },{
       "name":"sketch",
       "channel":"",
       "revision":"x1",
+      "install-time":"2017-03-22T09:01:00.0Z"
+    }],
+    "path":"/home/project/.workshop/ws.yaml"
+}}`
+
+var mockWorkshopWithSdksWaiting = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "name":"ws",
+    "base":"ubuntu@22.04",
+    "project-id":"42424242",
+    "status":"Waiting",
+    "notes":["wait-on-error"],
+    "sdks":[{
+      "name":"go",
+      "version":"1.8.0",
+      "channel":"latest/edge",
+      "revision":"1",
+      "build-time":"2017-02-19T17:23:05.592623Z",
+      "install-time":"2017-03-22T09:01:00.0Z"
+    },{
+      "name":"sketch",
+      "channel":"",
+      "revision":"x2",
       "install-time":"2017-03-22T09:01:00.0Z"
     }],
     "path":"/home/project/.workshop/ws.yaml"
@@ -291,16 +313,15 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 	// 1-2: get workshop info
 	// 3-5: refresh --wait-on-error (fails due to setup-base)
 	// 6-7: get workshop info
-	// 8-9. refresh --wait-on-error (fails due to earlier refresh)
-	// 10-12. refresh --abort
-	// 13-15. refresh --wait-on-error
+	// 8-10. refresh --abort
+	// 11-13. refresh --wait-on-error
 	n := 0
 	change := 42
 	workshop := "ws"
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3, 6, 8, 10, 13:
+		case 1, 3, 6, 8, 11:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
@@ -309,41 +330,42 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithSdksReady)
-		case 4, 9, 11, 14:
+			switch n {
+			case 2:
+				fmt.Fprintln(w, mockWorkshopWithSdksReady)
+			case 7:
+				fmt.Fprintln(w, mockWorkshopWithSdksWaiting)
+			}
+		case 4, 9, 12:
 			mode := "wait-on-error"
 			name := fmt.Sprintf("%s/sketch", workshop)
-			if n == 11 {
+			if n == 9 {
 				mode = "abort"
 				name = workshop
 			}
 
 			change += 1
-			status := 202
 			response := fmt.Sprintf(`{"type":"async", "change": "%d", "status-code": 202}`, change)
-			if n == 9 {
-				status = 400
-				response = `{"type":"error", "result": {"message":"already waiting on error", "kind":"waiting-on-error"}, "status-code": 400}`
-			}
 
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
-			w.WriteHeader(status)
+			w.WriteHeader(202)
 			fmt.Fprintln(w, response)
-		case 5, 12, 15:
+		case 5, 10, 13:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/changes/%d", change))
-			if n == 5 {
+			switch n {
+			case 5:
 				fmt.Fprintln(w, mockWaitChangeJSON)
-			} else if n == 12 {
+			case 10:
 				fmt.Fprintln(w, mockAbortedChangeJSON)
-			} else {
+			case 13:
 				fmt.Fprintln(w, mockReadyChangeJSON)
 			}
 		default:
-			c.Errorf("expected 15 calls, now on %d", n)
+			c.Errorf("expected 13 calls, now on %d", n)
 		}
 	})
 
@@ -374,7 +396,7 @@ hooks:
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	c.Assert(n, check.Equals, 15)
+	c.Assert(n, check.Equals, 13)
 	c.Assert(attempts, check.Equals, 2)
 }
 
@@ -616,18 +638,18 @@ func (m *workshopSketch) TestSketchSdkWorkshopStatusNotReady(c *check.C) {
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3, 5, 7:
+		case 1, 3, 5:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
-		case 2, 4, 6, 8:
+		case 2, 4, 6:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus(status[n/2-1]))
 		default:
-			c.Errorf("expected 8 calls, now on %d", n)
+			c.Errorf("expected 6 calls, now on %d", n)
 		}
 	})
 

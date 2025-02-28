@@ -78,7 +78,7 @@ $ workshop warnings`,
 		false,
 		"Show all warnings, including the acknowledged ones.")
 
-	cmd.PersistentFlags().BoolVar(&c.All, "verbose",
+	cmd.PersistentFlags().BoolVar(&c.Verbose, "verbose",
 		false,
 		"Show more information per each warning.")
 

@@ -1522,8 +1522,7 @@ func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no refresh in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
 }
 
 func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
@@ -1612,8 +1611,7 @@ func (s *apiSuite) TestRefreshWorkshopChangeAbort(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no refresh in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
@@ -1656,8 +1654,8 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no wait in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
-	c.Assert(err, check.ErrorMatches, `*. has "launch" change in progress`)
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", nil)
+	c.Check(err, check.ErrorMatches, `*. has "launch" change in progress`)
 }
 
 func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
@@ -1701,8 +1699,7 @@ func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no wait in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", nil), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
@@ -1782,8 +1779,7 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 	st.Lock()
 	defer st.Unlock()
 	// no refresh in progress after continue was successful
-	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", "")
-	c.Assert(err, check.IsNil)
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", nil), check.IsNil)
 }
 
 func (s *apiSuite) TestRefreshWorkshopPartialOK(c *check.C) {
@@ -1901,7 +1897,6 @@ base: ubuntu@22.04
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: `cannot refresh "manysdks": waiting on error`,
-			Kind:    "waiting-on-error",
 			Summary: `Refresh "manysdks" workshop`,
 		},
 	}

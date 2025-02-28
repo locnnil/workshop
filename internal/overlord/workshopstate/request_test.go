@@ -732,7 +732,7 @@ func (s *requestSuite) TestRemountSuccess(c *check.C) {
 
 	s.launchWorkshopWithSDKs(c, "ws-1", sdks)
 
-	ts, err := s.mgr.Remount(s.ctx, s.state, plug, source, s.project.ProjectId)
+	ts, err := s.mgr.Remount(s.ctx, s.state, plug, source)
 	c.Assert(err, check.IsNil)
 	c.Assert(ts.Tasks(), check.HasLen, 1)
 
@@ -771,6 +771,6 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	change.AddTask(task)
 	change.Set("project-id", s.project.ProjectId)
 
-	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir(), s.project.ProjectId)
+	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir())
 	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": other changes in progress`)
 }

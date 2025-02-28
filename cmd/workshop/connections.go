@@ -43,7 +43,7 @@ $ workshop connections nimble
 List connections for all workshops in the current project directory:
 $ workshop connections`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Pending", "Stopped"}),
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting", "Stopped"}),
 	}
 
 	cmd.Flags().BoolVar(&c.all, "all", false, "Include disconnected plugs in the output.")
