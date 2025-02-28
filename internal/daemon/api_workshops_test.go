@@ -1268,6 +1268,83 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	c.Assert(bound, check.Equals, true)
 }
 
+type expectedWorkshop struct {
+	name        string
+	base        string
+	sdks        []sdk.Setup
+	connections []string
+	plugs       []string
+	slots       []string
+}
+
+func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
+	got, err := s.b.ProjectWorkshops(s.ctx)
+	c.Assert(err, check.IsNil)
+	c.Assert(got, check.HasLen, len(want), check.Commentf("expected %d workshops, got %d", len(want), len(got)))
+
+	for idx, w := range got {
+		wantws := want[idx]
+		c.Assert(w.Name, check.Equals, wantws.name)
+		c.Assert(w.Base, check.Equals, wantws.base)
+
+		c.Assert(w.Sdks, check.HasLen, len(wantws.sdks))
+		for _, sk := range wantws.sdks {
+			c.Assert(sk, check.DeepEquals, w.Sdks[sk.Name])
+		}
+
+		repo := s.d.overlord.InterfaceManager().Repository()
+		for _, conn := range wantws.connections {
+			connref, err := interfaces.ParseConnRef(conn)
+			c.Assert(err, check.IsNil)
+
+			_, err = repo.Connection(connref)
+			c.Assert(err, check.IsNil)
+		}
+
+		for _, plug := range wantws.plugs {
+			ref := strings.SplitN(plug, ":", -1)
+			c.Assert(ref, check.HasLen, 2)
+
+			p := repo.Plug(s.project.ProjectId, wantws.name, ref[0], ref[1])
+			c.Assert(p, check.NotNil)
+		}
+
+		for _, slot := range wantws.slots {
+			ref := strings.SplitN(slot, ":", -1)
+			c.Assert(ref, check.HasLen, 2)
+
+			s := repo.Slot(s.project.ProjectId, wantws.name, ref[0], ref[1])
+			c.Assert(s, check.NotNil)
+		}
+
+		var allconns []*interfaces.ConnRef
+		var allplugs []*sdk.PlugInfo
+		var allslots []*sdk.SlotInfo
+		// Ensure there are no unexpected plugs, slots or conns in the
+		// repository for the workshop.
+		for _, sk := range wantws.sdks {
+			conns, err := repo.Connections(s.project.ProjectId, wantws.name, sk.Name)
+			c.Assert(err, check.IsNil)
+			for _, conn := range conns {
+				if !slices.ContainsFunc(allconns, func(a *interfaces.ConnRef) bool {
+					return *a == *conn
+				}) {
+					allconns = append(allconns, conn)
+				}
+			}
+
+			plugs := repo.Plugs(s.project.ProjectId, wantws.name, sk.Name)
+			allplugs = append(allplugs, plugs...)
+
+			slots := repo.Slots(s.project.ProjectId, wantws.name, sk.Name)
+			allslots = append(allslots, slots...)
+		}
+		c.Assert(allconns, check.HasLen, len(wantws.connections))
+		c.Assert(allplugs, check.HasLen, len(wantws.plugs))
+		c.Assert(allslots, check.HasLen, len(wantws.slots))
+	}
+}
+
 func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -1306,36 +1383,29 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "basic")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "basic", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "basic",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
-
-	conns, err = repo.Connections(s.project.ProjectId, "basic", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "gpu"},
+		connections: []string{
+			"b8639dea/basic/test-sdk:data b8639dea/basic/system:mount",
+			"b8639dea/basic/test-sdk-2:photos b8639dea/basic/system:mount",
+			"b8639dea/basic/test-sdk-2:gpu b8639dea/basic/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
@@ -1377,27 +1447,22 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk": {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+		},
+		plugs: []string{
+			"test-sdk:data",
+		},
+		slots: []string{},
+	}}
 
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, check.HasLen, 0)
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
@@ -1439,36 +1504,28 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/edge", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/edge", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
-
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+	s.ensureWorskhops(c, want)
 }
 
 func updateSdkStoreRev(name string, rev int, meta string) func() {
@@ -1523,39 +1580,28 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(2), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, check.HasLen, 0)
-
-	desktop := repo.Plug(s.project.ProjectId, "manysdks", "test-sdk", "desktop")
-	c.Assert(desktop, check.NotNil)
-
-	sshagent := repo.Plug(s.project.ProjectId, "manysdks", "test-sdk", "ssh-agent")
-	c.Assert(sshagent, check.NotNil)
-
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 2)
-
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(2), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
+		connections: []string{
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:ssh-agent",
+			"test-sdk:desktop",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
@@ -1595,40 +1641,29 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "data-slot"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/test-sdk-2:data-slot",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
-		},
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "data-slot"},
-		},
-	})
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
@@ -1668,40 +1703,31 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "new-plug"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk:new-plug b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk:new-plug",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
-		},
-	})
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -1741,39 +1767,29 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
-
-	oldplug := repo.Plug(s.project.ProjectId, "manysdks", "test-sdk", "new-plug")
-	c.Assert(oldplug, check.IsNil)
-
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
@@ -1813,36 +1829,29 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	w, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(w.Sdks, testutil.DeepUnsortedMatches, map[string]sdk.Setup{
-		"test-sdk":   {Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-		"test-sdk-2": {Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-	})
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
-
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
@@ -1884,36 +1893,29 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	wp, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	sdks, err := wp.SdkInfos(s.ctx)
-	c.Assert(err, check.IsNil)
-	c.Assert(sdks, check.HasLen, 2)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
-		},
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
-		},
-	})
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {
@@ -2428,30 +2430,32 @@ plugs:
 
 	s.runActionTest(c, requests, expected)
 
-	wp, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-	c.Assert(wp.Running, check.Equals, true)
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "sketch", Channel: "", Revision: sdk.R(-2), RevisionSequence: []sdk.Revision{sdk.R(-1)}, InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/sketch:sketch-plug b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"sketch:sketch-plug",
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	sketchsetup := wp.Sdks["sketch"]
-	c.Assert(sketchsetup.RevisionSequence, check.HasLen, 1)
-	c.Assert(sketchsetup.RevisionSequence[0].String(), check.Equals, "x1")
-	c.Assert(sketchsetup.Revision.String(), check.Equals, "x2")
-
-	fs, err := s.b.WorkshopFs(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x1"))
-	c.Assert(err, check.IsNil)
-
-	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x2"))
-	c.Assert(err, check.IsNil)
-
-	path, err := fs.ReadLink(sdk.SdkCurrentPath("sketch"))
-	c.Assert(err, check.IsNil)
-	c.Assert(strings.HasSuffix(path, sdk.SdkRevPath("sketch", "x2")), check.Equals, true)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "sketch", "sketch-plug"), check.NotNil)
+	s.ensureWorskhops(c, want)
 }
 
 func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {
