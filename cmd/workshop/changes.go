@@ -44,6 +44,9 @@ Notes:
 		Example: `
 List changes for all workshops in the current project directory:
 $ workshop changes`,
+		Annotations: map[string]string{
+			"related": "workshop info,workshop list",
+		},
 
 		RunE: c.Run,
 	}
