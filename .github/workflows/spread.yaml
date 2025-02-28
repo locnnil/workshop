@@ -15,6 +15,18 @@ jobs:
         with:
           name: snap
           path: ${{ steps.snapcraft.outputs.snap }}
+      - name: Checkout Sdkcraft
+        uses: actions/checkout@v4
+        with:
+          repository: canonical/sdkcraft
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: sdkcraft
+      - uses: canonical/action-build@v1
+        id: snapcraft_sdkcraft
+      - uses: actions/upload-artifact@master
+        with:
+          name: snap_sdkcraft
+          path: ${{ steps.snapcraft_sdkcraft.outputs.snap }}
   snap-tests:
     needs: build-snap
     strategy:
@@ -58,6 +70,10 @@ jobs:
       - uses: actions/download-artifact@master
         with:
           name: snap
+          path: ${{ github.workspace }}/tests/
+      - uses: actions/download-artifact@master
+        with:
+          name: snap_sdkcraft
           path: ${{ github.workspace }}/tests/
       - name: Install spread
         run: |
