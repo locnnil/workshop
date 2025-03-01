@@ -9,18 +9,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: canonical/action-build@v1
-        id: snapcraft
-      - uses: actions/upload-artifact@master
-        with:
-          name: snap
-          path: ${{ steps.snapcraft.outputs.snap }}
       - name: Checkout Sdkcraft
         uses: actions/checkout@v4
         with:
           repository: canonical/sdkcraft
           token: ${{ secrets.GH_SDKCRAFT }}
           path: sdkcraft
+      - uses: canonical/action-build@v1
+        id: snapcraft
+      - uses: actions/upload-artifact@master
+        with:
+          name: snap
+          path: ${{ steps.snapcraft.outputs.snap }}
       - uses: canonical/action-build@v1
         id: snapcraft_sdkcraft
       - uses: actions/upload-artifact@master
