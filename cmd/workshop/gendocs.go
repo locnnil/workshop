@@ -57,13 +57,13 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	td := gencodo.TemplateDetail{
+	td := gencodo.TemplateInfo{
 		IndexFileName:         "workshop.rst",
 		IndexTemplate:         string(indexTemplate),
 		SingleCommandTemplate: string(singleCommandTemplate),
 	}
 
-	err = gencodo.GenReSTTreeCustom(
+	err = gencodo.GenDocsTree(
 		c.root.Command(c.root.project),
 		docDir,
 		td,

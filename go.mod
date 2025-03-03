@@ -1,11 +1,11 @@
 module github.com/canonical/workshop
 
-go 1.24.0
+go 1.23.0
 
 require (
 	cloud.google.com/go/storage v1.37.0
 	github.com/adrg/xdg v0.4.0
-	github.com/canonical/gencodo v0.0.6
+	github.com/canonical/gencodo v0.1.0
 	github.com/canonical/lxd v0.0.0-20241119164425-14e4d099c7a3
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1
