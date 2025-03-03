@@ -65,6 +65,7 @@ function prepare_environment() {
 
 function cleanup_environment() {
     snap remove workshop --purge
+    snap remove sdkcraft --purge
     find /workshop -name .workshop.lock -delete
 }
 

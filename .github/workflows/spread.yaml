@@ -19,12 +19,12 @@ jobs:
           fetch-depth: 0
       - name: Build Workshop
         uses: canonical/action-build@v1
-        id: snapcraft
+        id: snapcraft_workshop
       - name: Upload Workshop
         uses: actions/upload-artifact@master
         with:
-          name: snap
-          path: ${{ steps.snapcraft.outputs.snap }}
+          name: snap_workshop
+          path: ${{ steps.snapcraft_workshop.outputs.snap }}
       - name: Build Sdkcraft
         uses: canonical/action-build@v1
         id: snapcraft_sdkcraft
@@ -35,6 +35,12 @@ jobs:
         with:
           name: snap_sdkcraft
           path: ${{ steps.snapcraft_sdkcraft.outputs.snap }}
+      - name: Debug step
+        run: |
+          echo "jyjyjy::build-snap" "${{ github.workspace }}"
+          ls -al ${{ github.workspace }}
+          pwd
+          ls -al tests/
   snap-tests:
     needs: build-snap
     strategy:
@@ -75,11 +81,13 @@ jobs:
         with:
           go-version: "1.23"
           cache: false
-      - uses: actions/download-artifact@master
+      - name: Download Workshop Snap
+        uses: actions/download-artifact@master
         with:
-          name: snap
+          name: snap_workshop
           path: ${{ github.workspace }}/tests/
-      - uses: actions/download-artifact@master
+      - name: Download Sdkcraft Snap
+        uses: actions/download-artifact@master
         with:
           name: snap_sdkcraft
           path: ${{ github.workspace }}/tests/
@@ -90,6 +98,12 @@ jobs:
           pushd spread
           go install ./...
           popd
+      - name: Debug step
+        run: |
+          echo "jyjyjy::snap-tests" "${{ github.workspace }}"
+          ls -al ${{ github.workspace }}
+          pwd
+          ls -al tests/
       - name: Run spread
         run: |
           mkdir ${{ github.workspace }}.cover

@@ -1,6 +1,8 @@
 summary: sdkcraft tutorial test
 
 execute: |
+  . "$TESTSLIB"/utils.sh
+  
   run_sdkcraft --help
   mkdir go/
   cd go/
