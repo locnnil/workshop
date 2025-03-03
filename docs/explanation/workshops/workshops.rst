@@ -87,11 +87,11 @@ A simple definition might look like this:
 .. code-block:: yaml
    :caption: workshop.yaml
 
-   name: golang
+   name: dev
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: jammy/stable
 
 
 .. @artefact SDK
@@ -174,6 +174,64 @@ Also, both connections established here
 are no different from those created via the command line.
 
 
+.. _exp_workshop_definition_scripts:
+
+Scripts
+-------
+
+Another optional part of a workshop definition is the :samp:`scripts` section;
+it contains named shell scripts to be copied and executed inside the workshop.
+
+The following example adds four scripts,
+:samp:`lint`, :samp:`shellcheck`, :samp:`unit` and :samp:`cover`,
+intended as utility helpers for a development environment:
+
+.. code-block:: yaml
+   :caption: .workshop/dev.yaml
+   :emphasize-lines: 6-15
+
+   name: dev
+   base: ubuntu@24.04
+   sdks:
+     - name: go
+       channel: jammy/stable
+   scripts:
+     lint: |
+       golangci-lint run  --out-format=colored-line-number -c .golangci.yaml
+     shellcheck: |
+       git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+     unit: |
+       go test ./...
+     cover: |
+       go test ./... -coverprofile=coverage.out
+       go tool cover -html=coverage.out
+
+
+To run these scripts, you use the :command:`workshop run` command:
+
+.. code-block:: console
+
+   $ workshop run lint
+
+
+When you thus invoke a script, it's injected into the workshop
+and executed there in a fashion similar to :command:`workshop exec`.
+Even if you update the :samp:`scripts` section in the definition,
+there's no need to refresh the workshop to use the updated script;
+it's available immediately.
+
+For a quick reference of the scripts in your workshop,
+run :command:`workshop scripts`:
+
+.. code-block:: console
+
+   $ workshop scripts
+
+
+This mechanism avoids the need to maintain helper scripts manually,
+ensuring instead that they are stored with the rest of the workshop's metadata.
+
+
 See also
 --------
 
@@ -183,8 +241,15 @@ Explanation:
 - :ref:`exp_sdk`
 
 
+How-to guides:
+
+- :ref:`how_use_workshops`
+
+
 Reference:
 
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
+- :ref:`ref_workshop_run`
+- :ref:`ref_workshop_scripts`
 - :ref:`ref_workshop_status`
