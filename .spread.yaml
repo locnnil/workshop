@@ -8,7 +8,8 @@ environment:
   SDK_STORE_BUCKET_DIR: /data/sdkstore
   IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |
-  test -f tests/*.snap || snapcraft -o tests/
+  test -f tests/sdkcraft*.snap
+  test -f tests/workshop*.snap || snapcraft -o tests/
   cat <&3 >&4
 backends:
   lxd:

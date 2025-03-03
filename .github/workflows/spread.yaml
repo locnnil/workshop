@@ -35,12 +35,6 @@ jobs:
         with:
           name: snap_sdkcraft
           path: ${{ steps.snapcraft_sdkcraft.outputs.snap }}
-      - name: Debug step
-        run: |
-          echo "jyjyjy::build-snap" "${{ github.workspace }}"
-          ls -al ${{ github.workspace }}
-          pwd
-          ls -al tests/
   snap-tests:
     needs: build-snap
     strategy:
@@ -98,12 +92,6 @@ jobs:
           pushd spread
           go install ./...
           popd
-      - name: Debug step
-        run: |
-          echo "jyjyjy::snap-tests" "${{ github.workspace }}"
-          ls -al ${{ github.workspace }}
-          pwd
-          ls -al tests/
       - name: Run spread
         run: |
           mkdir ${{ github.workspace }}.cover
