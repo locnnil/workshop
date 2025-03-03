@@ -17,15 +17,21 @@ jobs:
           token: ${{ secrets.GH_SDKCRAFT }}
           path: sdkcraft
           fetch-depth: 0
-      - uses: canonical/action-build@v1
+      - name: Build Workshop
+        uses: canonical/action-build@v1
         id: snapcraft
-      - uses: actions/upload-artifact@master
+      - name: Upload Workshop
+        uses: actions/upload-artifact@master
         with:
           name: snap
           path: ${{ steps.snapcraft.outputs.snap }}
-      - uses: canonical/action-build@v1
+      - name: Build Sdkcraft
+        uses: canonical/action-build@v1
         id: snapcraft_sdkcraft
-      - uses: actions/upload-artifact@master
+        with:
+          path: sdkcraft
+      - name: Upload Sdkcraft
+        uses: actions/upload-artifact@master
         with:
           name: snap_sdkcraft
           path: ${{ steps.snapcraft_sdkcraft.outputs.snap }}
