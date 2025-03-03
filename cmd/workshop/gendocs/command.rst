@@ -42,3 +42,14 @@
 
 {{ end }}
 {{- end }}
+
+{{if .RelatedCommands }}
+
+.. rubric:: See also
+
+Reference:
+
+{{ range .RelatedCommands }}
+- :ref:`ref_{{ . | replaceSpaces }}`
+{{- end }}
+{{ end }}
