@@ -39,6 +39,10 @@
             "pattern": "^[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)$",
             "errorMessage": "Channel must follow the pattern <track>/<risk> (e.g., 'latest/stable')."
           },
+          "source": {
+            "type": "string",
+            "description": "Local path or source for the SDK. If set, 'channel' need not be specified."
+          },
           "plugs": {
             "type": "object",
             "description": "Plugs for the SDK.",
@@ -95,13 +99,24 @@
           }
         },
         "required": [
-          "name",
-          "channel"
+          "name"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "channel"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ]
+          }
         ],
         "errorMessage": {
           "required": {
             "name": "Each SDK must specify a name.",
-            "channel": "SDK must specify a channel unless installed from a local source."
+            "channel": "Either 'channel' or 'source' must be provided for the SDK."
           }
         }
       }
