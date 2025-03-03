@@ -307,17 +307,13 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 		taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
 	} else {
 		change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-		taskset, err = mgr.RefreshMany(ctx, reqData.Names, pid)
+		taskset, err = mgr.RefreshMany(ctx, pid, reqData.Names)
 	}
 	return change, taskset, err
 }
 
 func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
-	st := c.d.overlord.State()
-	st.Lock()
-	defer st.Unlock()
-	wsmgr := c.d.overlord.WorkshopManager()
 
 	var reqData workshopReq
 	decoder := json.NewDecoder(r.Body)
@@ -352,6 +348,11 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	if !ok {
 		return statusBadRequest("cannot %s: user is not known", reqData.Action)
 	}
+
+	st := c.d.overlord.State()
+	st.Lock()
+	defer st.Unlock()
+	wsmgr := c.d.overlord.WorkshopManager()
 
 	var change *state.Change
 	var taskset []*state.TaskSet

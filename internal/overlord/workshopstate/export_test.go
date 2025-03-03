@@ -2,10 +2,7 @@ package workshopstate
 
 var (
 	Refresh            = refresh
-	RefreshManyImpl    = refreshMany
-	CheckHealthHooks   = checkHealthHooks
-	SaveStateHooks     = saveStateHooks
-	RestoreStateHooks  = restoreStateHooks
+	CheckHealthHooks   = checkSdksHealth
 	StartManyImpl      = startMany
 	StopManyImpl       = stopMany
 	CheckHealthTimeout = checkHealthTimeout

@@ -63,7 +63,7 @@ sdks:
   - name: test-sdk-2
     channel: latest/stable
 `
-	manysdks_refreshed = `name: manysdks
+	manysdks_broken = `name: manysdks
 base: ubuntu@22.04
 sdks:
   - name: test-sdk
@@ -80,6 +80,44 @@ sdks:
   - name: test-sdk-2
     channel: latest/stable
   - name: test-sdk
+    channel: latest/stable
+`
+	manysdks_minusone = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk
+    channel: latest/stable
+`
+	manysdks_newchan = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk
+    channel: latest/edge
+  - name: test-sdk-2
+    channel: latest/stable
+`
+	manysdks_connsadded = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk
+    channel: latest/stable
+  - name: test-sdk-2
+    channel: latest/stable
+connections:
+  - plug: test-sdk:data
+    slot: test-sdk-2:data-slot
+`
+
+	manysdks_plugadded = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk
+    channel: latest/stable
+    plugs:
+      new-plug:
+        interface: mount
+        workshop-target: /opt
+  - name: test-sdk-2
     channel: latest/stable
 `
 
@@ -238,6 +276,21 @@ plugs:
     interface: test
 `
 
+	testsdk_r2 = `
+name: test-sdk
+title: title
+base: ubuntu@20.04
+version: '0.1.3'
+summary: summary
+description: SDK
+sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+plugs:
+  ssh-agent:
+    interface: ssh-agent
+  desktop:
+    interface: desktop
+`
+
 	testsdk2 = `
 name: test-sdk-2
 title: title
@@ -252,6 +305,10 @@ plugs:
     workshop-target: /opt/data2
   gpu:
     interface: gpu
+slots:
+  data-slot:
+    workshop-source: /mnt
+    interface: mount
 `
 )
 
@@ -630,7 +687,7 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 		st.Unlock()
 
 		// Verify
-		c.Check(rsp.Type, check.Equals, expected[num].Type)
+		c.Check(rsp.Type, check.Equals, expected[num].Type, check.Commentf("case: %v", num))
 		c.Check(rsp.Status, check.Equals, expected[num].Status, check.Commentf("case: %v", num))
 
 		if rsp.Type == ResponseTypeError {
@@ -660,7 +717,7 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			c.Check(change.Summary(), check.Equals, expected[num].Summary)
 			st.Lock()
 			if expected[num].ChangeErr != "" {
-				c.Check(change.Err(), check.ErrorMatches, expected[num].ChangeErr)
+				c.Check(change.Err(), check.ErrorMatches, expected[num].ChangeErr, check.Commentf("case: %v", num))
 			} else {
 				c.Assert(change.Err(), check.IsNil)
 			}
@@ -701,7 +758,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 			return nil, err
 		}
 		info.Channel = act.Channel
-		info.Revision = sdk.Revision{N: 1}
+		info.Revision = apiSuiteSdks[act.Name].s.Revision
 		result = append(result, sdk.SdkResult{Info: info})
 	}
 	return result, nil
@@ -1211,7 +1268,84 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	c.Assert(bound, check.Equals, true)
 }
 
-func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
+type expectedWorkshop struct {
+	name        string
+	base        string
+	sdks        []sdk.Setup
+	connections []string
+	plugs       []string
+	slots       []string
+}
+
+func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
+	got, err := s.b.ProjectWorkshops(s.ctx)
+	c.Assert(err, check.IsNil)
+	c.Assert(got, check.HasLen, len(want), check.Commentf("expected %d workshops, got %d", len(want), len(got)))
+
+	for idx, w := range got {
+		wantws := want[idx]
+		c.Assert(w.Name, check.Equals, wantws.name)
+		c.Assert(w.Base, check.Equals, wantws.base)
+
+		c.Assert(w.Sdks, check.HasLen, len(wantws.sdks))
+		for _, sk := range wantws.sdks {
+			c.Assert(sk, check.DeepEquals, w.Sdks[sk.Name])
+		}
+
+		repo := s.d.overlord.InterfaceManager().Repository()
+		for _, conn := range wantws.connections {
+			connref, err := interfaces.ParseConnRef(conn)
+			c.Assert(err, check.IsNil)
+
+			_, err = repo.Connection(connref)
+			c.Assert(err, check.IsNil)
+		}
+
+		for _, plug := range wantws.plugs {
+			ref := strings.SplitN(plug, ":", -1)
+			c.Assert(ref, check.HasLen, 2)
+
+			p := repo.Plug(s.project.ProjectId, wantws.name, ref[0], ref[1])
+			c.Assert(p, check.NotNil)
+		}
+
+		for _, slot := range wantws.slots {
+			ref := strings.SplitN(slot, ":", -1)
+			c.Assert(ref, check.HasLen, 2)
+
+			s := repo.Slot(s.project.ProjectId, wantws.name, ref[0], ref[1])
+			c.Assert(s, check.NotNil)
+		}
+
+		var allconns []*interfaces.ConnRef
+		var allplugs []*sdk.PlugInfo
+		var allslots []*sdk.SlotInfo
+		// Ensure there are no unexpected plugs, slots or conns in the
+		// repository for the workshop.
+		for _, sk := range wantws.sdks {
+			conns, err := repo.Connections(s.project.ProjectId, wantws.name, sk.Name)
+			c.Assert(err, check.IsNil)
+			for _, conn := range conns {
+				if !slices.ContainsFunc(allconns, func(a *interfaces.ConnRef) bool {
+					return *a == *conn
+				}) {
+					allconns = append(allconns, conn)
+				}
+			}
+
+			plugs := repo.Plugs(s.project.ProjectId, wantws.name, sk.Name)
+			allplugs = append(allplugs, plugs...)
+
+			slots := repo.Slots(s.project.ProjectId, wantws.name, sk.Name)
+			allslots = append(allslots, slots...)
+		}
+		c.Assert(allconns, check.HasLen, len(wantws.connections))
+		c.Assert(allplugs, check.HasLen, len(wantws.plugs))
+		c.Assert(allslots, check.HasLen, len(wantws.slots))
+	}
+}
+
+func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1249,31 +1383,478 @@ func (s *apiSuite) TestRefreshWorkshopSuccess(c *check.C) {
 
 	s.runActionTest(c, requests, expected)
 
-	repo := s.d.overlord.InterfaceManager().Repository()
-
-	conns, err := repo.Connections(s.project.ProjectId, "basic", "test-sdk")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "basic",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
-
-	conns, err = repo.Connections(s.project.ProjectId, "basic", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "mount"},
-		}, {
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "basic", Sdk: sdk.System.String(), Name: "gpu"},
+		connections: []string{
+			"b8639dea/basic/test-sdk:data b8639dea/basic/system:mount",
+			"b8639dea/basic/test-sdk-2:photos b8639dea/basic/system:mount",
+			"b8639dea/basic/test-sdk-2:gpu b8639dea/basic/system:gpu",
 		},
-	})
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
 }
 
-func (s *apiSuite) TestRefreshWorkshopRestoresPreviousWorkshopIfFailed(c *check.C) {
+func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_minusone)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+		},
+		plugs: []string{
+			"test-sdk:data",
+		},
+		slots: []string{},
+	}}
+
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_newchan)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/edge", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+	s.ensureWorskhops(c, want)
+}
+
+func updateSdkStoreRev(name string, rev int, meta string) func() {
+	oldrev := apiSuiteSdks[name].s
+	oldmeta := apiSuiteSdks[name].meta
+
+	newrev := oldrev
+	newrev.Revision = sdk.R(rev)
+	apiSuiteSdks[name] = testSdk{s: newrev, meta: meta}
+
+	return func() {
+		apiSuiteSdks[name] = testSdk{s: oldrev, meta: oldmeta}
+	}
+}
+
+func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2)()
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(2), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:ssh-agent",
+			"test-sdk:desktop",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_connsadded)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/test-sdk-2:data-slot",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_plugadded)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk:new-plug b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk:new-plug",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks_plugadded)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer func() { _ = s.d.Overlord().Stop() }()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1283,64 +1864,220 @@ func (s *apiSuite) TestRefreshWorkshopRestoresPreviousWorkshopIfFailed(c *check.
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`)}
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
 
-	expected := []*expectedResp{{
-		Type:    ResponseTypeAsync,
-		Status:  http.StatusAccepted,
-		Kind:    "launch",
-		Summary: `Launch "manysdks" workshop`,
-	}}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
 	s.runActionTest(c, requests, expected)
 
 	// Setup "refresh" with a new workshop that will trigger an error
-	s.createWFile(c, "manysdks", manysdks_refreshed)
+	s.createWFile(c, "manysdks", manysdks_broken)
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`)}
-	expected = []*expectedResp{{
-		Type:      ResponseTypeAsync,
-		Status:    http.StatusAccepted,
-		Kind:      "refresh",
-		Summary:   `Refresh "manysdks" workshop`,
-		ChangeErr: `(?s).*SDK "manysdks/test-sdk" has no plug named "data-non-existent".*`,
-	}}
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "manysdks" workshop`,
+			ChangeErr: `(?s).*SDK "manysdks/test-sdk" has no plug named "data-non-existent".*`,
+		},
+	}
 	s.runActionTest(c, requests, expected)
 
-	wp, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	sdks, err := wp.SdkInfos(s.ctx)
-	c.Assert(err, check.IsNil)
-	c.Assert(sdks, check.HasLen, 2)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	conns, err := repo.Connections(s.project.ProjectId, "manysdks", "test-sdk")
-	c.Assert(err, check.IsNil)
-
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
-		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk", Name: "data"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
-	})
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	conns, err = repo.Connections(s.project.ProjectId, "manysdks", "test-sdk-2")
-	c.Assert(err, check.IsNil)
-	c.Assert(conns, testutil.DeepUnsortedMatches, []*interfaces.ConnRef{
+	s.ensureWorskhops(c, want)
+}
+
+func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "basic", basic)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
+	}
+
+	expected := []*expectedResp{
 		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "photos"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "mount"},
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
 		},
 		{
-			PlugRef: sdk.PlugRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: "test-sdk-2", Name: "gpu"},
-			SlotRef: sdk.SlotRef{ProjectId: s.project.ProjectId, Workshop: "manysdks", Sdk: sdk.System.String(), Name: "gpu"},
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot continue: no wait in progress",
 		},
-	})
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "cannot abort: no wait in progress",
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+}
+
+func (s *apiSuite) TestRefreshContinue(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	s.createWFile(c, "basic", basic)
+
+	var errOnce sync.Once
+	s.secBackend.RemoveCallback = func(sdkName string) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("cannot remove profile") })
+		return err
+	}
+
+	// Setup
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "basic", basic_refreshed)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic" workshop`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	// This will be called twice: first, on the refresh attempt, second, on the
+	// refresh --continue, which will be successfull and allow the refresh to
+	// finish.
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 2)
+
+	st := s.d.state
+	st.Lock()
+	defer st.Unlock()
+	// no refresh in progress after continue was successful
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
+}
+
+func (s *apiSuite) TestRefreshAbort(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	s.createWFile(c, "basic", basic)
+
+	var errOnce sync.Once
+	s.secBackend.RemoveCallback = func(sdkName string) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("cannot remove profile") })
+		return err
+	}
+
+	// Setup
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "basic", basic_refreshed)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic" workshop`,
+		},
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
+	st := s.d.state
+	st.Lock()
+	defer st.Unlock()
+	// no refresh in progress after continue was successful
+	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
 }
 
 // Tests the input validation logic of v1PostProjectWorkshop. Excludes any
 // dispatch validation, these are covered by their own tests.
-func (s *apiSuite) TestValidatev1PostProjectWorkshopModeInputs(c *check.C) {
+func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1432,7 +2169,7 @@ func (s *apiSuite) TestValidatev1PostProjectWorkshopModeInputs(c *check.C) {
 	}
 }
 
-func (s *apiSuite) TestValidatev1PostProjectWorkshopActionInputs(c *check.C) {
+func (s *apiSuite) TestValidateActionInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1473,145 +2210,6 @@ func (s *apiSuite) TestValidatev1PostProjectWorkshopActionInputs(c *check.C) {
 		c.Check(rsp.Status, check.Equals, exp.Status)
 		c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
 	}
-}
-
-func (s *apiSuite) TestRefreshWorkshopContinueSuccess(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	s.createWFile(c, "basic", basic)
-
-	var errOnce sync.Once
-	s.secBackend.RemoveCallback = func(sdkName string) error {
-		var err error
-		errOnce.Do(func() { err = errors.New("cannot remove profile") })
-		return err
-	}
-
-	// Setup
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		// start - continue (success)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
-	}
-
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "basic" workshop`,
-		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
-		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	st := s.d.state
-	st.Lock()
-	defer st.Unlock()
-	// no refresh in progress after continue was successful
-	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
-}
-
-func (s *apiSuite) TestRefreshWorkshopNoRefreshInProgress(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	// Setup
-	s.createWFile(c, "basic", basic)
-
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"continue"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
-	}
-
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "basic" workshop`,
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no wait in progress",
-		},
-	}
-
-	s.runActionTest(c, requests, expected)
-}
-
-func (s *apiSuite) TestRefreshWorkshopChangeAbort(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	// Setup
-	s.createWFile(c, "basic", basic)
-
-	var errOnce sync.Once
-	removeProfile := false
-	s.secBackend.RemoveCallback = func(sdkName string) error {
-		var err error
-		errOnce.Do(func() { err = fmt.Errorf("cannot remove profiles") })
-		removeProfile = true
-		return err
-	}
-
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
-		// start - abort (both success)
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"abort"}}`),
-	}
-
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "basic" workshop`,
-		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
-		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
-		},
-	}
-
-	s.runActionTest(c, requests, expected)
-
-	c.Assert(removeProfile, check.Equals, true)
-	st := s.d.state
-	st.Lock()
-	defer st.Unlock()
-	// no refresh in progress after continue was successful
-	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "basic", nil), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
@@ -1782,7 +2380,7 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 	c.Assert(conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", nil), check.IsNil)
 }
 
-func (s *apiSuite) TestRefreshWorkshopPartialOK(c *check.C) {
+func (s *apiSuite) TestRefreshPartialOK(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -1832,32 +2430,35 @@ plugs:
 
 	s.runActionTest(c, requests, expected)
 
-	wp, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-	c.Assert(wp.Running, check.Equals, true)
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: "sketch", Channel: "", Revision: sdk.R(-2), RevisionSequence: []sdk.Revision{sdk.R(-1)}, InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/sketch:sketch-plug b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"sketch:sketch-plug",
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+		},
+	}}
 
-	sketchsetup := wp.Sdks["sketch"]
-	c.Assert(sketchsetup.RevisionSequence, check.HasLen, 1)
-	c.Assert(sketchsetup.RevisionSequence[0].String(), check.Equals, "x1")
-	c.Assert(sketchsetup.Revision.String(), check.Equals, "x2")
-
-	fs, err := s.b.WorkshopFs(s.ctx, "manysdks")
-	c.Assert(err, check.IsNil)
-
-	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x1"))
-	c.Assert(err, check.IsNil)
-
-	_, err = fs.Stat(sdk.SdkRevPath("sketch", "x2"))
-	c.Assert(err, check.IsNil)
-
-	path, err := fs.ReadLink(sdk.SdkCurrentPath("sketch"))
-	c.Assert(err, check.IsNil)
-	c.Assert(strings.HasSuffix(path, sdk.SdkRevPath("sketch", "x2")), check.Equals, true)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Plug(s.project.ProjectId, "manysdks", "sketch", "sketch-plug"), check.NotNil)
+	s.ensureWorskhops(c, want)
 }
-func (s *apiSuite) TestRefreshWorkshopPartialConflictChange(c *check.C) {
+
+func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()

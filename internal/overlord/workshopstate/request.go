@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"time"
-
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
@@ -53,30 +53,9 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.
 	return projects[username][idx], nil
 }
 
-func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
-	username, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return false, fmt.Errorf("context key user not found")
-	}
-
-	usr, err := workshop.LookupUsername(username)
-	if err != nil {
-		return false, err
-	}
-	sketchdir := sdk.WorkshopSketchSdkCurrent(usr.HomeDir, pid, wp)
-
-	recs, err := os.ReadDir(sketchdir)
-	// no Sketch SDK exists for the workshop and it is not an error.
-	if len(recs) == 0 || osutil.IsDirNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
+	sto := sdk.StoreService(w.state)
+
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -98,7 +77,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
 
-		sdks, err = sdkStoreInfo(w.state, ctx, projectId, file)
+		sdks, err = sdkStoreInfo(sto, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}
@@ -114,8 +93,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func sdkStoreInfo(st *state.State, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
-	sto := sdk.StoreService(st)
+func sdkStoreInfo(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
 		// "system" SDK is bootstrapped and installed by Workshop locally in a
@@ -141,15 +119,11 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 }
 
 func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state.TaskSet) *state.TaskSet {
-	var prevInstall = sdkstate.InstallSystemSdk(st)
-	install := state.NewTaskSet(prevInstall.Tasks()...)
+	var prevInstall *state.TaskSet
+	install := state.NewTaskSet()
 
 	var prevSetup *state.Task
 	setupHook := state.NewTaskSet()
-
-	var prevAuto = st.NewTask("auto-connect", fmt.Sprintf(`Auto-connect interfaces of %q SDK`, sdk.System.String()))
-	prevAuto.Set("sdk", sdk.System.String())
-	autoConnect := state.NewTaskSet(prevAuto)
 
 	for idx, setup := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
@@ -175,35 +149,25 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveSet *state
 		}
 		prevSetup = setupHookTask
 		setupHook.AddTask(setupHookTask)
-
-		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
-		autoconnect.Set("sdk", setup.Name)
-		autoConnect.AddTask(autoconnect)
-		if prevAuto != nil {
-			autoconnect.WaitFor(prevAuto)
-		}
-		prevAuto = autoconnect
 	}
 	setupHook.WaitAll(install)
-	autoConnect.WaitAll(setupHook)
-	autoConnect.WaitAll(install)
 
 	all := state.NewTaskSet(install.Tasks()...)
 	all.AddAll(setupHook)
-	all.AddAll(autoConnect)
+
 	return all
 }
 
-func checkHealthHooks(st *state.State, file *workshop.File) *state.TaskSet {
-	var prevCheck *state.Task
+func checkSdksHealth(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet {
+	var prev *state.Task
 	checkHealth := state.NewTaskSet()
-	for _, sdk := range file.Sdks {
-		checkHealthTask := hookstate.HookWithTimeout(st, file.Name, sdk.Name, hookstate.CheckHealth, checkHealthTimeout)
-		if prevCheck != nil {
-			checkHealthTask.WaitFor(prevCheck)
+	for _, sk := range sdks {
+		check := hookstate.HookWithTimeout(st, w, sk.Name, hookstate.CheckHealth, checkHealthTimeout)
+		if prev != nil {
+			check.WaitFor(prev)
 		}
-		prevCheck = checkHealthTask
-		checkHealth.AddTask(checkHealthTask)
+		prev = check
+		checkHealth.AddTask(check)
 	}
 	return checkHealth
 }
@@ -228,31 +192,38 @@ func constructWorkshop(st *state.State, file *workshop.File, project workshop.Pr
 }
 
 func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
-	// check and download all the required SDKs
 	retrieve := retrieveSdks(st, sdks)
 
-	// create volume to store deb packages
 	createAptCache := st.NewTask("create-apt-cache", fmt.Sprintf("Create apt cache for %q", file.Name))
 
-	// create a basic workshop
 	create := constructWorkshop(st, file, project)
 	create.WaitAll(retrieve)
 	create.WaitFor(createAptCache)
 
-	// install the downloaded sdks
-	launch := installSdks(st, file.Name, sdks, retrieve)
-	launch.WaitAll(create)
+	system := sdkstate.InstallSystemSdk(st)
+	system.WaitAll(create)
 
-	// run a quick check health script (for every SDK, if present)
-	checkHealth := checkHealthHooks(st, file)
-	checkHealth.WaitAll(launch)
-	launch.AddAll(checkHealth)
+	install := installSdks(st, file.Name, sdks, retrieve)
+	install.WaitAll(system)
+
+	full := slices.Clone(sdks)
+	full = slices.Insert(full, 0, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}})
+
+	connect := autoconnectSdks(st, full)
+	connect.WaitAll(install)
+	connect.WaitAll(system)
+
+	checkHealth := checkSdksHealth(st, file.Name, sdks)
+	checkHealth.WaitAll(connect)
 
 	all := state.NewTaskSet(retrieve.Tasks()...)
 	all.AddAll(retrieve)
 	all.AddTask(createAptCache)
 	all.AddAll(create)
-	all.AddAll(launch)
+	all.AddAll(system)
+	all.AddAll(install)
+	all.AddAll(connect)
+	all.AddAll(checkHealth)
 
 	for _, task := range all.Tasks() {
 		task.Set("workshop", file.Name)
@@ -262,60 +233,391 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
+type refreshWorkshopReq struct {
+	// Existing workshop that will be refreshed.
+	w *workshop.Workshop
+	// Up to date workshop definitions from the project directory.
+	file *workshop.File
+}
+
+func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string) ([]*state.TaskSet, error) {
+	sto := sdk.StoreService(w.state)
+
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	workshops, err := w.Workshops(ctx, projectId)
+	all, err := w.Workshops(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	var files []*workshop.File
-	var installed, toinstall [][]sdk.Setup
-	for _, ws := range names {
-		idx := slices.IndexFunc(workshops, func(w *workshop.Workshop) bool { return w.Name == ws })
+	refreshReqs := make([]refreshWorkshopReq, 0, len(all))
+	allowed := []healthstate.Status{healthstate.ReadyStatus}
+	for _, name := range names {
+		idx := slices.IndexFunc(all, func(w *workshop.Workshop) bool { return w.Name == name })
 		if idx == -1 {
-			return nil, fmt.Errorf("cannot refresh %q: %w", ws, workshop.ErrWorkshopNotLaunched)
-		}
-		allowed := []healthstate.Status{healthstate.ReadyStatus}
-		if err = healthstate.CheckWorkshopHealth(w.state, workshops[idx], allowed); err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", ws, err)
-		}
-		file, err := project.Workshop(ws)
-		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", ws, err)
-		}
-		files = append(files, file)
-
-		res, err := sdkStoreInfo(w.state, ctx, projectId, file)
-		if err != nil {
-			return nil, err
-		}
-		var newSdks []sdk.Setup
-		for _, s := range res {
-			newSdks = append(newSdks, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, workshop.ErrWorkshopNotLaunched)
 		}
 
-		found, err := maybeSketch(ctx, projectId, ws)
-		if err != nil {
-			return nil, err
-		}
-		if found {
-			newSdks = append(newSdks, sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
+		if err = healthstate.CheckWorkshopHealth(w.state, all[idx], allowed); err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
 
-		toinstall = append(toinstall, newSdks)
-		installed = append(installed, maps.Values(workshops[idx].Sdks))
+		file, err := project.Workshop(name)
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+		}
+		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: all[idx], file: file})
 	}
 
-	fullrefresh, err := refreshMany(w.state, files, installed, toinstall, project)
+	taskset := make([]*state.TaskSet, 0, len(refreshReqs))
+	for _, req := range refreshReqs {
+		tasks, err := refresh(ctx, w.state, sto, req.w, req.file)
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", req.w.Name, err)
+		}
+		if len(tasks.Tasks()) == 0 {
+			continue
+		}
+		taskset = append(taskset, tasks)
+	}
+
+	for _, ts := range taskset {
+		cleanup := ts.MaybeEdge(EdgeRefreshCleanup)
+		if cleanup == nil {
+			continue
+		}
+
+		// We will iterate over other refreshes and make sure that the cleanup
+		// task of our refresh will wait until all the other refresh operations
+		// finished. This will ensure that we start to remove the workshops'
+		// previous copies once all the refresh operations were successful (at
+		// this stage, we only need to remove a stashed copy, the newly refreshed
+		// workshop is already up and running). Thus, every CleanupEdge will
+		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
+		// other changes before execution.
+		for _, otherts := range taskset {
+			if ts != otherts {
+				last, err := otherts.Edge(EdgeLastTaskBeforeRefreshIrreversible)
+				if err != nil {
+					return nil, err
+				}
+				cleanup.WaitFor(last)
+			}
+		}
+	}
+
+	return taskset, nil
+}
+
+func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
+	username, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return false, fmt.Errorf("context key user not found")
+	}
+
+	usr, err := workshop.LookupUsername(username)
+	if err != nil {
+		return false, err
+	}
+	sketchdir := sdk.WorkshopSketchSdkCurrent(usr.HomeDir, pid, wp)
+
+	recs, err := os.ReadDir(sketchdir)
+	// no Sketch SDK exists for the workshop and it is not an error.
+	if len(recs) == 0 || osutil.IsDirNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func maybeRefresh(installed sdk.Setup, candidate *sdk.Info) bool {
+	return installed.Revision != candidate.Revision
+}
+
+type refreshPlan struct {
+	install []sdk.Setup
+	refresh []sdk.Setup
+	remove  []sdk.Setup
+
+	installOrder  []string
+	refreshAnyway bool
+}
+
+func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
+	ordered := []sdk.Setup{}
+
+	for _, s := range p.installOrder {
+		contains := func(sp sdk.Setup) bool { return s == sp.Name }
+
+		idx := slices.IndexFunc(p.install, contains)
+		if idx != -1 {
+			ordered = append(ordered, p.install[idx])
+			continue
+		}
+
+		idx = slices.IndexFunc(p.refresh, contains)
+		if idx != -1 {
+			ordered = append(ordered, p.refresh[idx])
+			continue
+		}
+	}
+	return ordered
+}
+
+func (p refreshPlan) Refresh() []sdk.Setup {
+	return p.refresh
+}
+
+func (p refreshPlan) RefreshOrRemove() []sdk.Setup {
+	ordered := []sdk.Setup{}
+
+	for _, s := range p.installOrder {
+		contains := func(sp sdk.Setup) bool { return s == sp.Name }
+
+		idx := slices.IndexFunc(p.remove, contains)
+		if idx != -1 {
+			ordered = append(ordered, p.remove[idx])
+			continue
+		}
+
+		idx = slices.IndexFunc(p.refresh, contains)
+		if idx != -1 {
+			ordered = append(ordered, p.refresh[idx])
+			continue
+		}
+	}
+	return ordered
+}
+
+func (p refreshPlan) RecreateWorkshop() bool {
+	return p.refreshAnyway || len(p.install) != 0 || len(p.refresh) != 0 || len(p.remove) != 0
+}
+
+func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, file *workshop.File) (*refreshPlan, error) {
+	plan := &refreshPlan{
+		install:      make([]sdk.Setup, 0),
+		refresh:      make([]sdk.Setup, 0),
+		remove:       make([]sdk.Setup, 0),
+		installOrder: make([]string, 0),
+	}
+
+	infos, err := sdkStoreInfo(sto, ctx, w.Project.ProjectId, file)
 	if err != nil {
 		return nil, err
 	}
-	return fullrefresh, nil
+
+	// SDKs that only exists in the new workshop definition are to be installed.
+	for _, info := range infos {
+		if _, exist := w.Sdks[info.Name]; !exist {
+			plan.install = append(plan.install, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+		}
+	}
+
+	// SDKs that only exist in the previous workshop are to be removed.
+	for _, rec := range w.Sdks {
+		if !slices.ContainsFunc(infos, func(r sdk.SdkResult) bool {
+			return r.Info.Name == rec.Name
+		}) {
+			plan.remove = append(plan.remove, rec)
+		}
+	}
+
+	// SDKs that exist in both, the previous and new workshop definiotions, are to be refreshed.
+	for _, info := range infos {
+		// If the SDK is not in the list of the existing SDKs -- it is being
+		// installed, not refreshed.
+		if installed, exist := w.Sdks[info.Name]; exist {
+			plan.refreshAnyway = maybeRefresh(installed, info.Info)
+			if plan.refreshAnyway {
+				break
+			}
+		}
+	}
+
+	sketchFound, err := maybeSketch(ctx, w.Project.ProjectId, w.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if w.Base != file.Base {
+		plan.refreshAnyway = true
+	}
+
+	if !slices.Equal(w.File.Connections, file.Connections) {
+		plan.refreshAnyway = true
+	}
+
+	cmpRecord := func(s1, s2 workshop.SdkRecord) bool {
+		return reflect.DeepEqual(s1, s2)
+	}
+	if !slices.EqualFunc(w.File.Sdks, file.Sdks, cmpRecord) {
+		plan.refreshAnyway = true
+	}
+
+	// Establish SDK installation order.
+	for _, s := range file.Sdks {
+		plan.installOrder = append(plan.installOrder, s.Name)
+	}
+	if sketchFound {
+		plan.installOrder = append(plan.installOrder, sdk.Sketch)
+	}
+
+	// TODO: refresh only the required SDK when a workshop will be able to
+	// restore from a snapshots. Now, if there is at least one SDK to be
+	// refreshed, then refresh the entire set of SDKs.
+	if plan.refreshAnyway || len(plan.install) > 0 || len(plan.remove) > 0 || sketchFound {
+		for _, info := range infos {
+			if _, exist := w.Sdks[info.Name]; exist {
+				plan.refresh = append(plan.refresh, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+			}
+		}
+
+		if sketchFound {
+			if installed, exist := w.Sdks[sdk.Sketch]; exist {
+				plan.refresh = append(plan.refresh, installed)
+			} else {
+				plan.install = append(plan.install, sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
+			}
+		}
+	}
+
+	return plan, nil
+}
+
+func refresh(ctx context.Context, st *state.State, sto sdk.Store, w *workshop.Workshop, file *workshop.File) (*state.TaskSet, error) {
+	st.Unlock()
+	plan, err := resolveRefresh(ctx, sto, w, file)
+	st.Lock()
+	if err != nil {
+		return nil, err
+	}
+
+	refresh := state.NewTaskSet()
+	prev := (*state.TaskSet)(nil)
+	addTaskSet := func(ts *state.TaskSet) {
+		if len(ts.Tasks()) == 0 {
+			return
+		}
+
+		if prev != nil {
+			ts.WaitAll(prev)
+		}
+		refresh.AddAll(ts)
+		prev = ts
+	}
+
+	retrieve := retrieveSdks(st, plan.InstallOrRefresh())
+	addTaskSet(retrieve)
+
+	if len(plan.Refresh()) > 0 {
+		saveStateTs := state.NewTaskSet()
+		stateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
+		stateStorage.WaitAll(retrieve)
+		saveStateTs.AddTask(stateStorage)
+
+		// Call save-state hooks for the SDKs that are installed and will not be
+		// removed after this refresh.
+		saveState := createStateHooks(st, file.Name, plan.Refresh(), hookstate.SaveState)
+		saveState.WaitFor(stateStorage)
+		saveStateTs.AddAll(saveState)
+
+		addTaskSet(saveStateTs)
+	}
+
+	if plan.RecreateWorkshop() {
+		disconn := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}}
+		disconn = append(disconn, slices.Collect(maps.Values(w.Sdks))...)
+		disconnect := disconnectSdks(st, disconn)
+		addTaskSet(disconnect)
+	} else {
+		disconnect := disconnectSdks(st, plan.RefreshOrRemove())
+		addTaskSet(disconnect)
+	}
+
+	if plan.RecreateWorkshop() {
+		stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
+		addTaskSet(state.NewTaskSet(stash))
+
+		launch := constructWorkshop(st, file, w.Project)
+		addTaskSet(launch)
+
+		system := sdkstate.InstallSystemSdk(st)
+		addTaskSet(system)
+	}
+
+	install := installSdks(st, file.Name, plan.InstallOrRefresh(), retrieve)
+	addTaskSet(install)
+
+	if plan.RecreateWorkshop() {
+		conn := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}}
+		conn = append(conn, plan.InstallOrRefresh()...)
+		connect := autoconnectSdks(st, conn)
+		addTaskSet(connect)
+	} else {
+		connect := autoconnectSdks(st, plan.InstallOrRefresh())
+		addTaskSet(connect)
+	}
+
+	if len(plan.Refresh()) > 0 {
+		restoreState := createStateHooks(st, file.Name, plan.Refresh(), hookstate.RestoreState)
+		addTaskSet(restoreState)
+	}
+
+	checkHealth := checkSdksHealth(st, file.Name, plan.InstallOrRefresh())
+	addTaskSet(checkHealth)
+
+	length := len(refresh.Tasks())
+	if length == 0 {
+		return refresh, nil
+	}
+
+	cleanupLane := st.NewLane()
+	lastRefreshTsk := refresh.Tasks()[length-1]
+	refresh.MarkEdge(lastRefreshTsk, EdgeLastTaskBeforeRefreshIrreversible)
+	if len(plan.Refresh()) > 0 {
+		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+		removeStateStorage.WaitFor(lastRefreshTsk)
+		removeStateStorage.JoinLane(cleanupLane)
+		refresh.MarkEdge(removeStateStorage, EdgeRefreshCleanup)
+
+		refresh.AddTask(removeStateStorage)
+	}
+
+	if plan.RecreateWorkshop() {
+		// remove the workshop from stash after the state storage was detached
+		removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
+		// if the change was aborted during the cleanup stage execution,
+		// there is a chance that some of the workshop copies that had
+		// been created during the refresh were already deleted. If we
+		// start to Undo those workshops' refresh progress we will
+		// endup deleting the workshops that finished their refresh.
+		// Given that they have no copy already, the undo logic
+		// (stash-workshop) will delete the existing workshop
+		// and fail to restore from the copy. We don't want that. Hence,
+		// all the cleanup tasks are extracted into a separate lane. If
+		// any problem happens, the workshops that had finished their
+		// refresh will not be affected.
+		removeStash.JoinLane(cleanupLane)
+		removeStash.WaitFor(lastRefreshTsk)
+
+		if refresh.MaybeEdge(EdgeRefreshCleanup) == nil {
+			refresh.MarkEdge(removeStash, EdgeRefreshCleanup)
+		}
+
+		refresh.AddTask(removeStash)
+	}
+
+	for _, task := range refresh.Tasks() {
+		task.Set("workshop", file.Name)
+		task.Set("project", w.Project)
+	}
+
+	return refresh, nil
 }
 
 func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
@@ -400,179 +702,52 @@ func (w *WorkshopManager) refreshLocalSdk(wp *workshop.Workshop, sdkn string) (*
 	return ts, nil
 }
 
-func refreshMany(st *state.State, files []*workshop.File, installed [][]sdk.Setup,
-	toInstall [][]sdk.Setup, project workshop.Project) ([]*state.TaskSet, error) {
-	taskset := make([]*state.TaskSet, 0, len(files))
-
-	for i, file := range files {
-		tasks, err := refresh(st, file, installed[i], toInstall[i], project)
-		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", file.Name, err)
+func autoconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+	autoconnectSet := state.NewTaskSet()
+	var prevAuto = (*state.Task)(nil)
+	for _, setup := range sdks {
+		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
+		autoconnect.Set("sdk", setup.Name)
+		autoconnectSet.AddTask(autoconnect)
+		if prevAuto != nil {
+			autoconnect.WaitFor(prevAuto)
 		}
-		taskset = append(taskset, tasks)
+		prevAuto = autoconnect
 	}
 
-	for _, ts := range taskset {
-		cleanup, err := ts.Edge(EdgeRefreshCleanup)
-		if err != nil {
-			return nil, err
-		}
-
-		// We will iterate over other refreshes and make sure that the cleanup
-		// task of our refresh will wait until all the other refresh operations
-		// finished. This will ensure that we start to remove the workshops'
-		// previous copies once all the refresh operations were successful (at
-		// this stage, we only need to remove a stashed copy, the newly refreshed
-		// workshop is already up and running). Thus, every CleanupEdge will
-		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
-		// other changes before execution.
-		for _, otherts := range taskset {
-			if ts != otherts {
-				last, err := otherts.Edge(EdgeLastTaskBeforeRefreshIrreversible)
-				if err != nil {
-					return nil, err
-				}
-				cleanup.WaitFor(last)
-			}
-		}
-	}
-
-	return taskset, nil
+	return autoconnectSet
 }
 
-func refresh(st *state.State, file *workshop.File, installed []sdk.Setup, toInstall []sdk.Setup, p workshop.Project) (*state.TaskSet, error) {
-	// 1. Save previous state
-	// 2. Stop previous workshop
-	// 3. Put to stash
-	// 4. Launch the new workshop
-	// 5. Run restore state
-	// 6. Delete the old workshop
-	retrieve := retrieveSdks(st, toInstall)
-
-	createStateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
-	createStateStorage.WaitAll(retrieve)
-
-	// the saveStateHooks can be empty if the old SDKs were all removed in
-	// the new version of the workshop
-	saveStateHooks := saveStateHooks(st, file.Name, installed, file.Sdks)
-	saveStateHooks.WaitFor(createStateStorage)
-
-	// disconnect and remove SDKs plugs and slots
-	disconnect := disconnectSdks(installed, st)
-	disconnect.WaitAll(saveStateHooks)
-	disconnect.WaitFor(createStateStorage)
-
-	// put the workshop (old) away and disconnect its interfaces
-	putToStash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
-	putToStash.WaitAll(disconnect)
-	putToStash.WaitAll(saveStateHooks)
-	putToStash.WaitFor(createStateStorage)
-
-	// launch a workshop (new)
-	launch := constructWorkshop(st, file, p)
-	launch.WaitFor(putToStash)
-
-	// install SDKs and run restore-state scripts. The restoreStateHooks can be
-	// empty if the old SDKs were all removed in the new version of the workshop
-	install := installSdks(st, file.Name, toInstall, retrieve)
-	install.WaitAll(launch)
-	launch.AddAll(install)
-
-	// note: restore-state list may be empty if there are no SDKs or
-	// old SDKs are all gone
-	restoreState := restoreStateHooks(st, file.Name, installed, file.Sdks)
-	restoreState.WaitAll(install)
-	launch.AddAll(restoreState)
-
-	checkHealth := checkHealthHooks(st, file)
-	checkHealth.WaitAll(install)
-	checkHealth.WaitAll(restoreState)
-	launch.AddAll(checkHealth)
-
-	// remove the state storage after running restore-state scripts
-	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-	createLen := len(launch.Tasks())
-	lastLaunchTask := launch.Tasks()[createLen-1]
-	removeStateStorage.WaitFor(lastLaunchTask)
-	launch.MarkEdge(lastLaunchTask, EdgeLastTaskBeforeRefreshIrreversible)
-
-	// remove the workshop from stash after the state storage was detached
-	removeFromStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
-	removeFromStash.WaitFor(removeStateStorage)
-
-	// if the change was aborted during the cleanup stage execution,
-	// there is a chance that some of the workshop copies that had
-	// been created during the refresh were already deleted. If we
-	// start to Undo those workshops' refresh progress we will
-	// endup deleting the workshops that finished their refresh.
-	// Given that they have no copy already, the undo logic
-	// (stash-workshop) will delete the existing workshop
-	// and fail to restore from the copy. We don't want that. Hence,
-	// all the cleanup tasks are extracted into a separate lane. If
-	// any problem happens, the workshops that had finished their
-	// refresh will not be affected.
-	cleanupLane := st.NewLane()
-	removeStateStorage.JoinLane(cleanupLane)
-	removeFromStash.JoinLane(cleanupLane)
-
-	refresh := state.NewTaskSet([]*state.Task{}...)
-	refresh.AddAll(retrieve)
-	refresh.AddTask(createStateStorage)
-	refresh.AddAll(saveStateHooks)
-	refresh.AddAll(disconnect)
-	refresh.AddTask(putToStash)
-	refresh.AddAllWithEdges(launch)
-	refresh.AddTask(removeStateStorage)
-	refresh.AddTask(removeFromStash)
-
-	refresh.MarkEdge(removeStateStorage, EdgeRefreshCleanup)
-
-	for _, task := range refresh.Tasks() {
-		task.Set("workshop", file.Name)
-		task.Set("project", p)
-	}
-
-	return refresh, nil
-}
-
-func disconnectSdks(sdks []sdk.Setup, st *state.State) *state.TaskSet {
-	prev := st.NewTask("auto-disconnect", fmt.Sprintf(`Disconnect interfaces of %q SDK`, sdk.System.String()))
-	prev.Set("sdk", sdk.System.String())
-	disconnectSet := state.NewTaskSet(prev)
+func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+	prev := (*state.Task)(nil)
+	disconnSet := state.NewTaskSet()
 	for _, s := range sdks {
-		disc := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
-		disc.Set("sdk", s.Name)
-		disc.WaitFor(prev)
-		disconnectSet.AddTask(disc)
-		prev = disc
+		disconn := st.NewTask("auto-disconnect", fmt.Sprintf("Disconnect interfaces of %q SDK", s.Name))
+		disconn.Set("sdk", s.Name)
+		disconnSet.AddTask(disconn)
+
+		if prev != nil {
+			disconn.WaitFor(prev)
+		}
+		prev = disconn
 	}
-	return disconnectSet
+	return disconnSet
 }
 
-func saveStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord,
-) *state.TaskSet {
-	return createStateHooks(st, w, sdks, newSdks, hookstate.SaveState)
-}
-
-func restoreStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord) *state.TaskSet {
-	return createStateHooks(st, w, sdks, newSdks, hookstate.RestoreState)
-}
-
-func createStateHooks(st *state.State, w string, sdks []sdk.Setup, newSdks []workshop.SdkRecord, hooktype hookstate.WorkshopHookType) *state.TaskSet {
-	stateHooks := state.NewTaskSet([]*state.Task{}...)
-	prevRestore := (*state.Task)(nil)
-	for _, newsdk := range newSdks {
-		// the state hooks will only be set for the SDKs that were installed AND
-		// were not removed from the workshop file at the time of refresh
-		if slices.IndexFunc(sdks, func(s sdk.Setup) bool { return s.Name == newsdk.Name }) == -1 {
+func createStateHooks(st *state.State, w string, installed []sdk.Setup, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+	stateHooks := state.NewTaskSet()
+	prev := (*state.Task)(nil)
+	for _, sk := range installed {
+		if sk.Name == sdk.System.String() {
 			continue
 		}
-		stateHook := hookstate.Hook(st, w, newsdk.Name, hooktype)
+
+		stateHook := hookstate.Hook(st, w, sk.Name, hooktype)
 		stateHooks.AddTask(stateHook)
-		if prevRestore != nil {
-			stateHook.WaitFor(prevRestore)
+		if prev != nil {
+			stateHook.WaitFor(prev)
 		}
-		prevRestore = stateHook
+		prev = stateHook
 	}
 	return stateHooks
 }
@@ -753,7 +928,10 @@ func removeMany(st *state.State, workshops []*workshop.Workshop, project worksho
 
 func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*state.TaskSet, error) {
 	removeSet := state.NewTaskSet()
-	disconnectSet := disconnectSdks(maps.Values(w.Sdks), st)
+
+	disconn := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}}
+	disconn = append(disconn, slices.Collect(maps.Values(w.Sdks))...)
+	disconnectSet := disconnectSdks(st, disconn)
 
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	discard.WaitAll(disconnectSet)
