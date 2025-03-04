@@ -98,9 +98,58 @@ that |ws_markup| will listen on the plug address,
 forwarding incoming network connections to the slot address.
 
 When a system SDK plug is connected to a regular SDK slot,
-clients on the host can access services inside the workshop.
+clients on the host can access services inside the workshop:
+
+.. mermaid::
+   :alt: Exposing SDK services to the host system
+   :caption: Exposing SDK services to the host system
+   :align: center
+   :config: {"theme":"neutral"}
+
+   flowchart LR
+     subgraph Host
+       Client --> Plug
+
+       subgraph system[System SDK]
+         Plug
+       end
+     end
+
+     Plug -- Tunnel --> Slot
+
+     subgraph Workshop
+       subgraph regular[Regular SDK]
+         Slot --> Service
+       end
+     end
+
+
 When a regular SDK plug is connected to a system SDK slot,
-clients in the workshop can access services on the host.
+clients in the workshop can access services on the host:
+
+.. mermaid::
+   :alt: Sharing system services with a workshop
+   :caption: Sharing system services with a workshop
+   :align: center
+   :config: {"theme":"neutral"}
+
+   flowchart RL
+     subgraph Workshop
+       subgraph regular[Regular SDK]
+         Client --> Plug
+       end
+     end
+
+     Plug -- Tunnel --> Slot
+
+     subgraph Host
+       subgraph system[System SDK]
+         Slot
+       end
+
+       Slot --> Service
+     end
+
 
 |ws_markup| doesn't support connections within the system SDK
 or between regular SDKs.
