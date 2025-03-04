@@ -36,6 +36,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -1457,6 +1458,7 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 	chg.AddTask(tsk)
 	tsk.Set("workshop", "producer-ws")
 	chg.Set("project-id", "b8639dea")
+	s.d.overlord.TaskRunner().AddBlocked(func(t *state.Task, running []*state.Task) bool { return t.ID() == tsk.ID() })
 	st.Unlock()
 
 	text, err := json.Marshal(action)
@@ -1495,7 +1497,7 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 	st.Lock()
 	warnings := st.AllWarnings()
 	st.Unlock()
-	c.Check(warnings, check.HasLen, 1)
+	c.Assert(warnings, check.HasLen, 1)
 	c.Check(warnings[0].String(), check.Equals, `active shell sessions in "producer-ws" may need restarting for new connections to take effect`)
 }
 
