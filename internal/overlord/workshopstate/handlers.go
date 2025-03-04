@@ -335,17 +335,12 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 }
 
 func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
-	usr, err := workshop.LookupUsername(user)
+	usrDataDir, err := workshop.UserDataRootDir(user)
 	if err != nil {
 		return err
 	}
 
-	rootDir, err := workshop.UserDataRootDir(usr)
-	if err != nil {
-		return err
-	}
-
-	workshopUserData := workshop.UserData(rootDir, projectId, w)
+	workshopUserData := workshop.UserData(usrDataDir, projectId, w)
 
 	err = os.RemoveAll(workshopUserData)
 	if err != nil {
@@ -353,7 +348,7 @@ func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
 	}
 
 	// If this was the last workshop in the project, cleanup the project dir
-	projectUserData := workshop.ProjectUserData(rootDir, projectId)
+	projectUserData := workshop.ProjectUserData(usrDataDir, projectId)
 
 	prjDir, err := os.ReadDir(projectUserData)
 	if err != nil {

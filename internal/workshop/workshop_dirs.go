@@ -7,14 +7,27 @@ import (
 	"github.com/canonical/workshop/internal/systemd"
 )
 
-func UserDataRootDir(usr *user.User) (string, error) {
-	path := filepath.Join(usr.HomeDir, ".local", "share")
+func userAndEnv(name string) (*user.User, map[string]string, error) {
+	usr, err := LookupUsername(name)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	env, err := systemd.UserEnvironment(usr)
 	if err != nil {
-		return path, err
+		return nil, nil, err
 	}
 
+	return usr, env, err
+}
+
+func UserDataRootDir(name string) (string, error) {
+	usr, env, err := userAndEnv(name)
+	if err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(usr.HomeDir, ".local", "share")
 	dataDir := env["XDG_DATA_HOME"]
 	if dataDir != "" {
 		path = dataDir

@@ -230,7 +230,7 @@ func sketchSdkChannel(projectId, w string) string {
 		return "~"
 	}
 
-	rootDir, err := workshop.UserDataRootDir(user)
+	rootDir, err := workshop.UserDataRootDir(user.Username)
 	if err != nil {
 		return "~"
 	}

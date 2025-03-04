@@ -113,17 +113,12 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 	case sdk.System.String():
 		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
 	case sdk.Sketch:
-		usr, err := workshop.LookupUsername(user)
+		usrDataDir, err := workshop.UserDataRootDir(user)
 		if err != nil {
 			return err
 		}
 
-		rootDir, err := workshop.UserDataRootDir(usr)
-		if err != nil {
-			return err
-		}
-
-		sketchdir := workshop.SketchSdkCurrent(rootDir, project.ProjectId, w)
+		sketchdir := workshop.SketchSdkCurrent(usrDataDir, project.ProjectId, w)
 		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(sketchdir))
 	default:
 		return fmt.Errorf("unknown type of the local SDK")

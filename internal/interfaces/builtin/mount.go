@@ -199,7 +199,7 @@ func (iface *mountInterface) hostSource(usr *user.User, plug *interfaces.Connect
 	}
 
 	// default dir: <sdk>/<plug>
-	rootDir, err := workshop.UserDataRootDir(usr)
+	rootDir, err := workshop.UserDataRootDir(usr.Username)
 	if err != nil {
 		return source, err
 	}

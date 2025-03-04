@@ -228,7 +228,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	rootDir, err := workshop.UserDataRootDir(user)
+	rootDir, err := workshop.UserDataRootDir(user.Username)
 	if err != nil {
 		return err
 	}
@@ -454,7 +454,7 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) ([]st
 		exists = true
 	}
 
-	rootDir, err := workshop.UserDataRootDir(usr)
+	rootDir, err := workshop.UserDataRootDir(usr.Username)
 	if err != nil {
 		return nil, err
 	}
