@@ -10,7 +10,7 @@ execute: |
 
   echo "Install empty sketch SDK"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  wq
+  q
   EOF
 
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/project/.*/sdk/sketch/ws-sketch$'
@@ -26,8 +26,7 @@ execute: |
 
   echo "Add setup-base"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  10
-  i
+  1/^hooks:$/a
     setup-base: |
       mkdir -p /home/workshop/ws-sketch-test
   .
@@ -38,8 +37,7 @@ execute: |
 
   echo "Add a new mount"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  $
-  a
+  1/^plugs:$/a
     sketch-plug:
       interface: mount
       workshop-target: /home/workshop/ws-sketch-test
@@ -56,14 +54,13 @@ execute: |
 
   echo "Install empty sketch SDK"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  wq
+  q
   EOF
 
   echo "Add a breaking change to sketch"
   ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  $
-  a
-    test:
+  1/^plugs:$/a
+    unique-mount-plug-name:
       interface: mount
       workshop-typo: /mnt
   .
@@ -72,15 +69,13 @@ execute: |
 
   echo "Fix the breaking change"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  $
-  s/typo/target/
+  %s/workshop-typo/workshop-target/
   wq
   EOF
 
   echo "Add another breaking change to sketch"
   ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  $
-  a
+  1/^  unique-mount-plug-name:$/a
       unknown-attribute: true
   .
   wq
