@@ -60,6 +60,9 @@ Environment setup
 
       spread -h
 
+   To run the end-to-end test suite `tests/documentation/`,  
+   download the latest sdkcraft release file from  `sdkcraft repository <https://github.com/canonical/sdkcraft/releases>`_ 
+   and move it to `tests/` directory.
 
 Coding
 ------
