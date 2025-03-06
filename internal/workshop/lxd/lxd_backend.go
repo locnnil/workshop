@@ -531,7 +531,13 @@ func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name
 			defer conn.Disconnect()
 
 			if err := op.WaitContext(ctx); err != nil {
-				return err
+				switch err.Error() {
+				case "Command not executable", "Command not found":
+					// Usually a nonzero exit status is not an error,
+					// but LXD translates 126 and 127 into the above messages.
+				default:
+					return err
+				}
 			}
 
 			// waiting for any remaining data IO to be flushed LXD closes this channel
