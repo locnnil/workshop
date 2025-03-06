@@ -140,6 +140,11 @@ func New() (*Backend, error) {
 		req := api.StoragePoolsPost{
 			Name:   storagePool,
 			Driver: storagePoolDriver,
+			StoragePoolPut: api.StoragePoolPut{
+				Config: map[string]string{
+					"volume.zfs.remove_snapshots": "true",
+				},
+			},
 		}
 		err := conn.CreateStoragePool(req)
 		if err != nil {
@@ -258,8 +263,18 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		},
 	}
 
-	inst, _, err := conn.GetInstance(InstanceName(file.Name, projectId))
+	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
 	if err == nil {
+		for _, snapshot := range inst.Snapshots {
+			op, err := conn.DeleteInstanceSnapshot(inst.Name, snapshot.Name)
+			if err != nil {
+				return err
+			}
+			if err = op.Wait(); err != nil {
+				return err
+			}
+		}
+
 		rop, err := conn.RebuildInstanceFromImage(conn, *image, InstanceName(file.Name, projectId), api.InstanceRebuildPost{})
 		if err != nil {
 			return err
@@ -268,7 +283,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 		maps.Copy(inst.Config, req.Config)
-		inst.Devices = req.Devices
+		maps.Copy(inst.Devices, req.Devices)
 
 		op, err := conn.UpdateInstance(InstanceName(file.Name, projectId), inst.Writable(), "")
 		if err != nil {
@@ -768,6 +783,78 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	return op.Wait()
 }
 
+func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
+		Name: snapid,
+	})
+	if err != nil {
+		return err
+	}
+	return op.Wait()
+}
+
+func (s *Backend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	instPut := inst.Writable()
+	instPut.Restore = snapid
+	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+
+	instPut.Restore = ""
+	instPut.Profiles = []string{"default"}
+
+	// The restored snapsho will have an updated file. Similar to how a launched
+	// workshop is associated with its definition.
+	f, err := yaml.Marshal(file)
+	if err != nil {
+		return err
+	}
+	instPut.Config["user.workshop.file"] = string(f)
+	// Restore from a snapshot also restores the workshop configuration at the
+	// time the snapshot was made. We need the restored configuration to have
+	// the current instance's configuration as it reflects the installed SDKs
+	// list, for example.
+	op, err = conn.UpdateInstance(inst.Name, instPut, "")
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -915,6 +1002,7 @@ runcmd:
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
 		"user.workshop.file":       string(f),
+		"user.workshop.sdks":       "",
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic

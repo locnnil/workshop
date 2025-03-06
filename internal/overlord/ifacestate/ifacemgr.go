@@ -44,7 +44,7 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
 
 	r.AddHandler("setup-profiles", OnDo(m.doSetupProfiles), m.undoSetupProfiles)
-	r.AddHandler("remove-profiles", OnDo(m.doRemoveProfiles), m.undoRemoveProfiles)
+	r.AddHandler("remove-profiles", OnDo(m.doRemoveProfiles), nil)
 
 	// TODO: there is no use for the undo logic as remount is a single task
 	// change that will either finish successfully or fail (in which case it
@@ -156,14 +156,6 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
-				system, err := workshop.SdkInfo(pctx, sdk.System.String())
-				if err != nil {
-					continue
-				}
-				if err = m.repo.AddSdk(system); err != nil {
-					continue
-				}
-
 				infos, err := workshop.SdkInfos(pctx)
 				if err != nil {
 					logger.Noticef("Cannot obtain the installed SDKs for %q workshop: %v", workshop.Name, err)
@@ -172,7 +164,7 @@ func (m *InterfaceManager) StartUp() error {
 
 				for _, info := range infos {
 					if err = m.repo.AddSdk(info); err != nil {
-						logger.Noticef("Cannot register %q SDK interfaces:%v", info.Name, err)
+						logger.Noticef("Cannot register %q SDK interfaces: %v", info.Name, err)
 						continue
 					}
 				}

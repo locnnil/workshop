@@ -26,7 +26,7 @@ func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	st.Unlock()
 
 	runner.AddHandler("download-base", OnDo(manager.doDownloadBase), nil)
-	runner.AddHandler("create-workshop", OnDo(manager.doCreateWorkshop), manager.undoCreateWorkshop)
+	runner.AddHandler("create-workshop", OnDo(manager.doConstructWorkshop), manager.undoCreateWorkshop)
 	runner.AddHandler("start-workshop", OnDo(manager.doStart), manager.doStop)
 	runner.AddHandler("stop-workshop", OnDo(manager.doStop), manager.doStart)
 	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkshop), nil)

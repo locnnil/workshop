@@ -65,7 +65,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	return m.backend.Download(ctx, base, reporter)
 }
 
-func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -80,26 +80,42 @@ func (m *WorkshopManager) doCreateWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	st.Lock()
 	err = task.Get("workshop-file", &wf)
 	st.Unlock()
-
 	if err != nil {
+		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+	}
+
+	var sdkSnapshot string
+	st.Lock()
+	err = task.Get("sdk-snapshot", &sdkSnapshot)
+	st.Unlock()
+	if err != nil && !errors.Is(err, state.ErrNoState) {
 		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
 	rev := revert.New()
 	defer rev.Fail()
 
-	if err = m.backend.LaunchOrRebuildWorkshop(ctx, &wf); err != nil {
-		return err
-	}
-
 	cleanupCtx := context.WithoutCancel(ctx)
 	rev.Add(func() {
 		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
 		defer cancel()
+
+		// This may fail if the first workshop launch has failed for some
+		// reason; It is safe to ignore the error in that case.
 		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w); reverr != nil {
 			logger.Noticef("On doCreateWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
 		}
 	})
+
+	if len(sdkSnapshot) == 0 {
+		if err = m.backend.LaunchOrRebuildWorkshop(ctx, &wf); err != nil {
+			return err
+		}
+	} else {
+		if err = m.backend.Restore(ctx, w, workshop.SnapshotId(w, sdkSnapshot), &wf); err != nil {
+			return err
+		}
+	}
 
 	// Create workshop base and run directories
 	fs, err := m.backend.WorkshopFs(ctx, wf.Name)
@@ -308,7 +324,8 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 	if err = m.backend.UnstashWorkshop(ctx, w); err != nil {
 		return err
 	}
-	return nil
+
+	return m.backend.RemoveWorkshopStash(ctx, w)
 }
 
 func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {

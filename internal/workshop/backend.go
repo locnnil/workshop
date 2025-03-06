@@ -145,6 +145,8 @@ type Backend interface {
 	Stash
 	VolumeManager
 	BaseImageManager
+	Snapshot
+
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -203,6 +205,11 @@ type Backend interface {
 	// and redirect its IO using args.ExecControls. ExecContext.Environment will
 	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
+}
+
+type Snapshot interface {
+	Snapshot(ctx context.Context, workshop, snapid string) error
+	Restore(ctx context.Context, workshop, snapid string, file *File) error
 }
 
 type cachedBackendKey struct{}

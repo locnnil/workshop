@@ -522,7 +522,6 @@ func (s *sdkStateSuite) TestUndoLinkSdkRestorePreviousRev(c *check.C) {
 	setup, ok := wp.Sdks["test"]
 	c.Assert(ok, check.Equals, true)
 	c.Assert(setup.Revision.N, check.Equals, 1)
-	c.Assert(setup.RevisionSequence, check.HasLen, 0)
 
 	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)

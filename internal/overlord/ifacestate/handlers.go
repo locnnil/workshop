@@ -924,49 +924,12 @@ func (m *InterfaceManager) doRemoveProfiles(task *state.Task, tomb *tomb.Tomb) e
 		return err
 	}
 
-	if err = m.repo.RemoveSdk(p.ProjectId, w, s); err != nil {
-		return err
-	}
-
 	for _, backend := range m.repo.Backends() {
 		// If there are not plugs or slots declared by the SDK the profile does
 		// not neccessarily exist for the SDK.
 		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
-	}
-	return nil
-}
-
-func (m *InterfaceManager) undoRemoveProfiles(task *state.Task, tomb *tomb.Tomb) error {
-	st := task.State()
-	user, project, w, err := handlersetup.UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	st.Lock()
-	sdkName, err := handlersetup.Sdk(task)
-	st.Unlock()
-	if err != nil {
-		return err
-	}
-
-	inst, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-
-	sdkInfo, err := inst.SdkInfo(ctx, sdkName)
-	if err != nil {
-		return err
-	}
-
-	if err := m.repo.AddSdk(sdkInfo); err != nil {
-		return err
 	}
 	return nil
 }

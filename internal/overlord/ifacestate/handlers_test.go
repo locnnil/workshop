@@ -865,7 +865,6 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	// Setup
 	// Create an already installed workshop with a connected mount plug
-	repo := s.mgr.Repository()
 	source := c.MkDir()
 	s.launchRemountWorkshop(c, source)
 
@@ -881,9 +880,6 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 
 	// Validate
-	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
-	c.Assert(repo.Slots(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
-
 	var stateConns map[string]interface{}
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 0)

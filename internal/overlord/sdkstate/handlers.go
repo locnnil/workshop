@@ -127,7 +127,7 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 	}
 }
 
-func (m *SdkManager) undoInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doUninstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()), sdkPath, true)
 }
 
-func (m *SdkManager) undoInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doUinstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -225,9 +225,9 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	st := task.State()
 	rev.Add(func() {
-		if err := wp.UnlinkSdk(ctx, setup.Name); err != nil {
+		if reverr := wp.UnlinkSdk(ctx, setup.Name); reverr != nil {
 			st.Lock()
-			task.Logf("Link SDK cleanup: could not unlink %q SDK: %v", setup.Name, err)
+			task.Logf("Link SDK cleanup: could not unlink %q SDK: %v", setup.Name, reverr)
 			st.Unlock()
 		}
 	})
@@ -254,13 +254,13 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doUnlinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	sdkSetup, err := SdkSetup(task)
+	setup, err := SdkSetup(task)
 	if err != nil {
 		return err
 	}
@@ -268,14 +268,18 @@ func (m *SdkManager) undoLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	if err := m.repo.RemoveSdk(project.ProjectId, w, sdkSetup.Name); err != nil {
-		return err
-	}
-
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
 
-	return wp.UnlinkSdk(ctx, sdkSetup.Name)
+	if err = wp.UnlinkSdk(ctx, setup.Name); err != nil {
+		return err
+	}
+
+	if err = m.repo.RemoveSdk(project.ProjectId, w, setup.Name); err != nil {
+		return err
+	}
+
+	return nil
 }

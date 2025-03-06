@@ -79,36 +79,29 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	rev.Add(func() { _ = fs.Remove(current) })
 
-	// We do not track the system SDK in the Sdks field; this is only for the
-	// user-defined SDKs as the system SDK is a special case (e.g. cannot be
-	// removed from the workshop).
-	if s.Name != sdk.System.String() {
-		now := InstallTimeNow()
-		s.InstallTime = &now
+	now := InstallTimeNow()
+	s.InstallTime = &now
 
-		sdksetup, exist := w.Sdks[s.Name]
-		if exist {
-			sdksetup.RevisionSequence = append(sdksetup.RevisionSequence, sdksetup.Revision)
-			sdksetup.Revision = s.Revision
-			w.Sdks[s.Name] = sdksetup
-		} else {
-			w.Sdks[s.Name] = s
-		}
+	_, exist := w.Sdks[s.Name]
+	if exist {
+		return fmt.Errorf("%q SDK is already linked", s.Name)
+	} else {
+		w.Sdks[s.Name] = s
+	}
 
-		sequenceValue, err := json.Marshal(w.Sdks)
-		if err != nil {
-			return err
-		}
+	sequenceValue, err := json.Marshal(w.Sdks)
+	if err != nil {
+		return err
+	}
 
-		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-			&WorkshopConfigValue{
-				Name:  ConfigWorkshopSdks,
-				Value: string(sequenceValue),
-			})
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
+			Name:  ConfigWorkshopSdks,
+			Value: string(sequenceValue),
+		})
 
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
 	rev.Success()
@@ -119,28 +112,19 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK from the workshop "installed" SDKs if there are no more
 // revisions left.
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	if name != sdk.System.String() {
-		setup := w.Sdks[name]
-		if len(setup.RevisionSequence) > 0 {
-			setup.Revision = setup.RevisionSequence[len(setup.RevisionSequence)-1]
-			setup.RevisionSequence = setup.RevisionSequence[:len(setup.RevisionSequence)-1]
-			w.Sdks[name] = setup
-		} else {
-			delete(w.Sdks, name)
-		}
-		newSequence, err := json.Marshal(w.Sdks)
-		if err != nil {
-			return err
-		}
+	delete(w.Sdks, name)
+	newSequence, err := json.Marshal(w.Sdks)
+	if err != nil {
+		return err
+	}
 
-		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-			&WorkshopConfigValue{
-				Name:  ConfigWorkshopSdks,
-				Value: string(newSequence),
-			})
-		if err != nil {
-			return err
-		}
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
+			Name:  ConfigWorkshopSdks,
+			Value: string(newSequence),
+		})
+	if err != nil {
+		return err
 	}
 
 	// Update the 'current' link
@@ -149,16 +133,6 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 		return err
 	}
 	defer fs.Close()
-
-	if setup, exist := w.Sdks[name]; exist {
-		if err = fs.Remove(sdk.SdkCurrentPath(name)); err != nil {
-			return err
-		}
-		if err = fs.Symlink(sdk.SdkRevPath(name, setup.Revision.String()), sdk.SdkCurrentPath(name)); err != nil {
-			return err
-		}
-		return nil
-	}
 
 	// No revisions left in the sequence, remove the 'current' link.
 	// This will be the case during a launch operation that fails, therefore it's
@@ -343,16 +317,16 @@ func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
 }
 
 func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {
-	dstdir := filepath.Dir(dst)
-	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
-		return err
-	}
-
 	filesrc, err := srcfs.Open(src)
 	if err != nil {
 		return err
 	}
 	defer filesrc.Close()
+
+	dstdir := filepath.Dir(dst)
+	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
+		return err
+	}
 
 	filedst, err := wfs.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
 	if err != nil {
@@ -379,11 +353,11 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
 	metasrc := filepath.Join("meta", "sdk.yaml")
 	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
-	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
 
 	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {
 		return err
 	}
+	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
 
 	// hooks: /var/lib/workshop/sdk/<name>/<rev>/sdk/hooks
 	hooksdir := filepath.Join(sdk.SdkRevPath(name, rev), "sdk", "hooks")
@@ -408,4 +382,8 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 
 	reverter.Success()
 	return nil
+}
+
+func SnapshotId(w, sk string) string {
+	return strings.Join([]string{w, sk}, "-")
 }

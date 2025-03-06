@@ -49,35 +49,43 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 
 	switch hook.HookType {
 	case SaveState:
-		{
-			fs, err := h.backend.WorkshopFs(ctx, w)
-			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
-			}
-			err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
-			fs.Close()
-			if err != nil {
-				return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
-			}
+		fs, err := h.backend.WorkshopFs(ctx, w)
+		if err != nil {
+			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 		}
+		err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
+		fs.Close()
+		if err != nil {
+			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
+		}
+
 		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	case RestoreState:
-		{
-			fs, err := h.backend.WorkshopFs(ctx, w)
-			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
-			}
-			info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
-			fs.Close()
-			if err != nil {
-				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
-			}
 
-			if !info.IsDir() {
-				return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
-			}
+		fs, err := h.backend.WorkshopFs(ctx, w)
+		if err != nil {
+			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
 		}
+		info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
+		fs.Close()
+		if err != nil {
+			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
+		}
+
+		if !info.IsDir() {
+			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
+		}
+
 		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
+	case SetupBase:
+		if err = h.executeHook(ctx, task, w, prj.ProjectId, &hook); err != nil {
+			return err
+		}
+		if err = h.backend.Snapshot(ctx, w, workshop.SnapshotId(w, hook.Sdk)); err != nil {
+			return err
+		}
+		return nil
+
 	default:
 		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	}
