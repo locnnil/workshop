@@ -118,7 +118,7 @@ for example:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.10_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.11_amd64.snap
 
 
 The command installs two main components:
