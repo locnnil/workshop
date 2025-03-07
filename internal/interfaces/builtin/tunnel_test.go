@@ -971,13 +971,7 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	u := user.User{
-		Uid:      "1111",
-		Gid:      "2222",
-		Username: "testuser",
-		HomeDir:  "/home/testhome",
-	}
-	deviceSpec := lxd_device.NewSpecification(&u, "client")
+	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
 
 	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, `unexpected variable "PWD"`)

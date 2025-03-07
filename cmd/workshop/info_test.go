@@ -282,7 +282,7 @@ var mockWorkshopWithTunnels = `{"type":"sync","status-code":200,"status":"OK","r
                 },
                 "to":{
                     "protocol":"unix",
-                    "path":"/run/user/1000/gopls.socket"
+                    "path":"/run/user/%s/gopls.socket"
                 }
             }]
         }
@@ -308,7 +308,7 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkTunnels(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			_, err = fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithTunnels, user.HomeDir))
+			_, err = fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithTunnels, user.Uid))
 			c.Assert(err, check.IsNil)
 		default:
 			c.Errorf("expected 2 calls, now on %d", n)
@@ -327,7 +327,7 @@ sdks:
     tunnels:
       gopls:
         from:  127.0.0.1:60915/tcp
-        to:    /run/user/1000/gopls.socket
+        to:    /run/user/%s/gopls.socket
   go:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
@@ -335,6 +335,6 @@ sdks:
       snap-cache:
         from:  0.0.0.0:12345/tcp
         to:    /run/snap-proxy.socket
-`, m.prjDir))
+`, m.prjDir, user.Uid))
 	c.Check(n, check.Equals, 2)
 }
