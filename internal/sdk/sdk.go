@@ -299,43 +299,25 @@ type SlotInfo struct {
 	Label     string
 }
 
-type AttributeNotFoundError struct{ Err error }
-
-func (e AttributeNotFoundError) Error() string {
-	return e.Err.Error()
+type AttributeNotFoundError struct {
+	Attribute string
+	Plug      *PlugRef
+	Slot      *SlotRef
 }
 
-func (e AttributeNotFoundError) Is(target error) bool {
-	_, ok := target.(AttributeNotFoundError)
-	return ok
-}
-
-func lookupAttr(attrs map[string]interface{}, path string) (interface{}, bool) {
-	var v interface{}
-	comps := strings.FieldsFunc(path, func(r rune) bool { return r == '.' })
-	if len(comps) == 0 {
-		return nil, false
+func (e *AttributeNotFoundError) Error() string {
+	if e.Slot == nil {
+		return fmt.Sprintf("attribute %q not found for plug %q", e.Attribute, e.Plug.ShortRef())
 	}
-	v = attrs
-	for _, comp := range comps {
-		m, ok := v.(map[string]interface{})
-		if !ok {
-			return nil, false
-		}
-		v, ok = m[comp]
-		if !ok {
-			return nil, false
-		}
-	}
+	return fmt.Sprintf("attribute %q not found for slot %q", e.Attribute, e.Slot.ShortRef())
 
-	return v, true
 }
 
 func (slot *SlotInfo) Attr(key string, val interface{}) error {
 	v, ok := slot.Lookup(key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for slot %q", key, slot.Ref().ShortRef())
-		return AttributeNotFoundError{Err: err}
+		ref := slot.Ref()
+		return &AttributeNotFoundError{Attribute: key, Slot: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {
@@ -345,7 +327,7 @@ func (slot *SlotInfo) Attr(key string, val interface{}) error {
 }
 
 func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
-	return lookupAttr(slot.Attrs, key)
+	return metautil.LookupAttr(slot.Attrs, nil, key)
 }
 
 func (slot *SlotInfo) Ref() SlotRef {
@@ -398,8 +380,8 @@ type PlugInfo struct {
 func (plug *PlugInfo) Attr(key string, val interface{}) error {
 	v, ok := plug.Lookup(key)
 	if !ok {
-		err := fmt.Errorf("attribute %q not found for plug %q", key, plug.Ref().ShortRef())
-		return AttributeNotFoundError{Err: err}
+		ref := plug.Ref()
+		return &AttributeNotFoundError{Attribute: key, Plug: &ref}
 	}
 
 	if err := metautil.SetValueFromAttribute(v, val); err != nil {
@@ -409,7 +391,7 @@ func (plug *PlugInfo) Attr(key string, val interface{}) error {
 }
 
 func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
-	return lookupAttr(plug.Attrs, key)
+	return metautil.LookupAttr(plug.Attrs, nil, key)
 }
 
 func (plug *PlugInfo) Ref() PlugRef {

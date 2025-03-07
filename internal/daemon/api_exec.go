@@ -27,8 +27,6 @@ type execPayload struct {
 	Height      int               `json:"height"`
 }
 
-var defaultUID, defaultGID = 1000, 1000
-
 func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
 	if usrId != nil && grpId == nil {
 		return 0, 0, errors.New("must specify group, not just user")
@@ -38,11 +36,11 @@ func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
 		return 0, 0, errors.New("must specify user, not just group")
 	}
 
-	userId := defaultUID
+	userId := workshop.Uid
 	if usrId != nil {
 		userId = *usrId
 	}
-	groupId := defaultGID
+	groupId := workshop.Gid
 	if grpId != nil {
 		groupId = *grpId
 	}
@@ -105,12 +103,12 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	// We do not set PATH here as it's something LXD takes care of. Set HOME and
 	// USER if the user is a known default user.
-	if userId == defaultUID {
+	if userId == workshop.Uid {
 		if environment["HOME"] == "" {
-			environment["HOME"] = "/home/workshop"
+			environment["HOME"] = workshop.User.HomeDir
 		}
 		if environment["USER"] == "" {
-			environment["USER"] = "workshop"
+			environment["USER"] = workshop.User.Username
 		}
 	}
 

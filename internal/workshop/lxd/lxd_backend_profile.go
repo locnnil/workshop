@@ -49,6 +49,12 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		case "proxy":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			switch devtype {
+			case "tunnel":
+				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
+				if err != nil {
+					return pr, err
+				}
+				pr.Tunnels = append(pr.Tunnels, workshop.Tunnel{ProxyEntry: *proxyEntry})
 			case "ssh-agent":
 				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
 				if err != nil {
@@ -125,6 +131,16 @@ func proxyEntryFromLxdDevice(name string, dev map[string]string) (*workshop.Prox
 		return nil, fmt.Errorf("internal error: cannot deserialise proxy device in lxd profile: listen entry %q invalid", listen)
 	}
 
+	var direction workshop.ProxyDirection
+	switch dev["bind"] {
+	case "instance":
+		direction = workshop.WorkshopToHost
+	case "host":
+		direction = workshop.HostToWorkshop
+	default:
+		return nil, fmt.Errorf("internal error: cannot deserialise proxy device in lxd profile: bind entry %q invalid", dev["bind"])
+	}
+
 	return &workshop.ProxyEntry{
 		Name: name,
 		Connect: workshop.ProxyTarget{
@@ -135,5 +151,6 @@ func proxyEntryFromLxdDevice(name string, dev map[string]string) (*workshop.Prox
 			Address:  listen[1],
 			Protocol: listen[0],
 		},
+		Direction: direction,
 	}, nil
 }

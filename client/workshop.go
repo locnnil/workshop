@@ -25,6 +25,25 @@ type Mount struct {
 	WorkshopTarget string  `json:"workshop-target"`
 }
 
+type Endpoint struct {
+	Protocol string `json:"protocol"`
+	Path     string `json:"path,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Port     uint16 `json:"port,omitempty"`
+}
+
+type Tunnel struct {
+	Plug PlugRef  `json:"plug"`
+	Slot SlotRef  `json:"slot"`
+	From Endpoint `json:"from"`
+	To   Endpoint `json:"to"`
+}
+
+type TunnelInfo struct {
+	Plugs []*Tunnel `json:"plugs"`
+	Slots []*Tunnel `json:"slots"`
+}
+
 type Sdk struct {
 	Name        string       `json:"name"`
 	Version     string       `json:"version,omitempty"`
@@ -34,6 +53,7 @@ type Sdk struct {
 	InstallTime time.Time    `json:"install-time"`
 	Health      *HealthCheck `json:"health-check,omitempty"`
 	Mounts      []*Mount     `json:"mounts,omitempty"`
+	Tunnels     *TunnelInfo  `json:"tunnels,omitempty"`
 }
 
 type Workshops struct {

@@ -32,6 +32,7 @@ import (
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/ptyutil"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type CmdExec struct {
@@ -263,8 +264,8 @@ func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
 
 	flags := &ExecFlags{
 		WorkingDir: "/project",
-		UserId:     1000,
-		GroupId:    1000,
+		UserId:     workshop.Uid,
+		GroupId:    workshop.Gid,
 	}
 
 	return exec(c.root, flags, args)
@@ -349,8 +350,8 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
 	f.StringVarP(&flags.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop.")
 	f.StringArrayVar(&flags.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
-	f.IntVar(&flags.UserId, "uid", 1000, "Run as a specific workshop user.")
-	f.IntVar(&flags.GroupId, "gid", 1000, "Run as a member of a specific workshop group.")
+	f.IntVar(&flags.UserId, "uid", workshop.Uid, "Run as a specific workshop user.")
+	f.IntVar(&flags.GroupId, "gid", workshop.Gid, "Run as a member of a specific workshop group.")
 	f.DurationVar(&flags.Timeout, "timeout", 0, "Set a timeout; valid units are ns, us or µs, ms, s, m, h.")
 	f.BoolVarP(&flags.Interactive, "interactive", "i", false, "Force interactive mode.")
 	f.BoolVarP(&flags.NonInteractive, "non-interactive", "I", false, "Force non-interactive mode.")

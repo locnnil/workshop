@@ -152,7 +152,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 		return fmt.Errorf(`mount slot "workshop-source" is not a string (found %T)`, source)
 	}
 
-	if strings.HasPrefix(path, "$SDK") {
+	if strings.HasPrefix(path, "$SDK/") {
 		path = strings.Replace(path, "$SDK", sdk.SdkCurrentPath(slot.Sdk.Name), 1)
 	}
 
@@ -184,7 +184,7 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 		return "", err
 	}
 
-	if strings.HasPrefix(source, "$SDK") {
+	if strings.HasPrefix(source, "$SDK/") {
 		return strings.Replace(source, "$SDK", sdk.SdkCurrentPath(slot.Sdk().Name), 1), nil
 	}
 	return source, nil
@@ -207,10 +207,6 @@ func (iface *mountInterface) hostSource(baseDir string, plug *interfaces.Connect
 func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
 	// allow what declarations allowed
 	return true
-}
-
-func (iface *mountInterface) MountConnectedSlot(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	return nil
 }
 
 // Interactions with the mount backend.

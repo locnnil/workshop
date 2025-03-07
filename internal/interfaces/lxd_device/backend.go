@@ -225,8 +225,7 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	}
 	defer env.Close()
 
-	varline := fmt.Sprintln("export SSH_AUTH_SOCK=" + strings.TrimPrefix(dev.Listen.Address, "unix:"))
-	_, err = env.Write([]byte(varline))
+	_, err = fmt.Fprintf(env, "export SSH_AUTH_SOCK=%s\n", dev.Listen.Address)
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
 	}
@@ -268,7 +267,8 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.Wayland != nil {
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/run/user/1000/")
+		prefix := filepath.Join("/run/user", workshop.User.Uid) + "/"
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, prefix)
 	}
 
 	if dev.X11 != nil {
@@ -330,7 +330,7 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkInfo)
 	if err != nil {
-		return fmt.Errorf("cannot obtain device snippets for workshop %q: %w", sdkInfo.Workshop, err)
+		return err
 	}
 	spec := s.(*Specification)
 

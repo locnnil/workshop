@@ -57,6 +57,7 @@ Currently, |ws_markup| and |sdk_markup| support the following interface plugs:
 - :ref:`GPU <ref_gpu_interface>`
 - :ref:`Mount <ref_mount_interface>`
 - :ref:`SSH <ref_ssh_interface>`
+- :ref:`Tunnel <ref_tunnel_interface>`
 
 
 Slots can only be defined for the :samp:`mount` interface.
@@ -211,6 +212,102 @@ via a Unix domain socket.
 .. note::
 
    See the :ref:`explanation <exp_ssh_interface>` for more details.
+
+
+.. _ref_tunnel_interface:
+
+Tunnel interface
+~~~~~~~~~~~~~~~~
+
+.. @artefact tunnel interface
+
+A tunnel plug in the definition must specify the plug name, the interface and optionally an endpoint:
+
+.. code-block:: yaml
+   :caption: sdkcraft.yaml
+
+   # ...
+   plugs:
+     <NAME>:
+       interface: tunnel
+       endpoint: <ENDPOINT>
+
+
+Similarly, a tunnel *slot* in the definition must specify the slot name, the interface and optionally an endpoint:
+
+.. code-block:: yaml
+   :caption: sdkcraft.yaml
+
+   # ...
+   slots:
+     <NAME>:
+       interface: tunnel
+       endpoint: <ENDPOINT>
+
+
+When a tunnel interface plug is connected to a slot,
+clients can connect to the address of the plug.
+The connection will be forwarded to the address of the slot.
+Regular SDKs define the workshop side of the connection,
+leaving the host system to the :ref:`system SDK <exp_system_sdk>`.
+
+The supported protocols are TCP, UDP and Unix domain sockets.
+Unix domain sockets are compatible with TCP, but UDP plugs can only connect to UDP slots.
+
+TCP and UDP endpoints look like :samp:`<IPv4>:<PORT>/<PROTOCOL>` or :samp:`'[<IPv6>]:<PORT>/<PROTOCOL>'`.
+|ws_markup| doesn't resolve hostnames,
+but supports the aliases :samp:`localhost`, :samp:`ip6-localhost` and :samp:`ip6-loopback`.
+
+Unix domain socket endpoints are either paths to a socket file or abstract sockets of the form :samp:`'@<STRING>'`.
+The :envvar:`$HOME` and :envvar:`$XDG_RUNTIME_DIR` variables can be used in paths.
+
+Attributes can be abbreviated by omitting :samp:`tcp` and :samp:`localhost`:
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 4 10
+
+   * - Address
+     - Alternatives
+
+   * - :samp:`127.0.0.1:1234/tcp`
+
+     - :samp:`localhost:1234/tcp`, :samp:`1234/tcp`, :samp:`127.0.0.1:1234`, :samp:`1234`
+
+   * - :samp:`0.0.0.0:1234/tcp`
+
+     - :samp:`0.0.0.0:1234`
+
+   * - :samp:`'[::1]:1234/tcp'`
+
+     - :samp:`ip6-localhost:1234/tcp`, :samp:`ip6-loopback:1234`, :samp:`'[::1]:1234'`
+
+   * - :samp:`127.0.0.1:1234/udp`
+
+     - :samp:`localhost:1234/udp`, :samp:`1234/udp`
+
+   * - :samp:`'[::]:1234/udp'`
+
+     -
+
+   * - :samp:`/run/service.sock`
+
+     -
+
+   * - :samp:`'@abstract'`
+
+     -
+
+
+Port numbers may also be omitted,
+but only on one side of a connection.
+For such connections,
+both sides use the same port.
+
+.. note::
+
+   See the :ref:`explanation <exp_tunnel_interface>` for more details.
 
 
 .. _ref_sdk_hooks:

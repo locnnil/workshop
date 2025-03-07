@@ -121,6 +121,32 @@ sdks:
     channel: latest/stable
 `
 
+	workshoptunnels = `name: tunnels
+base: ubuntu@22.04
+sdks:
+  - name: system
+    plugs:
+      api:
+        interface: tunnel
+        endpoint: 0.0.0.0:8888/tcp
+    slots:
+      dns:
+        interface: tunnel
+        endpoint: 127.0.0.53/udp
+  - name: test-sdk
+    channel: latest/stable
+    plugs:
+      dns:
+        interface: tunnel
+        endpoint: 127.0.0.1:5353/udp
+  - name: test-sdk-2
+    channel: latest/stable
+    slots:
+      api:
+        interface: tunnel
+        endpoint: '@testapi'
+`
+
 	somebound = `name: somebound
 base: ubuntu@22.04
 sdks:
@@ -415,19 +441,19 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 }
 
 func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
-	// Setup (create a running workshop with a few mounts)
+	// Setup (create a running workshop with a few mounts and tunnels)
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "manysdks", manysdks, apiSuiteSdks)
+	s.launchWorkshop(c, "tunnels", workshoptunnels, apiSuiteSdks)
 
-	w, ok := s.b.Workshops[s.project.ProjectId]["manysdks"]
+	w, ok := s.b.Workshops[s.project.ProjectId]["tunnels"]
 	c.Assert(ok, check.Equals, true)
 
 	p := workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
-		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk", "data"),
 		Where: "/opt/data",
 		Type:  workshop.HostWorkshop,
 	}
@@ -435,7 +461,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	p = workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
-		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk-2", "photos"),
 		Where: "/opt/data2",
 		Type:  workshop.HostWorkshop,
 	}
@@ -446,10 +472,29 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	}
 	w.Profiles["test-sdk-2"] = p
 
+	// TODO: extend above setup with tunnels once system SDK profile is available.
+	// Also need coverage for tunnel plug binding logic.
+	connsState := map[string]interface{}{
+		"b8639dea/tunnels/system:api b8639dea/tunnels/test-sdk-2:api": map[string]interface{}{
+			"interface":   "tunnel",
+			"plug-static": map[string]interface{}{"endpoint": "0.0.0.0:8888/tcp"},
+			"slot-static": map[string]interface{}{"endpoint": "@testapi"},
+		},
+		"b8639dea/tunnels/test-sdk:dns b8639dea/tunnels/system:dns": map[string]interface{}{
+			"interface":   "tunnel",
+			"plug-static": map[string]interface{}{"endpoint": "127.0.0.1:5353/udp"},
+			"slot-static": map[string]interface{}{"endpoint": "127.0.0.53/udp"},
+		},
+	}
+	st := s.d.Overlord().State()
+	st.Lock()
+	st.Set("conns", connsState)
+	st.Unlock()
+
 	// Get Workshop info
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
-	s.vars = map[string]string{"id": s.project.ProjectId, "name": "manysdks"}
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/manysdks", nil)
+	s.vars = map[string]string{"id": s.project.ProjectId, "name": "tunnels"}
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/tunnels", nil)
 	c.Assert(err, check.IsNil)
 
 	rsp := v1GetProjectWorkshop(projectsCmd, req, nil).(*resp)
@@ -471,7 +516,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	}
 	c.Check(result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
-			Name:      "manysdks",
+			Name:      "tunnels",
 			Base:      "ubuntu@22.04",
 			ProjectId: s.project.ProjectId,
 			Status:    "Ready",
@@ -486,13 +531,41 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					InstallTime: &install1,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk", "data"),
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk", "data"),
 							WorkshopTarget: "/opt/data",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
-								Workshop:  "manysdks",
+								Workshop:  "tunnels",
 								Sdk:       "test-sdk",
 								Name:      "data",
+							},
+						},
+					},
+					Tunnels: &TunnelInfo{
+						Plugs: []*Tunnel{
+							{
+								Plug: sdk.PlugRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "test-sdk",
+									Name:      "dns",
+								},
+								Slot: sdk.SlotRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "system",
+									Name:      "dns",
+								},
+								From: Endpoint{
+									Protocol: "udp",
+									Host:     "127.0.0.1",
+									Port:     5353,
+								},
+								To: Endpoint{
+									Protocol: "udp",
+									Host:     "127.0.0.53",
+									Port:     5353,
+								},
 							},
 						},
 					},
@@ -506,11 +579,11 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					InstallTime: &install2,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "manysdks", "test-sdk-2", "photos"),
+							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk-2", "photos"),
 							WorkshopTarget: "/opt/data2",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
-								Workshop:  "manysdks",
+								Workshop:  "tunnels",
 								Sdk:       "test-sdk-2",
 								Name:      "photos",
 							},
@@ -520,16 +593,43 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 							WorkshopTarget: "/opt/data2",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
-								Workshop:  "manysdks",
+								Workshop:  "tunnels",
 								Sdk:       "test-sdk-2",
 								Name:      "photos2",
+							},
+						},
+					},
+					Tunnels: &TunnelInfo{
+						Slots: []*Tunnel{
+							{
+								Plug: sdk.PlugRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "system",
+									Name:      "api",
+								},
+								Slot: sdk.SlotRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "test-sdk-2",
+									Name:      "api",
+								},
+								From: Endpoint{
+									Protocol: "tcp",
+									Host:     "0.0.0.0",
+									Port:     8888,
+								},
+								To: Endpoint{
+									Protocol: "unix",
+									Path:     "@testapi",
+								},
 							},
 						},
 					},
 				},
 			},
 		},
-		Path: workshop.Filepath(s.project.Path, "manysdks")})
+		Path: workshop.Filepath(s.project.Path, "tunnels")})
 }
 
 func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {

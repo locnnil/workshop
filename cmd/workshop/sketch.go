@@ -114,6 +114,13 @@ plugs:
   # vs-code-settings:
   #   interface: mount
   #   workshop-target: /home/workshop/.config/Code/User
+
+slots:
+  # EXAMPLE: expose SDK services to the host
+  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/tunnel-interface/
+  # dashboard:
+  #   interface: tunnel
+  #   endpoint: 8080
 `
 
 var (

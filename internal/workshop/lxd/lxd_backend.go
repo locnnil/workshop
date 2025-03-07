@@ -887,7 +887,7 @@ runcmd:
 	}
 
 	cfg := map[string]string{
-		"raw.idmap":                fmt.Sprint("uid ", userid, " 1000\ngid ", groupid, " 1000"),
+		"raw.idmap":                fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":         "true",
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,

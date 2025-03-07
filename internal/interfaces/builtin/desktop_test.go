@@ -85,7 +85,8 @@ exit 0`)
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
 				Address:  "/run/user/1000/wayland-1",
-				Protocol: "unix"}}}
+				Protocol: "unix"},
+			Direction: workshop.WorkshopToHost}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 
@@ -121,7 +122,8 @@ exit 0`)
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
 				Address:  "/tmp/.X11-unix/X0",
-				Protocol: "unix"}}}
+				Protocol: "unix"},
+			Direction: workshop.WorkshopToHost}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 
@@ -158,7 +160,8 @@ exit 0`)
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
 				Address:  "/tmp/.X11-unix/X0",
-				Protocol: "unix"}},
+				Protocol: "unix"},
+			Direction: workshop.WorkshopToHost},
 		Wayland: &workshop.ProxyEntry{
 			Name: "consumer-wayland",
 			Connect: workshop.ProxyTarget{
@@ -166,7 +169,8 @@ exit 0`)
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
 				Address:  "/run/user/1000/wayland-0",
-				Protocol: "unix"}}}
+				Protocol: "unix"},
+			Direction: workshop.WorkshopToHost}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
 }
 

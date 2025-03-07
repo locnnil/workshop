@@ -1,0 +1,66 @@
+summary: Check tunnel interface scenarios
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-tunnel
+restore: |
+  . "$TESTSLIB"/utils.sh
+  rm -f /home/ubuntu/test-tunnel.sock
+  usermod --gid ubuntu --remove --groups ubuntu ubuntu
+  systemctl stop fakepostgres.service || true
+  workshop_exec remove ws-tunnel
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check automatic connection"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+\-.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+\-.+ws-tunnel/system:postgres.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:auto-connect-by-name.+ws-tunnel/test-sdk-tunnel:auto-connect-by-name.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+\-$"
+
+  echo "Check manual connection"
+  workshop_exec connect ws-tunnel/test-sdk-tunnel:postgres
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+ws-tunnel/system:postgres.+manual$"
+
+  echo "Check multiple plugs can connect to one slot"
+  workshop_exec connect ws-tunnel/test-sdk-tunnel:alias :postgres
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:postgres.+ws-tunnel/system:postgres.+manual$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/test-sdk-tunnel:alias.+ws-tunnel/system:postgres.+manual$"
+  workshop_exec connect ws-tunnel/system:tunnel ws-tunnel/test-sdk-tunnel:http
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:test-sdk-http.+ws-tunnel/test-sdk-tunnel:http.+\-$"
+  workshop_exec connections ws-tunnel | MATCH "^tunnel.+ws-tunnel/system:tunnel.+ws-tunnel/test-sdk-tunnel:http.+manual$"
+
+  echo "Check workshop can connect to host"
+  systemd-run --unit fakepostgres.service -- \
+    systemd-socket-activate --accept --inetd --listen '127.0.0.1:54321' -- \
+    bash -c 'head -n1 | sed s/foo/bar/'
+  workshop_exec exec ws-tunnel -- bash -c 'echo fooFOOfoo | nc localhost 5432' | MATCH '^barFOOfoo$'
+  workshop_exec exec ws-tunnel -- bash -c 'echo barFOOfoo | nc localhost 54321' | MATCH '^barFOObar$'
+
+  echo "Check host can connect to workshop"
+  workshop_exec exec ws-tunnel -- \
+    systemd-run --user -- \
+    systemd-socket-activate --accept --inetd --listen '[::1]:8000' -- \
+    bash -c 'head -n1 | sed s/FOO/BAR/g'
+  echo fooFOOfooFOO | nc localhost 8000 | MATCH '^fooBARfooBAR$'
+  echo BARFOOBAR | nc localhost 8001 | MATCH '^BARBARBAR$'
+
+  echo "Check that plugs cannot bind to same address"
+  (! workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused) | MATCH 'listen tcp 127.0.0.1:5432: bind: address already in use|Failed to receive file descriptor via abstract unix socket|Please look in'
+  # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
+  if workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused; then
+    workshop_exec disconnect ws-tunnel/test-sdk-tunnel:conflict
+  fi
+  (! workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused) | MATCH 'listen tcp 0.0.0.0:8000: bind: address already in use|Failed to receive file descriptor via abstract unix socket|Please look in'
+  # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
+  if workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused; then
+    workshop_exec disconnect ws-tunnel/system:conflict
+  fi
+
+  echo "Check that unix sockets have correct permissions"
+  usermod --append --groups ubuntu --gid games ubuntu
+  workshop_exec connect ws-tunnel/system:unix-path ws-tunnel/test-sdk-tunnel:unix-abstract
+  stat --format='%F %U %G' /home/ubuntu/test-tunnel.sock | MATCH '^socket ubuntu games$'
+  usermod --gid ubuntu --remove --groups ubuntu ubuntu
+  workshop_exec disconnect ws-tunnel/system:unix-path
+  # FIXME: https://github.com/canonical/lxd/issues/14972
+  # test ! -e /home/ubuntu/test-tunnel.sock

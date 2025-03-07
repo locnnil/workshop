@@ -34,6 +34,19 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		}, {
 			Sdk:    "sdk",
 			Mounts: map[string]workshop.Mount{},
+			Tunnels: []workshop.Tunnel{{
+				ProxyEntry: workshop.ProxyEntry{
+					Name: "http",
+					Connect: workshop.ProxyTarget{
+						Address:  "127.0.0.1:8080",
+						Protocol: "tcp"},
+					Listen: workshop.ProxyTarget{
+						Address:  "0.0.0.0:8000",
+						Protocol: "tcp"},
+					Direction: workshop.HostToWorkshop}}},
+		}, {
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
 			Agent: &workshop.SshAgent{
 				ProxyEntry: workshop.ProxyEntry{
 					Name: "ssh-agent",
@@ -43,7 +56,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					},
 					Listen: workshop.ProxyTarget{
 						Address:  ".workshop.socket",
-						Protocol: "unix"}}},
+						Protocol: "unix",
+					},
+					Direction: workshop.WorkshopToHost}},
 		}, {
 			Sdk:    "sdk",
 			Mounts: map[string]workshop.Mount{},
@@ -56,7 +71,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					},
 					Listen: workshop.ProxyTarget{
 						Address:  ".workshop.socket",
-						Protocol: "unix"}}},
+						Protocol: "unix",
+					},
+					Direction: workshop.WorkshopToHost}},
 		}, {
 			Sdk: "sdk",
 			Mounts: map[string]workshop.Mount{
@@ -111,6 +128,16 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		}, {
 			"sdk",
 			map[string]map[string]string{
+				"http": {
+					"type":    "proxy",
+					"connect": "tcp:127.0.0.1:8080",
+					"listen":  "tcp:0.0.0.0:8000",
+					"bind":    "host"}},
+			map[string]string{
+				"user.workshop.sdk.http.type": "tunnel"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
 				"ssh-agent": {
 					"type":    "proxy",
 					"connect": "unix:.host.socket",
@@ -153,5 +180,6 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		c.Assert(res.Camera, check.DeepEquals, expected[i].Camera)
 		c.Assert(res.Gpu, check.DeepEquals, expected[i].Gpu)
 		c.Assert(res.Mounts, testutil.DeepUnsortedMatches, expected[i].Mounts)
+		c.Assert(res.Tunnels, testutil.DeepUnsortedMatches, expected[i].Tunnels)
 	}
 }

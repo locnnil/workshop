@@ -32,11 +32,15 @@ func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 		return fmt.Errorf("cannot sanitize plug %q (interface %q) using interface %q",
 			plugInfo.Ref().ShortRef(), plugInfo.Interface, iface.Name())
 	}
-	var err error
 	if iface, ok := iface.(PlugSanitizer); ok {
-		err = iface.BeforePreparePlug(plugInfo)
+		return iface.BeforePreparePlug(plugInfo)
 	}
-	return err
+
+	// Plugs which accept attributes should define BeforePreparePlug.
+	for name := range plugInfo.Attrs {
+		return fmt.Errorf(`unknown attribute for %s interface plug: %q`, iface.Name(), name)
+	}
+	return nil
 }
 
 func BeforeConnectPlug(iface Interface, plug *ConnectedPlug) error {
@@ -64,11 +68,14 @@ func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 		return fmt.Errorf("cannot sanitize slot %q (interface %q) using interface %q",
 			slotInfo.Ref(), slotInfo.Interface, iface.Name())
 	}
-	var err error
 	if iface, ok := iface.(SlotSanitizer); ok {
-		err = iface.BeforePrepareSlot(slotInfo)
+		return iface.BeforePrepareSlot(slotInfo)
 	}
-	return err
+	// Slots which accept attributes should define BeforePrepareSlot.
+	for name := range slotInfo.Attrs {
+		return fmt.Errorf(`unknown attribute for %s interface slot: %q`, iface.Name(), name)
+	}
+	return nil
 }
 
 // Interfaces holds information about a list of plugs, slots and their connections.

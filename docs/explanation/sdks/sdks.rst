@@ -124,6 +124,7 @@ Currently, |ws_markup| and |sdk_markup| support the following:
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
 - :ref:`Mount interface <exp_mount_interface>` (auto-connected)
 - :ref:`SSH interface <exp_ssh_interface>` (manually connected)
+- :ref:`Tunnel interface <exp_tunnel_interface>` (sometimes auto-connected)
 
 
 .. _exp_plugs_slots:

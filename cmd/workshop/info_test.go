@@ -158,12 +158,12 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
         "revision":"1",
         "build-time":"2017-02-19T17:23:05.592623Z",
         "install-time":"2017-03-22T09:01:00.0Z",
-	      "mounts":[{
+        "mounts":[{
             "host-source":"/home/user/src",
             "workshop-target":"/home/workshop/target", 
             "plug":{
                 "project-id":"42ws42ws",
-                "workshop":"workshop",
+                "workshop":"ws",
                 "sdk":"go",
                 "plug":"plug-name"
             }
@@ -172,7 +172,7 @@ var mockWorkshopWithMounts = `{"type":"sync","status-code":200,"status":"OK","re
             "workshop-target":"/home/workshop/target", 
             "plug":{
                 "project-id":"42ws42ws",
-                "workshop":"workshop",
+                "workshop":"ws",
                 "sdk":"go",
                 "plug":"plug-default"
             }
@@ -222,6 +222,119 @@ sdks:
       plug-name:
         host-source:      /home/user/src
         workshop-target:  /home/workshop/target
+`, m.prjDir))
+	c.Check(n, check.Equals, 2)
+}
+
+var mockWorkshopWithTunnels = `{"type":"sync","status-code":200,"status":"OK","result":{
+    "name":"ws",
+    "base":"ubuntu@22.04",
+    "project-id":"42424242",
+    "status":"Ready",
+    "sdks":[{
+        "name":"go",
+        "version":"1.8.0",
+        "channel":"latest/edge",
+        "revision":"1",
+        "build-time":"2017-02-19T17:23:05.592623Z",
+        "install-time":"2017-03-22T09:01:00.0Z",
+        "tunnels":{
+            "plugs":[{
+                "plug":{
+                    "project-id":"42ws42ws",
+                    "workshop":"ws",
+                    "sdk":"go",
+                    "plug":"snap-cache"
+                },
+                "slot":{
+                    "project-id":"42ws42ws",
+                    "workshop":"ws",
+                    "sdk":"system",
+                    "slot":"snap-cache"
+                },
+                "from":{
+                    "protocol":"tcp",
+                    "host":"0.0.0.0",
+                    "port":12345
+                },
+                "to":{
+                    "protocol":"unix",
+                    "path":"/run/snap-proxy.socket"
+                }
+            }],
+            "slots":[{
+                "plug":{
+                    "project-id":"42ws42ws",
+                    "workshop":"ws",
+                    "sdk":"system",
+                    "plug":"gopls"
+                },
+                "slot":{
+                    "project-id":"42ws42ws",
+                    "workshop":"ws",
+                    "sdk":"go",
+                    "slot":"gopls"
+                },
+                "from":{
+                    "protocol":"tcp",
+                    "host":"127.0.0.1",
+                    "port":60915
+                },
+                "to":{
+                    "protocol":"unix",
+                    "path":"/run/user/1000/gopls.socket"
+                }
+            }]
+        }
+    }]
+}}`
+
+func (m *workshopInfo) TestWorkshopInfoWithSdkTunnels(c *check.C) {
+	cmd := &CmdInfo{root: &CmdRoot{}}
+	workshop := "ws"
+	n := 0
+	user, err := user.Current()
+	c.Assert(err, check.IsNil)
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			_, err = fmt.Fprintln(w, r)
+			c.Assert(err, check.IsNil)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
+			w.WriteHeader(200)
+			_, err = fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithTunnels, user.HomeDir))
+			c.Assert(err, check.IsNil)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err = cmd.Run(cmd.Command(), []string{workshop})
+	c.Assert(err, check.IsNil)
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
+base:     ubuntu@22.04
+project:  %s
+status:   ready
+notes:    -
+sdks:
+  system:
+    tunnels:
+      gopls:
+        from:  127.0.0.1:60915/tcp
+        to:    /run/user/1000/gopls.socket
+  go:
+    tracking:   latest/edge
+    installed:  1.8.0  2017-02-19  \(1\)
+    tunnels:
+      snap-cache:
+        from:  0.0.0.0:12345/tcp
+        to:    /run/snap-proxy.socket
 `, m.prjDir))
 	c.Check(n, check.Equals, 2)
 }

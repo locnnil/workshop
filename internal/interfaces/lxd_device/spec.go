@@ -84,11 +84,17 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	return nil
 }
 
-// Ssh Agent and Desktop are both of the lxc 'proxy' type
+// Tunnel, SSH Agent and Desktop are all of the lxc 'proxy' type
 // These are network protocol proxy devices that open a port on the host or in a workhop.
-// 'from', 'to' are the source and destination addresses (paths in the case of unix sockets),
+// 'listen', 'connect' are the source and destination addresses (paths in the case of unix sockets),
 // see https://documentation.ubuntu.com/lxd/en/latest/reference/devices_proxy/#device-proxy-device-conf:bind
 // bind denotes where the port is open (can be: instance, host)
+
+func (s *Specification) AddTunnelEntry(tunnel workshop.Tunnel) error {
+	s.Profile.Tunnels = append(s.Profile.Tunnels, tunnel)
+	s.addProxyEntry(&tunnel.ProxyEntry, "tunnel")
+	return nil
+}
 
 func (s *Specification) SetSshAgent(agent workshop.SshAgent) error {
 	s.Profile.Agent = &agent
@@ -126,7 +132,12 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	// card*/render* dri devices by LXD properly. Both will be assigned to
 	// the group provided in "gid"; there is no way to assign video to card*
 	// and render to render* devices.
-	s.devices[gpu.Name] = map[string]string{"type": "gpu", "gputype": "physical", "uid": "1000", "gid": "1000"}
+	s.devices[gpu.Name] = map[string]string{
+		"type":    "gpu",
+		"gputype": "physical",
+		"uid":     workshop.User.Uid,
+		"gid":     workshop.User.Gid,
+	}
 
 	return nil
 }
@@ -159,8 +170,8 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 			"source":   path,
 			"path":     path,
 			"required": "false",
-			"uid":      "1000",
-			"gid":      "1000",
+			"uid":      workshop.User.Uid,
+			"gid":      workshop.User.Gid,
 		}
 		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, name)] = "camera"
 	}
@@ -170,12 +181,24 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 
 func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
-	s.devices[entry.Name] = map[string]string{
+	device := map[string]string{
 		"type":    "proxy",
 		"connect": entry.Connect.Protocol + ":" + entry.Connect.Address,
 		"listen":  entry.Listen.Protocol + ":" + entry.Listen.Address,
-		"uid":     "1000",
-		"gid":     "1000",
-		"bind":    "instance",
 	}
+	switch entry.Direction {
+	case workshop.WorkshopToHost:
+		device["bind"] = "instance"
+		if entry.Listen.Protocol == "unix" {
+			device["uid"] = workshop.User.Uid
+			device["gid"] = workshop.User.Gid
+		}
+	case workshop.HostToWorkshop:
+		device["bind"] = "host"
+		if entry.Listen.Protocol == "unix" {
+			device["uid"] = s.User.Uid
+			device["gid"] = s.User.Gid
+		}
+	}
+	s.devices[entry.Name] = device
 }

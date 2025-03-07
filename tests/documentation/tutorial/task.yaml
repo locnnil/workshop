@@ -58,16 +58,14 @@ execute: |
   # sketch SDK
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  $
-  a
+  1/^plugs:$/a
     ssh-agent:
   .
   wq
   EOF
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  10
-  i
+  1/^hooks:$/a
     setup-base: |
       apt-get update
       apt-get install -y delve clang

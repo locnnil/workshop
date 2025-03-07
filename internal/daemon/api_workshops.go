@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +17,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/canonical/workshop/internal/metautil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -47,6 +51,7 @@ type SdkInfo struct {
 	InstallTime *time.Time       `json:"install-time,omitempty"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
+	Tunnels     *TunnelInfo      `json:"tunnels,omitempty"`
 }
 
 type Mount struct {
@@ -54,6 +59,25 @@ type Mount struct {
 	WorkshopSource string      `json:"workshop-source,omitempty"`
 	HostSource     string      `json:"host-source,omitempty"`
 	WorkshopTarget string      `json:"workshop-target,omitempty"`
+}
+
+type TunnelInfo struct {
+	Plugs []*Tunnel `json:"plugs,omitempty"`
+	Slots []*Tunnel `json:"slots,omitempty"`
+}
+
+type Tunnel struct {
+	Plug sdk.PlugRef `json:"plug"`
+	Slot sdk.SlotRef `json:"slot"`
+	From Endpoint    `json:"from"`
+	To   Endpoint    `json:"to"`
+}
+
+type Endpoint struct {
+	Protocol string `json:"protocol"`
+	Path     string `json:"path,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Port     uint16 `json:"port,omitempty"`
 }
 
 type Workshops struct {
@@ -168,6 +192,141 @@ func mountInfos(sk sdk.Ref, mnts []workshop.Mount) []*Mount {
 	}
 
 	return infos
+}
+
+// TODO: reimplement using SDK profiles once system SDK is available.
+func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
+	var tunnels = map[string]*TunnelInfo{}
+
+	masters := map[sdk.PlugRef][]sdk.PlugRef{}
+	for _, plug := range conns.Plugs {
+		if plug.Bind == nil {
+			continue
+		}
+
+		ref := *plug.Bind
+		sref := sdk.PlugRef{ProjectId: plug.ProjectId, Workshop: plug.Workshop, Sdk: plug.Sdk, Name: plug.Name}
+		masters[ref] = append(masters[ref], sref)
+	}
+
+	for _, conn := range conns.Established {
+		listen, connect, err := endpoints(conn)
+		if err != nil {
+			return nil, err
+		}
+
+		tunnel := Tunnel{
+			Plug: conn.Plug,
+			Slot: conn.Slot,
+			From: *listen,
+			To:   *connect,
+		}
+
+		sk := conn.Plug.Sdk
+		if sk == sdk.System.String() {
+			sk = conn.Slot.Sdk
+		}
+		info, ok := tunnels[sk]
+		if !ok {
+			info = &TunnelInfo{}
+			tunnels[sk] = info
+		}
+		if sk == conn.Plug.Sdk {
+			info.Plugs = append(info.Plugs, &tunnel)
+		} else {
+			info.Slots = append(info.Slots, &tunnel)
+		}
+
+		if slaves, ok := masters[conn.Plug]; ok {
+			for _, slave := range slaves {
+				t := tunnel
+				t.Plug = slave
+
+				if conn.Plug.Sdk != sdk.System.String() {
+					sk = slave.Sdk
+				}
+				info, ok := tunnels[sk]
+				if !ok {
+					info = &TunnelInfo{}
+					tunnels[sk] = info
+				}
+				if sk == slave.Sdk {
+					info.Plugs = append(info.Plugs, &t)
+				} else {
+					info.Slots = append(info.Slots, &t)
+				}
+			}
+		}
+	}
+
+	return tunnels, nil
+}
+
+func endpoints(conn connectionJSON) (*Endpoint, *Endpoint, error) {
+	v, ok := metautil.LookupAttr(conn.PlugAttrs, nil, "endpoint")
+	if !ok {
+		return nil, nil, &sdk.AttributeNotFoundError{Attribute: "endpoint", Plug: &conn.Plug}
+	}
+	var address string
+	if err := metautil.SetValueFromAttribute(v, &address); err != nil {
+		return nil, nil, fmt.Errorf("invalid attribute %q for plug %q: %w", "endpoint", conn.Plug.ShortRef(), err)
+	}
+	listen, err := parseEndpoint(address)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	v, ok = metautil.LookupAttr(conn.SlotAttrs, nil, "endpoint")
+	if !ok {
+		return nil, nil, &sdk.AttributeNotFoundError{Attribute: "endpoint", Slot: &conn.Slot}
+	}
+	if err := metautil.SetValueFromAttribute(v, &address); err != nil {
+		return nil, nil, fmt.Errorf("invalid attribute %q for slot %q: %w", "endpoint", conn.Slot.ShortRef(), err)
+	}
+	connect, err := parseEndpoint(address)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if (listen.Protocol == "tcp" || listen.Protocol == "udp") && listen.Port == 0 {
+		listen.Port = connect.Port
+	}
+	if (connect.Protocol == "tcp" || connect.Protocol == "udp") && connect.Port == 0 {
+		connect.Port = listen.Port
+	}
+
+	return listen, connect, nil
+}
+
+func parseEndpoint(endpoint string) (*Endpoint, error) {
+	// Leave unix sockets untouched.
+	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") || strings.HasPrefix(endpoint, "$") {
+		return &Endpoint{Protocol: "unix", Path: endpoint}, nil
+	}
+
+	protocol := "tcp"
+	idx := strings.LastIndexByte(endpoint, '/')
+	if idx >= 0 {
+		protocol = endpoint[idx+1:]
+		endpoint = endpoint[:idx]
+	}
+
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		host = endpoint
+		port = ""
+	}
+
+	result := &Endpoint{Protocol: protocol, Host: host}
+	if port != "" {
+		number, err := strconv.ParseUint(port, 10, 16)
+		if err != nil {
+			return nil, err
+		}
+		result.Port = uint16(number)
+	}
+
+	return result, nil
 }
 
 func newWorkshopChange(st *state.State, kind string, user, projectId, action string, names []string) *state.Change {
@@ -410,6 +569,16 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("workshop name required")
 	}
 
+	conns, err := collectConnections(c.d.overlord.InterfaceManager(), collectFilter{
+		projectId: projectId,
+		workshop:  name,
+		ifaceName: "tunnel",
+		connected: true,
+	})
+	if err != nil {
+		return statusInternalError("collecting connection information failed: %w", err)
+	}
+
 	state := c.d.overlord.State()
 	state.Lock()
 	defer state.Unlock()
@@ -427,6 +596,14 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("%w", err)
 	}
 	info := workshopToInfo(w, sdks, health)
+
+	ts, err := tunnels(conns)
+	if err != nil {
+		return statusBadRequest("%w", err)
+	}
+	for _, sk := range info.Sdks {
+		sk.Tunnels = ts[sk.Name]
+	}
 
 	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
 	if err != nil {

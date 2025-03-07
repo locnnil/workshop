@@ -265,6 +265,100 @@ They have no attributes.
 The only SSH interface slot is :samp:`system:ssh-agent`.
 
 
+Tunnel interface
+~~~~~~~~~~~~~~~~
+
+.. @artefact tunnel interface
+
+Tunnel interface plugs and slots are described by the following attributes:
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`endpoint`
+     - string
+     - A network address or Unix domain socket
+       to be used as one end of the tunnel.
+
+
+Endpoints are formatted as follows:
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 7
+
+   * - Type
+     - Format
+
+   * - Endpoint
+     - :samp:`<ADDRESS>/<PROTOCOL>` for network endpoints.
+       May be shortened to :samp:`<ADDRESS>` or :samp:`<PROTOCOL>`
+
+       :samp:`<PATH>` or :samp:`@<STRING>` for Unix domain sockets.
+
+   * - Address
+     - :samp:`<HOST>:<PORT>`.
+       May be shortened to :samp:`<HOST>` or :samp:`<PORT>`.
+
+   * - Protocol
+     - Either :samp:`tcp` or :samp:`udp`.
+       The default is :samp:`tcp`.
+
+   * - Host
+     - An IPv4 or IPv6 address.
+
+       If a port is supplied,
+       IPv6 addresses must be enclosed in square brackets.
+
+       Supported aliases: :samp:`localhost`, :samp:`ip6-localhost` and :samp:`ip6-loopback`.
+
+       The default is :samp:`localhost`.
+
+   * - Port
+     - A TCP or UDP port number (1–65535).
+
+       May be omitted,
+       but only on one side of a connection.
+       For such connections,
+       both sides use the same port.
+
+       For security reasons,
+       tunnel interface plugs in the system SDK
+       cannot use privileged ports (1–1023).
+
+   * - Path
+     - An absolute path to a Unix domain socket.
+
+       :envvar:`$HOME` expands into the user's home directory and
+       :envvar:`$XDG_RUNTIME_DIR` expands into the user runtime directory
+       (e.g. :file:`/run/user/1000`).
+
+       For security reasons,
+       tunnel interface plugs in the system SDK
+       cannot listen on sockets outside these two directories.
+
+   * - String
+     - An abstract socket name.
+
+
+The default :samp:`endpoint` is the default network address (:samp:`localhost/tcp`).
+
+Endpoints which start with :samp:`[` or :samp:`@`
+need to be quoted in YAML:
+
+.. code-block:: yaml
+
+   endpoint: '[::1]:8080/tcp'
+   endpoint: '@abstract.sock'
+
+
 JSON Schema
 -----------
 
