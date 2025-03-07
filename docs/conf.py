@@ -111,10 +111,10 @@ html_context = {
     #       and creating GitHub issues are added at the bottom of each page.
     "github_url": "https://github.com/canonical/workshop",
     # Docs branch in the repo; used in links for viewing the source files
-    "github_version": "main",
+    "repo_default_branch": "main",
     # Docs location in the repo; used in links for viewing the source files
     #
-    "github_folder": "/docs/",
+    "repo_folder": "/docs/",
     "github_issues": "enabled",
     # "sequential_nav": "none",
     # "display_contributors": True,
