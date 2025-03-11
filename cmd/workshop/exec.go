@@ -631,7 +631,7 @@ type CmdScripts struct {
 
 func (c *CmdScripts) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "scripts",
+		Use:   "scripts [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: shortScriptsHelp,
 		Long:  longScriptsHelp,
@@ -641,7 +641,8 @@ $ workshop scripts nimble
 
 The name is optional if the project has only one workshop:
 $ workshop scripts`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName(nil),
 	}
 
 	return cmd
