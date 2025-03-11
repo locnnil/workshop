@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -1477,6 +1478,30 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 	}
 }
 
+func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
+	c.Assert(s.b.SnapshotCalls, check.HasLen, len(sdks))
+
+	for i, sk := range sdks {
+		c.Assert(s.b.SnapshotCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
+		c.Assert(s.b.SnapshotCalls[i].Workshop, check.Equals, name)
+	}
+}
+
+func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, files []string) {
+	c.Assert(s.b.RestoreCalls, check.HasLen, len(sdks))
+	c.Assert(s.b.RestoreCalls, check.HasLen, len(files))
+
+	for i, sk := range sdks {
+		c.Assert(s.b.RestoreCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
+		c.Assert(s.b.RestoreCalls[i].Workshop, check.Equals, name)
+
+		var f workshop.File
+		err := yaml.Unmarshal([]byte(files[i]), &f)
+		c.Assert(err, check.IsNil)
+		c.Assert(s.b.RestoreCalls[i].File, check.DeepEquals, &f)
+	}
+}
+
 func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -1496,6 +1521,9 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		},
 	}
 	s.runActionTest(c, requests, expected)
+
+	s.checkSnapshotCalls(c, "basic", []string{
+		"system"})
 
 	s.createWFile(c, "basic", basic_refreshed)
 	s.mockSdkVolumes(c, apiSuiteSdks)
@@ -1544,6 +1572,14 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "basic", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic_refreshed})
 }
 
 func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
@@ -1608,6 +1644,14 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_minusone})
 }
 
 func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
@@ -1677,6 +1721,16 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 		},
 	}}
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_newchan})
 }
 
 func updateSdkStoreRev(name string, rev int, meta string) func() {
@@ -1759,6 +1813,16 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 		},
 	}}
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
 }
 
 func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
@@ -1827,6 +1891,14 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_connsadded})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
@@ -1897,6 +1969,18 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	// Workshop will be fully rebuilt.
+	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -1965,6 +2049,18 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	// Workshop will be fully rebuilt.
+	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
@@ -2033,6 +2129,14 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
 }
 
 func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
@@ -2103,6 +2207,14 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 	}}
 
 	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_broken})
 }
 
 func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {

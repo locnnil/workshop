@@ -49,6 +49,17 @@ type AttachVolumeCall struct {
 	Name     string
 }
 
+type SnapshotCall struct {
+	Workshop string
+	Snapid   string
+}
+
+type RestoreCall struct {
+	Workshop string
+	Snapid   string
+	File     *workshop.File
+}
+
 type WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
 
 type FakeWorkshopBackend struct {
@@ -74,6 +85,11 @@ type FakeWorkshopBackend struct {
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
+
+	SnapshotCalls    []SnapshotCall
+	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
+	RestoreCalls     []RestoreCall
+	RestoreCallback  func(ctx context.Context, workshop string, snapid string) error
 
 	BaseDir string
 }
@@ -541,6 +557,10 @@ func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report 
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {
+	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapid: snapid})
+	if s.SnapshotCallback != nil {
+		return s.SnapshotCallback(ctx, name, snapid)
+	}
 	return nil
 }
 
@@ -556,6 +576,11 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 		return workshop.ErrWorkshopNotLaunched
 	} else {
 		wp.File = file
+	}
+
+	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
+	if s.SnapshotCallback != nil {
+		return s.SnapshotCallback(ctx, name, snapid)
 	}
 	return nil
 }
