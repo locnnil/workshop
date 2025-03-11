@@ -12,7 +12,7 @@ execute: |
   workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
 
   echo "Validate the task output from the launch attempt"
-  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-launch-abort\"..."
+  workshop_exec tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-launch-abort\"..."
 
   echo "Ensure SDKs are unlinked successfully during abort"
   echo "Update the workshop file to use test-sdk-mount-broken"
@@ -21,4 +21,4 @@ execute: |
   sed -i 's/test-sdk-mount-broken/test-sdk-setup-fail/g' workshop.yaml
 
   workshop_exec launch --abort
-  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -2 | MATCH '.*"test-sdk-mount-broken" SDK has bad plugs or slots: one \(unknown attribute for mount interface slot: "host-source"\)'
+  workshop_exec tasks | tail -2 | MATCH '.*"test-sdk-mount-broken" SDK has bad plugs or slots: one \(unknown attribute for mount interface slot: "host-source"\)'

@@ -21,4 +21,4 @@ execute: |
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-abort[[:space:]]+Ready[[:space:]]+-$"
 
   echo "Validate the task output from the refresh attempt"
-  workshop_exec changes | tail -1 | cut -d ' ' -f1 | xargs workshop tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-refresh-abort\"..."
+  workshop_exec tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-refresh-abort\"..."

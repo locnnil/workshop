@@ -82,6 +82,10 @@ list its *tasks* to see the cause:
 
 The SDK-specific reason can be addressed individually.
 
+If no change ID is provided,
+:command:`workshop tasks` inspects the most recent change
+to the current project.
+
 
 Wait on error
 -------------
