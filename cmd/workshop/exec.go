@@ -247,7 +247,8 @@ $ workshop shell nimble
 
 The name is optional if the project has only one workshop:
 $ workshop shell`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
 
 	return cmd
