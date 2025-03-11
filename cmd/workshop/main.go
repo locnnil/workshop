@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/logger"
@@ -21,6 +22,8 @@ func main() {
 	logger.SetLogger(l)
 
 	rootCmd := (&CmdRoot{cwd: cwd}).Command()
+	// Work around https://github.com/spf13/cobra/issues/2257.
+	rootCmd.SetArgs(slices.Clone(os.Args[1:]))
 
 	if err = rootCmd.Execute(); err != nil {
 		exitError, ok := err.(*client.ExitError)

@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/spf13/cobra"
 	"gopkg.in/check.v1"
 )
 
@@ -24,6 +26,9 @@ var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","r
         "script":"echo bar\n"
     }
 }}`
+var mockWorkshopScriptsError = `{"type":"error","status-code":404,"status":"Not Found","result":{
+    "message":"workshop not found"
+}}`
 
 func (m *workshopExec) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
@@ -38,7 +43,7 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 4:
+		case 1, 4, 6:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
@@ -57,8 +62,13 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 			} else {
 				fmt.Fprintln(w, mockWorkshopWithScripts)
 			}
+		case 7:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/scripts", m.prjId))
+			w.WriteHeader(404)
+			fmt.Fprintln(w, mockWorkshopScriptsError)
 		default:
-			c.Errorf("expected 2 calls, now on %d", n)
+			c.Errorf("expected 7 calls, now on %d", n)
 		}
 	})
 
@@ -76,5 +86,90 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 foo:
   script: echo foo
 `)
-	c.Check(n, check.Equals, 5)
+
+	err = cmd.Run(cmd.Command(), []string{"wrong-name"})
+	c.Check(err, check.ErrorMatches, "workshop not found")
+
+	c.Check(n, check.Equals, 7)
+}
+
+func (m *workshopExec) TestWorkshopRunCompletion(c *check.C) {
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1, 3, 5, 7, 10:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2, 8:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
+		case 4, 9, 11:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopWithScripts)
+		case 6:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/scripts", m.prjId))
+			w.WriteHeader(404)
+			fmt.Fprintln(w, mockWorkshopScriptsError)
+		default:
+			c.Errorf("expected 11 calls, now on %d", n)
+		}
+	})
+
+	cmd := &CmdRun{root: &CmdRoot{cwd: m.prjDir}}
+	run := cmd.Command()
+
+	// TODO: remove this workaround once this bug is fixed:
+	// https://github.com/spf13/cobra/issues/1877
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{"workshop", "__complete", "run", ""}
+	result, compDirective := run.ValidArgsFunction(run, nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.DeepEquals, []string{"ws"})
+
+	os.Args = []string{"workshop", "__complete", "run", "ws", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"ws"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.DeepEquals, []string{"bar", "foo"})
+
+	os.Args = []string{"workshop", "__complete", "run", "wrong-name", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"wrong-name"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveError)
+	c.Check(result, check.HasLen, 0)
+
+	os.Args = []string{"workshop", "__complete", "run", "ws", "foo", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "foo"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.HasLen, 0)
+
+	os.Args = []string{"workshop", "__complete", "run", "--", ""}
+	result, compDirective = run.ValidArgsFunction(run, nil, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.DeepEquals, []string{"bar", "foo"})
+
+	os.Args = []string{"workshop", "__complete", "run", "--", "foo", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"foo"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.HasLen, 0)
+
+	os.Args = []string{"workshop", "__complete", "run", "ws", "--", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "--"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.DeepEquals, []string{"bar", "foo"})
+
+	os.Args = []string{"workshop", "__complete", "run", "ws", "--", "foo", ""}
+	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "--", "foo"}, "")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.HasLen, 0)
+
+	c.Check(n, check.Equals, 11)
 }
