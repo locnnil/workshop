@@ -67,7 +67,7 @@ $ workshop info`,
 //
 // becomes:
 //
-//	.../17942561/mount/go_mod-cache
+//	.../17942561/mount/go/mod-cache
 func shortenDefaultPath(source, xdg string) string {
 	defaultPathPrefix := filepath.Join(xdg, "workshop", "id")
 	if after, ok := strings.CutPrefix(source, defaultPathPrefix); ok {
@@ -230,12 +230,12 @@ func sketchSdkChannel(projectId, w string) string {
 		return "~"
 	}
 
-	rootDir, err := workshop.UserDataRootDir(user.Username)
+	userDataDir, err := workshop.UserDataRootDir(user.Username)
 	if err != nil {
 		return "~"
 	}
 
-	return contractHomeDirectory(workshop.SketchSdkDir(rootDir, projectId, w))
+	return contractHomeDirectory(workshop.SketchSdkDir(userDataDir, projectId, w))
 }
 
 func formatEndpoint(endpoint client.Endpoint) string {

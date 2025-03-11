@@ -16,7 +16,6 @@ package daemon
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os/user"
 	"path/filepath"
@@ -45,7 +44,7 @@ type apiSuite struct {
 	store      *sdk.FakeStore
 
 	workshopDir string
-	rootDir     string
+	userDataDir string
 	user        *user.User
 	installTime time.Time
 	project     workshop.Project
@@ -55,11 +54,9 @@ type apiSuite struct {
 
 	restoreMuxVars    func()
 	restoreProjectId  func()
-	restoreUser       func()
 	restoreTime       func()
 	restoreSanitize   func()
 	restoreSecBackend func()
-	restoreSudo       func()
 }
 
 func TestApi(t *testing.T) { check.TestingT(t) }
@@ -69,10 +66,6 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.workshopDir = c.MkDir()
 
 	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir()}
-	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		c.Check(name, check.Equals, s.user.Name)
-		return s.user, nil
-	})
 
 	s.project = workshop.Project{
 		Path:      s.workshopDir,
@@ -102,11 +95,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 
 	xdgDir := c.MkDir()
-	s.rootDir = filepath.Join(xdgDir, "workshop")
-	s.restoreSudo = testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
-  echo XDG_DATA_HOME=%s
-  exit 0
-  `, xdgDir)).Restore
+	s.userDataDir = filepath.Join(xdgDir, "workshop")
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -114,11 +103,9 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreProjectId()
-	s.restoreUser()
 	s.restoreTime()
 	s.restoreSanitize()
 	s.restoreSecBackend()
-	s.restoreSudo()
 }
 
 func (s *apiSuite) muxVars(*http.Request) map[string]string {

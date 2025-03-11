@@ -3,8 +3,6 @@ package workshop
 import (
 	"os/user"
 	"path/filepath"
-
-	"github.com/canonical/workshop/internal/systemd"
 )
 
 func userAndEnv(name string) (*user.User, map[string]string, error) {
@@ -36,30 +34,30 @@ func UserDataRootDir(name string) (string, error) {
 	return filepath.Join(path, "workshop"), nil
 }
 
-func ProjectUserData(rootDir, pid string) string {
-	return filepath.Join(rootDir, "id", pid)
+func ProjectUserData(userDataDir, pid string) string {
+	return filepath.Join(userDataDir, "id", pid)
 }
 
-func UserData(rootDir, pid, w string) string {
-	return filepath.Join(ProjectUserData(rootDir, pid), w)
+func UserData(userDataDir, pid, w string) string {
+	return filepath.Join(ProjectUserData(userDataDir, pid), w)
 }
 
-func SdkMountDir(rootDir, pid, w, sdk string) string {
-	return filepath.Join(UserData(rootDir, pid, w), "mount", sdk)
+func SdkMountDir(userDataDir, pid, w, sdk string) string {
+	return filepath.Join(UserData(userDataDir, pid, w), "mount", sdk)
 }
 
-func SdkMountHostSource(rootDir, pid, w, sdk, plug string) string {
-	return filepath.Join(SdkMountDir(rootDir, pid, w, sdk), plug)
+func SdkMountHostSource(userDataDir, pid, w, sdk, plug string) string {
+	return filepath.Join(SdkMountDir(userDataDir, pid, w, sdk), plug)
 }
 
-func SketchSdkDir(rootDir, pid, w string) string {
-	return filepath.Join(UserData(rootDir, pid, w), "sdk", "sketch")
+func SketchSdkDir(userDataDir, pid, w string) string {
+	return filepath.Join(UserData(userDataDir, pid, w), "sdk", "sketch")
 }
 
-func SketchSdkCurrent(rootDir, pid, w string) string {
-	return filepath.Join(SketchSdkDir(rootDir, pid, w), "current")
+func SketchSdkCurrent(userDataDir, pid, w string) string {
+	return filepath.Join(SketchSdkDir(userDataDir, pid, w), "current")
 }
 
-func SketchSdkStash(rootDir, pid, w string) string {
-	return filepath.Join(SketchSdkDir(rootDir, pid, w), "stash")
+func SketchSdkStash(userDataDir, pid, w string) string {
+	return filepath.Join(SketchSdkDir(userDataDir, pid, w), "stash")
 }

@@ -228,14 +228,14 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	rootDir, err := workshop.UserDataRootDir(user.Username)
+	userDataDir, err := workshop.UserDataRootDir(user.Username)
 	if err != nil {
 		return err
 	}
-	sketchdir := workshop.SketchSdkCurrent(rootDir, p.Id, wp.Name)
+	sketchdir := workshop.SketchSdkCurrent(userDataDir, p.Id, wp.Name)
 
 	if c.stash {
-		stashdir := workshop.SketchSdkStash(rootDir, p.Id, wp.Name)
+		stashdir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
 
 		reverter, err := stashSketch(sketchdir, stashdir)
 		if err != nil {
@@ -258,7 +258,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
 
-		storedir := workshop.SketchSdkStash(rootDir, p.Id, wp.Name)
+		storedir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
 
 		if err = restoreSketch(sketchdir, storedir); err != nil {
 			return err
@@ -454,12 +454,12 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) ([]st
 		exists = true
 	}
 
-	rootDir, err := workshop.UserDataRootDir(usr.Username)
+	userDataDir, err := workshop.UserDataRootDir(usr.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	stashdir := workshop.SketchSdkStash(rootDir, p.Id, w.Name)
+	stashdir := workshop.SketchSdkStash(userDataDir, p.Id, w.Name)
 
 	if osutil.IsDir(stashdir) {
 		if len(notes) > 0 {

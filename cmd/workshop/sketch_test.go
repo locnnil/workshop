@@ -9,6 +9,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -17,7 +18,7 @@ type workshopSketch struct {
 	BaseWorkshopSuite
 	prjDir      string
 	prjId       string
-	rootDir     string
+	userDataDir string
 	restoreSudo func()
 	restoreUser func()
 }
@@ -114,7 +115,7 @@ func (m *workshopSketch) SetUpTest(c *check.C) {
 	m.prjId = "42424242"
 	m.prjDir = c.MkDir()
 	xdgHome := c.MkDir()
-	m.rootDir = filepath.Join(xdgHome, "workshop")
+	m.userDataDir = filepath.Join(xdgHome, "workshop")
 	m.restoreSudo = testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
 echo XDG_DATA_HOME=%s
 exit 0
@@ -125,7 +126,7 @@ exit 0
 }
 
 func (m *workshopSketch) TearDownTest(c *check.C) {
-	sketch := workshop.SketchSdkDir(m.rootDir, m.prjId, "ws")
+	sketch := workshop.SketchSdkDir(m.userDataDir, m.prjId, "ws")
 	err := os.RemoveAll(sketch)
 	c.Assert(err, check.IsNil)
 	m.restoreSudo()
@@ -135,9 +136,9 @@ func (m *workshopSketch) TearDownTest(c *check.C) {
 func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current bool, meta []byte) (metapath string, hookspath string) {
 	var sketchDir string
 	if current {
-		sketchDir = workshop.SketchSdkCurrent(m.rootDir, m.prjId, ws)
+		sketchDir = workshop.SketchSdkCurrent(m.userDataDir, m.prjId, ws)
 	} else {
-		sketchDir = workshop.SketchSdkStash(m.rootDir, m.prjId, ws)
+		sketchDir = workshop.SketchSdkStash(m.userDataDir, m.prjId, ws)
 	}
 
 	err := writeSketchSdk(sketchDir, meta)
@@ -216,7 +217,7 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 	err := cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	current := workshop.SketchSdkCurrent(m.rootDir, m.prjId, "ws")
+	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
 	c.Assert(filepath.Join(current, "hooks"), testutil.FileAbsent)
 }
@@ -241,7 +242,7 @@ hooks:
 	err := cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	current := workshop.SketchSdkCurrent(m.rootDir, m.prjId, "ws")
+	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
 	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
 }
@@ -288,7 +289,7 @@ func (m *workshopSketch) TestSketchSdkEditExistingMeta(c *check.C) {
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
 
-	dir := workshop.SketchSdkCurrent(m.rootDir, m.prjId, "ws")
+	dir := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	metadir := filepath.Join(dir, "meta")
 	err := os.MkdirAll(metadir, 0755)
 	c.Assert(err, check.IsNil)
@@ -411,7 +412,7 @@ hooks:
 
 func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
-	restore := workshop.SketchSdkStash(m.rootDir, m.prjId, "ws")
+	restore := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileAbsent)
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
@@ -426,7 +427,7 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 
 func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
-	stash := workshop.SketchSdkStash(m.rootDir, m.prjId, "ws")
+	stash := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	_, stashedhooks := m.mockMinimalSketchSdk(c, "ws", false, []byte(`name: sketch
 base: ubuntu@18.04
 hooks:
@@ -488,7 +489,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 	c.Assert(n, check.Equals, 5)
 
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
-	restore := workshop.SketchSdkStash(m.rootDir, m.prjId, "ws")
+	restore := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	recs, err := os.ReadDir(restore)
 	c.Assert(recs, check.HasLen, 0)
 	c.Assert(err, check.IsNil)
@@ -503,7 +504,7 @@ func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	current := workshop.SketchSdkCurrent(m.rootDir, m.prjId, "ws")
+	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 }
 
@@ -544,7 +545,7 @@ func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	current := workshop.SketchSdkCurrent(m.rootDir, m.prjId, "ws")
+	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(current, testutil.FileAbsent)
 }
 
