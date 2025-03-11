@@ -1,10 +1,59 @@
 {
   "$defs": {
+    "CameraPlug": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project camera plug definition.",
+      "properties": {
+        "interface": {
+          "const": "camera",
+          "title": "Interface",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "CameraPlug",
+      "type": "object"
+    },
+    "DesktopPlug": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project desktop plug definition.",
+      "properties": {
+        "interface": {
+          "const": "desktop",
+          "title": "Interface",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "DesktopPlug",
+      "type": "object"
+    },
+    "GPUPlug": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project GPU plug definition.",
+      "properties": {
+        "interface": {
+          "const": "gpu",
+          "title": "Interface",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "GPUPlug",
+      "type": "object"
+    },
     "MountPlug": {
       "additionalProperties": false,
       "description": "Sdkcraft project mount plug definition.",
       "properties": {
         "interface": {
+          "const": "mount",
           "title": "Interface",
           "type": "string"
         },
@@ -13,14 +62,14 @@
           "type": "string"
         },
         "read-only": {
+          "default": false,
           "title": "Read-Only",
           "type": "boolean"
         }
       },
       "required": [
         "interface",
-        "workshop-target",
-        "read-only"
+        "workshop-target"
       ],
       "title": "MountPlug",
       "type": "object"
@@ -30,6 +79,7 @@
       "description": "Sdkcraft project mount slot definition.",
       "properties": {
         "interface": {
+          "const": "mount",
           "title": "Interface",
           "type": "string"
         },
@@ -87,6 +137,64 @@
         "build-on"
       ],
       "title": "Platform",
+      "type": "object"
+    },
+    "SSHPlug": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project SSH plug definition.",
+      "properties": {
+        "interface": {
+          "const": "ssh",
+          "title": "Interface",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "SSHPlug",
+      "type": "object"
+    },
+    "TunnelPlug": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project tunnel plug definition.",
+      "properties": {
+        "interface": {
+          "const": "tunnel",
+          "title": "Interface",
+          "type": "string"
+        },
+        "endpoint": {
+          "default": "",
+          "title": "Endpoint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "TunnelPlug",
+      "type": "object"
+    },
+    "TunnelSlot": {
+      "additionalProperties": false,
+      "description": "Sdkcraft project tunnel plug definition.",
+      "properties": {
+        "interface": {
+          "const": "tunnel",
+          "title": "Interface",
+          "type": "string"
+        },
+        "endpoint": {
+          "default": "",
+          "title": "Endpoint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interface"
+      ],
+      "title": "TunnelSlot",
       "type": "object"
     }
   },
@@ -299,6 +407,11 @@
       "additionalProperties": {
         "type": "object"
       },
+      "default": {
+        "default-part": {
+          "plugin": "nil"
+        }
+      },
       "title": "Parts",
       "type": "object"
     },
@@ -318,50 +431,69 @@
       "title": "Package-Repositories"
     },
     "plugs": {
-      "anyOf": [
-        {
-          "additionalProperties": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/MountPlug"
-              },
-              {}
-            ]
+      "additionalProperties": {
+        "discriminator": {
+          "mapping": {
+            "camera": "#/$defs/CameraPlug",
+            "desktop": "#/$defs/DesktopPlug",
+            "gpu": "#/$defs/GPUPlug",
+            "mount": "#/$defs/MountPlug",
+            "ssh": "#/$defs/SSHPlug",
+            "tunnel": "#/$defs/TunnelPlug"
           },
-          "type": "object"
+          "propertyName": "interface"
         },
-        {
-          "type": "null"
-        }
-      ],
-      "title": "Plugs"
+        "oneOf": [
+          {
+            "$ref": "#/$defs/CameraPlug"
+          },
+          {
+            "$ref": "#/$defs/DesktopPlug"
+          },
+          {
+            "$ref": "#/$defs/GPUPlug"
+          },
+          {
+            "$ref": "#/$defs/MountPlug"
+          },
+          {
+            "$ref": "#/$defs/SSHPlug"
+          },
+          {
+            "$ref": "#/$defs/TunnelPlug"
+          }
+        ]
+      },
+      "default": {},
+      "title": "Plugs",
+      "type": "object"
     },
     "slots": {
-      "anyOf": [
-        {
-          "additionalProperties": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/MountSlot"
-              },
-              {}
-            ]
+      "additionalProperties": {
+        "discriminator": {
+          "mapping": {
+            "mount": "#/$defs/MountSlot",
+            "tunnel": "#/$defs/TunnelSlot"
           },
-          "type": "object"
+          "propertyName": "interface"
         },
-        {
-          "type": "null"
-        }
-      ],
-      "title": "Slots"
+        "oneOf": [
+          {
+            "$ref": "#/$defs/MountSlot"
+          },
+          {
+            "$ref": "#/$defs/TunnelSlot"
+          }
+        ]
+      },
+      "default": {},
+      "title": "Slots",
+      "type": "object"
     }
   },
   "required": [
     "name",
-    "platforms",
-    "parts",
-    "plugs",
-    "slots"
+    "platforms"
   ],
   "title": "Project",
   "type": "object"
