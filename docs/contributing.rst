@@ -61,8 +61,8 @@ Environment setup
       spread -h
 
    To run the end-to-end test suite `tests/documentation/`,  
-   download the latest sdkcraft release file from  `sdkcraft repository <https://github.com/canonical/sdkcraft/releases>`_ 
-   and move it to `tests/` directory.
+   download the latest |sdk_markup| release from the `repository <https://github.com/canonical/sdkcraft/releases>`_
+   and move it to the :file:`tests/` directory.
 
 Coding
 ------
