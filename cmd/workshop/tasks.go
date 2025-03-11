@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -18,8 +19,8 @@ type CmdTasks struct {
 
 func (c *CmdTasks) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "tasks <CHANGE ID>",
-		Args:  cobra.ExactArgs(1),
+		Use:   "tasks [<CHANGE ID>]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "List tasks for a specific change",
 		Long: `
 Any substantial operation on a workshop is a change that consists of tasks;
@@ -41,7 +42,10 @@ Notes:
 `,
 		Example: `
 List the tasks under change ID 42:
-$ workshop tasks 42`,
+$ workshop tasks 42
+
+List the tasks under the most recent change to the project:
+$ workshop tasks`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.complete,
 	}
@@ -57,9 +61,25 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	change, err := cli.Change(av[0])
-	if err != nil {
-		return err
+	var change *client.Change
+	if len(av) > 0 {
+		change, err = cli.Change(av[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		changesCmd := CmdChanges{
+			root: c.root,
+		}
+		changes, err := changesCmd.changes(cli)
+		if err != nil {
+			return err
+		}
+
+		if len(changes) == 0 {
+			return errors.New("cannot find any changes")
+		}
+		change = changes[0]
 	}
 
 	if change != nil {

@@ -34,10 +34,10 @@ There are several categories of commands that vary by their purpose:
    * - Create, update, delete
      - :command:`connect`,
        :command:`disconnect`,
+       :command:`launch`,
        :command:`refresh`,
-       :command:`remount`
-       :command:`remove`,
-       :command:`launch`
+       :command:`remount`,
+       :command:`remove`
      - Control a workshop's existence;
        not to be confused with starting or stopping a workshop.
 
@@ -50,10 +50,11 @@ There are several categories of commands that vary by their purpose:
      - :command:`changes`,
        :command:`connections`,
        :command:`info`,
+       :command:`list`,
        :command:`okay`,
+       :command:`scripts`,
        :command:`tasks`,
-       :command:`warnings`,
-       :command:`list`
+       :command:`warnings`
      - Enumerate workshops, list their details and recent activities.
 
    * - Utilise

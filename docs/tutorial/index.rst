@@ -346,6 +346,12 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
      140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
 
 
+.. tip::
+
+   To inspect the most recent change,
+   use :command:`workshop tasks` without a change ID.
+
+
 Here, the following happens:
 
 - The :ref:`project directory <tut_define>`
