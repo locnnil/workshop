@@ -82,7 +82,7 @@ $ workshop refresh --continue
 Refresh the sketch SDK in the 'nimble' workshop:
 $ workshop refresh nimble/sketch`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
+		ValidArgsFunction: c.root.completeWorkshopNames([]string{"Ready", "Waiting"}),
 	}
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
