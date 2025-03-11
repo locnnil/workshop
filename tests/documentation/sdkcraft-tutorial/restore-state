@@ -1,2 +1,4 @@
 #!/usr/bin/bash
-rsync -a "$SDK_STATE_DIR"/ /home/workshop/my_work
+while IFS='=' read -r key value; do
+    sudo -u workshop go env -w "$key=$value"
+done < "$SDK_STATE_DIR"/env-vars

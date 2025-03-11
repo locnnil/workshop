@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-rsync -a /home/workshop/my_work/ "$SDK_STATE_DIR"
+sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars

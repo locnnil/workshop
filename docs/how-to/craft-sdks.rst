@@ -158,17 +158,13 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
 
    name: go
    base: ubuntu@24.04
-   version: '0.1'
+   version: "0.1"
    summary: Go SDK
    description: |
      This is my Go SDK description.
    license: GPL-3.0
    platforms:
      amd64:
-
-   parts:
-     my-part:
-       plugin: nil
 
 
 .. _tut_parts:
@@ -225,17 +221,13 @@ and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
       name: go
       base: ubuntu@24.04
-      version: '0.1'
+      version: "0.1"
       summary: Go SDK
       description: |
         This is my Go SDK description.
       license: GPL-3.0
       platforms:
         amd64:
-
-      parts:
-        my-part:
-          plugin: nil
 
       plugs:
         mod-cache:
@@ -289,14 +281,11 @@ named :file:`setup-base`:
    :caption: setup-base
 
    snap install --classic go
-   echo "PATH=/home/workshop/go/bin:$PATH" >> /home/workshop/.bashrc
+   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
    
    # Create a mod cache directory to be mounted using the mount interface
    cache=$(sudo -u workshop -- go env GOMODCACHE)
    sudo -u workshop -- mkdir -p "$cache"
-
-   # Create a working directory
-   sudo -u workshop -- mkdir -p /home/workshop/my_work/
 
 
 It runs when the workshop is launched or refreshed,
@@ -321,16 +310,18 @@ named :file:`save-state` and :file:`restore-state`:
 .. code-block:: shell
    :caption: save-state
 
-   rsync -a /home/workshop/my_work/ $SDK_STATE_DIR
+   sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars
 
 
 .. code-block:: shell
    :caption: restore-state
 
-   rsync -a $SDK_STATE_DIR/ /home/workshop/my_work
+   while IFS='=' read -r key value; do
+     sudo -u workshop go env -w "$key=$value"
+   done < "$SDK_STATE_DIR"/env-vars
 
 
-During a :command:`workshop refresh` operation:
+During a :command:`workshop refresh` operation:
 
 - The :file:`save-state` hook runs *before* the workshop is refreshed,
   saving the state of the SDK.
