@@ -17,18 +17,22 @@ package osutil
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var (
-	userCurrent     = user.Current
-	userLookup      = user.Lookup
-	userLookupGroup = user.LookupGroup
+	UserCurrent     = user.Current
+	UserLookup      = user.Lookup
+	UserLookupGroup = user.LookupGroup
+	UserAndEnv      = userAndEnv
 )
 
 // RealUser finds the user behind a sudo invocation when root, if applicable
@@ -37,7 +41,7 @@ var (
 // Don't check SUDO_USER when not root and simply return the current uid
 // to properly support sudo'ing from root to a non-root user
 func RealUser() (*user.User, error) {
-	cur, err := userCurrent()
+	cur, err := UserCurrent()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +94,7 @@ func NormalizeUidGid(uid, gid *int, username, group string) (*int, *int, error) 
 		return nil, nil, nil
 	}
 	if username != "" {
-		u, err := userLookup(username)
+		u, err := UserLookup(username)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -107,7 +111,7 @@ func NormalizeUidGid(uid, gid *int, username, group string) (*int, *int, error) 
 		}
 	}
 	if group != "" {
-		g, err := userLookupGroup(group)
+		g, err := UserLookupGroup(group)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -133,7 +137,7 @@ func NormalizeUidGid(uid, gid *int, username, group string) (*int, *int, error) 
 // Don't check SUDO_USER when not root and simply return the current uid
 // to properly support sudo'ing from root to a non-root user
 func UserMaybeSudoUser() (*user.User, error) {
-	cur, err := userCurrent()
+	cur, err := UserCurrent()
 	if err != nil {
 		return nil, err
 	}
@@ -165,6 +169,65 @@ func UserMaybeSudoUser() (*user.User, error) {
 	}
 
 	return real, nil
+}
+
+func userAndEnv(name string) (*user.User, map[string]string, error) {
+	usr, err := UserLookup(name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	env, err := userEnvironment(usr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return usr, env, err
+}
+
+// Returns the environment for the user as set by systemd.
+// This is the equivalent of running 'systemctl --user show-environment'
+func userEnvironment(user *user.User) (map[string]string, error) {
+	cmd := exec.Command("sudo", "-E", "-u", user.Username, "systemctl", "--user", "show-environment")
+	// XDG_RUNTIME_DIR may not be set if a command is invoked by sudo or
+	// systemd-run; set it here to the default location. It is required for
+	// systemctl to work with --user. See:
+	// https://unix.stackexchange.com/questions/346841/why-does-sudo-i-not-set-xdg-runtime-dir-for-the-target-user
+	defaultXdg := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
+	cmd.Env = append(cmd.Env, "XDG_RUNTIME_DIR="+defaultXdg)
+	out, errOut, err := RunCmd(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("%s", string(errOut))
+	}
+
+	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
+	return ParseEnvironment(rawEnv)
+}
+
+func FakeUserAndEnv(f func(name string) (*user.User, map[string]string, error)) func() {
+	UserAndEnv = f
+	return func() {
+		UserAndEnv = userAndEnv
+	}
+}
+
+func FakeUserCurrent(f func() (*user.User, error)) func() {
+	realUserCurrent := UserCurrent
+	UserCurrent = f
+
+	return func() { UserCurrent = realUserCurrent }
+}
+
+func FakeUserLookup(f func(name string) (*user.User, error)) func() {
+	oldUserLookup := UserLookup
+	UserLookup = f
+	return func() { UserLookup = oldUserLookup }
+}
+
+func FakeUserLookupGroup(f func(name string) (*user.Group, error)) func() {
+	oldUserLookupGroup := UserLookupGroup
+	UserLookupGroup = f
+	return func() { UserLookupGroup = oldUserLookupGroup }
 }
 
 // Note: this is best effort, comparing err here with UnknownUserError

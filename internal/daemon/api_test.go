@@ -18,7 +18,6 @@ import (
 	"context"
 	"net/http"
 	"os/user"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -44,7 +44,6 @@ type apiSuite struct {
 	store      *sdk.FakeStore
 
 	workshopDir string
-	userDataDir string
 	user        *user.User
 	installTime time.Time
 	project     workshop.Project
@@ -54,6 +53,7 @@ type apiSuite struct {
 
 	restoreMuxVars    func()
 	restoreProjectId  func()
+	restoreUserEnv    func()
 	restoreTime       func()
 	restoreSanitize   func()
 	restoreSecBackend func()
@@ -94,8 +94,10 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.secBackend = &ifacetest.TestSecurityBackend{BackendName: "api-suite"}
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 
-	xdgDir := c.MkDir()
-	s.userDataDir = filepath.Join(xdgDir, "workshop")
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return s.user, nil, nil
+	})
+
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -103,6 +105,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreProjectId()
+	s.restoreUserEnv()
 	s.restoreTime()
 	s.restoreSanitize()
 	s.restoreSecBackend()

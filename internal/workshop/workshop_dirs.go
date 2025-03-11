@@ -1,26 +1,13 @@
 package workshop
 
 import (
-	"os/user"
 	"path/filepath"
+
+	"github.com/canonical/workshop/internal/osutil"
 )
 
-func userAndEnv(name string) (*user.User, map[string]string, error) {
-	usr, err := LookupUsername(name)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	env, err := systemd.UserEnvironment(usr)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return usr, env, err
-}
-
 func UserDataRootDir(name string) (string, error) {
-	usr, env, err := userAndEnv(name)
+	usr, env, err := osutil.UserAndEnv(name)
 	if err != nil {
 		return "", err
 	}

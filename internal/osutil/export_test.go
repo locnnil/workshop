@@ -19,7 +19,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/user"
 	"syscall"
 	"time"
 
@@ -47,25 +46,6 @@ func ParseRawExpandableEnv(entries []string) (ExpandableEnv, error) {
 		om.Set(key, value)
 	}
 	return ExpandableEnv{OrderedMap: om}, nil
-}
-
-func FakeUserCurrent(f func() (*user.User, error)) func() {
-	realUserCurrent := userCurrent
-	userCurrent = f
-
-	return func() { userCurrent = realUserCurrent }
-}
-
-func FakeUserLookup(f func(name string) (*user.User, error)) func() {
-	oldUserLookup := userLookup
-	userLookup = f
-	return func() { userLookup = oldUserLookup }
-}
-
-func FakeUserLookupGroup(f func(name string) (*user.Group, error)) func() {
-	oldUserLookupGroup := userLookupGroup
-	userLookupGroup = f
-	return func() { userLookupGroup = oldUserLookupGroup }
 }
 
 func FakeChown(f func(*os.File, sys.UserID, sys.GroupID) error) (restore func()) {

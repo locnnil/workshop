@@ -20,7 +20,6 @@
 package builtin_test
 
 import (
-	"fmt"
 	"os/user"
 	"path/filepath"
 	"testing"
@@ -32,15 +31,17 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
 type mountSuite struct {
-	iface       interfaces.Interface
-	projectId   string
-	restoreUser func()
+	iface          interfaces.Interface
+	projectId      string
+	restoreUserEnv func()
+	env            map[string]string
 }
 
 func Test(t *testing.T) {
@@ -54,13 +55,14 @@ var _ = check.Suite(&mountSuite{
 func (s *mountSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
 	testuser.HomeDir = c.MkDir()
-	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		return &testuser, nil
+	s.env = make(map[string]string)
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, s.env, nil
 	})
 }
 
 func (s *mountSuite) TearDownSuite(c *check.C) {
-	s.restoreUser()
+	s.restoreUserEnv()
 }
 
 func (s *mountSuite) TestName(c *check.C) {
@@ -333,13 +335,10 @@ slots:
 `, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
 
-	systemCmd := testutil.FakeCommand(c, "sudo", `
-  echo XDG_DATA_HOME=""
-  exit 0
-  `)
-	defer systemCmd.Restore()
+	s.env["XDG_DATA_HOME"] = ""
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -367,19 +366,15 @@ slots:
 `, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
 
-	xdgDir := c.MkDir()
-	systemCmd := testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
-  echo XDG_DATA_HOME=%s
-  exit 0
-  `, xdgDir))
-	defer systemCmd.Restore()
+	s.env["XDG_DATA_HOME"] = c.MkDir()
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(xdgDir, "/workshop/id/42424242/ws/mount/consumer/mount")
+	sourceDir := filepath.Join(s.env["XDG_DATA_HOME"], "/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
@@ -403,7 +398,8 @@ slots:
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 

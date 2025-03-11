@@ -32,17 +32,16 @@ base: ubuntu@22.04
 `
 
 type workshopHandlers struct {
-	fs                afero.Fs
-	backend           *fakebackend.FakeWorkshopBackend
-	state             *state.State
-	runner            *state.TaskRunner
-	se                *overlord.StateEngine
-	wrkmgr            *workshopstate.WorkshopManager
-	ctx               context.Context
-	project           workshop.Project
-	user              *user.User
-	lookupUserRestore func()
-	sudoRestore       func()
+	fs             afero.Fs
+	backend        *fakebackend.FakeWorkshopBackend
+	state          *state.State
+	runner         *state.TaskRunner
+	se             *overlord.StateEngine
+	wrkmgr         *workshopstate.WorkshopManager
+	ctx            context.Context
+	project        workshop.Project
+	user           *user.User
+	restoreUserEnv func()
 }
 
 var _ = check.Suite(&workshopHandlers{})
@@ -85,12 +84,9 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	s.user = &user.User{
 		HomeDir: c.MkDir(),
 	}
-	s.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		return s.user, nil
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return s.user, nil, nil
 	})
-
-	s.sudoRestore = testutil.FakeCommand(c, "sudo", `
-exit 0`).Restore
 
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
@@ -114,7 +110,7 @@ exit 0`).Restore
 }
 
 func (s *workshopHandlers) TearDownTest(c *check.C) {
-	s.lookupUserRestore()
+	s.restoreUserEnv()
 }
 
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {

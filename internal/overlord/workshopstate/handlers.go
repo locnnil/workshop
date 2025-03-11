@@ -341,7 +341,6 @@ func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
 	}
 
 	workshopUserData := workshop.UserData(usrDataDir, projectId, w)
-
 	err = os.RemoveAll(workshopUserData)
 	if err != nil {
 		return err

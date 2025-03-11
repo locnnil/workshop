@@ -21,9 +21,9 @@ package ifacetest
 
 import (
 	"context"
-	"os/user"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -76,8 +76,12 @@ func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName 
 	return b.RemoveCallback(sdkName)
 }
 
-func (b *TestSecurityBackend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
-	return &Specification{user: user, pid: pid, sdk: sdk}
+func (b *TestSecurityBackend) NewSpecification(user string, pid, sdk string) (interfaces.Specification, error) {
+	usr, err := osutil.UserLookup(user)
+	if err != nil {
+		return nil, err
+	}
+	return &Specification{user: usr, pid: pid, sdk: sdk}, nil
 }
 
 func (b *TestSecurityBackend) SandboxFeatures() []string {

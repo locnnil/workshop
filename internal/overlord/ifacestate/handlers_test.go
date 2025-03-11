@@ -15,6 +15,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate/schema"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -119,7 +120,7 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	err := s.o.StartUp()
 	c.Assert(err, check.IsNil)
 
-	s.restoreUserLookup = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return &user.User{HomeDir: c.MkDir()}, nil
 	})
 }

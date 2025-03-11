@@ -451,7 +451,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	w, ok := s.b.Workshops[s.project.ProjectId]["tunnels"]
 	c.Assert(ok, check.Equals, true)
 
-	testSDKSource := workshop.SdkMountHostSource(s.userDataDir, s.project.ProjectId, "tunnels", "test-sdk-2", "data")
+	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "data")
 
 	p := workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
@@ -461,7 +461,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	}
 	w.Profiles["test-sdk"] = p
 
-	testSDKSource2 := workshop.SdkMountHostSource(s.userDataDir, s.project.ProjectId, "tunnels", "test-sdk-2", "photos")
+	testSDKSource2 := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "photos")
 
 	p = workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
@@ -648,7 +648,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	w, ok := s.b.Workshops[s.project.ProjectId]["somebound"]
 	c.Assert(ok, check.Equals, true)
 
-	testSDKSource := workshop.SdkMountHostSource(s.userDataDir, s.project.ProjectId, "somebound", "test-sdk-2", "photos")
+	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "somebound", "test-sdk-2", "photos")
 	p := workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
 		What:  testSDKSource,
@@ -901,7 +901,9 @@ func (s *apiSuite) mockSdkVolumes(c *check.C, sdks map[string]testSdk) {
 }
 
 func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
-	sdkpath := workshop.SketchSdkCurrent(s.userDataDir, s.project.ProjectId, ws)
+	userDataDir, err := workshop.UserDataRootDir(s.user.Username)
+	c.Assert(err, check.IsNil)
+	sdkpath := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
 	metadir := filepath.Join(sdkpath, "meta")
 	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
 	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)

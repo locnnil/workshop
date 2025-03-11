@@ -21,6 +21,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -233,7 +234,7 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 		return err
 	}
 
-	usr, err := workshop.LookupUsername(userName)
+	usr, err := osutil.UserLookup(userName)
 	if err != nil {
 		return err
 	}

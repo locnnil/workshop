@@ -91,7 +91,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	err = lxdbackend.InitLxdProject(f.lxdClient, f.usr.Username)
 	c.Check(err, check.IsNil)
 
-	f.lookupUserRestore = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+	f.lookupUserRestore = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil
 	})
 

@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -48,7 +49,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 
 	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
-	f.restoreLookupUsr = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+	f.restoreLookupUsr = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil
 	})
 	f.restoreNewId = testutil.FakeFunc(func() (string, error) {

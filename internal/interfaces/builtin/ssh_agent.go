@@ -27,7 +27,6 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -75,12 +74,7 @@ func (iface *sshAgentInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotIn
 }
 
 func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	env, err := systemd.UserEnvironment(spec.User)
-	if err != nil {
-		return err
-	}
-
-	sock := env["SSH_AUTH_SOCK"]
+	sock := spec.Environment["SSH_AUTH_SOCK"]
 	if sock == "" {
 		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, spec.User.Username)
 	}

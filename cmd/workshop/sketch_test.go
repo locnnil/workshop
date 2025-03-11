@@ -16,11 +16,10 @@ import (
 
 type workshopSketch struct {
 	BaseWorkshopSuite
-	prjDir      string
-	prjId       string
-	userDataDir string
-	restoreSudo func()
-	restoreUser func()
+	prjDir         string
+	prjId          string
+	userDataDir    string
+	restoreUserEnv func()
 }
 
 var _ = check.Suite(&workshopSketch{})
@@ -116,12 +115,9 @@ func (m *workshopSketch) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	xdgHome := c.MkDir()
 	m.userDataDir = filepath.Join(xdgHome, "workshop")
-	m.restoreSudo = testutil.FakeCommand(c, "sudo", fmt.Sprintf(`
-echo XDG_DATA_HOME=%s
-exit 0
-`, xdgHome)).Restore
-	m.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		return &user.User{HomeDir: c.MkDir()}, nil
+	usr := &user.User{HomeDir: c.MkDir()}
+	m.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return usr, map[string]string{"XDG_DATA_HOME": xdgHome}, nil
 	})
 }
 
@@ -129,8 +125,7 @@ func (m *workshopSketch) TearDownTest(c *check.C) {
 	sketch := workshop.SketchSdkDir(m.userDataDir, m.prjId, "ws")
 	err := os.RemoveAll(sketch)
 	c.Assert(err, check.IsNil)
-	m.restoreSudo()
-	m.restoreUser()
+	m.restoreUserEnv()
 }
 
 func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current bool, meta []byte) (metapath string, hookspath string) {

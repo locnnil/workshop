@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 	"github.com/canonical/workshop/internal/x11"
@@ -236,12 +235,7 @@ func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
 	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
 }
 
-func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, ws string) error {
-	env, err := systemd.UserEnvironment(user)
-	if err != nil {
-		return err
-	}
-
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string, ws string) error {
 	backend := env["XDG_BACKEND"]
 
 	var envVars map[string]string
@@ -357,7 +351,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	if !ok {
 		return fmt.Errorf("context key user not found")
 	}
-	user, err := workshop.LookupUsername(uname)
+	user, err := osutil.UserLookup(uname)
 	if err != nil {
 		return err
 	}
@@ -389,7 +383,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, sdkInfo.Workshop)
+		err = installDesktop(fs, *spec.Profile.Desktop, user, spec.Environment, sdkInfo.Workshop)
 		if err != nil {
 			return err
 		}
@@ -514,7 +508,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 }
 
 // NewSpecification returns a new mount specification.
-func (b *Backend) NewSpecification(user *user.User, pid, sdk string) interfaces.Specification {
+func (b *Backend) NewSpecification(user string, pid, sdk string) (interfaces.Specification, error) {
 	return NewSpecification(user, sdk)
 }
 

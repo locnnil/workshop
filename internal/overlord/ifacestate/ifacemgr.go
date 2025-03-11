@@ -11,10 +11,10 @@ import (
 	backend "github.com/canonical/workshop/internal/interfaces/backends"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/x11"
 )
@@ -480,19 +480,10 @@ func MockSecurityBackends(be []interfaces.SecurityBackend) func() {
 // updateXauthority determines user and environment information, then calls
 // MigrateXauthority
 func updateXauthority(user string) error {
-	usr, err := workshop.LookupUsername(user)
+	usr, env, err := osutil.UserAndEnv(user)
 	if err != nil {
 		return err
 	}
 
-	env, err := systemd.UserEnvironment(usr)
-	if err != nil {
-		return err
-	}
-
-	if err = x11.MigrateXauthority(usr, env["XAUTHORITY"]); err != nil {
-		return err
-	}
-
-	return nil
+	return x11.MigrateXauthority(usr, env["XAUTHORITY"])
 }

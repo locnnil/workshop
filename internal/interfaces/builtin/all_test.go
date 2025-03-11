@@ -39,7 +39,8 @@ type AllSuite struct{}
 var (
 	_        = Suite(&AllSuite{})
 	testuser = user.User{
-		Name: "testuser",
+		Name:     "testuser",
+		Username: "testuser",
 	}
 )
 

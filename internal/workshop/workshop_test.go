@@ -32,7 +32,7 @@ func (f *workshopSuite) SetUpTest(c *check.C) {
 	f.bend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 
-	f.restoreUserLookup = workshop.FakeUserLookup(func(name string) (*user.User, error) {
+	f.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return &user.User{HomeDir: c.MkDir()}, nil
 	})
 

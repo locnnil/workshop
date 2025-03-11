@@ -1,25 +1,36 @@
 package builtin_test
 
 import (
+	"os/user"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"gopkg.in/check.v1"
 )
 
 type gpuSuite struct {
-	iface     interfaces.Interface
-	projectId string
+	iface          interfaces.Interface
+	projectId      string
+	restoreUserEnv func()
 }
 
 var _ = check.Suite(&gpuSuite{
 	iface: builtin.MustInterface("gpu"),
 })
 
-func (s *gpuSuite) SetUpTest(c *check.C) {
+func (s *gpuSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, nil, nil
+	})
+}
+
+func (s *gpuSuite) TearDownSuite(c *check.C) {
+	s.restoreUserEnv()
 }
 
 func (s *gpuSuite) TestName(c *check.C) {
@@ -46,7 +57,8 @@ slots:
 `, s.projectId, "ws", "producer", "gpu")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
