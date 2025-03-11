@@ -59,7 +59,8 @@ There are several categories of commands that vary by their purpose:
 
    * - Utilise
      - :command:`exec`,
-       :command:`shell`
+       :command:`shell`,
+       :command:`run`
      - Run commands inside a workshop.
 
 

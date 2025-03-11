@@ -79,7 +79,7 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		if len(changes) == 0 {
 			return errors.New("cannot find any changes")
 		}
-		change = changes[0]
+		change = changes[len(changes)-1]
 	}
 
 	if change != nil {
