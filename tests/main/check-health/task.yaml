@@ -5,19 +5,19 @@ execute: |
   workshop_exec launch ws-ok
 
   echo "Check health reported okay"
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-ok\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Launch \"ws-ok\" workshop$"
   workshop_exec refresh ws-ok  
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Refresh \"ws-ok\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Refresh \"ws-ok\" workshop$"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-ok[[:space:]]+Ready[[:space:]]+-$" 
   workshop_exec remove ws-ok
 
   echo "Check health reported waiting"  
   workshop_exec launch ws-waiting    
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-waiting\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Launch \"ws-waiting\" workshop$"
   workshop_exec refresh ws-waiting
   workshop_exec remove ws-waiting
   
   echo "Check health reported error"
   workshop_exec launch ws-error || true
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Error[[:space:]]+today[: [:alnum:]]+[[:space:]]+Launch \"ws-error\" workshop$"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Error[[:space:]]+[:, [:alnum:]]+[[:space:]]+Launch \"ws-error\" workshop$"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-error[[:space:]]+Off[[:space:]]+-$" 
