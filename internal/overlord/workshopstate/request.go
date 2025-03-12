@@ -26,14 +26,29 @@ import (
 const (
 	// mark the last task in a taskset after which refresh becomes irreversible (i.e. the following tasks
 	// will not be possible to undo, e.g. removing an old workshop copy)
-	EdgeLastTaskBeforeRefreshIrreversible = state.TaskSetEdge("last-before-irreversible")
+	EdgeRefreshLastTaskBeforeCleanup = state.TaskSetEdge("last-before-irreversible")
 
 	// mark the tasks that denote irreversible clean up logic for refresh (e.g.
 	// removing state storage and the old workshop copy)
-	EdgeRefreshCleanup = state.TaskSetEdge("refresh-cleanup")
+	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
 
 var checkHealthTimeout = 5 * time.Second
+
+var (
+	systemSetup = sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)}
+	isSystem    = func(s sdk.Setup) bool { return s.Name == sdk.System.String() }
+)
+
+func ensureSystemFirst[T string | sdk.Setup](items []T, match func(T) bool, systemSdk T) []T {
+	idx := slices.IndexFunc(items, match)
+	if idx != -1 {
+		items[0], items[idx] = items[idx], items[0]
+	} else {
+		items = slices.Insert(items, 0, systemSdk)
+	}
+	return items
+}
 
 func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
@@ -51,29 +66,6 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.
 		return workshop.Project{}, fmt.Errorf("no project found with \"id\" %v", id)
 	}
 	return projects[username][idx], nil
-}
-
-var isSystem = func(s sdk.Setup) bool { return s.Name == sdk.System.String() }
-
-func ensureSystemSdk(setups []sdk.Setup) []sdk.Setup {
-	// system SDK has to be installed first.
-	idx := slices.IndexFunc(setups, isSystem)
-	if idx != -1 {
-		setups[0], setups[idx] = setups[idx], setups[0]
-	} else {
-		setups = slices.Insert(setups, 0, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
-	}
-	return setups
-}
-
-func ensureSystemFirst[T any](items []T, match func(T) bool, systemSdk T) []T {
-	idx := slices.IndexFunc(items, match)
-	if idx != -1 {
-		items[0], items[idx] = items[idx], items[0]
-	} else {
-		items = slices.Insert(items, 0, systemSdk)
-	}
-	return items
 }
 
 func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
@@ -109,7 +101,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		for _, s := range sdks {
 			candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
-		candidates = ensureSystemSdk(candidates)
+		candidates = ensureSystemFirst(candidates, isSystem, systemSetup)
 
 		tasks := launch(w.state, file, candidates, project)
 		taskset = append(taskset, tasks)
@@ -345,7 +337,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 	}
 
 	for _, ts := range taskset {
-		cleanup := ts.MaybeEdge(EdgeRefreshCleanup)
+		cleanup := ts.MaybeEdge(EdgeRefreshFirstCleanupTask)
 		if cleanup == nil {
 			continue
 		}
@@ -360,7 +352,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		// other changes before execution.
 		for _, otherts := range taskset {
 			if ts != otherts {
-				last, err := otherts.Edge(EdgeLastTaskBeforeRefreshIrreversible)
+				last, err := otherts.Edge(EdgeRefreshLastTaskBeforeCleanup)
 				if err != nil {
 					return nil, err
 				}
@@ -467,8 +459,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 	for _, s := range infos {
 		candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
-	candidates = ensureSystemFirst(candidates,
-		isSystem, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
+	candidates = ensureSystemFirst(candidates, isSystem, systemSetup)
 
 	// Restore the order of SDKs installed in the running workshop.
 	prevOrder := []string{}
@@ -554,11 +545,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 
 	// No appropriate snapshots found means the workshop needs to be rebuilt
 	// from scratch.
-	if plan.sdkSnapshot == "" {
-		plan.fullRefresh = true
-	}
-
-	if plan.fullRefresh {
+	if plan.fullRefresh || plan.sdkSnapshot == "" {
 		plan.refresh = append(plan.refresh, plan.intact...)
 		plan.remove = append(plan.remove, plan.intact...)
 		plan.intact = plan.intact[:0]
@@ -638,18 +625,16 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	addTaskSet(checkHealth)
 
 	length := len(refresh.Tasks())
-	if length == 0 {
-		return refresh, nil
-	}
+	last := refresh.Tasks()[length-1]
+	refresh.MarkEdge(last, EdgeRefreshLastTaskBeforeCleanup)
 
 	cleanupLane := st.NewLane()
-	lastRefreshTsk := refresh.Tasks()[length-1]
-	refresh.MarkEdge(lastRefreshTsk, EdgeLastTaskBeforeRefreshIrreversible)
+
 	if len(plan.Refresh()) > 0 {
 		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-		removeStateStorage.WaitFor(lastRefreshTsk)
+		removeStateStorage.WaitFor(last)
 		removeStateStorage.JoinLane(cleanupLane)
-		refresh.MarkEdge(removeStateStorage, EdgeRefreshCleanup)
+		refresh.MarkEdge(removeStateStorage, EdgeRefreshFirstCleanupTask)
 
 		refresh.AddTask(removeStateStorage)
 	}
@@ -668,10 +653,10 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	// any problem happens, the workshops that had finished their
 	// refresh will not be affected.
 	removeStash.JoinLane(cleanupLane)
-	removeStash.WaitFor(lastRefreshTsk)
+	removeStash.WaitFor(last)
 
-	if refresh.MaybeEdge(EdgeRefreshCleanup) == nil {
-		refresh.MarkEdge(removeStash, EdgeRefreshCleanup)
+	if refresh.MaybeEdge(EdgeRefreshFirstCleanupTask) == nil {
+		refresh.MarkEdge(removeStash, EdgeRefreshFirstCleanupTask)
 	}
 
 	refresh.AddTask(removeStash)

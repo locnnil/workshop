@@ -169,6 +169,7 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 
 		ws = wpe
 		ws.File = file
+		ws.Base = file.Base
 		fs := ws.WorkshopFilesystem
 
 		// TODO: Remove locally installed SDKs. These should be removed in a
