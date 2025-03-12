@@ -86,7 +86,7 @@ func (c *CmdRoot) preRun(cmd *cobra.Command, args []string) error {
 }
 
 func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
-	if c.cli != nil {
+	if c.cli != nil && cmd.Name() != cobra.ShellCompRequestCmd {
 		maybePresentWarnings(c.cli.WarningsSummary())
 	}
 }
