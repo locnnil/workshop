@@ -110,16 +110,19 @@ func (c *CmdRoot) completeWorkshopNames(status []string) cobra.CompletionFunc {
 func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]string, cobra.ShellCompDirective) {
 	cli, err := c.client()
 	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
 	project, err := cli.Project(c.project)
 	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
 	workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
