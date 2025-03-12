@@ -401,7 +401,6 @@ type refreshPlan struct {
 
 	sdkSnapshot  string
 	installOrder []string
-	fullRefresh  bool
 }
 
 func (p refreshPlan) ordered(setups ...[]sdk.Setup) []sdk.Setup {
@@ -443,6 +442,8 @@ func (p refreshPlan) Remove() []sdk.Setup {
 }
 
 func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, file *workshop.File) (*refreshPlan, error) {
+	fullRefresh := false
+
 	plan := &refreshPlan{
 		install:      make([]sdk.Setup, 0),
 		refresh:      make([]sdk.Setup, 0),
@@ -507,7 +508,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 	}
 
 	if w.Base != file.Base {
-		plan.fullRefresh = true
+		fullRefresh = true
 	}
 
 	if len(plan.refresh) == 0 && len(plan.remove) == 0 && len(plan.install) == 0 {
@@ -516,7 +517,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 				reflect.DeepEqual(s1.Slots, s2.Slots)
 		}
 		if !slices.EqualFunc(w.File.Sdks, file.Sdks, plugsSlotsChanged) {
-			plan.fullRefresh = true
+			fullRefresh = true
 		}
 	}
 
@@ -543,9 +544,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 		}
 	}
 
-	// No appropriate snapshots found means the workshop needs to be rebuilt
-	// from scratch.
-	if plan.fullRefresh || plan.sdkSnapshot == "" {
+	if fullRefresh {
 		plan.refresh = append(plan.refresh, plan.intact...)
 		plan.remove = append(plan.remove, plan.intact...)
 		plan.intact = plan.intact[:0]
