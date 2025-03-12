@@ -14,11 +14,12 @@ import (
 )
 
 type CmdRoot struct {
-	cli     *client.Client
-	project string
+	cwd string
+	cli *client.Client
+	prj string
 }
 
-func (c *CmdRoot) Command(cwd string) *cobra.Command {
+func (c *CmdRoot) Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "workshop",
 		// Avoid printing errors twice
@@ -26,7 +27,6 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 		SilenceUsage:     true,
 		TraverseChildren: true,
 
-		PersistentPreRunE: c.preRun,
 		PersistentPostRun: c.postRun,
 	}
 
@@ -53,7 +53,7 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 	cmd.AddCommand((&CmdSketches{root: c}).Command())
 	cmd.AddCommand((&CmdDocs{root: c}).Command())
 
-	cmd.PersistentFlags().StringVarP(&c.project, "project", "p", cwd, "Specify the project's directory path.")
+	cmd.PersistentFlags().StringVarP(&c.prj, "project", "p", c.cwd, "Specify the project's directory path.")
 	cmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
 
 	cmd.DisableAutoGenTag = true
@@ -76,13 +76,19 @@ func (c *CmdRoot) client() (*client.Client, error) {
 	return cli, err
 }
 
-func (c *CmdRoot) preRun(cmd *cobra.Command, args []string) error {
-	project, err := filepath.Abs(c.project)
-	if err != nil {
-		return err
+func (c *CmdRoot) project() string {
+	if c.cwd == "" {
+		return c.prj
 	}
-	c.project = project
-	return nil
+	// Avoid filepath.Abs because it returns an error.
+	return abs(c.cwd, c.prj)
+}
+
+func abs(cwd, path string) string {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
+	return filepath.Join(cwd, path)
 }
 
 func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
@@ -114,7 +120,7 @@ func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]str
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	project, err := cli.Project(c.project)
+	project, err := cli.Project(c.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError

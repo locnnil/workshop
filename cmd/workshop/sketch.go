@@ -195,7 +195,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	if err != nil {
 		return err
 	}
-	p, err := cli.Project(c.root.project)
+	p, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 		fmt.Fprintf(w, "Project\tWorkshop\tRev\tNotes\n")
 	}
 
-	p, err := cli.Project(c.root.project)
+	p, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}

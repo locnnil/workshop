@@ -367,7 +367,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		return err
 	}
 
-	project, err := cli.Project(root.project)
+	project, err := cli.Project(root.project())
 	if err != nil {
 		return err
 	}
@@ -616,7 +616,7 @@ func (c *CmdScripts) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	p, err := cli.Project(c.root.project)
+	p, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}

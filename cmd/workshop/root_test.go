@@ -107,7 +107,7 @@ func (s *rootSuite) TestWorkshopNameCompletion(c *check.C) {
 		Workshops: wsInfo,
 	}
 
-	cmd := &CmdRoot{}
+	cmd := &CmdRoot{cwd: s.prjDir}
 
 	s.listRedirectHelper(c, w, s.prjId, s.prjDir, len(statuses)*8)
 
@@ -115,22 +115,22 @@ func (s *rootSuite) TestWorkshopNameCompletion(c *check.C) {
 		single := cmd.completeWorkshopName([]string{st})
 		multiple := cmd.completeWorkshopNames([]string{st})
 
-		result, compDirective := single(cmd.Command(s.prjDir), nil, "")
+		result, compDirective := single(cmd.Command(), nil, "")
 		c.Check(result, check.DeepEquals, expected[st])
 		c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 
 		if len(expected[st]) > 0 {
-			result, compDirective = single(cmd.Command(s.prjDir), expected[st][:1], "")
+			result, compDirective = single(cmd.Command(), expected[st][:1], "")
 			c.Check(result, check.HasLen, 0)
 			c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 		}
 
-		result, compDirective = multiple(cmd.Command(s.prjDir), nil, "")
+		result, compDirective = multiple(cmd.Command(), nil, "")
 		c.Check(result, check.DeepEquals, expected[st])
 		c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 
 		if len(expected[st]) > 0 {
-			result, compDirective = multiple(cmd.Command(s.prjDir), expected[st][:1], "")
+			result, compDirective = multiple(cmd.Command(), expected[st][:1], "")
 			rest := expected[st][1:]
 			if len(rest) == 0 {
 				rest = nil

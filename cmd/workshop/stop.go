@@ -59,7 +59,7 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 
 	c.skipAbort = true
 
-	project, err := cli.Project(c.root.project)
+	project, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}

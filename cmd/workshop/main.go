@@ -20,7 +20,7 @@ func main() {
 
 	logger.SetLogger(l)
 
-	rootCmd := (&CmdRoot{}).Command(cwd)
+	rootCmd := (&CmdRoot{cwd: cwd}).Command()
 
 	if err = rootCmd.Execute(); err != nil {
 		exitError, ok := err.(*client.ExitError)

@@ -74,7 +74,7 @@ func (c *CmdDisconnect) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	project, err := cli.Project(c.root.project)
+	project, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (c *CmdDisconnect) complete(cmd *cobra.Command, args []string, toComplete s
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	project, err := cli.Project(c.root.project)
+	project, err := cli.Project(c.root.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
