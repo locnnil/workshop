@@ -401,7 +401,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "manysdks", manysdks, apiSuiteSdks)
+	s.launchWorkshop(c, "manysdks", manysdks_system, apiSuiteSdks)
 	s.launchWorkshop(c, "basic", basic, map[string]testSdk{})
 
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops")
@@ -419,14 +419,12 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 	// for DeepEqual to work correctly
-	install1, install2 := s.installTime, s.installTime
+	install1 := s.installTime
 	info := rsp.Result.(Workshops)
-	for _, w := range info.Workshops {
-		slices.SortFunc(w.Sdks, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
-	}
+
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
 		Name:      "manysdks",
-		Base:      "ubuntu@22.04",
+		Base:      "ubuntu@24.04",
 		ProjectId: s.project.ProjectId,
 		Status:    "Ready",
 		Sdks: []*SdkInfo{
@@ -440,12 +438,6 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 				Channel:     "latest/stable",
 				Revision:    "1",
 				InstallTime: &install1,
-			},
-			{
-				Name:        "test-sdk-2",
-				Channel:     "latest/stable",
-				Revision:    "1",
-				InstallTime: &install2,
 			},
 		},
 		Notes: nil,
@@ -546,7 +538,6 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	// for DeepEqual to work correctly
 	install1, install2 := s.installTime, s.installTime
 	result := rsp.Result.(Workshop)
-	slices.SortFunc(result.Sdks, func(a, b *SdkInfo) int { return cmp.Compare(a.Name, b.Name) })
 	for _, c := range result.Sdks {
 		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 	}

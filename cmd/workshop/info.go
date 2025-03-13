@@ -114,7 +114,6 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	if err != nil {
 		return err
 	}
-	slices.SortFunc(workshop.Sdks, func(a, b *client.Sdk) int { return cmp.Compare(a.Name, b.Name) })
 
 	w := tabWriter()
 	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
@@ -142,39 +141,26 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if len(workshop.Sdks) > 0 {
 		fmt.Fprintf(w, "sdks:\n")
-
-		var tunnels []*client.Tunnel
-		for _, sk := range workshop.Sdks {
-			if sk.Tunnels == nil {
-				continue
-			}
-			tunnels = append(tunnels, sk.Tunnels.Slots...)
-		}
-		if len(tunnels) > 0 {
-			fmt.Fprintf(w, "  system:\n")
-			fmt.Fprintf(w, "    tunnels:\n")
-
-			slices.SortFunc(tunnels, func(a, b *client.Tunnel) int {
-				return cmp.Compare(a.Plug.Name, b.Plug.Name)
-			})
-			for _, tunnel := range tunnels {
-				fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
-				fmt.Fprintf(w, "        from:\t%s\n", formatEndpoint(tunnel.From))
-				fmt.Fprintf(w, "        to:\t%s\n", formatEndpoint(tunnel.To))
-			}
-		}
-
 		for _, sk := range workshop.Sdks {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
-			if sk.Name == sdk.Sketch {
+
+			switch sk.Name {
+			case sdk.Sketch:
 				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)
 				if sk.BuildTime.IsZero() {
 					sk.BuildTime = sk.InstallTime
 				}
-			} else if sk.Channel == "" {
-				sk.Channel = "~"
+			default:
+				if sk.Channel == "" {
+					sk.Channel = "~"
+				}
 			}
-			fmt.Fprintf(w, "    tracking:\t%s\n", sk.Channel)
+
+			// Tracking info is always the same for the system SDK. Omit it to
+			// highlight the difference between it and a regular type SDK.
+			if sk.Name != sdk.System.String() {
+				fmt.Fprintf(w, "    tracking:\t%s\n", sk.Channel)
+			}
 
 			var buildTime string
 			if !sk.BuildTime.IsZero() {

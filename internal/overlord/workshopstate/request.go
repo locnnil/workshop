@@ -37,7 +37,6 @@ var checkHealthTimeout = 5 * time.Second
 
 var (
 	systemSetup = sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)}
-	isSystem    = func(s sdk.Setup) bool { return s.Name == sdk.System.String() }
 )
 
 func ensureSystemFirst[T string | sdk.Setup](items []T, match func(T) bool, systemSdk T) []T {
@@ -101,7 +100,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		for _, s := range sdks {
 			candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
-		candidates = ensureSystemFirst(candidates, isSystem, systemSetup)
+		candidates = ensureSystemFirst(candidates, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) }, systemSetup)
 
 		tasks := launch(w.state, file, candidates, project)
 		taskset = append(taskset, tasks)
@@ -114,7 +113,7 @@ func sdkStoreInfo(sto sdk.Store, ctx context.Context, projectid string, file *wo
 	for _, sd := range file.Sdks {
 		// "system" SDK is bootstrapped and installed by Workshop locally in a
 		// separate task.
-		if sd.Name == sdk.System.String() {
+		if sdk.IsSystem(sd.Name) {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
@@ -218,7 +217,14 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 	base.Set("workshop-base", file.Base)
 	addTask(base)
 
-	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
+	var summary string
+	if sdkSnapshot == "" {
+		summary = fmt.Sprintf("Rebuild %q workshop", file.Name)
+	} else {
+		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", file.Name, sdkSnapshot)
+	}
+
+	create := st.NewTask("create-workshop", summary)
 	addTask(create)
 	create.Set("workshop-file", file)
 
@@ -460,16 +466,14 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 	for _, s := range infos {
 		candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
-	candidates = ensureSystemFirst(candidates, isSystem, systemSetup)
+	candidates = ensureSystemFirst(candidates, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) }, systemSetup)
 
 	// Restore the order of SDKs installed in the running workshop.
 	prevOrder := []string{}
 	for _, s := range w.File.Sdks {
 		prevOrder = append(prevOrder, s.Name)
 	}
-	prevOrder = ensureSystemFirst(prevOrder,
-		func(s string) bool { return s == sdk.System.String() },
-		sdk.System.String())
+	prevOrder = ensureSystemFirst(prevOrder, sdk.IsSystem, sdk.System.String())
 
 	// Determine if a workshop can be partially updated.
 	lastIntact := 0

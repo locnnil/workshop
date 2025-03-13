@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -162,6 +163,25 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 	}
 	info.Status = health.Status.String()
 
+	// Sort the SDKs in installation order.
+	orderMap := make(map[string]int)
+	for i, v := range w.File.Sdks {
+		// Ignore the order of the system SDK from the definion (if exists).
+		if sdk.IsSystem(v.Name) {
+			continue
+		}
+		orderMap[v.Name] = i
+	}
+	sort.Slice(info.Sdks, func(i, j int) bool {
+		// system SDK is always first. Note: it may or may not present in the
+		// original file in an arbitrary order, but it will always be in the
+		// list of installed SDKs.
+		if sdk.IsSystem(info.Sdks[i].Name) || sdk.IsSystem(info.Sdks[j].Name) {
+			return true
+		}
+		return orderMap[info.Sdks[i].Name] < orderMap[info.Sdks[j].Name]
+	})
+
 	return &info
 }
 
@@ -223,7 +243,7 @@ func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
 		}
 
 		sk := conn.Plug.Sdk
-		if sk == sdk.System.String() {
+		if sdk.IsSystem(sk) {
 			sk = conn.Slot.Sdk
 		}
 		info, ok := tunnels[sk]
@@ -389,11 +409,10 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 		}
 	}
 
-	// If the client queried everything available,
-	// we add workshop files to the response.
-	// Some of these may only exist as files, not instances.
-	// The "available" query is a best-effort version of "all":
-	// if something is wrong with the files we still return the instances.
+	// If the client queried everything available, we add workshop files to the
+	// response. Some of these may only exist as files, not instances. The
+	// "available" query is a best-effort version of "all": if something is
+	// wrong with the files we still return the instances.
 	if ignoreStatus {
 		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
 		var fileErr *workshopstate.WorkshopFileError

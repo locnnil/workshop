@@ -194,15 +194,12 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	// the only SDKs of that source. This requires rework, once an arbitrary SDK
 	// can be installed from a local source, e.g. to support workshop try.
 	isLocal := func(n string) bool {
-		return n == sdk.Sketch || n == sdk.System.String()
+		return n == sdk.Sketch || sdk.IsSystem(n)
 	}
 
 	setup, ok := w.Sdks[sdkName]
-	if sdkName != sdk.System.String() && !ok {
+	if !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
-	}
-	if sdkName == sdk.System.String() {
-		setup = sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: 1}}
 	}
 
 	var err error

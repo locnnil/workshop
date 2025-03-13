@@ -23,3 +23,7 @@ slots:
 func SystemSdkMeta(base string) string {
 	return fmt.Sprintf(systemSdkYaml, base)
 }
+
+func IsSystem(name string) bool {
+	return name == System.String()
+}
