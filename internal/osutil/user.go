@@ -29,10 +29,11 @@ import (
 )
 
 var (
-	UserCurrent     = user.Current
-	UserLookup      = user.Lookup
-	UserLookupGroup = user.LookupGroup
-	UserAndEnv      = userAndEnv
+	UserCurrent       = user.Current
+	UserLookup        = user.Lookup
+	UserLookupGroup   = user.LookupGroup
+	UserAndEnv        = userAndEnv
+	CurrentUserAndEnv = currentUserAndEnv
 )
 
 // RealUser finds the user behind a sudo invocation when root, if applicable
@@ -185,6 +186,20 @@ func userAndEnv(name string) (*user.User, map[string]string, error) {
 	return usr, env, err
 }
 
+func currentUserAndEnv() (*user.User, map[string]string, error) {
+	usr, err := UserCurrent()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	env, err := userEnvironment(usr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return usr, env, err
+}
+
 // Returns the environment for the user as set by systemd.
 // This is the equivalent of running 'systemctl --user show-environment'
 func userEnvironment(user *user.User) (map[string]string, error) {
@@ -208,6 +223,13 @@ func FakeUserAndEnv(f func(name string) (*user.User, map[string]string, error)) 
 	UserAndEnv = f
 	return func() {
 		UserAndEnv = userAndEnv
+	}
+}
+
+func FakeCurrentUserAndEnv(f func() (*user.User, map[string]string, error)) func() {
+	CurrentUserAndEnv = f
+	return func() {
+		CurrentUserAndEnv = currentUserAndEnv
 	}
 }
 

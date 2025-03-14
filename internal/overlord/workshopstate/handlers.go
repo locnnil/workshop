@@ -11,6 +11,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -335,19 +336,20 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 }
 
 func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
-	usrDataDir, err := workshop.UserDataRootDir(user)
+	usr, env, err := osutil.UserAndEnv(user)
 	if err != nil {
 		return err
 	}
 
-	workshopUserData := workshop.UserData(usrDataDir, projectId, w)
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	workshopUserData := workshop.UserData(userDataDir, projectId, w)
 	err = os.RemoveAll(workshopUserData)
 	if err != nil {
 		return err
 	}
 
 	// If this was the last workshop in the project, cleanup the project dir
-	projectUserData := workshop.ProjectUserData(usrDataDir, projectId)
+	projectUserData := workshop.ProjectUserData(userDataDir, projectId)
 
 	prjDir, err := os.ReadDir(projectUserData)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -223,15 +222,12 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return fmt.Errorf(`error: cannot sketch %q: workshop currently %q, must be "Ready"`, wp.Name, wp.Status)
 	}
 
-	user, err := osutil.UserMaybeSudoUser()
+	user, env, err := osutil.CurrentUserAndEnv()
 	if err != nil {
 		return err
 	}
 
-	userDataDir, err := workshop.UserDataRootDir(user.Username)
-	if err != nil {
-		return err
-	}
+	userDataDir := workshop.UserDataRootDir(user.HomeDir, env)
 	sketchdir := workshop.SketchSdkCurrent(userDataDir, p.Id, wp.Name)
 
 	if c.stash {
@@ -415,14 +411,16 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	user, err := osutil.UserMaybeSudoUser()
+	user, env, err := osutil.CurrentUserAndEnv()
 	if err != nil {
 		return err
 	}
 
+	userDataDir := workshop.UserDataRootDir(user.HomeDir, env)
+
 	var entries []string
 	for _, wp := range wps {
-		entry, err := stashEntry(user, wp, p)
+		entry, err := stashEntry(userDataDir, wp, p)
 		if err != nil {
 			return err
 		}
@@ -442,7 +440,7 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) ([]string, error) {
+func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) ([]string, error) {
 	rev := "-"
 	notes := ""
 	exists := false
@@ -452,11 +450,6 @@ func stashEntry(usr *user.User, w *client.WorkshopInfo, p *client.Project) ([]st
 		rev = info.Revision
 		notes = "current"
 		exists = true
-	}
-
-	userDataDir, err := workshop.UserDataRootDir(usr.Username)
-	if err != nil {
-		return nil, err
 	}
 
 	stashdir := workshop.SketchSdkStash(userDataDir, p.Id, w.Name)

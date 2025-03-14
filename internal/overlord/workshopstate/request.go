@@ -318,12 +318,13 @@ func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
 		return false, fmt.Errorf("context key user not found")
 	}
 
-	usrDataDir, err := workshop.UserDataRootDir(username)
+	usr, env, err := osutil.UserAndEnv(username)
 	if err != nil {
 		return false, err
 	}
 
-	sketchdir := workshop.SketchSdkCurrent(usrDataDir, pid, wp)
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	sketchdir := workshop.SketchSdkCurrent(userDataDir, pid, wp)
 
 	recs, err := os.ReadDir(sketchdir)
 	// no Sketch SDK exists for the workshop and it is not an error.

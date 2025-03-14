@@ -2,23 +2,16 @@ package workshop
 
 import (
 	"path/filepath"
-
-	"github.com/canonical/workshop/internal/osutil"
 )
 
-func UserDataRootDir(name string) (string, error) {
-	usr, env, err := osutil.UserAndEnv(name)
-	if err != nil {
-		return "", err
-	}
-
-	path := filepath.Join(usr.HomeDir, ".local", "share")
+func UserDataRootDir(homedir string, env map[string]string) string {
+	path := filepath.Join(homedir, ".local", "share")
 	dataDir := env["XDG_DATA_HOME"]
 	if dataDir != "" {
 		path = dataDir
 	}
 
-	return filepath.Join(path, "workshop"), nil
+	return filepath.Join(path, "workshop")
 }
 
 func ProjectUserData(userDataDir, pid string) string {

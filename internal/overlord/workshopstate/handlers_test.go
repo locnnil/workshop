@@ -201,15 +201,14 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 		},
 	}}
 
-	usrDataDir, err := workshop.UserDataRootDir(s.user.Username)
-	c.Assert(err, check.IsNil)
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 
 	for _, wf := range wFiles {
 		err := s.backend.LaunchWorkshop(s.ctx, wf)
 		c.Check(err, check.IsNil)
 
 		// create content directories
-		sdkMountData := workshop.SdkMountDir(usrDataDir, s.project.ProjectId, wf.Name, "test")
+		sdkMountData := workshop.SdkMountDir(userDataDir, s.project.ProjectId, wf.Name, "test")
 		var plugs = []string{"plug1", "plug2"}
 		for _, p := range plugs {
 			err = os.MkdirAll(filepath.Join(sdkMountData, p), 0744)
@@ -219,7 +218,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 
 	for _, wf := range wFiles {
 		// Make sure content exists, we only care about this at a directory level
-		workshopUserData := workshop.UserData(usrDataDir, s.project.ProjectId, wf.Name)
+		workshopUserData := workshop.UserData(userDataDir, s.project.ProjectId, wf.Name)
 		exist, _, _ := osutil.ExistsIsDir(workshopUserData)
 		c.Assert(exist, check.Equals, true)
 
@@ -247,7 +246,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	}
 
 	// Make sure project directory is cleaned up
-	projectContent := workshop.ProjectUserData(usrDataDir, s.project.ProjectId)
+	projectContent := workshop.ProjectUserData(userDataDir, s.project.ProjectId)
 	exist, _, _ := osutil.ExistsIsDir(projectContent)
 	c.Assert(exist, check.Equals, false)
 

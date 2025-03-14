@@ -225,16 +225,12 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 }
 
 func sketchSdkChannel(projectId, w string) string {
-	user, err := osutil.UserMaybeSudoUser()
+	user, env, err := osutil.CurrentUserAndEnv()
 	if err != nil {
 		return "~"
 	}
 
-	userDataDir, err := workshop.UserDataRootDir(user.Username)
-	if err != nil {
-		return "~"
-	}
-
+	userDataDir := workshop.UserDataRootDir(user.HomeDir, env)
 	return contractHomeDirectory(workshop.SketchSdkDir(userDataDir, projectId, w))
 }
 

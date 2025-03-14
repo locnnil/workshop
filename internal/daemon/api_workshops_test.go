@@ -901,8 +901,7 @@ func (s *apiSuite) mockSdkVolumes(c *check.C, sdks map[string]testSdk) {
 }
 
 func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
-	userDataDir, err := workshop.UserDataRootDir(s.user.Username)
-	c.Assert(err, check.IsNil)
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 	sdkpath := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
 	metadir := filepath.Join(sdkpath, "meta")
 	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)

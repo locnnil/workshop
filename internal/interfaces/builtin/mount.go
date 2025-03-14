@@ -21,7 +21,6 @@ package builtin
 
 import (
 	"fmt"
-	"os/user"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -191,7 +190,7 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	return source, nil
 }
 
-func (iface *mountInterface) hostSource(usr *user.User, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *mountInterface) hostSource(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
 	err := slot.Attr("host-source", &source)
 	if err == nil {
@@ -199,11 +198,7 @@ func (iface *mountInterface) hostSource(usr *user.User, plug *interfaces.Connect
 	}
 
 	// default dir: <sdk>/<plug>
-	userDataDir, err := workshop.UserDataRootDir(usr.Username)
-	if err != nil {
-		return source, err
-	}
-
+	userDataDir := workshop.UserDataRootDir(spec.User.HomeDir, spec.Environment)
 	source = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
 	if err = slot.SetAttr("host-source", source); err != nil {
 		return "", err
@@ -219,7 +214,7 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	if slot.Sdk().Type == sdk.System {
-		source, err := iface.hostSource(spec.User, plug, slot)
+		source, err := iface.hostSource(spec, plug, slot)
 		if err != nil {
 			return err
 		}

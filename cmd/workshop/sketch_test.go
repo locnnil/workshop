@@ -113,12 +113,14 @@ func (m *workshopSketch) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 	m.prjId = "42424242"
 	m.prjDir = c.MkDir()
-	xdgHome := c.MkDir()
-	m.userDataDir = filepath.Join(xdgHome, "workshop")
+
 	usr := &user.User{HomeDir: c.MkDir()}
-	m.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return usr, map[string]string{"XDG_DATA_HOME": xdgHome}, nil
+
+	m.restoreUserEnv = osutil.FakeCurrentUserAndEnv(func() (*user.User, map[string]string, error) {
+		return usr, map[string]string{}, nil
 	})
+
+	m.userDataDir = workshop.UserDataRootDir(usr.HomeDir, nil)
 }
 
 func (m *workshopSketch) TearDownTest(c *check.C) {
