@@ -79,7 +79,7 @@ func (c *CmdList) runList() error {
 	}
 
 	if !c.global {
-		project, err := cli.Project(c.root.project)
+		project, err := cli.Project(c.root.project())
 		if err != nil {
 			return err
 		}

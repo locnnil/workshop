@@ -91,7 +91,7 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 
 func (c *CmdChanges) changes(cli *client.Client) ([]*client.Change, error) {
 	clientOpts := client.ChangesOptions{
-		ProjectPath: c.root.project,
+		ProjectPath: c.root.project(),
 		Selector:    client.ChangesAll,
 	}
 

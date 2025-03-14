@@ -72,16 +72,27 @@ func (s *BaseWorkshopSuite) Stderr() string {
 	return s.stderr.String()
 }
 
-func (s *BaseWorkshopSuite) TestWorkshopInfoList(c *check.C) {
-	prjId := "42424242"
-	prjDir := c.MkDir()
+type rootSuite struct {
+	BaseWorkshopSuite
+	prjDir string
+	prjId  string
+}
 
+var _ = check.Suite(&rootSuite{})
+
+func (s *rootSuite) SetUpTest(c *check.C) {
+	s.prjDir = c.MkDir()
+	s.prjId = "42424242"
+	s.BaseWorkshopSuite.SetUpTest(c)
+}
+
+func (s *rootSuite) TestWorkshopNameCompletion(c *check.C) {
 	statuses := []string{"Ready", "Pending", "Waiting", "Stopped", "Error"}
 	expected := make(map[string][]string)
 
 	var wsInfo []*client.WorkshopInfo
 	for i := range 20 {
-		index := rand.Intn(len(statuses) - 1)
+		index := rand.Intn(len(statuses))
 		status := statuses[index]
 		info := &client.WorkshopInfo{
 			ProjectId: "42424242",
@@ -96,14 +107,37 @@ func (s *BaseWorkshopSuite) TestWorkshopInfoList(c *check.C) {
 		Workshops: wsInfo,
 	}
 
-	cmd := &CmdRoot{}
+	cmd := &CmdRoot{cwd: s.prjDir}
 
-	s.listRedirectHelper(c, w, prjId, prjDir, len(statuses)*2)
+	s.listRedirectHelper(c, w, s.prjId, s.prjDir, len(statuses)*8)
 
 	for _, st := range statuses {
-		result, compDirective := cmd.completeWorkshopName([]string{st})(cmd.Command(prjDir), nil, "")
+		single := cmd.completeWorkshopName([]string{st})
+		multiple := cmd.completeWorkshopNames([]string{st})
+
+		result, compDirective := single(cmd.Command(), nil, "")
 		c.Check(result, check.DeepEquals, expected[st])
 		c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+
+		if len(expected[st]) > 0 {
+			result, compDirective = single(cmd.Command(), expected[st][:1], "")
+			c.Check(result, check.HasLen, 0)
+			c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+		}
+
+		result, compDirective = multiple(cmd.Command(), nil, "")
+		c.Check(result, check.DeepEquals, expected[st])
+		c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+
+		if len(expected[st]) > 0 {
+			result, compDirective = multiple(cmd.Command(), expected[st][:1], "")
+			rest := expected[st][1:]
+			if len(rest) == 0 {
+				rest = nil
+			}
+			c.Check(result, check.DeepEquals, rest)
+			c.Check(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+		}
 	}
 }
 

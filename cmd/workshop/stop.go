@@ -43,7 +43,7 @@ $ workshop stop nimble jazzy
 The name is optional if the project has only one workshop:
 $ workshop stop`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready"}),
+		ValidArgsFunction: c.root.completeWorkshopNames([]string{"Ready"}),
 	}
 
 	return cmd
@@ -59,7 +59,7 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 
 	c.skipAbort = true
 
-	project, err := cli.Project(c.root.project)
+	project, err := cli.Project(c.root.project())
 	if err != nil {
 		return err
 	}

@@ -247,7 +247,8 @@ $ workshop shell nimble
 
 The name is optional if the project has only one workshop:
 $ workshop shell`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
 
 	return cmd
@@ -292,7 +293,8 @@ Scripts can accept arguments,
 if a separator or a workshop name is provided:
 $ workshop run -- build --debug
 `,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.complete,
 	}
 
 	cmd.Flags().SortFlags = false
@@ -347,6 +349,41 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 	return exec(c.root, &c.flags, args)
 }
 
+func (c *CmdRun) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	scriptIdx := 1
+	dashIdx := len(os.Args) - 2 - len(args)
+	// TODO: Replace with cmd.ArgsLenAtDash() == 0.
+	// See https://github.com/spf13/cobra/issues/1877.
+	if dashIdx >= 0 && os.Args[dashIdx] == "--" {
+		scriptIdx = 0
+	} else if scriptIdx < len(args) && args[scriptIdx] == "--" {
+		scriptIdx++
+	}
+
+	if scriptIdx > len(args) {
+		// Just complete workshop names, even though script names are valid
+		// if there's a single workshop.
+		return c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
+	}
+	if scriptIdx < len(args) {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	scriptsCmd := CmdScripts{root: c.root}
+	scripts, err := scriptsCmd.scripts(args)
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+	names := make([]string, 0, len(scripts))
+	for name := range scripts {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+
+	return names, cobra.ShellCompDirectiveNoFileComp
+}
+
 func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
 	f.StringVarP(&flags.WorkingDir, "cwd", "w", "/project", "Set the working directory in the workshop.")
 	f.StringArrayVar(&flags.Env, "env", []string{}, "Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.")
@@ -367,7 +404,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		return err
 	}
 
-	project, err := cli.Project(root.project)
+	project, err := cli.Project(root.project())
 	if err != nil {
 		return err
 	}
@@ -594,7 +631,7 @@ type CmdScripts struct {
 
 func (c *CmdScripts) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "scripts",
+		Use:   "scripts [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: shortScriptsHelp,
 		Long:  longScriptsHelp,
@@ -604,32 +641,15 @@ $ workshop scripts nimble
 
 The name is optional if the project has only one workshop:
 $ workshop scripts`,
-		RunE: c.Run,
+		RunE:              c.Run,
+		ValidArgsFunction: c.root.completeWorkshopName(nil),
 	}
 
 	return cmd
 }
 
 func (c *CmdScripts) Run(cmd *cobra.Command, av []string) error {
-	cli, err := c.root.client()
-	if err != nil {
-		return err
-	}
-
-	p, err := cli.Project(c.root.project)
-	if err != nil {
-		return err
-	}
-
-	if len(av) == 0 {
-		name, err := cli.SingleWorkshopName(p)
-		if err != nil {
-			return err
-		}
-		av = []string{name}
-	}
-
-	scripts, err := cli.ListScripts(p.Id, av[0])
+	scripts, err := c.scripts(av)
 	if err != nil || len(scripts) == 0 {
 		return err
 	}
@@ -637,4 +657,26 @@ func (c *CmdScripts) Run(cmd *cobra.Command, av []string) error {
 	encoder := yaml.NewEncoder(Stdout)
 	encoder.SetIndent(2)
 	return encoder.Encode(scripts)
+}
+
+func (c *CmdScripts) scripts(av []string) (map[string]client.Script, error) {
+	cli, err := c.root.client()
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := cli.Project(c.root.project())
+	if err != nil {
+		return nil, err
+	}
+
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(p)
+		if err != nil {
+			return nil, err
+		}
+		av = []string{name}
+	}
+
+	return cli.ListScripts(p.Id, av[0])
 }

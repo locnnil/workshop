@@ -64,7 +64,7 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	err = gencodo.GenDocsTree(
-		c.root.Command(c.root.project),
+		c.root.Command(),
 		docDir,
 		td,
 		filePrepender,

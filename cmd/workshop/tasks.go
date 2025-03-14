@@ -140,17 +140,17 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 	}
 
 	cli, err := c.root.client()
-
 	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
 	changesCmd := CmdChanges{
 		root: c.root,
 	}
-
 	changes, err := changesCmd.changes(cli)
 	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
 

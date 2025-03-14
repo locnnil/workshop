@@ -14,11 +14,12 @@ import (
 )
 
 type CmdRoot struct {
-	cli     *client.Client
-	project string
+	cwd string
+	cli *client.Client
+	prj string
 }
 
-func (c *CmdRoot) Command(cwd string) *cobra.Command {
+func (c *CmdRoot) Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "workshop",
 		// Avoid printing errors twice
@@ -26,7 +27,6 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 		SilenceUsage:     true,
 		TraverseChildren: true,
 
-		PersistentPreRunE: c.preRun,
 		PersistentPostRun: c.postRun,
 	}
 
@@ -53,7 +53,7 @@ func (c *CmdRoot) Command(cwd string) *cobra.Command {
 	cmd.AddCommand((&CmdSketches{root: c}).Command())
 	cmd.AddCommand((&CmdDocs{root: c}).Command())
 
-	cmd.PersistentFlags().StringVarP(&c.project, "project", "p", cwd, "Specify the project's directory path.")
+	cmd.PersistentFlags().StringVarP(&c.prj, "project", "p", c.cwd, "Specify the project's directory path.")
 	cmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
 
 	cmd.DisableAutoGenTag = true
@@ -76,55 +76,76 @@ func (c *CmdRoot) client() (*client.Client, error) {
 	return cli, err
 }
 
-func (c *CmdRoot) preRun(cmd *cobra.Command, args []string) error {
-	project, err := filepath.Abs(c.project)
-	if err != nil {
-		return err
+func (c *CmdRoot) project() string {
+	if c.cwd == "" {
+		return c.prj
 	}
-	c.project = project
-	return nil
+	// Avoid filepath.Abs because it returns an error.
+	return abs(c.cwd, c.prj)
+}
+
+func abs(cwd, path string) string {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
+	return filepath.Join(cwd, path)
 }
 
 func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
-	if c.cli != nil {
+	if c.cli != nil && cmd.Name() != cobra.ShellCompRequestCmd {
 		maybePresentWarnings(c.cli.WarningsSummary())
 	}
 }
 
-type ValidArgsFunction func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
-
-func (c *CmdRoot) completeWorkshopName(status []string) ValidArgsFunction {
+func (c *CmdRoot) completeWorkshopName(status []string) cobra.CompletionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		cli, err := c.client()
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
+		if len(args) > 0 {
+			return []string{}, cobra.ShellCompDirectiveNoFileComp
 		}
 
-		project, err := cli.Project(c.project)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		desiredStatus := func(s string) bool {
-			if status == nil {
-				return true
-			}
-			return slices.Contains(status, s)
-		}
-
-		var workshops []string
-		for _, workshop := range workshopInfo {
-			if desiredStatus(workshop.Status) && !slices.Contains(args, workshop.Name) {
-				workshops = append(workshops, workshop.Name)
-			}
-		}
-		return workshops, cobra.ShellCompDirectiveNoFileComp
+		return c.doCompleteWorkshopNames(args, status)
 	}
+}
+
+func (c *CmdRoot) completeWorkshopNames(status []string) cobra.CompletionFunc {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return c.doCompleteWorkshopNames(args, status)
+	}
+}
+
+func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]string, cobra.ShellCompDirective) {
+	cli, err := c.client()
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	project, err := cli.Project(c.project())
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	desiredStatus := func(s string) bool {
+		if status == nil {
+			return true
+		}
+		return slices.Contains(status, s)
+	}
+
+	var workshops []string
+	for _, workshop := range workshopInfo {
+		if desiredStatus(workshop.Status) && !slices.Contains(args, workshop.Name) {
+			workshops = append(workshops, workshop.Name)
+		}
+	}
+	return workshops, cobra.ShellCompDirectiveNoFileComp
 }
 
 var (
