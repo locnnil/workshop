@@ -48,3 +48,14 @@ List changes for all workshops in the current project directory:
    $ workshop changes
 
 
+
+
+
+.. rubric:: See also
+
+Reference:
+
+
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_list`
+

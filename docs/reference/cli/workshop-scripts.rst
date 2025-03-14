@@ -11,7 +11,7 @@ List workshop scripts.
 
 .. code-block:: console
 
-   $ workshop scripts [flags]
+   $ workshop scripts [<WORKSHOP>] [flags]
 
 .. rubric:: Description
 
@@ -34,5 +34,7 @@ The name is optional if the project has only one workshop:
 .. code-block:: console
 
    $ workshop scripts
+
+
 
 
