@@ -281,7 +281,8 @@ named :file:`setup-base`:
    :caption: setup-base
 
    snap install --classic go
-   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
+   echo "PATH=/home/workshop/go/bin:$PATH" \
+   | tee -a /home/workshop/.profile
    
    # Create a mod cache directory to be mounted using the mount interface
    cache=$(sudo -u workshop -- go env GOMODCACHE)
@@ -310,7 +311,9 @@ named :file:`save-state` and :file:`restore-state`:
 .. code-block:: shell
    :caption: save-state
 
-   sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars
+   sudo -u workshop go env -changed \
+   | sed "s/='\(.*\)'/=\1/" \
+   | tee "$SDK_STATE_DIR"/env-vars
 
 
 .. code-block:: shell
@@ -453,10 +456,10 @@ Use the SDK
 The resulting SDK can be accessed by |ws_markup| as follows:
 
 .. code-block:: yaml
-   :caption: .workshop.golang.yaml
+   :caption: .workshop.dev.yaml
    :emphasize-lines: 2,4,5
 
-   name: golang
+   name: dev
    base: ubuntu@24.04
    sdks:
      - name: go
