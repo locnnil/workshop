@@ -217,7 +217,7 @@ and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
    .. code-block:: yaml
       :caption: sdkcraft.yaml
-      :emphasize-lines: 15-18
+      :emphasize-lines: 11-14
 
       name: go
       base: ubuntu@24.04
@@ -281,8 +281,7 @@ named :file:`setup-base`:
    :caption: setup-base
 
    snap install --classic go
-   echo "PATH=/home/workshop/go/bin:$PATH" \
-   | tee -a /home/workshop/.profile
+   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
    
    # Create a mod cache directory to be mounted using the mount interface
    cache=$(sudo -u workshop -- go env GOMODCACHE)
@@ -311,9 +310,7 @@ named :file:`save-state` and :file:`restore-state`:
 .. code-block:: shell
    :caption: save-state
 
-   sudo -u workshop go env -changed \
-   | sed "s/='\(.*\)'/=\1/" \
-   | tee "$SDK_STATE_DIR"/env-vars
+   sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars
 
 
 .. code-block:: shell
