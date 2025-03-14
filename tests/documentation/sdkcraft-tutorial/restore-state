@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+while IFS='=' read -r key value; do
+    sudo -u workshop go env -w "$key=$value"
+done < "$SDK_STATE_DIR"/env-vars

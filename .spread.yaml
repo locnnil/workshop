@@ -8,7 +8,7 @@ environment:
   SDK_STORE_BUCKET_DIR: /data/sdkstore
   IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |
-  test -f tests/*.snap || snapcraft -o tests/
+  test -f tests/workshop*.snap || snapcraft -o tests/
   cat <&3 >&4
 backends:
   lxd:
@@ -39,6 +39,9 @@ suites:
     kill-timeout: 30m
   tests/documentation/:
     summary: Documentation tests
+    repack: |
+      test -f tests/sdkcraft*.snap
+      cat <&3 >&4
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment

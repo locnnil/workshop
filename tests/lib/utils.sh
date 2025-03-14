@@ -65,6 +65,7 @@ function prepare_environment() {
 
 function cleanup_environment() {
     snap remove workshop --purge
+    snap remove sdkcraft --purge
     find /workshop -name .workshop.lock -delete
 }
 
@@ -114,4 +115,18 @@ function publish_test_sdks() {
 # Workshop sub-command wrappers
 function workshop_exec() {
     sudo -u ubuntu -- workshop "$@" 2>&1
+}
+
+function run_sdkcraft() {
+    sdkcraft "$@"
+}
+
+# Install sdkcraft from a local snap file
+function install_sdkcraft() {    
+    if stat /sdkcraft/tests/*.snap 2>/dev/null; then
+        snap install --classic --dangerous /sdkcraft/tests/*.snap
+    else
+        echo "Expected a snap to exist in /sdkcraft/tests/"
+        exit 1
+    fi
 }

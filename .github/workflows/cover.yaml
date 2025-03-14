@@ -19,6 +19,7 @@ jobs:
   # dependable method by which to share the artifacts
   spread:
     uses: ./.github/workflows/spread.yaml
+    secrets: inherit
   unit-tests:
     uses: ./.github/workflows/unit-tests.yaml
 

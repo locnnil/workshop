@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+snap install --classic go
+echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
+
+# Create a mod cache directory to be mounted using the content interface
+cache=$(sudo -u workshop -- go env GOMODCACHE)
+sudo -u workshop -- mkdir -p "$cache"
