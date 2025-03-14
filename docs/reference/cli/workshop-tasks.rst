@@ -11,7 +11,7 @@ List tasks for a specific change.
 
 .. code-block:: console
 
-   $ workshop tasks <CHANGE ID> [flags]
+   $ workshop tasks [<CHANGE ID>] [flags]
 
 .. rubric:: Description
 
@@ -42,5 +42,14 @@ List the tasks under change ID 42:
 .. code-block:: console
 
    $ workshop tasks 42
+
+
+List the tasks under the most recent change to the project:
+
+.. code-block:: console
+
+   $ workshop tasks
+
+
 
 
