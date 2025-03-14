@@ -5,6 +5,12 @@ import (
 )
 
 func UserDataRootDir(homedir string, env map[string]string) string {
+	// Use $HOME in preference of the user's home directory, if set.
+	// https://specifications.freedesktop.org/basedir-spec/latest/
+	if env["HOME"] != "" {
+		homedir = env["HOME"]
+	}
+
 	path := filepath.Join(homedir, ".local", "share")
 	dataDir := env["XDG_DATA_HOME"]
 	if dataDir != "" {

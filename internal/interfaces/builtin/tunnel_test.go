@@ -947,6 +947,7 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
 	testuser.Uid = "1111"
+	defer func() { testuser.Uid = "" }()
 
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
 	c.Assert(err, check.IsNil)
@@ -965,8 +966,6 @@ slots:
 		Direction: workshop.WorkshopToHost,
 	}
 	c.Check(deviceSpec.Profile.Tunnels, check.DeepEquals, []workshop.Tunnel{{ProxyEntry: expectedEntry}})
-
-	testuser.Uid = ""
 }
 
 func (s *tunnelSuite) TestExpandOtherDirectory(c *check.C) {

@@ -16,30 +16,17 @@ import (
 )
 
 type desktopSuite struct {
-	iface          interfaces.Interface
-	projectId      string
-	restoreUserEnv func()
-	env            map[string]string
+	iface     interfaces.Interface
+	projectId string
 }
 
 var _ = check.Suite(&desktopSuite{
 	iface: builtin.MustInterface("desktop"),
 })
 
-func (s *desktopSuite) SetUpTest(c *check.C) {
-	s.env = map[string]string{"XDG_RUNTIME_DIR": "/tmp"}
-}
-
 func (s *desktopSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
 	testuser.HomeDir = c.MkDir()
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, s.env, nil
-	})
-}
-
-func (s *desktopSuite) TearDownSuite(c *check.C) {
-	s.restoreUserEnv()
 }
 
 func (s *desktopSuite) TestName(c *check.C) {
@@ -51,6 +38,11 @@ func (s *desktopSuite) TestInterfaces(c *check.C) {
 }
 
 func (s *desktopSuite) TestDesktopInterfaceWayland(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "WAYLAND_DISPLAY": "wayland-1"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -67,8 +59,6 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
-
-	s.env["WAYLAND_DISPLAY"] = "wayland-1"
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
@@ -85,6 +75,11 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopInterfaceX11(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "DISPLAY": ":0"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -101,8 +96,6 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
-
-	s.env["DISPLAY"] = ":0"
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
@@ -119,6 +112,11 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopInterfaceBoth(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "DISPLAY": ":0", "WAYLAND_DISPLAY": "wayland-0"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -135,9 +133,6 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
-
-	s.env["WAYLAND_DISPLAY"] = "wayland-0"
-	s.env["DISPLAY"] = ":0"
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
@@ -163,6 +158,11 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopInterfaceXauth(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "DISPLAY": ":0", "XAUTHORITY": "/tmp/.Xauthority"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -179,9 +179,6 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
-
-	s.env["DISPLAY"] = ":0"
-	s.env["XAUTHORITY"] = "/tmp/.Xauthority"
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"), Where: "/var/lib/workshop/run/Xauthority"}
@@ -189,6 +186,11 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopInterfaceXauthFail(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "DISPLAY": ":0"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -206,14 +208,17 @@ slots:
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
 
-	s.env["DISPLAY"] = ":0"
-
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	_, ok := deviceSpec.Profile.Mounts["consumer-xauth"]
 	c.Assert(!ok, check.Equals, true)
 }
 
 func (s *desktopSuite) TestDesktopEnvWaylandFail(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -235,6 +240,11 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopEnvXDGFail(c *check.C) {
+	env := map[string]string{"XDG_RUNTIME_DIR": ""}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -251,8 +261,6 @@ slots:
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
 	c.Assert(err, check.IsNil)
-
-	s.env["XDG_RUNTIME_DIR"] = ""
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.ErrorMatches, "XDG_RUNTIME_DIR is either empty.*")
 }

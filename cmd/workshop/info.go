@@ -89,7 +89,11 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	home, _ := os.LookupEnv("HOME")
 	if home == "" {
-		return fmt.Errorf("cannot show info: $HOME is not set")
+		usr, err := osutil.UserCurrent()
+		if err != nil || usr.HomeDir == "" {
+			return fmt.Errorf("cannot show info: could not determine home directory")
+		}
+		home = usr.HomeDir
 	}
 
 	xdg, _ := os.LookupEnv("XDG_DATA_HOME")

@@ -30,15 +30,14 @@ import (
 )
 
 type backendDeviceSuite struct {
-	ctx            context.Context
-	be             *lxdbackend.Backend
-	client         lxd.InstanceServer
-	repo           *interfaces.Repository
-	usr            *user.User
-	pid            string
-	env            map[string]string
-	restoreUser    func()
-	restoreUserEnv func()
+	ctx         context.Context
+	be          *lxdbackend.Backend
+	client      lxd.InstanceServer
+	repo        *interfaces.Repository
+	usr         *user.User
+	pid         string
+	restoreUser func()
+	restoreEnv  func()
 }
 
 var _ = check.Suite(&backendDeviceSuite{})
@@ -90,14 +89,13 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 		Gid:      "1000",
 		HomeDir:  c.MkDir(),
 	}
-	f.env = make(map[string]string)
 
 	f.restoreUser = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil
 	})
 
-	f.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return f.usr, f.env, nil
+	f.restoreEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 
 	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
@@ -116,7 +114,7 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.usr.Username))
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.usr.Username))
-	f.restoreUserEnv()
+	f.restoreEnv()
 	f.client.Disconnect()
 }
 
@@ -276,7 +274,9 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	b := lxd_device.Backend{}
 	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
 
-	f.env["XDG_RUNTIME_DIR"] = c.MkDir()
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return map[string]string{"XDG_RUNTIME_DIR": c.MkDir()}, nil
+	})()
 
 	err = b.Setup(f.ctx, cref, f.repo)
 	c.Assert(err, check.IsNil)
@@ -357,7 +357,9 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 	b := lxd_device.Backend{}
 	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
 
-	f.env["SSH_AUTH_SOCK"] = "/run/.workshop.socket"
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return map[string]string{"SSH_AUTH_SOCK": "/run/.workshop.socket"}, nil
+	})()
 
 	// Setup profile.
 	err = b.Setup(f.ctx, cref, f.repo)
@@ -414,10 +416,14 @@ func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
 	b := lxd_device.Backend{}
 	cref := sdk.Ref{ProjectId: "42424242", Workshop: "test", Sdk: "consumer"}
 
-	f.env["XDG_RUNTIME_DIR"] = "/run"
-	f.env["SSH_AUTH_SOCK"] = "/run/.workshop.socket"
-	f.env["WAYLAND_DISPLAY"] = "1"
-	f.env["DISPLAY"] = ":0"
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return map[string]string{
+			"XDG_RUNTIME_DIR": "/tmp",
+			"SSH_AUTH_SOCK":   "/run/.workshop.socket",
+			"WAYLAND_DISPLAY": "1",
+			"DISPLAY":         ":0",
+		}, nil
+	})()
 
 	setupSshAgent := func() {
 		_, err = f.repo.Connect(sshConnRef, nil, nil, nil, nil, nil)

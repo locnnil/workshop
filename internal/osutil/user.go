@@ -32,6 +32,7 @@ var (
 	UserCurrent       = user.Current
 	UserLookup        = user.Lookup
 	UserLookupGroup   = user.LookupGroup
+	UserEnv           = userEnvironment
 	UserAndEnv        = userAndEnv
 	CurrentUserAndEnv = currentUserAndEnv
 )
@@ -178,7 +179,7 @@ func userAndEnv(name string) (*user.User, map[string]string, error) {
 		return nil, nil, err
 	}
 
-	env, err := userEnvironment(usr)
+	env, err := UserEnv(usr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -217,6 +218,13 @@ func userEnvironment(user *user.User) (map[string]string, error) {
 
 	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
 	return ParseEnvironment(rawEnv)
+}
+
+func FakeUserEnvironment(f func(user *user.User) (map[string]string, error)) func() {
+	UserEnv = f
+	return func() {
+		UserEnv = userEnvironment
+	}
 }
 
 func FakeUserAndEnv(f func(name string) (*user.User, map[string]string, error)) func() {

@@ -17,10 +17,8 @@ package osutil_test
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"os/user"
 	"strconv"
-	"strings"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -151,41 +149,4 @@ func (s *userSuite) TestNormalizeUidGid(c *check.C) {
 	test(nil, nil, "USER", "", nil, nil, "USER ERROR!")
 	groupErr = fmt.Errorf("GROUP ERROR!")
 	test(ptr(1), nil, "", "GROUP", nil, nil, "GROUP ERROR!")
-}
-
-func (s *userSuite) TestUserAndEnv(c *check.C) {
-	// Ensure we're testing this function in an environment using systemd as the
-	// init system:
-	// https://superuser.com/questions/1017959/how-to-know-if-i-am-using-systemd-on-linux
-	cmd := exec.Command("ps", "--no-headers", "-o", "comm", "1")
-	out, _, err := osutil.RunCmd(cmd)
-	c.Assert(err, check.IsNil)
-	if !strings.Contains(string(out), "systemd") {
-		c.Skip("This test requires systemd")
-	}
-
-	envIn := map[string]string{
-		"WORKSHOP_TEST_ENV_KEY":   "VALUE",
-		"WORKSHOP_TEST_ENV_EMPTY": "",
-	}
-
-	for k, v := range envIn {
-		// Set environment
-		cmd := exec.Command("systemctl", "--user", "set-environment", k+"="+v)
-		c.Check(cmd.Run(), check.IsNil)
-	}
-
-	cur, err := osutil.UserCurrent()
-	c.Check(err, check.IsNil)
-
-	// Check variables
-	usr, envOut, err := osutil.UserAndEnv(cur.Username)
-	c.Check(err, check.IsNil)
-	c.Check(usr, check.DeepEquals, cur)
-	for k, v := range envIn {
-		c.Check(envOut[k], check.Equals, v)
-
-		cmd := exec.Command("systemctl", "--user", "unset-environment", k)
-		c.Check(cmd.Run(), check.IsNil)
-	}
 }

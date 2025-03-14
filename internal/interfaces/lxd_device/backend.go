@@ -347,18 +347,9 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 	defer fs.Close()
 
-	uname, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key user not found")
-	}
-	user, err := osutil.UserLookup(uname)
-	if err != nil {
-		return err
-	}
-
 	reload := false
 	for _, mnt := range spec.Profile.Mounts {
-		rld, err := installMount(user, fs, mnt)
+		rld, err := installMount(spec.User, fs, mnt)
 		if err != nil {
 			return err
 		}
@@ -383,7 +374,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, user, spec.Environment, sdkInfo.Workshop)
+		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment, sdkInfo.Workshop)
 		if err != nil {
 			return err
 		}
