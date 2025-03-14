@@ -1002,7 +1002,7 @@ runcmd:
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
 		"user.workshop.file":       string(f),
-		"user.workshop.sdks":       "",
+		"user.workshop.sdks":       "{}",
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic

@@ -7,17 +7,20 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/spf13/afero"
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 )
 
 var (
@@ -279,6 +282,28 @@ func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
 	return infos, nil
 }
 
+// Returns the list of SDKs of the workshop sorted by installation order.
+func (w *Workshop) SdksByInstallOrder() []sdk.Setup {
+	// Sort the SDKs in installation order.
+	orderMap := make(map[string]int)
+	for i, v := range w.File.Sdks {
+		orderMap[v.Name] = i
+	}
+	sdks := slices.Collect(maps.Values(w.Sdks))
+	sort.Slice(sdks, func(i, j int) bool {
+		return orderMap[sdks[i].Name] < orderMap[sdks[j].Name]
+	})
+
+	// The workshop definition which defines the install order may or may not
+	// contain the system SDK declared in an arbitrary place. Therefore, we have
+	// to make sure that the system SDK goes first.
+	idx := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) })
+	if idx != -1 {
+		sdks[0], sdks[idx] = sdks[idx], sdks[0]
+	}
+	return sdks
+}
+
 // Mounts returns a map of active mounts,
 // given a map of SDK info as returned by SdkInfos.
 func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
@@ -348,7 +373,7 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 	defer reverter.Fail()
 
 	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
-	metasrc := filepath.Join("meta", "sdk.yaml")
+	metasrc := system.SdkMeta
 	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
 
 	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {

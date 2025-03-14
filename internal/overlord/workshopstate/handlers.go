@@ -107,7 +107,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		}
 	})
 
-	if len(sdkSnapshot) == 0 {
+	if sdkSnapshot == "" {
 		if err = m.backend.LaunchOrRebuildWorkshop(ctx, &wf); err != nil {
 			return err
 		}

@@ -20,6 +20,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -33,21 +34,9 @@ const (
 	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
 
-var checkHealthTimeout = 5 * time.Second
-
 var (
-	systemSetup = sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)}
+	checkHealthTimeout = 5 * time.Second
 )
-
-func ensureSystemFirst[T string | sdk.Setup](items []T, match func(T) bool, systemSdk T) []T {
-	idx := slices.IndexFunc(items, match)
-	if idx != -1 {
-		items[0], items[idx] = items[idx], items[0]
-	} else {
-		items = slices.Insert(items, 0, systemSdk)
-	}
-	return items
-}
 
 func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
@@ -91,7 +80,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
 
-		sdks, err = sdkStoreInfo(sto, ctx, projectId, file)
+		sdks, err = sdkInfos(sto, ctx, projectId, file)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +89,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		for _, s := range sdks {
 			candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 		}
-		candidates = ensureSystemFirst(candidates, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) }, systemSetup)
 
 		tasks := launch(w.state, file, candidates, project)
 		taskset = append(taskset, tasks)
@@ -108,18 +96,41 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	return taskset, nil
 }
 
-func sdkStoreInfo(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
+func systemSdkInfo(pid, wname string) (sdk.SdkResult, error) {
+	ybuf, err := system.SystemSdkFs.ReadFile(system.SdkMeta)
+	if err != nil {
+		return sdk.SdkResult{}, err
+	}
+	info, err := sdk.ReadSdkInfo(ybuf, pid, wname)
+	if err != nil {
+		return sdk.SdkResult{}, err
+	}
+	info.Revision = sdk.R(-1)
+	return sdk.SdkResult{Info: info}, nil
+}
+
+func sdkInfos(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		// "system" SDK is bootstrapped and installed by Workshop locally in a
-		// separate task.
 		if sdk.IsSystem(sd.Name) {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
 		acts = append(acts, act)
 	}
-	return sto.SdkAction(ctx, acts)
+
+	infos, err := sto.SdkAction(ctx, acts)
+	if err != nil {
+		return nil, err
+	}
+
+	sinfo, err := systemSdkInfo(projectid, file.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	infos = slices.Insert(infos, 0, sinfo)
+	return infos, nil
 }
 
 func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
@@ -457,7 +468,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 		installOrder: make([]string, 0),
 	}
 
-	infos, err := sdkStoreInfo(sto, ctx, w.Project.ProjectId, file)
+	infos, err := sdkInfos(sto, ctx, w.Project.ProjectId, file)
 	if err != nil {
 		return nil, err
 	}
@@ -466,30 +477,24 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 	for _, s := range infos {
 		candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
-	candidates = ensureSystemFirst(candidates, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) }, systemSetup)
 
 	// Restore the order of SDKs installed in the running workshop.
-	prevOrder := []string{}
-	for _, s := range w.File.Sdks {
-		prevOrder = append(prevOrder, s.Name)
-	}
-	prevOrder = ensureSystemFirst(prevOrder, sdk.IsSystem, sdk.System.String())
+	installed := w.SdksByInstallOrder()
 
 	// Determine if a workshop can be partially updated.
 	lastIntact := 0
 	for ni, s := range candidates {
 		// Do we have this SDK in the same order as in the running workshop?
-		if ni < len(prevOrder) && prevOrder[ni] == s.Name {
+		if ni < len(installed) && installed[ni].Name == s.Name {
 			// Has this SDK had any updates?
-			if !maybeRefresh(w.Sdks[s.Name], s) {
-				plan.intact = append(plan.intact, s)
-				// No updates to the SDK - reuse its snapshot and keep looking.
-				// Otherwise, break the loop as the rest require to be reinstalled.
-				plan.sdkSnapshot = s.Name
-				lastIntact = ni
-				continue
+			if maybeRefresh(w.Sdks[s.Name], s) {
+				break
 			}
-			break
+			plan.intact = append(plan.intact, s)
+			// No updates to the SDK - reuse its snapshot and keep looking.
+			// Otherwise, break the loop as the rest require to be reinstalled.
+			plan.sdkSnapshot = s.Name
+			lastIntact = ni
 		}
 	}
 
