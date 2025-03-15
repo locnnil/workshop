@@ -7,18 +7,25 @@ import (
 	"strconv"
 
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-func NewSpecification(user *user.User, sdk string) *Specification {
-	return &Specification{
-		devices: make(map[string]map[string]string),
-		config:  make(map[string]string),
-		Profile: workshop.NewSdkProfile(sdk),
-		User:    user,
+func NewSpecification(user string, sdk string) (*Specification, error) {
+	usr, env, err := osutil.UserAndEnv(user)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Specification{
+		devices:     make(map[string]map[string]string),
+		config:      make(map[string]string),
+		Profile:     workshop.NewSdkProfile(sdk),
+		User:        usr,
+		Environment: env,
+	}, nil
 }
 
 type Specification struct {
@@ -27,7 +34,8 @@ type Specification struct {
 	devices map[string]map[string]string
 	config  map[string]string
 
-	User *user.User
+	User        *user.User
+	Environment map[string]string
 }
 
 // AddPermanentSlot records side-effects of having a slot.

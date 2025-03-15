@@ -20,23 +20,28 @@
 package builtin_test
 
 import (
+	"os/user"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type mountSuite struct {
-	iface     interfaces.Interface
-	projectId string
+	iface          interfaces.Interface
+	projectId      string
+	restoreUserEnv func()
+	env            map[string]string
 }
 
 func Test(t *testing.T) {
@@ -47,8 +52,17 @@ var _ = check.Suite(&mountSuite{
 	iface: builtin.MustInterface("mount"),
 })
 
-func (s *mountSuite) SetUpTest(c *check.C) {
+func (s *mountSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
+	testuser.HomeDir = c.MkDir()
+	s.env = make(map[string]string)
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, s.env, nil
+	})
+}
+
+func (s *mountSuite) TearDownSuite(c *check.C) {
+	s.restoreUserEnv()
 }
 
 func (s *mountSuite) TestName(c *check.C) {
@@ -303,7 +317,7 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
 }
 
-func (s *mountSuite) TestConnectHostWorkshop(c *check.C) {
+func (s *mountSuite) TestConnectHostWorkshopXdgUnset(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -321,12 +335,46 @@ slots:
 `, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
+
+	s.env["XDG_DATA_HOME"] = ""
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/project/42424242/mount/ws_consumer_mount.sdk")
+	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/id/42424242/ws/mount/consumer/mount")
+	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
+	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
+}
+
+func (s *mountSuite) TestConnectHostWorkshopXdgSet(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+`, s.projectId, "ws", "consumer", "mount")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: system
+base: ubuntu@22.04
+type: system
+slots:
+ mount:
+`, s.projectId, "ws", "system", "mount")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
+
+	s.env["XDG_DATA_HOME"] = c.MkDir()
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	// Validate the mount specification.
+	sourceDir := filepath.Join(s.env["XDG_DATA_HOME"], "/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
@@ -350,7 +398,8 @@ slots:
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 

@@ -33,8 +33,6 @@ var (
 	ErrVolumeAlreadyExists = errors.New("volume already exists")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
-	LookupUsername = user.Lookup
-
 	User = user.User{
 		Uid:      "1000",
 		Gid:      "1000",
@@ -229,10 +227,4 @@ func WorkshopBackend(st *state.State) Backend {
 		return cachedStore
 	}
 	panic("internal error: needing the store before managers have initialized it")
-}
-
-func FakeUserLookup(f func(name string) (*user.User, error)) func() {
-	oldUserLookup := LookupUsername
-	LookupUsername = f
-	return func() { LookupUsername = oldUserLookup }
 }

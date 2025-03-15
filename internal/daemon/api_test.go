@@ -26,6 +26,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -43,8 +44,7 @@ type apiSuite struct {
 	store      *sdk.FakeStore
 
 	workshopDir string
-	username    string
-	userhome    string
+	user        *user.User
 	installTime time.Time
 	project     workshop.Project
 	ctx         context.Context
@@ -53,7 +53,7 @@ type apiSuite struct {
 
 	restoreMuxVars    func()
 	restoreProjectId  func()
-	restoreUser       func()
+	restoreUserEnv    func()
 	restoreTime       func()
 	restoreSanitize   func()
 	restoreSecBackend func()
@@ -65,14 +65,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 
-	s.username = "testuser"
-	s.userhome = c.MkDir()
-	cur, err := user.Current()
-	c.Assert(err, check.IsNil)
-	s.restoreUser = workshop.FakeUserLookup(func(name string) (*user.User, error) {
-		c.Check(name, check.Equals, s.username)
-		return &user.User{Name: s.username, HomeDir: s.userhome, Uid: cur.Uid, Gid: cur.Gid}, nil
-	})
+	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir()}
 
 	s.project = workshop.Project{
 		Path:      s.workshopDir,
@@ -81,6 +74,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.store = &sdk.FakeStore{}
 
+	var err error
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
@@ -91,7 +85,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, s.project.ProjectId)
-	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.username)
+	s.ctx = context.WithValue(ctx, workshop.ContextUser, s.user.Username)
 
 	_, _, err = s.b.CreateOrLoadProject(s.ctx, s.project.Path)
 	c.Assert(err, check.IsNil)
@@ -99,6 +93,11 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreSanitize = sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})
 	s.secBackend = &ifacetest.TestSecurityBackend{BackendName: "api-suite"}
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
+
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return s.user, nil, nil
+	})
+
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {
@@ -106,7 +105,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.workshopDir = ""
 	s.restoreMuxVars()
 	s.restoreProjectId()
-	s.restoreUser()
+	s.restoreUserEnv()
 	s.restoreTime()
 	s.restoreSanitize()
 	s.restoreSecBackend()

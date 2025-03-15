@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/interfaces/policy"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -37,16 +38,25 @@ import (
 )
 
 type tunnelSuite struct {
-	iface     interfaces.Interface
-	projectId string
+	iface          interfaces.Interface
+	projectId      string
+	restoreUserEnv func()
 }
 
 var _ = check.Suite(&tunnelSuite{
 	iface: builtin.MustInterface("tunnel"),
 })
 
-func (s *tunnelSuite) SetUpTest(c *check.C) {
+func (s *tunnelSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
+	testuser.HomeDir = c.MkDir()
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, nil, nil
+	})
+}
+
+func (s *tunnelSuite) TearDownSuite(c *check.C) {
+	s.restoreUserEnv()
 }
 
 func (s *tunnelSuite) TestName(c *check.C) {
@@ -458,7 +468,8 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -496,7 +507,8 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -534,9 +546,10 @@ slots:
 	slot := info.Slots["tunnel-slot"]
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "cannot connect system SDK to itself")
 }
 
@@ -559,9 +572,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "cannot connect regular SDKs from the same workshop")
 }
 
@@ -585,9 +599,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "udp and tcp are incompatible")
 }
 
@@ -611,9 +626,10 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "unix and udp are incompatible")
 }
 
@@ -637,7 +653,8 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -675,7 +692,8 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -713,9 +731,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "both ports unspecified")
 }
 
@@ -739,9 +758,10 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "both ports unspecified")
 }
 
@@ -765,9 +785,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "port 0 not currently supported")
 }
 
@@ -791,9 +812,10 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "port 0 not currently supported")
 }
 
@@ -817,9 +839,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, "port 22 is privileged")
 }
 
@@ -843,7 +866,8 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -881,15 +905,10 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	u := user.User{
-		Uid:      "1111",
-		Gid:      "2222",
-		Username: "testuser",
-		HomeDir:  c.MkDir(),
-	}
-	socket := filepath.Join(u.HomeDir, ".local", "state", "app", "unix.sock")
+	socket := filepath.Join(testuser.HomeDir, ".local", "state", "app", "unix.sock")
 	c.Assert(os.MkdirAll(filepath.Dir(socket), os.ModePerm), check.IsNil)
-	deviceSpec := lxd_device.NewSpecification(&u, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -927,13 +946,11 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	u := user.User{
-		Uid:      "1111",
-		Gid:      "2222",
-		Username: "testuser",
-		HomeDir:  "/home/testhome",
-	}
-	deviceSpec := lxd_device.NewSpecification(&u, "client")
+	testuser.Uid = "1111"
+	defer func() { testuser.Uid = "" }()
+
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
@@ -971,9 +988,10 @@ slots:
 `, s.projectId, "ws", "system", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec := lxd_device.NewSpecification(&testuser, "client")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "client")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, `unexpected variable "PWD"`)
 }
 
@@ -997,19 +1015,14 @@ slots:
 `, s.projectId, "ws", "service", "tunnel-slot")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	u := user.User{
-		Uid:      "1111",
-		Gid:      "2222",
-		Username: "testuser",
-		HomeDir:  c.MkDir(),
-	}
-	deviceSpec := lxd_device.NewSpecification(&u, "system")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "system")
+	c.Assert(err, check.IsNil)
 
-	err := deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
+	err = deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot)
 	c.Check(err, check.ErrorMatches, `user "testuser" cannot create socket "/etc/shadow" for security reasons`)
 
 	fakeEtc := c.MkDir()
-	shadowLink := filepath.Join(u.HomeDir, "etc", "shadow")
+	shadowLink := filepath.Join(testuser.HomeDir, "etc", "shadow")
 	c.Assert(os.Symlink(fakeEtc, filepath.Dir(shadowLink)), check.IsNil)
 	plug.Attrs["endpoint"] = shadowLink
 	connectedPlug = interfaces.NewConnectedPlug(plug, nil, nil)

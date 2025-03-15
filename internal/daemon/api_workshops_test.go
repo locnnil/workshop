@@ -451,17 +451,21 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	w, ok := s.b.Workshops[s.project.ProjectId]["tunnels"]
 	c.Assert(ok, check.Equals, true)
 
+	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "data")
+
 	p := workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
-		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk", "data"),
+		What:  testSDKSource,
 		Where: "/opt/data",
 		Type:  workshop.HostWorkshop,
 	}
 	w.Profiles["test-sdk"] = p
 
+	testSDKSource2 := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "photos")
+
 	p = workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
-		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk-2", "photos"),
+		What:  testSDKSource2,
 		Where: "/opt/data2",
 		Type:  workshop.HostWorkshop,
 	}
@@ -514,6 +518,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 	for _, c := range result.Sdks {
 		slices.SortFunc(c.Mounts, func(a, b *Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 	}
+	c.Assert(err, check.IsNil)
 	c.Check(result, check.DeepEquals, Workshop{
 		WorkshopInfo: WorkshopInfo{
 			Name:      "tunnels",
@@ -531,7 +536,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					InstallTime: &install1,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk", "data"),
+							HostSource:     testSDKSource,
 							WorkshopTarget: "/opt/data",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
@@ -579,7 +584,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					InstallTime: &install2,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "tunnels", "test-sdk-2", "photos"),
+							HostSource:     testSDKSource2,
 							WorkshopTarget: "/opt/data2",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
@@ -643,9 +648,10 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	w, ok := s.b.Workshops[s.project.ProjectId]["somebound"]
 	c.Assert(ok, check.Equals, true)
 
+	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "somebound", "test-sdk-2", "photos")
 	p := workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
-		What:  sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+		What:  testSDKSource,
 		Where: "/opt/data2",
 		Type:  workshop.HostWorkshop,
 	}
@@ -691,7 +697,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 					InstallTime: &install1,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							HostSource:     testSDKSource,
 							WorkshopTarget: "/opt/data2",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
@@ -711,7 +717,7 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 					InstallTime: &install2,
 					Mounts: []*Mount{
 						{
-							HostSource:     sdk.SdkMountHostSource(s.userhome, s.project.ProjectId, "somebound", "test-sdk-2", "photos"),
+							HostSource:     testSDKSource,
 							WorkshopTarget: "/opt/data2",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
@@ -895,7 +901,8 @@ func (s *apiSuite) mockSdkVolumes(c *check.C, sdks map[string]testSdk) {
 }
 
 func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
-	sdkpath := sdk.WorkshopSketchSdkCurrent(s.userhome, s.project.ProjectId, ws)
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
+	sdkpath := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
 	metadir := filepath.Join(sdkpath, "meta")
 	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
 	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)

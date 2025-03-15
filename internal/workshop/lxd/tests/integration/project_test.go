@@ -15,6 +15,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -288,12 +289,12 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 	restoreId := testutil.FakeFunc(func() (string, error) { return "b8639dea", nil }, &workshop.NewProjectId)
 	defer restoreId()
 
-	restoreLookup := testutil.FakeFunc(func(username string) (*user.User, error) {
+	restoreLookup := osutil.FakeUserLookup(func(username string) (*user.User, error) {
 		if username == f.username {
 			return &user.User{Name: username}, nil
 		}
 		return nil, user.UnknownUserError("not found")
-	}, &workshop.LookupUsername)
+	})
 	defer restoreLookup()
 
 	projectDir := c.MkDir()

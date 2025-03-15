@@ -121,11 +121,11 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	case string:
 		roBool, err := strconv.ParseBool(ro)
 		if err != nil {
-			return fmt.Errorf(`unknown value %q in key "read-only" for mount interface plug. Accepted values are 'true' or 'false'. String representations (e.g., '"true"') are also permitted.`, ro)
+			return fmt.Errorf(`unknown value %q in key "read-only" for mount interface plug. Accepted values are 'true' or 'false'. String representations (e.g., '"true"') are also permitted`, ro)
 		}
 		plug.Attrs["read-only"] = roBool
 	default:
-		return fmt.Errorf(`unknown value type %T in key "read-only" for mount interface plug. Accepted types are 'bool' or 'string'.`, ro)
+		return fmt.Errorf(`unknown value type %T in key "read-only" for mount interface plug. Accepted types are 'bool' or 'string'`, ro)
 	}
 	return nil
 }
@@ -190,14 +190,16 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	return source, nil
 }
 
-func (iface *mountInterface) hostSource(baseDir string, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *mountInterface) hostSource(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
 	var source string
 	err := slot.Attr("host-source", &source)
 	if err == nil {
 		return source, nil
 	}
-	// default dir: <workshop>_<sdk>_plug.sdk
-	source = sdk.SdkMountHostSource(baseDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
+
+	// default dir: <sdk>/<plug>
+	userDataDir := workshop.UserDataRootDir(spec.User.HomeDir, spec.Environment)
+	source = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
 	if err = slot.SetAttr("host-source", source); err != nil {
 		return "", err
 	}
@@ -212,7 +214,7 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	if slot.Sdk().Type == sdk.System {
-		source, err := iface.hostSource(spec.User.HomeDir, plug, slot)
+		source, err := iface.hostSource(spec, plug, slot)
 		if err != nil {
 			return err
 		}

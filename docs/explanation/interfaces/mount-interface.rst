@@ -136,7 +136,7 @@ This means a source directory is mounted to the target:
          installed:  2022-03-04  (1)
          mounts:
            cache:
-             host-source:      .../8584e571/mount/ws_mount-sdk_cache.sdk
+             host-source:      .../8584e571/ws/mount/mount-sdk/cache
              workshop-target:  /home/workshop/.local/cache
 
 

@@ -2,13 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
-
-	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdRemove struct {
@@ -77,26 +73,11 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	user, err := osutil.UserMaybeSudoUser()
-	if err != nil {
-		return err
-	}
-
 	if _, err := c.wait(cli, changeId); err != nil {
 		if err == errNoWait {
 			return nil
 		}
 		return err
-	}
-
-	// Once workshop has been removed, its current and stashed sketches must be
-	// cleaned up. We let the client to control this logic as these are the type
-	// of a local SDK and were by the client in the first place.
-	for _, wp := range av {
-		sketchdir := sdk.WorkshopSketchSdk(user.HomeDir, project.Id, wp)
-		if err := os.RemoveAll(sketchdir); err != nil {
-			fmt.Fprintf(Stderr, "cannot remove the sketch SDK for %q: %v\n", wp, err)
-		}
 	}
 
 	for _, name := range av {

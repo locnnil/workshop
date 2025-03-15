@@ -148,7 +148,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 		if username == "" {
 			continue
 		}
-		if _, err = workshop.LookupUsername(username); err != nil {
+		if _, err = osutil.UserLookup(username); err != nil {
 			logger.Noticef("cannot find user %q: %v", username, err)
 			continue
 		}

@@ -17,7 +17,7 @@ execute: |
 
   echo "Check mounts"
   workshop_exec info | grep -v notes > mounts.log
-  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*mount/ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*mount/test-sdk-mount/one" 
   yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
   yq '.sdks["test-sdk-mount"].mounts["wp-plug"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"
 
@@ -30,5 +30,5 @@ execute: |
 
   echo "Check mounts"
   workshop_exec info | grep -v notes > mounts.log
-  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*ws-user-conns_test-sdk-mount_one.sdk" 
+  yq '.sdks["test-sdk-mount"].mounts["one"]' < mounts.log | MATCH "^host-source:.*test-sdk-mount/one" 
   yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^workshop-source:.*/project/user-data-2"

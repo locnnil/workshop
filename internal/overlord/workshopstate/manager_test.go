@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -27,7 +28,7 @@ type managerSuite struct {
 	ctx     context.Context
 	project workshop.Project
 
-	lookupUserRestore func()
+	restoreUserEnv func()
 }
 
 var _ = check.Suite(&managerSuite{})
@@ -41,16 +42,10 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
-	s.lookupUserRestore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     "testuser",
-			Username: "testuser",
-			Uid:      "1000",
-			Gid:      "1000",
-			HomeDir:  c.MkDir(),
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil, nil
+	})
+
 	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
 	c.Assert(err, check.IsNil)
 	s.project = *project
@@ -59,7 +54,7 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 }
 
 func (s *managerSuite) TearDownTest(c *check.C) {
-	s.lookupUserRestore()
+	s.restoreUserEnv()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {

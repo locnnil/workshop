@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -113,11 +114,13 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 	case sdk.System.String():
 		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
 	case sdk.Sketch:
-		usr, err := workshop.LookupUsername(user)
+		usr, env, err := osutil.UserAndEnv(user)
 		if err != nil {
 			return err
 		}
-		sketchdir := sdk.WorkshopSketchSdkCurrent(usr.HomeDir, project.ProjectId, w)
+		userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+		sketchdir := workshop.SketchSdkCurrent(userDataDir, project.ProjectId, w)
+
 		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(sketchdir))
 	default:
 		return fmt.Errorf("unknown type of the local SDK")

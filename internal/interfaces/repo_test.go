@@ -29,9 +29,9 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 type RepositorySuite struct {
@@ -95,19 +95,9 @@ func (s *RepositorySuite) SetUpTest(c *C) {
 	s.projectId = "42424242"
 	s.context = ifacetest.CreateTestContext("user", s.projectId)
 
-	usr, err := user.Current()
-	c.Assert(err, IsNil)
-	homeDir := c.MkDir()
-	s.restore = testutil.FakeFunc(func(name string) (*user.User, error) {
-		u := &user.User{
-			Name:     usr.Name,
-			Username: usr.Name,
-			Uid:      usr.Uid,
-			Gid:      usr.Gid,
-			HomeDir:  homeDir,
-		}
-		return u, nil
-	}, &workshop.LookupUsername)
+	s.restore = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
 }
 
 func (s *RepositorySuite) TearDownTest(c *C) {

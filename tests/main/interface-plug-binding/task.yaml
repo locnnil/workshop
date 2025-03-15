@@ -1,4 +1,7 @@
 summary: Check plug binding
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -12,16 +15,14 @@ execute: |
     MATCH "ssh-agent  ws-bind/test-sdk-ssh-agent:ssh-agent       -                            bind.6" < conns.log
   }
 
-  workshop_exec launch
-
   echo "Check binding on launch"
   workshop_exec connections ws-bind > conns.log
   check_original_binding
 
   echo "Check bound mount plugs use host directories of the plug they are bound to"
   workshop_exec info | grep -v notes > mounts.log
-  yq '.sdks["test-sdk-multiple-plugs"].mounts["data"]' < mounts.log | MATCH "^host-source:.*ws-bind_test-sdk-mount_one.sdk"
-  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*ws-bind_test-sdk-multiple-plugs_cache.sdk"
+  yq '.sdks["test-sdk-multiple-plugs"].mounts["data"]' < mounts.log | MATCH "^host-source:.*test-sdk-mount/one"
+  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*test-sdk-multiple-plugs/cache"
 
   echo "Check disconnect affects all bound plugs"
   workshop_exec disconnect ws-bind/test-sdk-multiple-plugs:cache
@@ -56,4 +57,4 @@ execute: |
   MATCH "mount      ws-bind/test-sdk-multiple-plugs:cache      ws-bind/system:mount         -" < conns.log
   workshop_exec info | grep -v notes > mounts.log
   yq '.sdks["test-sdk-multiple-plugs"].mounts["cache"]' < mounts.log | MATCH "^host-source:.*$new_source"
-  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*ws-bind_test-sdk-mount_two.sdk"
+  yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*test-sdk-mount/two"

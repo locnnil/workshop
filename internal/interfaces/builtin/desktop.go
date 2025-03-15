@@ -28,7 +28,6 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -76,20 +75,15 @@ func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 }
 
 func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	env, err := systemd.UserEnvironment(spec.User)
-	if err != nil {
-		return err
-	}
-
-	xdg := env["XDG_RUNTIME_DIR"]
+	xdg := spec.Environment["XDG_RUNTIME_DIR"]
 	if xdg == "" {
 		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
 	}
 
 	desktop := workshop.Desktop{}
 
-	wayland := env["WAYLAND_DISPLAY"]
-	display := env["DISPLAY"]
+	wayland := spec.Environment["WAYLAND_DISPLAY"]
+	display := spec.Environment["DISPLAY"]
 
 	if wayland == "" && display == "" {
 		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User.Username)
@@ -130,7 +124,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	// cookie is updated when the host cookie changes (ie. reboot).
 	// https://discuss.linuxcontainers.org/t/mount-single-file/17975
 	workshopdXauth := filepath.Join(dirs.WorkshopdRunDir, spec.User.Uid, "Xauthority")
-	xauth := env["XAUTHORITY"]
+	xauth := spec.Environment["XAUTHORITY"]
 	if xauth != "" {
 		m := workshop.Mount{}
 		m.Name = plug.Sdk().Name + "-" + "xauth"

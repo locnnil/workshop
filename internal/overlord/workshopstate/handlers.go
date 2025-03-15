@@ -4,21 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/revert"
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -338,50 +335,29 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
 
-type cleanupError struct {
-	errs []error
-}
-
-func (e *cleanupError) Error() string {
-	return fmt.Sprintf("workshop cleanup errors: %v", e.errs)
-}
-
 func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
-	usr, err := workshop.LookupUsername(user)
+	usr, env, err := osutil.UserAndEnv(user)
 	if err != nil {
 		return err
 	}
 
-	var errors []error
-	projectContent := sdk.ProjectContentDir(usr.HomeDir, projectId)
-
-	var contentDirs []fs.DirEntry
-	if contentDirs, err = os.ReadDir(projectContent); err != nil {
-		errors = append(errors, fmt.Errorf("%q workshop content directory is not available: %v", w, err))
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	workshopUserData := workshop.UserData(userDataDir, projectId, w)
+	err = os.RemoveAll(workshopUserData)
+	if err != nil {
+		return err
 	}
 
-	// Remove all the possible workshop default mount interface 'source'
-	// locations that could have existed over the workshop's lifecycle. These
-	// are not only the ones that exist by the time we remove the workshop.
-	// Imagine the following scenario. An SDK added to a workshop and created a
-	// mount interface plug. Then, the SDK was removed from the workshop via
-	// refresh. When we call 'workshop remove', the plug does not exist anymore
-	// (nor the SDK profile for this plug); however, the content is still stored
-	// on the host and must also be removed alongside the workshop.
-	for _, dir := range contentDirs {
-		// Remove all default content dirs that belong the workshop. These will be
-		// named as <workshop>_<sdk>_<plug>.sdk
-		base := filepath.Base(dir.Name())
-		if dir.IsDir() && strings.HasPrefix(base, w+"_") {
-			if err := os.RemoveAll(filepath.Join(projectContent, dir.Name())); err != nil {
-				errors = append(errors, err)
-			}
-		}
+	// If this was the last workshop in the project, cleanup the project dir
+	projectUserData := workshop.ProjectUserData(userDataDir, projectId)
+
+	prjDir, err := os.ReadDir(projectUserData)
+	if err != nil {
+		return err
 	}
 
-	if len(errors) > 0 {
-		return &cleanupError{errs: errors}
+	if len(prjDir) == 0 {
+		return os.RemoveAll(projectUserData)
 	}
-
 	return nil
 }

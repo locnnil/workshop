@@ -1,5 +1,9 @@
 summary: Check mount interface scenarios
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
 restore: |
+  . "$TESTSLIB"/utils.sh
   workshop_exec remove || true
 execute: |
   . "$TESTSLIB"/utils.sh
@@ -10,11 +14,10 @@ execute: |
   }
 
   echo "Check the mount interface plug can be installed and auto-connected"
-  workshop_exec launch
 
   project_id=$(cat .workshop.lock)
-  source_one="/home/ubuntu/.local/share/workshop/project/"$project_id"/mount/ws-mount_test-sdk-mount_one.sdk"
-  source_two="/home/ubuntu/.local/share/workshop/project/"$project_id"/mount/ws-mount_test-sdk-mount_two.sdk"
+  source_one="/home/ubuntu/.local/share/workshop/id/"$project_id"/ws-mount/mount/test-sdk-mount/one"
+  source_two="/home/ubuntu/.local/share/workshop/id/"$project_id"/ws-mount/mount/test-sdk-mount/two"
   validate_host_mounts
 
   echo "Check the mount interface plugs auto-reconnected after refresh"
@@ -50,8 +53,20 @@ execute: |
   workshop_exec exec -- bash -c "sudo touch /opt/ro-slot/tmp"
   workshop_exec exec -- bash -c "test -f /mnt/ro-plug/tmp"
 
-
-  echo "Check remove will also clean up the default mount interface default locations"
+  echo "Check remove will clean up mount interface default locations"
   workshop_exec remove
   test ! -d "$source_one"
   test ! -d "$source_two"
+  
+  echo "Check mount respects XDG_DATA_HOME"
+  sudo -u ubuntu XDG_RUNTIME_DIR=/run/user/1000 systemctl --user set-environment XDG_DATA_HOME=/home/ubuntu/mydata
+  workshop_exec launch
+  source_one="/home/ubuntu/mydata/workshop/id/"$project_id"/ws-mount/mount/test-sdk-mount_one"
+  source_two="/home/ubuntu/mydata/workshop/id/"$project_id"/ws-mount/mount/test-sdk-mount_two"
+  validate_host_mounts
+
+  echo "Check remove will clean up mount interface locations overridden with XDG_DATA_HOME"
+  workshop_exec remove
+  test ! -d "$source_one"
+  test ! -d "$source_two"
+  sudo -u ubuntu XDG_RUNTIME_DIR=/run/user/1000 systemctl --user unset-environment XDG_DATA_HOME
