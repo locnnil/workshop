@@ -27,3 +27,7 @@ func SystemSdkMeta(base string) string {
 func IsSystem(name string) bool {
 	return name == System.String()
 }
+
+func IsSketch(name string) bool {
+	return name == Sketch
+}

@@ -418,8 +418,9 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
-	// for DeepEqual to work correctly
-	install1 := s.installTime
+
+	install1 := time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	build1 := time.Date(2020, 4, 22, 19, 12, 7, 903032000, time.UTC)
 	info := rsp.Result.(Workshops)
 
 	c.Check(info.Workshops, testutil.DeepUnsortedMatches, []*WorkshopInfo{{
@@ -436,11 +437,12 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
+				Version:     "0.1.2",
 				Revision:    "1",
 				InstallTime: &install1,
+				BuildTime:   &build1,
 			},
 		},
-		Notes: nil,
 	}, {
 		Name:      "basic",
 		Base:      "ubuntu@22.04",

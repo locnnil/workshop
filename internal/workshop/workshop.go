@@ -270,15 +270,30 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 // Returns a map of SDK info for installed SDKs. The info includes SDK details
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
-func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
-	var infos = make(map[string]*sdk.Info, len(w.Sdks))
+func (w *Workshop) SdkInfosByInstallOrder(ctx context.Context) ([]*sdk.Info, error) {
+	var infos = make([]*sdk.Info, 0, len(w.Sdks))
 	for _, sdk := range w.Sdks {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err
 		}
-		infos[info.Name] = info
+		infos = append(infos, info)
 	}
+
+	orderMap := make(map[string]int)
+	for i, v := range w.File.Sdks {
+		orderMap[v.Name] = i
+	}
+
+	// The workshop definition which defines the install order may or may not
+	// contain the system SDK declared in an arbitrary place. Therefore, we have
+	// to make sure that the system SDK goes first and the sketch SDK goes last.
+	orderMap[sdk.System.String()] = -1
+	orderMap[sdk.Sketch] = len(w.File.Sdks)
+	sort.Slice(infos, func(i, j int) bool {
+		return orderMap[infos[i].Name] < orderMap[infos[j].Name]
+	})
+
 	return infos, nil
 }
 
@@ -289,24 +304,22 @@ func (w *Workshop) SdksByInstallOrder() []sdk.Setup {
 	for i, v := range w.File.Sdks {
 		orderMap[v.Name] = i
 	}
+	// The workshop definition which defines the install order may or may not
+	// contain the system SDK declared in an arbitrary place. Therefore, we have
+	// to make sure that the system SDK goes first and the sketch SDK goes last.
+	orderMap[sdk.System.String()] = -1
+	orderMap[sdk.Sketch] = len(w.File.Sdks)
 	sdks := slices.Collect(maps.Values(w.Sdks))
 	sort.Slice(sdks, func(i, j int) bool {
 		return orderMap[sdks[i].Name] < orderMap[sdks[j].Name]
 	})
 
-	// The workshop definition which defines the install order may or may not
-	// contain the system SDK declared in an arbitrary place. Therefore, we have
-	// to make sure that the system SDK goes first.
-	idx := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return sdk.IsSystem(s.Name) })
-	if idx != -1 {
-		sdks[0], sdks[idx] = sdks[idx], sdks[0]
-	}
 	return sdks
 }
 
 // Mounts returns a map of active mounts,
 // given a map of SDK info as returned by SdkInfos.
-func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
+func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	if sdks == nil {
 		return nil
 	}
@@ -407,5 +420,5 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 }
 
 func SnapshotId(w, sk string) string {
-	return strings.Join([]string{w, sk}, "-")
+	return strings.Join([]string{w, sk}, ".")
 }

@@ -156,7 +156,7 @@ func (m *InterfaceManager) StartUp() error {
 					logger.Noticef("Cannot create internal mounts for %q workshop: %v", workshop.Name, err)
 				}
 
-				infos, err := workshop.SdkInfos(pctx)
+				infos, err := workshop.SdkInfosByInstallOrder(pctx)
 				if err != nil {
 					logger.Noticef("Cannot obtain the installed SDKs for %q workshop: %v", workshop.Name, err)
 					continue

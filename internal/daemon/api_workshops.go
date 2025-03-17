@@ -119,19 +119,21 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health healthstate.HealthState) *WorkshopInfo {
+func workshopToInfo(ctx context.Context, w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
 
+	sdks, err := w.SdkInfosByInstallOrder(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	mnts := w.Mounts(sdks)
 
-	for _, sk := range w.Sdks {
-		sdkInfo := sdks[sk.Name]
-		if sdkInfo == nil {
-			sdkInfo = &sdk.Info{}
-		}
+	for _, sk := range sdks {
+		sdkInfo := sk
 
 		var healthInfo *HealthCheckInfo
 		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
@@ -151,7 +153,7 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 			Channel:     sk.Channel,
 			Revision:    sk.Revision.String(),
 			BuildTime:   sdkInfo.BuildTime,
-			InstallTime: sk.InstallTime,
+			InstallTime: w.Sdks[sk.Name].InstallTime,
 			Health:      healthInfo,
 			Mounts:      mntInfos,
 		})
@@ -162,7 +164,7 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 	}
 	info.Status = health.Status.String()
 
-	return &info
+	return &info, nil
 }
 
 func mountInfos(sk sdk.Ref, mnts []workshop.Mount) []*Mount {
@@ -381,10 +383,14 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	info := Workshops{}
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
+	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
 	for _, w := range workshops {
 		health := healthstate.WorkshopHealth(state, w)
 		if ignoreStatus || health.Status == status {
-			wi := workshopToInfo(w, nil, health)
+			wi, err := workshopToInfo(ctx, w, health)
+			if err != nil {
+				return statusBadRequest("%w", err)
+			}
 			info.Workshops = append(info.Workshops, wi)
 		}
 	}
@@ -590,11 +596,11 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	health := healthstate.WorkshopHealth(state, w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	sdks, err := w.SdkInfos(ctx)
+
+	info, err := workshopToInfo(ctx, w, health)
 	if err != nil {
 		return statusBadRequest("%w", err)
 	}
-	info := workshopToInfo(w, sdks, health)
 
 	ts, err := tunnels(conns)
 	if err != nil {
