@@ -17,7 +17,8 @@ import (
 
 type Setup struct {
 	Name        string     `json:"name"`
-	Channel     string     `json:"channel"`
+	Channel     string     `json:"channel,omitempty"`
+	Source      string     `json:"source,omitempty"`
 	Revision    Revision   `json:"revision"`
 	InstallTime *time.Time `json:"install-time"`
 }
@@ -74,6 +75,7 @@ type Info struct {
 	Type      Type
 	Revision  Revision
 	Channel   string
+	Source    string
 	BuildTime *time.Time
 
 	Plugs     map[string]*PlugInfo

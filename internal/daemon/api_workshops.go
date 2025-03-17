@@ -45,7 +45,8 @@ type HealthCheckInfo struct {
 type SdkInfo struct {
 	Name        string           `json:"name"`
 	Version     string           `json:"version,omitempty"`
-	Channel     string           `json:"channel"`
+	Channel     string           `json:"channel,omitempty"`
+	Source      string           `json:"source,omitempty"`
 	Revision    string           `json:"revision"`
 	BuildTime   *time.Time       `json:"build-time,omitempty"`
 	InstallTime *time.Time       `json:"install-time,omitempty"`
@@ -142,6 +143,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) *Works
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
 			Channel:     sk.Channel,
+			Source:      sk.Source,
 			Revision:    sk.Revision.String(),
 			InstallTime: sk.InstallTime,
 			Health:      healthInfo,
@@ -189,6 +191,7 @@ func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health health
 			Name:        sk.Name,
 			Version:     sk.Version,
 			Channel:     sk.Channel,
+			Source:      sk.Source,
 			Revision:    sk.Revision.String(),
 			BuildTime:   sk.BuildTime,
 			InstallTime: w.Sdks[sk.Name].InstallTime,

@@ -65,7 +65,11 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 
-	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir()}
+	// Real UID and GID are required to copy local SDKs.
+	// TODO: implement unprivileged operations properly and mock them separately.
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
 
 	s.project = workshop.Project{
 		Path:      s.workshopDir,
@@ -74,7 +78,6 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 
 	s.store = &sdk.FakeStore{}
 
-	var err error
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 

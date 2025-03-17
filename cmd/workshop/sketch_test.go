@@ -38,7 +38,7 @@ var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK",
       "install-time":"2017-03-22T09:01:00.0Z"
     },{
       "name":"sketch",
-      "channel":"",
+      "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
       "revision":"x1",
       "install-time":"2017-03-22T09:01:00.0Z"
     }],
@@ -60,7 +60,7 @@ var mockWorkshopWithSdksWaiting = `{"type":"sync","status-code":200,"status":"OK
       "install-time":"2017-03-22T09:01:00.0Z"
     },{
       "name":"sketch",
-      "channel":"",
+      "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
       "revision":"x2",
       "install-time":"2017-03-22T09:01:00.0Z"
     }],
@@ -75,7 +75,7 @@ var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK
         "status":"Ready",
         "sdks":[{
             "name":"sketch",
-            "channel":"",
+            "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
             "revision":"x1",
             "install-time":"2017-03-22T09:01:00.0Z"
         }]
@@ -91,7 +91,7 @@ var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK
         "status":"Ready",
         "sdks":[{
             "name":"sketch",
-            "channel":"",
+            "source":"/home/.local/share/workshop/id/42424242/both/sdk/sketch/current",
             "revision":"x3",
             "install-time":"2017-03-22T09:01:00.0Z"
         }]

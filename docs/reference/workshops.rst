@@ -75,6 +75,10 @@ At the container launch, |ws_markup| does the following:
 - Fetches the required images and SDKs from the image server and the Store,
   if they aren't already cached locally.
 
+- Reads definitions of local SDKs,
+  such as the sketch SDK,
+  and copies them to a read-only location.
+
 - Spins up the container with mapped user and group IDs,
   configures basic devices like the root disk and network bridge.
 

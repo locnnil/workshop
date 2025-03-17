@@ -27,7 +27,7 @@ var _ = check.Suite(&workshopFile{})
 func TestWorkshop(t *testing.T) { check.TestingT(t) }
 
 func TestMain(m *testing.M) {
-	// Ensure consistent file permissions for workshopSuite and workshopFsSuite.
+	// Ensure consistent file permissions for workshopSuite, workshopFsSuite and localSdk.
 	syscall.Umask(0002)
 	m.Run()
 }

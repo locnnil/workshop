@@ -224,6 +224,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	}
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
+	info.Source = setup.Source
 
 	// Now add changes defined for this SDK in the workshop file (e.g. plug
 	// binds, slots).

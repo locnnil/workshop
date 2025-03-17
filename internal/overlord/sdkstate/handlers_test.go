@@ -270,7 +270,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}
+	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-local-sdk", "test")
@@ -298,7 +298,7 @@ func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
 func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: sdk.System.String()}
+	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-local-sdk", "test")

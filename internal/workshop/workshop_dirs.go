@@ -2,6 +2,8 @@ package workshop
 
 import (
 	"path/filepath"
+
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 func UserDataRootDir(homedir string, env map[string]string) string {
@@ -36,8 +38,16 @@ func SdkMountHostSource(userDataDir, pid, w, sdk, plug string) string {
 	return filepath.Join(SdkMountDir(userDataDir, pid, w, sdk), plug)
 }
 
+func LocalSdkDir(userDataDir, pid, w, name string) string {
+	return filepath.Join(UserData(userDataDir, pid, w), "sdk", name)
+}
+
+func LocalSdkRevision(userDataDir, pid, w, name string, revision sdk.Revision) string {
+	return filepath.Join(LocalSdkDir(userDataDir, pid, w, name), revision.String())
+}
+
 func SketchSdkDir(userDataDir, pid, w string) string {
-	return filepath.Join(UserData(userDataDir, pid, w), "sdk", "sketch")
+	return LocalSdkDir(userDataDir, pid, w, sdk.Sketch)
 }
 
 func SketchSdkCurrent(userDataDir, pid, w string) string {

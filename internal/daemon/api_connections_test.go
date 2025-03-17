@@ -109,7 +109,7 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	c.Assert(err, check.IsNil)
 	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
-	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Source: info.Source, Revision: info.Revision})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)

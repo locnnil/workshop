@@ -3206,6 +3206,53 @@ func (s *apiSuite) TestRefreshPartialOK(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
+	s.createWFile(c, "manysdks", manysdks_minusone)
+	s.mockSketchSdk(c, "manysdks", `name: sketch
+base: ubuntu@22.04
+`)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks/sketch" SDK`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
+	sketchdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, "manysdks")
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "sketch", Source: sketchdir, Revision: sdk.R(-1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+		},
+		plugs: []string{
+			"test-sdk:data",
+		},
+		slots: []string{
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+
 	s.mockSketchSdk(c, "manysdks", `name: sketch
 base: ubuntu@22.04
 plugs:
@@ -3215,7 +3262,6 @@ plugs:
 `)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh"}`),
 		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 	}
 	expected = []*expectedResp{
@@ -3225,24 +3271,17 @@ plugs:
 			Kind:    "refresh",
 			Summary: `Refresh "manysdks/sketch" SDK`,
 		},
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "manysdks/sketch" SDK`,
-		},
 	}
 
-	s.createWFile(c, "manysdks", manysdks_minusone)
 	s.runActionTest(c, requests, expected)
 
-	want := []expectedWorkshop{{
+	want = []expectedWorkshop{{
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "sketch", Channel: "", Revision: sdk.R(-2), InstallTime: &s.installTime},
+			{Name: "sketch", Source: sketchdir, Revision: sdk.R(-2), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/sketch:sketch-plug b8639dea/manysdks/system:mount",
@@ -3262,7 +3301,6 @@ plugs:
 	}}
 
 	s.ensureWorskhops(c, want)
-
 }
 
 func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {

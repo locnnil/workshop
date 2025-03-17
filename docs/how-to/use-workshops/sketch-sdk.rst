@@ -134,7 +134,7 @@ After the refresh, the output of :command:`workshop info` should look like this
 .. code-block:: console
 
    sketch:
-     tracking:   ~/.local/share/workshop/project/b5b0f128/sdk/sketch/dev
+     tracking:   ~/.local/share/workshop/id/b5b0f128/dev/sdk/sketch/current
      installed:  2025-02-24  (x1)
 
 

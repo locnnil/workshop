@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -86,7 +87,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
 		}
 
-		localSdks, err := resolveLocalSdks(userDataDir, projectId, name, nil)
+		localSdks, err := resolveLocalSdks(usr, userDataDir, projectId, name, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
@@ -166,10 +167,10 @@ func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file
 	return setups, nil
 }
 
-func resolveLocalSdks(userDataDir, pid, name string, wp *workshop.Workshop) ([]sdk.Setup, error) {
+func resolveLocalSdks(usr *user.User, userDataDir, pid, name string, wp *workshop.Workshop) ([]sdk.Setup, error) {
 	localSdks := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.R(-1)}}
 
-	sketch, err := maybeSketch(userDataDir, pid, name, wp)
+	sketch, err := maybeSketch(userDataDir, pid, name, wp == nil)
 	if err != nil {
 		return nil, err
 	}
@@ -177,10 +178,28 @@ func resolveLocalSdks(userDataDir, pid, name string, wp *workshop.Workshop) ([]s
 		localSdks = append(localSdks, *sketch)
 	}
 
+	for i, sk := range localSdks {
+		if i == 0 {
+			// Skip system SDK.
+			continue
+		}
+
+		var installed sdk.Revision
+		if wp != nil {
+			installed = wp.Sdks[sk.Name].Revision
+		}
+
+		sdkdir := workshop.LocalSdkDir(userDataDir, pid, name, sk.Name)
+		localSdks[i].Revision, err = sdk.CommitRevision(usr, sk.Source, sdkdir, installed)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return localSdks, nil
 }
 
-func maybeSketch(userDataDir, pid, name string, wp *workshop.Workshop) (*sdk.Setup, error) {
+func maybeSketch(userDataDir, pid, name string, launch bool) (*sdk.Setup, error) {
 	sketchdir := workshop.SketchSdkCurrent(userDataDir, pid, name)
 
 	recs, err := os.ReadDir(sketchdir)
@@ -192,7 +211,7 @@ func maybeSketch(userDataDir, pid, name string, wp *workshop.Workshop) (*sdk.Set
 		return nil, err
 	}
 
-	if wp == nil {
+	if launch {
 		// Old sketches might exist because the snap remove hook doesn't remove them.
 		// No workshop exists currently; including the sketch SDK would be unexpected.
 		// We remove it (but keep the stash) to prevent future refreshes from including it.
@@ -202,12 +221,7 @@ func maybeSketch(userDataDir, pid, name string, wp *workshop.Workshop) (*sdk.Set
 		return nil, nil
 	}
 
-	revision := sdk.R(-1)
-	if installed, ok := wp.Sdks[sdk.Sketch]; ok {
-		revision = sdk.Revision{N: installed.Revision.N - 1}
-	}
-
-	return &sdk.Setup{Name: sdk.Sketch, Revision: revision}, nil
+	return &sdk.Setup{Name: sdk.Sketch, Source: sketchdir}, nil
 }
 
 func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
@@ -421,7 +435,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
 
-		localSdks, err := resolveLocalSdks(userDataDir, projectId, name, wp)
+		localSdks, err := resolveLocalSdks(usr, userDataDir, projectId, name, wp)
 		if err != nil {
 			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
