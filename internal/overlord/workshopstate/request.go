@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -54,17 +53,32 @@ func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.
 }
 
 func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
-	sto := sdk.StoreService(w.state)
+	username, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key user not found")
+	}
+
+	usr, env, err := osutil.UserAndEnv(username)
+	if err != nil {
+		return nil, err
+	}
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
 
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
+	reqs, err := w.resolveWorkshops(ctx, project, names, "launch")
+	if err != nil {
+		return nil, err
+	}
+
 	taskset := make([]*state.TaskSet, 0, len(names))
-	var sdks []sdk.SdkResult
-	for _, name := range names {
+	for _, req := range reqs {
+		name := req.file.Name
 		// Make sure the workshop doesn't exist.
+		// Has to happen after calling resolveWorkshops (because it unlocks the state).
 		_, err := w.Workshop(ctx, name, projectId)
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
@@ -72,41 +86,64 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
 		}
 
-		file, err := project.Workshop(name)
+		localSdks, err := resolveLocalSdks(userDataDir, projectId, name, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
+		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
-		sdks, err = sdkInfos(sto, ctx, projectId, file)
-		if err != nil {
-			return nil, err
-		}
-
-		candidates := make([]sdk.Setup, 0, len(sdks))
-		for _, s := range sdks {
-			candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
-		}
-
-		tasks := launch(w.state, file, candidates, project)
+		tasks := launch(w.state, req.file, sdks, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
 }
 
-func systemSdkInfo(pid, wname string) (sdk.SdkResult, error) {
-	ybuf, err := system.SystemSdkFs.ReadFile(system.SdkMeta)
-	if err != nil {
-		return sdk.SdkResult{}, err
-	}
-	info, err := sdk.ReadSdkInfo(ybuf, pid, wname)
-	if err != nil {
-		return sdk.SdkResult{}, err
-	}
-	info.Revision = sdk.R(-1)
-	return sdk.SdkResult{Info: info}, nil
+type workshopReq struct {
+	// Up to date workshop definitions from the project directory.
+	file *workshop.File
+	// All possible SDKs (including sketch) in installation order.
+	installOrder []string
+	// Up to date SDK setups from the store.
+	storeSdks []sdk.Setup
 }
 
-func sdkInfos(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
+func (w *WorkshopManager) resolveWorkshops(ctx context.Context, project workshop.Project, names []string, action string) ([]workshopReq, error) {
+	sto := sdk.StoreService(w.state)
+	reqs := make([]workshopReq, 0, len(names))
+
+	// Not an error, the state is locked; unlock it to let other requests to be
+	// processed while we are getting the store info sorted.
+	// This code can be concurrent with other changes,
+	// so we avoid interacting with local SDKs.
+	w.state.Unlock()
+	defer w.state.Lock()
+
+	for _, name := range names {
+		file, err := project.Workshop(name)
+		if err != nil {
+			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
+		}
+
+		installOrder := make([]string, 1, len(file.Sdks)+2)
+		installOrder[0] = sdk.System.String()
+		for _, sk := range file.Sdks {
+			if !workshop.IsImplicitSdk(sk.Name) {
+				installOrder = append(installOrder, sk.Name)
+			}
+		}
+		installOrder = append(installOrder, sdk.Sketch)
+
+		storeSdks, err := resolveStoreSdks(sto, ctx, project.ProjectId, file)
+		if err != nil {
+			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
+		}
+		reqs = append(reqs, workshopReq{file: file, installOrder: installOrder, storeSdks: storeSdks})
+	}
+
+	return reqs, nil
+}
+
+func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.Setup, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
 		if workshop.IsImplicitSdk(sd.Name) {
@@ -121,13 +158,73 @@ func sdkInfos(sto sdk.Store, ctx context.Context, projectid string, file *worksh
 		return nil, err
 	}
 
-	sinfo, err := systemSdkInfo(projectid, file.Name)
+	setups := make([]sdk.Setup, 0, len(infos))
+	for _, s := range infos {
+		setups = append(setups, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+	}
+
+	return setups, nil
+}
+
+func resolveLocalSdks(userDataDir, pid, name string, wp *workshop.Workshop) ([]sdk.Setup, error) {
+	localSdks := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.R(-1)}}
+
+	sketch, err := maybeSketch(userDataDir, pid, name, wp)
+	if err != nil {
+		return nil, err
+	}
+	if sketch != nil {
+		localSdks = append(localSdks, *sketch)
+	}
+
+	return localSdks, nil
+}
+
+func maybeSketch(userDataDir, pid, name string, wp *workshop.Workshop) (*sdk.Setup, error) {
+	sketchdir := workshop.SketchSdkCurrent(userDataDir, pid, name)
+
+	recs, err := os.ReadDir(sketchdir)
+	// no Sketch SDK exists for the workshop and it is not an error.
+	if (err == nil && len(recs) == 0) || osutil.IsDirNotExist(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	infos = slices.Insert(infos, 0, sinfo)
-	return infos, nil
+	if wp == nil {
+		// Old sketches might exist because the snap remove hook doesn't remove them.
+		// No workshop exists currently; including the sketch SDK would be unexpected.
+		// We remove it (but keep the stash) to prevent future refreshes from including it.
+		if err = os.RemoveAll(sketchdir); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	revision := sdk.R(-1)
+	if installed, ok := wp.Sdks[sdk.Sketch]; ok {
+		revision = sdk.Revision{N: installed.Revision.N - 1}
+	}
+
+	return &sdk.Setup{Name: sdk.Sketch, Revision: revision}, nil
+}
+
+func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
+	ordered := make([]sdk.Setup, 0, len(order))
+
+	for _, sk := range order {
+		for _, setup := range setups {
+			contains := func(sp sdk.Setup) bool { return sk == sp.Name }
+
+			idx := slices.IndexFunc(setup, contains)
+			if idx != -1 {
+				ordered = append(ordered, setup[idx])
+				break
+			}
+		}
+	}
+	return ordered
 }
 
 func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
@@ -287,73 +384,57 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	return all
 }
 
-type refreshWorkshopReq struct {
-	// Existing workshop that will be refreshed.
-	w *workshop.Workshop
-	// Up to date workshop definitions from the project directory.
-	file *workshop.File
-	// Up to date SDK infos (from the store or a local source).
-	infos []sdk.SdkResult
-}
-
-func (w *WorkshopManager) prepareRefresh(ctx context.Context, wps []*workshop.Workshop, names []string) ([]refreshWorkshopReq, error) {
-	sto := sdk.StoreService(w.state)
-
-	// Not an error, the state is locked; unlock it to let other requests to be
-	// processed while we are getting the store info sorted.
-	w.state.Unlock()
-	defer w.state.Lock()
-
-	refreshReqs := make([]refreshWorkshopReq, 0, len(names))
-	for _, name := range names {
-		idx := slices.IndexFunc(wps, func(wp *workshop.Workshop) bool { return wp.Name == name })
-		if idx == -1 {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, workshop.ErrWorkshopNotLaunched)
-		}
-		wp := wps[idx]
-
-		file, err := wp.Project.Workshop(wp.Name)
-		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", wp.Name, err)
-		}
-
-		infos, err := sdkInfos(sto, ctx, wp.Project.ProjectId, file)
-		if err != nil {
-			return nil, err
-		}
-		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: wp, file: file, infos: infos})
-	}
-	return refreshReqs, nil
-}
-
 func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string) ([]*state.TaskSet, error) {
-	all, err := w.Workshops(ctx, projectId)
+	username, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return nil, fmt.Errorf("context key user not found")
+	}
+
+	usr, env, err := osutil.UserAndEnv(username)
+	if err != nil {
+		return nil, err
+	}
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+
+	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshReqs, err := w.prepareRefresh(ctx, all, names)
+	reqs, err := w.resolveWorkshops(ctx, project, names, "refresh")
 	if err != nil {
 		return nil, err
 	}
 
+	taskset := make([]*state.TaskSet, 0, len(reqs))
 	allowed := []healthstate.Status{healthstate.ReadyStatus}
-	for _, req := range refreshReqs {
-		if err = healthstate.CheckWorkshopHealth(w.state, req.w, allowed); err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", req.w.Name, err)
+	for _, req := range reqs {
+		name := req.file.Name
+		wp, err := w.Workshop(ctx, name, projectId)
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
-	}
 
-	taskset := make([]*state.TaskSet, 0, len(refreshReqs))
-	for _, req := range refreshReqs {
-		plan, err := resolveRefresh(ctx, req.w, req.file, req.infos)
+		// Check for conflicting changes.
+		// Has to happen after calling resolveWorkshops (because it unlocks the state).
+		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+		}
+
+		localSdks, err := resolveLocalSdks(userDataDir, projectId, name, wp)
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+		}
+		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
+
+		plan, err := resolveRefresh(wp, req.file, sdks)
 		if err != nil {
 			return nil, err
 		}
 
-		tasks, err := refresh(ctx, w.state, plan, req.w, req.file)
+		tasks, err := refresh(ctx, w.state, plan, wp, req.file)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", req.w.Name, err)
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
 		if len(tasks.Tasks()) == 0 {
 			continue
@@ -389,31 +470,6 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 	return taskset, nil
 }
 
-func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
-	username, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return false, fmt.Errorf("context key user not found")
-	}
-
-	usr, env, err := osutil.UserAndEnv(username)
-	if err != nil {
-		return false, err
-	}
-
-	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-	sketchdir := workshop.SketchSdkCurrent(userDataDir, pid, wp)
-
-	recs, err := os.ReadDir(sketchdir)
-	// no Sketch SDK exists for the workshop and it is not an error.
-	if len(recs) == 0 || osutil.IsDirNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func maybeRefresh(installed, candidate sdk.Setup) bool {
 	return installed.Channel != candidate.Channel || installed.Revision != candidate.Revision
 }
@@ -445,49 +501,32 @@ type refreshPlan struct {
 	installedOrder []string
 }
 
-func (p refreshPlan) ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
-	ordered := make([]sdk.Setup, 0, len(order))
-
-	for _, sk := range order {
-		for _, setup := range setups {
-			contains := func(sp sdk.Setup) bool { return sk == sp.Name }
-
-			idx := slices.IndexFunc(setup, contains)
-			if idx != -1 {
-				ordered = append(ordered, setup[idx])
-				break
-			}
-		}
-	}
-	return ordered
-}
-
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
-	return p.ordered(p.installOrder, p.install, p.refresh)
+	return ordered(p.installOrder, p.install, p.refresh)
 }
 
 func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 	revOrder := slices.Clone(p.installedOrder)
 	slices.Reverse(revOrder)
-	ordered := p.ordered(revOrder, p.intact, p.remove)
+	ordered := ordered(revOrder, p.intact, p.remove)
 	return ordered
 }
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
-	return p.ordered(p.installOrder, p.install, p.refresh, p.intact)
+	return ordered(p.installOrder, p.install, p.refresh, p.intact)
 }
 
 func (p refreshPlan) Refresh() []sdk.Setup {
-	return p.ordered(p.installOrder, p.refresh)
+	return ordered(p.installOrder, p.refresh)
 }
 
 func (p refreshPlan) Remove() []sdk.Setup {
 	revOrder := slices.Clone(p.installedOrder)
 	slices.Reverse(revOrder)
-	return p.ordered(revOrder, p.remove)
+	return ordered(revOrder, p.remove)
 }
 
-func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop.File, newinfos []sdk.SdkResult) (*refreshPlan, error) {
+func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []sdk.Setup) (*refreshPlan, error) {
 	plan := &refreshPlan{
 		install:        make([]sdk.Setup, 0),
 		intact:         make([]sdk.Setup, 0),
@@ -495,11 +534,6 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 		remove:         make([]sdk.Setup, 0),
 		installOrder:   make([]string, 0),
 		installedOrder: make([]string, 0),
-	}
-
-	candidates := make([]sdk.Setup, 0, len(newinfos))
-	for _, s := range newinfos {
-		candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
 
 	// Restore the order of SDKs installed in the running workshop.
@@ -560,23 +594,6 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 		plan.installOrder = append(plan.installOrder, s.Name)
 	}
 
-	sketchFound, err := maybeSketch(ctx, w.Project.ProjectId, w.Name)
-	if err != nil {
-		return nil, err
-	}
-	if sketchFound {
-		plan.installOrder = append(plan.installOrder, sdk.Sketch)
-
-		if installed, exist := w.Sdks[sdk.Sketch]; exist {
-			plan.refresh = append(plan.refresh, sdk.Setup{
-				Name:     sdk.Sketch,
-				Revision: sdk.Revision{N: installed.Revision.N - 1},
-			})
-		} else {
-			plan.install = append(plan.install,
-				sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
-		}
-	}
 	return plan, nil
 }
 

@@ -126,7 +126,10 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
+	err := s.backend.RemoveWorkshop(s.ctx, workshop2.Name)
+	c.Assert(err, check.IsNil)
 
-	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
+	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not launched`)
 }

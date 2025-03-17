@@ -2907,9 +2907,9 @@ func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
 		}, {
 			cmd: "refresh",
 			result: map[string]string{
-				"":              `cannot refresh "basic": workshop not launched`,
-				"transactional": `cannot refresh "basic": workshop not launched`,
-				"wait-on-error": `cannot refresh "basic": workshop not launched`,
+				"":              `cannot refresh "basic": workshop definition .*`,
+				"transactional": `cannot refresh "basic": workshop definition .*`,
+				"wait-on-error": `cannot refresh "basic": workshop definition .*`,
 				"continue":      "cannot continue: no wait in progress",
 				"abort":         "cannot abort: no wait in progress",
 				"invalid-mode":  `cannot refresh: "invalid-mode" is not a valid mode`,
@@ -3191,13 +3191,6 @@ func (s *apiSuite) TestRefreshPartialOK(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	s.mockSketchSdk(c, "manysdks", `name: sketch
-base: ubuntu@22.04
-plugs:
-  sketch-plug:
-    interface: mount
-    workshop-target: /etc
-`)
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
@@ -3212,6 +3205,14 @@ plugs:
 		},
 	}
 	s.runActionTest(c, requests, expected)
+
+	s.mockSketchSdk(c, "manysdks", `name: sketch
+base: ubuntu@22.04
+plugs:
+  sketch-plug:
+    interface: mount
+    workshop-target: /etc
+`)
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh"}`),
@@ -3270,9 +3271,6 @@ func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	s.mockSketchSdk(c, "manysdks", `name: illegal-sketch-name
-base: ubuntu@22.04
-`)
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
@@ -3287,6 +3285,10 @@ base: ubuntu@22.04
 		},
 	}
 	s.runActionTest(c, requests, expected)
+
+	s.mockSketchSdk(c, "manysdks", `name: illegal-sketch-name
+base: ubuntu@22.04
+`)
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
