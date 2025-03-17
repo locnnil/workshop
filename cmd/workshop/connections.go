@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdConnections struct {
@@ -51,12 +52,8 @@ $ workshop connections`,
 	return cmd
 }
 
-func isSystemSdk(sdkName string) bool {
-	return sdkName == "system"
-}
-
 func isDefaultSystemSlot(slot client.Slot) bool {
-	return isSystemSdk(slot.Sdk) && slot.Interface == slot.Name
+	return sdk.IsSystem(slot.Sdk) && slot.Interface == slot.Name
 }
 
 func endpoint(workshop, sdkName, name string) string {

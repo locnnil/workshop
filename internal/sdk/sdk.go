@@ -57,6 +57,14 @@ func (t Type) String() string {
 	return string(t)
 }
 
+func IsSystem(name string) bool {
+	return name == System.String()
+}
+
+func IsSketch(name string) bool {
+	return name == Sketch
+}
+
 type Info struct {
 	ProjectId string
 	Workshop  string

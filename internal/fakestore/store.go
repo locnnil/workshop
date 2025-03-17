@@ -78,9 +78,6 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 	for _, act := range actions {
 		switch act.Action {
 		case sdk.Install:
-			if act.Channel == "" {
-				continue
-			}
 			s, err := storeSdkInfo(ctx, act.Name, act.Channel)
 			if err != nil {
 				actError.errors[act.Name] = err
@@ -250,7 +247,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Name = name
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
-	sSdk.Revision = sdk.Revision{N: int(atr.Generation % 1000)}
+	sSdk.Revision = sdk.Revision{N: int(atr.Generation%1000) + 1}
 	sSdk.Size = atr.Size
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {

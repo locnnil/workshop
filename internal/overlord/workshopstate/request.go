@@ -110,7 +110,7 @@ func systemSdkInfo(pid, wname string) (sdk.SdkResult, error) {
 func sdkInfos(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		if sdk.IsSystem(sd.Name) {
+		if workshop.IsImplicitSdk(sd.Name) {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
@@ -135,7 +135,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string
 	retrieve := state.NewTaskSet()
 	retrieveMap := map[string]string{}
 	for _, s := range sdks {
-		if s.Channel != "" {
+		if s.Revision.Store() {
 			r := sdkstate.Retrieve(st, s)
 			retrieve.AddTask(r)
 			retrieveMap[s.Name] = r.ID()
@@ -165,7 +165,7 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 		// allowed by LXD to be run concurrently and in general case we cannot
 		// guarantee safety of concurrent installations.
 		var install *state.TaskSet
-		if setup.Channel == "" {
+		if setup.Revision.Local() {
 			install = sdkstate.InstallLocalSdk(st, setup)
 		} else {
 			install = sdkstate.Install(st, setup.Name, retrieveTasks[setup.Name])
@@ -733,7 +733,7 @@ func uninstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
 		// guarantee safety of concurrent installations.
-		if setup.Channel != "" {
+		if setup.Revision.Store() {
 			install := st.NewTask("remove-sdk", fmt.Sprintf("Remove %q SDK", setup.Name))
 			install.Set("sdk-retrieve-task", install.ID())
 			install.Set("sdk-setup", setup)

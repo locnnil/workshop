@@ -235,7 +235,7 @@ func validateBinding(sdks []SdkRecord) error {
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
-			if p.Bind.Sdk != sdk.System.String() && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
+			if !IsImplicitSdk(p.Bind.Sdk) && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("cannot bind plug %q: SDK %q not found", p.Bind.String(), p.Bind.Sdk)
 			}
 			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
@@ -284,11 +284,11 @@ func validateConnections(wfile *File) error {
 				conn.PlugRef.String(), conn.SlotRef.String())
 		}
 
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || sdk.IsSystem(conn.PlugRef.Sdk) }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || IsImplicitSdk(conn.PlugRef.Sdk) }) {
 			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
 				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.PlugRef.Sdk)
 		}
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || sdk.IsSystem(conn.SlotRef.Sdk) }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || IsImplicitSdk(conn.SlotRef.Sdk) }) {
 			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
 				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.SlotRef.Sdk)
 		}
@@ -303,4 +303,10 @@ func validateScripts(wfile *File) error {
 		}
 	}
 	return nil
+}
+
+// IsImplicitSdk checks whether the given SDK is installed
+// regardless of whether it appears in the workshop file.
+func IsImplicitSdk(name string) bool {
+	return sdk.IsSystem(name) || sdk.IsSketch(name)
 }
