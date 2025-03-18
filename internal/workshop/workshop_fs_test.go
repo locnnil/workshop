@@ -27,53 +27,37 @@ func (f *workshopFsSuite) SetUpTest(c *check.C) {
 }
 
 func (f *workshopFsSuite) TestAtomicWrite(c *check.C) {
-	c.Assert(workshop.AtomicWrite(f.fs, "/file", strings.NewReader("content"), 0200), check.IsNil)
+	c.Assert(workshop.AtomicWrite(f.fs, "/file", strings.NewReader("content"), 0400), check.IsNil)
 
-	info, err := f.fs.Stat("/file")
+	c.Check(f.fs, testutil.DirEquals, []string{"-r-------- file"})
+	content, err := afero.ReadFile(f.fs, "/file")
 	c.Assert(err, check.IsNil)
-	c.Check(info.Name(), check.Equals, "file")
-	c.Check(info.Size(), check.Equals, int64(7))
-	c.Check(info.Mode().Perm(), check.Equals, os.FileMode(0200))
-	c.Check(info.IsDir(), check.Equals, false)
+	c.Check(string(content), check.Equals, "content")
 
-	infos, err := afero.ReadDir(f.fs, "/")
+	c.Assert(workshop.AtomicWrite(f.fs, "/file", strings.NewReader("new"), 0500), check.IsNil)
+	c.Check(f.fs, testutil.DirEquals, []string{"-r-x------ file"})
+	content, err = afero.ReadFile(f.fs, "/file")
 	c.Assert(err, check.IsNil)
-	c.Assert(infos, check.HasLen, 1)
-	c.Check(infos[0].Name(), check.Equals, "file")
-
-	c.Assert(workshop.AtomicWrite(f.fs, "/file", strings.NewReader("new"), 0100), check.IsNil)
-
-	info, err = f.fs.Stat("/file")
-	c.Assert(err, check.IsNil)
-	c.Check(info.Name(), check.Equals, "file")
-	c.Check(info.Size(), check.Equals, int64(3))
-	c.Check(info.Mode().Perm(), check.Equals, os.FileMode(0100))
-	c.Check(info.IsDir(), check.Equals, false)
-
-	infos, err = afero.ReadDir(f.fs, "/")
-	c.Assert(err, check.IsNil)
-	c.Assert(infos, check.HasLen, 1)
-	c.Check(infos[0].Name(), check.Equals, "file")
+	c.Check(string(content), check.Equals, "new")
 }
 
 func (f *workshopFsSuite) TestAtomicWriteNameOnly(c *check.C) {
 	err := workshop.AtomicWrite(f.fs, "file", strings.NewReader("content"), 0644)
 	c.Check(err, check.ErrorMatches, `parent directory not found for "file"`)
+	c.Check(f.fs, testutil.DirEquals, []string{})
 }
 
 func (f *workshopFsSuite) TestAtomicWriteNoDirectory(c *check.C) {
 	err := workshop.AtomicWrite(f.fs, "/var/tmp/file", strings.NewReader("content"), 0644)
 	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
+	c.Check(f.fs, testutil.DirEquals, []string{})
 }
 
 func (f *workshopFsSuite) TestAtomicWriteSourceError(c *check.C) {
 	expected := errors.New("fake error")
 	err := workshop.AtomicWrite(f.fs, "/file", &ErrorSource{expected}, 0644)
 	c.Check(err, testutil.ErrorIs, expected)
-
-	infos, err := afero.ReadDir(f.fs, "/")
-	c.Assert(err, check.IsNil)
-	c.Assert(infos, check.HasLen, 0)
+	c.Check(f.fs, testutil.DirEquals, []string{})
 }
 
 type ErrorSource struct {
@@ -89,12 +73,7 @@ func (f *workshopFsSuite) TestAtomicWriteRenameFailed(c *check.C) {
 	err := workshop.AtomicWrite(f.fs, "/file", strings.NewReader("content"), 0644)
 	c.Check(err, testutil.ErrorIs, os.ErrExist)
 
-	infos, err := afero.ReadDir(f.fs, "/")
-	c.Assert(err, check.IsNil)
-	c.Assert(infos, check.HasLen, 1)
-	c.Check(infos[0].Name(), check.Equals, "file")
-
-	infos, err = afero.ReadDir(f.fs, "/file")
-	c.Assert(err, check.IsNil)
-	c.Assert(infos, check.HasLen, 0)
+	c.Check(f.fs, testutil.DirEquals, []string{"drwxrwxr-x file"})
+	dir := afero.NewBasePathFs(f.fs, "/file")
+	c.Check(dir, testutil.DirEquals, []string{})
 }
