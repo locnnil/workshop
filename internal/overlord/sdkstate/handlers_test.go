@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -43,6 +44,12 @@ type sdkStateSuite struct {
 }
 
 var _ = check.Suite(&sdkStateSuite{})
+
+func TestMain(m *testing.M) {
+	// Ensure consistent file permissions for sdkStateSuite.
+	syscall.Umask(0002)
+	m.Run()
+}
 
 func Test(t *testing.T) { check.TestingT(t) }
 

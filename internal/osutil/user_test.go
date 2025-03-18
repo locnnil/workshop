@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"syscall"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -30,6 +31,12 @@ import (
 
 type userSuite struct {
 	testutil.BaseTest
+}
+
+func TestMain(m *testing.M) {
+	// Ensure consistent file permissions for profileSuite and StatTestSuite.
+	syscall.Umask(0002)
+	m.Run()
 }
 
 func TestOsUtil(t *testing.T) { check.TestingT(t) }

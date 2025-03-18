@@ -32,7 +32,7 @@ type normalizeTestSuite struct {
 
 var _ = Suite(&normalizeTestSuite{})
 
-func TestMain(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { TestingT(t) }
 
 func (s *normalizeTestSuite) TestNormalize(c *C) {
 	for _, tc := range []struct {
