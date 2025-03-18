@@ -1,7 +1,7 @@
-.. _ref_sdk:
+.. _ref_sdk_internals:
 
-SDKs
-====
+SDK internals
+=============
 
 .. @artefact SDK
 

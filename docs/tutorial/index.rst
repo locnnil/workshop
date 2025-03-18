@@ -33,6 +33,8 @@ see the
 :ref:`how-to guides <how_index>`.
 
 
+.. _tut_install:
+
 Install |ws_markup|
 -------------------
 
@@ -167,6 +169,21 @@ you're ready to create your first workshop.
    If anything went wrong in this section, see this guide:
    :ref:`how_troubleshoot`.
 
+
+Install shell completions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+|ws_markup| features shell completion for popular shells
+such as :program:`bash`, :program:`zsh` and :program:`fish`.
+Bash completion is configured automatically;
+you can :ref:`install completion for other shells <ref_workshop_cli_completion>`
+manually.
+
+After that, press the :kbd:`Tab` key while typing a command
+to quickly substitute suitable subcommands, flags and arguments.
+
+
+.. _tut_define_launch:
 
 Launch a workshop
 -----------------
@@ -549,6 +566,8 @@ who's also named :samp:`workshop`:
    workshop@dev-6b79e889:~$ exit
 
 
+.. _tut_project_updates:
+
 Project directory updates
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -647,41 +666,7 @@ This makes :file:`/home/user/mod/` on the host
 act as the Go modules cache for the workshop.
 
 
-Install shell completions
--------------------------
-
-|ws_markup| features shell completion for popular shells
-such as :program:`bash`, :program:`zsh` and :program:`fish`.
-Bash completion is configured automatically;
-to install completion for other shells,
-use :ref:`completion <ref_workshop_cli_completion>`.
-
-To see how this can be useful, let's look at the :command:`connect` command above.
-This command contains up to six sections that must be remembered:
-
-- The names of the plug and the slot themselves.
-- Their respective workshop\ :sup:`*` names.
-- Their respective SDK\ :sup:`*` names.
-
-:sup:`*` *Workshop and SDK names may be omitted for system SDK slots*
-
-This would look something like:
-
-.. code-block:: console
-
-   $ workshop connect <workshop>/<sdk>:<plug> <workshop>/<sdk>:<slot>
-
-
-Shell completion can simplify this by automatically finding appropriate
-candidate plugs and slots for you, eliminating the need to run
-:command:`workshop connections` to see what's available.
-
-After installation, you can access command completion by pressing the :kbd:`Tab` key
-while typing or after entering a command.
-
-
 .. _tut_sketch:
-
 
 Sketch an SDK (optional)
 ------------------------

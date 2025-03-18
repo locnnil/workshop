@@ -30,6 +30,6 @@ Explanation:
 
 Reference:
 
-- :ref:`ref_sdk`
+- :ref:`ref_sdk_internals`
 - :ref:`ref_sdk_definition`
 - :ref:`ref_workshopctl`
