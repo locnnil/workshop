@@ -53,7 +53,13 @@ In this documentation
 
    .. grid-item:: :doc:`Tutorial <tutorial/index>`
 
-      **Starter instructions** for new users of |ws_markup|
+      :ref:`Install <tut_install>` |
+      :ref:`Define workshops <tut_define_launch>` |
+      :ref:`Refresh workshops <tut_refresh>` |
+      :ref:`Run commands <tut_exec>` |
+      :ref:`Use interfaces <tut_interfaces>` |
+      :ref:`Sketch SDKs <tut_sketch>` |
+      :ref:`Remove workshops <tut_remove>`
 
 
    .. grid-item:: :doc:`How-to guides <how-to/index>`
@@ -70,8 +76,35 @@ In this documentation
 
       **Technical details**, specifications, APIs
 
-----
 
+- **Projects**: :ref:`Concepts <exp_projects>` |
+  :ref:`Move projects <how_moving_projects>` |
+  :ref:`Update projects <tut_project_updates>`
+
+- **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |
+  :ref:`Definition <ref_workshop_definition>` |
+  :ref:`Status diagrams <ref_workshop_status>` |
+  :ref:`Debug workshops <how_debug_issues_workshops>`
+
+- **SDKs**: :ref:`Concepts <exp_sdk_concepts>` |
+  :ref:`Internals <ref_sdk_internals>` |
+  :ref:`Definition <ref_sdk_definition>` |
+  :ref:`Design SDKs <how_create_ros2_sdk>` |
+  :ref:`Sketch SDKs in-place <how_sketch>` |
+  :ref:`Craft complete SDKs <how_sdkcraft>`
+
+- **Interfaces**: :ref:`Concepts <exp_interface_concepts>` |
+  :ref:`Camera <exp_camera_interface>` |
+  :ref:`Desktop <exp_desktop_interface>` |
+  :ref:`GPU <exp_gpu_interface>` |
+  :ref:`Mounts <exp_mount_interface>` |
+  :ref:`SSH agent <exp_ssh_interface>` |
+  :ref:`Networking <exp_tunnel_interface>`
+
+- **Utilities**: :ref:`Command-line tools <ref_cli>` |
+  :ref:`Troubleshoot installation <how_troubleshoot>`
+
+----
 
 Project and community
 ---------------------

@@ -221,5 +221,5 @@ How-to guides:
 
 Reference:
 
-- :ref:`ref_sdk`
+- :ref:`ref_sdk_internals`
 - :ref:`ref_workshop_definition`
