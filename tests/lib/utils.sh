@@ -47,7 +47,7 @@ function prepare_environment() {
     done
 
     apt-get update
-    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq xdelta3
+    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq xdelta3 zfsutils-linux
 
     systemctl unmask snapd.service
     systemctl start snapd.service
@@ -135,7 +135,7 @@ function run_sdkcraft() {
 }
 
 # Install sdkcraft from a local snap file
-function install_sdkcraft() {    
+function install_sdkcraft() {
     if stat /sdkcraft/tests/*.snap 2>/dev/null; then
         snap install --classic --dangerous /sdkcraft/tests/*.snap
     else

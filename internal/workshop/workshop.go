@@ -317,8 +317,7 @@ func (w *Workshop) SdksByInstallOrder() []sdk.Setup {
 	return sdks
 }
 
-// Mounts returns a map of active mounts,
-// given a map of SDK info as returned by SdkInfos.
+// Mounts returns a map of active SDK mounts for the workshop.
 func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	if sdks == nil {
 		return nil

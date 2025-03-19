@@ -1,12 +1,12 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch --project single
-  workshop_exec launch ws-refresh ws-refresh-sdk --project multi
+  workshop_exec launch ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove --project single
-  workshop_exec remove ws-refresh ws-refresh-sdk --project multi
+  workshop_exec remove ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -38,3 +38,40 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
+
+
+  validate_snapshots() {
+    local expected_output="$1"
+    local output
+    output=$(zfs list -t snapshot -s creation -o name | grep ws-refresh-snapshots | sed 's|^.*workshop/containers/workshop.ubuntu_||')
+    [ "$expected_output" = "$output" ]
+  }
+
+  echo "Check workshop snapshots exist"
+  pid=$(cat .workshop.lock)
+  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.basic
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.mount
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.gpu"
+  validate_snapshots "$expected_snapshots"
+
+  echo "Check workshop snapshots updated after an SDK was removed"
+  # Annoyingly, yq snap is in strict mode and won't see these files.
+  cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks[-1])' | sponge .workshop/ws-refresh-snapshots.yaml
+  workshop_exec refresh ws-refresh-snapshots
+  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.basic
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.mount"
+  validate_snapshots "$expected_snapshots"
+
+  echo "Check workshop was rebuilt from a new image base"
+  cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks)' | sponge .workshop/ws-refresh-snapshots.yaml
+  cat .workshop/ws-refresh-snapshots.yaml | yq '(.base) |= sub("ubuntu@22.04"; "ubuntu@24.04")' | sponge .workshop/ws-refresh-snapshots.yaml
+  workshop_exec refresh ws-refresh-snapshots
+  workshop_exec info ws-refresh-snapshots | MATCH ubuntu@24.04
+  workshop_exec exec ws-refresh-snapshots -- lsb_release -a | MATCH 24.04
+
+  echo "Check workshop refresh when no updates are available"
+  workshop_exec refresh ws-refresh-snapshots
+  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system"
+  validate_snapshots "$expected_snapshots"

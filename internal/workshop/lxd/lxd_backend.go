@@ -11,13 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -275,17 +275,24 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			}
 		}
 
-		rop, err := conn.RebuildInstanceFromImage(conn, *image, InstanceName(file.Name, projectId), api.InstanceRebuildPost{})
+		rop, err := conn.RebuildInstanceFromImage(conn, *image, inst.Name, api.InstanceRebuildPost{})
 		if err != nil {
 			return err
 		}
 		if err = rop.Wait(); err != nil {
 			return err
 		}
-		maps.Copy(inst.Config, req.Config)
-		maps.Copy(inst.Devices, req.Devices)
 
-		op, err := conn.UpdateInstance(InstanceName(file.Name, projectId), inst.Writable(), "")
+		// Get an updated instance configuration
+		rebuilt, etag, err := conn.GetInstance(inst.Name)
+		if err != nil {
+			return err
+		}
+
+		maps.Copy(rebuilt.Config, config)
+		maps.Copy(rebuilt.Devices, defaultDevices())
+
+		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
 		if err != nil {
 			return err
 		}
@@ -831,11 +838,14 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 		return err
 	}
 
-	instPut.Restore = ""
+	// The restored snapshot will have an updated file and empty profiles.
+	// Similar to how a launched workshop is associated with its definition.
+	inst, etag, err = conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+	instPut = inst.Writable()
 	instPut.Profiles = []string{"default"}
-
-	// The restored snapsho will have an updated file. Similar to how a launched
-	// workshop is associated with its definition.
 	f, err := yaml.Marshal(file)
 	if err != nil {
 		return err
@@ -845,7 +855,7 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 	// time the snapshot was made. We need the restored configuration to have
 	// the current instance's configuration as it reflects the installed SDKs
 	// list, for example.
-	op, err = conn.UpdateInstance(inst.Name, instPut, "")
+	op, err = conn.UpdateInstance(inst.Name, instPut, etag)
 	if err != nil {
 		return err
 	}
