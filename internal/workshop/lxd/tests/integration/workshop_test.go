@@ -15,6 +15,8 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -414,7 +416,15 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
-	err := f.bd.StopWorkshop(f.ctx, "test", true)
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+	err = w.InstallLocalSdk(f.ctx, sdk.System.String(), "x1", system.SystemSdkFs)
+	c.Check(err, check.IsNil)
+	err = w.LinkSdk(f.ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
+	c.Check(err, check.IsNil)
+	c.Check(w.Sdks, check.HasLen, 1)
+
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 
 	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
@@ -422,15 +432,22 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 
 	wf := &workshop.File{
 		Name: "test",
-		Base: "ubuntu@24.04"}
-
-	// Execute
-	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf)
-	c.Assert(err, check.IsNil)
-
-	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
-	c.Assert(err, check.IsNil)
+		Base: "ubuntu@24.04",
+	}
+	// The instance's configuration does not have any SDK in user.workshop.sdks
+	// after this.
+	err = w.UnlinkSdk(f.ctx, sdk.System.String())
+	c.Check(err, check.IsNil)
 
 	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
 	c.Assert(err, check.IsNil)
+
+	w, err = f.bd.Workshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+	c.Check(w.Running, check.Equals, false)
+	// Check that restore did not restore previous version of
+	// "user.workshop.sdks" or "user.workshop.file" and uses the instance's
+	// configuration, not the snapshot's.
+	c.Check(w.File, check.DeepEquals, wf)
+	c.Check(w.Sdks, check.HasLen, 0)
 }

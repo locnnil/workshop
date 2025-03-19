@@ -225,9 +225,6 @@ func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
 		}
 
 		sk := conn.Plug.Sdk
-		if sdk.IsSystem(sk) {
-			sk = conn.Slot.Sdk
-		}
 		info, ok := tunnels[sk]
 		if !ok {
 			info = &TunnelInfo{}

@@ -688,15 +688,20 @@ func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn s
 		return nil, fmt.Errorf("cannot refresh %q: %w", wpn, err)
 	}
 
+	file, err := wp.Project.Workshop(wpn)
+	if err != nil {
+		return nil, err
+	}
+
 	sto := sdk.StoreService(w.state)
 	w.state.Unlock()
-	plan, err := resolveRefresh(ctx, sto, wp, wp.File)
+	plan, err := resolveRefresh(ctx, sto, wp, file)
 	w.state.Lock()
 	if err != nil {
 		return nil, err
 	}
 
-	ts, err := refresh(ctx, w.state, plan, wp, wp.File)
+	ts, err := refresh(ctx, w.state, plan, wp, file)
 	if err != nil {
 		return nil, err
 	}

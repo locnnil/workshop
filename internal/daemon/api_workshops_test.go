@@ -556,6 +556,33 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Name:        "system",
 					Revision:    "x1",
 					InstallTime: &install1,
+					Tunnels: &TunnelInfo{
+						Plugs: []*Tunnel{
+							{
+								Plug: sdk.PlugRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "system",
+									Name:      "api",
+								},
+								Slot: sdk.SlotRef{
+									ProjectId: s.project.ProjectId,
+									Workshop:  "tunnels",
+									Sdk:       "test-sdk-2",
+									Name:      "api",
+								},
+								From: Endpoint{
+									Protocol: "tcp",
+									Host:     "0.0.0.0",
+									Port:     8888,
+								},
+								To: Endpoint{
+									Protocol: "unix",
+									Path:     "@testapi",
+								},
+							},
+						},
+					},
 				},
 				{
 					Name:        "test-sdk",
@@ -631,33 +658,6 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 								Workshop:  "tunnels",
 								Sdk:       "test-sdk-2",
 								Name:      "photos2",
-							},
-						},
-					},
-					Tunnels: &TunnelInfo{
-						Slots: []*Tunnel{
-							{
-								Plug: sdk.PlugRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "system",
-									Name:      "api",
-								},
-								Slot: sdk.SlotRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "test-sdk-2",
-									Name:      "api",
-								},
-								From: Endpoint{
-									Protocol: "tcp",
-									Host:     "0.0.0.0",
-									Port:     8888,
-								},
-								To: Endpoint{
-									Protocol: "unix",
-									Path:     "@testapi",
-								},
 							},
 						},
 					},
@@ -2960,6 +2960,7 @@ plugs:
 		},
 	}
 
+	s.createWFile(c, "manysdks", manysdks_minusone)
 	s.runActionTest(c, requests, expected)
 
 	want := []expectedWorkshop{{
@@ -2968,23 +2969,17 @@ plugs:
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "sketch", Channel: "", Revision: sdk.R(-2), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/sketch:sketch-plug b8639dea/manysdks/system:mount",
 			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
 		plugs: []string{
 			"sketch:sketch-plug",
 			"test-sdk:data",
-			"test-sdk-2:photos",
-			"test-sdk-2:gpu",
 		},
 		slots: []string{
-			"test-sdk-2:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
