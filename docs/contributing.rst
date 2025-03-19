@@ -421,29 +421,94 @@ and following our internal `Sphinx and Read the Docs guide
 Releases
 --------
 
-#. `Snapcraft <https://snapcraft.io/docs/snapcraft>`_
-   is used to build, package, and publish ``workshop`` snaps.
-   All these processes run in a self-launched
-   `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
-   Install ``snapcraft`` and ``lxd`` using ``snap``:
-
-   .. code-block:: console
-
-      sudo snap install snapcraft --classic
-      sudo snap install lxd
+See the :ref:`release notes <release_notes>`
+for more information on our general approach.
+The steps to produce a |ws_markup| release are as follows.
 
 
-   Add the current user to the ``lxd`` group
-   to give permission to access its resources:
+Build the snaps locally
+~~~~~~~~~~~~~~~~~~~~~~~
 
-   .. code-block:: console
+`Snapcraft <https://snapcraft.io/docs/snapcraft>`_
+is used to build, package, and publish ``workshop`` snaps.
+All these processes run in a self-launched
+`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
+To be able to run the build, install ``snapcraft`` and ``lxd`` using ``snap``:
 
-      sudo usermod -a -G lxd $USER
+.. code-block:: console
+
+   sudo snap install snapcraft --classic
+   sudo snap install lxd
 
 
-   Log out and re-open your user session for the new group to become active,
-   then initialise LXD:
+Add the current user to the ``lxd`` group
+to give permission to access its resources:
 
-   .. code-block:: console
+.. code-block:: console
 
-      lxd init --minimal
+   sudo usermod -a -G lxd $USER
+
+
+Log out and re-open your user session for the new group to become active,
+then initialise LXD:
+
+.. code-block:: console
+
+   lxd init --minimal
+
+
+Publish the release
+~~~~~~~~~~~~~~~~~~~
+
+Here's the publishing checklist to follow:
+
+- Merge and close the outstanding pull requests from the release scope
+
+- Make sure the unit, integration and documentation tests are green;
+  see `Testing`_ for details
+
+- Create and push a new release tag with :program:`git`,
+  using `semantic versioning <https://semver.org/>`_
+
+- Run the `release workflow
+  <https://github.com/canonical/workshop/actions/workflows/release.yaml>`_
+  on GitHub;
+  this builds the release snaps for the supported architectures
+  to be published on GitHub
+  and adds a pull request to update the
+  :ref:`CLI reference <ref_workshop_cli>`
+
+- Generate the
+  `change log <https://github.com/canonical/workshop/releases/new>`_
+  on GitHub
+
+
+You'll also need to update the documentation:
+
+- Merge the auto-generated documentation pull request
+
+- Generate the updated SDK definition schema
+  in the root of the SDKcraft_ repository:
+
+  .. code-block:: console
+
+     PYTHONPATH=. python sdkcraft/models/project.py
+
+
+  And copy the output to :file:`docs/reference/definitions/schema-sdk.json`
+  in this repository.
+
+- Update the workshop definition schema in
+  :file:`docs/reference/definitions/schema.json`
+  according to the changes in :file:`internal/workshop/workshop_file.go`.
+
+- Update the release notes,
+  adding additional information on top of the auto-generated change log
+  and following the `established format
+  <https://github.com/canonical/workshop/releases>`_.
+
+- Update the `coverage map
+  <https://github.com/canonical/workshop/actions/workflows/doc-cover.yaml>`_.
+
+- Publish and merge all documentation changes in the repository;
+  the site updates automatically.
