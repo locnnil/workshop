@@ -58,8 +58,7 @@ In this documentation
       :ref:`Refresh workshops <tut_refresh>` |
       :ref:`Run commands <tut_exec>` |
       :ref:`Use interfaces <tut_interfaces>` |
-      :ref:`Sketch SDKs <tut_sketch>` |
-      :ref:`Remove workshops <tut_remove>`
+      :ref:`Sketch SDKs <tut_sketch>`
 
 
    .. grid-item:: :doc:`How-to guides <how-to/index>`
@@ -82,6 +81,7 @@ In this documentation
   :ref:`Update projects <tut_project_updates>`
 
 - **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |
+  :ref:`Internals <ref_workshop_internals>` |
   :ref:`Definition file <ref_workshop_definition>` |
   :ref:`Status diagrams <ref_workshop_status>` |
   :ref:`Debug workshops <how_debug_issues_workshops>`
@@ -91,7 +91,7 @@ In this documentation
   :ref:`Definition file <ref_sdk_definition>` |
   :ref:`Design SDKs <how_create_ros2_sdk>` |
   :ref:`Sketch SDKs in-place <how_sketch>` |
-  :ref:`Craft complete SDKs <how_sdkcraft>`
+  :ref:`Craft full SDKs <how_sdkcraft>`
 
 - **Interfaces**: :ref:`Concepts <exp_interface_concepts>` |
   :ref:`Camera <exp_camera_interface>` |
