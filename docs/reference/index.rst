@@ -33,7 +33,7 @@ However, both definition types have different purposes and structure:
 .. toctree::
    :maxdepth: 2
 
-   Definitions <definitions/index>
+   Definition files <definition-files/index>
 
 
 Structure and behaviour

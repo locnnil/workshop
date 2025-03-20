@@ -82,14 +82,13 @@ In this documentation
   :ref:`Update projects <tut_project_updates>`
 
 - **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |
-  :ref:`Internals <ref_workshop_internals>` |
-  :ref:`Definition <ref_workshop_definition>` |
+  :ref:`Definition file <ref_workshop_definition>` |
   :ref:`Status diagrams <ref_workshop_status>` |
   :ref:`Debug workshops <how_debug_issues_workshops>`
 
 - **SDKs**: :ref:`Concepts <exp_sdk_concepts>` |
   :ref:`Internals <ref_sdk_internals>` |
-  :ref:`Definition <ref_sdk_definition>` |
+  :ref:`Definition file <ref_sdk_definition>` |
   :ref:`Design SDKs <how_create_ros2_sdk>` |
   :ref:`Sketch SDKs in-place <how_sketch>` |
   :ref:`Craft complete SDKs <how_sdkcraft>`
