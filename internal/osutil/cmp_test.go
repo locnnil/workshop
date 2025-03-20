@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	. "gopkg.in/check.v1"
 
@@ -152,4 +153,104 @@ func (s *CmpTestSuite) TestStreamsEqualChunked(c *C) {
 		eq = osutil.StreamsEqualChunked(readerB, readerA, chunkSize)
 		c.Check(eq, Equals, false, comment)
 	}
+}
+
+func (s *CmpTestSuite) TestDirsAreEqual(c *C) {
+	// Empty directory
+	a := c.MkDir()
+	b := c.MkDir()
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add empty subdirectory
+	c.Assert(os.Mkdir(filepath.Join(a, "dir"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Mkdir(filepath.Join(b, "dir"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add empty file, with initially different permissions.
+	c.Assert(os.WriteFile(filepath.Join(a, "file"), nil, 0600), IsNil)
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.WriteFile(filepath.Join(b, "file"), nil, os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Chmod(filepath.Join(b, "file"), 0600), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add named pipe
+	c.Assert(syscall.Mkfifo(filepath.Join(b, "pipe"), uint32(os.ModePerm)), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add files with different names and contents
+	c.Assert(os.WriteFile(filepath.Join(a, "dir", "file"), []byte("foo"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.WriteFile(filepath.Join(b, "dir", "file"), nil, os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.WriteFile(filepath.Join(b, "dir", "file"), []byte("bar"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Remove(filepath.Join(b, "dir", "file")), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Assert(os.WriteFile(filepath.Join(b, "dir", "file2"), []byte("foo"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Rename(filepath.Join(b, "dir", "file2"), filepath.Join(b, "dir", "file")), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add subdirectory and a regular file
+	c.Assert(os.Mkdir(filepath.Join(a, "dir", "dir"), os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.WriteFile(filepath.Join(b, "dir", "dir"), nil, os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	// Add symlink to subdirectory
+	c.Assert(os.Remove(filepath.Join(b, "dir", "dir")), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Assert(os.Symlink(filepath.Join(a, "dir", "dir"), filepath.Join(b, "dir", "dir")), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Add file in shared subdirectory
+	c.Assert(os.WriteFile(filepath.Join(a, "dir", "dir", "file"), nil, os.ModePerm), IsNil)
+	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
+
+	// Edit top-level directory permissions
+	c.Check(osutil.DirsAreEqual(filepath.Join(a, "dir"), filepath.Join(b, "dir")), Equals, true)
+	c.Assert(os.Chmod(filepath.Join(b, "dir"), 0700), IsNil)
+	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+	c.Check(osutil.DirsAreEqual(filepath.Join(a, "dir"), filepath.Join(b, "dir")), Equals, true)
+}
+
+func (s *CmpTestSuite) TestDirsAreEqualTerminates(c *C) {
+	loop := filepath.Join(c.MkDir(), "loop")
+	c.Assert(os.Symlink("loop", loop), IsNil)
+	c.Check(osutil.DirsAreEqual(loop, loop), Equals, false)
+
+	a := c.MkDir()
+	b := c.MkDir()
+	c.Assert(os.Symlink(a, filepath.Join(b, "a")), IsNil)
+	c.Assert(os.Symlink(b, filepath.Join(a, "b")), IsNil)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
 }

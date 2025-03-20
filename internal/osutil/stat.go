@@ -122,3 +122,20 @@ func ExistsIsDir(fn string) (exists bool, isDir bool, err error) {
 	}
 	return true, st.IsDir(), nil
 }
+
+// DirInfos converts directory entries into file info.
+func DirInfos(entries []os.DirEntry) ([]os.FileInfo, error) {
+	if entries == nil {
+		return nil, nil
+	}
+
+	infos := make([]os.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			return infos, err
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
+}
