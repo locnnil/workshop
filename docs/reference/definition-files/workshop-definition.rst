@@ -161,21 +161,22 @@ Technically, the system SDK is of :samp:`system` type,
 whereas all other SDKs are of :samp:`regular` type,
 but this detail isn't exposed in the definition files.
 
-The system SDK declares slots for interfaces that only support a single slot,
-because they expose host-based resources that are singular by nature:
+Several interfaces expose resources that are host-based and singular by nature;
+the system SDK has default eponymous slots for these interfaces:
 :samp:`system:camera`, :samp:`system:desktop`, :samp:`system:gpu`,
 :samp:`system:mount`, and :samp:`system:ssh-agent`.
 No other SDKs can declare slots for these interfaces, except for :samp:`mount`.
 The :samp:`system:mount` slot is still unique
-because it's the only one that provides access to the host file system,
+because it's the only one that provides access to the *host* file system,
 whereas slots under regular SDKs only expose locations in the workshop.
-However, regular SDKs can also declare slots for the mount interface.
 
-Additional plugs and slots for interfaces like :samp:`tunnel` or :samp:`mount`
-are subject to extra conditions and restrictions
-when they are defined for the system SDK,
+If additional slots for interfaces like :samp:`tunnel` or :samp:`mount`
+are defined for the system SDK,
+they won't be auto-connected at launch or refresh,
 largely due to security considerations,
 because the system SDK exposes sensitive host system resources.
+To the contrary, plugs added under the system SDK can be auto-connected
+because they expose workshop internals.
 
 
 Camera interface
