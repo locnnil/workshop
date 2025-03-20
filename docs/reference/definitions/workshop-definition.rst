@@ -66,18 +66,20 @@ and includes a number of mandatory and optional keys:
 
        Each entry points to an existing SDK
        and specifies its retrieval channel.
-       The SDKs are installed in the order they appear in this list.
+       The SDKs are installed in the order they appear in this list;
+       the exception is the system SDK which is always installed first.
 
    * - :samp:`connections`
      - array
      - List of connections made by the workshop;
        each links a plug to a slot.
 
-       Any entry in :samp:`connections` must include a :samp:`plug` and a
-       :samp:`slot` from the SDKs listed under :samp:`sdks` (the system SDK is
-       always implicitly included). Both must be strings that reference a plug
-       and a slot with the same interface in different SDKs, using the
-       :samp:`<SDK>:<PLUG>` format.
+       Any entry in :samp:`connections` must include
+       a :samp:`plug` and a :samp:`slot` from the SDKs listed under :samp:`sdks`
+       (the system SDK is always implicitly included).
+       Both must be strings that reference a plug and a slot
+       with the same interface in different SDKs,
+       using the :samp:`<SDK>:<PLUG>` format.
 
    * - :samp:`scripts`
      - object
@@ -107,7 +109,7 @@ Each SDK is described with the following keys:
      - string
      - Name of an existing SDK
        that is available from the SDK store,
-       or :samp:`system`.
+       or :samp:`system` for the :ref:`system SDK <ref_system_sdk>`.
 
    * - :samp:`channel` (required)
      - string
@@ -150,15 +152,30 @@ System SDK
 
 .. @artefact system SDK
 
-The system SDK is built in to every workshop,
-and isn't available in the SDK store,
-so it doesn't require a :samp:`channel`.
+The system SDK is built into every workshop
+to expose resources provided by the host system in a consistent way.
+It's not available in the SDK store,
+so :samp:`channel` isn't relevant and can be omitted.
 
-The system SDK declares slots for many interfaces.
-These represent resources provided by the host system.
-The workshop definition can define additional plugs and slots
-for all SDKs,
-including the system SDK.
+Technically, the system SDK is of :samp:`system` type,
+whereas all other SDKs are of :samp:`regular` type,
+but this detail isn't exposed in the definition files.
+
+The system SDK declares slots for interfaces that only support a single slot,
+because they expose host-based resources that are singular by nature:
+:samp:`system:camera`, :samp:`system:desktop`, :samp:`system:gpu`,
+:samp:`system:mount`, and :samp:`system:ssh-agent`.
+No other SDKs can declare slots for these interfaces, except for :samp:`mount`.
+The :samp:`system:mount` slot is still unique
+because it's the only one that provides access to the host file system,
+whereas slots under regular SDKs only expose locations in the workshop.
+However, regular SDKs can also declare slots for the mount interface.
+
+Additional plugs and slots for interfaces like :samp:`tunnel` or :samp:`mount`
+are subject to extra conditions and restrictions
+when they are defined for the system SDK,
+largely due to security considerations,
+because the system SDK exposes sensitive host system resources.
 
 
 Camera interface
@@ -226,7 +243,8 @@ They are described by the following attributes:
      - Whether the target directory should be read-only.
 
 
-The only mount interface slot in the :ref:`system SDK <ref_system_sdk>` is :samp:`system:mount`.
+The only mount interface slot in the :ref:`system SDK <ref_system_sdk>`
+is :samp:`system:mount`.
 It has a single dynamic attribute named :samp:`host-source`,
 which can be only configured at :ref:`remount <ref_workshop_remount>`.
 
