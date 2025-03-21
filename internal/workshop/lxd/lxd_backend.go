@@ -249,22 +249,35 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	if err != nil {
 		return err
 	}
-	req := api.InstancesPost{
-		InstancePut: api.InstancePut{
-			Devices: defaultDevices(),
-			Config:  config,
-		},
-		Name: InstanceName(file.Name, projectId),
-		Type: api.InstanceType("container"),
-		Source: api.InstanceSource{
-			Type:        "image",
-			Fingerprint: image.Fingerprint,
-			Project:     LxdProjectName(userName),
-		},
-	}
+	devices := defaultDevices()
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
-	if err == nil {
+	switch {
+	case err != nil && !api.StatusErrorCheck(err, http.StatusNotFound):
+		return err
+	case err != nil && api.StatusErrorCheck(err, http.StatusNotFound):
+		// Create a new workshop.
+		req := api.InstancesPost{
+			InstancePut: api.InstancePut{
+				Devices: devices,
+				Config:  config,
+			},
+			Name: InstanceName(file.Name, projectId),
+			Type: api.InstanceType("container"),
+			Source: api.InstanceSource{
+				Type:        "image",
+				Fingerprint: image.Fingerprint,
+				Project:     LxdProjectName(userName),
+			},
+		}
+		op, err := conn.CreateInstance(req)
+		if err != nil {
+			return err
+		}
+
+		return op.Wait()
+	default:
+		// Rebuild the existing workshop
 		for _, snapshot := range inst.Snapshots {
 			op, err := conn.DeleteInstanceSnapshot(inst.Name, snapshot.Name)
 			if err != nil {
@@ -290,7 +303,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		}
 
 		maps.Copy(rebuilt.Config, config)
-		maps.Copy(rebuilt.Devices, defaultDevices())
+		maps.Copy(rebuilt.Devices, devices)
 
 		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
 		if err != nil {
@@ -300,13 +313,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 		return nil
-	} else {
-		op, err := conn.CreateInstance(req)
-		if err != nil {
-			return err
-		}
-
-		return op.Wait()
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"slices"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -87,7 +86,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 // Moves the instance between LXD projects.
 func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string) error {
 	conn = conn.UseProject(sourceProject)
-	instance, etag, err := conn.GetInstance(srcName)
+	instance, _, err := conn.GetInstance(srcName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
@@ -95,36 +94,7 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 		return err
 	}
 
-	dest := conn
-	dest = dest.UseProject(targetProject)
-
-	// Profiles need reseting before making a copy to workaround:
-	// https://github.com/canonical/lxd/issues/15078#issue-2883386254
-	oldProfiles := slices.Clone(instance.Profiles)
-	instance.Profiles = []string{"default"}
-
-	op, err := conn.UpdateInstance(instance.Name, instance.Writable(), etag)
-	if err != nil {
-		return err
-	}
-	if err = op.Wait(); err != nil {
-		return err
-	}
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	rev.Add(func() {
-		instance.Profiles = oldProfiles
-		op, rerr := conn.UpdateInstance(instance.Name, instance.Writable(), "")
-		if rerr != nil {
-			logger.Noticef("On copyInstance: cannot revert profiles assigned to %q workshop: %v", srcName, rerr)
-		}
-		if rerr = op.Wait(); rerr != nil {
-			logger.Noticef("On copyInstance: cannot revert profiles assigned to %q workshop: %v", srcName, rerr)
-		}
-	})
-
+	dest := conn.UseProject(targetProject)
 	rop, err := dest.CopyInstance(conn, *instance, &lxd.InstanceCopyArgs{Name: dstName})
 	if err != nil {
 		return err
@@ -132,7 +102,6 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 	if err = rop.Wait(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
