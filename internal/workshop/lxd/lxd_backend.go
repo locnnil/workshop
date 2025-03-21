@@ -84,6 +84,12 @@ func ImageAlias(name string) string {
 	return fmt.Sprintf("workshop-%s-%s", name, runtime.GOARCH)
 }
 
+func ErrorWithInstallLXDPrompt(err error) error {
+	return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
+		"Install and initialize LXD by:\n  sudo snap install lxd\n  lxd init --auto\n"+
+		"Then restart workshop daemon by:\n  sudo snap start workshop.workshopd", err)
+}
+
 func New() (*Backend, error) {
 	server := Backend{}
 
@@ -94,9 +100,7 @@ func New() (*Backend, error) {
 	// Create LXD storage pool if it doesn't exist
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return nil, fmt.Errorf("[yanjiangdebug2222] cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
-			"Install and initialize LXD by:\n  sudo snap install lxd\n  lxd init --auto\n"+
-			"Then restart workshop daemon by:\n  sudo snap start workshop.workshopd", err)
+		return nil, ErrorWithInstallLXDPrompt(err)
 	}
 	defer conn.Disconnect()
 
@@ -904,7 +908,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	}
 
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
-		return nil, fmt.Errorf("[yanjiangdebug3333] cannot connect to LXD: %w, maybe LXD isn't installed?", err)
+		return nil, ErrorWithInstallLXDPrompt(err)
 	} else {
 		if err = InitLxdProject(srv, user); err != nil {
 			return nil, err
@@ -928,7 +932,7 @@ func createDefaultDevices() map[string]map[string]string {
 func checkNvidia() (bool, error) {
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return false, err
+		return false, ErrorWithInstallLXDPrompt(err)
 	}
 	defer conn.Disconnect()
 
