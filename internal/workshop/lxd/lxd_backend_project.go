@@ -131,7 +131,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 	// every workshop
 	client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[yanjiangdebug4444] cannot connect to LXD: %w, maybe LXD isn't installed?", err)
 	}
 	// list all projects for all users if the user is not provided
 	lxdProjects, err := client.GetProjects()

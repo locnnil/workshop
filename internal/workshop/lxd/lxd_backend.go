@@ -94,7 +94,7 @@ func New() (*Backend, error) {
 	// Create LXD storage pool if it doesn't exist
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[yanjiangdebug2222] cannot connect to LXD: %w, maybe LXD isn't installed? 1", err)
 	}
 	defer conn.Disconnect()
 
@@ -902,7 +902,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	}
 
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[yanjiangdebug3333] cannot connect to LXD: %w, maybe LXD isn't installed?", err)
 	} else {
 		if err = InitLxdProject(srv, user); err != nil {
 			return nil, err

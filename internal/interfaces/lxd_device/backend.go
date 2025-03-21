@@ -50,7 +50,7 @@ func lxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 
 	srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[yanjiangdebug1111] cannot connect to LXD: %w, maybe LXD isn't installed?", err)
 	}
 
 	return srv.UseProject("workshop." + user), nil
