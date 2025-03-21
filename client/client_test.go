@@ -101,7 +101,7 @@ func (cs *clientSuite) TestNewBaseURLError(c *C) {
 func (cs *clientSuite) TestClientDoReportsErrors(c *C) {
 	cs.err = errors.New("ouchie")
 	err := cs.cli.Do("GET", "/", nil, nil, nil)
-	c.Check(err, ErrorMatches, "cannot communicate with server: ouchie*")
+	c.Check(err, ErrorMatches, `cannot communicate with server: ouchie[\s\S]*`)
 	if cs.doCalls < 2 {
 		c.Fatalf("do did not retry")
 	}

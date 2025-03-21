@@ -98,7 +98,7 @@ func (cs *clientSuite) TestClientWaitChangeTimeout(c *check.C) {
 	}
 	_, err := cs.cli.WaitChange("bar", opts)
 	c.Assert(cs.req.URL.String(), check.Equals, "http://localhost/v1/changes/bar/wait?timeout=30s")
-	c.Assert(err, check.ErrorMatches, `.*timed out waiting for change.*`)
+	c.Assert(err, check.ErrorMatches, `.*timed out waiting for change[\s\S]*`)
 }
 
 func (cs *clientSuite) TestClientChangeData(c *check.C) {
