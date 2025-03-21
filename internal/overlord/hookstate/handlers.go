@@ -81,11 +81,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		if err = h.executeHook(ctx, task, w, prj.ProjectId, &hook); err != nil {
 			return err
 		}
-		if err = h.backend.Snapshot(ctx, w, workshop.SnapshotId(w, hook.Sdk)); err != nil {
-			return err
-		}
-		return nil
-
+		return h.backend.Snapshot(ctx, w, workshop.SnapshotId(w, hook.Sdk))
 	default:
 		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
 	}

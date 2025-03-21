@@ -220,9 +220,11 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 		prev = t
 	}
 
-	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-	base.Set("workshop-base", file.Base)
-	addTask(base)
+	if sdkSnapshot != "" {
+		base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
+		base.Set("workshop-base", file.Base)
+		addTask(base)
+	}
 
 	var summary string
 	if sdkSnapshot == "" {
@@ -433,7 +435,7 @@ type refreshPlan struct {
 }
 
 func (p refreshPlan) ordered(setups ...[]sdk.Setup) []sdk.Setup {
-	ordered := []sdk.Setup{}
+	ordered := make([]sdk.Setup, 0, len(p.installOrder))
 
 	for _, sk := range p.installOrder {
 		for _, setup := range setups {
@@ -442,6 +444,7 @@ func (p refreshPlan) ordered(setups ...[]sdk.Setup) []sdk.Setup {
 			idx := slices.IndexFunc(setup, contains)
 			if idx != -1 {
 				ordered = append(ordered, setup[idx])
+				break
 			}
 		}
 	}
@@ -502,6 +505,8 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 			// Otherwise, break the loop as the rest require to be reinstalled.
 			plan.sdkSnapshot = s.Name
 			lastIntact = ni
+		} else {
+			break
 		}
 	}
 

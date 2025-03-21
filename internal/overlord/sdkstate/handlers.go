@@ -180,7 +180,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()), sdkPath, true)
 }
 
-func (m *SdkManager) doUnistallSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err

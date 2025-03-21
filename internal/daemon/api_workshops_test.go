@@ -143,6 +143,17 @@ sdks:
 base: ubuntu@22.04
 `
 
+	manysdks_extended = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-3
+    channel: latest/stable
+  - name: test-sdk-2
+    channel: latest/stable
+  - name: test-sdk
+    channel: latest/stable
+`
+
 	workshoptunnels = `name: tunnels
 base: ubuntu@22.04
 sdks:
@@ -358,6 +369,16 @@ slots:
     workshop-source: /mnt
     interface: mount
 `
+
+	testsdk3 = `
+name: test-sdk-3
+title: title
+base: ubuntu@20.04
+version: '20200401.3f3a63f'
+summary: summary
+description: SDK
+sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+`
 )
 
 type testSdk struct {
@@ -368,6 +389,7 @@ type testSdk struct {
 var apiSuiteSdks = map[string]testSdk{
 	"test-sdk":   {s: sdk.Setup{Name: "test-sdk", Revision: sdk.R(1)}, meta: testsdk},
 	"test-sdk-2": {s: sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(1)}, meta: testsdk2},
+	"test-sdk-3": {s: sdk.Setup{Name: "test-sdk-3", Revision: sdk.R(1)}, meta: testsdk3},
 }
 
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string, sdks map[string]testSdk) {
@@ -1594,6 +1616,87 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic_refreshed})
+}
+
+func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_extended)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-3", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk-3",
+		"test-sdk-2",
+		"test-sdk",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_extended})
 }
 
 func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
