@@ -24,6 +24,7 @@ envvar
 fixup
 GCP
 gcs
+GiB
 gid
 gocheck
 golang
@@ -113,4 +114,5 @@ X11
 XAUTHORITY
 yaml
 YYYY
+ZFS
 zsh

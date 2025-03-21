@@ -49,4 +49,6 @@ it's crucial to know how SDKs are structured and operated:
    :maxdepth: 1
 
    sdks
+   workshops
    workshop-status
+
