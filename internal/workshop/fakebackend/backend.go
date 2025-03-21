@@ -89,7 +89,7 @@ type FakeWorkshopBackend struct {
 	SnapshotCalls    []SnapshotCall
 	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
 	RestoreCalls     []RestoreCall
-	RestoreCallback  func(ctx context.Context, workshop string, snapid string) error
+	RestoreCallback  func(ctx context.Context, workshop string, snapid string, File *workshop.File) error
 
 	BaseDir string
 }
@@ -377,8 +377,7 @@ func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name stri
 		return err
 	}
 
-	wp := s.StashedWorkshops[projectId][workshop.StashNamePrefix+name]
-	if wp == nil {
+	if s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] == nil {
 		return fmt.Errorf("stashed workshop %q not found", name)
 	}
 	delete(s.StashedWorkshops[projectId], workshop.StashNamePrefix+name)
@@ -580,8 +579,8 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 	}
 
 	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
-	if s.SnapshotCallback != nil {
-		return s.SnapshotCallback(ctx, name, snapid)
+	if s.RestoreCallback != nil {
+		return s.RestoreCallback(ctx, name, snapid, file)
 	}
 	return nil
 }

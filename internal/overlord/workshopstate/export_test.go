@@ -1,8 +1,7 @@
 package workshopstate
 
 var (
-	Refresh            = refresh
-	StartManyImpl      = startMany
-	StopManyImpl       = stopMany
-	CheckHealthTimeout = checkHealthTimeout
+	Refresh       = refresh
+	StartManyImpl = startMany
+	StopManyImpl  = stopMany
 )

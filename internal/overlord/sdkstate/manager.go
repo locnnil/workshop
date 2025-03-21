@@ -26,7 +26,6 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 	runner.AddHandler("link-sdk", OnDo(manager.doLinkSdk), manager.doUnlinkSdk)
 	runner.AddHandler("unlink-sdk", OnDo(manager.doUnlinkSdk), manager.doLinkSdk)
 	runner.AddHandler("remove-sdk", OnDo(manager.doUnistallSdk), nil)
-	runner.AddHandler("remove-local-sdk", OnDo(manager.doUninstallLocalSdk), manager.doInstallLocalSdk)
 
 	return manager
 }

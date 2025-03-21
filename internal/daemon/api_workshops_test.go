@@ -865,7 +865,7 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			if err != nil {
 				c.Check(err, check.ErrorMatches, expected[num].ChangeErr, check.Commentf("case: %v", num))
 			} else {
-				c.Assert(expected[num].ChangeErr, check.Equals, "")
+				c.Check(expected[num].ChangeErr, check.Equals, "")
 			}
 			st.Unlock()
 		}

@@ -23,7 +23,7 @@ var StopLogInterval = 30 * time.Second
 
 var StopWorkshop = (workshop.Backend).StopWorkshop
 
-func (m *WorkshopManager) undoCreateWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkshopManager) undoConstructWorkshop(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, workshop, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -101,9 +101,9 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		defer cancel()
 
 		// This may fail if the first workshop launch has failed for some
-		// reason; It is safe to ignore the error in that case.
+		// reason; it is safe to ignore the error in that case.
 		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w); reverr != nil {
-			logger.Noticef("On doCreateWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
+			logger.Noticef("On doConstructWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
 		}
 	})
 

@@ -34,10 +34,6 @@ const (
 	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
 
-var (
-	checkHealthTimeout = 5 * time.Second
-)
-
 func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
@@ -284,7 +280,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
 
-	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, checkHealthTimeout, hookstate.CheckHealth)
+	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, 5*time.Second, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	for _, task := range all.Tasks() {
@@ -300,22 +296,45 @@ type refreshWorkshopReq struct {
 	w *workshop.Workshop
 	// Up to date workshop definitions from the project directory.
 	file *workshop.File
+	// Up to date SDK infos (from the store or a local source).
+	infos []sdk.SdkResult
+}
+
+func (w *WorkshopManager) prepareRefresh(ctx context.Context, wps []*workshop.Workshop) ([]refreshWorkshopReq, error) {
+	sto := sdk.StoreService(w.state)
+
+	// Not an error, the state is locked; unlock it to let other requests to be
+	// processed while we are getting the store info sorted.
+	w.state.Unlock()
+	defer w.state.Lock()
+
+	refreshReqs := make([]refreshWorkshopReq, 0, len(wps))
+	for _, w := range wps {
+		file, err := w.Project.Workshop(w.Name)
+		if err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", w.Name, err)
+		}
+
+		infos, err := sdkInfos(sto, ctx, w.Project.ProjectId, file)
+		if err != nil {
+			return nil, err
+		}
+		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: w, file: file, infos: infos})
+	}
+	return refreshReqs, nil
 }
 
 func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string) ([]*state.TaskSet, error) {
-	sto := sdk.StoreService(w.state)
-
-	project, err := w.loadProject(ctx, projectId)
-	if err != nil {
-		return nil, err
-	}
-
 	all, err := w.Workshops(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshReqs := make([]refreshWorkshopReq, 0, len(all))
+	refreshReqs, err := w.prepareRefresh(ctx, all)
+	if err != nil {
+		return nil, err
+	}
+
 	allowed := []healthstate.Status{healthstate.ReadyStatus}
 	for _, name := range names {
 		idx := slices.IndexFunc(all, func(w *workshop.Workshop) bool { return w.Name == name })
@@ -327,18 +346,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
 
-		file, err := project.Workshop(name)
-		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-		}
-		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: all[idx], file: file})
 	}
 
 	taskset := make([]*state.TaskSet, 0, len(refreshReqs))
 	for _, req := range refreshReqs {
-		w.state.Unlock()
-		plan, err := resolveRefresh(ctx, sto, req.w, req.file)
-		w.state.Lock()
+		plan, err := resolveRefresh(ctx, req.w, req.file, req.infos)
 		if err != nil {
 			return nil, err
 		}
@@ -458,7 +470,7 @@ func (p refreshPlan) Remove() []sdk.Setup {
 	return p.remove
 }
 
-func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, file *workshop.File) (*refreshPlan, error) {
+func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop.File, newinfos []sdk.SdkResult) (*refreshPlan, error) {
 	fullRefresh := false
 
 	plan := &refreshPlan{
@@ -468,13 +480,8 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 		installOrder: make([]string, 0),
 	}
 
-	infos, err := sdkInfos(sto, ctx, w.Project.ProjectId, file)
-	if err != nil {
-		return nil, err
-	}
-
-	candidates := make([]sdk.Setup, 0, len(infos))
-	for _, s := range infos {
+	candidates := make([]sdk.Setup, 0, len(newinfos))
+	for _, s := range newinfos {
 		candidates = append(candidates, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
 
@@ -516,7 +523,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 		}
 	}
 
-	if w.Base != file.Base {
+	if w.Base != newfile.Base {
 		fullRefresh = true
 	}
 
@@ -525,7 +532,7 @@ func resolveRefresh(ctx context.Context, sto sdk.Store, w *workshop.Workshop, fi
 			return reflect.DeepEqual(s1.Plugs, s2.Plugs) &&
 				reflect.DeepEqual(s1.Slots, s2.Slots)
 		}
-		if !slices.EqualFunc(w.File.Sdks, file.Sdks, plugsSlotsChanged) {
+		if !slices.EqualFunc(w.File.Sdks, newfile.Sdks, plugsSlotsChanged) {
 			fullRefresh = true
 		}
 	}
@@ -675,38 +682,6 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	}
 
 	return refresh, nil
-}
-
-func (w *WorkshopManager) RefreshLocalSdk(ctx context.Context, pid string, wpn string, sdkn string) ([]*state.TaskSet, error) {
-	var taskset []*state.TaskSet
-	wp, err := w.Workshop(ctx, wpn, pid)
-	if err != nil {
-		return nil, err
-	}
-	allowed := []healthstate.Status{healthstate.ReadyStatus}
-	if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-		return nil, fmt.Errorf("cannot refresh %q: %w", wpn, err)
-	}
-
-	file, err := wp.Project.Workshop(wpn)
-	if err != nil {
-		return nil, err
-	}
-
-	sto := sdk.StoreService(w.state)
-	w.state.Unlock()
-	plan, err := resolveRefresh(ctx, sto, wp, file)
-	w.state.Lock()
-	if err != nil {
-		return nil, err
-	}
-
-	ts, err := refresh(ctx, w.state, plan, wp, file)
-	if err != nil {
-		return nil, err
-	}
-	taskset = append(taskset, ts)
-	return taskset, nil
 }
 
 func autoconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {

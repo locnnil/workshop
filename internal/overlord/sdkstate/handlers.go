@@ -277,9 +277,5 @@ func (m *SdkManager) doUnlinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	if err = m.repo.RemoveSdk(project.ProjectId, w, setup.Name); err != nil {
-		return err
-	}
-
-	return nil
+	return m.repo.RemoveSdk(project.ProjectId, w, setup.Name)
 }

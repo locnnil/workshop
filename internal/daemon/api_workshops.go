@@ -465,7 +465,7 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 		if sk != sdk.Sketch {
 			return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 		}
-		taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
+		taskset, err = mgr.RefreshMany(ctx, pid, []string{wp})
 	} else {
 		change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
 		taskset, err = mgr.RefreshMany(ctx, pid, reqData.Names)
