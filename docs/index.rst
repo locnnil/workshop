@@ -82,6 +82,7 @@ In this documentation
   :ref:`Update projects <tut_project_updates>`
 
 - **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |
+  :ref:`Internals <ref_workshop_internals>` |
   :ref:`Definition <ref_workshop_definition>` |
   :ref:`Status diagrams <ref_workshop_status>` |
   :ref:`Debug workshops <how_debug_issues_workshops>`
