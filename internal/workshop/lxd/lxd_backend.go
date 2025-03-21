@@ -94,7 +94,9 @@ func New() (*Backend, error) {
 	// Create LXD storage pool if it doesn't exist
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return nil, fmt.Errorf("[yanjiangdebug2222] cannot connect to LXD: %w, maybe LXD isn't installed? 1", err)
+		return nil, fmt.Errorf("[yanjiangdebug2222] cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
+			"Install and initialize LXD by:\n  sudo snap install lxd\n  lxd init --auto\n"+
+			"Then restart workshop daemon by:\n  sudo snap start workshop.workshopd", err)
 	}
 	defer conn.Disconnect()
 
