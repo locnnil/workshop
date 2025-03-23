@@ -30,8 +30,8 @@
           "name": {
             "type": "string",
             "description": "Name of the SDK.",
-            "pattern": "^[a-z][a-z0-9-]*$",
-            "errorMessage": "An SDK's name must start with a letter and can only include digits, lowercase letters, and hyphens."
+            "pattern": "^(?!agent$)[a-z][a-z0-9-]*$",
+            "errorMessage": "An SDK's name must start with a letter, can only include digits, lowercase letters, and hyphens, and cannot be 'agent'."
           },
           "channel": {
             "type": "string",
@@ -52,9 +52,9 @@
                 "properties": {
                   "bind": {
                     "type": "string",
-                    "description": "Reference to a plug in the form <sdk>:<plug>.",
-                    "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
-                    "errorMessage": "Bind reference must follow the pattern <sdk>:<plug>."
+                    "description": "Reference to a plug in the form [<sdk>:]<plug>. If omitted, the SDK is 'system'.",
+                    "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+                    "errorMessage": "Bind reference must follow the pattern [<sdk>:]<plug> (SDK optional)."
                   },
                   "attributes": {
                     "type": "object",
@@ -129,15 +129,15 @@
         "properties": {
           "plug": {
             "type": "string",
-            "description": "Reference to a plug in the form <sdk>:<plug>.",
-            "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
-            "errorMessage": "Plug reference must follow the pattern <sdk>:<plug>."
+            "description": "Reference to a plug in the form [<sdk>:]<plug>. If omitted, the SDK is 'system'.",
+            "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+            "errorMessage": "Plug reference must follow the pattern [<sdk>:]<plug> (SDK optional)."
           },
           "slot": {
             "type": "string",
-            "description": "Reference to a slot in the form <sdk>:<slot>.",
-            "pattern": "^[a-z][a-z0-9-]*:[a-z_][a-z0-9_-]*$",
-            "errorMessage": "Slot reference must follow the pattern <sdk>:<slot>."
+            "description": "Reference to a slot in the form [<sdk>:]<slot>. If omitted, the SDK is 'system'.",
+            "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+            "errorMessage": "Slot reference must follow the pattern [<sdk>:]<slot> (SDK optional)."
           }
         },
         "required": [
