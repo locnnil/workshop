@@ -31,17 +31,6 @@ function setup_lxd() {
 }
 
 function prepare_environment() {
-    systemctl unmask snapd.service
-    systemctl start snapd.service
-    snap wait system seed.loaded
-    # The /snap directory does not exist in some environments
-    [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
-
-    setup_lxd
-
-    snap install --classic --channel=1.23/stable go
-    snap install yq
-
     # The unattended upgrades hold locks on reusable instances and can break a
     # spread run. This is to prevent the prepare script from failing (e.g. when
     # reusing an existing spread instance). Since workshops don't currently
@@ -58,8 +47,21 @@ function prepare_environment() {
     done
 
     apt-get update
-    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq
+    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq xdelta3
 
+    systemctl unmask snapd.service
+    systemctl start snapd.service
+    snap wait system seed.loaded
+    # The /snap directory does not exist in some environments
+    [ ! -d /snap ] && ln -s /var/lib/snapd/snap /snap
+
+    setup_lxd
+
+    snap install --classic --channel=1.23/stable go
+    snap install yq
+}
+
+function setup_workshop() {
     snap install --dangerous --classic /workshop/tests/*.snap
     snap set workshop store.url=http://localhost:8080/storage/v1/
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
@@ -67,9 +69,13 @@ function prepare_environment() {
 
     # required to keep /lib/systemd/systemd --user running for a regular user
     loginctl enable-linger ubuntu
+
+    start_sdk_store
 }
 
-function cleanup_environment() {
+function cleanup_workshop() {
+    stop_sdk_store
+
     snap remove workshop --purge
     snap remove sdkcraft --purge
     find /workshop -name .workshop.lock -delete
