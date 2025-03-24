@@ -34,7 +34,7 @@ type userSuite struct {
 }
 
 func TestMain(m *testing.M) {
-	// Ensure consistent file permissions for CmpTestSuite, profileSuite and StatTestSuite.
+	// Ensure consistent file permissions for CmpTestSuite, cpSuite, profileSuite and StatTestSuite.
 	syscall.Umask(0002)
 	m.Run()
 }
