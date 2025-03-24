@@ -154,6 +154,18 @@ sdks:
     channel: latest/stable
 `
 
+	manysdks_system_extended = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk
+    channel: latest/stable
+  - name: system
+    slots:
+      tunnel:
+        interface: tunnel
+        endpoint: 8080
+`
+
 	workshoptunnels = `name: tunnels
 base: ubuntu@22.04
 sdks:
@@ -1472,7 +1484,7 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 			c.Assert(ref, check.HasLen, 2)
 
 			p := repo.Plug(s.project.ProjectId, wantws.name, ref[0], ref[1])
-			c.Assert(p, check.NotNil)
+			c.Assert(p, check.NotNil, check.Commentf("plug %q is not found in the repository", plug))
 		}
 
 		for _, slot := range wantws.slots {
@@ -1480,7 +1492,7 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 			c.Assert(ref, check.HasLen, 2)
 
 			s := repo.Slot(s.project.ProjectId, wantws.name, ref[0], ref[1])
-			c.Assert(s, check.NotNil)
+			c.Assert(s, check.NotNil, check.Commentf("slot %q is not found in the repository", slot))
 		}
 
 		var allconns []*interfaces.ConnRef
@@ -2093,6 +2105,79 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_plugadded})
+}
+
+func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	s.mockSdkVolumes(c, apiSuiteSdks)
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_system_extended)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+		},
+		plugs: []string{
+			"test-sdk:data",
+		},
+		slots: []string{
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+			"system:tunnel",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"system",
+		"test-sdk",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {

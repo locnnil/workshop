@@ -121,7 +121,7 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 
 // Returns essential workshop properties and its SDKs health statuses (if
 // available).
-func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
+func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
@@ -152,7 +152,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) (*Work
 		info.Notes = append(info.Notes, health.Code)
 	}
 	info.Status = health.Status.String()
-	return &info, nil
+	return &info
 }
 
 // Returns essential workshop properties, SDK health statuses (if available) and
@@ -421,10 +421,7 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	for _, w := range workshops {
 		health := healthstate.WorkshopHealth(state, w)
 		if ignoreStatus || health.Status == status {
-			wi, err := workshopToInfo(w, health)
-			if err != nil {
-				return statusBadRequest("%w", err)
-			}
+			wi := workshopToInfo(w, health)
 			info.Workshops = append(info.Workshops, wi)
 		}
 	}

@@ -39,7 +39,6 @@ execute: |
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
 
-
   validate_snapshots() {
     local expected_output="$1"
     local output
@@ -50,9 +49,9 @@ execute: |
   echo "Check workshop snapshots exist"
   pid=$(cat .workshop.lock)
   expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.basic
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.mount
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.gpu"
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-basic
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-mount
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-gpu"
   validate_snapshots "$expected_snapshots"
 
   echo "Check workshop snapshots updated after an SDK was removed"
@@ -60,13 +59,16 @@ execute: |
   cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks[-1])' | sponge .workshop/ws-refresh-snapshots.yaml
   workshop_exec refresh ws-refresh-snapshots
   expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.basic
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots-test-sdk.mount"
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-basic
+  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-mount"
   validate_snapshots "$expected_snapshots"
 
   echo "Check workshop was rebuilt from a new image base"
   cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks)' | sponge .workshop/ws-refresh-snapshots.yaml
   cat .workshop/ws-refresh-snapshots.yaml | yq '(.base) |= sub("ubuntu@22.04"; "ubuntu@24.04")' | sponge .workshop/ws-refresh-snapshots.yaml
+
+  # Ensure there is no cached image so that refresh will take care of downloading it.
+  lxc image delete workshop-ubuntu@24.04-amd64 --project workshop.ubuntu
   workshop_exec refresh ws-refresh-snapshots
   workshop_exec info ws-refresh-snapshots | MATCH ubuntu@24.04
   workshop_exec exec ws-refresh-snapshots -- lsb_release -a | MATCH 24.04

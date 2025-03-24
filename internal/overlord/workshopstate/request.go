@@ -34,6 +34,8 @@ const (
 	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
 
+var checkHealthTimeout = 5 * time.Second
+
 func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
@@ -220,7 +222,7 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 		prev = t
 	}
 
-	if sdkSnapshot != "" {
+	if sdkSnapshot == "" {
 		base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
 		base.Set("workshop-base", file.Base)
 		addTask(base)
@@ -282,7 +284,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
 
-	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, 5*time.Second, hookstate.CheckHealth)
+	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, checkHealthTimeout, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	for _, task := range all.Tasks() {
@@ -430,7 +432,8 @@ func definitionChanged(old, new *workshop.File, sdkName string) bool {
 	newidx := slices.IndexFunc(new.Sdks, byName)
 
 	if oldidx == -1 || newidx == -1 {
-		return false
+		// Check if the SDK definition was added or removed.
+		return oldidx != newidx
 	}
 
 	oldrec := old.Sdks[oldidx]
@@ -493,8 +496,6 @@ func (p refreshPlan) Remove() []sdk.Setup {
 }
 
 func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop.File, newinfos []sdk.SdkResult) (*refreshPlan, error) {
-	fullRefresh := false
-
 	plan := &refreshPlan{
 		install:        make([]sdk.Setup, 0),
 		intact:         make([]sdk.Setup, 0),
@@ -502,10 +503,6 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 		remove:         make([]sdk.Setup, 0),
 		installOrder:   make([]string, 0),
 		installedOrder: make([]string, 0),
-	}
-
-	if w.Base != newfile.Base {
-		fullRefresh = true
 	}
 
 	candidates := make([]sdk.Setup, 0, len(newinfos))
@@ -517,30 +514,33 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 	installed := w.SdksByInstallOrder()
 
 	// Determine if a workshop can be partially updated.
-	lastIntact := 0
-	for ni, s := range candidates {
-		// Do we have this SDK in the same order as in the running workshop?
-		if ni < len(installed) && installed[ni].Name == s.Name {
-			// Has this SDK had any updates?
-			if maybeRefresh(w.Sdks[s.Name], s) {
-				break
-			}
-			// Has this SDK had any changes in the workshop definition?
-			if definitionChanged(w.File, newfile, s.Name) {
-				break
-			}
+	lastIntactIdx := -1
 
-			plan.intact = append(plan.intact, s)
-			// No updates to the SDK - reuse its snapshot and keep looking.
-			// Otherwise, break the loop as the rest require to be reinstalled.
-			plan.sdkSnapshot = s.Name
-			lastIntact = ni
-		} else {
-			break
+	if w.Base == newfile.Base {
+		for ci, s := range candidates {
+			// Do we have this SDK in the same order as in the running workshop?
+			if ci < len(installed) && installed[ci].Name == s.Name {
+				// Has this SDK had any updates?
+				if maybeRefresh(w.Sdks[s.Name], s) {
+					break
+				}
+				// Has this SDK had any changes in the workshop definition?
+				if definitionChanged(w.File, newfile, s.Name) {
+					break
+				}
+
+				plan.intact = append(plan.intact, s)
+				// No updates to the SDK - reuse its snapshot and keep looking.
+				// Otherwise, break the loop as the rest require to be reinstalled.
+				plan.sdkSnapshot = s.Name
+				lastIntactIdx = ci
+			} else {
+				break
+			}
 		}
 	}
 
-	for _, s := range candidates[lastIntact+1:] {
+	for _, s := range candidates[lastIntactIdx+1:] {
 		if installed, exist := w.Sdks[s.Name]; exist {
 			plan.refresh = append(plan.refresh, s)
 			plan.remove = append(plan.remove, installed)
@@ -584,13 +584,6 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 			plan.install = append(plan.install,
 				sdk.Setup{Name: sdk.Sketch, Revision: sdk.Revision{N: -1}})
 		}
-	}
-
-	if fullRefresh {
-		plan.refresh = append(plan.refresh, plan.intact...)
-		plan.remove = append(plan.remove, plan.intact...)
-		plan.intact = plan.intact[:0]
-		plan.sdkSnapshot = ""
 	}
 	return plan, nil
 }
