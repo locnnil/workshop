@@ -293,8 +293,9 @@ installing the prerequisites and preparing it for use.
 
 .. note::
 
-   For workshops, apt is configured to exclude recommended and suggested 
-   packages by default.
+   For workshops,
+   :command:`apt` is configured to exclude recommended or suggested packages
+   and answer 'yes' to all confirmation prompts.
 
 
 Persist: save and restore

@@ -875,6 +875,9 @@ write_files:
 
     # Don't automatically install suggested packages
     APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
   path: /etc/apt/apt.conf.d/01norecommend
 runcmd:
   - systemctl daemon-reload
