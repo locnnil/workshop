@@ -133,8 +133,6 @@ func workshopToInfo(ctx context.Context, w *workshop.Workshop, health healthstat
 	mnts := w.Mounts(sdks)
 
 	for _, sk := range sdks {
-		sdkInfo := sk
-
 		var healthInfo *HealthCheckInfo
 		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
 			healthInfo = &HealthCheckInfo{
@@ -149,10 +147,10 @@ func workshopToInfo(ctx context.Context, w *workshop.Workshop, health healthstat
 
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
-			Version:     sdkInfo.Version,
+			Version:     sk.Version,
 			Channel:     sk.Channel,
 			Revision:    sk.Revision.String(),
-			BuildTime:   sdkInfo.BuildTime,
+			BuildTime:   sk.BuildTime,
 			InstallTime: w.Sdks[sk.Name].InstallTime,
 			Health:      healthInfo,
 			Mounts:      mntInfos,

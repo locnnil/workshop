@@ -420,8 +420,23 @@ func maybeSketch(ctx context.Context, pid, wp string) (bool, error) {
 	return true, nil
 }
 
-func maybeRefresh(installed sdk.Setup, candidate sdk.Setup) bool {
+func maybeRefresh(installed, candidate sdk.Setup) bool {
 	return installed.Channel != candidate.Channel || installed.Revision != candidate.Revision
+}
+
+func definitionChanged(old, new *workshop.File, sdkName string) bool {
+	byName := func(s workshop.SdkRecord) bool { return s.Name == sdkName }
+	oldidx := slices.IndexFunc(old.Sdks, byName)
+	newidx := slices.IndexFunc(new.Sdks, byName)
+
+	if oldidx == -1 || newidx == -1 {
+		return false
+	}
+
+	oldrec := old.Sdks[oldidx]
+	newrec := new.Sdks[newidx]
+
+	return !reflect.DeepEqual(oldrec.Plugs, newrec.Plugs) || !reflect.DeepEqual(oldrec.Slots, newrec.Slots)
 }
 
 type refreshPlan struct {
@@ -430,14 +445,15 @@ type refreshPlan struct {
 	refresh []sdk.Setup
 	remove  []sdk.Setup
 
-	sdkSnapshot  string
-	installOrder []string
+	sdkSnapshot    string
+	installOrder   []string
+	installedOrder []string
 }
 
-func (p refreshPlan) ordered(setups ...[]sdk.Setup) []sdk.Setup {
-	ordered := make([]sdk.Setup, 0, len(p.installOrder))
+func (p refreshPlan) ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
+	ordered := make([]sdk.Setup, 0, len(order))
 
-	for _, sk := range p.installOrder {
+	for _, sk := range order {
 		for _, setup := range setups {
 			contains := func(sp sdk.Setup) bool { return sk == sp.Name }
 
@@ -452,35 +468,44 @@ func (p refreshPlan) ordered(setups ...[]sdk.Setup) []sdk.Setup {
 }
 
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
-	return p.ordered(p.install, p.refresh)
+	return p.ordered(p.installOrder, p.install, p.refresh)
 }
 
 func (p refreshPlan) IntactOrRemove() []sdk.Setup {
-	ordered := p.ordered(p.intact)
-	ordered = append(ordered, p.remove...)
+	revOrder := slices.Clone(p.installedOrder)
+	slices.Reverse(revOrder)
+	ordered := p.ordered(revOrder, p.intact, p.remove)
 	return ordered
 }
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
-	return p.ordered(p.install, p.refresh, p.intact)
+	return p.ordered(p.installOrder, p.install, p.refresh, p.intact)
 }
 
 func (p refreshPlan) Refresh() []sdk.Setup {
-	return p.ordered(p.refresh)
+	return p.ordered(p.installOrder, p.refresh)
 }
 
 func (p refreshPlan) Remove() []sdk.Setup {
-	return p.remove
+	revOrder := slices.Clone(p.installedOrder)
+	slices.Reverse(revOrder)
+	return p.ordered(revOrder, p.remove)
 }
 
 func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop.File, newinfos []sdk.SdkResult) (*refreshPlan, error) {
 	fullRefresh := false
 
 	plan := &refreshPlan{
-		install:      make([]sdk.Setup, 0),
-		refresh:      make([]sdk.Setup, 0),
-		remove:       make([]sdk.Setup, 0),
-		installOrder: make([]string, 0),
+		install:        make([]sdk.Setup, 0),
+		intact:         make([]sdk.Setup, 0),
+		refresh:        make([]sdk.Setup, 0),
+		remove:         make([]sdk.Setup, 0),
+		installOrder:   make([]string, 0),
+		installedOrder: make([]string, 0),
+	}
+
+	if w.Base != newfile.Base {
+		fullRefresh = true
 	}
 
 	candidates := make([]sdk.Setup, 0, len(newinfos))
@@ -500,6 +525,11 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 			if maybeRefresh(w.Sdks[s.Name], s) {
 				break
 			}
+			// Has this SDK had any changes in the workshop definition?
+			if definitionChanged(w.File, newfile, s.Name) {
+				break
+			}
+
 			plan.intact = append(plan.intact, s)
 			// No updates to the SDK - reuse its snapshot and keep looking.
 			// Otherwise, break the loop as the rest require to be reinstalled.
@@ -528,18 +558,9 @@ func resolveRefresh(ctx context.Context, w *workshop.Workshop, newfile *workshop
 		}
 	}
 
-	if w.Base != newfile.Base {
-		fullRefresh = true
-	}
-
-	if len(plan.refresh) == 0 && len(plan.remove) == 0 && len(plan.install) == 0 {
-		plugsSlotsChanged := func(s1, s2 workshop.SdkRecord) bool {
-			return reflect.DeepEqual(s1.Plugs, s2.Plugs) &&
-				reflect.DeepEqual(s1.Slots, s2.Slots)
-		}
-		if !slices.EqualFunc(w.File.Sdks, newfile.Sdks, plugsSlotsChanged) {
-			fullRefresh = true
-		}
+	// Establish SDK order for the installed SDKs.
+	for _, s := range installed {
+		plan.installedOrder = append(plan.installedOrder, s.Name)
 	}
 
 	// Establish SDK installation order.
@@ -607,9 +628,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 
 	// Unlink and remove SDKs from interfaces repository. If refresh fails, the
 	// SDKs will be linked back and returned to the repository. This is the
-	// reason unlink has to happen before stashing. As the workshop, that will
-	// be reconstructed after stashing, will link and add their SDKs to the
-	// repository in `installSdks` step.
+	// reason unlink has to happen before stashing.
 	unlink := unlinkSdks(st, plan.Remove())
 	addTaskSet(unlink)
 
@@ -629,6 +648,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	uninstall := uninstallSdks(st, plan.Remove())
 	addTaskSet(uninstall)
 
+	// Install and link updated SDKs to the rebuilt workshop.
 	install := installSdks(st, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
 

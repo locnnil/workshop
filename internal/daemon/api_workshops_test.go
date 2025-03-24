@@ -2091,13 +2091,11 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"system",
 		"test-sdk",
 		"test-sdk-2",
 	})
 
-	// Workshop will be fully rebuilt.
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_plugadded})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -2171,13 +2169,11 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"system",
 		"test-sdk",
 		"test-sdk-2",
 	})
 
-	// Workshop will be fully rebuilt.
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
