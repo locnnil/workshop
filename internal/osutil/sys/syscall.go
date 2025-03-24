@@ -20,6 +20,7 @@
 package sys
 
 import (
+	"errors"
 	"os"
 	"syscall"
 	"unsafe"
@@ -106,4 +107,12 @@ func FcntlGetFl(fd int) (int, error) {
 		return 0, errno
 	}
 	return int(flags), nil
+}
+
+func FileOwner(info os.FileInfo) (UserID, GroupID, error) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, 0, errors.New("user and group unavailable")
+	}
+	return UserID(stat.Uid), GroupID(stat.Gid), nil
 }

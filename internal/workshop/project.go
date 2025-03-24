@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var (
@@ -341,13 +341,12 @@ func (w *Project) updateLock() error {
 		return err
 	}
 
-	uid, gid := 0, 0
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		uid = int(stat.Uid)
-		gid = int(stat.Gid)
+	uid, gid, err := sys.FileOwner(info)
+	if err != nil {
+		return err
 	}
 
-	if err = os.Chown(LockPath(w.Path), uid, gid); err != nil {
+	if err = sys.Chown(lock, uid, gid); err != nil {
 		return err
 	}
 
