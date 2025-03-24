@@ -82,7 +82,7 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
-		case "unix-char":
+		case "unix-hotplug":
 			devtype := config[DeviceTypeConfigKey(profile, name)]
 			if devtype == "camera" {
 				continue

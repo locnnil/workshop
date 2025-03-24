@@ -47,7 +47,7 @@ Prepare LXD
 ~~~~~~~~~~~
 
 |ws_markup| relies on
-`LXD 5.21+ <https://canonical.com/lxd>`_
+`LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
 `API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_

@@ -80,7 +80,7 @@ A camera plug in the definition must specify the plug name and the interface:
         interface: camera
 
 
-This makes the host's USB-based cameras directly available inside the workshop
+This makes the host's cameras directly available inside the workshop
 as video capture devices.
 
 .. note::
