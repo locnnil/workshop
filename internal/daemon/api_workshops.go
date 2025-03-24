@@ -119,7 +119,47 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(ctx context.Context, w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
+// Returns essential workshop properties and its SDKs health statuses (if
+// available).
+func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
+	var info WorkshopInfo
+	info.Name = w.Name
+	info.ProjectId = w.Project.ProjectId
+	info.Base = w.Base
+
+	sdkSetups := w.SdksByInstallOrder()
+
+	for _, sk := range sdkSetups {
+		var healthInfo *HealthCheckInfo
+		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
+			healthInfo = &HealthCheckInfo{
+				Timestamp: sdkHealth.Timestamp,
+				Message:   sdkHealth.Message,
+				Code:      sdkHealth.Code,
+			}
+		}
+
+		info.Sdks = append(info.Sdks, &SdkInfo{
+			Name:        sk.Name,
+			Channel:     sk.Channel,
+			Revision:    sk.Revision.String(),
+			InstallTime: sk.InstallTime,
+			Health:      healthInfo,
+		})
+	}
+
+	if len(health.Code) > 0 {
+		info.Notes = append(info.Notes, health.Code)
+	}
+	info.Status = health.Status.String()
+	return &info, nil
+}
+
+// Returns essential workshop properties, SDK health statuses (if available) and
+// information about the installed SDKs. This function reads from the workshop's
+// filesystem to obtain certain fields, it has to be used with possible latency
+// changes in mind.
+func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
@@ -378,11 +418,10 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 
 	info := Workshops{}
 	info.Workshops = make([]*WorkshopInfo, 0, len(workshops))
-	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
 	for _, w := range workshops {
 		health := healthstate.WorkshopHealth(state, w)
 		if ignoreStatus || health.Status == status {
-			wi, err := workshopToInfo(ctx, w, health)
+			wi, err := workshopToInfo(w, health)
 			if err != nil {
 				return statusBadRequest("%w", err)
 			}
@@ -592,7 +631,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
 
-	info, err := workshopToInfo(ctx, w, health)
+	info, err := workshopToInfoFull(ctx, w, health)
 	if err != nil {
 		return statusBadRequest("%w", err)
 	}
