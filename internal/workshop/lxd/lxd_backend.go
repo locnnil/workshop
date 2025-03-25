@@ -18,6 +18,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -85,9 +86,18 @@ func ImageAlias(name string) string {
 }
 
 func ErrorWithInstallLXDPrompt(err error) error {
-	return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
-		"Install and initialize LXD by:\n  sudo snap install lxd\n  lxd init --auto\n"+
-		"Then restart workshop daemon by:\n  sudo snap start workshop.workshopd", err)
+	switch {
+	case errors.Is(err, unix.ECONNREFUSED):
+		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD daemon isn't running?\n"+
+			"Start the LXD daemon:\n  sudo snap start lxd.daemon\n"+
+			"Then restart the workshop daemon:\n  sudo snap start workshop.workshopd", err)
+	case errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
+			"Install and initialize LXD:\n  sudo snap install lxd\n  lxd init --auto\n"+
+			"Then restart the workshop daemon:\n  sudo snap start workshop.workshopd", err)
+	default:
+		return err
+	}
 }
 
 func New() (*Backend, error) {
