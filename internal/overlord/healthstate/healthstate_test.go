@@ -421,7 +421,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthError(c *check.C) {
 			WaitExecution: func(ctx context.Context) error {
 				// emulate workshopctl set-health --code=<code> error <message>
 				var err error
-				hookContext, err = s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				hookContext, err = s.hookMgr.Context(args.Environment["WORKSHOP_COOKIE"])
 				c.Assert(err, check.IsNil)
 				hookContext.Lock()
 				hookContext.Set("health", result)
@@ -486,7 +486,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthWaiting(c *check.C) {
 	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
-				hookCtx, err := s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				hookCtx, err := s.hookMgr.Context(args.Environment["WORKSHOP_COOKIE"])
 				c.Assert(err, check.IsNil)
 				hookCtx.Lock()
 				var counter int
@@ -550,7 +550,7 @@ func (s *healthSuite) TestExecCheckHealthSetHealthExceededAttempts(c *check.C) {
 		return workshop.ExecContext{
 			WaitExecution: func(ctx context.Context) error {
 				var err error
-				hookContext, err = s.hookMgr.Context(args.ExecArgs.Environment["WORKSHOP_COOKIE"])
+				hookContext, err = s.hookMgr.Context(args.Environment["WORKSHOP_COOKIE"])
 				c.Assert(err, check.IsNil)
 				hookContext.Lock()
 				// emulate workshopctl set-health --code=<code> error <message>

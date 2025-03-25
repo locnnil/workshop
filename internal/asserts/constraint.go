@@ -293,7 +293,7 @@ func (matcher regexpAttrMatcher) match(apath string, v interface{}, ctx *attrMat
 	default:
 		return fmt.Errorf("%s %q must be a scalar or list", ctx.attrWord, apath)
 	}
-	if !matcher.Regexp.MatchString(s) {
+	if !matcher.MatchString(s) {
 		return fmt.Errorf("%s %q value %q does not match %v", ctx.attrWord, apath, s, matcher.Regexp)
 	}
 	return nil

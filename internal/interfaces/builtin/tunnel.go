@@ -274,7 +274,8 @@ func (iface *tunnelInterface) MountConnectedPlug(spec *lxd_device.Specification,
 	if err := checkListenPort(entry.Listen, entry.Direction); err != nil {
 		return err
 	}
-	if entry.Direction == workshop.HostToWorkshop {
+	switch entry.Direction {
+	case workshop.HostToWorkshop:
 		if err := expandPath(&entry.Listen, spec.User); err != nil {
 			return err
 		}
@@ -284,7 +285,7 @@ func (iface *tunnelInterface) MountConnectedPlug(spec *lxd_device.Specification,
 		if err := expandPath(&entry.Connect, &workshop.User); err != nil {
 			return err
 		}
-	} else if entry.Direction == workshop.WorkshopToHost {
+	case workshop.WorkshopToHost:
 		if err := expandPath(&entry.Listen, &workshop.User); err != nil {
 			return err
 		}

@@ -1,17 +1,21 @@
+version: '2'
+
 linters:
-  disable-all: true
+  default: none
   enable:
     - errcheck
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      - path: _test\.go$
+        linters: [errcheck]
+        text: Error return value of `\(\*github.com/canonical/workshop/internal/overlord\.Overlord\)\.Stop` is not checked
 
 issues:
   # these values ensure that all issues will be surfaced
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  exclude-rules:
-    - path: _test\.go$
-      linters: [errcheck]
-      text: Error return value of `\(\*github.com/canonical/workshop/internal/overlord\.Overlord\)\.Stop` is not checked
 
 run:
   build-tags: [integration]

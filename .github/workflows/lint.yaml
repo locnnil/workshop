@@ -17,18 +17,17 @@ jobs:
           cache: false
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         id: lint
         with:
           version: latest
-          args: "--out-format=colored-line-number"
           skip-cache: true
 
       - name: errcheck
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: latest
-          args: "--out-format=colored-line-number --config=.golangci.errcheck.yaml"
+          args: --config=.golangci.errcheck.yaml
           only-new-issues: true
           skip-cache: true
 

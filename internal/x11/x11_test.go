@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -61,5 +62,5 @@ func (x *X11TestSuit) TestMigrateXAuthorityOwnershipFail(c *check.C) {
 
 	err = x11.MigrateXauthority(user, filepath.Join(dirs.WorkshopdRunDir, ".workshop-Xauthority"))
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "Xauthority file isn't owned by the current user "+user.Uid)
+	c.Assert(err, testutil.ErrorIs, syscall.EACCES)
 }

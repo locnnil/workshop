@@ -283,7 +283,7 @@ func lastWarningTimestamp() (time.Time, error) {
 	f, err := os.Open(warnFilename())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return time.Time{}, fmt.Errorf("you must have looked at the warnings before acknowledging them. Try 'workshop warnings'.")
+			return time.Time{}, fmt.Errorf("use 'workshop warnings' to view the warnings before dismissing them")
 		}
 		return time.Time{}, fmt.Errorf("cannot open timestamp file: %v", err)
 

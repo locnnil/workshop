@@ -46,7 +46,7 @@ var websocketRegexp = regexp.MustCompile(`^ws://localhost/v1/tasks/T\d+/websocke
 func (s *execSuite) SetUpTest(c *C) {
 	s.clientSuite.SetUpTest(c)
 
-	s.clientSuite.cli.SetDoer(s)
+	s.cli.SetDoer(s)
 
 	s.stdioWs = &testWebsocket{}
 	s.stdoutWs = &testWebsocket{}
@@ -79,7 +79,7 @@ func (cs *execSuite) Do(req *http.Request) (*http.Response, error) {
 		// to LXD now
 		matches := websocketRedirectexp.FindStringSubmatch(req.URL.String())
 		if matches != nil {
-			var header http.Header = make(http.Header)
+			header := make(http.Header)
 			header.Set("Location", fmt.Sprintf("ws://localhost%s", req.URL.Path))
 			return &http.Response{
 				StatusCode: http.StatusTemporaryRedirect,

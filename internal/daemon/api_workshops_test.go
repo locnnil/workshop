@@ -1480,7 +1480,7 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 		}
 
 		for _, plug := range wantws.plugs {
-			ref := strings.SplitN(plug, ":", -1)
+			ref := strings.Split(plug, ":")
 			c.Assert(ref, check.HasLen, 2)
 
 			p := repo.Plug(s.project.ProjectId, wantws.name, ref[0], ref[1])
@@ -1488,7 +1488,7 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 		}
 
 		for _, slot := range wantws.slots {
-			ref := strings.SplitN(slot, ":", -1)
+			ref := strings.Split(slot, ":")
 			c.Assert(ref, check.HasLen, 2)
 
 			s := repo.Slot(s.project.ProjectId, wantws.name, ref[0], ref[1])

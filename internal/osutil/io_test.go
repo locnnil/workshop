@@ -243,7 +243,7 @@ func (ts *AtomicWriteTestSuite) TestAtomicFileCancel(c *C) {
 
 	aw, err := osutil.NewAtomicFile(p, 0644, 0, osutil.NoChown, osutil.NoChown)
 	c.Assert(err, IsNil)
-	fn := aw.File.Name()
+	fn := aw.Name()
 	c.Check(osutil.FileExists(fn), Equals, true)
 	c.Check(aw.Cancel(), IsNil)
 	c.Check(osutil.FileExists(fn), Equals, false)

@@ -29,8 +29,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/check.v1"
-	// XXX Delete import above and make this file like the other ones.
-	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
@@ -102,7 +100,7 @@ func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.lastMethod = r.Method
 }
 
-func (s *daemonSuite) TestExplicitPaths(c *C) {
+func (s *daemonSuite) TestExplicitPaths(c *check.C) {
 	s.socketPath = filepath.Join(c.MkDir(), "custom.socket")
 
 	d := s.newDaemon(c)
@@ -112,12 +110,12 @@ func (s *daemonSuite) TestExplicitPaths(c *C) {
 	defer d.Stop(nil)
 
 	info, err := os.Stat(s.socketPath)
-	c.Assert(err, IsNil)
-	c.Assert(info.Mode(), Equals, os.ModeSocket|0666)
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Mode(), check.Equals, os.ModeSocket|0666)
 
 	info, err = os.Stat(s.socketPath + ".untrusted")
-	c.Assert(err, IsNil)
-	c.Assert(info.Mode(), Equals, os.ModeSocket|0666)
+	c.Assert(err, check.IsNil)
+	c.Assert(info.Mode(), check.Equals, os.ModeSocket|0666)
 }
 
 func (s *daemonSuite) TestCommandMethodDispatch(c *check.C) {
@@ -1078,18 +1076,18 @@ func (s *daemonSuite) TestHTTPAPI(c *check.C) {
 	port := d.httpListener.Addr().(*net.TCPAddr).Port
 
 	request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/v1/changes", port), nil)
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	response, err := http.DefaultClient.Do(request)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusUnauthorized)
+	c.Assert(err, check.IsNil)
+	c.Assert(response.StatusCode, check.Equals, http.StatusUnauthorized)
 
 	err = d.Stop(nil)
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	_, err = http.DefaultClient.Do(request)
-	c.Assert(err, ErrorMatches, ".* connection refused")
+	c.Assert(err, check.ErrorMatches, ".* connection refused")
 }
 
-func (s *daemonSuite) TestStopRunning(c *C) {
+func (s *daemonSuite) TestStopRunning(c *check.C) {
 	// d := s.newDaemon(c)
 	// err := d.Init()
 	// c.Assert(err, IsNil)

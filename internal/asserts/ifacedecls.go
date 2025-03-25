@@ -252,7 +252,7 @@ type regexpNameMatcher struct {
 }
 
 func (matcher regexpNameMatcher) match(name string, special map[string]string) error {
-	if !matcher.Regexp.MatchString(name) {
+	if !matcher.MatchString(name) {
 		return fmt.Errorf("%q does not match %v", name, matcher.Regexp)
 	}
 	return nil

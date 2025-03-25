@@ -190,7 +190,7 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 		// However, the weakness does not make PEM unsafe for our purposes as it pertains to password protection on the
 		// key file (client.key is only readable to the user in any case), so we'll ignore deprecation.
 		if x509.IsEncryptedPEMBlock(pemKey) { //nolint:staticcheck
-			return nil, fmt.Errorf("Private key is password protected and no helper was configured")
+			return nil, fmt.Errorf("private key is password protected and no helper was configured")
 		}
 
 		args.TLSClientKey = string(content)

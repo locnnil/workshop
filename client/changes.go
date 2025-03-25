@@ -95,7 +95,7 @@ func (client *Client) Change(id string) (*Change, error) {
 		return nil, err
 	}
 
-	chgd.Change.data = chgd.Data
+	chgd.data = chgd.Data
 	return &chgd.Change, nil
 }
 
@@ -174,7 +174,7 @@ func (client *Client) Changes(opts *ChangesOptions) ([]*Change, error) {
 	var chgs []*Change
 	for i := range chgds {
 		chgd := &chgds[i]
-		chgd.Change.data = chgd.Data
+		chgd.data = chgd.Data
 		chgs = append(chgs, &chgd.Change)
 	}
 
@@ -203,6 +203,6 @@ func (client *Client) WaitChange(id string, opts *WaitChangeOptions) (*Change, e
 		return nil, err
 	}
 
-	chgd.Change.data = chgd.Data
+	chgd.data = chgd.Data
 	return &chgd.Change, nil
 }

@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
@@ -78,7 +77,7 @@ func (ovs *overlordSuite) SetUpTest(c *C) {
 	ovs.statePath = filepath.Join(ovs.dir, "state.json")
 
 	b, err := fakebackend.New(c.MkDir())
-	c.Assert(err, check.IsNil)
+	c.Assert(err, IsNil)
 	ovs.restorebackend = overlord.MockWorkshopBackend(b)
 }
 

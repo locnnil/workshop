@@ -26,7 +26,6 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/osutil"
@@ -80,7 +79,7 @@ plugs:
 
 func (s *RepositorySuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 
 	consumer := sdk.MockInfo(c, consumerYaml, s.projectId, "ws")
 	s.plug = consumer.Plugs["plug"]
@@ -1015,7 +1014,7 @@ func (s *RepositorySuite) TestSdkSpecificationBoundPlugs(c *C) {
 	c.Assert(repo.AddInterface(testInterface), IsNil)
 	// the plug's connection is bound which means it has the "bind" dynamic
 	// attribute that points to the connection it is bound to
-	bref := interfaces.ConnRef{
+	bref := ConnRef{
 		PlugRef: s.plug.Ref(),
 		SlotRef: s.slot.Ref(),
 	}
@@ -1231,7 +1230,7 @@ var _ = Suite(&AddRemoveSuite{})
 
 func (s *AddRemoveSuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 
 	s.repo = NewRepository()
 	err := s.repo.AddInterface(&ifacetest.TestInterface{InterfaceName: "iface"})
@@ -1282,7 +1281,7 @@ var _ = Suite(&DisconnectSdkSuite{})
 
 func (s *DisconnectSdkSuite) SetUpTest(c *C) {
 	s.BaseTest.SetUpTest(c)
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 
 	s.repo = NewRepository()
 

@@ -58,7 +58,7 @@ func (s *timingsSuite) TearDownTest(c *C) {
 
 func (s *timingsSuite) mockDuration(c *C) {
 	// Increase duration by 1 millisecond on each call
-	s.BaseTest.AddCleanup(timings.MockTimeDuration(func(start, end time.Time) time.Duration {
+	s.AddCleanup(timings.MockTimeDuration(func(start, end time.Time) time.Duration {
 		c.Check(start.Before(end), Equals, true)
 		s.duration += time.Millisecond
 		return s.duration
@@ -79,7 +79,7 @@ func (s *timingsSuite) mockTimeNow(c *C) {
 	c.Assert(err, IsNil)
 	s.fakeTime = t
 	// Increase fakeTime by 1 millisecond on each call, and report it as current time
-	s.BaseTest.AddCleanup(timings.MockTimeNow(func() time.Time {
+	s.AddCleanup(timings.MockTimeNow(func() time.Time {
 		s.fakeTime = s.fakeTime.Add(time.Millisecond)
 		return s.fakeTime
 	}))

@@ -5,11 +5,10 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
-	backend "github.com/canonical/workshop/internal/workshop"
 )
 
 type SdkManager struct {
-	backend backend.Backend
+	backend workshop.Backend
 	repo    *interfaces.Repository
 }
 

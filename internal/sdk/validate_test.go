@@ -16,7 +16,7 @@ var _ = check.Suite(&ValidateSuite{})
 
 func (s *ValidateSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
+	s.AddCleanup(sdk.MockSanitizePlugsSlots(func(snapInfo *sdk.Info) {}))
 	s.projectId = "prj-4242"
 }
 

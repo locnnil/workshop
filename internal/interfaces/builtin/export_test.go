@@ -22,10 +22,10 @@ package builtin
 import (
 	"fmt"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/sdk"
-
-	"gopkg.in/check.v1"
 )
 
 var (
