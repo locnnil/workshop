@@ -49,6 +49,17 @@ type AttachVolumeCall struct {
 	Name     string
 }
 
+type SnapshotCall struct {
+	Workshop string
+	Snapid   string
+}
+
+type RestoreCall struct {
+	Workshop string
+	Snapid   string
+	File     *workshop.File
+}
+
 type WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
 
 type FakeWorkshopBackend struct {
@@ -74,6 +85,11 @@ type FakeWorkshopBackend struct {
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
+
+	SnapshotCalls    []SnapshotCall
+	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
+	RestoreCalls     []RestoreCall
+	RestoreCallback  func(ctx context.Context, workshop string, snapid string, File *workshop.File) error
 
 	BaseDir string
 }
@@ -134,7 +150,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -145,21 +161,43 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 	if f.Workshops[projectId] == nil {
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
-	if _, ok := f.Workshops[projectId][file.Name]; ok {
-		return errors.New("workshop exists")
-	}
 
 	ws := &FakeWorkshop{}
-	ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
-	if err != nil {
-		return err
-	}
-	ws.Workshop = &workshop.Workshop{Backend: f,
-		Name:    file.Name,
-		Running: false,
-		Project: *prj,
-		Base:    file.Base,
-		File:    file,
+
+	if wpe, ok := f.Workshops[projectId][file.Name]; ok {
+		// rebuild the workshop
+
+		ws = wpe
+		ws.File = file
+		ws.Base = file.Base
+		fs := ws.WorkshopFilesystem
+
+		// TODO: Remove locally installed SDKs. These should be removed in a
+		// more elegant way, i.e. unmounted from the workshop in a similar
+		// fashion to regular SDKs installed from the store. Thus, it will make
+		// SDKs "independent" of the workshop, which means that changes will
+		// have to take care of unmounting them from the workshop at the right
+		// time.
+		// NOTE: RemoveAll ignores E_NOENT.
+		if err = fs.RemoveAll(sdk.SdkRootPath("system")); err != nil {
+			return err
+		}
+		if err = fs.RemoveAll(sdk.SdkRootPath("sketch")); err != nil {
+			return err
+		}
+	} else {
+		ws.Workshop = &workshop.Workshop{Backend: f,
+			Name:    file.Name,
+			Running: false,
+			Project: *prj,
+			Base:    file.Base,
+			File:    file,
+		}
+		ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
+		if err != nil {
+			return err
+		}
+		f.Workshops[projectId][file.Name] = ws
 	}
 
 	ws.Config = make(map[string]string)
@@ -169,7 +207,6 @@ func (f *FakeWorkshopBackend) LaunchWorkshop(ctx context.Context, file *workshop
 	ws.Sdks = make(map[string]sdk.Setup)
 	ws.Profiles = make(map[string]workshop.SdkProfile, 0)
 
-	f.Workshops[projectId][file.Name] = ws
 	return nil
 }
 
@@ -335,6 +372,15 @@ func DoExecDefault(ctx context.Context, name string, args *workshop.Execution) (
 }
 
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
+	_, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	if s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] == nil {
+		return fmt.Errorf("stashed workshop %q not found", name)
+	}
+	delete(s.StashedWorkshops[projectId], workshop.StashNamePrefix+name)
 	return nil
 }
 
@@ -348,9 +394,10 @@ func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) 
 	if wp == nil {
 		return fmt.Errorf("stashed workshop %q not found", name)
 	}
-	delete(s.StashedWorkshops[projectId], workshop.StashNamePrefix+name)
 	wp.Name = name
 	s.Workshops[projectId][name] = wp
+	wp.Running = true
+
 	return nil
 }
 
@@ -368,9 +415,14 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	if s.StashedWorkshops[projectId] == nil {
 		s.StashedWorkshops[projectId] = make(map[string]*FakeWorkshop)
 	}
-	s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] = wp
-	wp.Name = workshop.StashNamePrefix + name
-	delete(s.Workshops[projectId], name)
+	wp.Running = false
+
+	wcpy := *wp.Workshop
+	stashed := *wp
+	stashed.Workshop = &wcpy
+	stashed.Name = workshop.StashNamePrefix + name
+
+	s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] = &stashed
 	return nil
 }
 
@@ -495,10 +547,40 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	}
 	return userName, projectId, nil
 }
+
 func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) error {
 	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, base, report)
+	}
+	return nil
+}
+
+func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {
+	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapid: snapid})
+	if s.SnapshotCallback != nil {
+		return s.SnapshotCallback(ctx, name, snapid)
+	}
+	return nil
+}
+
+func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+	user, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	prj := s.project(user, projectId)
+
+	if wp, ok := s.Workshops[prj.ProjectId][name]; !ok {
+		return workshop.ErrWorkshopNotLaunched
+	} else {
+		wp.File = file
+	}
+
+	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
+	if s.RestoreCallback != nil {
+		return s.RestoreCallback(ctx, name, snapid, file)
 	}
 	return nil
 }

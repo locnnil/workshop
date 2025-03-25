@@ -8,19 +8,22 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-type S struct {
-	state *state.State
+type hooksRequestSuite struct {
+	state   *state.State
+	project *workshop.Project
 }
 
-var _ = check.Suite(&S{})
+var _ = check.Suite(&hooksRequestSuite{})
 
-func (s *S) SetUpTest(c *check.C) {
+func (s *hooksRequestSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
+	s.project = &workshop.Project{ProjectId: "42424242", Path: c.MkDir()}
 }
 
-func (s *S) TestCreateHook(c *check.C) {
+func (s *hooksRequestSuite) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -35,7 +38,7 @@ func (s *S) TestCreateHook(c *check.C) {
 		hookstate.SaveState,
 		hookstate.RestoreState,
 	} {
-		task := hookstate.Hook(s.state, "test", "go", i)
+		task := hookstate.Hook(s.state, s.project.ProjectId, "test", "go", 0, i)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)
@@ -48,10 +51,10 @@ func (s *S) TestCreateHook(c *check.C) {
 	}
 }
 
-func (s *S) TestCreateHookWithTimeout(c *check.C) {
+func (s *hooksRequestSuite) TestCreateHookWithTimeout(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	task := hookstate.HookWithTimeout(s.state, "test", "go", hookstate.CheckHealth, 5*time.Second)
+	task := hookstate.Hook(s.state, s.project.ProjectId, "test", "go", 5*time.Second, hookstate.CheckHealth)
 	var hookSetup hookstate.HookSetup
 	err := task.Get("hook-setup", &hookSetup)
 	c.Assert(err, check.IsNil)

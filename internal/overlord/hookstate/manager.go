@@ -29,6 +29,7 @@ type Handler interface {
 type HandlerGenerator func(*Context) Handler
 
 type HookSetup struct {
+	ProjectId   string            `json:"project-id"`
 	Workshop    string            `json:"workshop"`
 	Sdk         string            `json:"sdk"`
 	HookType    WorkshopHookType  `json:"type"`

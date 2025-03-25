@@ -46,7 +46,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	if err = s.moveInstanceAndProfiles(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+	if err = s.copyInstance(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	if err := s.moveInstanceAndProfiles(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
+	if err := s.copyInstance(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
 		return err
 	}
 
@@ -83,31 +83,23 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	return nil
 }
 
-// Moves the instance between the project and stash area (or the other way around)
-// instanceFrom - the instance's source name
-// instanceTo - the instance's dest name (must be different due to LXD DNS conflicts)
-// source - the LXD project name to move instance from
-// target - the LXD project name to move instance to
-func (s *Backend) moveInstanceAndProfiles(conn lxd.InstanceServer, instanceFrom, instanceTo, source, target string) error {
-	conn = conn.UseProject(source)
-	_, _, err := conn.GetInstance(instanceFrom)
+// Moves the instance between LXD projects.
+func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string) error {
+	conn = conn.UseProject(sourceProject)
+	instance, _, err := conn.GetInstance(srcName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
 		}
 		return err
 	}
-	// Stash the workshop
-	// the new name must not be the same, otherwise the LXD's DNS will fail
-	// the new instance creation; hence, the prefix.
-	if op, err := conn.MigrateInstance(instanceFrom, api.InstancePost{
-		Name:      instanceTo,
-		Project:   target,
-		Migration: true,
-		Profiles:  []string{"default"},
-	}); err != nil {
+
+	dest := conn.UseProject(targetProject)
+	rop, err := dest.CopyInstance(conn, *instance, &lxd.InstanceCopyArgs{Name: dstName})
+	if err != nil {
 		return err
-	} else if err = op.Wait(); err != nil {
+	}
+	if err = rop.Wait(); err != nil {
 		return err
 	}
 	return nil
@@ -133,12 +125,12 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	conn = conn.UseProject(LxdSystemProjectName(user))
 	iname := workshop.StashNamePrefix + InstanceName(name, projectId)
 
-	// 1. Remove the workshop instance
 	op, err := conn.DeleteInstance(iname)
 	if err != nil {
 		return err
-	} else if err = op.WaitContext(ctx); err != nil {
-		return nil
+	}
+	if err = op.Wait(); err != nil {
+		return err
 	}
 	return nil
 }

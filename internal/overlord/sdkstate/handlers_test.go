@@ -146,7 +146,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	err = s.backend.LaunchWorkshop(s.ctx, wf)
+	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
 }
 
@@ -522,7 +522,6 @@ func (s *sdkStateSuite) TestUndoLinkSdkRestorePreviousRev(c *check.C) {
 	setup, ok := wp.Sdks["test"]
 	c.Assert(ok, check.Equals, true)
 	c.Assert(setup.Revision.N, check.Equals, 1)
-	c.Assert(setup.RevisionSequence, check.HasLen, 0)
 
 	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)

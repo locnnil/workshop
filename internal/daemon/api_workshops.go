@@ -119,20 +119,60 @@ func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo 
 	return &ws
 }
 
-func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health healthstate.HealthState) *WorkshopInfo {
+// Returns essential workshop properties and its SDKs health statuses (if
+// available).
+func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) *WorkshopInfo {
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
 	info.Base = w.Base
 
-	mnts := w.Mounts(sdks)
+	sdkSetups := w.SdksByInstallOrder()
 
-	for _, sk := range w.Sdks {
-		sdkInfo := sdks[sk.Name]
-		if sdkInfo == nil {
-			sdkInfo = &sdk.Info{}
+	for _, sk := range sdkSetups {
+		var healthInfo *HealthCheckInfo
+		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
+			healthInfo = &HealthCheckInfo{
+				Timestamp: sdkHealth.Timestamp,
+				Message:   sdkHealth.Message,
+				Code:      sdkHealth.Code,
+			}
 		}
 
+		info.Sdks = append(info.Sdks, &SdkInfo{
+			Name:        sk.Name,
+			Channel:     sk.Channel,
+			Revision:    sk.Revision.String(),
+			InstallTime: sk.InstallTime,
+			Health:      healthInfo,
+		})
+	}
+
+	if len(health.Code) > 0 {
+		info.Notes = append(info.Notes, health.Code)
+	}
+	info.Status = health.Status.String()
+	return &info
+}
+
+// Returns essential workshop properties, SDK health statuses (if available) and
+// information about the installed SDKs. This function reads from the workshop's
+// filesystem to obtain certain fields, it has to be used with possible latency
+// changes in mind.
+func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health healthstate.HealthState) (*WorkshopInfo, error) {
+	var info WorkshopInfo
+	info.Name = w.Name
+	info.ProjectId = w.Project.ProjectId
+	info.Base = w.Base
+
+	sdks, err := w.SdkInfosByInstallOrder(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	mnts := w.Mounts(sdks)
+
+	for _, sk := range sdks {
 		var healthInfo *HealthCheckInfo
 		if sdkHealth, ok := health.SdkHealth[sk.Name]; ok {
 			healthInfo = &HealthCheckInfo{
@@ -147,11 +187,11 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
-			Version:     sdkInfo.Version,
+			Version:     sk.Version,
 			Channel:     sk.Channel,
 			Revision:    sk.Revision.String(),
-			BuildTime:   sdkInfo.BuildTime,
-			InstallTime: sk.InstallTime,
+			BuildTime:   sk.BuildTime,
+			InstallTime: w.Sdks[sk.Name].InstallTime,
 			Health:      healthInfo,
 			Mounts:      mntInfos,
 		})
@@ -162,7 +202,7 @@ func workshopToInfo(w *workshop.Workshop, sdks map[string]*sdk.Info, health heal
 	}
 	info.Status = health.Status.String()
 
-	return &info
+	return &info, nil
 }
 
 func mountInfos(sk sdk.Ref, mnts []workshop.Mount) []*Mount {
@@ -223,9 +263,6 @@ func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
 		}
 
 		sk := conn.Plug.Sdk
-		if sk == sdk.System.String() {
-			sk = conn.Slot.Sdk
-		}
 		info, ok := tunnels[sk]
 		if !ok {
 			info = &TunnelInfo{}
@@ -384,16 +421,15 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	for _, w := range workshops {
 		health := healthstate.WorkshopHealth(state, w)
 		if ignoreStatus || health.Status == status {
-			wi := workshopToInfo(w, nil, health)
+			wi := workshopToInfo(w, health)
 			info.Workshops = append(info.Workshops, wi)
 		}
 	}
 
-	// If the client queried everything available,
-	// we add workshop files to the response.
-	// Some of these may only exist as files, not instances.
-	// The "available" query is a best-effort version of "all":
-	// if something is wrong with the files we still return the instances.
+	// If the client queried everything available, we add workshop files to the
+	// response. Some of these may only exist as files, not instances. The
+	// "available" query is a best-effort version of "all": if something is
+	// wrong with the files we still return the instances.
 	if ignoreStatus {
 		files, err := wrkmgr.WorkshopFiles(r.Context(), projectId)
 		var fileErr *workshopstate.WorkshopFileError
@@ -463,7 +499,7 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 		if sk != sdk.Sketch {
 			return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 		}
-		taskset, err = mgr.RefreshLocalSdk(ctx, pid, wp, sk)
+		taskset, err = mgr.RefreshMany(ctx, pid, []string{wp})
 	} else {
 		change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
 		taskset, err = mgr.RefreshMany(ctx, pid, reqData.Names)
@@ -591,11 +627,11 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	health := healthstate.WorkshopHealth(state, w)
 
 	ctx := context.WithValue(r.Context(), workshop.ContextProjectId, projectId)
-	sdks, err := w.SdkInfos(ctx)
+
+	info, err := workshopToInfoFull(ctx, w, health)
 	if err != nil {
 		return statusBadRequest("%w", err)
 	}
-	info := workshopToInfo(w, sdks, health)
 
 	ts, err := tunnels(conns)
 	if err != nil {

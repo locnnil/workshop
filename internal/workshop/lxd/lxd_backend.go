@@ -6,17 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -139,6 +140,11 @@ func New() (*Backend, error) {
 		req := api.StoragePoolsPost{
 			Name:   storagePool,
 			Driver: storagePoolDriver,
+			StoragePoolPut: api.StoragePoolPut{
+				Config: map[string]string{
+					"volume.zfs.remove_snapshots": "true",
+				},
+			},
 		}
 		err := conn.CreateStoragePool(req)
 		if err != nil {
@@ -203,7 +209,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
 	var err error
 	var image *api.Image
 
@@ -213,14 +219,14 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
 	userName, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return fmt.Errorf("context key user not found")
+	}
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
 	}
 
 	// Check if we have the base image stored locally
@@ -243,27 +249,71 @@ func (s *Backend) LaunchWorkshop(ctx context.Context, file *workshop.File) error
 	if err != nil {
 		return err
 	}
-	req := api.InstancesPost{
-		InstancePut: api.InstancePut{
-			Devices: defaultDevices(),
-			Config:  config,
-		},
-		Name: InstanceName(file.Name, projectId),
-		Type: api.InstanceType("container"),
-		Source: api.InstanceSource{
-			Type:        "image",
-			Fingerprint: image.Fingerprint,
-			Project:     LxdProjectName(userName),
-		},
-	}
+	devices := defaultDevices()
 
-	op, err := conn.CreateInstance(req)
-	if err != nil {
+	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
+	switch {
+	case err != nil && !api.StatusErrorCheck(err, http.StatusNotFound):
 		return err
-	}
+	case err != nil && api.StatusErrorCheck(err, http.StatusNotFound):
+		// Create a new workshop.
+		req := api.InstancesPost{
+			InstancePut: api.InstancePut{
+				Devices: devices,
+				Config:  config,
+			},
+			Name: InstanceName(file.Name, projectId),
+			Type: api.InstanceType("container"),
+			Source: api.InstanceSource{
+				Type:        "image",
+				Fingerprint: image.Fingerprint,
+				Project:     LxdProjectName(userName),
+			},
+		}
+		op, err := conn.CreateInstance(req)
+		if err != nil {
+			return err
+		}
 
-	// CreateInstance cannot be cancelled in LXD.
-	return op.Wait()
+		return op.Wait()
+	default:
+		// Rebuild the existing workshop
+		for _, snapshot := range inst.Snapshots {
+			op, err := conn.DeleteInstanceSnapshot(inst.Name, snapshot.Name)
+			if err != nil {
+				return err
+			}
+			if err = op.Wait(); err != nil {
+				return err
+			}
+		}
+
+		rop, err := conn.RebuildInstanceFromImage(conn, *image, inst.Name, api.InstanceRebuildPost{})
+		if err != nil {
+			return err
+		}
+		if err = rop.Wait(); err != nil {
+			return err
+		}
+
+		// Get an updated instance configuration
+		rebuilt, etag, err := conn.GetInstance(inst.Name)
+		if err != nil {
+			return err
+		}
+
+		maps.Copy(rebuilt.Config, config)
+		maps.Copy(rebuilt.Devices, devices)
+
+		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
+		if err != nil {
+			return err
+		}
+		if err = op.Wait(); err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
@@ -746,6 +796,85 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	return op.Wait()
 }
 
+func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
+		Name: snapid,
+	})
+	if err != nil {
+		return err
+	}
+	return op.Wait()
+}
+
+func (s *Backend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	instPut := inst.Writable()
+	instPut.Restore = snapid
+	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+
+	// The restored snapshot will have an updated file and empty profiles.
+	// Similar to how a launched workshop is associated with its definition.
+	restored, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	f, err := yaml.Marshal(file)
+	if err != nil {
+		return err
+	}
+
+	// Restore from a snapshot also restores the workshop configuration at the
+	// time the snapshot was made. We need the restored configuration to have
+	// the current instance's configuration as it reflects the installed SDKs
+	// list, for example.
+	// Reset it to the actual configuration of the instance.
+	restored.Config["user.workshop.sdks"] = instPut.Config["user.workshop.sdks"]
+	restored.Config["user.workshop.file"] = string(f)
+	restored.Profiles = []string{"default"}
+
+	op, err = conn.UpdateInstance(inst.Name, restored.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -893,6 +1022,7 @@ runcmd:
 		"user.workshop.project-id": projectId,
 		"user.user-data":           cloudInitConfig,
 		"user.workshop.file":       string(f),
+		"user.workshop.sdks":       "{}",
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic

@@ -145,6 +145,8 @@ type Backend interface {
 	Stash
 	VolumeManager
 	BaseImageManager
+	Snapshot
+
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
 	// is not found, e.g. .lock file was removed by the user, but there is still
@@ -165,8 +167,11 @@ type Backend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
-	// Launch a barebone workshop instance using the base provided.
-	LaunchWorkshop(ctx context.Context, file *File) error
+	// Launch a barebone workshop instance. If the workshop exists, wipe out its
+	// rootfs and rebuild it from the workshop file's base image. The
+	// configuration and devices of the rebuilt workshop will be reset to the
+	// default one.
+	LaunchOrRebuildWorkshop(ctx context.Context, file *File) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error
@@ -200,6 +205,11 @@ type Backend interface {
 	// and redirect its IO using args.ExecControls. ExecContext.Environment will
 	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
+}
+
+type Snapshot interface {
+	Snapshot(ctx context.Context, workshop, snapid string) error
+	Restore(ctx context.Context, workshop, snapid string, file *File) error
 }
 
 type cachedBackendKey struct{}

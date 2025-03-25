@@ -270,68 +270,135 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
 	c.Check(n, check.Equals, 2)
 }
 
-var mockWorkshopWithTunnels = `{"type":"sync","status-code":200,"status":"OK","result":{
-    "name":"ws",
-    "base":"ubuntu@22.04",
-    "project-id":"42424242",
-    "status":"Ready",
-    "sdks":[{
-        "name":"go",
-        "version":"1.8.0",
-        "channel":"latest/edge",
-        "revision":"1",
-        "build-time":"2017-02-19T17:23:05.592623Z",
-        "install-time":"2017-03-22T09:01:00.0Z",
-        "tunnels":{
-            "plugs":[{
-                "plug":{
-                    "project-id":"42ws42ws",
-                    "workshop":"ws",
-                    "sdk":"go",
-                    "plug":"snap-cache"
-                },
-                "slot":{
-                    "project-id":"42ws42ws",
-                    "workshop":"ws",
-                    "sdk":"system",
-                    "slot":"snap-cache"
-                },
-                "from":{
-                    "protocol":"tcp",
-                    "host":"0.0.0.0",
-                    "port":12345
-                },
-                "to":{
-                    "protocol":"unix",
-                    "path":"/run/snap-proxy.socket"
-                }
-            }],
-            "slots":[{
-                "plug":{
-                    "project-id":"42ws42ws",
-                    "workshop":"ws",
-                    "sdk":"system",
-                    "plug":"gopls"
-                },
-                "slot":{
-                    "project-id":"42ws42ws",
-                    "workshop":"ws",
-                    "sdk":"go",
-                    "slot":"gopls"
-                },
-                "from":{
-                    "protocol":"tcp",
-                    "host":"127.0.0.1",
-                    "port":60915
-                },
-                "to":{
-                    "protocol":"unix",
-                    "path":"/run/user/%s/gopls.socket"
-                }
-            }]
+var mockWorkshopWithTunnels = `{
+  "type": "sync",
+  "status-code": 200,
+  "status": "OK",
+  "result": {
+    "name": "ws",
+    "base": "ubuntu@22.04",
+    "project-id": "42424242",
+    "status": "Ready",
+    "sdks": [
+      {
+        "name": "system",
+        "revision": "x1",
+        "tunnels": {
+          "plugs": [
+            {
+              "plug": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "system",
+                "plug": "gopls"
+              },
+              "slot": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "go",
+                "slot": "gopls"
+              },
+              "from": {
+                "protocol": "tcp",
+                "host": "127.0.0.1",
+                "port": 60915
+              },
+              "to": {
+                "protocol": "unix",
+                "path": "/run/user/%s/gopls.socket"
+              }
+            }
+          ],
+          "slots": [
+            {
+              "plug": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "go",
+                "plug": "snap-cache"
+              },
+              "slot": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "system",
+                "slot": "snap-cache"
+              },
+              "from": {
+                "protocol": "tcp",
+                "host": "0.0.0.0",
+                "port": 12345
+              },
+              "to": {
+                "protocol": "unix",
+                "path": "/run/snap-proxy.socket"
+              }
+            }
+          ]
         }
-    }]
-}}`
+      },
+      {
+        "name": "go",
+        "version": "1.8.0",
+        "channel": "latest/edge",
+        "revision": "1",
+        "build-time": "2017-02-19T17:23:05.592623Z",
+        "install-time": "2017-03-22T09:01:00.0Z",
+        "tunnels": {
+          "plugs": [
+            {
+              "plug": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "go",
+                "plug": "snap-cache"
+              },
+              "slot": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "system",
+                "slot": "snap-cache"
+              },
+              "from": {
+                "protocol": "tcp",
+                "host": "0.0.0.0",
+                "port": 12345
+              },
+              "to": {
+                "protocol": "unix",
+                "path": "/run/snap-proxy.socket"
+              }
+            }
+          ],
+          "slots": [
+            {
+              "plug": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "system",
+                "plug": "gopls"
+              },
+              "slot": {
+                "project-id": "42ws42ws",
+                "workshop": "ws",
+                "sdk": "go",
+                "slot": "gopls"
+              },
+              "from": {
+                "protocol": "tcp",
+                "host": "127.0.0.1",
+                "port": 60915
+              },
+              "to": {
+                "protocol": "unix",
+                "path": "/run/user/%s/gopls.socket"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}`
 
 func (m *workshopInfo) TestWorkshopInfoWithSdkTunnels(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
@@ -368,6 +435,7 @@ status:   ready
 notes:    -
 sdks:
   system:
+    installed:  \(x1\)
     tunnels:
       gopls:
         from:  127.0.0.1:60915/tcp

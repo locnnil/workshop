@@ -286,11 +286,11 @@ func validateConnections(wfile *File) error {
 				conn.PlugRef.String(), conn.SlotRef.String())
 		}
 
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || conn.PlugRef.Sdk == sdk.System.String() }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.PlugRef.Sdk || sdk.IsSystem(conn.PlugRef.Sdk) }) {
 			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
 				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.PlugRef.Sdk)
 		}
-		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || conn.SlotRef.Sdk == sdk.System.String() }) {
+		if !slices.ContainsFunc(wfile.Sdks, func(r SdkRecord) bool { return r.Name == conn.SlotRef.Sdk || sdk.IsSystem(conn.SlotRef.Sdk) }) {
 			return fmt.Errorf(`cannot connect plug %q to slot %q: workshop %q has no SDK named %q`,
 				conn.PlugRef.String(), conn.SlotRef.String(), wfile.Name, conn.SlotRef.Sdk)
 		}

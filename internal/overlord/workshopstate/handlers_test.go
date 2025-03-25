@@ -118,7 +118,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsFocal)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 
 	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
@@ -160,7 +160,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 		{Name: "test2", Channel: "latest/stable"},
 	}}
 
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
@@ -204,7 +204,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 
 	for _, wf := range wFiles {
-		err := s.backend.LaunchWorkshop(s.ctx, wf)
+		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 		c.Check(err, check.IsNil)
 
 		// create content directories
@@ -249,7 +249,6 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	projectContent := workshop.ProjectUserData(userDataDir, s.project.ProjectId)
 	exist, _, _ := osutil.ExistsIsDir(projectContent)
 	c.Assert(exist, check.Equals, false)
-
 }
 
 func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *check.C) {

@@ -15,6 +15,8 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -82,22 +84,28 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Validate
-	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, check.NotNil)
+	c.Assert(err, check.IsNil)
+
+	// Execute
+	err = f.bd.RemoveWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Execute
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
-	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+
+	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -105,7 +113,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	// Validate
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+	c.Assert(err, check.IsNil)
 
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
@@ -386,4 +394,60 @@ func (f *wsOps) TestLxdBackendWorkshopStartFailed(c *check.C) {
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Check(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	err := f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
+	wf := &workshop.File{
+		Name: "test",
+		Base: "ubuntu@24.04"}
+
+	// Execute
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf)
+	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+	err = w.InstallLocalSdk(f.ctx, sdk.System.String(), "x1", system.SystemSdkFs)
+	c.Check(err, check.IsNil)
+	err = w.LinkSdk(f.ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
+	c.Check(err, check.IsNil)
+	c.Check(w.Sdks, check.HasLen, 1)
+
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
+	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
+	c.Assert(err, check.IsNil)
+
+	wf := &workshop.File{
+		Name: "test",
+		Base: "ubuntu@24.04",
+	}
+	// The instance's configuration does not have any SDK in user.workshop.sdks
+	// after this.
+	err = w.UnlinkSdk(f.ctx, sdk.System.String())
+	c.Check(err, check.IsNil)
+
+	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
+	c.Assert(err, check.IsNil)
+
+	w, err = f.bd.Workshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+	c.Check(w.Running, check.Equals, false)
+	// Check that restore did not restore previous version of
+	// "user.workshop.sdks" or "user.workshop.file" and uses the instance's
+	// configuration, not the snapshot's.
+	c.Check(w.File, check.DeepEquals, wf)
+	c.Check(w.Sdks, check.HasLen, 0)
 }

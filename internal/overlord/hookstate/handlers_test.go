@@ -89,7 +89,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	t1 := hookstate.Hook(s.state, "ws", "new", hookstate.SetupBase)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "new", 0, hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -97,7 +97,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	chg.AddTask(t1)
 
 	// Launch a workshop provinding no hooks
-	err := s.backend.LaunchWorkshop(s.ctx, &workshop.File{Name: "ws", Base: "ubuntu@20.04"})
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "ws", Base: "ubuntu@20.04"})
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -112,7 +112,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -161,7 +161,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.RestoreState)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -201,7 +201,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -245,7 +245,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.HookWithTimeout(s.state, "ws", "one", hookstate.FakeHook, 100*time.Millisecond)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 100*time.Millisecond, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -285,7 +285,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -309,7 +309,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -345,7 +345,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 	// The context handler will return an error that must be the final error of
 	// the task.
 	s.mockHandler.ErrorError = true
@@ -384,7 +384,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.IgnoreOriginalErr = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -420,7 +420,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.BeforeError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -448,7 +448,7 @@ func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.DoneError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -474,7 +474,7 @@ func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, "ws", "one", hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
 	s.hookmgr.Register(regexp.MustCompile("^fake-*"), func(context *hookstate.Context) hookstate.Handler {
 		return s.mockHandler
 	})
@@ -501,7 +501,7 @@ func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
-	err := s.backend.LaunchWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)

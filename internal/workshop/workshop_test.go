@@ -10,6 +10,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
@@ -25,7 +26,14 @@ type workshopSuite struct {
 var _ = check.Suite(&workshopSuite{})
 
 var workshopyaml = []byte(`name: test-workshop
-base: ubuntu@22.04`)
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-1
+    channel: latest/stable
+  - name: test-sdk-2
+    channel: latest/stable
+  - name: system
+`)
 
 func (f *workshopSuite) SetUpTest(c *check.C) {
 	var err error
@@ -66,7 +74,7 @@ func (f *workshopSuite) TestInstallLocalSdkMetaOnlyOK(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")
@@ -93,7 +101,7 @@ func (f *workshopSuite) TestInstallLocalSdkNoMetaFails(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")
@@ -118,7 +126,7 @@ func (f *workshopSuite) TestInstallLocalSdkWithHooksOK(c *check.C) {
 	file, err := workshop.ReadWorkshop(wpath)
 	c.Assert(err, check.IsNil)
 
-	err = f.bend.LaunchWorkshop(f.ctx, file)
+	err = f.bend.LaunchOrRebuildWorkshop(f.ctx, file)
 	c.Assert(err, check.IsNil)
 
 	w, err := f.bend.Workshop(f.ctx, "test-workshop")
@@ -142,4 +150,27 @@ base: ubuntu@22.04`)
 	info, err := wfs.Stat("/var/lib/workshop/sdk/local/x1/sdk/hooks/setup-base")
 	c.Assert(err, check.IsNil)
 	c.Check(info.Mode().Perm(), check.Equals, fs.FileMode(0755))
+}
+
+func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
+	wpath := filepath.Join(f.p.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
+	c.Assert(err, check.IsNil)
+
+	w := workshop.Workshop{File: file, Name: "test-workshop"}
+	w.Sdks = map[string]sdk.Setup{
+		"test-sdk-1": {Name: "test-sdk-1", Revision: sdk.R(1), Channel: "latest/stable"},
+		"test-sdk-2": {Name: "test-sdk-2", Revision: sdk.R(1), Channel: "latest/edge"},
+		"system":     {Name: "system", Revision: sdk.R(-1)},
+		"sketch":     {Name: "sketch", Revision: sdk.R(-3)},
+	}
+
+	sdks := w.SdksByInstallOrder()
+	c.Assert(sdks, check.DeepEquals, []sdk.Setup{
+		{Name: "system", Revision: sdk.R(-1)},
+		{Name: "test-sdk-1", Revision: sdk.R(1), Channel: "latest/stable"},
+		{Name: "test-sdk-2", Revision: sdk.R(1), Channel: "latest/edge"},
+		{Name: "sketch", Revision: sdk.R(-3)},
+	})
 }

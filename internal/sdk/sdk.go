@@ -16,11 +16,10 @@ import (
 )
 
 type Setup struct {
-	Name             string     `json:"name"`
-	Channel          string     `json:"channel"`
-	Revision         Revision   `json:"revision"`
-	RevisionSequence []Revision `json:"revision-sequence,omitempty"`
-	InstallTime      *time.Time `json:"install-time"`
+	Name        string     `json:"name"`
+	Channel     string     `json:"channel"`
+	Revision    Revision   `json:"revision"`
+	InstallTime *time.Time `json:"install-time"`
 }
 
 func (s *Setup) Filepath() string {

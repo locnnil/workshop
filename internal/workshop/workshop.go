@@ -7,17 +7,20 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/spf13/afero"
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 )
 
 var (
@@ -79,36 +82,29 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 	}
 	rev.Add(func() { _ = fs.Remove(current) })
 
-	// We do not track the system SDK in the Sdks field; this is only for the
-	// user-defined SDKs as the system SDK is a special case (e.g. cannot be
-	// removed from the workshop).
-	if s.Name != sdk.System.String() {
-		now := InstallTimeNow()
-		s.InstallTime = &now
+	now := InstallTimeNow()
+	s.InstallTime = &now
 
-		sdksetup, exist := w.Sdks[s.Name]
-		if exist {
-			sdksetup.RevisionSequence = append(sdksetup.RevisionSequence, sdksetup.Revision)
-			sdksetup.Revision = s.Revision
-			w.Sdks[s.Name] = sdksetup
-		} else {
-			w.Sdks[s.Name] = s
-		}
+	_, exist := w.Sdks[s.Name]
+	if exist {
+		return fmt.Errorf("%q SDK is already linked", s.Name)
+	} else {
+		w.Sdks[s.Name] = s
+	}
 
-		sequenceValue, err := json.Marshal(w.Sdks)
-		if err != nil {
-			return err
-		}
+	sequenceValue, err := json.Marshal(w.Sdks)
+	if err != nil {
+		return err
+	}
 
-		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-			&WorkshopConfigValue{
-				Name:  ConfigWorkshopSdks,
-				Value: string(sequenceValue),
-			})
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
+			Name:  ConfigWorkshopSdks,
+			Value: string(sequenceValue),
+		})
 
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
 	rev.Success()
@@ -119,28 +115,19 @@ func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
 // removing the SDK from the workshop "installed" SDKs if there are no more
 // revisions left.
 func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
-	if name != sdk.System.String() {
-		setup := w.Sdks[name]
-		if len(setup.RevisionSequence) > 0 {
-			setup.Revision = setup.RevisionSequence[len(setup.RevisionSequence)-1]
-			setup.RevisionSequence = setup.RevisionSequence[:len(setup.RevisionSequence)-1]
-			w.Sdks[name] = setup
-		} else {
-			delete(w.Sdks, name)
-		}
-		newSequence, err := json.Marshal(w.Sdks)
-		if err != nil {
-			return err
-		}
+	delete(w.Sdks, name)
+	newSequence, err := json.Marshal(w.Sdks)
+	if err != nil {
+		return err
+	}
 
-		err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-			&WorkshopConfigValue{
-				Name:  ConfigWorkshopSdks,
-				Value: string(newSequence),
-			})
-		if err != nil {
-			return err
-		}
+	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
+		&WorkshopConfigValue{
+			Name:  ConfigWorkshopSdks,
+			Value: string(newSequence),
+		})
+	if err != nil {
+		return err
 	}
 
 	// Update the 'current' link
@@ -149,16 +136,6 @@ func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
 		return err
 	}
 	defer fs.Close()
-
-	if setup, exist := w.Sdks[name]; exist {
-		if err = fs.Remove(sdk.SdkCurrentPath(name)); err != nil {
-			return err
-		}
-		if err = fs.Symlink(sdk.SdkRevPath(name, setup.Revision.String()), sdk.SdkCurrentPath(name)); err != nil {
-			return err
-		}
-		return nil
-	}
 
 	// No revisions left in the sequence, remove the 'current' link.
 	// This will be the case during a launch operation that fails, therefore it's
@@ -220,15 +197,12 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	// the only SDKs of that source. This requires rework, once an arbitrary SDK
 	// can be installed from a local source, e.g. to support workshop try.
 	isLocal := func(n string) bool {
-		return n == sdk.Sketch || n == sdk.System.String()
+		return n == sdk.Sketch || sdk.IsSystem(n)
 	}
 
 	setup, ok := w.Sdks[sdkName]
-	if sdkName != sdk.System.String() && !ok {
+	if !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
-	}
-	if sdkName == sdk.System.String() {
-		setup = sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: 1}}
 	}
 
 	var err error
@@ -296,21 +270,55 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 // Returns a map of SDK info for installed SDKs. The info includes SDK details
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
-func (w *Workshop) SdkInfos(ctx context.Context) (map[string]*sdk.Info, error) {
-	var infos = make(map[string]*sdk.Info, len(w.Sdks))
+func (w *Workshop) SdkInfosByInstallOrder(ctx context.Context) ([]*sdk.Info, error) {
+	var infos = make([]*sdk.Info, 0, len(w.Sdks))
 	for _, sdk := range w.Sdks {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err
 		}
-		infos[info.Name] = info
+		infos = append(infos, info)
 	}
+
+	orderMap := make(map[string]int)
+	for i, v := range w.File.Sdks {
+		orderMap[v.Name] = i
+	}
+
+	// The workshop definition which defines the install order may or may not
+	// contain the system SDK declared in an arbitrary place. Therefore, we have
+	// to make sure that the system SDK goes first and the sketch SDK goes last.
+	orderMap[sdk.System.String()] = -1
+	orderMap[sdk.Sketch] = len(w.File.Sdks)
+	sort.Slice(infos, func(i, j int) bool {
+		return orderMap[infos[i].Name] < orderMap[infos[j].Name]
+	})
+
 	return infos, nil
 }
 
-// Mounts returns a map of active mounts,
-// given a map of SDK info as returned by SdkInfos.
-func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
+// Returns the list of SDKs of the workshop sorted by installation order.
+func (w *Workshop) SdksByInstallOrder() []sdk.Setup {
+	// Sort the SDKs in installation order.
+	orderMap := make(map[string]int)
+	for i, v := range w.File.Sdks {
+		orderMap[v.Name] = i
+	}
+	// The workshop definition which defines the install order may or may not
+	// contain the system SDK declared in an arbitrary place. Therefore, we have
+	// to make sure that the system SDK goes first and the sketch SDK goes last.
+	orderMap[sdk.System.String()] = -1
+	orderMap[sdk.Sketch] = len(w.File.Sdks)
+	sdks := slices.Collect(maps.Values(w.Sdks))
+	sort.Slice(sdks, func(i, j int) bool {
+		return orderMap[sdks[i].Name] < orderMap[sdks[j].Name]
+	})
+
+	return sdks
+}
+
+// Mounts returns a map of active SDK mounts for the workshop.
+func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	if sdks == nil {
 		return nil
 	}
@@ -343,16 +351,16 @@ func (w *Workshop) Mounts(sdks map[string]*sdk.Info) map[string][]Mount {
 }
 
 func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {
-	dstdir := filepath.Dir(dst)
-	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
-		return err
-	}
-
 	filesrc, err := srcfs.Open(src)
 	if err != nil {
 		return err
 	}
 	defer filesrc.Close()
+
+	dstdir := filepath.Dir(dst)
+	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
+		return err
+	}
 
 	filedst, err := wfs.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
 	if err != nil {
@@ -377,13 +385,13 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 	defer reverter.Fail()
 
 	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
-	metasrc := filepath.Join("meta", "sdk.yaml")
+	metasrc := system.SdkMeta
 	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
-	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
 
 	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {
 		return err
 	}
+	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
 
 	// hooks: /var/lib/workshop/sdk/<name>/<rev>/sdk/hooks
 	hooksdir := filepath.Join(sdk.SdkRevPath(name, rev), "sdk", "hooks")
@@ -408,4 +416,8 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 
 	reverter.Success()
 	return nil
+}
+
+func SnapshotId(w, sk string) string {
+	return strings.Join([]string{w, sk}, ".")
 }
