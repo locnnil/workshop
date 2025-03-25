@@ -1460,7 +1460,10 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 	c.Assert(err, check.IsNil)
 	c.Assert(got, check.HasLen, len(want), check.Commentf("expected %d workshops, got %d", len(want), len(got)))
 
-	for idx, w := range got {
+	for _, w := range got {
+		idx := slices.IndexFunc(want, func(ws expectedWorkshop) bool { return ws.name == w.Name })
+		c.Assert(idx >= 0, check.Equals, true)
+
 		wantws := want[idx]
 		c.Assert(w.Name, check.Equals, wantws.name)
 		c.Assert(w.Base, check.Equals, wantws.base)
@@ -1524,27 +1527,154 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 }
 
 func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
-	c.Assert(s.b.SnapshotCalls, check.HasLen, len(sdks))
+	wpCalls := []fakebackend.SnapshotCall{}
+	for _, sc := range s.b.SnapshotCalls {
+		if sc.Workshop == name {
+			wpCalls = append(wpCalls, sc)
+		}
+	}
+
+	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(s.b.SnapshotCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
-		c.Assert(s.b.SnapshotCalls[i].Workshop, check.Equals, name)
+		c.Assert(wpCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
 	}
 }
 
 func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, files []string) {
-	c.Assert(s.b.RestoreCalls, check.HasLen, len(sdks))
-	c.Assert(s.b.RestoreCalls, check.HasLen, len(files))
+	wpCalls := []fakebackend.RestoreCall{}
+	for _, sc := range s.b.RestoreCalls {
+		if sc.Workshop == name {
+			wpCalls = append(wpCalls, sc)
+		}
+	}
+
+	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(s.b.RestoreCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
-		c.Assert(s.b.RestoreCalls[i].Workshop, check.Equals, name)
+		c.Assert(wpCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
 
 		var f workshop.File
 		err := yaml.Unmarshal([]byte(files[i]), &f)
 		c.Assert(err, check.IsNil)
-		c.Assert(s.b.RestoreCalls[i].File, check.DeepEquals, &f)
+		c.Assert(wpCalls[i].File, check.DeepEquals, &f)
 	}
+}
+
+func (s *apiSuite) TestRefreshMany(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "basic", basic)
+	s.createWFile(c, "manysdks", manysdks)
+	s.createWFile(c, "somebound", somebound)
+
+	s.mockSdkVolumes(c, apiSuiteSdks)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic", "manysdks", "somebound"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic", "manysdks", "somebound" workshops`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_allremoved)
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic", "manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "basic", "manysdks" workshops`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "somebound",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		}, connections: []string{
+			"b8639dea/somebound/test-sdk:data b8639dea/somebound/system:mount",
+			"b8639dea/somebound/test-sdk-2:photos b8639dea/somebound/system:mount",
+			"b8639dea/somebound/test-sdk-2:gpu b8639dea/somebound/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}, {
+		name: "basic",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+		},
+		slots: []string{
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}, {
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: sdk.R(-1), InstallTime: &s.installTime},
+		},
+		slots: []string{
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+
+	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "basic", []string{
+		"system",
+	})
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkSnapshotCalls(c, "somebound", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})
+	s.checkRestoreCalls(c, "somebound", []string{}, []string{})
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_allremoved})
 }
 
 func (s *apiSuite) TestRefreshAddSdk(c *check.C) {

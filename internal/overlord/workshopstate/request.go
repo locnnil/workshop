@@ -304,7 +304,7 @@ type refreshWorkshopReq struct {
 	infos []sdk.SdkResult
 }
 
-func (w *WorkshopManager) prepareRefresh(ctx context.Context, wps []*workshop.Workshop) ([]refreshWorkshopReq, error) {
+func (w *WorkshopManager) prepareRefresh(ctx context.Context, wps []*workshop.Workshop, names []string) ([]refreshWorkshopReq, error) {
 	sto := sdk.StoreService(w.state)
 
 	// Not an error, the state is locked; unlock it to let other requests to be
@@ -312,18 +312,24 @@ func (w *WorkshopManager) prepareRefresh(ctx context.Context, wps []*workshop.Wo
 	w.state.Unlock()
 	defer w.state.Lock()
 
-	refreshReqs := make([]refreshWorkshopReq, 0, len(wps))
-	for _, w := range wps {
-		file, err := w.Project.Workshop(w.Name)
+	refreshReqs := make([]refreshWorkshopReq, 0, len(names))
+	for _, name := range names {
+		idx := slices.IndexFunc(wps, func(wp *workshop.Workshop) bool { return wp.Name == name })
+		if idx == -1 {
+			return nil, fmt.Errorf("cannot refresh %q: %w", name, workshop.ErrWorkshopNotLaunched)
+		}
+		wp := wps[idx]
+
+		file, err := wp.Project.Workshop(wp.Name)
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", w.Name, err)
+			return nil, fmt.Errorf("cannot refresh %q: %w", wp.Name, err)
 		}
 
-		infos, err := sdkInfos(sto, ctx, w.Project.ProjectId, file)
+		infos, err := sdkInfos(sto, ctx, wp.Project.ProjectId, file)
 		if err != nil {
 			return nil, err
 		}
-		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: w, file: file, infos: infos})
+		refreshReqs = append(refreshReqs, refreshWorkshopReq{w: wp, file: file, infos: infos})
 	}
 	return refreshReqs, nil
 }
@@ -334,22 +340,16 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		return nil, err
 	}
 
-	refreshReqs, err := w.prepareRefresh(ctx, all)
+	refreshReqs, err := w.prepareRefresh(ctx, all, names)
 	if err != nil {
 		return nil, err
 	}
 
 	allowed := []healthstate.Status{healthstate.ReadyStatus}
-	for _, name := range names {
-		idx := slices.IndexFunc(all, func(w *workshop.Workshop) bool { return w.Name == name })
-		if idx == -1 {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, workshop.ErrWorkshopNotLaunched)
+	for _, req := range refreshReqs {
+		if err = healthstate.CheckWorkshopHealth(w.state, req.w, allowed); err != nil {
+			return nil, fmt.Errorf("cannot refresh %q: %w", req.w.Name, err)
 		}
-
-		if err = healthstate.CheckWorkshopHealth(w.state, all[idx], allowed); err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-		}
-
 	}
 
 	taskset := make([]*state.TaskSet, 0, len(refreshReqs))
