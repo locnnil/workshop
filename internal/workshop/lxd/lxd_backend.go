@@ -285,7 +285,7 @@ func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Conte
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 45,
+		Timeout: 60,
 		Force:   force,
 	}
 
