@@ -68,15 +68,13 @@ for example:
 Launching workshops
 -------------------
 
-In the ``.workshop`` directory of the project
+In the directory of the project
 that you want to use with Workshop,
 create a workshop definition file named ``workshop.yaml``
 to list your project's prerequisites,
 then run ``workshop launch``:
 
 .. code-block:: console
-
-   mkdir -p .workshop
 
    cat > workshop.yaml <<EOF -
    name: golang
