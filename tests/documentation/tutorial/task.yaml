@@ -17,6 +17,7 @@ execute: |
   workshop_exec info
 
   # Changes and tasks after launch
+  workshop_exec tasks
   workshop_exec changes
   workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')
 

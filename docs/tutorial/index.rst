@@ -337,7 +337,18 @@ The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
-Check out the recent :ref:`changes <ref_workshop_changes>`
+To briefly glimpse the steps of the latest change,
+use :command:`workshop tasks` without a change ID:
+
+.. @artefact workshop tasks
+
+.. code-block:: console
+
+   $ workshop tasks
+
+
+For a historical view,
+check out the list of recent :ref:`changes <ref_workshop_changes>`
 to see how |ws_markup| keeps track of the project directory:
 
 .. @artefact workshop changes
@@ -353,8 +364,6 @@ to see how |ws_markup| keeps track of the project directory:
 To find out what launching a workshop implies,
 pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
 
-.. @artefact workshop tasks
-
 .. code-block:: console
 
    $ workshop tasks 34
@@ -368,12 +377,6 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
      138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
      139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
      140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
-
-
-.. tip::
-
-   To inspect the most recent change,
-   use :command:`workshop tasks` without a change ID.
 
 
 Here, the following happens:

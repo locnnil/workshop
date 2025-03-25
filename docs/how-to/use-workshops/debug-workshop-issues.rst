@@ -9,10 +9,11 @@ you can explore its underlying changes and tasks, pause on error,
 list system-wide warnings and acknowledge false positives.
 
 
-List workshop changes
----------------------
+List tasks and changes
+----------------------
 
 .. @artefact workshop changes
+.. @artefact workshop tasks
 
 Consider a workshop named :samp:`dev-volatile`,
 which uses an unstable SDK
@@ -39,8 +40,21 @@ Suppose something goes wrong during :command:`workshop refresh`:
      Refresh aborted
 
 
-To investigate the failure,
-list the *changes* in the workshop to find the one that failed:
+To see the *tasks*, or individual actions,
+during the latest *change*, which is essentially a major workshop update,
+run :command:`workshop tasks` without arguments:
+
+.. code-block:: console
+
+   $ workshop tasks
+
+     ID    Status  Spawn                Ready                Summary
+     ...
+
+
+If that didn't help,
+investigate the failure further
+by listing all *changes* in the workshop to find the one that failed:
 
 .. code-block:: console
 
@@ -51,13 +65,9 @@ list the *changes* in the workshop to find the one that failed:
      81  Error   today at 12:20       today at 12:23       Refresh workshops "dev-volatile"
 
 
-List tasks in a change
-----------------------
-
 When you have found the problematic change,
-list its *tasks* to see the cause:
-
-.. @artefact workshop tasks
+list its *tasks* to see the cause,
+this time supplying the change ID as the argument:
 
 .. code-block:: console
 
@@ -82,13 +92,12 @@ list its *tasks* to see the cause:
 
 The SDK-specific reason can be addressed individually.
 
-If no change ID is provided,
-:command:`workshop tasks` inspects the most recent change
-to the current project.
-
 
 Wait on error
 -------------
+
+.. @artefact workshop launch
+.. @artefact workshop refresh
 
 The :option:`!--wait-on-error` option in :command:`workshop refresh` and
 :command:`workshop launch`
