@@ -83,8 +83,8 @@ func (c *containsChecker) Check(params []interface{}, names []string) (result bo
 			error = fmt.Sprint(v)
 		}
 	}()
-	var container interface{} = params[0]
-	var elem interface{} = params[1]
+	container := params[0]
+	elem := params[1]
 	if commonEquals(container, elem, &result, &error) {
 		return result, error
 	}
@@ -123,8 +123,8 @@ var DeepContains check.Checker = &deepContainsChecker{
 }
 
 func (c *deepContainsChecker) Check(params []interface{}, names []string) (result bool, error string) {
-	var container interface{} = params[0]
-	var elem interface{} = params[1]
+	container := params[0]
+	elem := params[1]
 	if commonEquals(container, elem, &result, &error) {
 		return result, error
 	}

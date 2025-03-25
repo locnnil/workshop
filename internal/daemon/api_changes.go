@@ -164,7 +164,7 @@ func v1GetChanges(c *Command, r *http.Request, _ *userState) Response {
 			}
 
 			if query.Has("workshops") {
-				var workshops []string = strings.Split(query.Get("workshops"), ",")
+				workshops := strings.Split(query.Get("workshops"), ",")
 				var workshop string
 				if err := chg.Get("workshop", &workshop); err != nil {
 					return false

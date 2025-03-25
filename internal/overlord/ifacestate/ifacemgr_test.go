@@ -64,7 +64,7 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.prj = *prj
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
-	s.BaseTest.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
+	s.AddCleanup(sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {}))
 }
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
@@ -132,7 +132,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	s.writeSDKMetaFile(c, wsfs, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}, systemYaml)
 
 	for _, setup := range sdks {
-		s.mockSdk(c, setup.Setup.Name, setup.yaml, int64(setup.Revision.N))
+		s.mockSdk(c, setup.Name, setup.yaml, int64(setup.Revision.N))
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
@@ -300,7 +300,7 @@ slots:
 }
 
 func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
-	var isAuto, isUndesired bool = true, false
+	isAuto, isUndesired := true, false
 	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
 		"pid/ws/consumer:plug pid/ws/producer:slot": {
 			Interface: "test",
@@ -321,7 +321,7 @@ func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
 }
 
 func (s *interfaceManagerSuite) TestConnectionStatesUndesired(c *check.C) {
-	var isAuto, isUndesired bool = true, true
+	isAuto, isUndesired := true, true
 	s.testConnectionStates(c, isAuto, isUndesired, map[string]ifacestate.ConnectionState{
 		"pid/ws/consumer:plug pid/ws/producer:slot": {
 			Interface: "test",

@@ -225,8 +225,8 @@ func validateBinding(sdks []SdkRecord) error {
 	// All bindings must refer to the existing SDKs and meet the name validity
 	// checks (at this stage). Later, when SDK metadata will be received, the
 	// plugs must be checked again (e.g. ensure all those plugs actually exist).
-	var masters map[PlugRef][]PlugRef = make(map[PlugRef][]PlugRef)
-	var slaves map[PlugRef]PlugRef = make(map[PlugRef]PlugRef)
+	masters := make(map[PlugRef][]PlugRef)
+	slaves := make(map[PlugRef]PlugRef)
 	for _, s := range sdks {
 		for name, p := range s.Plugs {
 			if p.Bind == nil {

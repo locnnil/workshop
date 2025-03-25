@@ -1,15 +1,25 @@
+version: '2'
+
+formatters:
+  enable:
+    - gci
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - Prefix(github.com/canonical/workshop)
+
 linters:
   disable:
     - errcheck
   enable:
-    - gci
     - nilerr
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - Prefix(github.com/canonical/workshop)
+  settings:
+    staticcheck:
+      dot-import-whitelist:
+        - github.com/canonical/workshop/internal/overlord/handlersetup
+
 issues:
   # these values ensure that all issues will be surfaced
   max-issues-per-linter: 0

@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -39,7 +38,7 @@ type baseDeclSuite struct {
 	restoreSanitize func()
 }
 
-var _ = Suite(&baseDeclSuite{})
+var _ = check.Suite(&baseDeclSuite{})
 
 func Test(t *testing.T) {
 	check.TestingT(t)
@@ -94,7 +93,7 @@ slots:
 	}
 }
 
-func (s *baseDeclSuite) TestAutoConnection(c *C) {
+func (s *baseDeclSuite) TestAutoConnection(c *check.C) {
 	all := builtin.Interfaces()
 
 	// these have more complex or in flux policies and have their
@@ -115,32 +114,32 @@ func (s *baseDeclSuite) TestAutoConnection(c *C) {
 			continue
 		}
 		expected := autoconnect[iface.Name()]
-		comm := Commentf(iface.Name())
+		comm := check.Commentf(iface.Name())
 
 		// check base declaration
 		cand := s.connectCand(c, iface.Name(), "", "", "", "", "", "")
 		arity, err := cand.CheckAutoConnect()
 		if expected {
-			c.Check(err, IsNil, comm)
-			c.Check(arity.SlotsPerPlugAny(), Equals, false)
+			c.Check(err, check.IsNil, comm)
+			c.Check(arity.SlotsPerPlugAny(), check.Equals, false)
 		} else {
-			c.Check(err, NotNil, comm)
+			c.Check(err, check.NotNil, comm)
 		}
 	}
 }
 
-func (s *baseDeclSuite) TestManualConnection(c *C) {
+func (s *baseDeclSuite) TestManualConnection(c *check.C) {
 	all := builtin.Interfaces()
 
 	for _, iface := range all {
-		comm := Commentf(iface.Name())
+		comm := check.Commentf(iface.Name())
 
 		// check base declaration
 		cand := s.connectCand(c, iface.Name(), "", "", "", "", "", "")
 		arity, err := cand.Check()
-		c.Check(err, IsNil, comm)
+		c.Check(err, check.IsNil, comm)
 		// not currently used outside of tests
-		c.Check(arity.SlotsPerPlugAny(), Equals, true)
+		c.Check(arity.SlotsPerPlugAny(), check.Equals, true)
 	}
 }
 
@@ -171,7 +170,7 @@ func (s *baseDeclSuite) TestAutoConnectPlugSlot(c *check.C) {
 		if snowflakes[iface.Name()] {
 			continue
 		}
-		c.Check(iface.AutoConnect(nil, nil), Equals, true)
+		c.Check(iface.AutoConnect(nil, nil), check.Equals, true)
 	}
 }
 
@@ -179,16 +178,16 @@ func (s *baseDeclSuite) TestMountSlotInstallation(c *check.C) {
 	// test mount specially
 	ic := s.installSlotCand(c, "mount", sdk.Regular, ``)
 	err := ic.Check()
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 
 	ic = s.installSlotCand(c, "mount", sdk.System, ``)
 	err = ic.Check()
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *baseDeclSuite) TestComposeBaseDeclaration(c *check.C) {
 	decl, err := policy.ComposeBaseDeclaration(nil)
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	c.Assert(string(decl), testutil.Contains, `
 type: base-declaration
 authority-id: canonical
@@ -201,7 +200,7 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 	// In case there are any issues in the actual interfaces we'd get a panic
 	// on startup. This test prevents this from happing unnoticed.
 	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *check.C) {

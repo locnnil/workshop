@@ -48,7 +48,7 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 	// but it is better to convert the uid from the stat result to a
 	// string than a string into a number.
 	if fmt.Sprintf("%d", fsys.(*syscall.Stat_t).Uid) != user.Uid {
-		return fmt.Errorf("Xauthority file isn't owned by the current user %s", user.Uid)
+		return &os.PathError{Op: "open", Path: xauth, Err: syscall.EACCES}
 	}
 
 	destFile := filepath.Join(destDir, ".Xauthority")

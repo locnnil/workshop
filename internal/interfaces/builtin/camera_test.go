@@ -3,13 +3,14 @@ package builtin_test
 import (
 	"os/user"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type cameraSuite struct {

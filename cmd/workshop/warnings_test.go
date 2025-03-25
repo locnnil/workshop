@@ -186,7 +186,7 @@ func (s *warningSuite) TestOkay(c *check.C) {
 
 func (s *warningSuite) TestOkayBeforeWarnings(c *check.C) {
 	err := s.cmdO.Run(s.cmdO.Command(), nil)
-	c.Assert(err, check.ErrorMatches, "you must have looked at the warnings before acknowledging them. Try 'workshop warnings'.")
+	c.Assert(err, check.ErrorMatches, "use 'workshop warnings' to view the warnings before dismissing them")
 	c.Check(s.Stderr(), check.Equals, "")
 	c.Check(s.Stdout(), check.Equals, "")
 }

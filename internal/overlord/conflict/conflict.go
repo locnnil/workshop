@@ -178,11 +178,12 @@ func ResumeAfterWait(st *state.State,
 
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
-			if mode == ChangeContinue {
+			switch mode {
+			case ChangeContinue:
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
 				tsk.Logf("Continuing for workshop %q...", workshop)
-			} else if mode == ChangeAbort {
+			case ChangeAbort:
 				tsk.SetStatus(state.DoStatus)
 				tsk.Logf("Aborting for workshop %q...", workshop)
 			}

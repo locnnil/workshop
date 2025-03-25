@@ -25,6 +25,8 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"gopkg.in/check.v1"
+
 	"github.com/canonical/workshop/internal/asserts"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
@@ -34,7 +36,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
-	"gopkg.in/check.v1"
 )
 
 type tunnelSuite struct {

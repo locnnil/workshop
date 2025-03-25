@@ -7,24 +7,23 @@ import (
 	"path/filepath"
 
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 )
 
 type workshopList struct {
 }
 
-var _ = Suite(&workshopList{})
+var _ = check.Suite(&workshopList{})
 
-func (m *workshopList) TestHomeDirectoryPathContraction(c *C) {
+func (m *workshopList) TestHomeDirectoryPathContraction(c *check.C) {
 	home, _ := os.UserHomeDir()
 	r := contractHomeDirectory(filepath.Join(home, "test"))
-	c.Assert(r, Equals, "~/test")
+	c.Assert(r, check.Equals, "~/test")
 	r = contractHomeDirectory(filepath.Join(home, "///test"))
-	c.Assert(r, Equals, "~/test")
+	c.Assert(r, check.Equals, "~/test")
 	r = contractHomeDirectory(home)
-	c.Assert(r, Equals, "~")
+	c.Assert(r, check.Equals, "~")
 	r = contractHomeDirectory("/sys")
-	c.Assert(r, Equals, "/sys")
+	c.Assert(r, check.Equals, "/sys")
 
 	/* This will fail because of how filepath handles path prefixes (not path aware)
 	r = contractHomeDirectory(home + "4")

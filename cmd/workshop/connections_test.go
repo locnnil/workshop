@@ -26,7 +26,6 @@ import (
 	"net/url"
 
 	"gopkg.in/check.v1"
-	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
 )
@@ -88,12 +87,12 @@ func (s *connectionsSuite) TestConnectionsNoneConnected(c *check.C) {
 	allCmd := cmd.Command()
 	cmd.all = true
 	err = cmd.Run(allCmd, []string{})
-	c.Check(err, IsNil)
+	c.Check(err, check.IsNil)
 	c.Assert(s.Stdout(), check.Equals, "")
 	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsNotInstalled(c *C) {
+func (s *connectionsSuite) TestConnectionsNotInstalled(c *check.C) {
 	query := url.Values{
 		"project-id": []string{"42424242"},
 		"workshop":   []string{"foo"},
@@ -109,23 +108,23 @@ func (s *connectionsSuite) TestConnectionsNotInstalled(c *C) {
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, s.prjId, s.prjDir)
 			fmt.Fprintln(w, r)
 		case 2:
-			c.Check(r.Method, Equals, "GET")
-			c.Check(r.URL.Path, Equals, "/v1/connections")
-			c.Check(r.URL.Query(), DeepEquals, query)
+			c.Check(r.Method, check.Equals, "GET")
+			c.Check(r.URL.Path, check.Equals, "/v1/connections")
+			c.Check(r.URL.Query(), check.DeepEquals, query)
 			body, err := io.ReadAll(r.Body)
-			c.Check(err, IsNil)
-			c.Check(body, DeepEquals, []byte{})
+			c.Check(err, check.IsNil)
+			c.Check(body, check.DeepEquals, []byte{})
 			fmt.Fprintln(w, `{"type": "error", "result": {"message": "not found"}, "status-code": 404}`)
 		}
 	})
 	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"foo"})
-	c.Check(err, ErrorMatches, `not found`)
-	c.Assert(s.Stdout(), Equals, "")
-	c.Assert(s.Stderr(), Equals, "")
+	c.Check(err, check.ErrorMatches, `not found`)
+	c.Assert(s.Stdout(), check.Equals, "")
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *C) {
+func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *check.C) {
 	query := url.Values{
 		"project-id": []string{"42424242"},
 		"select":     []string{"all"},
@@ -168,12 +167,12 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *C) {
 	command := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(command, []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                                 Slot  Notes\n" +
 		"leds       keyboard-lights/lights:capslock-led  -     -\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 
 	s.ResetStdStreams()
 
@@ -184,15 +183,15 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *C) {
 	}
 
 	err = cmd.Run(cmd.Command(), []string{"keyboard-lights"})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout = "" +
 		"Interface  Plug                                 Slot  Notes\n" +
 		"leds       keyboard-lights/lights:capslock-led  -     -\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *C) {
+func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *check.C) {
 	result := client.Connections{}
 	query := url.Values{"project-id": []string{"42424242"}, "select": []string{"all"}, "workshop": []string{"foo"}}
 	n := 0
@@ -219,7 +218,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *C) {
 	})
 	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"foo"})
-	c.Check(err, IsNil)
+	c.Check(err, check.IsNil)
 	c.Assert(s.Stdout(), check.Equals, "")
 	c.Assert(s.Stderr(), check.Equals, "")
 
@@ -245,7 +244,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *C) {
 	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
+func (s *connectionsSuite) TestConnectionsSomeConnected(c *check.C) {
 	result := client.Connections{
 		Established: []client.Connection{
 			{
@@ -367,17 +366,17 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *C) {
 	})
 	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                  Notes\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led   -\n" +
 		"leds       keyboard-lights/lights:numlock    keyboard-lights/system:numlock-led    manual\n" +
 		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led  -\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
+func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *check.C) {
 	result := client.Connections{
 		Established: []client.Connection{
 			{
@@ -506,17 +505,17 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *C) {
 	})
 	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                  Notes\n" +
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led   -\n" +
 		"leds       keyboard-lights/lights:numlock    keyboard-lights/system:numlock-led    manual,bind.3\n" +
 		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led  manual,bind.3\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
+func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *check.C) {
 	result := client.Connections{
 		Established: []client.Connection{
 			{
@@ -644,7 +643,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
@@ -653,11 +652,11 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *C) {
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             -\n" +
 		"leds       keyboard-lights/lights:scrollock  keyboard-lights/system:scrollock-led          -\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
+func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *check.C) {
 	result := client.Connections{
 		Established: []client.Connection{
 			{
@@ -775,7 +774,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                              Slot                                          Notes\n" +
 		"leds       -                                 keyboard-lights/numlock-provider:numlock-led  -\n" +
@@ -784,11 +783,11 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *C) {
 		"leds       keyboard-lights/lights:capslock   leds-provider/provider:capslock-led           -\n" +
 		"leds       keyboard-lights/lights:numlock    -                                             bind.6\n" +
 		"leds       keyboard-lights/lights:scrollock  -                                             bind.6\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *C) {
+func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *check.C) {
 	result := client.Connections{
 		Undesired: []client.Connection{
 			{
@@ -844,16 +843,16 @@ func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *C) {
 
 	cmd := &CmdConnections{root: &CmdRoot{}}
 	err := cmd.Run(cmd.Command(), []string{"leds-provider"})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug  Slot                                        Notes\n" +
 		"leds       -     leds-provider/numlock-provider:numlock-led  -\n" +
 		"leds       -     leds-provider/provider:capslock-led         -\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
 
-func (s *connectionsSuite) TestConnectionsFiltering(c *C) {
+func (s *connectionsSuite) TestConnectionsFiltering(c *check.C) {
 	result := client.Connections{}
 	query := url.Values{
 		"project-id": []string{"42424242"},
@@ -890,15 +889,15 @@ func (s *connectionsSuite) TestConnectionsFiltering(c *C) {
 	cmd := &CmdConnections{root: &CmdRoot{}}
 
 	err := cmd.Run(cmd.Command(), []string{"mouse-buttons"})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err = cmd.Run(cmdAll, []string{"mouse-buttons"})
-	c.Assert(err, ErrorMatches, "cannot use --all with workshop name")
+	c.Assert(err, check.ErrorMatches, "cannot use --all with workshop name")
 }
 
-func (s *connectionsSuite) TestConnectionsSorting(c *C) {
+func (s *connectionsSuite) TestConnectionsSorting(c *check.C) {
 	result := client.Connections{
 		Established: []client.Connection{
 			{
@@ -1123,7 +1122,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 	cmdAll := cmd.Command()
 	cmd.all = true
 	err := cmd.Run(cmdAll, []string{})
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"Interface  Plug                         Slot                           Notes\n" +
 		"desktop    abc/foo:desktop-plug         abc/system:desktop             -\n" +
@@ -1136,6 +1135,6 @@ func (s *connectionsSuite) TestConnectionsSorting(c *C) {
 		"x11        abc/foo:x11-plug             abc/system:x11                 -\n" +
 		"x11        def/foo:a-x11-plug           def/system:x11                 -\n" +
 		"x11        def/keyboard-app:x11         def/system:x11                 manual\n"
-	c.Assert(s.Stdout(), Equals, expectedStdout)
-	c.Assert(s.Stderr(), Equals, "")
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
 }
