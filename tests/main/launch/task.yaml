@@ -4,11 +4,6 @@ execute: |
 
   echo "Test launch for all the supported bases"
 
-  function check_apt() {
-    workshop_exec exec "$1" -- test -f /etc/apt/apt.conf.d/01norecommend
-    workshop_exec exec "$1" -- bash -c 'sudo apt update && diff <(sudo apt-get --assume-no --no-install-recommends --no-install-suggests -o Debug::NoLocking=true install gnome) <(sudo apt-get --assume-no -o Debug::NoLocking=true install gnome)'
-  }
-
   function launch_and_validate() {
     workshop_exec launch "$1"
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
@@ -17,7 +12,7 @@ execute: |
     # ensure the apt cache is mounted
     workshop_exec exec "$1" mountpoint /var/cache/apt/archives
     # ensure apt is configured to exclude suggested and recommended packages
-    check_apt "$1"
+    workshop_exec run "$1" check-apt
     workshop_exec remove "$1"
   }
   

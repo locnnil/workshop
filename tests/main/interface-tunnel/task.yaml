@@ -45,12 +45,12 @@ execute: |
   echo BARFOOBAR | nc localhost 8001 | MATCH '^BARBARBAR$'
 
   echo "Check that plugs cannot bind to same address"
-  (! workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused) | MATCH 'listen tcp 127.0.0.1:5432: bind: address already in use|Failed to receive file descriptor via abstract unix socket|Please look in'
+  (! workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused) | MATCH 'listen tcp 127.0.0.1:5432: bind: address already in use'
   # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
   if workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused; then
     workshop_exec disconnect ws-tunnel/test-sdk-tunnel:conflict
   fi
-  (! workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused) | MATCH 'listen tcp 0.0.0.0:8000: bind: address already in use|Failed to receive file descriptor via abstract unix socket|Please look in'
+  (! workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused) | MATCH 'listen tcp 0.0.0.0:8000: bind: address already in use'
   # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
   if workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused; then
     workshop_exec disconnect ws-tunnel/system:conflict
@@ -62,5 +62,4 @@ execute: |
   stat --format='%F %U %G' /home/ubuntu/test-tunnel.sock | MATCH '^socket ubuntu games$'
   usermod --gid ubuntu --remove --groups ubuntu ubuntu
   workshop_exec disconnect ws-tunnel/system:unix-path
-  # FIXME: https://github.com/canonical/lxd/issues/14972
-  # test ! -e /home/ubuntu/test-tunnel.sock
+  test ! -e /home/ubuntu/test-tunnel.sock

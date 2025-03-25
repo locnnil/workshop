@@ -1,4 +1,5 @@
-echo "setup-base ran successfully!"
+sudo apt-get update
+sudo apt-get install xdelta3
 sudo snap install go --classic
 echo "PATH=/home/workshop/go/bin:$PATH" >> /home/workshop/.bashrc
 

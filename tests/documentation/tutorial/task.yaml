@@ -68,7 +68,7 @@ execute: |
   1/^hooks:$/a
     setup-base: |
       apt-get update
-      apt-get install -y delve clang
+      apt-get install delve clang
   .
   wq
   EOF

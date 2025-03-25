@@ -68,8 +68,8 @@ Establishing a connection means
 that all existing :samp:`video4linux` and :samp:`media` devices
 will be made available inside the workshop.
 While the connection is active,
-new devices on the host will be made available inside the workshop;
-unplugged devices will also be removed from the workshop.
+adding new devices on the host will also make them available inside the workshop,
+whereas unplugged devices will also be removed from the workshop.
 
 To check if the interface is connected:
 

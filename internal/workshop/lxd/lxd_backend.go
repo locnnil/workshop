@@ -335,7 +335,7 @@ func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Conte
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 45,
+		Timeout: 60,
 		Force:   force,
 	}
 
@@ -1004,6 +1004,9 @@ write_files:
 
     # Don't automatically install suggested packages
     APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
   path: /etc/apt/apt.conf.d/01norecommend
 runcmd:
   - systemctl daemon-reload
