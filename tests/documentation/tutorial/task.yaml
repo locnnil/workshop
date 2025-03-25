@@ -55,6 +55,30 @@ execute: |
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info
 
+  # Caddy
+  workshop_exec exec -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+  cat <<EOF > Caddyfile
+  :8080 {
+          file_server
+  }
+  EOF
+  echo 'Hello, Workshop!' > index.html
+  cat <<EOF >> workshop.yaml
+      slots:
+        caddy:
+          interface: tunnel
+          endpoint: localhost:8082
+    - name: system
+      plugs:
+        caddy:
+          interface: tunnel
+          endpoint: localhost:8082
+  EOF
+  workshop_exec refresh
+  workshop_exec info
+  workshop_exec exec -- caddy start
+  curl localhost:8082
+
   # sketch SDK
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF

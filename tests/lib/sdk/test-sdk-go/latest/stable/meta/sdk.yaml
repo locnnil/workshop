@@ -11,3 +11,6 @@ plugs:
   mod-cache:
     interface: mount
     workshop-target: /home/workshop/go/pkg/mod
+  bin:
+    interface: mount
+    workshop-target: /home/workshop/go/bin
