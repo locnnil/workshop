@@ -111,21 +111,20 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		if err = m.backend.LaunchOrRebuildWorkshop(ctx, &wf); err != nil {
 			return err
 		}
+		// Create workshop base and run directories
+		fs, err := m.backend.WorkshopFs(ctx, wf.Name)
+		if err != nil {
+			return err
+		}
+		defer fs.Close()
+
+		if err = fs.MkdirAll(dirs.WorkshopRunDir, 0755); err != nil {
+			return err
+		}
 	} else {
 		if err = m.backend.Restore(ctx, w, workshop.SnapshotId(w, sdkSnapshot), &wf); err != nil {
 			return err
 		}
-	}
-
-	// Create workshop base and run directories
-	fs, err := m.backend.WorkshopFs(ctx, wf.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	if err = fs.MkdirAll(dirs.WorkshopRunDir, 0755); err != nil {
-		return err
 	}
 
 	rev.Success()
