@@ -18,14 +18,14 @@ Ensure your version matches the latest
    $ snap info workshop
 
      ...
-     installed:    0.1.3 (x18) 24MB classic
+     installed:    0.1.12 (x18) 24MB classic
 
 
 If it's outdated, download and install the update:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.4_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.12_amd64.snap
 
 
 Install and start LXD

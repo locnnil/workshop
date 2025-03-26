@@ -1,8 +1,9 @@
 sudo apt-get update
 sudo apt-get install xdelta3
 sudo snap install go --classic
-echo "PATH=/home/workshop/go/bin:$PATH" >>/home/workshop/.bashrc
+echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
 
-# create a mod cache to be mounted from the host using the mount interface
+# create mod cache, bin to be mounted from the host using the mount interface
 cache=$(sudo -u workshop -- go env GOMODCACHE)
 sudo -u workshop -- mkdir -p "$cache"
+sudo -u workshop -- mkdir -p "/home/workshop/go/bin"

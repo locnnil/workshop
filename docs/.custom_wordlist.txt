@@ -4,6 +4,7 @@ autosquash
 AUTH
 backend
 basename
+Caddy
 Charmcraft
 CLIs
 colcon

@@ -1,7 +1,7 @@
 .. _ref_definitions:
 
-SDK and workshop definitions
-============================
+SDK and workshop definition files
+=================================
 
 .. @artefact SDK
 

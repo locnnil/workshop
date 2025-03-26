@@ -487,6 +487,8 @@ You'll also need to update the documentation:
 
 - Merge the auto-generated documentation pull request
 
+- Bump the snap version used across documentation
+
 - Generate the updated SDK definition schema
   in the root of the SDKcraft_ repository:
 

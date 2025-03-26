@@ -254,6 +254,13 @@ Here, the SDK is referenced as :samp:`go`,
 and the specific version to retrieve from the SDK Store
 comes from the :samp:`jammy/stable` channel.
 
+.. tip::
+
+   This tutorial relies on a number of Go samples for demonstration purposes.
+   however, this doesn't imply that |ws_markup| is focused solely on Go;
+   quite the contrary, it's envisioned as language- and framework-agnostic.
+
+
 To confirm that |ws_markup| sees the definition,
 :ref:`list <ref_workshop_list>` the workshops
 in the project directory:
@@ -330,7 +337,18 @@ The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
-Check out the recent :ref:`changes <ref_workshop_changes>`
+To briefly glimpse the steps of the latest change,
+use :command:`workshop tasks` without a change ID:
+
+.. @artefact workshop tasks
+
+.. code-block:: console
+
+   $ workshop tasks
+
+
+For a historical view,
+check out the list of recent :ref:`changes <ref_workshop_changes>`
 to see how |ws_markup| keeps track of the project directory:
 
 .. @artefact workshop changes
@@ -346,8 +364,6 @@ to see how |ws_markup| keeps track of the project directory:
 To find out what launching a workshop implies,
 pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
 
-.. @artefact workshop tasks
-
 .. code-block:: console
 
    $ workshop tasks 34
@@ -361,12 +377,6 @@ pass the ID of the change to the :ref:`tasks <ref_workshop_tasks>` command:
      138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
      139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
      140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
-
-
-.. tip::
-
-   To inspect the most recent change,
-   use :command:`workshop tasks` without a change ID.
 
 
 Here, the following happens:
@@ -594,11 +604,18 @@ Work with interfaces
 --------------------
 
 .. @artefact interface
+.. @artefact system SDK
 
 For security and control,
-|ws_markup| exposes various host system capabilities to the workshop
-by connecting it to various :ref:`interfaces <exp_interfaces>`.
-SDKs can also use interfaces to interact in an organised fashion.
+|ws_markup| provides various host system capabilities (camera, GPU, and so forth)
+to the workshop through the :ref:`interface mechanism <exp_interfaces>`,
+using :ref:`plugs and slots <exp_plugs_slots>`.
+
+SDKs use interfaces to interact in an organised manner,
+exposing the resources they provide via slots and consuming them via plugs;
+the layout of these plugs and slots is defined by the SDK publishers.
+Host system resources are similarly exposed to the |ws_markup| ecosystem
+through :ref:`system SDK <exp_system_sdk>` slots.
 
 To list the connected interfaces,
 use :ref:`connections <ref_workshop_connections>`:
@@ -664,6 +681,110 @@ to a new location on the host:
 
 This makes :file:`/home/user/mod/` on the host
 act as the Go modules cache for the workshop.
+
+Lastly, you can add plugs and slots to the SDKs in the workshop definition,
+allowing you to tailor the initial plug and slot layout to your requirements.
+For instance, you could use the :ref:`tunnel interface <exp_tunnel_interface>`
+with the system SDK to connect to a server running in the workshop.
+
+.. @artefact tunnel interface
+
+For a quick demo, let's install `Caddy <https://caddyserver.com/>`_
+to serve files over HTTP:
+
+.. code-block:: console
+
+   $ workshop exec -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+   $ cat <<EOF > Caddyfile
+   :8080 {
+           file_server
+   }
+   EOF
+   $ echo 'Hello, Workshop!' > index.html
+
+
+This installs Caddy inside the workshop under :file:`~/go/bin/`
+in the :samp:`workshop` user's home directory,
+configures it to run as a file server at port 8080
+and creates an index file.
+
+.. note::
+
+   We added the index file to the project directory on the host;
+   however, the server will be able to access it
+   because the project directory is mounted inside the workshop.
+
+
+To configure the tunnel interface,
+add the following lines to the definition:
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+   :emphasize-lines: 6-14
+
+   name: dev
+   base: ubuntu@24.04
+   sdks:
+     - name: go
+       channel: noble/stable
+       slots:
+         caddy:
+           interface: tunnel
+           endpoint: localhost:8080
+     - name: system
+       plugs:
+         caddy:
+           interface: tunnel
+           endpoint: localhost:8080
+
+
+First, this defines a :samp:`go:caddy` slot under the :samp:`go` SDK,
+used to expose the server running inside the workshop.
+This slot isn't part of the SDK by default;
+it's defined for this workshop only,
+so other instances of the :samp:`go` SDK in other workshops won't have it.
+
+Additionally, this adds a plug named :samp:`system:caddy`
+to indicate that the system SDK in this workshop
+can connect to a tunnel interface slot and expose it in the host system.
+
+Refresh the workshop to enable the tunnel;
+|ws_markup| matches the plug to the slot using their names,
+then validates and enables the connection.
+Check the result using :command:`workshop info`:
+
+.. code-block:: console
+
+   $ workshop refresh
+   $ workshop info
+
+     ...
+     sdks:
+       system:
+         tunnels:
+           server:
+             from:  127.0.0.1:8080/tcp
+             to:    127.0.0.1:8080/tcp
+     ...
+
+Then start the server at port 8080 (the slot):
+
+.. code-block:: console
+
+   $ workshop exec -- caddy start
+
+
+By default,
+:command:`exec` uses the :file:`/project/` directory in the workshop
+as the current working directory
+so Caddy will serve the files in it.
+Finally, test the server on the host at port 8080 (the plug):
+
+.. code-block:: console
+
+   $ curl localhost:8080
+
+     Hello, Workshop!
 
 
 .. _tut_sketch:
