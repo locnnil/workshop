@@ -1661,7 +1661,7 @@ slots:
 	c.Assert(r.AddSdk(s2), IsNil)
 
 	s3 := sdk.MockInfo(c, `
-name: s3
+name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -1687,7 +1687,7 @@ plugs:
 	c.Assert(err, IsNil)
 	_, err = r.Connect(&ConnRef{
 		PlugRef: sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s1", Name: "i2"},
-		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "s3", Name: "i2"}}, nil, nil, nil, nil, nil)
+		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "system", Name: "i2"}}, nil, nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 
 	// Without any names or options we get the summary of all the interfaces.

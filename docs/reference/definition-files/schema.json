@@ -8,8 +8,8 @@
     "name": {
       "type": "string",
       "description": "Name of the workshop.",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens."
+      "pattern": "^[a-z](-?[a-z0-9])*$",
+      "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens joining them."
     },
     "base": {
       "type": "string",
@@ -30,8 +30,8 @@
           "name": {
             "type": "string",
             "description": "Name of the SDK.",
-            "pattern": "^(?!agent$)[a-z][a-z0-9-]*$",
-            "errorMessage": "An SDK's name must start with a letter, can only include digits, lowercase letters, and hyphens, and cannot be 'agent'."
+            "pattern": "^(?!agent$)([a-z0-9]-?)*[a-z](-?[a-z0-9])*$",
+            "errorMessage": "An SDK's name must contain a letter, can only include digits, lowercase letters, and hyphens joining them, and cannot be 'agent'."
           },
           "channel": {
             "type": "string",
@@ -53,7 +53,7 @@
                   "bind": {
                     "type": "string",
                     "description": "Reference to a plug in the form [<sdk>:]<plug>. If omitted, the SDK is 'system'.",
-                    "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+                    "pattern": "^(([a-z0-9]-?)*[a-z](-?[a-z0-9])*)?:[a-z](-?[a-z0-9])*$",
                     "errorMessage": "Bind reference must follow the pattern [<sdk>:]<plug> (SDK optional)."
                   },
                   "attributes": {
@@ -130,13 +130,13 @@
           "plug": {
             "type": "string",
             "description": "Reference to a plug in the form [<sdk>:]<plug>. If omitted, the SDK is 'system'.",
-            "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+            "pattern": "^(([a-z0-9]-?)*[a-z](-?[a-z0-9])*)?:[a-z](-?[a-z0-9])*$",
             "errorMessage": "Plug reference must follow the pattern [<sdk>:]<plug> (SDK optional)."
           },
           "slot": {
             "type": "string",
             "description": "Reference to a slot in the form [<sdk>:]<slot>. If omitted, the SDK is 'system'.",
-            "pattern": "^(?:[a-z][a-z0-9-]*)?:[a-z_][a-z0-9_-]*$",
+            "pattern": "^(([a-z0-9]-?)*[a-z](-?[a-z0-9])*)?:[a-z](-?[a-z0-9])*$",
             "errorMessage": "Slot reference must follow the pattern [<sdk>:]<slot> (SDK optional)."
           }
         },
@@ -156,7 +156,7 @@
       "type": "object",
       "description": "List of scripts to be run in the workshop.",
       "patternProperties": {
-        "^[a-z][a-z0-9-]*$": {
+        "^[a-z](-?[a-z0-9])*$": {
           "type": "string",
           "description": "Shell script."
         }

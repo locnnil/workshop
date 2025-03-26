@@ -79,12 +79,16 @@ plugs:
 
 func (s *baseDeclSuite) installSlotCand(c *check.C, iface string, sdkType sdk.Type, yaml string) *policy.InstallCandidate {
 	if yaml == "" {
-		yaml = fmt.Sprintf(`name: install-slot-sdk
+		name := "install-slot-sdk"
+		if sdkType == sdk.System {
+			name = "system"
+		}
+		yaml = fmt.Sprintf(`name: %s
 base: ubuntu@22.04
 type: %s
 slots:
   %s:
-`, sdkType, iface)
+`, name, sdkType, iface)
 	}
 	sdk := sdk.MockInfo(c, yaml, "mock424242", "ws")
 	return &policy.InstallCandidate{
@@ -144,7 +148,7 @@ func (s *baseDeclSuite) TestManualConnection(c *check.C) {
 }
 
 func (s *baseDeclSuite) TestMountAutoConnection(c *check.C) {
-	slotYaml := `name: slot-sdk
+	slotYaml := `name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -204,7 +208,7 @@ func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 }
 
 func (s *baseDeclSuite) TestSlotPlugFromSameWorkshop(c *check.C) {
-	slotYaml := `name: slot-sdk
+	slotYaml := `name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -218,7 +222,7 @@ slots:
 }
 
 func (s *baseDeclSuite) TestSlotPlugDifferentProjects(c *check.C) {
-	slotYaml := `name: slot-sdk
+	slotYaml := `name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -238,7 +242,7 @@ plugs:
 }
 
 func (s *baseDeclSuite) TestSlotPlugDifferentWorkshop(c *check.C) {
-	slotYaml := `name: slot-sdk
+	slotYaml := `name: system
 base: ubuntu@22.04
 type: system
 slots:

@@ -49,6 +49,6 @@ execute: |
   workshop_exec warnings |
     tr -d '\n' | # remove newlines
     sed -e 's,\s\+, ,g' | # rename any extra spaces
-    MATCH "invalid file \".*/new-project/.workshop.yaml\": a workshop's name must: \\(1\\) start with a letter, \\(2\\) only include digits, lowercase letters, and hyphens"
+    MATCH "invalid file \".*/new-project/.workshop.yaml\": a workshop's name must: \\(1\\) start with a letter, \\(2\\) only include digits, lowercase letters, and hyphens joining them"
 
   workshop_exec remove --project $(pwd)/new-project ws

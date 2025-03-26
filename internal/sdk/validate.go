@@ -11,13 +11,13 @@ import (
 
 var (
 	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	sdkName      = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	SdkName      = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
 	// Regular expression describing correct plug, slot and interface names.
 	validPlugSlotIface = regexp.MustCompile("^[a-z](?:-?[a-z0-9])*$")
 )
 
 func Validate(sdk *Info) error {
-	if !sdkName.MatchString(sdk.Name) {
+	if !SdkName.MatchString(sdk.Name) {
 		return fmt.Errorf("invalid SDK name %q", sdk.Name)
 	}
 

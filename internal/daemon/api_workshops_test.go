@@ -3310,7 +3310,7 @@ func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
 	s.mockSdkVolumes(c, apiSuiteSdks)
-	s.mockSketchSdk(c, "manysdks", `name: illegal%
+	s.mockSketchSdk(c, "manysdks", `name: illegal-sketch-name
 base: ubuntu@22.04
 `)
 	defer s.store.SetDownloadCallback(storeDownload)()

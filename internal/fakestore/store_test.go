@@ -71,7 +71,7 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 				Revision: sdk.Revision{N: 123},
 				SdkYAML:  `incorrect yaml: -`,
 			},
-			"test-sdk-valid": {
+			"test-sdk": {
 				Name:     "test-sdk",
 				Channel:  channel,
 				Revision: sdk.Revision{N: 123},
@@ -95,7 +95,7 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",
 		Action:    sdk.Install,
-		Name:      "test-sdk-valid",
+		Name:      "test-sdk",
 		Base:      "ubuntu@20.04",
 		Channel:   "latest/stable",
 	}}
