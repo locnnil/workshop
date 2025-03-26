@@ -46,7 +46,6 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 				}
 
 				if mode == conflict.ChangeWaitOnError {
-					task.Logf("Setting the task to wait until the operation is either aborted or continued...")
 					task.Errorf(err.Error())
 					return &state.Wait{
 						WaitedStatus: state.DoingStatus,

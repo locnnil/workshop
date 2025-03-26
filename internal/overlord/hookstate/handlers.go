@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
@@ -123,12 +124,18 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 	}
 
 	// create a memory out/err to log the hook output into the task's log
-	memFs := afero.NewMemMapFs()
-	out, err := memFs.Create(fmt.Sprintf("%s-%s", w, projectId))
+	memfs := afero.NewMemMapFs()
+	stdout, err := memfs.Create(fmt.Sprintf("%s-%s-%s-stdout", w, projectId, hook.Type()))
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer stdout.Close()
+
+	stderr, err := memfs.Create(fmt.Sprintf("%s-%s-%s-stderr", w, projectId, hook.Type()))
+	if err != nil {
+		return err
+	}
+	defer stderr.Close()
 
 	hook.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
 	args := workshop.Execution{
@@ -148,8 +155,8 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 		},
 		ExecControls: workshop.ExecControls{
 			Stdin:  nil,
-			Stdout: out,
-			Stderr: out,
+			Stdout: stdout,
+			Stderr: stderr,
 		},
 	}
 
@@ -162,10 +169,34 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 	err = exectx.WaitExecution(ctx)
 
 	st := task.State()
-	hookLog, _ := afero.ReadFile(memFs, out.Name())
-	if len(hookLog) > 0 {
+	isNewLine := func(r rune) bool { return r == '\n' }
+	outlog, _ := afero.ReadFile(memfs, stdout.Name())
+	if len(outlog) > 0 {
+		lines := strings.FieldsFunc(string(outlog), isNewLine)
 		st.Lock()
-		task.Logf("%s", string(hookLog))
+		for _, line := range lines {
+			task.Logf("%s", line)
+		}
+		st.Unlock()
+	}
+
+	errlog, _ := afero.ReadFile(memfs, stderr.Name())
+	if err != nil {
+		lines := strings.FieldsFunc(string(errlog), isNewLine)
+		st.Lock()
+		for i, line := range lines {
+			if i == len(lines)-1 {
+				if exerr, isCmdError := err.(*workshop.ErrExec); isCmdError {
+					// If it's an exec error, the return value would only
+					// contain the status code which is often useless to return
+					// to the upper level. We'll attempt to return the last
+					// known error line for better claririty.
+					err = fmt.Errorf("%s (exit code: %d)", line, exerr.Status)
+				}
+			} else {
+				task.Errorf("%s", line)
+			}
+		}
 		st.Unlock()
 	}
 

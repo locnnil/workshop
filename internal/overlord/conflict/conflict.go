@@ -182,10 +182,10 @@ func ResumeAfterWait(st *state.State,
 			case ChangeContinue:
 				waited := tsk.WaitedStatus()
 				tsk.SetStatus(waited)
-				tsk.Logf("Continuing for workshop %q...", workshop)
+				tsk.Logf("Continuing %q for workshop %q...", chg.Kind(), workshop)
 			case ChangeAbort:
 				tsk.SetStatus(state.DoStatus)
-				tsk.Logf("Aborting for workshop %q...", workshop)
+				tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), workshop)
 			}
 		}
 	}

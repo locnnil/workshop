@@ -12,7 +12,7 @@ execute: |
   workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
 
   echo "Validate the task output from the launch attempt"
-  workshop_exec tasks | tail -1 | MATCH ".*Aborting for workshop \"ws-launch-abort\"..."
+  workshop_exec tasks | tail -1 | MATCH ".*Aborting \"launch\" for workshop \"ws-launch-abort\"..."
 
   echo "Ensure SDKs are unlinked successfully during abort"
   echo "Update the workshop file to use test-sdk-mount-broken"
