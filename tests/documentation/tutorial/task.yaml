@@ -59,7 +59,7 @@ execute: |
   # Caddy
   workshop_exec exec -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
   cat <<EOF > Caddyfile
-  :8080 {
+  :8082 {
           file_server
   }
   EOF
