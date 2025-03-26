@@ -205,7 +205,7 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 
 	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
 
-	sketchContent := fmt.Sprintf(sketchTemplate, "/home/project/.workshop/ws.yaml", "ubuntu@22.04")
+	sketchContent := fmt.Sprintf(sketchTemplate, "/home/project/.workshop/ws.yaml")
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
 		return []byte(inContent), nil
 	})

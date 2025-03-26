@@ -83,7 +83,6 @@ var sketchTemplate = `# Sketch SDK for %s
 # To read more about SDKs, their components and syntax, see:
 # https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/
 name: sketch
-base: %s
 
 hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
@@ -281,7 +280,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
 
 	// Format sketch SDK template header.
-	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path, wp.Base)
+	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path)
 
 	if osutil.FileExists(metafile) {
 		old, err := os.ReadFile(metafile)

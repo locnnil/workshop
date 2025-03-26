@@ -66,15 +66,20 @@ This defines all SDK components in a single file named :file:`sdk.yaml`:
    $ workshop sketch-sdk
 
 
-The editor presents a minimal setup with :samp:`name`, :samp:`base`,
-and empty :samp:`hooks` and :samp:`plugs`:
+The editor presents a minimal setup
+with empty :samp:`hooks`, :samp:`plugs` and :samp:`slots`:
 
 .. code-block:: yaml
    :caption: sdk.yaml
 
    name: sketch
-   base: ubuntu@22.04
-   # ...
+
+   hooks:
+    # ...
+   plugs:
+    # ...
+   slots:
+    # ...
 
 
 .. note::
@@ -92,7 +97,6 @@ Uncomment :samp:`setup-base` and add the installation commands for our tools:
    :caption: sdk.yaml
 
    name: sketch
-   base: ubuntu@22.04
 
    hooks:
      setup-base: |
