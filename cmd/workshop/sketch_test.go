@@ -138,10 +138,11 @@ func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current boo
 		sketchDir = workshop.SketchSdkStash(m.userDataDir, m.prjId, ws)
 	}
 
-	err := writeSketchSdk(sketchDir, meta)
-	c.Assert(err, check.IsNil)
 	metadir := filepath.Join(sketchDir, "meta")
 	hooksdir := filepath.Join(sketchDir, "hooks")
+
+	c.Assert(writeSketchSdk(filepath.Join(metadir, "sdk.yaml"), meta), check.IsNil)
+	c.Assert(writeSketchHooks(sketchDir, meta), check.IsNil)
 
 	return metadir, hooksdir
 }
@@ -207,7 +208,10 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 
 	sketchContent := fmt.Sprintf(sketchTemplate, "/home/project/.workshop/ws.yaml")
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
-		return []byte(inContent), nil
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, inContent), check.IsNil)
+		}
+		return inContent, nil
 	})
 	defer restore()
 
@@ -232,6 +236,9 @@ hooks:
         echo "Hello"
 `
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, []byte(sketchContent)), check.IsNil)
+		}
 		return []byte(sketchContent), nil
 	})
 	defer restore()
@@ -268,6 +275,9 @@ hooks:
         # restores state
 `
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, []byte(sketchContent)), check.IsNil)
+		}
 		return []byte(sketchContent), nil
 	})
 	defer restore()
@@ -300,6 +310,9 @@ plugs:
     interface: gpu
 `
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, []byte(sketchContent)), check.IsNil)
+		}
 		return []byte(sketchContent), nil
 	})
 	defer restore()
@@ -385,15 +398,21 @@ hooks:
         %s
 `
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		var content string
 		attempts += 1
 		switch attempts {
 		case 1:
-			return []byte(fmt.Sprintf(sketchSetup, "false")), nil
+			content = fmt.Sprintf(sketchSetup, "false")
 		case 2:
-			return []byte(fmt.Sprintf(sketchSetup, "true")), nil
+			content = fmt.Sprintf(sketchSetup, "true")
 		default:
 			return nil, fmt.Errorf("expected 2 attempts, now on %d", attempts)
 		}
+
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, []byte(content)), check.IsNil)
+		}
+		return []byte(content), nil
 	})
 	defer restore()
 

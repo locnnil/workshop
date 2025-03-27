@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -126,8 +125,6 @@ var (
 )
 
 func stashSketch(sketchdir, stashdir string) (*revert.Reverter, error) {
-	reverter := revert.New()
-
 	recs, err := os.ReadDir(sketchdir)
 	if err != nil && !osutil.IsDirNotExist(err) {
 		return nil, err
@@ -137,20 +134,43 @@ func stashSketch(sketchdir, stashdir string) (*revert.Reverter, error) {
 		return nil, fmt.Errorf(`cannot stash: the 'sketch' SDK doesn't exist`)
 	}
 
-	if err := os.MkdirAll(stashdir, 0755); err != nil {
+	// Ensure stashdir exists but is empty.
+	if err := clearStash(stashdir); err != nil {
 		return nil, err
 	}
+
+	reverter := revert.New()
+	defer reverter.Fail()
 
 	if err := osutil.Exchange(sketchdir, stashdir); err != nil {
 		return nil, err
 	}
 	reverter.Add(func() { _ = osutil.Exchange(stashdir, sketchdir) })
 
-	if err := os.RemoveAll(sketchdir); err != nil {
+	if err := os.Remove(sketchdir); err != nil {
 		return nil, err
 	}
 	reverter.Add(func() { _ = os.MkdirAll(sketchdir, 0755) })
-	return reverter, nil
+
+	clone := reverter.Clone()
+	reverter.Success()
+	return clone, nil
+}
+
+func clearStash(stashdir string) error {
+	temp, err := os.MkdirTemp(filepath.Dir(stashdir), "stash-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(temp)
+	if err := os.Chmod(temp, 0755); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(stashdir, 0755); err != nil {
+		return err
+	}
+	return osutil.Exchange(stashdir, temp)
 }
 
 func restoreSketch(sketchdir, stashdir string) error {
@@ -185,7 +205,20 @@ func removeSketch(sketchdir string) error {
 		return fmt.Errorf(`cannot remove: the 'sketch' SDK doesn't exist`)
 	}
 
-	return os.RemoveAll(sketchdir)
+	temp, err := os.MkdirTemp(filepath.Dir(sketchdir), "sketch-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(temp)
+	if err := os.Chmod(temp, 0755); err != nil {
+		return err
+	}
+
+	if err := osutil.Exchange(sketchdir, temp); err != nil {
+		return err
+	}
+
+	return os.Remove(sketchdir)
 }
 
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
@@ -254,17 +287,17 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
 
-		storedir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
+		stashdir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
 
-		if err = restoreSketch(sketchdir, storedir); err != nil {
+		if err = restoreSketch(sketchdir, stashdir); err != nil {
 			return err
 		}
 
-		// Run refresh with the stored sketch SDK. We do not revert dirs exchange
+		// Run refresh with the stashed sketch SDK. We do not revert dirs exchange
 		// on a failed refresh here as it is run with the content from "stored"
 		// and with --wait-on-error. Hence, there is always a possibility to
-		// workshop refresh --abort and workshop sketch-sdk --restore to restore the
-		// original sketch content.
+		// workshop refresh --abort and workshop sketch-sdk --stash to restore the
+		// original stash content.
 		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
 	}
 
@@ -277,38 +310,8 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return cmdrefresh.Run(cmd, []string{wp.Name})
 	}
 
-	metafile := filepath.Join(sketchdir, "meta", "sdk.yaml")
-
-	// Format sketch SDK template header.
-	boilerplate := fmt.Sprintf(sketchTemplate, wp.Path)
-
-	if osutil.FileExists(metafile) {
-		old, err := os.ReadFile(metafile)
-		if err != nil {
-			return err
-		}
-
-		new, err := runTextEditor(metafile, []byte{})
-		if err != nil {
-			return err
-		}
-
-		if bytes.Equal(old, new) {
-			return nil
-		}
-
-		if err = writeSketchSdk(sketchdir, new); err != nil {
-			return err
-		}
-	} else {
-		res, err := runTextEditor("", []byte(boilerplate))
-		if err != nil {
-			return err
-		}
-
-		if err = writeSketchSdk(sketchdir, res); err != nil {
-			return err
-		}
+	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
+		return err
 	}
 
 	cmdrefresh := &CmdRefresh{root: c.root}
@@ -317,11 +320,52 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
 }
 
-func writeSketchSdk(sketchdir string, content []byte) error {
-	var rec workshop.SdkRecord
-	r := revert.New()
-	defer r.Fail()
+func editSketchSdk(sketchdir, workshopFile string) error {
+	content, err := os.ReadFile(filepath.Join(sketchdir, "meta", "sdk.yaml"))
+	if errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(sketchdir, 0755); err != nil {
+			return err
+		}
 
+		// Format sketch SDK template header.
+		content = []byte(fmt.Sprintf(sketchTemplate, workshopFile))
+	} else if err != nil {
+		return err
+	}
+
+	temp, err := os.MkdirTemp(filepath.Dir(sketchdir), "current-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(temp)
+	if err := os.Chmod(temp, 0755); err != nil {
+		return err
+	}
+
+	target := filepath.Join(temp, "meta", "sdk.yaml")
+	if err := writeSketchSdk(target, content); err != nil {
+		return err
+	}
+	content, err = runTextEditor(target, content)
+	if err != nil {
+		return err
+	}
+	if err := writeSketchHooks(temp, content); err != nil {
+		return err
+	}
+
+	return osutil.Exchange(temp, sketchdir)
+}
+
+func writeSketchSdk(path string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, content, 0644)
+}
+
+func writeSketchHooks(sketchdir string, content []byte) error {
+	var rec workshop.SdkRecord
 	if err := yaml.Unmarshal(content, &rec); err != nil {
 		return err
 	}
@@ -330,37 +374,22 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
-	metadir := filepath.Join(sketchdir, "meta")
-	metapath := filepath.Join(metadir, "sdk.yaml")
-	if err := os.MkdirAll(metadir, 0755); err != nil {
-		return err
-	}
-	r.Add(func() { os.RemoveAll(metadir) })
-	if err := os.WriteFile(metapath, content, 0644); err != nil {
-		return err
-	}
-
 	hooksdir := filepath.Join(sketchdir, "hooks")
 	if len(rec.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
 			return err
 		}
-		r.Add(func() { os.RemoveAll(hooksdir) })
 	}
+
 	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
 		hookpath := filepath.Join(hooksdir, hook)
 		if script := rec.Hooks[hook]; len(script) > 0 {
 			if err := os.WriteFile(hookpath, []byte(script+"\n"), 0644); err != nil {
 				return err
 			}
-		} else {
-			if err := os.Remove(hookpath); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return err
-			}
 		}
 	}
 
-	r.Success()
 	return nil
 }
 
