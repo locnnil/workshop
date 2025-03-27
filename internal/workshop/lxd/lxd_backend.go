@@ -90,11 +90,11 @@ func ErrorWithInstallLXDPrompt(err error) error {
 	case errors.Is(err, unix.ECONNREFUSED):
 		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD daemon isn't running?\n"+
 			"Start the LXD daemon:\n  sudo snap start lxd\n"+
-			"Then restart the workshop daemon:\n  sudo snap start workshop.workshopd", err)
+			"Then restart the workshop daemon:\n  sudo snap restart workshop", err)
 	case errors.Is(err, os.ErrNotExist):
 		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
 			"Install and initialize LXD:\n  sudo snap install lxd\n  lxd init --auto\n"+
-			"Then restart the workshop daemon:\n  sudo snap start workshop.workshopd", err)
+			"Then restart the workshop daemon:\n  sudo snap restart workshop", err)
 	default:
 		return err
 	}
@@ -124,7 +124,7 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers can't be launched
 	// without further manual configuration.
 	if len(pools) == 0 {
-		return nil, errors.New("LXD not initialized")
+		return nil, errors.New("LXD not initialized\nInitialize LXD:\n  lxd init --auto")
 	}
 
 	networks, err := conn.GetNetworks()
@@ -137,7 +137,7 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers won't have network access
 	// without further manual configuration.
 	if len(networks) == 0 {
-		return nil, errors.New("LXD not initialized")
+		return nil, errors.New("LXD not initialized\nInitialize LXD:\n  lxd init --auto")
 	}
 
 	poolExists := false
