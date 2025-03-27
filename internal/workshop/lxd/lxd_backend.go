@@ -89,7 +89,7 @@ func ErrorWithInstallLXDPrompt(err error) error {
 	switch {
 	case errors.Is(err, unix.ECONNREFUSED):
 		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD daemon isn't running?\n"+
-			"Start the LXD daemon:\n  sudo snap start lxd.daemon\n"+
+			"Start the LXD daemon:\n  sudo snap start lxd\n"+
 			"Then restart the workshop daemon:\n  sudo snap start workshop.workshopd", err)
 	case errors.Is(err, os.ErrNotExist):
 		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
