@@ -58,9 +58,8 @@ func (s *CommonStateFuncs) TestChangeWaitOnError(c *check.C) {
 	expected := state.Wait{Reason: "wait on error: task failed", WaitedStatus: state.DoingStatus}
 	c.Assert(err, check.ErrorMatches, expected.Error())
 	s.state.Lock()
-	c.Assert(task.Log(), check.HasLen, 2)
-	c.Assert(task.Log()[0], check.Matches, ".*Setting the task to wait until the operation is either aborted or continued...")
-	c.Assert(task.Log()[1], check.Matches, ".*task failed")
+	c.Assert(task.Log(), check.HasLen, 1)
+	c.Assert(task.Log()[0], check.Matches, ".*task failed")
 	s.state.Unlock()
 
 }
