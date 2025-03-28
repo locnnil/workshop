@@ -39,8 +39,9 @@ const (
 )
 
 var (
-	defaultDevices     = createDefaultDevices
-	checkNvidiaRuntime = checkNvidia
+	defaultDevices      = createDefaultDevices
+	checkNvidiaRuntime  = checkNvidia
+	startCommandTimeout = 1 * time.Minute
 )
 
 type volumeGuard struct {
@@ -354,6 +355,10 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
+	return s.startWorkshop(conn, ctx, name)
+}
+
+func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, name string) error {
 	rev := revert.New()
 	defer rev.Fail()
 
@@ -373,12 +378,12 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	if err = s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
+	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
 		return err
 	}
 
 	// Workshop started, enable autostart.
-	if err = s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "true"}); err != nil {
+	if err := s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "true"}); err != nil {
 		return err
 	}
 
@@ -390,6 +395,7 @@ func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
 				"bash", "-euc", startCommand,
 			},
 			WorkDir: "/",
+			Timeout: startCommandTimeout,
 		},
 	}
 
@@ -413,8 +419,12 @@ func (s *Backend) StopWorkshop(ctx context.Context, name string, force bool) err
 	}
 	defer conn.Disconnect()
 
-	// Workshop stopped, disable autostart
-	if err = s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); err != nil {
+	return s.stopWorkshop(conn, ctx, name, force)
+}
+
+func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, name string, force bool) error {
+	// Workshop stopped, disable autostart.
+	if err := s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); err != nil {
 		return err
 	}
 
@@ -783,7 +793,7 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	}
 
 	// ignore possible errors (e.g. container is already stopped)
-	if err = s.updateInstanceState(conn, ctx, name, "stop", true); err != nil {
+	if err = s.stopWorkshop(conn, ctx, name, true); err != nil {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 

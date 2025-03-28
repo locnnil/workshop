@@ -35,14 +35,13 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	if err := s.updateInstanceState(conn, ctx, name, "stop", true); err != nil {
+	if err := s.stopWorkshop(conn, ctx, name, true); err != nil {
 		return err
 	}
 
 	rev.Add(func() {
-		err := s.updateInstanceState(conn, ctx, name, "start", false)
-		if err != nil {
-			logger.Debugf("Cannot restart %q workshop after failed stash operation", name)
+		if rerr := s.startWorkshop(conn, ctx, name); rerr != nil {
+			logger.Debugf("On StashWorkshop: Cannot restart %q workshop after failed stash operation: %v", name, rerr)
 		}
 	})
 
@@ -77,10 +76,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
-		return err
-	}
-	return nil
+	return s.startWorkshop(conn, ctx, name)
 }
 
 // Moves the instance between LXD projects.
