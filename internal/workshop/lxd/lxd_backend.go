@@ -129,7 +129,8 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers can't be launched
 	// without further manual configuration.
 	if len(pools) == 0 {
-		return nil, errors.New("LXD not initialized\nInitialize LXD:\n  lxd init --auto")
+		return nil, errors.New(`LXD not initialized
+To initialize LXD: 'lxd init --auto'`)
 	}
 
 	networks, err := conn.GetNetworks()
@@ -142,7 +143,8 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers won't have network access
 	// without further manual configuration.
 	if len(networks) == 0 {
-		return nil, errors.New("LXD not initialized. Run 'lxd init --auto'")
+		return nil, errors.New(`LXD not initialized
+To initialize LXD: 'lxd init --auto'`)
 	}
 
 	poolExists := false
