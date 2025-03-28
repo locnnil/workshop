@@ -177,7 +177,12 @@ func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	// Configure workshop core properties: project directory
-	var prjMount = workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: prj.Path, Where: workshop.WorkshopProjectPath}
+	var prjMount = workshop.Mount{
+		Name:  workshop.ConfigProjectPathDevice,
+		What:  prj.Path,
+		Where: workshop.WorkshopProjectPath,
+		Type:  workshop.HostWorkshop,
+	}
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 

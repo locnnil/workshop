@@ -257,7 +257,7 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 	return nil
 }
 
-func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string, props workshop.Mount) error {
+func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string, mount workshop.Mount) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -266,12 +266,12 @@ func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string,
 	f.workshopLock.Lock()
 	defer f.workshopLock.Unlock()
 
-	f.Workshops[projectId][name].Devices[props.Name] = map[string]string{"type": "disk", "source": props.What,
-		"path": props.Where}
+	f.Workshops[projectId][name].Devices[mount.Name] = map[string]string{"type": "disk", "source": mount.What,
+		"path": mount.Where}
 	return nil
 }
 
-func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name string, device string) error {
+func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name, mount string) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -280,7 +280,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name stri
 	f.workshopLock.Lock()
 	defer f.workshopLock.Unlock()
 
-	delete(f.Workshops[projectId][name].Devices, device)
+	delete(f.Workshops[projectId][name].Devices, mount)
 	return nil
 }
 
@@ -507,7 +507,7 @@ func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, name string) err
 	return nil
 }
 
-func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, what string, ro bool) error {
+func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
@@ -519,7 +519,7 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, what s
 	}
 	defer wfs.Close()
 
-	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(what)
+	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(where)
 	if err != nil {
 		return err
 	}
@@ -537,7 +537,7 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, what s
 		return err
 	}
 
-	s.WorkshopVolumeMountPoints[name] = what
+	s.WorkshopVolumeMountPoints[name] = where
 	return nil
 }
 

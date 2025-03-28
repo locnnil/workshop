@@ -487,7 +487,7 @@ func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key str
 	return op.Wait()
 }
 
-func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device workshop.Mount) error {
+func (s *Backend) AddWorkshopMount(ctx context.Context, name string, mount workshop.Mount) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -503,16 +503,18 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device work
 	if err != nil {
 		return err
 	}
-	if device.Type == workshop.Volume {
-		inst.Devices[device.Name] = map[string]string{"type": "disk",
-			"pool":     storagePool,
-			"path":     device.What,
-			"source":   device.Where,
-			"readonly": fmt.Sprint(device.ReadOnly)}
-	} else {
-		inst.Devices[device.Name] = map[string]string{"type": "disk", "source": device.What,
-			"path": device.Where, "readonly": fmt.Sprint(device.ReadOnly)}
+
+	device := map[string]string{
+		"type":     "disk",
+		"source":   mount.What,
+		"path":     mount.Where,
+		"readonly": fmt.Sprint(mount.ReadOnly),
 	}
+	if mount.Type == workshop.Volume {
+		device["pool"] = storagePool
+	}
+	inst.Devices[mount.Name] = device
+
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
@@ -521,7 +523,7 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, device work
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) RemoveWorkshopMount(ctx context.Context, name string, device string) error {
+func (s *Backend) RemoveWorkshopMount(ctx context.Context, name, mount string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -538,7 +540,7 @@ func (s *Backend) RemoveWorkshopMount(ctx context.Context, name string, device s
 		return err
 	}
 
-	delete(inst.Devices, device)
+	delete(inst.Devices, mount)
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err

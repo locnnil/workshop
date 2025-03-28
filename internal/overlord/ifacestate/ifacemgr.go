@@ -300,8 +300,12 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	// Recreate workshopctl bind mount, this has to be done if, for example,
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
-	workshopctl := workshop.Mount{Name: "workshop.workshopctl", What: filepath.Join(dirs.ExecDir, "workshopctl"),
-		Where: "/usr/bin/workshopctl"}
+	workshopctl := workshop.Mount{
+		Name:  "workshop.workshopctl",
+		What:  filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where: "/usr/bin/workshopctl",
+		Type:  workshop.HostWorkshop,
+	}
 
 	_ = m.backend.RemoveWorkshopMount(pctx, w, workshopctl.Name)
 
