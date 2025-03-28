@@ -89,14 +89,14 @@ func ErrorWithInstallLXDPrompt(err error) error {
 	switch {
 	case errors.Is(err, unix.ECONNREFUSED):
 		return fmt.Errorf(`cannot connect to LXD: %w
-Maybe LXD daemon isn't active?
 
+Maybe LXD daemon isn't active?
 To start the LXD daemon: 'sudo snap start lxd'
 To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 	case errors.Is(err, os.ErrNotExist):
 		return fmt.Errorf(`cannot connect to LXD: %w
-Maybe LXD isn't installed?
 
+Maybe LXD isn't installed?
 To install LXD: 'sudo snap install lxd'
 To initialize LXD: 'lxd init --auto'
 To restart the workshop daemon: 'sudo snap restart workshop'`, err)
@@ -130,6 +130,7 @@ func New() (*Backend, error) {
 	// without further manual configuration.
 	if len(pools) == 0 {
 		return nil, errors.New(`LXD not initialized
+
 To initialize LXD: 'lxd init --auto'`)
 	}
 
@@ -144,6 +145,7 @@ To initialize LXD: 'lxd init --auto'`)
 	// without further manual configuration.
 	if len(networks) == 0 {
 		return nil, errors.New(`LXD not initialized
+
 To initialize LXD: 'lxd init --auto'`)
 	}
 
