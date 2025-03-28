@@ -88,13 +88,18 @@ func ImageAlias(name string) string {
 func ErrorWithInstallLXDPrompt(err error) error {
 	switch {
 	case errors.Is(err, unix.ECONNREFUSED):
-		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD daemon isn't running?\n"+
-			"Start the LXD daemon:\n  sudo snap start lxd\n"+
-			"Then restart the workshop daemon:\n  sudo snap restart workshop", err)
+		return fmt.Errorf(`cannot connect to LXD: %w
+Maybe LXD daemon isn't active?
+
+To start the LXD daemon: 'sudo snap start lxd'
+To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 	case errors.Is(err, os.ErrNotExist):
-		return fmt.Errorf("cannot connect to LXD: %w, maybe LXD isn't installed?\n"+
-			"Install and initialize LXD:\n  sudo snap install lxd\n  lxd init --auto\n"+
-			"Then restart the workshop daemon:\n  sudo snap restart workshop", err)
+		return fmt.Errorf(`cannot connect to LXD: %w
+Maybe LXD isn't installed?
+
+To install LXD: 'sudo snap install lxd'
+To initialize LXD: 'lxd init --auto'
+To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 	default:
 		return err
 	}
