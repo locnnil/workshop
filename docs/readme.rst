@@ -62,7 +62,7 @@ for example:
 
 .. code-block:: console
 
-   sudo snap install --dangerous --classic ./workshop_0.1.12_amd64.snap
+   sudo snap install --dangerous --classic ./workshop_0.1.13_amd64.snap
 
 
 Launching workshops
