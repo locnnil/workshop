@@ -95,13 +95,13 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 				"camera": {
 					"type": "none",
 				},
-				"camera/video4linux": {
+				"camera_video4linux": {
 					"type":              "unix-hotplug",
 					"subsystem":         "video4linux",
 					"required":          "false",
 					"ownership.inherit": "true",
 				},
-				"camera/media": {
+				"camera_media": {
 					"type":              "unix-hotplug",
 					"subsystem":         "media",
 					"required":          "false",
@@ -109,8 +109,8 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 			map[string]string{
 				"user.workshop.sdk.camera":                  `{"name": "camera"}`,
 				"user.workshop.sdk.camera.type":             "camera",
-				"user.workshop.sdk.camera/video4linux.type": "camera",
-				"user.workshop.sdk.camera/media.type":       "camera"},
+				"user.workshop.sdk.camera_video4linux.type": "camera",
+				"user.workshop.sdk.camera_media.type":       "camera"},
 		}, {
 			"sdk",
 			map[string]map[string]string{

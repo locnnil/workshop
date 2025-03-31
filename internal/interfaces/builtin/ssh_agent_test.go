@@ -63,13 +63,13 @@ slots:
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.SshAgent{ProxyEntry: workshop.ProxyEntry{
-		Name: "consumer-" + plug.Name,
+		Name: plug.Name,
 		Connect: workshop.ProxyTarget{
 			Address:  "/tmp/dir/ssh",
 			Protocol: "unix",
 		},
 		Listen: workshop.ProxyTarget{
-			Address:  "/var/lib/workshop/run/consumer-ssh-agent.ssh",
+			Address:  "/var/lib/workshop/run/consumer_ssh-agent.ssh",
 			Protocol: "unix",
 		},
 		Direction: workshop.WorkshopToHost,
