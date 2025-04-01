@@ -79,6 +79,7 @@ type FakeWorkshopBackend struct {
 	ExecCallback ExecFunc
 	ExecCalls    []*ExecCall
 
+	workshopFsLock     sync.Mutex
 	WorkshopFsCallback WorkshopFsCallback
 	WorkshopFsCalls    []*FsCall
 
@@ -371,18 +372,28 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter w
 }
 
 func (s *FakeWorkshopBackend) SetWorkshopFsCallback(c WorkshopFsCallback) func() {
+	s.workshopFsLock.Lock()
+	defer s.workshopFsLock.Unlock()
+
 	old := s.WorkshopFsCallback
 	s.WorkshopFsCallback = c
+
 	return func() {
+		s.workshopFsLock.Lock()
+		defer s.workshopFsLock.Unlock()
+
 		s.WorkshopFsCallback = old
 	}
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
+	s.workshopFsLock.Lock()
 	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &FsCall{Name: name})
 	if s.WorkshopFsCallback != nil {
+		defer s.workshopFsLock.Unlock()
 		return s.WorkshopFsCallback(ctx, name)
 	}
+	s.workshopFsLock.Unlock()
 
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
