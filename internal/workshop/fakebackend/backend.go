@@ -83,6 +83,7 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCallback WorkshopFsCallback
 	WorkshopFsCalls    []*FsCall
 
+	downloadLock         sync.Mutex
 	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 
@@ -610,6 +611,9 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 }
 
 func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) error {
+	b.downloadLock.Lock()
+	defer b.downloadLock.Unlock()
+
 	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, base, report)
