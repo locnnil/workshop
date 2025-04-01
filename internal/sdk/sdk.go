@@ -23,10 +23,10 @@ type Setup struct {
 }
 
 func (s *Setup) Filepath() string {
-	return filepath.Join(dirs.SdkDownloads, s.Filename())
+	return filepath.Join(dirs.SdkDownloads, s.filename())
 }
 
-func (s *Setup) Filename() string {
+func (s *Setup) filename() string {
 	return fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String())
 }
 
