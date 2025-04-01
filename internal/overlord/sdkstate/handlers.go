@@ -65,10 +65,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	st.Lock()
-	store := sdk.StoreService(st)
-	st.Unlock()
-
 	reporter := &progress.Reporter{
 		Name: task.ID(),
 		Report: func(label string, done, total int) {
@@ -78,8 +74,18 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
-		return err
+	if sdk.IsSystem(rec.Name) {
+		if err := system.RetrieveSystemSdk(rec, reporter); err != nil {
+			return err
+		}
+	} else {
+		st.Lock()
+		store := sdk.StoreService(st)
+		st.Unlock()
+
+		if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
+			return err
+		}
 	}
 
 	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), rec.Filepath())
@@ -108,10 +114,6 @@ func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error 
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
-	}
-
-	if sdk.IsSystem(sdkSetup.Name) {
-		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
 	}
 
 	usr, env, err := osutil.UserAndEnv(user)

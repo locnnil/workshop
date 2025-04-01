@@ -9,7 +9,12 @@ import (
 )
 
 func Retrieve(st *state.State, s sdk.Setup) *state.Task {
-	download := st.NewTask("retrieve-sdk", fmt.Sprintf("Retrieve %q SDK from channel %q", s.Name, s.Channel))
+	summary := fmt.Sprintf("Retrieve %q SDK from channel %q", s.Name, s.Channel)
+	if sdk.IsSystem(s.Name) {
+		summary = fmt.Sprintf("Retrieve %q SDK", s.Name)
+	}
+
+	download := st.NewTask("retrieve-sdk", summary)
 	download.Set("sdk-setup", s)
 	return download
 }

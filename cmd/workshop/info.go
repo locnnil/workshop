@@ -143,21 +143,21 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		for _, sk := range workshop.Sdks {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
 
+			tracking := sk.Channel
+			revision, err := sdk.ParseRevision(sk.Revision)
+			if err == nil && revision.Local() {
+				tracking = contractHomeDirectory(sk.Source)
+				if sk.BuildTime.IsZero() {
+					sk.BuildTime = sk.InstallTime
+				}
+			}
+			if tracking == "" {
+				tracking = "-"
+			}
+
 			// Tracking info is always the same for the system SDK. Omit it to
 			// highlight the difference between it and a regular type SDK.
 			if !sdk.IsSystem(sk.Name) {
-				tracking := sk.Channel
-				revision, err := sdk.ParseRevision(sk.Revision)
-				if err == nil && revision.Local() {
-					tracking = contractHomeDirectory(sk.Source)
-					if sk.BuildTime.IsZero() {
-						sk.BuildTime = sk.InstallTime
-					}
-				}
-				if tracking == "" {
-					tracking = "-"
-				}
-
 				fmt.Fprintf(w, "    tracking:\t%s\n", tracking)
 			}
 

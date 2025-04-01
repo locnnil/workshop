@@ -20,6 +20,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -159,7 +160,8 @@ func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file
 		return nil, err
 	}
 
-	setups := make([]sdk.Setup, 0, len(infos))
+	setups := make([]sdk.Setup, 1, len(infos)+1)
+	setups[0] = sdk.Setup{Name: "system", Revision: system.SystemSdkRevision}
 	for _, s := range infos {
 		setups = append(setups, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
 	}
@@ -168,7 +170,7 @@ func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file
 }
 
 func resolveLocalSdks(usr *user.User, userDataDir, pid, name string, wp *workshop.Workshop) ([]sdk.Setup, error) {
-	localSdks := []sdk.Setup{{Name: sdk.System.String(), Revision: sdk.R(-1)}}
+	var localSdks []sdk.Setup
 
 	sketch, err := maybeSketch(userDataDir, pid, name, wp == nil)
 	if err != nil {
@@ -179,11 +181,6 @@ func resolveLocalSdks(usr *user.User, userDataDir, pid, name string, wp *worksho
 	}
 
 	for i, sk := range localSdks {
-		if i == 0 {
-			// Skip system SDK.
-			continue
-		}
-
 		var installed sdk.Revision
 		if wp != nil {
 			installed = wp.Sdks[sk.Name].Revision

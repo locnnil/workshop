@@ -20,7 +20,6 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/sdk/system"
 )
 
 var (
@@ -218,8 +217,8 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("SDK must be named %q (now: %q)", sdkName, info.Name)
 	}
 
-	// Local SDKs will always have the workshop's base.
-	if setup.Revision.Local() {
+	// Local and system SDKs will always have the workshop's base.
+	if setup.Revision.Local() || info.Type == sdk.System {
 		info.Base = w.Base
 	}
 	info.Revision = setup.Revision
@@ -382,7 +381,7 @@ func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string,
 	defer reverter.Fail()
 
 	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
-	metasrc := system.SdkMeta
+	metasrc := filepath.Join("meta", "sdk.yaml")
 	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
 
 	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {

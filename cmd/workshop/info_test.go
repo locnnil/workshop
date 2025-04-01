@@ -284,7 +284,7 @@ var mockWorkshopWithTunnels = `{
     "sdks": [
       {
         "name": "system",
-        "revision": "x1",
+        "revision": "1",
         "tunnels": {
           "plugs": [
             {
@@ -437,7 +437,7 @@ status:   ready
 notes:    -
 sdks:
   system:
-    installed:  \(x1\)
+    installed:  \(1\)
     tunnels:
       gopls:
         from:  127.0.0.1:60915/tcp

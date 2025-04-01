@@ -8,11 +8,13 @@ import (
 	"errors"
 	"os"
 	"os/user"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -37,6 +39,8 @@ type wsOps struct {
 var _ = check.Suite(&wsOps{})
 
 func (f *wsOps) SetUpSuite(c *check.C) {
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+
 	var err error
 
 	f.bd, err = lxdbackend.New()
@@ -418,9 +422,20 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Check(err, check.IsNil)
-	err = w.InstallLocalSdk(f.ctx, sdk.System.String(), "x1", system.SystemSdkFs)
-	c.Check(err, check.IsNil)
-	err = w.LinkSdk(f.ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
+
+	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	err = system.RetrieveSystemSdk(setup, nil)
+	c.Assert(err, check.IsNil)
+
+	volume := sdk.VolumeName(setup.Name, setup.Revision)
+	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
+	c.Assert(err, check.IsNil)
+
+	sdkPath := filepath.Join(dirs.WorkshopSdksDir, setup.Name, setup.Revision.String())
+	err = f.bd.AttachVolume(f.ctx, "test", volume, sdkPath, true)
+	c.Assert(err, check.IsNil)
+
+	err = w.LinkSdk(f.ctx, setup)
 	c.Check(err, check.IsNil)
 	c.Check(w.Sdks, check.HasLen, 1)
 
@@ -436,7 +451,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	}
 	// The instance's configuration does not have any SDK in user.workshop.sdks
 	// after this.
-	err = w.UnlinkSdk(f.ctx, sdk.System.String())
+	err = w.UnlinkSdk(f.ctx, setup.Name)
 	c.Check(err, check.IsNil)
 
 	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)

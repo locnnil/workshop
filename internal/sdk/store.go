@@ -125,3 +125,15 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 	}
 	return nil
 }
+
+func (f *FakeStore) RetrieveSystemSdk(setup Setup, report *progress.Reporter) error {
+	f.downloadLock.Lock()
+	defer f.downloadLock.Unlock()
+	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
+		Setup: setup,
+	})
+	if f.DownloadCallback != nil {
+		return f.DownloadCallback(nil, setup, report)
+	}
+	return nil
+}

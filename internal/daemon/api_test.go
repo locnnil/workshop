@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -52,6 +53,7 @@ type apiSuite struct {
 	vars map[string]string
 
 	restoreMuxVars    func()
+	restoreRetrieve   func()
 	restoreProjectId  func()
 	restoreUserEnv    func()
 	restoreTime       func()
@@ -77,6 +79,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	}
 
 	s.store = &sdk.FakeStore{}
+	s.restoreRetrieve = system.FakeRetrieveSystemSdk(s.store.RetrieveSystemSdk)
 
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
@@ -107,6 +110,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workshopDir = ""
 	s.restoreMuxVars()
+	s.restoreRetrieve()
 	s.restoreProjectId()
 	s.restoreUserEnv()
 	s.restoreTime()

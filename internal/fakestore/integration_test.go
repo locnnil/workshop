@@ -59,9 +59,9 @@ func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 	err := s.DownloadSdk(context.Background(), setup, r)
 	c.Assert(err, check.IsNil)
 	c.Assert(setup.Filepath(), testutil.FilePresent)
-	c.Check(done > 0, check.Equals, true)
-	c.Check(total > 0, check.Equals, true)
-	c.Check(done == total, check.Equals, true)
+	c.Check(done, testutil.IntGreaterThan, 0)
+	c.Check(total, testutil.IntGreaterThan, 0)
+	c.Check(done, check.Equals, total)
 	c.Assert(os.Remove(setup.Filepath()), check.IsNil)
 }
 
