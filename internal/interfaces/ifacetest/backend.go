@@ -21,6 +21,7 @@ package ifacetest
 
 import (
 	"context"
+	"sync"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
@@ -36,6 +37,7 @@ type TestSecurityBackend struct {
 	RemoveCalls []string
 	// SetupCallback is an callback that is optionally called in Setup
 	SetupCallback func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error
+	setupLock     sync.Mutex
 	// RemoveCallback is a callback that is optionally called in Remove
 	RemoveCallback func(sdkName string) error
 	// SandboxFeaturesCallback is a callback that is optionally called in SandboxFeatures
@@ -60,6 +62,9 @@ func (b *TestSecurityBackend) Name() interfaces.SecuritySystem {
 
 // Setup records information about the call and calls the setup callback if one is defined.
 func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	b.setupLock.Lock()
+	defer b.setupLock.Unlock()
+
 	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkInfo: sdkInfo})
 	if b.SetupCallback == nil {
 		return nil
