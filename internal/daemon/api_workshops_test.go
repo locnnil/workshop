@@ -891,8 +891,9 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 			c.Check(change.Kind(), check.Equals, expected[num].Kind)
 			c.Check(change.Summary(), check.Equals, expected[num].Summary)
 
-			err := change.Err()
-			if err != nil {
+			if err := change.Err(); err != nil {
+				c.Check(err, check.ErrorMatches, expected[num].ChangeErr, check.Commentf("case: %v", num))
+			} else if err := change.WaitErr(); err != nil {
 				c.Check(err, check.ErrorMatches, expected[num].ChangeErr, check.Commentf("case: %v", num))
 			} else {
 				c.Check(expected[num].ChangeErr, check.Equals, "")
@@ -2792,10 +2793,11 @@ func (s *apiSuite) TestRefreshContinue(c *check.C) {
 	}
 	expected = []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "basic" workshop`,
+			ChangeErr: `(?s).*\(cannot remove profile\)`,
 		},
 		{
 			Type:    ResponseTypeAsync,
@@ -2854,10 +2856,11 @@ func (s *apiSuite) TestRefreshAbort(c *check.C) {
 	}
 	expected = []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "basic" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "basic" workshop`,
+			ChangeErr: `(?s).*\(cannot remove profile\)`,
 		},
 		{
 			Type:    ResponseTypeAsync,
@@ -3036,10 +3039,11 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "manysdks" workshop`,
+			ChangeErr: `(?s).*\(setup failed\)`,
 		},
 		{
 			Type:    ResponseTypeError,
@@ -3080,10 +3084,11 @@ func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "manysdks" workshop`,
+			ChangeErr: `(?s).*\(setup failed\)`,
 		},
 		{
 			Type:    ResponseTypeAsync,
@@ -3159,10 +3164,11 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 
 	expected := []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "manysdks" workshop`,
+			ChangeErr: `(?s).*\(setup failed\)`,
 		},
 		{
 			Type:    ResponseTypeAsync,
@@ -3290,10 +3296,11 @@ base: ubuntu@22.04
 	}
 	expected = []*expectedResp{
 		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "manysdks/sketch" SDK`,
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "manysdks/sketch" SDK`,
+			ChangeErr: `(?s).*\(SDK must be named "sketch" \(now: "illegal-sketch-name"\)\)`,
 		},
 		{
 			Type:    ResponseTypeError,
