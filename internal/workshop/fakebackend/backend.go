@@ -89,6 +89,7 @@ type FakeWorkshopBackend struct {
 
 	AttachVolumeCalls []AttachVolumeCall
 
+	snapshotLock     sync.Mutex
 	SnapshotCalls    []SnapshotCall
 	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
 	RestoreCalls     []RestoreCall
@@ -622,6 +623,9 @@ func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report 
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {
+	s.snapshotLock.Lock()
+	defer s.snapshotLock.Unlock()
+
 	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapid: snapid})
 	if s.SnapshotCallback != nil {
 		return s.SnapshotCallback(ctx, name, snapid)
@@ -645,6 +649,9 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 		wp.File = file
 	}
 	s.workshopLock.Unlock()
+
+	s.snapshotLock.Lock()
+	defer s.snapshotLock.Unlock()
 
 	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
 	if s.RestoreCallback != nil {
