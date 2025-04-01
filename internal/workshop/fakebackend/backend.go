@@ -63,6 +63,7 @@ type RestoreCall struct {
 type WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
 
 type FakeWorkshopBackend struct {
+	workshopLock sync.Mutex
 	// the key is a project-id - workshop name
 	Workshops map[string]map[string]*FakeWorkshop
 	// workshops put to stash (e.g. during refresh)
@@ -78,14 +79,17 @@ type FakeWorkshopBackend struct {
 	ExecCallback ExecFunc
 	ExecCalls    []*ExecCall
 
+	workshopFsLock     sync.Mutex
 	WorkshopFsCallback WorkshopFsCallback
 	WorkshopFsCalls    []*FsCall
 
+	downloadLock         sync.Mutex
 	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
 
+	snapshotLock     sync.Mutex
 	SnapshotCalls    []SnapshotCall
 	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
 	RestoreCalls     []RestoreCall
@@ -158,6 +162,9 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 
 	prj := f.project(user, projectId)
 
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	if f.Workshops[projectId] == nil {
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
@@ -218,6 +225,9 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) e
 
 	prj := f.project(user, projectId)
 
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	if _, ok := f.Workshops[prj.ProjectId][name]; !ok {
 		return workshop.ErrWorkshopNotLaunched
 	}
@@ -252,6 +262,10 @@ func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string,
 	if err != nil {
 		return err
 	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	f.Workshops[projectId][name].Devices[props.Name] = map[string]string{"type": "disk", "source": props.What,
 		"path": props.Where}
 	return nil
@@ -262,6 +276,10 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name stri
 	if err != nil {
 		return err
 	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	delete(f.Workshops[projectId][name].Devices, device)
 	return nil
 }
@@ -271,6 +289,10 @@ func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	f.Workshops[projectId][name].Config[item.Name] = item.Value
 	return nil
 }
@@ -280,6 +302,10 @@ func (f *FakeWorkshopBackend) RemoveWorkshopConfig(ctx context.Context, name str
 	if err != nil {
 		return err
 	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	delete(f.Workshops[projectId][name].Config, key)
 	return nil
 }
@@ -294,6 +320,10 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 	if project == nil {
 		return nil, api.StatusErrorf(404, "project not found")
 	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	wp := f.Workshops[projectId][name]
 	if wp == nil {
 		return nil, workshop.ErrWorkshopNotLaunched
@@ -313,15 +343,25 @@ func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*workshop
 		return nil, err
 	}
 
-	var workshops = make([]*workshop.Workshop, 0)
+	f.workshopLock.Lock()
+	var names []string
 	for _, i := range f.Workshops[projectId] {
-		ws, _ := f.Workshop(ctx, i.Name)
+		names = append(names, i.Name)
+	}
+	f.workshopLock.Unlock()
+
+	var workshops = make([]*workshop.Workshop, 0)
+	for _, name := range names {
+		ws, _ := f.Workshop(ctx, name)
 		workshops = append(workshops, ws)
 	}
 	return workshops, nil
 }
 
 func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter workshop.WorkshopConfigFilter) ([]*workshop.Workshop, error) {
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
 	res := make([]*workshop.Workshop, 0)
 	for _, i := range f.Workshops {
 		for _, j := range i {
@@ -334,23 +374,37 @@ func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter w
 }
 
 func (s *FakeWorkshopBackend) SetWorkshopFsCallback(c WorkshopFsCallback) func() {
+	s.workshopFsLock.Lock()
+	defer s.workshopFsLock.Unlock()
+
 	old := s.WorkshopFsCallback
 	s.WorkshopFsCallback = c
+
 	return func() {
+		s.workshopFsLock.Lock()
+		defer s.workshopFsLock.Unlock()
+
 		s.WorkshopFsCallback = old
 	}
 }
 
 func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
+	s.workshopFsLock.Lock()
 	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &FsCall{Name: name})
 	if s.WorkshopFsCallback != nil {
+		defer s.workshopFsLock.Unlock()
 		return s.WorkshopFsCallback(ctx, name)
 	}
+	s.workshopFsLock.Unlock()
 
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
+
 	fs, exists := s.Workshops[projectId][name]
 	if !exists {
 		return nil, fmt.Errorf(`%q filesystem is not available`, name)
@@ -377,6 +431,9 @@ func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name stri
 		return err
 	}
 
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
+
 	if s.StashedWorkshops[projectId][workshop.StashNamePrefix+name] == nil {
 		return fmt.Errorf("stashed workshop %q not found", name)
 	}
@@ -389,6 +446,9 @@ func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) 
 	if err != nil {
 		return err
 	}
+
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
 
 	wp := s.StashedWorkshops[projectId][workshop.StashNamePrefix+name]
 	if wp == nil {
@@ -406,6 +466,9 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	if err != nil {
 		return err
 	}
+
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
 
 	wp := s.Workshops[projectId][name]
 	if wp == nil {
@@ -549,6 +612,9 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 }
 
 func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) error {
+	b.downloadLock.Lock()
+	defer b.downloadLock.Unlock()
+
 	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, base, report)
@@ -557,6 +623,9 @@ func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report 
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {
+	s.snapshotLock.Lock()
+	defer s.snapshotLock.Unlock()
+
 	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapid: snapid})
 	if s.SnapshotCallback != nil {
 		return s.SnapshotCallback(ctx, name, snapid)
@@ -572,11 +641,17 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 
 	prj := s.project(user, projectId)
 
+	s.workshopLock.Lock()
 	if wp, ok := s.Workshops[prj.ProjectId][name]; !ok {
+		defer s.workshopLock.Unlock()
 		return workshop.ErrWorkshopNotLaunched
 	} else {
 		wp.File = file
 	}
+	s.workshopLock.Unlock()
+
+	s.snapshotLock.Lock()
+	defer s.snapshotLock.Unlock()
 
 	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
 	if s.RestoreCallback != nil {

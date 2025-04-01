@@ -15,6 +15,9 @@ jobs:
       - name: Build
         run: go build -v ./...
 
+      - name: Check for races
+        run: go test -race ./...
+
       - name: Test
         run: mkdir -p ${{ github.workspace }}.cover/unit/cover && go test -cover ./... -args -test.gocoverdir=${{ github.workspace }}.cover/unit/cover
 
