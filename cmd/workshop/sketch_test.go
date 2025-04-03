@@ -139,7 +139,7 @@ func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current boo
 	}
 
 	metadir := filepath.Join(sketchDir, "meta")
-	hooksdir := filepath.Join(sketchDir, "hooks")
+	hooksdir := filepath.Join(sketchDir, "sdk", "hooks")
 
 	c.Assert(writeSketchSdk(filepath.Join(metadir, "sdk.yaml"), meta), check.IsNil)
 	c.Assert(writeSketchHooks(sketchDir, meta), check.IsNil)
@@ -248,7 +248,7 @@ hooks:
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
-	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
+	c.Assert(filepath.Join(current, "sdk", "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
 }
 
 func (m *workshopSketch) TestSketchSdkUpdateHooks(c *check.C) {

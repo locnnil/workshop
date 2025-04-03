@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -349,74 +347,6 @@ func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	}
 
 	return mnts
-}
-
-func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {
-	filesrc, err := srcfs.Open(src)
-	if err != nil {
-		return err
-	}
-	defer filesrc.Close()
-
-	dstdir := filepath.Dir(dst)
-	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
-		return err
-	}
-
-	filedst, err := wfs.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
-	if err != nil {
-		return err
-	}
-	defer filedst.Close()
-
-	if _, err = io.Copy(filedst, filesrc); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string, src fs.FS) error {
-	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	reverter := revert.New()
-	defer reverter.Fail()
-
-	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
-	metasrc := filepath.Join("meta", "sdk.yaml")
-	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
-
-	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {
-		return err
-	}
-	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
-
-	// hooks: /var/lib/workshop/sdk/<name>/<rev>/sdk/hooks
-	hooksdir := filepath.Join(sdk.SdkRevPath(name, rev), "sdk", "hooks")
-	reverter.Add(func() { _ = wfs.RemoveAll(hooksdir) })
-
-	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
-		hooksrc := filepath.Join("hooks", hook)
-		hookdst := filepath.Join(hooksdir, hook)
-
-		// Hooks are optional.
-		if _, err := src.Open(hooksrc); err != nil {
-			if !osutil.IsDirNotExist(err) {
-				return err
-			}
-			continue
-		}
-
-		if err = install(wfs, src, hooksrc, hookdst, 0755); err != nil {
-			return err
-		}
-	}
-
-	reverter.Success()
-	return nil
 }
 
 func SnapshotId(w, sk string) string {

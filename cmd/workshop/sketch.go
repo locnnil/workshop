@@ -374,7 +374,7 @@ func writeSketchHooks(sketchdir string, content []byte) error {
 		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
-	hooksdir := filepath.Join(sketchdir, "hooks")
+	hooksdir := filepath.Join(sketchdir, "sdk", "hooks")
 	if len(rec.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
 			return err

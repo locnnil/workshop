@@ -20,7 +20,7 @@ func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 }
 
 func InstallLocalSdk(st *state.State, pid, w string, setup sdk.Setup) *state.TaskSet {
-	install := st.NewTask("install-local-sdk", fmt.Sprintf("Install %q SDK", setup.Name))
+	install := st.NewTask("install-sdk", fmt.Sprintf("Install %q SDK", setup.Name))
 	install.Set("sdk-setup", setup)
 	install.Set("sdk-retrieve-task", install.ID())
 

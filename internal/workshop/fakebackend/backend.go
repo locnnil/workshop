@@ -243,6 +243,29 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string, mount workshop.Mount) error {
+	if mount.Type != workshop.HostWorkshop {
+		return errors.New("fake backend only supports HostWorkshop mounts")
+	}
+
+	wfs, err := f.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(mount.Where)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
+		return err
+	}
+
+	if err := os.Symlink(mount.What, mnt); err != nil {
+		return err
+	}
+
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -263,10 +286,25 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name, mou
 	}
 
 	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
+	device, ok := f.Workshops[projectId][name].Devices[mount]
 	delete(f.Workshops[projectId][name].Devices, mount)
-	return nil
+	f.workshopLock.Unlock()
+	if !ok {
+		return fmt.Errorf("mount %q not found", mount)
+	}
+
+	wfs, err := f.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	where, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(device["path"])
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(where)
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
