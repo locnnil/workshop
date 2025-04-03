@@ -166,7 +166,7 @@ func AptCacheVolumeName(ws, pid string) string {
 }
 
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
-	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision.String()))
+	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
 	if err != nil {
 		return "", err
 	}

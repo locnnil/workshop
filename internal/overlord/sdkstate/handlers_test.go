@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -140,7 +139,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev int64) {
+func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revision) {
 	vfs := c.MkDir()
 
 	meta := filepath.Join(vfs, "meta")
@@ -148,7 +147,7 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev int64) {
 	c.Assert(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(meta, "sdk.yaml"), []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
-	err = s.backend.ImportVolume(s.ctx, sdk.VolumeName(name, strconv.FormatInt(rev, 10)), vfs)
+	err = s.backend.ImportVolume(s.ctx, sdk.VolumeName(name, rev), vfs)
 	c.Assert(err, check.IsNil)
 }
 
@@ -166,7 +165,7 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
-	s.mockSdk(c, "test-2", sdkYaml, 2)
+	s.mockSdk(c, "test-2", sdkYaml, sdk.R(2))
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
@@ -206,9 +205,9 @@ func (s *sdkStateSuite) TestDoInstallSdkWhenVolumeExists(c *check.C) {
 	chg.AddTask(t1)
 	chg.AddTask(t)
 
-	err := s.backend.CreateVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision.String()))
+	err := s.backend.CreateVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision))
 	c.Assert(err, check.IsNil)
-	defer func() { _ = s.backend.DeleteVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision.String())) }()
+	defer func() { _ = s.backend.DeleteVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision)) }()
 
 	s.state.Unlock()
 	s.se.Ensure()
@@ -227,7 +226,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	defer s.state.Unlock()
 
 	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
-	s.mockSdk(c, "test-2", sdkYaml, 2)
+	s.mockSdk(c, "test-2", sdkYaml, sdk.R(2))
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
@@ -329,7 +328,7 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: sdk.Revision{N: 1}, InstallTime: &s.installTime}
-	s.mockSdk(c, "test", sdkYaml, 1)
+	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -374,7 +373,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	defer s.state.Unlock()
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	s.mockSdk(c, "test-broken", sdkYamlViolatesPolicy, 2)
+	s.mockSdk(c, "test-broken", sdkYamlViolatesPolicy, sdk.R(2))
 
 	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
 
@@ -423,7 +422,7 @@ func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	s.mockSdk(c, "test", sdkYaml, 1)
+	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
 	newSdk := sdk.Info{Workshop: "ws", Name: "test", Revision: sdk.Revision{N: 1}}
 	t := s.state.NewTask("fake-task", "retrieve")
@@ -467,7 +466,7 @@ func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
 func (s *sdkStateSuite) TestLinkSdkBadInterfacesFound(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	s.mockSdk(c, "test", sdkYaml, 1)
+	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
 	newSdk := sdk.Info{Workshop: "ws", Name: "test", Revision: sdk.Revision{N: 1}}
 	t := s.state.NewTask("fake-task", "retrieve")

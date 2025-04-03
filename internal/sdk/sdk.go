@@ -30,7 +30,7 @@ func (s *Setup) Filename() string {
 	return fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String())
 }
 
-func VolumeName(name, revision string) string {
+func VolumeName(name string, revision Revision) string {
 	return fmt.Sprintf("%s-%s", name, revision)
 }
 

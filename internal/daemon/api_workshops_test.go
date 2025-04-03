@@ -962,10 +962,10 @@ func mockSdkVolume(sdkdir string, metayaml string) error {
 
 func (s *apiSuite) mockSdkVolumes(c *check.C, sdks map[string]testSdk) {
 	for _, info := range sdks {
-		err := s.b.CreateVolume(s.ctx, sdk.VolumeName(info.s.Name, info.s.Revision.String()))
+		err := s.b.CreateVolume(s.ctx, sdk.VolumeName(info.s.Name, info.s.Revision))
 		c.Assert(err, check.IsNil)
 
-		vfs := s.b.WorkshopVolumeContents[sdk.VolumeName(info.s.Name, info.s.Revision.String())]
+		vfs := s.b.WorkshopVolumeContents[sdk.VolumeName(info.s.Name, info.s.Revision)]
 		err = mockSdkVolume(vfs, info.meta)
 		c.Assert(err, check.IsNil)
 	}
@@ -3383,8 +3383,8 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 
 	c.Assert(s.b.AttachVolumeCalls, check.DeepEquals, []fakebackend.AttachVolumeCall{
 		{Workshop: "manysdks", Name: workshop.AptCacheVolumeName("manysdks", s.project.ProjectId)},
-		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision.String())},
-		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision.String())},
+		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision)},
+		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision)},
 	})
 	s.b.AttachVolumeCalls = s.b.AttachVolumeCalls[:0]
 
@@ -3407,8 +3407,8 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 
 	c.Assert(s.b.AttachVolumeCalls, check.DeepEquals, []fakebackend.AttachVolumeCall{
 		{Workshop: "manysdks", Name: workshop.AptCacheVolumeName("manysdks", s.project.ProjectId)},
-		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision.String())},
-		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision.String())},
+		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision)},
+		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision)},
 	})
 }
 
