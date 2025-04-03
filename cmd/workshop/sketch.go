@@ -89,6 +89,7 @@ hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
   # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # setup-base: |
+    # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
 
