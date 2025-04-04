@@ -25,17 +25,19 @@ func (i *SdkStateTasks) TestInstall(c *check.C) {
 
 	sdk := workshop.SdkRecord{Name: "sdk"}
 
-	tasks := sdkstate.Install(i.state, sdk.Name, "retrieve").Tasks()
+	tasks := sdkstate.Install(i.state, "42424242", "ws", sdk.Name, "retrieve").Tasks()
 
-	c.Check(tasks, check.HasLen, 2)
+	c.Check(tasks, check.HasLen, 3)
 	c.Check(tasks[1].WaitTasks(), check.HasLen, 1)
+	c.Check(tasks[2].WaitTasks(), check.HasLen, 1)
 	var id string
 	tasks[0].Get("sdk-retrieve-task", &id)
-	c.Check(tasks[0].Summary(), check.Equals, "Install \"sdk\" SDK")
+	c.Check(tasks[0].Summary(), check.Equals, `Install "sdk" SDK`)
 	c.Check(id, check.Equals, "retrieve")
 	tasks[1].Get("sdk-retrieve-task", &id)
-	c.Check(tasks[1].Summary(), check.Equals, "Link \"sdk\" SDK")
+	c.Check(tasks[1].Summary(), check.Equals, `Link "sdk" SDK`)
 	c.Check(id, check.Equals, "retrieve")
+	c.Check(tasks[2].Summary(), check.Equals, `Run hook "setup-base" for "sdk" SDK`)
 }
 
 func (i *SdkStateTasks) TestRetrieve(c *check.C) {

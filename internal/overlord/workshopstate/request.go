@@ -143,7 +143,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string
 	return retrieve, retrieveMap
 }
 
-func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 	addTaskSet := func(ts *state.TaskSet) {
@@ -165,9 +165,9 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 		// guarantee safety of concurrent installations.
 		var install *state.TaskSet
 		if setup.Revision.Local() {
-			install = sdkstate.InstallLocalSdk(st, setup)
+			install = sdkstate.InstallLocalSdk(st, pid, w, setup)
 		} else {
-			install = sdkstate.Install(st, setup.Name, retrieveTasks[setup.Name])
+			install = sdkstate.Install(st, pid, w, setup.Name, retrieveTasks[setup.Name])
 		}
 
 		addTaskSet(install)
@@ -270,11 +270,8 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	create := launchWorkshop(st, file, project)
 	addTaskSet(create)
 
-	install := installSdks(st, sdks, rmap)
+	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
 	addTaskSet(install)
-
-	setup := runHooks(st, project.ProjectId, file.Name, sdks, 0, hookstate.SetupBase)
-	addTaskSet(setup)
 
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
@@ -626,22 +623,9 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	rebuild := rebuildWorkshop(st, file, plan.sdkSnapshot)
 	addTaskSet(rebuild)
 
-	// Detach (uninstall) volumes of the SDKs from the restored snapshot. If the
-	// refresh fails, a copy of the workshop will be restored that had SDKs
-	// installed previously.
-	// We do not uninstall the SDKs that were installed locally and are to be
-	// removed here as those will not present in the recovered snapshot (as
-	// those are simply copied over into the workshop). These tasks will uninstall
-	// SDKs that were installed from the store as SDK volumes.
-	uninstall := uninstallSdks(st, plan.Remove())
-	addTaskSet(uninstall)
-
 	// Install and link updated SDKs to the rebuilt workshop.
-	install := installSdks(st, plan.InstallOrRefresh(), rmap)
+	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
-
-	setup := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), 0, hookstate.SetupBase)
-	addTaskSet(setup)
 
 	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
@@ -710,32 +694,6 @@ func autoconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 		prevAuto = autoconnect
 	}
 	return autoconnectSet
-}
-
-func uninstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
-	var prevRemove *state.Task
-	all := state.NewTaskSet()
-	addTask := func(ts *state.Task) {
-		if prevRemove != nil {
-			ts.WaitFor(prevRemove)
-		}
-		prevRemove = ts
-
-		all.AddTask(ts)
-	}
-
-	for _, setup := range sdks {
-		// The install task sets must not run concurrently as exec ops are not
-		// allowed by LXD to be run concurrently and in general case we cannot
-		// guarantee safety of concurrent installations.
-		if setup.Revision.Store() {
-			install := st.NewTask("remove-sdk", fmt.Sprintf("Remove %q SDK", setup.Name))
-			install.Set("sdk-retrieve-task", install.ID())
-			install.Set("sdk-setup", setup)
-			addTask(install)
-		}
-	}
-	return all
 }
 
 func unlinkSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {

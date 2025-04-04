@@ -325,7 +325,14 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
+		// TODO: Run mount-project after snapshots, and delete this workaround.
+		projectPathDevice, ok := rebuilt.Devices[workshop.ConfigProjectPathDevice]
+		if ok {
+			devices[workshop.ConfigProjectPathDevice] = projectPathDevice
+		}
+
 		maps.Copy(rebuilt.Config, config)
+		clear(rebuilt.Devices)
 		maps.Copy(rebuilt.Devices, devices)
 
 		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)

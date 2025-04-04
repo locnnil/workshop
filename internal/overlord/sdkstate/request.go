@@ -3,6 +3,7 @@ package sdkstate
 import (
 	"fmt"
 
+	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -13,7 +14,7 @@ func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 	return download
 }
 
-func InstallLocalSdk(st *state.State, setup sdk.Setup) *state.TaskSet {
+func InstallLocalSdk(st *state.State, pid, w string, setup sdk.Setup) *state.TaskSet {
 	install := st.NewTask("install-local-sdk", fmt.Sprintf("Install %q SDK", setup.Name))
 	install.Set("sdk-setup", setup)
 	install.Set("sdk-retrieve-task", install.ID())
@@ -22,10 +23,13 @@ func InstallLocalSdk(st *state.State, setup sdk.Setup) *state.TaskSet {
 	link.Set("sdk-retrieve-task", install.ID())
 	link.WaitFor(install)
 
-	return state.NewTaskSet(install, link)
+	hook := hookstate.Hook(st, pid, w, setup.Name, 0, hookstate.SetupBase)
+	hook.WaitFor(link)
+
+	return state.NewTaskSet(install, link, hook)
 }
 
-func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
+func Install(st *state.State, pid, w, sdk, retrieveId string) *state.TaskSet {
 	install := st.NewTask("install-sdk", fmt.Sprintf("Install %q SDK", sdk))
 	install.Set("sdk-retrieve-task", retrieveId)
 
@@ -33,5 +37,8 @@ func Install(st *state.State, sdk string, retrieveId string) *state.TaskSet {
 	link.Set("sdk-retrieve-task", retrieveId)
 	link.WaitFor(install)
 
-	return state.NewTaskSet(install, link)
+	hook := hookstate.Hook(st, pid, w, sdk, 0, hookstate.SetupBase)
+	hook.WaitFor(link)
+
+	return state.NewTaskSet(install, link, hook)
 }

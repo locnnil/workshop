@@ -173,25 +173,9 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 
 	if wpe, ok := f.Workshops[projectId][file.Name]; ok {
 		// rebuild the workshop
-
 		ws = wpe
 		ws.File = file
 		ws.Base = file.Base
-		fs := ws.WorkshopFilesystem
-
-		// TODO: Remove locally installed SDKs. These should be removed in a
-		// more elegant way, i.e. unmounted from the workshop in a similar
-		// fashion to regular SDKs installed from the store. Thus, it will make
-		// SDKs "independent" of the workshop, which means that changes will
-		// have to take care of unmounting them from the workshop at the right
-		// time.
-		// NOTE: RemoveAll ignores E_NOENT.
-		if err = fs.RemoveAll(sdk.SdkRootPath("system")); err != nil {
-			return err
-		}
-		if err = fs.RemoveAll(sdk.SdkRootPath("sketch")); err != nil {
-			return err
-		}
 	} else {
 		ws.Workshop = &workshop.Workshop{Backend: f,
 			Name:    file.Name,
@@ -200,11 +184,12 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 			Base:    file.Base,
 			File:    file,
 		}
-		ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
-		if err != nil {
-			return err
-		}
 		f.Workshops[projectId][file.Name] = ws
+	}
+
+	ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
+	if err != nil {
+		return err
 	}
 
 	ws.Config = make(map[string]string)
@@ -634,21 +619,37 @@ func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string)
 }
 
 func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
-	user, projectId, err := s.userProject(ctx)
+	wp, err := s.Workshop(ctx, name)
 	if err != nil {
 		return err
 	}
 
-	prj := s.project(user, projectId)
-
-	s.workshopLock.Lock()
-	if wp, ok := s.Workshops[prj.ProjectId][name]; !ok {
-		defer s.workshopLock.Unlock()
-		return workshop.ErrWorkshopNotLaunched
-	} else {
-		wp.File = file
+	sdks := []string{sdk.System.String()}
+	for _, sk := range wp.File.Sdks {
+		if !workshop.IsImplicitSdk(sk.Name) {
+			sdks = append(sdks, sk.Name)
+		}
 	}
-	s.workshopLock.Unlock()
+	sdks = append(sdks, sdk.Sketch)
+
+	lastIntact := slices.IndexFunc(sdks, func(s string) bool { return workshop.SnapshotId(name, s) == snapid })
+	if lastIntact < 0 {
+		return fmt.Errorf("invalid snapshot %q", snapid)
+	}
+	unwantedSdks := sdks[lastIntact+1:]
+
+	// Remove SDKs from after the snapshot.
+	fs, err := s.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	for _, sk := range unwantedSdks {
+		if err = fs.RemoveAll(sdk.SdkRootPath(sk)); err != nil {
+			return err
+		}
+	}
+
+	wp.File = file
 
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
