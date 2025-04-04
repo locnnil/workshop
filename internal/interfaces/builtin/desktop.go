@@ -91,7 +91,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 
 	if wayland != "" {
 		desktop.Wayland = &workshop.ProxyEntry{
-			Name: plug.Sdk().Name + "-" + "wayland",
+			Name: fmt.Sprintf("%s_wayland", plug.Name()),
 			Connect: workshop.ProxyTarget{
 				Address:  filepath.Join(xdg, wayland),
 				Protocol: "unix",
@@ -113,7 +113,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 			Protocol: "unix",
 		}
 		desktop.X11 = &workshop.ProxyEntry{
-			Name:      plug.Sdk().Name + "-" + "x11",
+			Name:      fmt.Sprintf("%s_x11", plug.Name()),
 			Connect:   proxyTarget,
 			Listen:    proxyTarget,
 			Direction: workshop.WorkshopToHost,

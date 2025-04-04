@@ -33,8 +33,8 @@ func lxdProjectUser(project string) string {
 	return ""
 }
 
-func LxdSystemProjectName(user string) string {
-	return LxdProjectName(user) + ".stash"
+func LxdStashProjectName(user string) string {
+	return "workshop-stash." + user
 }
 
 // Initialise the Workshop project namespace.
@@ -46,7 +46,7 @@ func InitLxdProject(conn lxd.InstanceServer, username string) error {
 		return err
 	}
 
-	if err := createOrLoadLxdProject(conn, LxdSystemProjectName(username)); err != nil {
+	if err := createOrLoadLxdProject(conn, LxdStashProjectName(username)); err != nil {
 		return err
 	}
 	return nil
@@ -340,7 +340,12 @@ func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Conte
 	}
 
 	for _, i := range workshops {
-		mount := workshop.Mount{Name: workshop.ConfigProjectPathDevice, What: project.Path, Where: workshop.WorkshopProjectPath}
+		mount := workshop.Mount{
+			Name:  workshop.ConfigProjectPathDevice,
+			What:  project.Path,
+			Where: workshop.WorkshopProjectPath,
+			Type:  workshop.HostWorkshop,
+		}
 		err = s.AddWorkshopMount(projectCtx, workshop.WorkshopName(i.Name), mount)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop %q project directory: %w", i.Name, err)

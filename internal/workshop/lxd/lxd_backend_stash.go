@@ -45,7 +45,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	if err = s.copyInstance(conn, instance, stashedInsance, LxdProjectName(user), LxdSystemProjectName(user)); err != nil {
+	if err = s.copyInstance(conn, instance, stashedInsance, LxdProjectName(user), LxdStashProjectName(user)); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	if err := s.copyInstance(conn, stashedInsance, instance, LxdSystemProjectName(user), LxdProjectName(user)); err != nil {
+	if err := s.copyInstance(conn, stashedInsance, instance, LxdStashProjectName(user), LxdProjectName(user)); err != nil {
 		return err
 	}
 
@@ -118,7 +118,7 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn = conn.UseProject(LxdSystemProjectName(user))
+	conn = conn.UseProject(LxdStashProjectName(user))
 	iname := workshop.StashNamePrefix + InstanceName(name, projectId)
 
 	op, err := conn.DeleteInstance(iname)

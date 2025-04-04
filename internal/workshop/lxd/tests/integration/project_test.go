@@ -45,7 +45,7 @@ func (f *wsProject) SetUpTest(c *check.C) {
 
 func (f *wsProject) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.username))
-	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdStashProjectName(f.username))
 }
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
@@ -316,7 +316,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	defer helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName("anotheruser"))
-	defer helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName("anotheruser"))
+	defer helper.CleanupLxdProject(c, f.client, lxdbackend.LxdStashProjectName("anotheruser"))
 
 	// Setup
 	be := lxdbackend.Backend{}

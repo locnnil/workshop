@@ -118,7 +118,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.restoreImageServer()
 	f.restoreDevices()
 	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdProjectName(f.usr.Username))
-	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdSystemProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, f.lxdClient, lxdbackend.LxdStashProjectName(f.usr.Username))
 }
 
 func (f *wsExec) exec(stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {

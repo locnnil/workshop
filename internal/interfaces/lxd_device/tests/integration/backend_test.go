@@ -113,7 +113,7 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.usr.Username))
-	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdStashProjectName(f.usr.Username))
 	f.restoreEnv()
 	f.client.Disconnect()
 }
@@ -368,15 +368,15 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 	prof, err := lxdbackend.Profile(f.client, f.pid, "test", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(prof.Agent, check.NotNil)
-	c.Check(prof.Agent.Name, check.Equals, "consumer-ssh-agent")
+	c.Check(prof.Agent.Name, check.Equals, "ssh-agent")
 	c.Check(prof.Agent.Connect.Address, check.Equals, "/run/.workshop.socket")
 	c.Check(prof.Agent.Connect.Protocol, check.Equals, "unix")
-	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/consumer-ssh-agent.ssh")
+	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/consumer_ssh-agent.ssh")
 	c.Check(prof.Agent.Listen.Protocol, check.Equals, "unix")
 	c.Check(prof.Agent.Direction, check.Equals, workshop.WorkshopToHost)
 
-	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer-ssh-agent.sh")
-	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer-ssh-agent.ssh\n")
+	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer_ssh-agent.sh")
+	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer_ssh-agent.ssh\n")
 
 	f.repo.DisconnectAll([]*interfaces.ConnRef{connref})
 
@@ -386,7 +386,7 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
+	_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
 
@@ -450,7 +450,7 @@ func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
 		// Validate Filesystem
 		fs, err := f.be.WorkshopFs(f.ctx, "test")
 		c.Assert(err, check.IsNil)
-		_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
+		_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
 		c.Assert(err, check.IsNil)
 		_, err = fs.Stat("/etc/profile.d/desktop.sh")
 		c.Assert(err, check.IsNil)
@@ -459,7 +459,7 @@ func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
 		f.repo.DisconnectAll([]*interfaces.ConnRef{sshConnRef, desktopConnRef})
 		err = b.Setup(f.ctx, cref, f.repo)
 		c.Assert(err, check.IsNil)
-		_, err = fs.Stat("/etc/profile.d/consumer-ssh-agent.sh")
+		_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
 		c.Assert(err, check.NotNil)
 		_, err = fs.Stat("/etc/profile.d/desktop.sh")
 		c.Assert(err, check.NotNil)

@@ -169,11 +169,14 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 	var sdkYaml sdkYaml
 	err := yaml.Unmarshal(yamlData, &sdkYaml)
 	if err != nil {
-		return &Info{}, err
+		return nil, err
 	}
 
 	if sdkYaml.Type == "" {
 		sdkYaml.Type = Regular.String()
+	}
+	if sdkYaml.Type == System.String() && !IsSystem(sdkYaml.Name) {
+		return nil, fmt.Errorf("SDK %q has type %q but is not the system SDK", sdkYaml.Name, sdkYaml.Type)
 	}
 
 	sdkInfo := &Info{

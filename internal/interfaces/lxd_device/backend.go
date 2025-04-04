@@ -217,8 +217,9 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 	})
 }
 
-func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop string) error {
-	env, err := fs.Create(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop, sdkName string) error {
+	script := fmt.Sprintf("%s_%s.sh", sdkName, dev.Name)
+	env, err := fs.Create(filepath.Join("/etc", "profile.d", script))
 	if err != nil {
 		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
 	}
@@ -231,15 +232,16 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop str
 	return nil
 }
 
-func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) error {
-	return fs.Remove(filepath.Join("/etc/profile.d", dev.Name+".sh"))
+func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, sdkName string) error {
+	script := fmt.Sprintf("%s_%s.sh", sdkName, dev.Name)
+	return fs.Remove(filepath.Join("/etc", "profile.d", script))
 }
 
 func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string, ws string) error {
 	backend := env["XDG_BACKEND"]
 
 	var envVars map[string]string
-	envFile, err := fs.Create(filepath.Join("/etc/profile.d", "desktop"+".sh"))
+	envFile, err := fs.Create("/etc/profile.d/desktop.sh")
 	if err != nil {
 		return fmt.Errorf("cannot configure required environment for %q: %w", ws, err)
 	}
@@ -367,7 +369,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if spec.Profile.Agent != nil {
-		err = installSshAgent(fs, *spec.Profile.Agent, sdkInfo.Workshop)
+		err = installSshAgent(fs, *spec.Profile.Agent, sdkInfo.Workshop, sdkInfo.Sdk)
 		if err != nil {
 			return err
 		}
@@ -395,7 +397,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 		}
 
 		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
-			if err = removeSshAgent(fs, *prevp.Agent); err != nil {
+			if err = removeSshAgent(fs, *prevp.Agent, sdkInfo.Sdk); err != nil {
 				return err
 			}
 		}
@@ -471,7 +473,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 	}
 
 	if prof.Agent != nil {
-		if err = removeSshAgent(fs, *prof.Agent); err != nil {
+		if err = removeSshAgent(fs, *prof.Agent, profile); err != nil {
 			return err
 		}
 	}

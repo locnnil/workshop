@@ -20,8 +20,9 @@ var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 	sdkBlocklist   = []string{"agent"}
 
-	workshopName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
-	channel      = regexp.MustCompile(`^(?P<track>[a-zA-Z0-9\.-]+)/(?P<risk>(stable|candidate|beta|edge))$`)
+	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
+	channel      = regexp.MustCompile(`^(?:[a-zA-Z0-9\.-]+/(?:stable|candidate|beta|edge)|)$`)
+	scriptName   = workshopName
 
 	Directory = ".workshop"
 	Filenames = []string{"workshop.yaml", ".workshop.yaml"}
@@ -64,7 +65,7 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 	if len(parts[0]) == 0 {
 		parts[0] = sdk.System.String()
 	}
-	if !workshopName.MatchString(parts[0]) {
+	if !sdk.SdkName.MatchString(parts[0]) {
 		return fmt.Errorf("%q is not a valid plug or slot reference (%q is an invalid SDK name)", refStr, parts[0])
 	}
 
@@ -164,7 +165,7 @@ func readWorkshop(path string) (*File, error) {
 	}
 
 	if !workshopName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens")
+		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them")
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {
@@ -204,10 +205,7 @@ func validateSdks(sdks []SdkRecord) error {
 
 		// An SDK installed from a local source (e.g. system SDK) does not have a
 		// channel.
-		if s.Channel == "" {
-			continue
-		}
-		if matches := channel.FindStringSubmatch(s.Channel); matches == nil {
+		if !channel.MatchString(s.Channel) {
 			return fmt.Errorf("unsupported channel %q for %q SDK", s.Channel, s.Name)
 		}
 		// A plug must either be bound or declared/extended with dynamic
@@ -300,8 +298,8 @@ func validateConnections(wfile *File) error {
 
 func validateScripts(wfile *File) error {
 	for name := range wfile.Scripts {
-		if !workshopName.MatchString(name) {
-			return fmt.Errorf("script name %q must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens", name)
+		if !scriptName.MatchString(name) {
+			return fmt.Errorf("script name %q must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them", name)
 		}
 	}
 	return nil

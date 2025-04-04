@@ -162,8 +162,8 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, camera.Name)] = "camera"
 
 	for _, subsystem := range []string{"video4linux", "media"} {
-		// This name is unique because '/' is not permitted in plug names.
-		name := fmt.Sprintf("%s/%s", camera.Name, subsystem)
+		// This name is unique because '_' is not permitted in plug names.
+		name := fmt.Sprintf("%s_%s", camera.Name, subsystem)
 		s.devices[name] = map[string]string{
 			"type":              "unix-hotplug",
 			"subsystem":         subsystem,

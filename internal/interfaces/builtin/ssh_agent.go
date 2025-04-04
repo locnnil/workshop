@@ -79,14 +79,12 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specificatio
 		return fmt.Errorf(`cannot access ssh-agent for user %q: environment variable "SSH_AUTH_SOCK" not found`, spec.User.Username)
 	}
 
-	name := plug.Sdk().Name + "-" + plug.Name()
-
 	fromSocket := sock
-	toSocket := filepath.Join(dirs.WorkshopRunDir, name+".ssh")
+	toSocket := filepath.Join(dirs.WorkshopRunDir, fmt.Sprintf("%s_%s.ssh", plug.Sdk().Name, plug.Name()))
 
 	return spec.SetSshAgent(workshop.SshAgent{
 		ProxyEntry: workshop.ProxyEntry{
-			Name: name,
+			Name: plug.Name(),
 			Connect: workshop.ProxyTarget{
 				Address:  fromSocket,
 				Protocol: "unix",

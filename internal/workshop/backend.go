@@ -93,7 +93,7 @@ type VolumeManager interface {
 	ImportVolume(ctx context.Context, name string, tarball string) error
 
 	// Attach the volume to the workshop. The volume must be created before.
-	AttachVolume(ctx context.Context, wp, name, what string, ro bool) error
+	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
 
 	// Detach the volume from the workshop.
 	DetachVolume(ctx context.Context, wp, name string) error
@@ -185,10 +185,10 @@ type Backend interface {
 	StopWorkshop(ctx context.Context, name string, force bool) error
 
 	// Adds a workshop mount described by the properties.
-	AddWorkshopMount(ctx context.Context, name string, device Mount) error
+	AddWorkshopMount(ctx context.Context, name string, mount Mount) error
 
 	// Removes a workshop mount.
-	RemoveWorkshopMount(ctx context.Context, name string, device string) error
+	RemoveWorkshopMount(ctx context.Context, name, mount string) error
 
 	// TODO: these methods are too generic and should be wrapped with a proper
 	// interface method where required. We should not let the client to change

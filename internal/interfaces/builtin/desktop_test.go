@@ -63,7 +63,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
 		Wayland: &workshop.ProxyEntry{
-			Name: "consumer-wayland",
+			Name: "desktop_wayland",
 			Connect: workshop.ProxyTarget{
 				Address:  "/tmp/wayland-1",
 				Protocol: "unix"},
@@ -100,7 +100,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
 		X11: &workshop.ProxyEntry{
-			Name: "consumer-x11",
+			Name: "desktop_x11",
 			Connect: workshop.ProxyTarget{
 				Address:  "/tmp/.X11-unix/X0",
 				Protocol: "unix"},
@@ -137,7 +137,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 	expectedProxy := &workshop.Desktop{
 		X11: &workshop.ProxyEntry{
-			Name: "consumer-x11",
+			Name: "desktop_x11",
 			Connect: workshop.ProxyTarget{
 				Address:  "/tmp/.X11-unix/X0",
 				Protocol: "unix"},
@@ -146,7 +146,7 @@ slots:
 				Protocol: "unix"},
 			Direction: workshop.WorkshopToHost},
 		Wayland: &workshop.ProxyEntry{
-			Name: "consumer-wayland",
+			Name: "desktop_wayland",
 			Connect: workshop.ProxyTarget{
 				Address:  "/tmp/wayland-0",
 				Protocol: "unix"},
@@ -181,7 +181,7 @@ slots:
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"), Where: "/var/lib/workshop/run/Xauthority"}
+	expectedMount := &workshop.Mount{Name: "consumer-xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"), Where: "/var/lib/workshop/run/Xauthority", Type: workshop.HostWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts["consumer-xauth"], check.DeepEquals, *expectedMount)
 }
 

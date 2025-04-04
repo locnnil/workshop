@@ -152,7 +152,7 @@ plugs:
 }
 
 func (s *mountSuite) TestSanitizeSlotSystem(c *check.C) {
-	const mockSdkYaml = `name: mount-slot-sdk
+	const mockSdkYaml = `name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -165,7 +165,7 @@ slots:
 }
 
 func (s *mountSuite) TestSanitizeSlotSystemWorkshopSource(c *check.C) {
-	const mockSdkYaml = `name: mount-slot-sdk
+	const mockSdkYaml = `name: system
 base: ubuntu@22.04
 type: system
 slots:
@@ -179,7 +179,7 @@ slots:
 }
 
 func (s *mountSuite) TestSanitizeSlotSystemHostSource(c *check.C) {
-	const mockSdkYaml = `name: mount-slot-sdk
+	const mockSdkYaml = `name: system
 base: ubuntu@22.04
 type: system
 slots:
