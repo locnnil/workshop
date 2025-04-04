@@ -33,8 +33,8 @@ func lxdProjectUser(project string) string {
 	return ""
 }
 
-func LxdSystemProjectName(user string) string {
-	return LxdProjectName(user) + ".stash"
+func LxdStashProjectName(user string) string {
+	return "workshop-stash." + user
 }
 
 // Initialise the Workshop project namespace.
@@ -46,7 +46,7 @@ func InitLxdProject(conn lxd.InstanceServer, username string) error {
 		return err
 	}
 
-	if err := createOrLoadLxdProject(conn, LxdSystemProjectName(username)); err != nil {
+	if err := createOrLoadLxdProject(conn, LxdStashProjectName(username)); err != nil {
 		return err
 	}
 	return nil

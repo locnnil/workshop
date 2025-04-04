@@ -113,7 +113,7 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.usr.Username))
-	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdSystemProjectName(f.usr.Username))
+	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdStashProjectName(f.usr.Username))
 	f.restoreEnv()
 	f.client.Disconnect()
 }
