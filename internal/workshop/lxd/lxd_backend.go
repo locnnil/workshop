@@ -18,6 +18,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -85,6 +86,26 @@ func ImageAlias(name string) string {
 	return fmt.Sprintf("workshop-%s-%s", name, runtime.GOARCH)
 }
 
+func ErrorWithInstallLXDPrompt(err error) error {
+	switch {
+	case errors.Is(err, unix.ECONNREFUSED):
+		return fmt.Errorf(`cannot connect to LXD: %w
+
+Maybe LXD daemon isn't active?
+To start the LXD daemon: 'sudo snap start lxd'
+To restart the workshop daemon: 'sudo snap restart workshop'`, err)
+	case errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf(`cannot connect to LXD: %w
+
+Maybe LXD isn't installed?
+To install LXD: 'sudo snap install lxd'
+To initialize LXD: 'lxd init --auto'
+To restart the workshop daemon: 'sudo snap restart workshop'`, err)
+	default:
+		return err
+	}
+}
+
 func New() (*Backend, error) {
 	server := Backend{}
 
@@ -95,7 +116,7 @@ func New() (*Backend, error) {
 	// Create LXD storage pool if it doesn't exist
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return nil, err
+		return nil, ErrorWithInstallLXDPrompt(err)
 	}
 	defer conn.Disconnect()
 
@@ -109,7 +130,9 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers can't be launched
 	// without further manual configuration.
 	if len(pools) == 0 {
-		return nil, errors.New("LXD not initialized")
+		return nil, errors.New(`LXD not initialized
+
+To initialize LXD: 'lxd init --auto'`)
 	}
 
 	networks, err := conn.GetNetworks()
@@ -122,7 +145,9 @@ func New() (*Backend, error) {
 	// and non-Workshop LXD containers won't have network access
 	// without further manual configuration.
 	if len(networks) == 0 {
-		return nil, errors.New("LXD not initialized")
+		return nil, errors.New(`LXD not initialized
+
+To initialize LXD: 'lxd init --auto'`)
 	}
 
 	poolExists := false
@@ -912,7 +937,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	}
 
 	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
-		return nil, err
+		return nil, ErrorWithInstallLXDPrompt(err)
 	} else {
 		if err = InitLxdProject(srv, user); err != nil {
 			return nil, err
@@ -936,7 +961,7 @@ func createDefaultDevices() map[string]map[string]string {
 func checkNvidia() (bool, error) {
 	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
 	if err != nil {
-		return false, err
+		return false, ErrorWithInstallLXDPrompt(err)
 	}
 	defer conn.Disconnect()
 

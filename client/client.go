@@ -224,7 +224,9 @@ type ConnectionError struct {
 }
 
 func (e ConnectionError) Error() string {
-	return fmt.Sprintf("cannot communicate with server: %v", e.error)
+	return fmt.Sprintf(`cannot communicate with workshopd: %v
+
+To view more information: 'journalctl -u snap.workshop.workshopd.service'`, e.error)
 }
 
 func (e ConnectionError) Unwrap() error {

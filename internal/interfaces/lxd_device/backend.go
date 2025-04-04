@@ -50,7 +50,7 @@ func lxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 
 	srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
 	if err != nil {
-		return nil, err
+		return nil, lxdbackend.ErrorWithInstallLXDPrompt(err)
 	}
 
 	return srv.UseProject("workshop." + user), nil
