@@ -1,10 +1,13 @@
 summary: Check that basic refresh scenarios work correctly for the transactional mode
 prepare: |
   . "$TESTSLIB"/utils.sh
+  apt-add-repository -y universe
+  apt install expect -y --no-install-recommends
   workshop_exec launch --project single
   workshop_exec launch ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
 restore: |
   . "$TESTSLIB"/utils.sh
+  apt remove -y expect
   workshop_exec remove --project single
   workshop_exec remove ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
 execute: |
@@ -20,6 +23,15 @@ execute: |
   echo "Check apt cache is preserved across refreshes"
   workshop_exec exec -- mountpoint /var/cache/apt/archives
   workshop_exec exec -- sudo test -f /var/cache/apt/archives/sentinel
+
+  echo "Check workshop refresh --no-wait"
+  echo -e "sdks:\n  - name: test-sdk-health-waiting\n    channel: latest/stable" >> workshop.yaml
+  workshop_exec refresh --no-wait
+  
+  # The refresh process here takes about 10s. 
+  # The hook check-health should fail four times before final success.
+  # Check tests/lib/sdk/test-sdk-health-waiting/latest/stable/sdk/hooks/check-health for details
+  sudo -u ubuntu 2>&1 -- expect -f ./health.exp
 
   echo "Check refresh supports multi-workshop projects"
   cd ../multi

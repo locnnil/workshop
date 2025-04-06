@@ -94,6 +94,9 @@ $ workshop refresh nimble/sketch`,
 	cmd.PersistentFlags().BoolVar(&c.Abort, "abort",
 		false,
 		"Abort the previously paused operation, reverting any changes.")
+	cmd.PersistentFlags().BoolVar(&c.NoWait, "no-wait",
+		false,
+		"Return the change ID, don't wait for the operation to finish.")
 
 	return cmd
 }

@@ -118,6 +118,11 @@ Refresh the sketch SDK in the 'nimble' workshop:
    Continue the previously paused operation.
 
 
+--no-wait
+
+   Return the change ID, don't wait for the operation to finish.
+
+
 --wait-on-error
 
    Pause the operation on error; to resume, use '--continue' or '--abort'.

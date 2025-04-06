@@ -1,0 +1,27 @@
+#!/usr/bin/expect -f
+
+set success 0 
+
+while {1} {
+    spawn workshop info
+    set result [wait]
+    expect {
+        -re "message:\[ \]*Cannot finish health check" {
+            puts "Seen the expected SDK health messages"
+            set success 1
+            continue
+        }
+        -re "ready" {
+            if { $success == 1 } {
+                exit 0
+            }
+            puts "Could not find the expected SDK health message"
+            exit 1
+        }
+        timeout { 
+            puts "Timed out while waiting for the SDK health message"
+            exit 1
+        }
+    }
+    after 500
+}
