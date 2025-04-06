@@ -41,8 +41,6 @@ var (
 	BaseDir string
 	// Work directory
 	ExecDir string
-	// The directory to store unpacked SDKs
-	SdkDir string
 	// The directory to store downloaded SDKs
 	SdkDownloads string
 	// Path to the daemon's unix socket
@@ -90,7 +88,6 @@ func SetRootDir(rootdir string) {
 		panic(fmt.Sprintf("cannot set root dir: path %q is not absolute", rootdir))
 	}
 	BaseDir = rootdir
-	SdkDir = filepath.Join(BaseDir, "sdk")
 	SdkDownloads = filepath.Join(BaseDir, "cache")
 
 	WorkshopStateLockFile = filepath.Join(BaseDir, "state.lock")
@@ -101,9 +98,6 @@ func SetRootDir(rootdir string) {
 
 func CreateDirs() error {
 	if err := os.MkdirAll(BaseDir, 0755); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(SdkDir, 0755); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(SdkDownloads, 0755); err != nil {
