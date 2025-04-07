@@ -3,7 +3,6 @@ package sdkstate
 import (
 	"fmt"
 
-	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -19,31 +18,28 @@ func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 	return download
 }
 
-func InstallLocalSdk(st *state.State, pid, w string, setup sdk.Setup) *state.TaskSet {
+func InstallLocalSdk(st *state.State, setup sdk.Setup) *state.Task {
 	install := st.NewTask("install-sdk", fmt.Sprintf("Install %q SDK", setup.Name))
 	install.Set("sdk-setup", setup)
 	install.Set("sdk-retrieve-task", install.ID())
-
-	link := st.NewTask("link-sdk", fmt.Sprintf("Link %q SDK", setup.Name))
-	link.Set("sdk-retrieve-task", install.ID())
-	link.WaitFor(install)
-
-	hook := hookstate.Hook(st, pid, w, setup.Name, 0, hookstate.SetupBase)
-	hook.WaitFor(link)
-
-	return state.NewTaskSet(install, link, hook)
+	return install
 }
 
-func Install(st *state.State, pid, w, sdk, retrieveId string) *state.TaskSet {
+func Install(st *state.State, sdk, retrieveId string) *state.Task {
 	install := st.NewTask("install-sdk", fmt.Sprintf("Install %q SDK", sdk))
 	install.Set("sdk-retrieve-task", retrieveId)
+	return install
+}
 
-	link := st.NewTask("link-sdk", fmt.Sprintf("Link %q SDK", sdk))
-	link.Set("sdk-retrieve-task", retrieveId)
-	link.WaitFor(install)
+func Register(st *state.State, sdk, retrieveId string) *state.Task {
+	register := st.NewTask("register-sdk", fmt.Sprintf("Register %q SDK plugs and slots", sdk))
+	register.Set("sdk-retrieve-task", retrieveId)
+	return register
+}
 
-	hook := hookstate.Hook(st, pid, w, sdk, 0, hookstate.SetupBase)
-	hook.WaitFor(link)
-
-	return state.NewTaskSet(install, link, hook)
+func Unregister(st *state.State, setup sdk.Setup) *state.Task {
+	unregister := st.NewTask("unregister-sdk", fmt.Sprintf("Unregister %q SDK plugs and slots", setup.Name))
+	unregister.Set("sdk-retrieve-task", unregister.ID())
+	unregister.Set("sdk-setup", setup)
+	return unregister
 }

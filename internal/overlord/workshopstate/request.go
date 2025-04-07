@@ -252,33 +252,39 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string
 }
 
 func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
-	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
-	addTaskSet := func(ts *state.TaskSet) {
-		if len(ts.Tasks()) == 0 {
-			return
-		}
 
-		if prevInstall != nil {
-			ts.WaitAll(prevInstall)
+	var prev *state.Task
+	addTask := func(t *state.Task) {
+		all.AddTask(t)
+		if prev != nil {
+			t.WaitFor(prev)
 		}
-		prevInstall = ts
-
-		all.AddAll(ts)
+		prev = t
 	}
 
+	// Run setup-base after installing each SDK, rather than all at once.
+	// This means each SDK snapshot only contains the relevant SDKs.
 	for _, setup := range sdks {
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
 		// guarantee safety of concurrent installations.
-		var install *state.TaskSet
+		var install *state.Task
+		var retrieveTask string
 		if setup.Revision.Local() {
-			install = sdkstate.InstallLocalSdk(st, pid, w, setup)
+			install = sdkstate.InstallLocalSdk(st, setup)
+			retrieveTask = install.ID()
 		} else {
-			install = sdkstate.Install(st, pid, w, setup.Name, retrieveTasks[setup.Name])
+			retrieveTask = retrieveTasks[setup.Name]
+			install = sdkstate.Install(st, setup.Name, retrieveTask)
 		}
+		addTask(install)
 
-		addTaskSet(install)
+		register := sdkstate.Register(st, setup.Name, retrieveTask)
+		addTask(register)
+
+		hook := hookstate.Hook(st, pid, w, setup.Name, 0, hookstate.SetupBase)
+		addTask(hook)
 	}
 	return all
 }
@@ -639,11 +645,10 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
 	addTaskSet(disconnect)
 
-	// Unlink and remove SDKs from interfaces repository. If refresh fails, the
-	// SDKs will be linked back and returned to the repository. This is the
-	// reason unlink has to happen before stashing.
-	unlink := unlinkSdks(st, plan.Remove())
-	addTaskSet(unlink)
+	// Remove SDKs from interfaces repository. If refresh fails, the SDKs will be returned
+	// to the repository after restoring the stashed workshop (with the SDKs installed).
+	unregister := unregisterSdks(st, plan.Remove())
+	addTaskSet(unregister)
 
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
@@ -651,7 +656,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	rebuild := rebuildWorkshop(st, file, plan.sdkSnapshot)
 	addTaskSet(rebuild)
 
-	// Install and link updated SDKs to the rebuilt workshop.
+	// Install updated SDKs to the rebuilt workshop.
 	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
 
@@ -724,21 +729,19 @@ func autoconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return autoconnectSet
 }
 
-func unlinkSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+func unregisterSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	prev := (*state.Task)(nil)
-	unlinkSet := state.NewTaskSet()
+	unregisterSet := state.NewTaskSet()
 	for _, s := range sdks {
-		unlink := st.NewTask("unlink-sdk", fmt.Sprintf("Unlink %q SDK", s.Name))
-		unlink.Set("sdk-retrieve-task", unlink.ID())
-		unlink.Set("sdk-setup", s)
-		unlinkSet.AddTask(unlink)
+		unregister := sdkstate.Unregister(st, s)
+		unregisterSet.AddTask(unregister)
 
 		if prev != nil {
-			unlink.WaitFor(prev)
+			unregister.WaitFor(prev)
 		}
-		prev = unlink
+		prev = unregister
 	}
-	return unlinkSet
+	return unregisterSet
 }
 
 func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
@@ -965,8 +968,8 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	unlink := unlinkSdks(st, slices.Collect(maps.Values(w.Sdks)))
-	addTaskSet(unlink)
+	unregister := unregisterSdks(st, slices.Collect(maps.Values(w.Sdks)))
+	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	addTaskSet(state.NewTaskSet(remove))

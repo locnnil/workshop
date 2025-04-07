@@ -3,7 +3,6 @@ package workshop
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -43,103 +41,43 @@ type Workshop struct {
 	Profiles map[string]SdkProfile
 }
 
-// Associate an SDK with the workshop by creating a 'current' symlink and adding
-// the SDK to the Sdks field.
-func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// Update the current link to point out to the newly installed SDK.
-	sdkrev := sdk.SdkRevPath(s.Name, s.Revision.String())
-	current := sdk.SdkCurrentPath(s.Name)
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	oldcur, err := fs.ReadLink(current)
-	if err != nil && !osutil.IsDirNotExist(err) {
-		return err
-	}
-	if err == nil {
-		// The link could already be existing (e.g. there is a previous
-		// revision).
-		if err = fs.Remove(current); err != nil {
-			return err
-		}
-		rev.Add(func() { _ = fs.Symlink(oldcur, current) })
-	}
-
-	if err = fs.Symlink(sdkrev, current); err != nil {
-		return err
-	}
-	rev.Add(func() { _ = fs.Remove(current) })
-
+// Associate an SDK with the workshop by adding the SDK to the Sdks field.
+func (w *Workshop) AddSdk(ctx context.Context, s sdk.Setup) error {
 	now := InstallTimeNow()
 	s.InstallTime = &now
 
 	_, exist := w.Sdks[s.Name]
 	if exist {
-		return fmt.Errorf("%q SDK is already linked", s.Name)
+		return fmt.Errorf("%q SDK is already installed", s.Name)
 	} else {
 		w.Sdks[s.Name] = s
 	}
 
-	sequenceValue, err := json.Marshal(w.Sdks)
+	value, err := json.Marshal(w.Sdks)
 	if err != nil {
 		return err
 	}
 
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopSdks,
-			Value: string(sequenceValue),
-		})
-
-	if err != nil {
-		return err
+	item := &WorkshopConfigValue{
+		Name:  ConfigWorkshopSdks,
+		Value: string(value),
 	}
-
-	rev.Success()
-	return nil
+	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
-// Stops associating an SDK with the workshop by removing a 'current' symlink and
-// removing the SDK from the workshop "installed" SDKs if there are no more
-// revisions left.
-func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
+// Stops associating an SDK with the workshop by removing the SDK from the Sdks field.
+func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
 	delete(w.Sdks, name)
-	newSequence, err := json.Marshal(w.Sdks)
+	value, err := json.Marshal(w.Sdks)
 	if err != nil {
 		return err
 	}
 
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopSdks,
-			Value: string(newSequence),
-		})
-	if err != nil {
-		return err
+	item := &WorkshopConfigValue{
+		Name:  ConfigWorkshopSdks,
+		Value: string(value),
 	}
-
-	// Update the 'current' link
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// No revisions left in the sequence, remove the 'current' link.
-	// This will be the case during a launch operation that fails, therefore it's
-	// possible for there to be no current revision to remove.
-	if err = fs.Remove(sdk.SdkCurrentPath(name)); errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	return err
+	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
 func WorkshopName(instance string) string {

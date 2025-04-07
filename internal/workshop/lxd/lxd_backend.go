@@ -889,8 +889,6 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 		return err
 	}
 
-	// The restored snapshot will have an updated file and empty profiles.
-	// Similar to how a launched workshop is associated with its definition.
 	restored, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
@@ -901,14 +899,9 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 		return err
 	}
 
-	// Restore from a snapshot also restores the workshop configuration at the
-	// time the snapshot was made. We need the restored configuration to have
-	// the current instance's configuration as it reflects the installed SDKs
-	// list, for example.
-	// Reset it to the actual configuration of the instance.
-	restored.Config["user.workshop.sdks"] = instPut.Config["user.workshop.sdks"]
-	restored.Config["user.workshop.file"] = string(f)
-	restored.Profiles = []string{"default"}
+	// The restored snapshot will have an updated file.
+	// Similar to how a launched workshop is associated with its definition.
+	restored.Config[workshop.ConfigWorkshopFile] = string(f)
 
 	op, err = conn.UpdateInstance(inst.Name, restored.Writable(), etag)
 	if err != nil {

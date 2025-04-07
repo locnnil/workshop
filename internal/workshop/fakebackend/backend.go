@@ -662,15 +662,8 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 		return err
 	}
 
-	sdks := []string{sdk.System.String()}
-	for _, sk := range wp.File.Sdks {
-		if !workshop.IsImplicitSdk(sk.Name) {
-			sdks = append(sdks, sk.Name)
-		}
-	}
-	sdks = append(sdks, sdk.Sketch)
-
-	lastIntact := slices.IndexFunc(sdks, func(s string) bool { return workshop.SnapshotId(name, s) == snapid })
+	sdks := wp.SdksByInstallOrder()
+	lastIntact := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return workshop.SnapshotId(name, s.Name) == snapid })
 	if lastIntact < 0 {
 		return fmt.Errorf("invalid snapshot %q", snapid)
 	}
@@ -682,9 +675,18 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 		return err
 	}
 	for _, sk := range unwantedSdks {
-		if err = fs.RemoveAll(sdk.SdkRootPath(sk)); err != nil {
+		if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
 			return err
 		}
+		delete(wp.Sdks, sk.Name)
+	}
+	value, err := json.Marshal(wp.Sdks)
+	if err != nil {
+		return err
+	}
+	item := &workshop.WorkshopConfigValue{Name: workshop.ConfigWorkshopSdks, Value: string(value)}
+	if err := s.AddWorkshopConfig(ctx, name, item); err != nil {
+		return err
 	}
 
 	wp.File = file

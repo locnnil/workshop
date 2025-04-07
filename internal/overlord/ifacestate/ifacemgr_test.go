@@ -11,7 +11,6 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord"
@@ -135,9 +134,9 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	s.state.Unlock()
 
 	for _, sk := range allsdks {
-		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), filepath.Join(dirs.WorkshopSdksDir, sk.Name, sk.Revision.String()), true)
+		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), sdk.SdkDir(sk.Name), true)
 		c.Assert(err, check.IsNil)
-		err = w.LinkSdk(ctx, sk.Setup)
+		err = w.AddSdk(ctx, sk.Setup)
 		c.Assert(err, check.IsNil)
 	}
 

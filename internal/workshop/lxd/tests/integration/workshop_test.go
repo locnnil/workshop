@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"os/user"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -421,7 +420,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	w, err := f.bd.Workshop(f.ctx, "test")
-	c.Check(err, check.IsNil)
+	c.Assert(err, check.IsNil)
 
 	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
 	err = system.RetrieveSystemSdk(setup, nil)
@@ -431,12 +430,11 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
 	c.Assert(err, check.IsNil)
 
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, setup.Name, setup.Revision.String())
-	err = f.bd.AttachVolume(f.ctx, "test", volume, sdkPath, true)
+	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir(setup.Name), true)
 	c.Assert(err, check.IsNil)
 
-	err = w.LinkSdk(f.ctx, setup)
-	c.Check(err, check.IsNil)
+	err = w.AddSdk(f.ctx, setup)
+	c.Assert(err, check.IsNil)
 	c.Check(w.Sdks, check.HasLen, 1)
 
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
@@ -445,24 +443,31 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
 	c.Assert(err, check.IsNil)
 
+	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir("sdk"), true)
+	c.Assert(err, check.IsNil)
+
+	err = w.AddSdk(f.ctx, sdk.Setup{Name: "sdk", Revision: sdk.R(5)})
+	c.Assert(err, check.IsNil)
+	c.Check(w.Sdks, check.HasLen, 2)
+
 	wf := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@24.04",
 	}
-	// The instance's configuration does not have any SDK in user.workshop.sdks
-	// after this.
-	err = w.UnlinkSdk(f.ctx, setup.Name)
-	c.Check(err, check.IsNil)
-
+	// The instance's configuration only has the system SDK after this.
 	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
 	c.Assert(err, check.IsNil)
 
 	w, err = f.bd.Workshop(f.ctx, "test")
-	c.Check(err, check.IsNil)
+	c.Assert(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
-	// Check that restore did not restore previous version of
-	// "user.workshop.sdks" or "user.workshop.file" and uses the instance's
-	// configuration, not the snapshot's.
+	// Check that Restore uses the provided "user.workshop.file" and removes "sdk".
 	c.Check(w.File, check.DeepEquals, wf)
-	c.Check(w.Sdks, check.HasLen, 0)
+	c.Check(w.Sdks, check.HasLen, 1)
+
+	fs, err := f.bd.WorkshopFs(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	defer fs.Close()
+	_, err = fs.Stat(sdk.SdkDir("sdk"))
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }

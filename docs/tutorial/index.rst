@@ -333,34 +333,20 @@ pass the ID of the change to the :command:`workshop tasks` command:
      ID   Status  Spawn               Ready               Summary
      132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
      133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
-     134  Done    today at 11:32 GMT  today at 11:32 GMT  Create apt cache for "dev"
-     135  Done    today at 11:32 GMT  today at 11:32 GMT  Download "ubuntu@22.04" base image
-     136  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "dev" workshop
-     137  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "/home/user/hello-workshop"
-     138  Done    today at 11:32 GMT  today at 11:33 GMT  Start "dev" workshop
-     139  Done    today at 11:33 GMT  today at 11:33 GMT  Install "system" SDK
-     140  Done    today at 11:33 GMT  today at 11:33 GMT  Link "system" SDK
-     141  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "system" SDK
-     142  Done    today at 11:33 GMT  today at 11:33 GMT  Install "go" SDK
-     143  Done    today at 11:33 GMT  today at 11:33 GMT  Link "go" SDK
-     144  Done    today at 11:33 GMT  today at 11:34 GMT  Run hook "setup-base" for "go" SDK
-     145  Done    today at 11:34 GMT  today at 11:34 GMT  Auto-connect interfaces of "system" SDK
-     146  Done    today at 11:34 GMT  today at 11:34 GMT  Auto-connect interfaces of "go" SDK
-     147  Done    today at 11:34 GMT  today at 11:34 GMT  Run hook "check-health" for "system" SDK
-     148  Done    today at 11:34 GMT  today at 11:34 GMT  Run hook "check-health" for "go" SDK
-     149  Done    today at 11:34 GMT  today at 11:34 GMT  Connect "dev/go:mod-cache" to "dev/system:mount"
-     150  Done    today at 11:34 GMT  today at 11:34 GMT  Connect "dev/go:bin" to "dev/system:mount"
-     151  Done    today at 11:34 GMT  today at 11:34 GMT  Setup "system" SDK profile
+     ...
+     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+     ...
 
      ......................................................................
      Run hook "setup-base" for "go" SDK
 
      2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical** installed
-     2024-08-25T11:34:53+00:00 INFO PATH=/home/workshop/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
 
-
-Here, the following happens:
+This displays a list of all the tasks
+which comprise launching the workshop,
+and logs for some of the tasks.
+For launch, the following happens:
 
 - The :samp:`ubuntu@22.04` base image from the definition is retrieved.
 
