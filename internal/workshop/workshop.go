@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/afero"
-
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -177,15 +175,22 @@ func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string,
 	return meta, nil
 }
 
-func (w *Workshop) metaFromFs(ctx context.Context, setup sdk.Setup) (string, error) {
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
+func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, error) {
+	username, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return "", fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	usr, env, err := osutil.UserAndEnv(username)
 	if err != nil {
 		return "", err
 	}
-	defer fs.Close()
+	userDataDir := UserDataRootDir(usr.HomeDir, env)
 
-	metapath := sdk.SdkMetaPath(setup.Name)
-	meta, err := afero.ReadFile(fs, metapath)
+	rev := LocalSdkRevision(userDataDir, w.Project.ProjectId, w.Name, setup.Name, setup.Revision)
+	metapath := filepath.Join(rev, "meta", "sdk.yaml")
+
+	meta, err := os.ReadFile(metapath)
 	return string(meta), err
 }
 
@@ -199,7 +204,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	var err error
 	var meta string
 	if setup.Revision.Local() {
-		meta, err = w.metaFromFs(ctx, setup)
+		meta, err = w.metaFromFile(ctx, setup)
 	} else {
 		meta, err = w.metaFromVolume(ctx, setup)
 	}
