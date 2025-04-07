@@ -238,7 +238,7 @@ See also
 Explanation:
 
 - :ref:`exp_projects`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 
 
 How-to guides:

@@ -148,7 +148,7 @@ See also
 Explanation:
 
 - :ref:`exp_mount_interface`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 
 
 Reference:
