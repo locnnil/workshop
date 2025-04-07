@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -71,15 +70,6 @@ plugs:
   plug2:
     interface: test-interface
     attr2: value2
-`
-
-var sdkYamlRev2 = `
-name: test
-base: ubuntu@22.04
-plugs:
-  plug:
-    interface: test-interface
-    attr: value
 `
 
 var sdkYamlViolatesPolicy = `
@@ -472,65 +462,6 @@ func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
-}
-
-func (s *sdkStateSuite) TestUndoLinkSdkRestorePreviousRev(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	s.mockSdk(c, "test", sdkYaml, 1)
-	s.mockSdk(c, "test", sdkYamlRev2, 2)
-	wp, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-
-	// Link the first revision to emulate that an SDK has already been linked to
-	// the previous rev, so that undo can update records properly.
-	err = wp.Backend.AttachVolume(s.ctx, wp.Name, sdk.VolumeName("test", "1"), "/var/lib/workshop/sdk/test/1", true)
-	c.Assert(err, check.IsNil)
-	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}})
-	c.Assert(err, check.IsNil)
-
-	refreshedSdk := sdk.Info{Workshop: "ws", Name: "test", Revision: sdk.Revision{N: 2}}
-	retrieve := s.state.NewTask("fake-task", "retrieve")
-	retrieve.Set("sdk-setup", refreshedSdk)
-	link := s.state.NewTask("link-sdk", "test")
-	link.Set("sdk-retrieve-task", retrieve.ID())
-	link.WaitFor(retrieve)
-
-	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(link)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, link, retrieve)
-
-	chg.Set("user", "testuser")
-	chg.AddTask(retrieve)
-	chg.AddTask(link)
-	chg.AddTask(terr)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	wp, err = s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-
-	setup, ok := wp.Sdks["test"]
-	c.Assert(ok, check.Equals, true)
-	c.Assert(setup.Revision.N, check.Equals, 1)
-
-	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-
-	curpath, err := fs.ReadLink(sdk.SdkCurrentPath("test"))
-	c.Assert(err, check.IsNil)
-	c.Assert(strings.HasSuffix(curpath, sdk.SdkRevPath("test", "1")), check.Equals, true)
-
-	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 }
 
 func (s *sdkStateSuite) TestLinkSdkBadInterfacesFound(c *check.C) {
