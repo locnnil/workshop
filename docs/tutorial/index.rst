@@ -31,11 +31,6 @@ If you're looking for advanced practical steps,
 see the
 :ref:`how-to guides <how_index>`.
 
-.. note::
-
-   If anything goes wrong in your tutorial journey, see this guide:
-   :ref:`how_debug_issues_workshops`.
-
 
 .. _tut_install:
 
@@ -115,66 +110,23 @@ proceed to installing |ws_markup|.
 Install
 ~~~~~~~
 
-Download the latest snap from |ws_markup|'s `Releases`_ page on GitHub
-and install it, using the options
+.. @artefact installation
+.. @artefact workshopd
+.. @artefact workshop (CLI)
+
+Install the latest snap from |ws_markup|'s `Releases`_ page,
+using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
-`--classic <https://snapcraft.io/docs/install-modes>`_,
-for example:
+`--classic <https://snapcraft.io/docs/install-modes>`_:
 
 .. code-block:: console
 
    $ sudo snap install --dangerous --classic ./workshop_0.1.13_amd64.snap
 
 
-The command installs two main components:
-
-.. @artefact installation
-.. @artefact workshopd
-.. @artefact workshop (CLI)
-.. @artefact API
-
-- The :program:`workshopd` daemon, which exposes a REST API
-
-- The :program:`workshop` CLI tool,
-  which uses this API to command |ws_markup|
-
-
-After installation, the daemon should start and stop on demand.
-Make sure it's enabled:
-
-.. code-block:: console
-
-   $ snap services workshop.workshopd
-
-     Service             Startup  Current   Notes
-     workshop.workshopd  enabled  inactive  socket-activated
-
-
-Run
-~~~
-
-Before proceeding, ensure the CLI tool works:
-
-.. @artefact workshop --help
-
-.. code-block:: console
-
-   $ workshop --help
-
-
-This should display the available commands and usage information.
-Now that |ws_markup| is operational,
-you're ready to create your first workshop.
-
-.. note::
-
-   If anything went wrong in this section, see this guide:
-   :ref:`how_troubleshoot`.
-
-
-Install shell completions
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Enable shell completion
+~~~~~~~~~~~~~~~~~~~~~~~
 
 |ws_markup| features shell completion for popular shells
 such as :program:`bash`, :program:`zsh` and :program:`fish`.
@@ -267,8 +219,8 @@ comes from the :samp:`jammy/stable` channel.
 .. tip::
 
    This tutorial relies on a number of Go samples for demonstration purposes.
-   however, this doesn't imply that |ws_markup| is focused solely on Go;
-   quite the contrary, it's envisioned as language- and framework-agnostic.
+   However, this doesn't imply that |ws_markup| is focused solely on Go;
+   quite the contrary, it's envisioned as language-neutral and framework-agnostic.
 
 
 To confirm that |ws_markup| sees the definition,
@@ -305,6 +257,13 @@ To get a workshop ready for use, you launch it:
 Now, the workshop is *Ready*;
 you can start using it to build, debug and run your code.
 
+.. note::
+
+   If issues arise now or later, see these guides:
+   :ref:`how_troubleshoot` and
+   :ref:`how_debug_issues_workshops`.
+
+
 After launching, check the run-time information
 to see what went into your workshop:
 
@@ -331,7 +290,7 @@ to see what went into your workshop:
 
 The output looks like the :ref:`definition <tut_define>`
 with extra details such as the :ref:`mounts <tut_interfaces>`;
-you can ignore these for now.
+ignore these for now.
 
 .. @artefact workshop .lock
 
@@ -628,8 +587,7 @@ This lists a mount interface plug named :samp:`dev/go:mod-cache`.
 As seen in the :command:`workshop info` output,
 it was automatically connected at :ref:`launch <tut_launch>`
 to the :samp:`dev/system:mount` slot,
-indicated by the ellipsis in the :samp:`host-source` path
-and abbreviated here as :samp:`:mount` by convention.
+indicated by the ellipsis in the :samp:`host-source` path.
 
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
@@ -817,8 +775,10 @@ remove it:
 
 This doesn't affect the files in the project directory,
 including the workshop definition,
-or any other content that was stored outside the workshop,
-e.g. via the :ref:`mount interface <tut_interfaces>`.
+or any other content that was stored outside the workshop
+(e.g. using the :ref:`mount interface <tut_interfaces>`
+with a custom :command:`workshop remount` location;
+however, the content in *default* mount locations will be deleted).
 
 .. important::
 
@@ -846,42 +806,3 @@ and have had your first taste of what it can do for you.
 - To know more about workshops in general,
   proceed to :ref:`explanation <exp_index>`
   and :ref:`reference <ref_index>` sections.
-
-
-See also
---------
-
-Explanation:
-
-- :ref:`exp_base`
-- :ref:`exp_hooks`
-- :ref:`exp_interfaces`
-- :ref:`exp_mount_interface`
-- :ref:`exp_plugs_slots`
-- :ref:`exp_projects`
-- :ref:`exp_sdks`
-- :ref:`exp_sketch_sdk`
-- :ref:`exp_system_sdk`
-- :ref:`exp_tunnel_interface`
-- :ref:`exp_workshop`
-- :ref:`exp_workshop_cli`
-- :ref:`exp_workshop_definition`
-
-
-Reference:
-
-- :ref:`ref_workshop_changes`
-- :ref:`ref_workshop_connect`
-- :ref:`ref_workshop_connections`
-- :ref:`ref_workshop_disconnect`
-- :ref:`ref_workshop_exec`
-- :ref:`ref_workshop_info`
-- :ref:`ref_workshop_launch`
-- :ref:`ref_workshop_list`
-- :ref:`ref_workshop_refresh`
-- :ref:`ref_workshop_remount`
-- :ref:`ref_workshop_remove`
-- :ref:`ref_workshop_shell`
-- :ref:`ref_workshop_start`
-- :ref:`ref_workshop_stop`
-- :ref:`ref_workshop_tasks`
