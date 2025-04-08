@@ -14,7 +14,6 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -29,11 +28,8 @@ scripts:
 
 var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
 
-func DefaultTestDevices() map[string]map[string]string {
-	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "workshop", "path": "/"},
-		"workshop.network": {"type": "nic", "network": "workshopbr0", "name": "eth0"},
-	}
+func DefaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
+	return nil, nil
 }
 
 func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
@@ -127,8 +123,6 @@ printf '%s\n' "$@"
 
 	volume := workshop.AptCacheVolumeName(wf.Name, prj.ProjectId)
 	err = bd.CreateVolume(ctx, volume)
-	c.Assert(err, check.IsNil)
-	err = bd.AttachVolume(ctx, wf.Name, volume, dirs.AptCachePath, false)
 	c.Assert(err, check.IsNil)
 
 	err = bd.StartWorkshop(ctx, "test")

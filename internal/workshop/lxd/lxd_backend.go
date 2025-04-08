@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -21,7 +20,6 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
@@ -40,7 +38,6 @@ const (
 )
 
 var (
-	defaultDevices      = createDefaultDevices
 	checkNvidiaRuntime  = checkNvidia
 	startCommandTimeout = 1 * time.Minute
 )
@@ -275,7 +272,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	if err != nil {
 		return err
 	}
-	devices := defaultDevices()
+	devices := defaultDevices(projectId, file.Name)
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
 	switch {
@@ -529,6 +526,17 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, mount works
 		return err
 	}
 
+	inst.Devices[mount.Name] = mountToLxdDisk(mount)
+
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+
+	return op.WaitContext(ctx)
+}
+
+func mountToLxdDisk(mount workshop.Mount) map[string]string {
 	device := map[string]string{
 		"type":     "disk",
 		"source":   mount.What,
@@ -538,14 +546,7 @@ func (s *Backend) AddWorkshopMount(ctx context.Context, name string, mount works
 	if mount.Type == workshop.Volume {
 		device["pool"] = storagePool
 	}
-	inst.Devices[mount.Name] = device
-
-	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
-	if err != nil {
-		return err
-	}
-
-	return op.WaitContext(ctx)
+	return device
 }
 
 func (s *Backend) RemoveWorkshopMount(ctx context.Context, name, mount string) error {
@@ -948,16 +949,38 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	}
 }
 
-func createDefaultDevices() map[string]map[string]string {
-	// configure .untrusted socket mount
-	shostpath := dirs.SocketPath + ".untrusted"
-	swspath := filepath.Join(dirs.WorkshopRunDir, filepath.Base(shostpath))
-	return map[string]map[string]string{
-		"root":                 {"type": "disk", "pool": storagePool, "path": "/"},
-		"workshop.network":     {"type": "nic", "network": networkName, "name": "eth0"},
-		"workshop.socket":      {"type": "proxy", "connect": "unix:" + shostpath, "listen": "unix:" + swspath, "bind": "instance", "mode": "0666"},
-		"workshop.workshopctl": {"type": "disk", "source": filepath.Join(dirs.ExecDir, "workshopctl"), "path": "/usr/bin/workshopctl"},
+func defaultDevices(pid, w string) map[string]map[string]string {
+	devices := map[string]map[string]string{
+		"root":             {"type": "disk", "pool": storagePool, "path": "/"},
+		"workshop.network": {"type": "nic", "network": networkName, "name": "eth0"},
 	}
+
+	mounts, proxies := workshop.DefaultDevices(pid, w)
+	for _, mount := range mounts {
+		devices[mount.Name] = mountToLxdDisk(mount)
+	}
+
+	for _, proxy := range proxies {
+		devices[proxy.Name] = proxyToLxdDevice(proxy)
+	}
+
+	return devices
+}
+
+func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
+	device := map[string]string{
+		"type":    "proxy",
+		"connect": proxy.Connect.Protocol + ":" + proxy.Connect.Address,
+		"listen":  proxy.Listen.Protocol + ":" + proxy.Listen.Address,
+		"mode":    "0666",
+	}
+	switch proxy.Direction {
+	case workshop.WorkshopToHost:
+		device["bind"] = "instance"
+	case workshop.HostToWorkshop:
+		device["bind"] = "host"
+	}
+	return device
 }
 
 func checkNvidia() (bool, error) {
@@ -1056,13 +1079,32 @@ runcmd:
 		return map[string]string{}, err
 	}
 
+	nvidiaRuntime, err := checkNvidiaRuntime()
+	if err != nil {
+		return nil, err
+	}
+
+	// nvidia.* properties must be set at launch as otherwise it requires a
+	// container restart to take effect.
+	cfgNvidiaDriverCapabilities := ""
+	cfgNvidiaRuntime := ""
+	if nvidiaRuntime {
+		cfgNvidiaDriverCapabilities = "all"
+		cfgNvidiaRuntime = "true"
+	}
+
+	// Include all options we might change, even those with default values,
+	// so that workshops can be rebuilt.
 	cfg := map[string]string{
-		"raw.idmap":                fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
-		"security.nesting":         "true",
-		"user.workshop.project-id": projectId,
-		"user.user-data":           cloudInitConfig,
-		"user.workshop.file":       string(f),
-		"user.workshop.sdks":       "{}",
+		"boot.autostart":             "false",
+		"raw.idmap":                  fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
+		"security.nesting":           "true",
+		"user.workshop.project-id":   projectId,
+		"user.user-data":             cloudInitConfig,
+		"user.workshop.file":         string(f),
+		"user.workshop.sdks":         "{}",
+		"nvidia.driver.capabilities": cfgNvidiaDriverCapabilities,
+		"nvidia.runtime":             cfgNvidiaRuntime,
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic
@@ -1070,25 +1112,7 @@ runcmd:
 		// See: https://github.com/lxc/lxc/issues/434
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
-
-	nvidiaRuntime, err := checkNvidiaRuntime()
-	if err != nil {
-		return nil, err
-	}
-
-	if nvidiaRuntime {
-		// nvidia.* properties must be set at launch as otherwise it requires a
-		// container restart to take effect.
-		cfg["nvidia.driver.capabilities"] = "all"
-		cfg["nvidia.runtime"] = "true"
-	}
 	return cfg, nil
-}
-
-func FakeDefaultDevices(f func() map[string]map[string]string) func() {
-	oldDefault := defaultDevices
-	defaultDevices = f
-	return func() { defaultDevices = oldDefault }
 }
 
 func FakeStartCommand(script string) func() {

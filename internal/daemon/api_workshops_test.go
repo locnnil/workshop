@@ -17,7 +17,6 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
@@ -1031,7 +1030,6 @@ line 1: cannot unmarshal !!seq into string`,
 
 	volume := workshop.AptCacheVolumeName("basic", wp.Project.ProjectId)
 	c.Assert(s.b.WorkshopVolumes[volume], check.Equals, true)
-	c.Assert(s.b.WorkshopVolumeMountPoints[volume], check.Equals, dirs.AptCachePath)
 
 	c.Assert(wp.Running, check.Equals, true)
 
@@ -3345,7 +3343,6 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 	s2 := apiSuiteSdks["test-sdk-2"].s
 
 	c.Assert(s.b.AttachVolumeCalls, check.DeepEquals, []fakebackend.AttachVolumeCall{
-		{Workshop: "manysdks", Name: workshop.AptCacheVolumeName("manysdks", s.project.ProjectId)},
 		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision)},
 		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision)},
 	})
@@ -3369,7 +3366,6 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	c.Assert(s.b.AttachVolumeCalls, check.DeepEquals, []fakebackend.AttachVolumeCall{
-		{Workshop: "manysdks", Name: workshop.AptCacheVolumeName("manysdks", s.project.ProjectId)},
 		{Workshop: "manysdks", Name: sdk.VolumeName(s1.Name, s1.Revision)},
 		{Workshop: "manysdks", Name: sdk.VolumeName(s2.Name, s2.Revision)},
 	})

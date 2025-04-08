@@ -69,7 +69,6 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 		"mount-project",
 		"create-apt-cache",
 		"remove-apt-cache",
-		"mount-apt-cache",
 		"remove-workshop-stash",
 		"stash-workshop",
 		"create-state-storage",

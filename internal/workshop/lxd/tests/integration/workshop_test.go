@@ -49,7 +49,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	}
 	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
+	f.restoreDevices = workshop.FakeDefaultDevices(helper.DefaultTestDevices)
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 	f.restoreLookupUsr = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil

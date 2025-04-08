@@ -11,7 +11,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
@@ -196,13 +195,9 @@ func launchWorkshop(st *state.State, file *workshop.File, project workshop.Proje
 	addTask(create)
 	create.Set("workshop-file", file)
 
-	// We're rebuilding the workshop from base, which means, the mounts will
-	// be removed too.
+	// TODO: move this after snapshots are taken; also for refresh.
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTask(mountProject)
-
-	mountAptCache := st.NewTask("mount-apt-cache", fmt.Sprintf("Mount apt cache directory %q", dirs.AptCachePath))
-	addTask(mountAptCache)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	addTask(start)
