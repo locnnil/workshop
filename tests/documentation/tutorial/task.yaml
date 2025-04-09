@@ -78,7 +78,7 @@ execute: |
   workshop_exec refresh
   workshop_exec info
   workshop_exec exec -- caddy start
-  curl localhost:8082
+  curl localhost:8082 | MATCH 'Hello, Workshop!'
 
   # sketch SDK
 
