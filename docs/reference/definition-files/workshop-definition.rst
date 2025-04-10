@@ -481,7 +481,7 @@ See also
 Explanation:
 
 - :ref:`exp_base`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 - :ref:`exp_system_sdk`
 - :ref:`exp_workshop_definition`
 

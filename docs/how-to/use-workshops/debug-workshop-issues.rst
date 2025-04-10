@@ -180,7 +180,7 @@ See also
 Explanation:
 
 - :ref:`exp_changes_tasks`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 - :ref:`exp_workshop`
 
 

@@ -33,7 +33,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 
 
 Reference:

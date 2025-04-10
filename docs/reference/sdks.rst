@@ -447,6 +447,6 @@ Explanation:
 
 - :ref:`exp_base`
 - :ref:`exp_interfaces`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 - :ref:`exp_sdk_state`
 - :ref:`exp_workshop_definition`

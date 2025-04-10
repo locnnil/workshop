@@ -11,7 +11,7 @@ This is a practical how-to guide
 that takes you on a tour
 of the essential |sdk_markup| activities.
 
-Here, you will initialise, define, pack and publish an :ref:`SDK <exp_sdk>`:
+Here, you will initialise, define, pack and publish an :ref:`SDK <exp_sdks>`:
 a set of hooks, interfaces and parts that is bundled into a single package,
 suitable for use with |sdk_markup|, the user-oriented CLI utility.
 The commands you're about to run
@@ -114,7 +114,7 @@ Initialise the SDK
 ------------------
 
 Once you have installed |sdk_markup|,
-use it to initialise, define and pack your first :ref:`SDK <exp_sdk>`.
+use it to initialise, define and pack your first :ref:`SDK <exp_sdks>`.
 Here, we'll build an SDK that installs a version of Go in the workshop.
 
 First, create a directory named :file:`go/`:

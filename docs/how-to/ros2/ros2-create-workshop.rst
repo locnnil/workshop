@@ -215,7 +215,7 @@ Explanation:
 - :ref:`exp_mount_interface`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_projects`
-- :ref:`exp_sdk`
+- :ref:`exp_sdks`
 - :ref:`exp_workshop_definition`
 
 
