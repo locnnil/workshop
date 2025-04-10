@@ -21,6 +21,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -78,9 +79,6 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 	for _, act := range actions {
 		switch act.Action {
 		case sdk.Install:
-			if act.Channel == "" {
-				continue
-			}
 			s, err := storeSdkInfo(ctx, act.Name, act.Channel)
 			if err != nil {
 				actError.errors[act.Name] = err
@@ -138,6 +136,12 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	}
 	defer fl.Close()
 
+	target := setup.Filepath()
+	if osutil.FileExists(target) {
+		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
+		return nil
+	}
+
 	info, err := storeSdkInfo(ctx, setup.Name, setup.Channel)
 	if err != nil {
 		return err
@@ -149,49 +153,46 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	}
 	defer r.Close()
 
-	target := setup.Filepath()
-	if !osutil.FileExists(target) {
-		file, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			// Remove the target as due to the error it may be corrupted.
-			if err != nil {
-				if err1 := os.Remove(target); err1 != nil {
-					logger.Noticef("SDK Store on Download: Cannot remove %q on a failed download: %v", target, err1)
-				}
-				return
-			}
-			// If the SDK was downloaded successfully, remove its previous rev if any.
-			matches, err1 := filepath.Glob(filepath.Join(filepath.Dir(target), setup.Name+"_*.sdk"))
-			if err1 != nil {
-				logger.Noticef("SDK Store on Download: Cannot cleanup previous downloads for %q: %v", setup.Name, err1)
-			}
-			for _, m := range matches {
-				if m != target {
-					if err1 = os.Remove(m); err1 != nil {
-						logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err1)
-					}
-				}
-			}
-		}()
-		defer file.Close()
+	reverter := revert.New()
+	defer reverter.Fail()
 
-		var writer io.Writer
-		if report != nil {
-			writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(info.Size)})
-		} else {
-			writer = file
+	file, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	reverter.Add(func() {
+		// Remove the target as due to the error it may be corrupted.
+		if err1 := os.Remove(target); err1 != nil {
+			logger.Noticef("SDK Store on Download: Cannot remove %q on a failed download: %v", target, err1)
 		}
+	})
 
-		if _, err = io.Copy(writer, r); err != nil {
-			return err
-		}
+	var writer io.Writer
+	if report != nil {
+		writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(info.Size)})
 	} else {
-		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
+		writer = file
 	}
 
+	if _, err = io.Copy(writer, r); err != nil {
+		return err
+	}
+
+	reverter.Success()
+	// If the SDK was downloaded successfully, remove its previous rev if any.
+	matches, err := filepath.Glob(filepath.Join(filepath.Dir(target), setup.Name+"_*.sdk"))
+	if err != nil {
+		logger.Noticef("SDK Store on Download: Cannot cleanup previous downloads for %q: %v", setup.Name, err)
+	}
+	for _, m := range matches {
+		if m == target {
+			continue
+		}
+		if err := os.Remove(m); err != nil {
+			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
+		}
+	}
 	return nil
 }
 
@@ -250,7 +251,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Name = name
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
-	sSdk.Revision = sdk.Revision{N: int(atr.Generation % 1000)}
+	sSdk.Revision = sdk.Revision{N: int(atr.Generation%1000) + 1}
 	sSdk.Size = atr.Size
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {

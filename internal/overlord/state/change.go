@@ -570,6 +570,31 @@ func (c *Change) Err() error {
 	return &changeError{errors}
 }
 
+// WaitErr returns an error value based on errors that were logged for tasks registered
+// in this change, or nil if the change is not in WaitStatus.
+func (c *Change) WaitErr() error {
+	c.state.reading()
+	if c.Status() != WaitStatus {
+		return nil
+	}
+	var errors []taskError
+	for _, tid := range c.taskIDs {
+		task := c.state.tasks[tid]
+		if task.Status() != WaitStatus {
+			continue
+		}
+		for _, msg := range task.Log() {
+			if s, ok := stripErrorMsg(msg); ok {
+				errors = append(errors, taskError{task.Summary(), s})
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return fmt.Errorf("internal inconsistency: change %q in ErrorStatus with no task errors logged", c.Kind())
+	}
+	return &changeError{errors}
+}
+
 // State returns the system State
 func (c *Change) State() *State {
 	return c.state

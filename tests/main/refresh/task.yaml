@@ -80,7 +80,9 @@ execute: |
   cat .workshop/ws-refresh-snapshots.yaml | yq '(.base) |= sub("ubuntu@22.04"; "ubuntu@24.04")' | sponge .workshop/ws-refresh-snapshots.yaml
 
   # Ensure there is no cached image so that refresh will take care of downloading it.
-  lxc image delete workshop-ubuntu@24.04-amd64 --project workshop.ubuntu
+  if ! lxc image delete workshop-ubuntu@24.04-amd64 --project workshop.ubuntu &> image.log; then
+    MATCH 'Failed fetching fingerprint' < image.log
+  fi
   workshop_exec refresh ws-refresh-snapshots
   workshop_exec info ws-refresh-snapshots | MATCH ubuntu@24.04
   workshop_exec exec ws-refresh-snapshots -- lsb_release -a | MATCH 24.04

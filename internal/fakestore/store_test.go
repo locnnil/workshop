@@ -101,7 +101,7 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 	}}
 	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
-	c.Assert(err, check.ErrorMatches, "(?s)*.test-sdk-broken: yaml: block sequence entries are not allowed in this context")
+	c.Assert(err, check.ErrorMatches, "(?s).*test-sdk-broken: yaml: block sequence entries are not allowed in this context")
 }
 
 func (s *storeSuite) TestSdkActionInstallIncompatibleBase(c *check.C) {

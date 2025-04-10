@@ -23,14 +23,14 @@ type Setup struct {
 }
 
 func (s *Setup) Filepath() string {
-	return filepath.Join(dirs.SdkDownloads, s.Filename())
+	return filepath.Join(dirs.SdkDownloads, s.filename())
 }
 
-func (s *Setup) Filename() string {
+func (s *Setup) filename() string {
 	return fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String())
 }
 
-func VolumeName(name, revision string) string {
+func VolumeName(name string, revision Revision) string {
 	return fmt.Sprintf("%s-%s", name, revision)
 }
 
@@ -55,6 +55,14 @@ const (
 
 func (t Type) String() string {
 	return string(t)
+}
+
+func IsSystem(name string) bool {
+	return name == System.String()
+}
+
+func IsSketch(name string) bool {
+	return name == Sketch
 }
 
 type Info struct {

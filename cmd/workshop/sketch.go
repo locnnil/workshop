@@ -326,7 +326,7 @@ func writeSketchSdk(sketchdir string, content []byte) error {
 		return err
 	}
 
-	if rec.Name != sdk.Sketch {
+	if !sdk.IsSketch(rec.Name) {
 		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
@@ -444,7 +444,7 @@ func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) (
 	rev := "-"
 	notes := ""
 	exists := false
-	idx := slices.IndexFunc(w.Sdks, func(s *client.Sdk) bool { return s.Name == sdk.Sketch })
+	idx := slices.IndexFunc(w.Sdks, func(s *client.Sdk) bool { return sdk.IsSketch(s.Name) })
 	if idx != -1 {
 		info := w.Sdks[idx]
 		rev = info.Revision

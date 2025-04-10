@@ -144,21 +144,18 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		for _, sk := range workshop.Sdks {
 			fmt.Fprintf(w, "  %s:\n", sk.Name)
 
-			switch sk.Name {
-			case sdk.Sketch:
+			if sdk.IsSketch(sk.Name) {
 				sk.Channel = sketchSdkChannel(project.Id, workshop.Name)
 				if sk.BuildTime.IsZero() {
 					sk.BuildTime = sk.InstallTime
 				}
-			default:
-				if sk.Channel == "" {
-					sk.Channel = "~"
-				}
+			} else if sk.Channel == "" {
+				sk.Channel = "~"
 			}
 
 			// Tracking info is always the same for the system SDK. Omit it to
 			// highlight the difference between it and a regular type SDK.
-			if sk.Name != sdk.System.String() {
+			if !sdk.IsSystem(sk.Name) {
 				fmt.Fprintf(w, "    tracking:\t%s\n", sk.Channel)
 			}
 

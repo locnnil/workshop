@@ -279,7 +279,7 @@ func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
 				t := tunnel
 				t.Plug = slave
 
-				if conn.Plug.Sdk != sdk.System.String() {
+				if !sdk.IsSystem(conn.Plug.Sdk) {
 					sk = slave.Sdk
 				}
 				info, ok := tunnels[sk]
@@ -496,7 +496,7 @@ func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopMa
 
 	if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
 		change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
-		if sk != sdk.Sketch {
+		if !sdk.IsSketch(sk) {
 			return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
 		}
 		taskset, err = mgr.RefreshMany(ctx, pid, []string{wp})

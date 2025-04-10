@@ -166,7 +166,7 @@ func AptCacheVolumeName(ws, pid string) string {
 }
 
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
-	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision.String()))
+	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
 	if err != nil {
 		return "", err
 	}
@@ -192,14 +192,6 @@ func (w *Workshop) metaFromFs(ctx context.Context, setup sdk.Setup) (string, err
 
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
-	// TODO: isLocal should rely on the SDK source and not the name of the SDK.
-	// Currently, a sketch or system SDK are both considered local and these are
-	// the only SDKs of that source. This requires rework, once an arbitrary SDK
-	// can be installed from a local source, e.g. to support workshop try.
-	isLocal := func(n string) bool {
-		return n == sdk.Sketch || sdk.IsSystem(n)
-	}
-
 	setup, ok := w.Sdks[sdkName]
 	if !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
@@ -207,7 +199,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 	var err error
 	var meta string
-	if isLocal(sdkName) {
+	if setup.Revision.Local() {
 		meta, err = w.metaFromFs(ctx, setup)
 	} else {
 		meta, err = w.metaFromVolume(ctx, setup)
@@ -239,7 +231,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 	// system and sketch SDK is an optional entry in a workshop file, so it's not an error
 	// scenario.
-	if idx == -1 && isLocal(sdkName) {
+	if idx == -1 && IsImplicitSdk(sdkName) {
 		return info, nil
 	}
 

@@ -82,9 +82,9 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision.String()), rec.Filepath())
+	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), rec.Filepath())
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision.String()))
+		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
 		return nil
 	}
 
@@ -177,7 +177,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	// Mount the SDK content at the workshop location.
 	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
 
-	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()), sdkPath, true)
+	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), sdkPath, true)
 }
 
 func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -194,7 +194,7 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.backend.DetachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision.String()))
+	return m.backend.DetachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
 }
 
 func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {

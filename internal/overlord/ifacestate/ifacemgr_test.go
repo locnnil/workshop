@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
@@ -92,7 +91,7 @@ slots:
     interface: mount
 `
 
-func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev int64) {
+func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revision) {
 	vfs := c.MkDir()
 
 	meta := filepath.Join(vfs, "meta")
@@ -104,7 +103,7 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev in
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	err = be.ImportVolume(s.ctx, sdk.VolumeName(name, strconv.FormatInt(rev, 10)), vfs)
+	err = be.ImportVolume(s.ctx, sdk.VolumeName(name, rev), vfs)
 	c.Assert(err, check.IsNil)
 }
 
@@ -132,7 +131,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	s.writeSDKMetaFile(c, wsfs, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}, systemYaml)
 
 	for _, setup := range sdks {
-		s.mockSdk(c, setup.Name, setup.yaml, int64(setup.Revision.N))
+		s.mockSdk(c, setup.Name, setup.yaml, setup.Revision)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
@@ -146,7 +145,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	s.state.Unlock()
 
 	for _, sk := range sdks {
-		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision.String()), filepath.Join(dirs.WorkshopSdksDir, sk.Name, sk.Revision.String()), true)
+		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), filepath.Join(dirs.WorkshopSdksDir, sk.Name, sk.Revision.String()), true)
 		c.Assert(err, check.IsNil)
 		err = w.LinkSdk(ctx, sk.Setup)
 		c.Assert(err, check.IsNil)
