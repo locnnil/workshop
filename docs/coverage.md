@@ -65,7 +65,7 @@
                 <td>interface</td>
                 <td>interface</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L606">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L561">[index.rst]</a></td>
                 <td><a href="how-to/craft-sdks.rst#L8">[craft-sdks.rst]</a></td>
                 <td><a href="explanation/interfaces/interfaces.rst#L8">[interfaces.rst]</a><br><a href="explanation/workshops/workshops.rst#L98">[workshops.rst]</a></td>
                 <td><a href="reference/workshops.rst#L171">[workshops.rst]</a></td>
@@ -137,7 +137,7 @@
                 <td>system SDK</td>
                 <td>interface</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L607">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L562">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/sdks/sdks.rst#L108">[sdks.rst]</a></td>
                 <td><a href="reference/definition-files/workshop-definition.rst#L153">[workshop-definition.rst]</a></td>
@@ -146,7 +146,7 @@
                 <td>tunnel interface</td>
                 <td>interface</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L690">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L639">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/tunnel-interface.rst#L6">[tunnel-interface.rst]</a></td>
                 <td><a href="reference/definition-files/workshop-definition.rst#L290">[workshop-definition.rst]</a><br><a href="reference/sdks.rst#L222">[sdks.rst]</a></td>
@@ -155,7 +155,7 @@
                 <td>project</td>
                 <td>project</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L221">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L185">[index.rst]</a></td>
                 <td><a href="how-to/ros2/ros2-create-workshop.rst#L28">[ros2-create-workshop.rst]</a><br><a href="how-to/ros2/ros2-design-sdk.rst#L85">[ros2-design-sdk.rst]</a><br><a href="how-to/use-workshops/git-workshop.rst#L70">[git-workshop.rst]</a><br><a href="how-to/use-workshops/moving-projects.rst#L6">[moving-projects.rst]</a></td>
                 <td><a href="explanation/index.rst#L14">[index.rst]</a><br><a href="explanation/workshops/changes-tasks.rst#L18">[changes-tasks.rst]</a><br><a href="explanation/workshops/projects.rst#L8">[projects.rst]</a><br><a href="explanation/workshops/workshops.rst#L6">[workshops.rst]</a></td>
                 <td><a href="reference/definition-files/workshop-definition.rst#L6">[workshop-definition.rst]</a><br><a href="reference/workshop-status.rst#L7">[workshop-status.rst]</a></td>
@@ -182,7 +182,7 @@
                 <td>sdkcraft (CLI)</td>
                 <td>sdkcraft (CLI)</td>
                 <td></td>
-                <td><a href="tutorial/index.rst#L204">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L163">[index.rst]</a></td>
                 <td><a href="how-to/craft-sdks.rst#L6">[craft-sdks.rst]</a><br><a href="how-to/ros2/ros2-design-sdk.rst#L26">[ros2-design-sdk.rst]</a></td>
                 <td><a href="explanation/sdks/data-persistence-sharing.rst#L57">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/sdks.rst#L58">[sdks.rst]</a></td>
                 <td><a href="reference/definition-files/sdk-definition.rst#L12">[sdk-definition.rst]</a><br><a href="reference/sdks.rst#L23">[sdks.rst]</a></td>
@@ -209,7 +209,7 @@
                 <td>SDK</td>
                 <td>SDK</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L205">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L164">[index.rst]</a></td>
                 <td><a href="how-to/craft-sdks.rst#L7">[craft-sdks.rst]</a><br><a href="how-to/index.rst#L44">[index.rst]</a><br><a href="how-to/ros2/index.rst#L6">[index.rst]</a><br><a href="how-to/ros2/ros2-design-sdk.rst#L6">[ros2-design-sdk.rst]</a><br><a href="how-to/use-workshops/sketch-sdk.rst#L11">[sketch-sdk.rst]</a></td>
                 <td><a href="explanation/index.rst#L36">[index.rst]</a><br><a href="explanation/interfaces/interfaces.rst#L7">[interfaces.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L22">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L6">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/hooks.rst#L8">[hooks.rst]</a><br><a href="explanation/sdks/index.rst#L6">[index.rst]</a><br><a href="explanation/sdks/parts.rst#L8">[parts.rst]</a><br><a href="explanation/sdks/sdks.rst#L6">[sdks.rst]</a><br><a href="explanation/sdks/workshopctl.rst#L8">[workshopctl.rst]</a><br><a href="explanation/workshops/workshops.rst#L97">[workshops.rst]</a></td>
                 <td><a href="reference/definition-files/index.rst#L6">[index.rst]</a><br><a href="reference/definition-files/sdk-definition.rst#L6">[sdk-definition.rst]</a><br><a href="reference/definition-files/workshop-definition.rst#L35">[workshop-definition.rst]</a><br><a href="reference/index.rst#L26">[index.rst]</a><br><a href="reference/sdks.rst#L6">[sdks.rst]</a><br><a href="reference/workshops.rst#L25">[workshops.rst]</a></td>
@@ -281,7 +281,7 @@
                 <td>SDK publisher</td>
                 <td>SDK</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L206">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L165">[index.rst]</a></td>
                 <td><a href="how-to/index.rst#L28">[index.rst]</a></td>
                 <td><a href="explanation/interfaces/interfaces.rst#L141">[interfaces.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L114">[dockerfile-vs-sdk.rst]</a><br><a href="explanation/sdks/sdks.rst#L7">[sdks.rst]</a><br><a href="explanation/sdks/workshopctl.rst#L49">[workshopctl.rst]</a></td>
                 <td></td>
@@ -317,7 +317,7 @@
                 <td>SDK Store</td>
                 <td>SDK</td>
                 <td>concept</td>
-                <td><a href="tutorial/index.rst#L207">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L166">[index.rst]</a></td>
                 <td><a href="how-to/craft-sdks.rst#L436">[craft-sdks.rst]</a><br><a href="how-to/index.rst#L29">[index.rst]</a></td>
                 <td><a href="explanation/sdks/sdks.rst#L8">[sdks.rst]</a></td>
                 <td><a href="reference/workshops.rst#L26">[workshops.rst]</a></td>
@@ -344,7 +344,7 @@
                 <td>installation</td>
                 <td>workshop (CLI)</td>
                 <td>action</td>
-                <td><a href="tutorial/index.rst#L128">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L113">[index.rst]</a></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -353,20 +353,11 @@
                 <td>workshop (CLI)</td>
                 <td>workshop (CLI)</td>
                 <td>tool</td>
-                <td><a href="tutorial/index.rst#L130">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L115">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/workshops/workshop-cli.rst#L8">[workshop-cli.rst]</a></td>
                 <td><a href="reference/cli/index.rst#L10">[index.rst]</a><br><a href="reference/cli/workshop.rst#L6">[workshop.rst]</a></td>
                 <td>SK000</td>
-            </tr><tr>
-                <td>workshop --help</td>
-                <td>workshop (CLI)</td>
-                <td>command</td>
-                <td><a href="tutorial/index.rst#L156">[index.rst]</a></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
             </tr><tr>
                 <td>workshop --project</td>
                 <td>workshop (CLI)</td>
@@ -380,7 +371,7 @@
                 <td>workshop changes</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L354">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L316">[index.rst]</a></td>
                 <td><a href="how-to/use-workshops/debug-workshop-issues.rst#L15">[debug-workshop-issues.rst]</a></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-changes.rst#L6">[workshop-changes.rst]</a></td>
@@ -389,7 +380,7 @@
                 <td>workshop connect</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L647">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L597">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/camera-interface.rst#L58">[camera-interface.rst]</a><br><a href="explanation/interfaces/desktop-interface.rst#L23">[desktop-interface.rst]</a><br><a href="explanation/interfaces/ssh-interface.rst#L57">[ssh-interface.rst]</a><br><a href="explanation/interfaces/tunnel-interface.rst#L85">[tunnel-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-connect.rst#L6">[workshop-connect.rst]</a></td>
@@ -398,7 +389,7 @@
                 <td>workshop connections</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L623">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L576">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/camera-interface.rst#L76">[camera-interface.rst]</a><br><a href="explanation/interfaces/desktop-interface.rst#L69">[desktop-interface.rst]</a><br><a href="explanation/interfaces/gpu-interface.rst#L69">[gpu-interface.rst]</a><br><a href="explanation/interfaces/interfaces.rst#L221">[interfaces.rst]</a><br><a href="explanation/interfaces/mount-interface.rst#L108">[mount-interface.rst]</a><br><a href="explanation/interfaces/ssh-interface.rst#L75">[ssh-interface.rst]</a><br><a href="explanation/interfaces/tunnel-interface.rst#L161">[tunnel-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-connections.rst#L6">[workshop-connections.rst]</a></td>
@@ -407,7 +398,7 @@
                 <td>workshop disconnect</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L648">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L598">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/camera-interface.rst#L59">[camera-interface.rst]</a><br><a href="explanation/interfaces/desktop-interface.rst#L24">[desktop-interface.rst]</a><br><a href="explanation/interfaces/mount-interface.rst#L172">[mount-interface.rst]</a><br><a href="explanation/interfaces/ssh-interface.rst#L58">[ssh-interface.rst]</a><br><a href="explanation/interfaces/tunnel-interface.rst#L86">[tunnel-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-disconnect.rst#L6">[workshop-disconnect.rst]</a></td>
@@ -416,7 +407,7 @@
                 <td>workshop exec</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L516">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L471">[index.rst]</a></td>
                 <td><a href="how-to/use-workshops/git-workshop.rst#L62">[git-workshop.rst]</a></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-exec.rst#L6">[workshop-exec.rst]</a><br><a href="reference/workshops.rst#L52">[workshops.rst]</a></td>
@@ -425,7 +416,7 @@
                 <td>workshop info</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L308">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L270">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/interfaces.rst#L189">[interfaces.rst]</a><br><a href="explanation/interfaces/mount-interface.rst#L121">[mount-interface.rst]</a><br><a href="explanation/interfaces/tunnel-interface.rst#L178">[tunnel-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-info.rst#L6">[workshop-info.rst]</a></td>
@@ -434,7 +425,7 @@
                 <td>workshop launch</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L289">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L250">[index.rst]</a></td>
                 <td><a href="how-to/ros2/ros2-create-workshop.rst#L77">[ros2-create-workshop.rst]</a><br><a href="how-to/use-workshops/debug-workshop-issues.rst#L99">[debug-workshop-issues.rst]</a><br><a href="how-to/use-workshops/git-workshop.rst#L39">[git-workshop.rst]</a><br><a href="how-to/use-workshops/moving-projects.rst#L31">[moving-projects.rst]</a></td>
                 <td><a href="explanation/interfaces/interfaces.rst#L243">[interfaces.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L262">[dockerfile-vs-sdk.rst]</a></td>
                 <td><a href="reference/cli/workshop-launch.rst#L6">[workshop-launch.rst]</a><br><a href="reference/workshops.rst#L74">[workshops.rst]</a></td>
@@ -443,7 +434,7 @@
                 <td>workshop list</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L268">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L229">[index.rst]</a></td>
                 <td><a href="how-to/use-workshops/git-workshop.rst#L169">[git-workshop.rst]</a><br><a href="how-to/use-workshops/moving-projects.rst#L44">[moving-projects.rst]</a></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-list.rst#L6">[workshop-list.rst]</a></td>
@@ -461,7 +452,7 @@
                 <td>workshop refresh</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L473">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L430">[index.rst]</a></td>
                 <td><a href="how-to/ros2/ros2-create-workshop.rst#L141">[ros2-create-workshop.rst]</a><br><a href="how-to/use-workshops/debug-workshop-issues.rst#L100">[debug-workshop-issues.rst]</a></td>
                 <td><a href="explanation/interfaces/interfaces.rst#L251">[interfaces.rst]</a><br><a href="explanation/interfaces/mount-interface.rst#L173">[mount-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-refresh.rst#L6">[workshop-refresh.rst]</a><br><a href="reference/workshops.rst#L110">[workshops.rst]</a></td>
@@ -470,7 +461,7 @@
                 <td>workshop remount</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L659">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L608">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/interfaces/mount-interface.rst#L155">[mount-interface.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L133">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/dockerfile-vs-sdk.rst#L321">[dockerfile-vs-sdk.rst]</a></td>
                 <td><a href="reference/cli/workshop-remount.rst#L6">[workshop-remount.rst]</a></td>
@@ -479,7 +470,7 @@
                 <td>workshop remove</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L818">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L769">[index.rst]</a></td>
                 <td><a href="how-to/use-workshops/git-workshop.rst#L83">[git-workshop.rst]</a><br><a href="how-to/use-workshops/moving-projects.rst#L130">[moving-projects.rst]</a></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-remove.rst#L6">[workshop-remove.rst]</a></td>
@@ -506,7 +497,7 @@
                 <td>workshop shell</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L566">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L521">[index.rst]</a></td>
                 <td><a href="how-to/ros2/ros2-create-workshop.rst#L100">[ros2-create-workshop.rst]</a><br><a href="how-to/ros2/ros2-design-sdk.rst#L258">[ros2-design-sdk.rst]</a><br><a href="how-to/use-workshops/debug-workshop-issues.rst#L122">[debug-workshop-issues.rst]</a></td>
                 <td><a href="explanation/interfaces/camera-interface.rst#L89">[camera-interface.rst]</a><br><a href="explanation/interfaces/desktop-interface.rst#L82">[desktop-interface.rst]</a><br><a href="explanation/interfaces/gpu-interface.rst#L82">[gpu-interface.rst]</a></td>
                 <td><a href="reference/cli/workshop-shell.rst#L6">[workshop-shell.rst]</a><br><a href="reference/workshops.rst#L54">[workshops.rst]</a></td>
@@ -533,7 +524,7 @@
                 <td>workshop start</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L422">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L383">[index.rst]</a></td>
                 <td></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-start.rst#L6">[workshop-start.rst]</a></td>
@@ -542,7 +533,7 @@
                 <td>workshop stop</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L412">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L373">[index.rst]</a></td>
                 <td></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-stop.rst#L6">[workshop-stop.rst]</a></td>
@@ -551,7 +542,7 @@
                 <td>workshop tasks</td>
                 <td>workshop (CLI)</td>
                 <td>command</td>
-                <td><a href="tutorial/index.rst#L343">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L305">[index.rst]</a></td>
                 <td><a href="how-to/use-workshops/debug-workshop-issues.rst#L16">[debug-workshop-issues.rst]</a></td>
                 <td></td>
                 <td><a href="reference/cli/workshop-tasks.rst#L6">[workshop-tasks.rst]</a></td>
@@ -578,7 +569,7 @@
                 <td>workshop .lock</td>
                 <td>workshop (container)</td>
                 <td>file</td>
-                <td><a href="tutorial/index.rst#L333">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L295">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/workshops/projects.rst#L11">[projects.rst]</a></td>
                 <td></td>
@@ -596,7 +587,7 @@
                 <td>workshop definition</td>
                 <td>workshop (container)</td>
                 <td>file</td>
-                <td><a href="tutorial/index.rst#L237">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L199">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/index.rst#L16">[index.rst]</a><br><a href="explanation/workshops/projects.rst#L10">[projects.rst]</a><br><a href="explanation/workshops/workshops.rst#L75">[workshops.rst]</a></td>
                 <td></td>
@@ -647,19 +638,10 @@
                 <td><a href="reference/cli/index.rst#L11">[index.rst]</a><br><a href="reference/cli/workshopctl.rst#L6">[workshopctl.rst]</a><br><a href="reference/sdks.rst#L321">[sdks.rst]</a></td>
                 <td>SK023</td>
             </tr><tr>
-                <td>API</td>
-                <td>workshopd</td>
-                <td>endpoint</td>
-                <td><a href="tutorial/index.rst#L131">[index.rst]</a></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>SK009<br>SK013</td>
-            </tr><tr>
                 <td>workshopd</td>
                 <td>workshopd</td>
                 <td>daemon</td>
-                <td><a href="tutorial/index.rst#L129">[index.rst]</a></td>
+                <td><a href="tutorial/index.rst#L114">[index.rst]</a></td>
                 <td></td>
                 <td><a href="explanation/sdks/workshopctl.rst#L6">[workshopctl.rst]</a><br><a href="explanation/workshops/workshop-cli.rst#L9">[workshop-cli.rst]</a></td>
                 <td><a href="reference/workshops.rst#L13">[workshops.rst]</a></td>
