@@ -33,11 +33,6 @@ After the SDKs are installed, their :samp:`setup-base` hooks run
 in the order the SDK are listed;
 this serves to customise the workshop and prepare the SDKs for use.
 
-The host user is mapped to the default workshop user
-with :samp:`uid=1000` and :samp:`gid=1000`,
-named :samp:`workshop` inside the workshop container,
-so files and permissions align with the same person on the host.
-
 The host user running |ws_markup| is mapped to the default workshop user,
 named :samp:`workshop` in the container,
 with :samp:`uid=1000` and :samp:`gid=1000`.
