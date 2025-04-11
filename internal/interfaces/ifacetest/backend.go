@@ -37,9 +37,9 @@ type TestSecurityBackend struct {
 	RemoveCalls []string
 	// SetupCallback is an callback that is optionally called in Setup
 	SetupCallback func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error
-	setupLock     sync.Mutex
 	// RemoveCallback is a callback that is optionally called in Remove
 	RemoveCallback func(sdkName string) error
+	lock           sync.Mutex
 	// SandboxFeaturesCallback is a callback that is optionally called in SandboxFeatures
 	SandboxFeaturesCallback func() []string
 }
@@ -62,8 +62,8 @@ func (b *TestSecurityBackend) Name() interfaces.SecuritySystem {
 
 // Setup records information about the call and calls the setup callback if one is defined.
 func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
-	b.setupLock.Lock()
-	defer b.setupLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkInfo: sdkInfo})
 	if b.SetupCallback == nil {
@@ -74,6 +74,9 @@ func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo sdk.Ref, re
 
 // Remove records information about the call and calls the remove callback if one is defined
 func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName string) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	b.RemoveCalls = append(b.RemoveCalls, sdkName)
 	if b.RemoveCallback == nil {
 		return nil
