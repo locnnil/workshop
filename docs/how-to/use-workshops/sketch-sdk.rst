@@ -203,7 +203,8 @@ to revert your workshop to its previous state:
 
 .. important::
 
-   Running :command:`workshop sketch-sdk` after stashing overwrites the stash.
+   Running :command:`workshop sketch-sdk --stash` overwrites the existing stash,
+   if any.
    Be cautious to avoid losing your changes.
 
 

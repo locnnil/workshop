@@ -158,7 +158,7 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
 
    name: go
    base: ubuntu@24.04
-   version: "0.1"
+   version: '0.1'
    summary: Go SDK
    description: |
      This is my Go SDK description.
@@ -166,13 +166,17 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
    platforms:
      amd64:
 
+   parts:
+     my-part:
+       plugin: nil
+
 
 .. _tut_parts:
 
 Define parts
 ------------
 
-|project| leverages the :ref:`parts mechanism <exp_sdk_parts>`
+|sdk_markup| leverages the :ref:`parts mechanism <exp_sdk_parts>`
 to obtain data from different sources, process it in various ways
 and prepare an SDK package for publishing.
 
@@ -215,24 +219,28 @@ so that the files remain on the host.
 Open :file:`sdkcraft.yaml` again
 and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
-   .. code-block:: yaml
-      :caption: sdkcraft.yaml
-      :emphasize-lines: 11-14
+.. code-block:: yaml
+   :caption: sdkcraft.yaml
+   :emphasize-lines: 15-18
 
-      name: go
-      base: ubuntu@24.04
-      version: "0.1"
-      summary: Go SDK
-      description: |
-        This is my Go SDK description.
-      license: GPL-3.0
-      platforms:
-        amd64:
+   name: go
+   base: ubuntu@24.04
+   version: '0.1'
+   summary: Go SDK
+   description: |
+     This is my Go SDK description.
+   license: GPL-3.0
+   platforms:
+     amd64:
 
-      plugs:
-        mod-cache:
-          interface: mount
-          workshop-target: /home/workshop/go/pkg/mod
+   parts:
+     my-part:
+       plugin: nil
+
+   plugs:
+     mod-cache:
+       interface: mount
+       workshop-target: /home/workshop/go/pkg/mod
 
 
 Now, when a workshop using this SDK will be started,
@@ -375,17 +383,6 @@ Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
 
 
-Make the hooks executable
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Make all hooks executable so that |ws_markup| can use them later:
-
-.. code-block:: console
-
-   $ cd ..  # back to go/
-   $ chmod +x hooks/*
-
-
 .. _tut_build_sdk:
 
 Build and pack
@@ -454,7 +451,7 @@ Use the SDK
 The resulting SDK can be accessed by |ws_markup| as follows:
 
 .. code-block:: yaml
-   :caption: .workshop.dev.yaml
+   :caption: workshop.yaml
    :emphasize-lines: 2,4,5
 
    name: dev
@@ -469,9 +466,11 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 .. note::
 
    Currently, you can't use unpublished SDKs in a workshop.
+   However, the :ref:`sketch SDK <how_sketch>` provides
+   a subset of |sdk_markup|'s functionality.
 
 
-This was the last step of the tutorial;
+This was the last step of the guide;
 you are now familiar with the basic operations |sdk_markup| provides
 and have had your first taste of what it can do for you.
 

@@ -47,13 +47,8 @@ which separates workshops that belong to different users
 and isolates them from each other and the host system.
 
 By design, all SDKs in a workshop can access any data inside it,
-but have limited capabilities on the host.
-To achieve this, LXD is used to add a level of confinement:
-everything |ws_markup| users do ends up in a `non-privileged container
-<https://documentation.ubuntu.com/server/how-to/containers/lxd-containers/#uid-mappings-and-privileged-containers>`_
-within a dedicated `project <https://documentation.ubuntu.com/lxd/en/latest/explanation/projects/>`_,
-which separates workshops that belong to different users
-and isolates them from each other and the host system.
+but have limited capabilities on the host,
+due to the confinement of the workshop.
 
 
 Interfaces

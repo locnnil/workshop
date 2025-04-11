@@ -92,8 +92,9 @@ Our SDKs are structured using :ref:`parts <exp_sdk_parts>`;
 their expressiveness makes them more diverse and semantically rich,
 allowing the layout of an SDK to be formalised in a modular way.
 If necessary, the layered approach
-can be mimicked using :ref:`SDK hooks <exp_sdk_hooks>`,
-although |ws_markup| and |sdk_markup| don't yet support layering.
+can be mimicked using :ref:`SDK hooks <exp_sdk_hooks>`.
+|ws_markup| uses ZFS snapshots
+to cache the results of each :samp:`setup-base` hook.
 
 
 Build commands
@@ -177,7 +178,7 @@ In turn, the CLI subcommands can be mapped like this:
      - :command:`sdkcraft build`, :command:`sdkcraft pack`
 
    * - :command:`docker exec`
-     - :command:`workshop exec`, :command:`workshop shell`
+     - :command:`workshop exec`, :command:`workshop shell`, :command:`workshop run`
 
    * - :command:`docker images`, :command:`docker ps`
      - :command:`workshop info`, :command:`workshop list`
@@ -189,7 +190,7 @@ In turn, the CLI subcommands can be mapped like this:
      - :command:`workshop remove`
 
    * - :command:`docker run`
-     - :command:`workshop launch`
+     - :command:`workshop launch`, :command:`workshop refresh`
 
    * - :command:`docker run --mount`, :command:`docker volume`
      - :command:`workshop remount`
