@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed gendocs/cli.rst gendocs/command.rst
+//go:embed doc-templates/*
 var templates embed.FS
 
 type CmdDocs struct {
@@ -48,11 +48,11 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		log.Fatalf("failed to create docs directory: %v", err)
 	}
 
-	indexTemplate, err := templates.ReadFile("gendocs/cli.rst")
+	indexTemplate, err := templates.ReadFile("doc-templates/cli.rst")
 	if err != nil {
 		return err
 	}
-	singleCommandTemplate, err := templates.ReadFile("gendocs/command.rst")
+	singleCommandTemplate, err := templates.ReadFile("doc-templates/command.rst")
 	if err != nil {
 		return err
 	}
