@@ -109,7 +109,7 @@ instead of reverting the workshop to its previous state,
 
    $ workshop refresh --wait-on-error
 
-     YYYY-MM-DDT00:00:00 ERROR command exit code 1
+     2023-07-24T12:22:42+12:00 ERROR command exit code 1
      error: cannot refresh; fix the errors reported,
      then run "workshop refresh --continue blank".
      To abort and revert, run "workshop refresh --abort blank"

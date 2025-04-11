@@ -172,7 +172,7 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
 Define parts
 ------------
 
-|project| leverages the :ref:`parts mechanism <exp_sdk_parts>`
+|sdk_markup| leverages the :ref:`parts mechanism <exp_sdk_parts>`
 to obtain data from different sources, process it in various ways
 and prepare an SDK package for publishing.
 
