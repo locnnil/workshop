@@ -1445,6 +1445,9 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 	d.Overlord().Loop()
 	defer d.Overlord().Stop()
 
+	// Prevent the exec task from finishing before connect.
+	s.d.Overlord().TaskRunner().AddBlocked(func(t *state.Task, running []*state.Task) bool { return t.Kind() == "exec" })
+
 	action := &client.InterfaceAction{
 		Action: "connect",
 		Plugs:  []client.Plug{{ProjectId: "b8639dea", Workshop: "consumer-ws", Sdk: "consumer", Name: "plug"}},
@@ -1458,7 +1461,6 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 	chg.AddTask(tsk)
 	tsk.Set("workshop", "producer-ws")
 	chg.Set("project-id", "b8639dea")
-	s.d.overlord.TaskRunner().AddBlocked(func(t *state.Task, running []*state.Task) bool { return t.ID() == tsk.ID() })
 	st.Unlock()
 
 	text, err := json.Marshal(action)

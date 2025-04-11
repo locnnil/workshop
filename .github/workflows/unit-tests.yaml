@@ -15,9 +15,6 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Check for races
-        run: go test -race ./...
-
       - name: Test
         run: mkdir -p ${{ github.workspace }}.cover/unit/cover && go test -cover ./... -args -test.gocoverdir=${{ github.workspace }}.cover/unit/cover
 
@@ -27,3 +24,15 @@ jobs:
         with:
           name: code-coverage-unit
           path: ${{ github.workspace }}.cover/
+  race:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Check for races
+        run: go test -race ./...
