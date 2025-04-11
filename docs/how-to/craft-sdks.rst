@@ -375,17 +375,6 @@ Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
 
 
-Make the hooks executable
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Make all hooks executable so that |ws_markup| can use them later:
-
-.. code-block:: console
-
-   $ cd ..  # back to go/
-   $ chmod +x hooks/*
-
-
 .. _tut_build_sdk:
 
 Build and pack
@@ -454,7 +443,7 @@ Use the SDK
 The resulting SDK can be accessed by |ws_markup| as follows:
 
 .. code-block:: yaml
-   :caption: .workshop.dev.yaml
+   :caption: workshop.yaml
    :emphasize-lines: 2,4,5
 
    name: dev
@@ -469,9 +458,11 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 .. note::
 
    Currently, you can't use unpublished SDKs in a workshop.
+   However, the :ref:`sketch SDK <how_sketch>` provides
+   a subset of |sdk_markup|'s functionality.
 
 
-This was the last step of the tutorial;
+This was the last step of the guide;
 you are now familiar with the basic operations |sdk_markup| provides
 and have had your first taste of what it can do for you.
 

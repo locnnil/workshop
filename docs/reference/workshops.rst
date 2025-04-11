@@ -81,11 +81,12 @@ At the container launch, |ws_markup| does the following:
   if they aren't already cached locally.
 
 - Spins up the container with mapped user and group IDs,
-  configures basic devices like disk and networking,
-  and sets up interface plugs and slots defined by the workshop and its SDKs
-  for extra devices and capabilities.
+  configures basic devices like the root disk and network bridge.
 
 - Installs the SDKs, then runs their setup hooks in the container.
+
+- Sets up interface plugs and slots defined by the workshop and its SDKs
+  for extra devices and capabilities.
 
 - Maps the project directory on the host to :file:`/project` in the container;
   this allows to transparently work on the host-based files
