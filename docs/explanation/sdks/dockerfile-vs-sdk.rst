@@ -92,8 +92,9 @@ Our SDKs are structured using :ref:`parts <exp_sdk_parts>`;
 their expressiveness makes them more diverse and semantically rich,
 allowing the layout of an SDK to be formalised in a modular way.
 If necessary, the layered approach
-can be mimicked using :ref:`SDK hooks <exp_sdk_hooks>`,
-although |ws_markup| and |sdk_markup| don't yet support layering.
+can be mimicked using :ref:`SDK hooks <exp_sdk_hooks>`.
+|ws_markup| uses ZFS snapshots
+to cache the results of each :samp:`setup-base` hook.
 
 
 Build commands
