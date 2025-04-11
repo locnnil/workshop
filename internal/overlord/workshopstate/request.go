@@ -666,7 +666,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
 
-	checkHealth := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), 0, hookstate.CheckHealth)
+	checkHealth := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	length := len(refresh.Tasks())
