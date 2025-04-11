@@ -88,10 +88,7 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 
 
 To separate the 'exec' subcommand from the command itself,
-use shell syntax such as *--*:
-
-  $ workshop exec nimble -- echo -n foo bar
-
+use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted.
 
 Notes:
@@ -141,10 +138,7 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 
 
 To separate the 'run' subcommand from the script and its arguments,
-use shell syntax such as *--*:
-
-  $ workshop run nimble -- test --verbose
-
+use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted
 and the script takes one or more arguments.
 

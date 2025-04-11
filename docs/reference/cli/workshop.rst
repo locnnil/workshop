@@ -14,7 +14,7 @@ and also has a number of global flags:
    Print the help message for the command.
 
 
--p, --project `path`
+-p, --project
 
    Specify the project's directory path.
 
