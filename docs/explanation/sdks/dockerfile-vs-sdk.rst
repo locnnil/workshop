@@ -178,7 +178,7 @@ In turn, the CLI subcommands can be mapped like this:
      - :command:`sdkcraft build`, :command:`sdkcraft pack`
 
    * - :command:`docker exec`
-     - :command:`workshop exec`, :command:`workshop shell`
+     - :command:`workshop exec`, :command:`workshop shell`, :command:`workshop run`
 
    * - :command:`docker images`, :command:`docker ps`
      - :command:`workshop info`, :command:`workshop list`
@@ -190,7 +190,7 @@ In turn, the CLI subcommands can be mapped like this:
      - :command:`workshop remove`
 
    * - :command:`docker run`
-     - :command:`workshop launch`
+     - :command:`workshop launch`, :command:`workshop refresh`
 
    * - :command:`docker run --mount`, :command:`docker volume`
      - :command:`workshop remount`
