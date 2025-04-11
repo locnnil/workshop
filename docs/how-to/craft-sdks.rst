@@ -158,13 +158,17 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
 
    name: go
    base: ubuntu@24.04
-   version: "0.1"
+   version: '0.1'
    summary: Go SDK
    description: |
      This is my Go SDK description.
    license: GPL-3.0
    platforms:
      amd64:
+
+   parts:
+     my-part:
+       plugin: nil
 
 
 .. _tut_parts:
@@ -215,24 +219,28 @@ so that the files remain on the host.
 Open :file:`sdkcraft.yaml` again
 and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
-   .. code-block:: yaml
-      :caption: sdkcraft.yaml
-      :emphasize-lines: 11-14
+.. code-block:: yaml
+   :caption: sdkcraft.yaml
+   :emphasize-lines: 15-18
 
-      name: go
-      base: ubuntu@24.04
-      version: "0.1"
-      summary: Go SDK
-      description: |
-        This is my Go SDK description.
-      license: GPL-3.0
-      platforms:
-        amd64:
+   name: go
+   base: ubuntu@24.04
+   version: '0.1'
+   summary: Go SDK
+   description: |
+     This is my Go SDK description.
+   license: GPL-3.0
+   platforms:
+     amd64:
 
-      plugs:
-        mod-cache:
-          interface: mount
-          workshop-target: /home/workshop/go/pkg/mod
+   parts:
+     my-part:
+       plugin: nil
+
+   plugs:
+     mod-cache:
+       interface: mount
+       workshop-target: /home/workshop/go/pkg/mod
 
 
 Now, when a workshop using this SDK will be started,
