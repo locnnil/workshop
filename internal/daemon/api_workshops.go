@@ -143,7 +143,7 @@ func workshopToInfo(w *workshop.Workshop, health healthstate.HealthState) *Works
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
 			Channel:     sk.Channel,
-			Source:      sk.Source,
+			Source:      workshop.ExpandSdkSource(sk.Source, w.Project.Path),
 			Revision:    sk.Revision.String(),
 			InstallTime: sk.InstallTime,
 			Health:      healthInfo,
@@ -191,7 +191,7 @@ func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health health
 			Name:        sk.Name,
 			Version:     sk.Version,
 			Channel:     sk.Channel,
-			Source:      sk.Source,
+			Source:      workshop.ExpandSdkSource(sk.Source, w.Project.Path),
 			Revision:    sk.Revision.String(),
 			BuildTime:   sk.BuildTime,
 			InstallTime: w.Sdks[sk.Name].InstallTime,

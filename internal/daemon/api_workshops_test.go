@@ -43,8 +43,7 @@ base: ubuntu@22.04
 sdks:
   - name: test-sdk
     channel: latest/stable
-  - name: test-sdk-2
-    channel: latest/stable
+  - name: project-test-sdk-2
 `
 
 	scripts = `name: scripts
@@ -120,6 +119,13 @@ sdks:
         workshop-target: /opt
   - name: test-sdk-2
     channel: latest/stable
+`
+
+	manysdks_project = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: project-test-sdk
+  - name: project-test-sdk-2
 `
 
 	manysdks_newbase = `name: manysdks
@@ -928,7 +934,7 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 	if sdk.IsSystem(setup.Name) {
 		return os.CopyFS(sdkdir, system.SystemSdkFs)
 	}
-	return mockSdkVolume(sdkdir, apiSuiteSdks[setup.Name].meta)
+	return mockSdk(sdkdir, apiSuiteSdks[setup.Name].meta)
 }
 
 func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
@@ -945,7 +951,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 	return result, nil
 }
 
-func mockSdkVolume(sdkdir string, metayaml string) error {
+func mockSdk(sdkdir string, meta string) error {
 	metadir := filepath.Join(sdkdir, "meta")
 	if err := os.MkdirAll(metadir, 0755); err != nil {
 		return err
@@ -956,7 +962,7 @@ func mockSdkVolume(sdkdir string, metayaml string) error {
 		return err
 	}
 	defer file.Close()
-	if _, err = file.Write([]byte(metayaml)); err != nil {
+	if _, err = file.Write([]byte(meta)); err != nil {
 		return err
 	}
 
@@ -964,12 +970,15 @@ func mockSdkVolume(sdkdir string, metayaml string) error {
 	return os.MkdirAll(hooksdir, 0755)
 }
 
+func (s *apiSuite) mockProjectSdk(c *check.C, name string, meta string) {
+	sdkdir := workshop.ProjectSdkPath(s.project.Path, name)
+	c.Assert(mockSdk(sdkdir, meta), check.IsNil)
+}
+
 func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
-	sdkpath := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
-	metadir := filepath.Join(sdkpath, "meta")
-	c.Assert(os.MkdirAll(metadir, 0755), check.IsNil)
-	c.Assert(os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644), check.IsNil)
+	sdkdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
+	c.Assert(mockSdk(sdkdir, meta), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
@@ -1118,6 +1127,44 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
+}
+
+func (s *apiSuite) TestLaunchWorkshopNoProjectSdk(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
+	s.createWFile(c, "manysdks", manysdks_project)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+
+	message := fmt.Sprintf(`cannot launch "manysdks": stat %s/.workshop/test-sdk: no such file or directory`, s.project.Path)
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: message,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	_, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+
+	repo := s.d.overlord.InterfaceManager().Repository()
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
+
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "project-test-sdk"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "project-test-sdk"), check.HasLen, 0)
+
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "project-test-sdk-2"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "project-test-sdk-2"), check.HasLen, 0)
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
@@ -1681,6 +1728,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system"})
 
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)
 
 	requests = []*bytes.Buffer{
@@ -1703,20 +1751,20 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/basic/test-sdk:data b8639dea/basic/system:mount",
-			"b8639dea/basic/test-sdk-2:photos b8639dea/basic/system:mount",
-			"b8639dea/basic/test-sdk-2:gpu b8639dea/basic/system:gpu",
+			"b8639dea/basic/project-test-sdk-2:photos b8639dea/basic/system:mount",
+			"b8639dea/basic/project-test-sdk-2:gpu b8639dea/basic/system:gpu",
 		},
 		plugs: []string{
 			"test-sdk:data",
-			"test-sdk-2:photos",
-			"test-sdk-2:gpu",
+			"project-test-sdk-2:photos",
+			"project-test-sdk-2:gpu",
 		},
 		slots: []string{
-			"test-sdk-2:data-slot",
+			"project-test-sdk-2:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
@@ -1730,7 +1778,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
 		"test-sdk",
-		"test-sdk-2",
+		"project-test-sdk-2",
 	})
 
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic_refreshed})
@@ -2052,6 +2100,115 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+}
+
+func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.mockProjectSdk(c, "test-sdk", testsdk)
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
+	s.createWFile(c, "manysdks", manysdks_project)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "project-test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/project-test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/project-test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/project-test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"project-test-sdk:data",
+			"project-test-sdk-2:photos",
+			"project-test-sdk-2:gpu",
+		},
+		slots: []string{
+			"project-test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+	s.ensureWorskhops(c, want)
+
+	c.Assert(os.RemoveAll(workshop.ProjectSdkPath(s.project.Path, "test-sdk")), check.IsNil)
+	s.mockProjectSdk(c, "test-sdk", testsdk_r2)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want = []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "project-test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-2), InstallTime: &s.installTime},
+			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/project-test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/project-test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"project-test-sdk:ssh-agent",
+			"project-test-sdk:desktop",
+			"project-test-sdk-2:photos",
+			"project-test-sdk-2:gpu",
+		},
+		slots: []string{
+			"project-test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+	s.ensureWorskhops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"project-test-sdk",
+		"project-test-sdk-2",
+		"project-test-sdk",
+		"project-test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_project})
 }
 
 func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
@@ -2590,40 +2747,41 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 	s.d.Overlord().Loop()
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
-	s.createWFile(c, "manysdks", manysdks)
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
+	s.createWFile(c, "basic", basic_refreshed)
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
 	}
 	expected := []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Summary: `Launch "basic" workshop`,
 		},
 	}
 	s.runActionTest(c, requests, expected)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh"}`),
 	}
 	expected = []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks" workshop`,
+			Summary: `Refresh "basic" workshop`,
 		},
 	}
 
-	s.createWFile(c, "manysdks", manysdks_allremoved)
+	s.createWFile(c, "basic", basic)
 
 	s.runActionTest(c, requests, expected)
 
 	want := []expectedWorkshop{{
-		name: "manysdks",
+		name: "basic",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
@@ -2639,13 +2797,13 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 
 	s.ensureWorskhops(c, want)
 
-	s.checkSnapshotCalls(c, "manysdks", []string{
+	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
 		"test-sdk",
-		"test-sdk-2",
+		"project-test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_allremoved})
+	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})
 }
 
 func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
@@ -2790,6 +2948,7 @@ func (s *apiSuite) TestRefreshContinue(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)
 
 	requests = []*bytes.Buffer{
@@ -2854,6 +3013,7 @@ func (s *apiSuite) TestRefreshAbort(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)
 
 	requests = []*bytes.Buffer{
@@ -3262,6 +3422,7 @@ base: ubuntu@22.04
 
 	s.ensureWorskhops(c, want)
 
+	c.Assert(os.RemoveAll(sketchdir), check.IsNil)
 	s.mockSketchSdk(c, "manysdks", `name: sketch
 base: ubuntu@22.04
 plugs:

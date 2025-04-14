@@ -1,0 +1,66 @@
+summary: Check workshop sketch-sdk
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch workshop with project-defined SDKs"
+  cd project
+  workshop_exec launch
+  workshop_exec exec -- test -d /one/two/three
+
+  workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^tunnel.+\-.+dev/project-two:http.+\-$"
+  workshop_exec connections dev | MATCH "^desktop.+dev/project-three:desktop.+\-.+\-$"
+
+  echo "Move project-defined SDKs"
+  mv .workshop/{one,two,three} ./
+  workshop_exec exec -- test -d /one/two/three
+  workshop_exec stop
+  workshop_exec start
+  mv one two three .workshop/
+
+  echo "Move entire project"
+  cd ..
+  mv project moved
+  cd moved
+  workshop_exec exec -- test -d /one/two/three
+
+  workshop_exec info | grep -v notes | yq '.sdks["project-one"].tracking' | MATCH "^$PWD/\\.workshop/one\$"
+  workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
+  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["project-three"].tracking' | MATCH "^$PWD/\\.workshop/three\$"
+  workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
+
+  # TODO: don't move back, to provide coverage for refresh (currently broken due to /project mount)
+  cd ..
+  mv moved project
+  cd project
+
+  echo "Break second SDK"
+  echo false >> .workshop/two/sdk/hooks/setup-base
+  ! workshop_exec refresh
+  workshop_exec exec -- test -d /one/two/three
+
+  workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
+  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
+
+  echo "Fix second SDK"
+  sed 's@false@mkdir /two@' -i .workshop/two/sdk/hooks/setup-base
+  workshop_exec refresh
+  workshop_exec exec -- test -d /one/two/three
+  workshop_exec exec -- test -d /two
+
+  workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x3\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
+
+  echo "Add a new plug"
+  sed 's@ssh-agent@camera@' -i .workshop/one/meta/sdk.yaml
+  workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | NOMATCH "^camera.+dev/project-one:camera.+\-.+\-$"
+  workshop_exec refresh
+  workshop_exec connections dev | NOMATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^camera.+dev/project-one:camera.+\-.+\-$"

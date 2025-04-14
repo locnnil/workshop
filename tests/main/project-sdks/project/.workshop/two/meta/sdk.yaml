@@ -1,0 +1,6 @@
+name: two
+
+slots:
+  http:
+    interface: tunnel
+    endpoint: 8888

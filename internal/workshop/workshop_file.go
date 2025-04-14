@@ -36,6 +36,17 @@ func Filepath(project, name string) string {
 	return filepath.Join(project, Directory, filename(name))
 }
 
+func ProjectSdkPath(project, name string) string {
+	return filepath.Join(project, Directory, name)
+}
+
+func ExpandSdkSource(source, project string) string {
+	if strings.HasPrefix(source, "$PROJECT/") {
+		source = strings.Replace(source, "$PROJECT", project, 1)
+	}
+	return source
+}
+
 type Plug struct {
 	Bind       *PlugRef               `yaml:"bind,omitempty"`
 	Attributes map[string]interface{} `yaml:",inline"`
@@ -309,4 +320,10 @@ func validateScripts(wfile *File) error {
 // regardless of whether it appears in the workshop file.
 func IsImplicitSdk(name string) bool {
 	return sdk.IsSystem(name) || sdk.IsSketch(name)
+}
+
+// IsProjectSdk checks whether the given SDK is defined
+// in the project directory.
+func IsProjectSdk(name string) bool {
+	return strings.HasPrefix(name, "project-")
 }
