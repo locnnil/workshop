@@ -1,0 +1,74 @@
+package system_test
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"os"
+	"testing"
+
+	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
+	"github.com/canonical/workshop/internal/testutil"
+)
+
+type systemSdk struct {
+	oldRoot string
+}
+
+var _ = check.Suite(&systemSdk{})
+
+func Test(t *testing.T) { check.TestingT(t) }
+
+func (f *systemSdk) SetUpSuite(c *check.C) {
+	f.oldRoot = dirs.BaseDir
+	dirs.SetRootDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+}
+
+func (f *systemSdk) TearDownSuite(c *check.C) {
+	dirs.SetRootDir(f.oldRoot)
+}
+
+// Update this hash with new SDK revision numbers.
+const systemSdkHash = "8836e6d5a7a5fd6d16e9b74028d572518002105251af0f17e4bcd50870ea7cf1"
+
+func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
+	done, total := 0, 0
+	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
+		done = d
+		total = t
+	}}
+	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	c.Assert(system.RetrieveSystemSdk(setup, report), check.IsNil)
+	c.Check(done, testutil.IntGreaterThan, 0)
+	c.Check(total, testutil.IntGreaterThan, 0)
+	c.Check(done, check.Equals, total)
+
+	r, err := os.Open(setup.Filepath())
+	c.Assert(err, check.IsNil)
+	defer r.Close()
+
+	w := sha256.New()
+	_, err = io.Copy(w, r)
+	c.Assert(err, check.IsNil)
+
+	hash := hex.EncodeToString(w.Sum(nil))
+	c.Check(hash, check.Equals, systemSdkHash, check.Commentf("system SDK revision needs updating"))
+	c.Check(system.SystemSdkRevision, check.Equals, sdk.R(1))
+}
+
+func (s *systemSdk) TestRetrieveSystemSdkWrongRevision(c *check.C) {
+	setup := sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(system.SystemSdkRevision.N - 1)}
+	err := system.RetrieveSystemSdk(setup, nil)
+	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
+
+	setup.Revision.N += 2
+	err = system.RetrieveSystemSdk(setup, nil)
+	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
+}

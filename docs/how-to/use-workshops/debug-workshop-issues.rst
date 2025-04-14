@@ -48,7 +48,7 @@ run :command:`workshop tasks` without arguments:
 
    $ workshop tasks
 
-     ID    Status  Spawn                Ready                Summary
+     ID    Status  Spawn           Ready           Summary
      ...
 
 
@@ -60,9 +60,9 @@ by listing all *changes* in the workshop to find the one that failed:
 
    $ workshop changes
 
-     ID  Status  Spawn                Ready                Summary
+     ID  Status  Spawn           Ready           Summary
      ...
-     81  Error   today at 12:20       today at 12:23       Refresh workshops "dev-volatile"
+     81  Error   today at 12:20  today at 12:21  Refresh workshops "dev-volatile"
 
 
 When you have found the problematic change,
@@ -73,22 +73,40 @@ this time supplying the change ID as the argument:
 
    $ workshop tasks 81
 
-     ID    Status  Spawn                Ready                Summary
-     ...
-     1392  Error   today at 12:17       today at 12:18       Run hook "setup-base" for "go" SDK
+     ID    Status  Spawn           Ready           Summary
+     1390  Undone  today at 12:20  today at 12:21  Create SDK state storage
+     1391  Done    today at 12:20  today at 12:21  Run hook "save-state" for "go" SDK
+     1392  Done    today at 12:20  today at 12:21  Disconnect interfaces of "go" SDK
+     1393  Done    today at 12:20  today at 12:21  Disconnect interfaces of "system" SDK
+     1394  Undone  today at 12:20  today at 12:21  Unregister "go" SDK plugs and slots
+     1395  Undone  today at 12:20  today at 12:21  Stash previous "dev-volatile" workshop
+     1396  Undone  today at 12:20  today at 12:21  Restore "dev-volatile" workshop from "system" snapshot
+     1397  Undone  today at 12:20  today at 12:21  Start "dev-volatile" workshop
+     1398  Undone  today at 12:20  today at 12:21  Install "go" SDK
+     1399  Undone  today at 12:20  today at 12:21  Register "go" SDK plugs and slots
+     1400  Error   today at 12:20  today at 12:21  Run hook "setup-base" for "go" SDK
+     1401  Hold    today at 12:20  today at 12:21  Auto-connect interfaces of "system" SDK
+     1402  Hold    today at 12:20  today at 12:21  Auto-connect interfaces of "go" SDK
+     1403  Hold    today at 12:20  today at 12:21  Run hook "restore-state" for "go" SDK
+     1404  Hold    today at 12:20  today at 12:21  Run hook "check-health" for "system" SDK
+     1405  Hold    today at 12:20  today at 12:21  Run hook "check-health" for "go" SDK
+     1406  Hold    today at 12:20  today at 12:21  Remove SDK state storage
+     1407  Hold    today at 12:20  today at 12:21  Remove "dev-volatile" workshop from stash
+     1408  Done    today at 12:20  today at 12:21  Remove "go" SDK profile
+     1409  Done    today at 12:20  today at 12:21  Remove "system" SDK profile
 
      ......................................................................
      Run hook "save-state" for "go" SDK
 
-     2023-07-24T12:17:37+12:00 INFO latest/beta save-state: preserving ~/.config/pretrained-config.conf
+     2023-07-24T12:21:37 INFO GOBIN='/home/workshop/.local/bin'
+
      ......................................................................
      Run hook "setup-base" for "go" SDK
-     ...
-     Traceback (most recent call last):
-         File "<string>", line 1, in <module>
-         File "/home/user/.local/lib/python3.9/site-packages/tensorrt/__init__.py", line 36, in <module>
-             from .tensorrt import *
-     ModuleNotFoundError: No module named 'tensorrt.tensorrt'
+
+     2023-07-24T12:21:37 ERROR error: cannot install "go": cannot get nonce from store: persistent network
+     2023-07-24T12:21:37 ERROR        error: Post "https://api.snapcraft.io/api/v1/snaps/auth/nonces": dial
+     2023-07-24T12:21:37 ERROR        tcp: lookup api.snapcraft.io: Temporary failure in name resolution (exit code: 1)
+
 
 The SDK-specific reason can be addressed individually.
 

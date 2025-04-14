@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -61,7 +60,7 @@ base: ubuntu@20.04
 `
 
 func (s *requestSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+	sdkPath := sdk.SdkMetaDir(name)
 	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
 	metaPath := filepath.Join(sdkPath, "sdk.yaml")
 	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
@@ -94,7 +93,7 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 
 	for _, sd := range sdks {
 		s.writeSDKMetaFile(c, wfs, sd.Name, fmt.Sprintf(sdkTemplate, sd.Name))
-		c.Assert(w.LinkSdk(s.ctx, sdk.Setup{Name: sd.Name, Channel: sd.Channel}), check.IsNil)
+		c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: sd.Name, Channel: sd.Channel}), check.IsNil)
 	}
 
 	return w

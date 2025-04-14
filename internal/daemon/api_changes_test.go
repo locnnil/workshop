@@ -42,10 +42,10 @@ func setupChanges(st *state.State) []string {
 	chg2 := st.NewChange("remove", "remove...")
 	chg2.Set("workshop", "two")
 	chg2.Set("project-id", "123")
-	t3 := st.NewTask("unlink-sdk", "1...")
+	t3 := st.NewTask("unregister-sdk", "1...")
 	chg2.AddTask(t3)
 	t3.SetStatus(state.ErrorStatus)
-	t3.Errorf("unlink failed")
+	t3.Errorf("unregister failed")
 
 	return []string{chg1.ID(), chg2.ID(), t1.ID(), t2.ID(), t3.ID()}
 }
@@ -102,7 +102,7 @@ func (s *apiSuite) TestStateChangesDefaultToAll(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workshop","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unregister-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unregister failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
 func (s *apiSuite) TestStateChangesInProgress(c *check.C) {
@@ -160,7 +160,7 @@ func (s *apiSuite) TestStateChangesAll(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"launch","summary":"launch...","status":"Do","tasks":\[{"id":"\w+","kind":"create-workshop","summary":"1...","status":"Do","log":\["2016-04-21T01:02:03Z INFO l11","2016-04-21T01:02:03Z INFO l12"],"progress":{"label":"","done":0,"total":1},"spawn-time":"2016-04-21T01:02:03Z"}.*],"ready":false,"spawn-time":"2016-04-21T01:02:03Z","project-id":"123"}.*`)
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unregister-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unregister failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
 func (s *apiSuite) TestStateChangesReady(c *check.C) {
@@ -188,7 +188,7 @@ func (s *apiSuite) TestStateChangesReady(c *check.C) {
 	res, err := rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unlink-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unlink failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
+	c.Check(string(res), check.Matches, `.*{"id":"\w+","kind":"remove","summary":"remove...","status":"Error","tasks":\[{"id":"\w+","kind":"unregister-sdk","summary":"1...","status":"Error","log":\["2016-04-21T01:02:03Z ERROR unregister failed"],"progress":{"label":"","done":1,"total":1},"spawn-time":"2016-04-21T01:02:03Z","ready-time":"2016-04-21T01:02:03Z"}.*],"ready":true,"err":"[^"]+".*`)
 }
 
 func (s *apiSuite) TestStateChangesForWorkshop(c *check.C) {

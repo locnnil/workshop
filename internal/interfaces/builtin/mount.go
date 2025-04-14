@@ -153,7 +153,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	}
 
 	if strings.HasPrefix(path, "$SDK/") {
-		path = strings.Replace(path, "$SDK", sdk.SdkCurrentPath(slot.Sdk.Name), 1)
+		path = strings.Replace(path, "$SDK", sdk.SdkDir(slot.Sdk.Name), 1)
 	}
 
 	if !filepath.IsAbs(path) {
@@ -185,7 +185,7 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	}
 
 	if strings.HasPrefix(source, "$SDK/") {
-		return strings.Replace(source, "$SDK", sdk.SdkCurrentPath(slot.Sdk().Name), 1), nil
+		return strings.Replace(source, "$SDK", sdk.SdkDir(slot.Sdk().Name), 1), nil
 	}
 	return source, nil
 }

@@ -253,7 +253,7 @@ Run-time behaviour
 At run-time, SDK revisions are available inside the workshop;
 under :file:`/var/lib/workshop/sdk/ros2/`,
 you can see all SDK content that was packed, published and installed.
-There, :file:`current/` always maps to the latest installed revision:
+The directory always maps to the latest installed revision:
 
 .. @artefact workshop shell
 .. @artefact SDK revision
@@ -261,7 +261,7 @@ There, :file:`current/` always maps to the latest installed revision:
 .. code-block:: console
 
    $ workshop shell ros2-jazzy
-   workshop@ros2-jazzy-8584e57d$ ls /var/lib/workshop/sdk/ros2/current
+   workshop@ros2-jazzy-8584e57d$ ls /var/lib/workshop/sdk/ros2
 
    meta  sdk
 

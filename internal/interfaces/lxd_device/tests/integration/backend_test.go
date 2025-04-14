@@ -30,14 +30,15 @@ import (
 )
 
 type backendDeviceSuite struct {
-	ctx         context.Context
-	be          *lxdbackend.Backend
-	client      lxd.InstanceServer
-	repo        *interfaces.Repository
-	usr         *user.User
-	pid         string
-	restoreUser func()
-	restoreEnv  func()
+	ctx          context.Context
+	be           *lxdbackend.Backend
+	client       lxd.InstanceServer
+	repo         *interfaces.Repository
+	usr          *user.User
+	pid          string
+	restoreUser  func()
+	restoreEnv   func()
+	restoreNewId func()
 }
 
 var _ = check.Suite(&backendDeviceSuite{})
@@ -70,13 +71,15 @@ func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 	return string(buf)
 }
 
-func defaultTestDevices() map[string]map[string]string {
+func defaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 	cwd, _ := os.Getwd()
-	return map[string]map[string]string{
-		"root":             {"type": "disk", "pool": "workshop", "path": "/"},
-		"project":          {"type": "disk", "source": cwd, "path": "/project"},
-		"workshop.network": {"type": "nic", "network": "workshopbr0", "name": "eth0"},
-	}
+	mounts := []workshop.Mount{{
+		Name:  workshop.ConfigProjectPathDevice,
+		What:  cwd,
+		Where: workshop.WorkshopProjectPath,
+		Type:  workshop.HostWorkshop,
+	}}
+	return mounts, nil
 }
 
 func (f *backendDeviceSuite) SetUpTest(c *check.C) {
@@ -97,6 +100,9 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 	f.restoreEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return nil, nil
 	})
+	f.restoreNewId = testutil.FakeFunc(func() (string, error) {
+		return f.pid, nil
+	}, &workshop.NewProjectId)
 
 	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
@@ -107,14 +113,17 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 
 	f.setupRepo(c)
 
-	defer lxdbackend.FakeDefaultDevices(defaultTestDevices)()
+	defer workshop.FakeDefaultDevices(defaultTestDevices)()
 	helper.LaunchTestWorkshop(c, f.ctx, f.be, c.MkDir())
 }
 
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
+	helper.RemoveTestWorkshop(c, f.ctx, f.be)
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdProjectName(f.usr.Username))
 	helper.CleanupLxdProject(c, f.client, lxdbackend.LxdStashProjectName(f.usr.Username))
+	f.restoreNewId()
 	f.restoreEnv()
+	f.restoreUser()
 	f.client.Disconnect()
 }
 

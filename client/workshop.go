@@ -48,6 +48,7 @@ type Sdk struct {
 	Name        string       `json:"name"`
 	Version     string       `json:"version,omitempty"`
 	Channel     string       `json:"channel"`
+	Source      string       `json:"source"`
 	Revision    string       `json:"revision"`
 	BuildTime   time.Time    `json:"build-time"`
 	InstallTime time.Time    `json:"install-time"`

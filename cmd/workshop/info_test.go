@@ -38,7 +38,7 @@ var mockWorkshopWithSdks = `{"type":"sync","status-code":200,"status":"OK","resu
       "install-time":"2017-03-22T09:01:00.0Z"
     },{  
       "name":"sketch",
-      "channel":"",
+      "source":"%s/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
       "revision":"x1",
       "install-time":"2017-03-22T09:01:00.0Z"
     }],
@@ -51,6 +51,8 @@ var mockWorkshopWithSdks = `{"type":"sync","status-code":200,"status":"OK","resu
 func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 	cmd := &CmdInfo{root: &CmdRoot{}}
 	workshop := "ws"
+	home, err := os.UserHomeDir()
+	c.Assert(err, check.IsNil)
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -69,13 +71,13 @@ func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithSdks)
+			fmt.Fprintln(w, fmt.Sprintf(mockWorkshopWithSdks, home))
 		default:
 			c.Errorf("expected 3 calls, now on %d", n)
 		}
 	})
 
-	err := cmd.Run(cmd.Command(), nil)
+	err = cmd.Run(cmd.Command(), nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
 base:     ubuntu@22.04
@@ -87,7 +89,7 @@ sdks:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
   sketch:
-    tracking:   ~/.local/share/workshop/id/42424242/ws/sdk/sketch
+    tracking:   ~/.local/share/workshop/id/42424242/ws/sdk/sketch/current
     installed:  2017-03-22  \(x1\)
 `, m.prjDir))
 	c.Check(n, check.Equals, 3)
@@ -282,7 +284,7 @@ var mockWorkshopWithTunnels = `{
     "sdks": [
       {
         "name": "system",
-        "revision": "x1",
+        "revision": "1",
         "tunnels": {
           "plugs": [
             {
@@ -435,7 +437,7 @@ status:   ready
 notes:    -
 sdks:
   system:
-    installed:  \(x1\)
+    installed:  \(1\)
     tunnels:
       gopls:
         from:  127.0.0.1:60915/tcp

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -31,6 +32,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/testutil"
 )
 
@@ -295,4 +297,108 @@ func (s *cpSuite) TestCopyPreserveAllSyncSyncFailure(c *C) {
 		{"cp", "-av", src, dst},
 		{"sync"},
 	})
+}
+
+// To check file ownership properly, run:
+// $ go test -c ./internal/osutil
+// $ sudo ./osutil.test -check.f TestCopyDirOnBehalf
+func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
+	root := c.MkDir()
+
+	c.Assert(os.Mkdir(filepath.Join(root, "a"), 0755), IsNil)
+	c.Assert(os.Mkdir(filepath.Join(root, "a", "dir"), 0700), IsNil)
+	c.Assert(os.WriteFile(filepath.Join(root, "a", "file"), []byte("foo"), 0640), IsNil)
+	c.Assert(os.WriteFile(filepath.Join(root, "a", "script"), []byte("#!/bin/sh\n"), 0705), IsNil)
+	c.Assert(syscall.Mkfifo(filepath.Join(root, "a", "pipe"), 0644), IsNil)
+	c.Assert(os.Mkdir(filepath.Join(root, "target"), 0755), IsNil)
+	c.Assert(os.WriteFile(filepath.Join(root, "target", "file"), []byte("bar"), 0644), IsNil)
+	c.Assert(os.Symlink(filepath.Join(root, "target"), filepath.Join(root, "a", "link")), IsNil)
+
+	u, err := osutil.UserMaybeSudoUser()
+	c.Assert(err, IsNil)
+	uid, gid, err := osutil.UidGid(u)
+	c.Assert(err, IsNil)
+
+	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		return os.Lchown(path, int(uid), int(gid))
+	})
+	c.Assert(err, IsNil)
+
+	b := filepath.Join(c.MkDir(), "b")
+	c.Assert(osutil.CopyDirOnBehalf(filepath.Join(root, "a"), b, uid, gid), IsNil)
+
+	c.Check(filepath.Dir(b), testutil.DirEquals, []string{"drwxr-xr-x b"})
+	c.Check(b, testutil.DirEquals, []string{
+		"drwx------ dir",
+		"-rw-r----- file",
+		"drwxr-xr-x link",
+		"-rwx---r-x script"})
+	c.Check(filepath.Join(b, "file"), testutil.FileEquals, "foo")
+	c.Check(filepath.Join(b, "dir"), testutil.DirEquals, []string{})
+	c.Check(filepath.Join(b, "link"), testutil.DirEquals, []string{"-rw-r--r-- file"})
+	c.Check(filepath.Join(b, "link", "file"), testutil.FileEquals, "bar")
+	c.Check(filepath.Join(b, "script"), testutil.FileEquals, "#!/bin/sh\n")
+
+	err = filepath.WalkDir(b, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		fuid, fgid, err := sys.FileOwner(info)
+		if err != nil {
+			return err
+		}
+
+		c.Check(fuid, Equals, uid)
+		c.Check(fgid, Equals, gid)
+		return nil
+	})
+	c.Assert(err, IsNil)
+}
+
+func (s *cpSuite) TestCopyDirOnBehalfNoSource(c *C) {
+	root := c.MkDir()
+
+	u, err := user.Current()
+	c.Assert(err, IsNil)
+	uid, gid, err := osutil.UidGid(u)
+	c.Assert(err, IsNil)
+	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
+}
+
+func (s *cpSuite) TestCopyDirOnBehalfTargetExists(c *C) {
+	root := c.MkDir()
+
+	c.Assert(os.Mkdir(filepath.Join(root, "a"), os.ModePerm), IsNil)
+	c.Assert(os.Mkdir(filepath.Join(root, "b"), os.ModePerm), IsNil)
+
+	u, err := user.Current()
+	c.Assert(err, IsNil)
+	uid, gid, err := osutil.UidGid(u)
+	c.Assert(err, IsNil)
+	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
+	c.Check(err, testutil.ErrorIs, os.ErrExist)
+}
+
+func (s *cpSuite) TestCopyDirOnBehalfNoParent(c *C) {
+	root := c.MkDir()
+
+	c.Assert(os.Mkdir(filepath.Join(root, "a"), os.ModePerm), IsNil)
+
+	u, err := user.Current()
+	c.Assert(err, IsNil)
+	uid, gid, err := osutil.UidGid(u)
+	c.Assert(err, IsNil)
+	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b", "c"), uid, gid)
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }

@@ -32,7 +32,6 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -90,7 +89,7 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 }
 
 func (s *apiSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, name, "0", "meta")
+	sdkPath := sdk.SdkMetaDir(name)
 	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
 	metaPath := filepath.Join(sdkPath, "sdk.yaml")
 	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
@@ -109,7 +108,7 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	c.Assert(err, check.IsNil)
 	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
-	err = wp.LinkSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Revision: info.Revision})
+	err = wp.AddSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Source: info.Source, Revision: info.Revision})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)

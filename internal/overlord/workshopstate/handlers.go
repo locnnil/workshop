@@ -194,24 +194,6 @@ func (m *WorkshopManager) undoMountProject(task *state.Task, tomb *tomb.Tomb) er
 	return nil
 }
 
-func (m *WorkshopManager) doMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
-	return m.backend.AttachVolume(ctx, w, volume, dirs.AptCachePath, false)
-}
-
-func (m *WorkshopManager) undoMountAptCache(task *state.Task, tomb *tomb.Tomb) error {
-	// No need to undo because the mount will be removed with the workshop
-	return nil
-}
-
 func (m *WorkshopManager) doStart(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {

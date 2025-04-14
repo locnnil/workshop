@@ -331,17 +331,26 @@ pass the ID of the change to the :command:`workshop tasks` command:
    $ workshop tasks 34
 
      ID   Status  Spawn               Ready               Summary
-     133  Done    today at 11:32 GMT  today at 11:32 GMT  Create new "dev" workshop
-     134  Done    today at 11:32 GMT  today at 11:32 GMT  Mount project directory "hello-workshop"
-     135  Done    today at 11:32 GMT  today at 11:32 GMT  Start "dev" workshop
-     136  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
-     137  Done    today at 11:32 GMT  today at 11:32 GMT  Install "go" SDK
-     138  Done    today at 11:32 GMT  today at 11:33 GMT  Link "go" SDK
-     139  Done    today at 11:33 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
-     140  Done    today at 11:33 GMT  today at 11:33 GMT  Auto-connect interfaces of "go" SDK
+     132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
+     133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
+     ...
+     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+     ...
+
+     ......................................................................
+     Run hook "setup-base" for "go" SDK
+
+     2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical** installed
 
 
-Here, the following happens:
+This displays a list of all the tasks
+which comprise launching the workshop,
+and logs for some of the tasks.
+For launch, the following happens:
+
+- The :samp:`ubuntu@22.04` base image from the definition is retrieved.
+
+- A cache is created for apt packages.
 
 - The :ref:`project directory <tut_define>`
   is mounted inside the workshop
@@ -350,10 +359,12 @@ Here, the following happens:
 
 - The workshop is *started*, or brought online.
 
+- The :ref:`system SDK <exp_system_sdk>` is installed.
+
 - The :samp:`go` SDK from the definition is retrieved,
   installed and set up inside the workshop.
 
-- The interfaces of the SDK are connected.
+- The interfaces of the SDKs are connected.
 
 
 You only need to launch a workshop once after defining it;

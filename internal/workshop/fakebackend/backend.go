@@ -173,25 +173,9 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 
 	if wpe, ok := f.Workshops[projectId][file.Name]; ok {
 		// rebuild the workshop
-
 		ws = wpe
 		ws.File = file
 		ws.Base = file.Base
-		fs := ws.WorkshopFilesystem
-
-		// TODO: Remove locally installed SDKs. These should be removed in a
-		// more elegant way, i.e. unmounted from the workshop in a similar
-		// fashion to regular SDKs installed from the store. Thus, it will make
-		// SDKs "independent" of the workshop, which means that changes will
-		// have to take care of unmounting them from the workshop at the right
-		// time.
-		// NOTE: RemoveAll ignores E_NOENT.
-		if err = fs.RemoveAll(sdk.SdkRootPath("system")); err != nil {
-			return err
-		}
-		if err = fs.RemoveAll(sdk.SdkRootPath("sketch")); err != nil {
-			return err
-		}
 	} else {
 		ws.Workshop = &workshop.Workshop{Backend: f,
 			Name:    file.Name,
@@ -200,11 +184,12 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 			Base:    file.Base,
 			File:    file,
 		}
-		ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
-		if err != nil {
-			return err
-		}
 		f.Workshops[projectId][file.Name] = ws
+	}
+
+	ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
+	if err != nil {
+		return err
 	}
 
 	ws.Config = make(map[string]string)
@@ -258,6 +243,29 @@ func (s *FakeWorkshopBackend) StopWorkshop(ctx context.Context, name string, for
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string, mount workshop.Mount) error {
+	if mount.Type != workshop.HostWorkshop {
+		return errors.New("fake backend only supports HostWorkshop mounts")
+	}
+
+	wfs, err := f.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(mount.Where)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
+		return err
+	}
+
+	if err := os.Symlink(mount.What, mnt); err != nil {
+		return err
+	}
+
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -278,10 +286,25 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name, mou
 	}
 
 	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
+	device, ok := f.Workshops[projectId][name].Devices[mount]
 	delete(f.Workshops[projectId][name].Devices, mount)
-	return nil
+	f.workshopLock.Unlock()
+	if !ok {
+		return fmt.Errorf("mount %q not found", mount)
+	}
+
+	wfs, err := f.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	where, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(device["path"])
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(where)
 }
 
 func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
@@ -634,21 +657,39 @@ func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string)
 }
 
 func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
-	user, projectId, err := s.userProject(ctx)
+	wp, err := s.Workshop(ctx, name)
 	if err != nil {
 		return err
 	}
 
-	prj := s.project(user, projectId)
-
-	s.workshopLock.Lock()
-	if wp, ok := s.Workshops[prj.ProjectId][name]; !ok {
-		defer s.workshopLock.Unlock()
-		return workshop.ErrWorkshopNotLaunched
-	} else {
-		wp.File = file
+	sdks := wp.SdksByInstallOrder()
+	lastIntact := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return workshop.SnapshotId(name, s.Name) == snapid })
+	if lastIntact < 0 {
+		return fmt.Errorf("invalid snapshot %q", snapid)
 	}
-	s.workshopLock.Unlock()
+	unwantedSdks := sdks[lastIntact+1:]
+
+	// Remove SDKs from after the snapshot.
+	fs, err := s.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	for _, sk := range unwantedSdks {
+		if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
+			return err
+		}
+		delete(wp.Sdks, sk.Name)
+	}
+	value, err := json.Marshal(wp.Sdks)
+	if err != nil {
+		return err
+	}
+	item := &workshop.WorkshopConfigValue{Name: workshop.ConfigWorkshopSdks, Value: string(value)}
+	if err := s.AddWorkshopConfig(ctx, name, item); err != nil {
+		return err
+	}
+
+	wp.File = file
 
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()

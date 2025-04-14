@@ -1,11 +1,14 @@
 package sdkstate_test
 
 import (
+	"archive/tar"
 	"context"
 	"errors"
-	"io/fs"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -21,6 +24,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -43,6 +47,12 @@ type sdkStateSuite struct {
 }
 
 var _ = check.Suite(&sdkStateSuite{})
+
+func TestMain(m *testing.M) {
+	// Ensure consistent file permissions for sdkStateSuite.
+	syscall.Umask(0002)
+	m.Run()
+}
 
 func Test(t *testing.T) { check.TestingT(t) }
 
@@ -164,8 +174,11 @@ func (s *sdkStateSuite) TearDownTest(c *check.C) {
 func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
-	s.mockSdk(c, "test-2", sdkYaml, sdk.R(2))
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	newSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
+	s.mockSdk(c, "test", sdkYaml, sdk.R(2))
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
@@ -187,38 +200,17 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	c.Check(chg.Status(), check.Equals, state.DoneStatus)
 
 	c.Assert(s.backend.WorkshopVolumeMountPoints, check.HasLen, 1)
-	c.Assert(s.backend.WorkshopVolumeMountPoints["test-2-2"], check.Equals, "/var/lib/workshop/sdk/test-2/2")
-}
+	c.Assert(s.backend.WorkshopVolumeMountPoints["test-2"], check.Equals, "/var/lib/workshop/sdk/test")
 
-func (s *sdkStateSuite) TestDoInstallSdkWhenVolumeExists(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-	chg.AddTask(t)
-
-	err := s.backend.CreateVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision))
+	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	defer func() { _ = s.backend.DeleteVolume(s.ctx, sdk.VolumeName(newSdk.Name, newSdk.Revision)) }()
+	info := props.Sdks
+	c.Check(info["test"], check.DeepEquals, newSdk)
 
-	s.state.Unlock()
-	s.se.Ensure()
-	s.se.Wait()
-	s.state.Lock()
-
-	c.Check(chg.Err(), check.IsNil)
-	c.Check(chg.Status(), check.Equals, state.DoneStatus)
-
-	c.Assert(s.backend.WorkshopVolumeMountPoints, check.HasLen, 1)
-	c.Assert(s.backend.WorkshopVolumeMountPoints["test-2-2"], check.Equals, "/var/lib/workshop/sdk/test-2/2")
+	sdkInfo, err := props.SdkInfo(s.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Assert(sdkInfo.Plugs, check.HasLen, 2)
+	c.Assert(sdkInfo.Slots, check.HasLen, 0)
 }
 
 func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
@@ -260,68 +252,59 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	c.Assert(s.backend.WorkshopVolumeMountPoints, check.HasLen, 0)
 }
 
-func (s *sdkStateSuite) TestDoInstallSystemSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
+	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+
 	s.state.Lock()
 	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}
-	t := s.state.NewTask("fake-task", "retrieve")
+
+	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	t := s.state.NewTask("retrieve-sdk", "retrieve")
 	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-local-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.AddTask(t1)
 	chg.AddTask(t)
 
 	s.state.Unlock()
-	s.se.Ensure()
+	c.Assert(s.se.Ensure(), check.IsNil)
 	s.se.Wait()
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.IsNil)
-	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+
+	f, err := os.Open(newSdk.Filepath())
 	c.Assert(err, check.IsNil)
-	info, err := wfs.Stat("/var/lib/workshop/sdk/system/x1/meta/sdk.yaml")
-	c.Assert(err, check.IsNil)
-	c.Assert(info.Mode().Perm(), check.Equals, fs.FileMode(0644))
-}
+	defer f.Close()
 
-func (s *sdkStateSuite) TestUndoInstallSystemSdkSuccess(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	newSdk := sdk.Setup{Name: sdk.System.String()}
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk)
-	t1 := s.state.NewTask("install-local-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
+	tr := tar.NewReader(f)
+	var entries []string
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		c.Assert(err, check.IsNil)
 
-	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(t1)
+		info := hdr.FileInfo()
+		if info.IsDir() {
+			continue
+		}
 
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1, terr)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-	chg.AddTask(t)
-	chg.AddTask(terr)
+		entry := fmt.Sprintf("%s %s", info.Mode().Perm(), hdr.Name)
+		entries = append(entries, entry)
 
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
+		r, err := system.SystemSdkFs.Open(hdr.Name)
+		c.Assert(err, check.IsNil)
+		c.Check(osutil.StreamsEqual(r, tr), check.Equals, true)
+		r.Close()
 	}
-	s.state.Lock()
 
-	c.Check(chg.Err(), check.NotNil)
-	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	_, err = wfs.Stat("/var/lib/workshop/sdk/system/x1")
-	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
+	c.Check(entries, check.DeepEquals, []string{"-r--r--r-- meta/sdk.yaml"})
 }
 
-func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
+func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -334,7 +317,7 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	t.Set("sdk-setup", testSdk)
 	t1 := s.state.NewTask("install-sdk", "test")
 	t1.Set("sdk-retrieve-task", t.ID())
-	t2 := s.state.NewTask("link-sdk", "test")
+	t2 := s.state.NewTask("register-sdk", "test")
 	t2.Set("sdk-retrieve-task", t.ID())
 	t2.WaitFor(t1)
 
@@ -353,22 +336,13 @@ func (s *sdkStateSuite) TestDoLinkSdkSuccess(c *check.C) {
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.Equals, nil)
-	props, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	info := props.Sdks
-	c.Check(info["test"], check.DeepEquals, testSdk)
-
-	sdkInfo, err := props.SdkInfo(s.ctx, info["test"].Name)
-	c.Assert(err, check.IsNil)
-	c.Assert(sdkInfo.Plugs, check.HasLen, 2)
-	c.Assert(sdkInfo.Slots, check.HasLen, 0)
 
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 2)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.NotNil)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.NotNil)
 }
 
-func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
+func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -381,7 +355,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	t.Set("sdk-setup", testSdk)
 	t1 := s.state.NewTask("install-sdk", "...")
 	t1.Set("sdk-retrieve-task", t.ID())
-	t2 := s.state.NewTask("link-sdk", "test-broken")
+	t2 := s.state.NewTask("register-sdk", "test-broken")
 	t2.Set("sdk-retrieve-task", t.ID())
 	t2.WaitFor(t1)
 
@@ -404,7 +378,7 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	// not in the fs (removed)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	_, err = wfs.Stat(sdk.SdkCurrentPath("test-broken"))
+	_, err = wfs.Stat(sdk.SdkDir("test-broken"))
 	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
 
 	// not in the SDK list (unlinked)
@@ -418,29 +392,29 @@ func (s *sdkStateSuite) TestDoLinkSdkFailedPolicyCheck(c *check.C) {
 	c.Check(s.repo.Slots(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 }
 
-func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
+func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
-	newSdk := sdk.Info{Workshop: "ws", Name: "test", Revision: sdk.Revision{N: 1}}
+	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "...")
 	t1.Set("sdk-retrieve-task", t.ID())
-	link := s.state.NewTask("link-sdk", "test")
-	link.Set("sdk-retrieve-task", t.ID())
-	link.WaitFor(t1)
+	register := s.state.NewTask("register-sdk", "test")
+	register.Set("sdk-retrieve-task", t.ID())
+	register.WaitFor(t1)
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(link)
+	terr.WaitFor(register)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, link, t, t1)
+	setWorkshopProject("ws", s.project, register, t, t1)
 
 	chg.Set("user", "testuser")
-	chg.AddTask(link)
+	chg.AddTask(register)
 	chg.AddTask(t)
 	chg.AddTask(terr)
 	chg.AddTask(t1)
@@ -451,42 +425,39 @@ func (s *sdkStateSuite) TestUndoLinkSdk(c *check.C) {
 		s.se.Wait()
 	}
 	s.state.Lock()
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*provoking total undo \(error out\)`)
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	_, ok := props.Sdks["test"]
 	c.Check(ok, check.Equals, false)
-	c.Check(link.Status(), check.Equals, state.UndoneStatus)
+	c.Check(register.Status(), check.Equals, state.UndoneStatus)
 
 	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
 	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
 }
 
-func (s *sdkStateSuite) TestLinkSdkBadInterfacesFound(c *check.C) {
+func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
-	newSdk := sdk.Info{Workshop: "ws", Name: "test", Revision: sdk.Revision{N: 1}}
+	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "...")
 	t1.Set("sdk-retrieve-task", t.ID())
-	link := s.state.NewTask("link-sdk", "test")
-	link.Set("sdk-retrieve-task", t.ID())
-	link.WaitFor(t1)
-
-	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(link)
+	register := s.state.NewTask("register-sdk", "test")
+	register.Set("sdk-retrieve-task", t.ID())
+	register.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, link, t, t1)
+	setWorkshopProject("ws", s.project, register, t, t1)
 
 	chg.Set("user", "testuser")
-	chg.AddTask(link)
+	chg.AddTask(register)
 	chg.AddTask(t)
-	chg.AddTask(terr)
 	chg.AddTask(t1)
 
 	s.state.Unlock()

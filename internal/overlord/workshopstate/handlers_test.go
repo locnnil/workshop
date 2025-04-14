@@ -12,7 +12,6 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -402,24 +401,6 @@ func (s *workshopHandlers) TestAptCache(c *check.C) {
 
 	volume := workshop.AptCacheVolumeName("ws", s.project.ProjectId)
 	c.Assert(s.backend.WorkshopVolumes[volume], check.Equals, true)
-
-	// Mount apt cache
-	chg = s.state.NewChange("sample", "...")
-	t1 = s.state.NewTask("mount-apt-cache", "...")
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-
-	c.Assert(s.backend.WorkshopVolumeMountPoints[volume], check.Equals, dirs.AptCachePath)
 
 	// Remove volume for apt cache
 	chg = s.state.NewChange("sample", "...")

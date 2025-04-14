@@ -26,7 +26,7 @@ type BaseWorkshopSuite struct {
 	stderr *bytes.Buffer
 }
 
-func TestMain(t *testing.T) { check.TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *BaseWorkshopSuite) SetUpTest(c *check.C) {
 	dirs.SetRootDir(c.MkDir())

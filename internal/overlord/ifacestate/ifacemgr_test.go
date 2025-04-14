@@ -8,11 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/overlord"
@@ -71,13 +69,6 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-func (s *interfaceManagerSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, setup sdk.Setup, yaml string) {
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, setup.Name, setup.Revision.String(), "meta")
-	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
-	metaPath := filepath.Join(sdkPath, "sdk.yaml")
-	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
-}
-
 type testSdkSetup struct {
 	sdk.Setup
 	yaml string
@@ -103,8 +94,9 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	err = be.ImportVolume(s.ctx, sdk.VolumeName(name, rev), vfs)
-	c.Assert(err, check.IsNil)
+	if err := be.ImportVolume(s.ctx, sdk.VolumeName(name, rev), vfs); err != nil {
+		c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeAlreadyExists)
+	}
 }
 
 func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []testSdkSetup) (*workshop.Workshop, error) {
@@ -127,27 +119,24 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	c.Assert(wsfs.MkdirAll(filepath.Join(dirs.WorkshopSdksDir, sdk.System.String(), "x1", "meta"), 0755), check.IsNil)
-	s.writeSDKMetaFile(c, wsfs, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}}, systemYaml)
+	allsdks := []testSdkSetup{{Setup: sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(1)}, yaml: systemYaml}}
+	allsdks = append(allsdks, sdks...)
 
-	for _, setup := range sdks {
+	for _, setup := range allsdks {
 		s.mockSdk(c, setup.Name, setup.yaml, setup.Revision)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
 	c.Assert(err, check.IsNil)
 
-	err = w.LinkSdk(ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.Revision{N: -1}})
-	c.Assert(err, check.IsNil)
-
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
 
-	for _, sk := range sdks {
-		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), filepath.Join(dirs.WorkshopSdksDir, sk.Name, sk.Revision.String()), true)
+	for _, sk := range allsdks {
+		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), sdk.SdkDir(sk.Name), true)
 		c.Assert(err, check.IsNil)
-		err = w.LinkSdk(ctx, sk.Setup)
+		err = w.AddSdk(ctx, sk.Setup)
 		c.Assert(err, check.IsNil)
 	}
 

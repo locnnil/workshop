@@ -17,7 +17,8 @@ import (
 
 type Setup struct {
 	Name        string     `json:"name"`
-	Channel     string     `json:"channel"`
+	Channel     string     `json:"channel,omitempty"`
+	Source      string     `json:"source,omitempty"`
 	Revision    Revision   `json:"revision"`
 	InstallTime *time.Time `json:"install-time"`
 }
@@ -74,6 +75,7 @@ type Info struct {
 	Type      Type
 	Revision  Revision
 	Channel   string
+	Source    string
 	BuildTime *time.Time
 
 	Plugs     map[string]*PlugInfo
@@ -441,20 +443,12 @@ func (ref PlugRef) SortsBefore(other PlugRef) bool {
 	return ref.Name < other.Name
 }
 
-func SdkRootPath(sdkName string) string {
+func SdkDir(sdkName string) string {
 	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
 }
 
-func SdkRevPath(sdkName string, rev string) string {
-	return filepath.Join(SdkRootPath(sdkName), rev)
-}
-
-func SdkCurrentPath(sdkName string) string {
-	return filepath.Join(SdkRootPath(sdkName), "current")
-}
-
 func SdkMetaDir(sdkName string) string {
-	return filepath.Join(SdkCurrentPath(sdkName), "meta")
+	return filepath.Join(SdkDir(sdkName), "meta")
 }
 
 func SdkMetaPath(sdkName string) string {
@@ -462,7 +456,7 @@ func SdkMetaPath(sdkName string) string {
 }
 
 func SdkHooksDir(sdkName string) string {
-	return filepath.Join(SdkCurrentPath(sdkName), "sdk", "hooks")
+	return filepath.Join(SdkDir(sdkName), "sdk", "hooks")
 }
 
 func SdkHookPath(sdkName, hookName string) string {

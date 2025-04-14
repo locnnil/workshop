@@ -41,11 +41,15 @@ type wsExec struct {
 
 var _ = check.Suite(&wsExec{})
 
-func execTestDevices(projectDir string) func() map[string]map[string]string {
-	conf := helper.DefaultTestDevices()
-	conf["workshop.project"] = map[string]string{"type": "disk", "source": projectDir, "path": "/project"}
-	return func() map[string]map[string]string {
-		return conf
+func execTestDevices(projectDir string) func(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
+	mounts := []workshop.Mount{{
+		Name:  workshop.ConfigProjectPathDevice,
+		What:  projectDir,
+		Where: workshop.WorkshopProjectPath,
+		Type:  workshop.HostWorkshop,
+	}}
+	return func(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
+		return mounts, nil
 	}
 }
 
@@ -99,7 +103,7 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		return f.usr, nil
 	}, &daemon.LookupUserId)
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(execTestDevices(c.MkDir()))
+	f.restoreDevices = workshop.FakeDefaultDevices(execTestDevices(c.MkDir()))
 
 	f.newProjectidRestore = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil

@@ -27,6 +27,11 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 		return err
 	}
 
+	uid, gid, err := osutil.UidGid(user)
+	if err != nil {
+		return err
+	}
+
 	// We are performing a Stat() here to ensure that the user can't steal
 	// another user's Xauthority file. Note that while Stat() uses fstat() on the
 	// file descriptor created during Open(), the file might have changed
@@ -40,24 +45,16 @@ func MigrateXauthority(user *user.User, xauth string) (err error) {
 	if err != nil {
 		return err
 	}
-	fsys := f.Sys()
-	if fsys == nil {
-		return fmt.Errorf("cannot validate owner of file %s", f.Name())
+	fuid, _, err := sys.FileOwner(f)
+	if err != nil {
+		return &os.PathError{Op: "stat", Path: xauth, Err: err}
 	}
-	// cheap comparison as the current uid is only available as a string
-	// but it is better to convert the uid from the stat result to a
-	// string than a string into a number.
-	if fmt.Sprintf("%d", fsys.(*syscall.Stat_t).Uid) != user.Uid {
+	if fuid != uid {
 		return &os.PathError{Op: "open", Path: xauth, Err: syscall.EACCES}
 	}
 
 	destFile := filepath.Join(destDir, ".Xauthority")
 	err = osutil.CopyFile(xauth, filepath.Join(destDir, ".Xauthority"), osutil.CopyFlagOverwrite)
-	if err != nil {
-		return err
-	}
-
-	uid, gid, err := osutil.UidGid(user)
 	if err != nil {
 		return err
 	}

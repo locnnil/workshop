@@ -404,7 +404,7 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	expectedMnt := workshop.Mount{Name: plug.Name, What: "/var/lib/workshop/sdk/producer/current/training", Where: "/project/training", Type: workshop.WorkshopWorkshop}
+	expectedMnt := workshop.Mount{Name: plug.Name, What: "/var/lib/workshop/sdk/producer/training", Where: "/project/training", Type: workshop.WorkshopWorkshop}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 

@@ -1,10 +1,9 @@
 package sdkstate
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/tomb.v2"
 
@@ -65,10 +64,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	st.Lock()
-	store := sdk.StoreService(st)
-	st.Unlock()
-
 	reporter := &progress.Reporter{
 		Name: task.ID(),
 		Report: func(label string, done, total int) {
@@ -78,8 +73,18 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
-		return err
+	if sdk.IsSystem(rec.Name) {
+		if err := system.RetrieveSystemSdk(rec, reporter); err != nil {
+			return err
+		}
+	} else {
+		st.Lock()
+		store := sdk.StoreService(st)
+		st.Unlock()
+
+		if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
+			return err
+		}
 	}
 
 	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), rec.Filepath())
@@ -89,65 +94,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	return err
-}
-
-func (m *SdkManager) doInstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	sdkSetup, err := SdkSetup(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	wp, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-
-	switch sdkSetup.Name {
-	case sdk.System.String():
-		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), system.SystemSdkFs)
-	case sdk.Sketch:
-		usr, env, err := osutil.UserAndEnv(user)
-		if err != nil {
-			return err
-		}
-		userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-		sketchdir := workshop.SketchSdkCurrent(userDataDir, project.ProjectId, w)
-
-		return wp.InstallLocalSdk(ctx, sdkSetup.Name, sdkSetup.Revision.String(), os.DirFS(sketchdir))
-	default:
-		return fmt.Errorf("unknown type of the local SDK")
-	}
-}
-
-func (m *SdkManager) doUninstallLocalSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	sdkSetup, err := SdkSetup(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	wfs, err := m.backend.WorkshopFs(ctx, w)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	return wfs.RemoveAll(sdk.SdkRevPath(sdkSetup.Name, sdkSetup.Revision.String()))
 }
 
 func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -164,7 +110,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	// Directory: /var/lib/workshop/sdk/<name>/<revision>/
+	// Directory: /var/lib/workshop/sdk/<name>/
 	fs, err := m.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
@@ -174,10 +120,52 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	// Mount the SDK content at the workshop location.
-	sdkPath := filepath.Join(dirs.WorkshopSdksDir, sdkSetup.Name, sdkSetup.Revision.String())
+	wp, err := m.backend.Workshop(ctx, w)
+	if err != nil {
+		return err
+	}
 
-	return m.backend.AttachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), sdkPath, true)
+	rev := revert.New()
+	defer rev.Fail()
+
+	if err := m.mountSdk(ctx, user, project, w, sdkSetup); err != nil {
+		return err
+	}
+	st := task.State()
+	rev.Add(func() {
+		if reverr := m.unmountSdk(ctx, w, sdkSetup); reverr != nil {
+			st.Lock()
+			task.Logf("Install SDK cleanup: could not unmount %q SDK: %v", sdkSetup.Name, reverr)
+			st.Unlock()
+		}
+	})
+
+	if err = wp.AddSdk(ctx, sdkSetup); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
+}
+
+func (m *SdkManager) mountSdk(ctx context.Context, user string, project *workshop.Project, w string, sdkSetup sdk.Setup) error {
+	// Mount the SDK content at the workshop location.
+	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
+	sdkPath := sdk.SdkDir(sdkSetup.Name)
+
+	if sdkSetup.Revision.Store() {
+		return m.backend.AttachVolume(ctx, w, name, sdkPath, true)
+	}
+
+	usr, env, err := osutil.UserAndEnv(user)
+	if err != nil {
+		return err
+	}
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	what := workshop.LocalSdkRevision(userDataDir, project.ProjectId, w, sdkSetup.Name, sdkSetup.Revision)
+
+	mnt := workshop.Mount{Name: name, What: what, Where: sdkPath, Type: workshop.HostWorkshop, ReadOnly: true}
+	return m.backend.AddWorkshopMount(ctx, w, mnt)
 }
 
 func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -194,10 +182,27 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	return m.backend.DetachVolume(ctx, w, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+	wp, err := m.backend.Workshop(ctx, w)
+	if err != nil {
+		return err
+	}
+
+	if err := wp.RemoveSdk(ctx, sdkSetup.Name); err != nil {
+		return err
+	}
+
+	return m.unmountSdk(ctx, w, sdkSetup)
 }
 
-func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
+func (m *SdkManager) unmountSdk(ctx context.Context, w string, sdkSetup sdk.Setup) error {
+	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
+	if sdkSetup.Revision.Store() {
+		return m.backend.DetachVolume(ctx, w, name)
+	}
+	return m.backend.RemoveWorkshopMount(ctx, w, name)
+}
+
+func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -215,22 +220,6 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
-
-	if err = wp.LinkSdk(ctx, setup); err != nil {
-		return err
-	}
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	st := task.State()
-	rev.Add(func() {
-		if reverr := wp.UnlinkSdk(ctx, setup.Name); reverr != nil {
-			st.Lock()
-			task.Logf("Link SDK cleanup: could not unlink %q SDK: %v", setup.Name, reverr)
-			st.Unlock()
-		}
-	})
 
 	info, err := wp.SdkInfo(ctx, setup.Name)
 	if err != nil {
@@ -246,34 +235,17 @@ func (m *SdkManager) doLinkSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	// add SDK's plugs and slots
-	if err := m.repo.AddSdk(info); err != nil {
-		return err
-	}
-
-	rev.Success()
-	return nil
+	return m.repo.AddSdk(info)
 }
 
-func (m *SdkManager) doUnlinkSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, w, err := UserProjectWorkshop(task)
+func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
+	_, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
 	setup, err := SdkSetup(task)
 	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	wp, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-
-	if err = wp.UnlinkSdk(ctx, setup.Name); err != nil {
 		return err
 	}
 

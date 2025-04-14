@@ -3,10 +3,7 @@ package workshop
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -15,12 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/afero"
-
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/sdk/system"
 )
 
 var (
@@ -48,103 +41,43 @@ type Workshop struct {
 	Profiles map[string]SdkProfile
 }
 
-// Associate an SDK with the workshop by creating a 'current' symlink and adding
-// the SDK to the Sdks field.
-func (w *Workshop) LinkSdk(ctx context.Context, s sdk.Setup) error {
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// Update the current link to point out to the newly installed SDK.
-	sdkrev := sdk.SdkRevPath(s.Name, s.Revision.String())
-	current := sdk.SdkCurrentPath(s.Name)
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	oldcur, err := fs.ReadLink(current)
-	if err != nil && !osutil.IsDirNotExist(err) {
-		return err
-	}
-	if err == nil {
-		// The link could already be existing (e.g. there is a previous
-		// revision).
-		if err = fs.Remove(current); err != nil {
-			return err
-		}
-		rev.Add(func() { _ = fs.Symlink(oldcur, current) })
-	}
-
-	if err = fs.Symlink(sdkrev, current); err != nil {
-		return err
-	}
-	rev.Add(func() { _ = fs.Remove(current) })
-
+// Associate an SDK with the workshop by adding the SDK to the Sdks field.
+func (w *Workshop) AddSdk(ctx context.Context, s sdk.Setup) error {
 	now := InstallTimeNow()
 	s.InstallTime = &now
 
 	_, exist := w.Sdks[s.Name]
 	if exist {
-		return fmt.Errorf("%q SDK is already linked", s.Name)
+		return fmt.Errorf("%q SDK is already installed", s.Name)
 	} else {
 		w.Sdks[s.Name] = s
 	}
 
-	sequenceValue, err := json.Marshal(w.Sdks)
+	value, err := json.Marshal(w.Sdks)
 	if err != nil {
 		return err
 	}
 
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopSdks,
-			Value: string(sequenceValue),
-		})
-
-	if err != nil {
-		return err
+	item := &WorkshopConfigValue{
+		Name:  ConfigWorkshopSdks,
+		Value: string(value),
 	}
-
-	rev.Success()
-	return nil
+	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
-// Stops associating an SDK with the workshop by removing a 'current' symlink and
-// removing the SDK from the workshop "installed" SDKs if there are no more
-// revisions left.
-func (w *Workshop) UnlinkSdk(ctx context.Context, name string) error {
+// Stops associating an SDK with the workshop by removing the SDK from the Sdks field.
+func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
 	delete(w.Sdks, name)
-	newSequence, err := json.Marshal(w.Sdks)
+	value, err := json.Marshal(w.Sdks)
 	if err != nil {
 		return err
 	}
 
-	err = w.Backend.AddWorkshopConfig(ctx, w.Name,
-		&WorkshopConfigValue{
-			Name:  ConfigWorkshopSdks,
-			Value: string(newSequence),
-		})
-	if err != nil {
-		return err
+	item := &WorkshopConfigValue{
+		Name:  ConfigWorkshopSdks,
+		Value: string(value),
 	}
-
-	// Update the 'current' link
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// No revisions left in the sequence, remove the 'current' link.
-	// This will be the case during a launch operation that fails, therefore it's
-	// possible for there to be no current revision to remove.
-	if err = fs.Remove(sdk.SdkCurrentPath(name)); errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	return err
+	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
 func WorkshopName(instance string) string {
@@ -178,15 +111,22 @@ func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string,
 	return meta, nil
 }
 
-func (w *Workshop) metaFromFs(ctx context.Context, setup sdk.Setup) (string, error) {
-	fs, err := w.Backend.WorkshopFs(ctx, w.Name)
+func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, error) {
+	username, ok := ctx.Value(ContextUser).(string)
+	if !ok {
+		return "", fmt.Errorf("context key %s not found", ContextUser)
+	}
+
+	usr, env, err := osutil.UserAndEnv(username)
 	if err != nil {
 		return "", err
 	}
-	defer fs.Close()
+	userDataDir := UserDataRootDir(usr.HomeDir, env)
 
-	metapath := sdk.SdkMetaPath(setup.Name)
-	meta, err := afero.ReadFile(fs, metapath)
+	rev := LocalSdkRevision(userDataDir, w.Project.ProjectId, w.Name, setup.Name, setup.Revision)
+	metapath := filepath.Join(rev, "meta", "sdk.yaml")
+
+	meta, err := os.ReadFile(metapath)
 	return string(meta), err
 }
 
@@ -200,7 +140,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	var err error
 	var meta string
 	if setup.Revision.Local() {
-		meta, err = w.metaFromFs(ctx, setup)
+		meta, err = w.metaFromFile(ctx, setup)
 	} else {
 		meta, err = w.metaFromVolume(ctx, setup)
 	}
@@ -218,12 +158,13 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("SDK must be named %q (now: %q)", sdkName, info.Name)
 	}
 
-	// system SDK will always have its workshop's base.
-	if info.Type == sdk.System {
+	// Local and system SDKs will always have the workshop's base.
+	if setup.Revision.Local() || info.Type == sdk.System {
 		info.Base = w.Base
 	}
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
+	info.Source = setup.Source
 
 	// Now add changes defined for this SDK in the workshop file (e.g. plug
 	// binds, slots).
@@ -344,74 +285,6 @@ func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	}
 
 	return mnts
-}
-
-func install(wfs WorkshopFs, srcfs fs.FS, src, dst string, perm fs.FileMode) error {
-	filesrc, err := srcfs.Open(src)
-	if err != nil {
-		return err
-	}
-	defer filesrc.Close()
-
-	dstdir := filepath.Dir(dst)
-	if err := wfs.MkdirAll(dstdir, 0755); err != nil {
-		return err
-	}
-
-	filedst, err := wfs.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
-	if err != nil {
-		return err
-	}
-	defer filedst.Close()
-
-	if _, err = io.Copy(filedst, filesrc); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Workshop) InstallLocalSdk(ctx context.Context, name string, rev string, src fs.FS) error {
-	wfs, err := w.Backend.WorkshopFs(ctx, w.Name)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	reverter := revert.New()
-	defer reverter.Fail()
-
-	// meta: /var/lib/workshop/sdk/<name>/<rev>/meta
-	metasrc := system.SdkMeta
-	metadst := filepath.Join(sdk.SdkRevPath(name, rev), "meta", "sdk.yaml")
-
-	if err = install(wfs, src, metasrc, metadst, 0644); err != nil {
-		return err
-	}
-	reverter.Add(func() { _ = wfs.RemoveAll(filepath.Dir(metadst)) })
-
-	// hooks: /var/lib/workshop/sdk/<name>/<rev>/sdk/hooks
-	hooksdir := filepath.Join(sdk.SdkRevPath(name, rev), "sdk", "hooks")
-	reverter.Add(func() { _ = wfs.RemoveAll(hooksdir) })
-
-	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
-		hooksrc := filepath.Join("hooks", hook)
-		hookdst := filepath.Join(hooksdir, hook)
-
-		// Hooks are optional.
-		if _, err := src.Open(hooksrc); err != nil {
-			if !osutil.IsDirNotExist(err) {
-				return err
-			}
-			continue
-		}
-
-		if err = install(wfs, src, hooksrc, hookdst, 0755); err != nil {
-			return err
-		}
-	}
-
-	reverter.Success()
-	return nil
 }
 
 func SnapshotId(w, sk string) string {

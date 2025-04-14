@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -37,6 +38,8 @@ type wsOps struct {
 var _ = check.Suite(&wsOps{})
 
 func (f *wsOps) SetUpSuite(c *check.C) {
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+
 	var err error
 
 	f.bd, err = lxdbackend.New()
@@ -49,7 +52,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	}
 	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
-	f.restoreDevices = lxdbackend.FakeDefaultDevices(helper.DefaultTestDevices)
+	f.restoreDevices = workshop.FakeDefaultDevices(helper.DefaultTestDevices)
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 	f.restoreLookupUsr = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil
@@ -417,11 +420,21 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	w, err := f.bd.Workshop(f.ctx, "test")
-	c.Check(err, check.IsNil)
-	err = w.InstallLocalSdk(f.ctx, sdk.System.String(), "x1", system.SystemSdkFs)
-	c.Check(err, check.IsNil)
-	err = w.LinkSdk(f.ctx, sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(-1)})
-	c.Check(err, check.IsNil)
+	c.Assert(err, check.IsNil)
+
+	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	err = system.RetrieveSystemSdk(setup, nil)
+	c.Assert(err, check.IsNil)
+
+	volume := sdk.VolumeName(setup.Name, setup.Revision)
+	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
+	c.Assert(err, check.IsNil)
+
+	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir(setup.Name), true)
+	c.Assert(err, check.IsNil)
+
+	err = w.AddSdk(f.ctx, setup)
+	c.Assert(err, check.IsNil)
 	c.Check(w.Sdks, check.HasLen, 1)
 
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
@@ -430,24 +443,31 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
 	c.Assert(err, check.IsNil)
 
+	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir("sdk"), true)
+	c.Assert(err, check.IsNil)
+
+	err = w.AddSdk(f.ctx, sdk.Setup{Name: "sdk", Revision: sdk.R(5)})
+	c.Assert(err, check.IsNil)
+	c.Check(w.Sdks, check.HasLen, 2)
+
 	wf := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@24.04",
 	}
-	// The instance's configuration does not have any SDK in user.workshop.sdks
-	// after this.
-	err = w.UnlinkSdk(f.ctx, sdk.System.String())
-	c.Check(err, check.IsNil)
-
+	// The instance's configuration only has the system SDK after this.
 	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
 	c.Assert(err, check.IsNil)
 
 	w, err = f.bd.Workshop(f.ctx, "test")
-	c.Check(err, check.IsNil)
+	c.Assert(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
-	// Check that restore did not restore previous version of
-	// "user.workshop.sdks" or "user.workshop.file" and uses the instance's
-	// configuration, not the snapshot's.
+	// Check that Restore uses the provided "user.workshop.file" and removes "sdk".
 	c.Check(w.File, check.DeepEquals, wf)
-	c.Check(w.Sdks, check.HasLen, 0)
+	c.Check(w.Sdks, check.HasLen, 1)
+
+	fs, err := f.bd.WorkshopFs(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	defer fs.Close()
+	_, err = fs.Stat(sdk.SdkDir("sdk"))
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }

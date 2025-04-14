@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -52,6 +53,7 @@ type apiSuite struct {
 	vars map[string]string
 
 	restoreMuxVars    func()
+	restoreRetrieve   func()
 	restoreProjectId  func()
 	restoreUserEnv    func()
 	restoreTime       func()
@@ -65,7 +67,11 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 
-	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir()}
+	// Real UID and GID are required to copy local SDKs.
+	// TODO: implement unprivileged operations properly and mock them separately.
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
 
 	s.project = workshop.Project{
 		Path:      s.workshopDir,
@@ -73,8 +79,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	}
 
 	s.store = &sdk.FakeStore{}
+	s.restoreRetrieve = system.FakeRetrieveSystemSdk(s.store.RetrieveSystemSdk)
 
-	var err error
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
@@ -104,6 +110,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workshopDir = ""
 	s.restoreMuxVars()
+	s.restoreRetrieve()
 	s.restoreProjectId()
 	s.restoreUserEnv()
 	s.restoreTime()

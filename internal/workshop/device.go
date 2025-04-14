@@ -1,5 +1,13 @@
 package workshop
 
+import (
+	"path/filepath"
+
+	"github.com/canonical/workshop/internal/dirs"
+)
+
+var DefaultDevices = defaultDevices
+
 type MountType int
 
 const (
@@ -96,4 +104,35 @@ func NewSdkProfile(sdkName string) SdkProfile {
 		Sdk:    sdkName,
 		Mounts: make(map[string]Mount),
 	}
+}
+
+func defaultDevices(pid, w string) ([]Mount, []ProxyEntry) {
+	mounts := []Mount{{
+		Name:  "workshop.workshopctl",
+		What:  filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where: "/usr/bin/workshopctl",
+		Type:  HostWorkshop,
+	}, {
+		Name:  "cache.apt",
+		What:  AptCacheVolumeName(w, pid),
+		Where: dirs.AptCachePath,
+		Type:  Volume,
+	}}
+
+	socketHost := dirs.SocketPath + ".untrusted"
+	socketWorkshop := filepath.Join(dirs.WorkshopRunDir, filepath.Base(socketHost))
+	proxies := []ProxyEntry{{
+		Name:      "workshop.socket",
+		Connect:   ProxyTarget{Address: socketHost, Protocol: "unix"},
+		Listen:    ProxyTarget{Address: socketWorkshop, Protocol: "unix"},
+		Direction: WorkshopToHost,
+	}}
+
+	return mounts, proxies
+}
+
+func FakeDefaultDevices(f func(pid, w string) ([]Mount, []ProxyEntry)) func() {
+	oldDefault := DefaultDevices
+	DefaultDevices = f
+	return func() { DefaultDevices = oldDefault }
 }
