@@ -158,8 +158,8 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("SDK must be named %q (now: %q)", sdkName, info.Name)
 	}
 
-	// Local and system SDKs will always have the workshop's base.
-	if setup.Revision.Local() || info.Type == sdk.System {
+	// Local and system SDKs match the workshop's base by default.
+	if info.Base == "" && (setup.Revision.Local() || info.Type == sdk.System) {
 		info.Base = w.Base
 	}
 	info.Revision = setup.Revision
