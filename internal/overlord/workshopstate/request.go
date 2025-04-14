@@ -14,6 +14,7 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -86,6 +87,9 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
 		} else if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
+		}
+		if err := conflict.CheckChangeConflict(w.state, projectId, name, nil); err != nil {
+			return nil, fmt.Errorf("cannot launch %q: other changes in progress", name)
 		}
 
 		localSdks, err := resolveLocalSdks(usr, userDataDir, projectId, name, nil)
