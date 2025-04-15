@@ -80,19 +80,17 @@ var sketchTemplate = `# Sketch SDK for %s
 # Sketch SDK provides local customisation of this specific workshop.
 
 # To read more about SDKs, their components and syntax, see:
-# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/
+# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 
 hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # setup-base: |
     # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
 
   # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
@@ -102,19 +100,16 @@ hooks:
 
 plugs:
   # EXAMPLE: forward your SSH agent into the workshop enabling 'git push' inside the workshop.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/ssh-interface/
   # ssh-agent:
   #   interface: ssh-agent
 
   # EXAMPLE: expose well-known config file locations to the workshop
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/mount-interface/
   # vs-code-settings:
   #   interface: mount
   #   workshop-target: /home/workshop/.config/Code/User
 
 slots:
   # EXAMPLE: expose SDK services to the host
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/tunnel-interface/
   # dashboard:
   #   interface: tunnel
   #   endpoint: 8080
