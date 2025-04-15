@@ -307,10 +307,12 @@ func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
 
 	c.Assert(os.Mkdir(filepath.Join(root, "a"), 0755), IsNil)
 	c.Assert(os.Mkdir(filepath.Join(root, "a", "dir"), 0700), IsNil)
-	c.Assert(os.WriteFile(filepath.Join(root, "a", "file"), []byte("foo"), 0640), IsNil)
+	c.Assert(os.WriteFile(filepath.Join(root, "a", "file"), []byte("foo"), os.ModePerm), IsNil)
+	c.Assert(os.Chmod(filepath.Join(root, "a", "file"), os.ModePerm), IsNil)
 	c.Assert(os.WriteFile(filepath.Join(root, "a", "script"), []byte("#!/bin/sh\n"), 0705), IsNil)
 	c.Assert(syscall.Mkfifo(filepath.Join(root, "a", "pipe"), 0644), IsNil)
-	c.Assert(os.Mkdir(filepath.Join(root, "target"), 0755), IsNil)
+	c.Assert(os.Mkdir(filepath.Join(root, "target"), os.ModePerm), IsNil)
+	c.Assert(os.Chmod(filepath.Join(root, "target"), os.ModePerm), IsNil)
 	c.Assert(os.WriteFile(filepath.Join(root, "target", "file"), []byte("bar"), 0644), IsNil)
 	c.Assert(os.Symlink(filepath.Join(root, "target"), filepath.Join(root, "a", "link")), IsNil)
 
@@ -334,8 +336,8 @@ func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
 	c.Check(filepath.Dir(b), testutil.DirEquals, []string{"drwxr-xr-x b"})
 	c.Check(b, testutil.DirEquals, []string{
 		"drwx------ dir",
-		"-rw-r----- file",
-		"drwxr-xr-x link",
+		"-rwxrwxrwx file",
+		"drwxrwxrwx link",
 		"-rwx---r-x script"})
 	c.Check(filepath.Join(b, "file"), testutil.FileEquals, "foo")
 	c.Check(filepath.Join(b, "dir"), testutil.DirEquals, []string{})

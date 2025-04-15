@@ -284,6 +284,10 @@ func copyDirOnBehalf(uid sys.UserID, gid sys.GroupID, src, dst string, info os.F
 	if err := os.Mkdir(dst, info.Mode().Perm()); err != nil {
 		return err
 	}
+	// Need to Chmod, despite passing mode to Mkdir, because of system umask.
+	if err := os.Chmod(dst, info.Mode().Perm()); err != nil {
+		return err
+	}
 
 	if slices.ContainsFunc(prev, func(fi os.FileInfo) bool { return os.SameFile(fi, info) }) {
 		return fmt.Errorf("directory %q contains a symlink cycle", dst)
@@ -308,6 +312,10 @@ func copyFileOnBehalf(uid sys.UserID, gid sys.GroupID, src, dst string, info os.
 		return err
 	}
 	defer w.Close()
+	// Need to Chmod, despite passing mode to Mkdir, because of system umask.
+	if err := w.Chmod(info.Mode().Perm()); err != nil {
+		return err
+	}
 
 	if err := sys.Chown(w, uid, gid); err != nil {
 		return &os.PathError{Op: "chown", Path: dst, Err: err}
