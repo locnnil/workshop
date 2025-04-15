@@ -138,13 +138,10 @@ func (m *workshopSketch) mockMinimalSketchSdk(c *check.C, ws string, current boo
 		sketchDir = workshop.SketchSdkStash(m.userDataDir, m.prjId, ws)
 	}
 
-	metadir := filepath.Join(sketchDir, "meta")
-	hooksdir := filepath.Join(sketchDir, "sdk", "hooks")
-
-	c.Assert(writeSketchSdk(filepath.Join(metadir, "sdk.yaml"), meta), check.IsNil)
+	c.Assert(writeSketchSdk(filepath.Join(sketchDir, "sdk.yaml"), meta), check.IsNil)
 	c.Assert(writeSketchHooks(sketchDir, meta), check.IsNil)
 
-	return metadir, hooksdir
+	return sketchDir, filepath.Join(sketchDir, "hooks")
 }
 
 func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname string, mode string) {
@@ -219,7 +216,7 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
+	c.Assert(filepath.Join(current, "sdk.yaml"), testutil.FileEquals, sketchContent)
 	c.Assert(filepath.Join(current, "hooks"), testutil.FileAbsent)
 }
 
@@ -247,8 +244,8 @@ hooks:
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
-	c.Assert(filepath.Join(current, "sdk", "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
+	c.Assert(filepath.Join(current, "sdk.yaml"), testutil.FileEquals, sketchContent)
+	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
 	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch refreshed\n`)
 }
 
@@ -298,10 +295,9 @@ func (m *workshopSketch) TestSketchSdkEditExistingMeta(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	dir := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	metadir := filepath.Join(dir, "meta")
-	err := os.MkdirAll(metadir, 0755)
+	err := os.MkdirAll(dir, 0755)
 	c.Assert(err, check.IsNil)
-	err = os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(simpleSketchMeta), 0644)
+	err = os.WriteFile(filepath.Join(dir, "sdk.yaml"), []byte(simpleSketchMeta), 0644)
 	c.Assert(err, check.IsNil)
 
 	sketchContent := `name: sketch
@@ -321,7 +317,7 @@ plugs:
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, sketchContent)
+	c.Assert(filepath.Join(dir, "sdk.yaml"), testutil.FileEquals, sketchContent)
 }
 
 func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
@@ -432,7 +428,7 @@ hooks:
 func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 	restore := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
-	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileAbsent)
+	c.Assert(filepath.Join(restore, "sdk.yaml"), testutil.FileAbsent)
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
@@ -441,7 +437,7 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(metadir, testutil.FileAbsent)
-	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(filepath.Join(restore, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch stashed\n`)
 }
 
@@ -464,7 +460,7 @@ hooks:
 	c.Assert(err, check.IsNil)
 
 	c.Assert(metadir, testutil.FileAbsent)
-	c.Assert(filepath.Join(stash, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(filepath.Join(stash, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 	c.Assert(filepath.Join(stashedhooks, "setup-base"), testutil.FileAbsent)
 	c.Assert(filepath.Join(stashedhooks, "check-health"), testutil.FileAbsent)
 }
@@ -525,7 +521,7 @@ func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(filepath.Join(current, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch restored\n`)
 }
 

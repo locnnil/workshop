@@ -58,7 +58,7 @@ execute: |
   workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
 
   echo "Add a new plug"
-  sed 's@ssh-agent@camera@' -i .workshop/one/meta/sdk.yaml
+  sed 's@ssh-agent@camera@' -i .workshop/one/sdk.yaml
   workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
   workshop_exec connections dev | NOMATCH "^camera.+dev/project-one:camera.+\-.+\-$"
   workshop_exec refresh

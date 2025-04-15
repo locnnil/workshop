@@ -934,7 +934,9 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 	if sdk.IsSystem(setup.Name) {
 		return os.CopyFS(sdkdir, system.SystemSdkFs)
 	}
-	return mockSdk(sdkdir, apiSuiteSdks[setup.Name].meta)
+	metadir := filepath.Join(sdkdir, "meta")
+	hooksdir := filepath.Join(sdkdir, "sdk", "hooks")
+	return mockSdk(metadir, hooksdir, apiSuiteSdks[setup.Name].meta)
 }
 
 func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
@@ -951,8 +953,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 	return result, nil
 }
 
-func mockSdk(sdkdir string, meta string) error {
-	metadir := filepath.Join(sdkdir, "meta")
+func mockSdk(metadir, hooksdir string, meta string) error {
 	if err := os.MkdirAll(metadir, 0755); err != nil {
 		return err
 	}
@@ -966,19 +967,18 @@ func mockSdk(sdkdir string, meta string) error {
 		return err
 	}
 
-	hooksdir := filepath.Join(sdkdir, "sdk", "hooks")
 	return os.MkdirAll(hooksdir, 0755)
 }
 
 func (s *apiSuite) mockProjectSdk(c *check.C, name string, meta string) {
 	sdkdir := workshop.ProjectSdkPath(s.project.Path, name)
-	c.Assert(mockSdk(sdkdir, meta), check.IsNil)
+	c.Assert(mockSdk(sdkdir, filepath.Join(sdkdir, "hooks"), meta), check.IsNil)
 }
 
 func (s *apiSuite) mockSketchSdk(c *check.C, ws string, meta string) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 	sdkdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, ws)
-	c.Assert(mockSdk(sdkdir, meta), check.IsNil)
+	c.Assert(mockSdk(sdkdir, filepath.Join(sdkdir, "hooks"), meta), check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {

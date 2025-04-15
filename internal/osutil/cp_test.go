@@ -301,8 +301,8 @@ func (s *cpSuite) TestCopyPreserveAllSyncSyncFailure(c *C) {
 
 // To check file ownership properly, run:
 // $ go test -c ./internal/osutil
-// $ sudo ./osutil.test -check.f TestCopyDirOnBehalf
-func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
+// $ sudo ./osutil.test -check.f TestCopyAllChown
+func (s *cpSuite) TestCopyAllChown(c *C) {
 	root := c.MkDir()
 
 	c.Assert(os.Mkdir(filepath.Join(root, "a"), 0755), IsNil)
@@ -331,7 +331,8 @@ func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
 	c.Assert(err, IsNil)
 
 	b := filepath.Join(c.MkDir(), "b")
-	c.Assert(osutil.CopyDirOnBehalf(filepath.Join(root, "a"), b, uid, gid), IsNil)
+	c.Assert(os.Mkdir(b, 0700), IsNil)
+	c.Assert(osutil.CopyAllChown(filepath.Join(root, "a"), b, uid, gid), IsNil)
 
 	c.Check(filepath.Dir(b), testutil.DirEquals, []string{"drwxr-xr-x b"})
 	c.Check(b, testutil.DirEquals, []string{
@@ -367,32 +368,19 @@ func (s *cpSuite) TestCopyDirOnBehalf(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *cpSuite) TestCopyDirOnBehalfNoSource(c *C) {
+func (s *cpSuite) TestCopyAllChownNoSource(c *C) {
 	root := c.MkDir()
+	c.Assert(os.Mkdir(filepath.Join(root, "b"), 0700), IsNil)
 
 	u, err := user.Current()
 	c.Assert(err, IsNil)
 	uid, gid, err := osutil.UidGid(u)
 	c.Assert(err, IsNil)
-	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
+	err = osutil.CopyAllChown(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
 	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }
 
-func (s *cpSuite) TestCopyDirOnBehalfTargetExists(c *C) {
-	root := c.MkDir()
-
-	c.Assert(os.Mkdir(filepath.Join(root, "a"), os.ModePerm), IsNil)
-	c.Assert(os.Mkdir(filepath.Join(root, "b"), os.ModePerm), IsNil)
-
-	u, err := user.Current()
-	c.Assert(err, IsNil)
-	uid, gid, err := osutil.UidGid(u)
-	c.Assert(err, IsNil)
-	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
-	c.Check(err, testutil.ErrorIs, os.ErrExist)
-}
-
-func (s *cpSuite) TestCopyDirOnBehalfNoParent(c *C) {
+func (s *cpSuite) TestCopyAllChownNoTarget(c *C) {
 	root := c.MkDir()
 
 	c.Assert(os.Mkdir(filepath.Join(root, "a"), os.ModePerm), IsNil)
@@ -401,6 +389,6 @@ func (s *cpSuite) TestCopyDirOnBehalfNoParent(c *C) {
 	c.Assert(err, IsNil)
 	uid, gid, err := osutil.UidGid(u)
 	c.Assert(err, IsNil)
-	err = osutil.CopyDirOnBehalf(filepath.Join(root, "a"), filepath.Join(root, "b", "c"), uid, gid)
+	err = osutil.CopyAllChown(filepath.Join(root, "a"), filepath.Join(root, "b"), uid, gid)
 	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }
