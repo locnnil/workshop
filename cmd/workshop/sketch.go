@@ -79,7 +79,7 @@ $ workshop sketch-sdk nimble --stash`,
 var sketchTemplate = `# Sketch SDK for %s
 # Sketch SDK provides local customisation of this specific workshop.
 
-# To read more about SDKs, their components and syntax, see:
+# To read more about the sketch SDK, its and syntax, see:
 # https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 
@@ -239,8 +239,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
-	// Ensure that the workshop is Ready,
-	// aborting previous sketch if necessary.
+	// Ensure that the workshop is Ready, aborting previous sketch if necessary.
 	if wp.Status == "Waiting" {
 		cmdabort := &CmdRefresh{root: c.root, Abort: true}
 		if err = cmdabort.Run(cmd, []string{wp.Name}); err != nil {
@@ -268,12 +267,13 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		if err = cmdrefresh.Run(cmd, []string{wp.Name}); err != nil {
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
 			// "workshop refresh <WORKSHOP>/sketch" won't fail due to the lack of
 			// sketch SDK definition.
 			return err
 		}
+		fmt.Fprintf(Stdout, "%q sketch stashed\n", wp.Name)
 		reverter.Success()
 		return nil
 	}
@@ -293,7 +293,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// and with --wait-on-error. Hence, there is always a possibility to
 		// workshop refresh --abort and workshop sketch-sdk --stash to restore the
 		// original stash content.
-		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+			return err
+		}
+		fmt.Fprintf(Stdout, "%q sketch restored\n", wp.Name)
+		return nil
 	}
 
 	if c.remove {
@@ -302,7 +306,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		return cmdrefresh.Run(cmd, []string{wp.Name})
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+			return err
+		}
+		fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
+		return nil
 	}
 
 	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
@@ -312,7 +320,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
 
-	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
+	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+		return err
+	}
+	fmt.Fprintf(Stdout, "%q sketch refreshed\n", wp.Name)
+	return nil
 }
 
 func editSketchSdk(sketchdir, workshopFile string) error {

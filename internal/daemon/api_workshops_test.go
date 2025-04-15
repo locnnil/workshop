@@ -3221,14 +3221,14 @@ base: ubuntu@22.04
 `)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
 	}
 	expected = []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks/sketch" SDK`,
+			Summary: `Refresh "manysdks" workshop`,
 		},
 	}
 
@@ -3271,14 +3271,14 @@ plugs:
 `)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 	}
 	expected = []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "refresh",
-			Summary: `Refresh "manysdks/sketch" SDK`,
+			Summary: `Refresh "manysdks" workshop`,
 		},
 	}
 
@@ -3338,7 +3338,7 @@ base: ubuntu@22.04
 `)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks/sketch"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
 	}
 	expected = []*expectedResp{
@@ -3346,7 +3346,7 @@ base: ubuntu@22.04
 			Type:      ResponseTypeAsync,
 			Status:    http.StatusAccepted,
 			Kind:      "refresh",
-			Summary:   `Refresh "manysdks/sketch" SDK`,
+			Summary:   `Refresh "manysdks" workshop`,
 			ChangeErr: `(?s).*\(SDK must be named "sketch" \(now: "illegal-sketch-name"\)\)`,
 		},
 		{

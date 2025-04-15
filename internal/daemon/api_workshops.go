@@ -384,15 +384,6 @@ func newWorkshopChange(st *state.State, kind string, user, projectId, action str
 	return change
 }
 
-func newWorkshopSdkChange(st *state.State, kind string, user, projectId, action string, wp, sk string) *state.Change {
-	sdkRef := sdk.Ref{ProjectId: projectId, Workshop: wp, Sdk: sk}
-	summary := fmt.Sprintf(`%s %q SDK`, cases.Title(language.BritishEnglish).String(action), sdkRef.ShortRef())
-	change := st.NewChange(kind, summary)
-	change.Set("user", user)
-	change.Set("project-id", projectId)
-	return change
-}
-
 func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	state := c.d.overlord.State()
@@ -451,18 +442,6 @@ func v1GetProjectWorkshops(c *Command, r *http.Request, _ *userState) Response {
 	return SyncResponse(info, http.StatusOK)
 }
 
-func maybeSdkRefresh(names []string) (wp string, sk string, partial bool) {
-	if len(names) != 1 {
-		return "", "", false
-	}
-
-	parts := strings.FieldsFunc(names[0], func(r rune) bool { return r == '/' })
-	if len(parts) == 2 {
-		return parts[0], parts[1], true
-	}
-	return "", "", false
-}
-
 func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	var mode conflict.Mode
 
@@ -493,20 +472,9 @@ func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 }
 
 func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
-	var taskset []*state.TaskSet
-	var change *state.Change
-	var err error
+	change := newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
+	taskset, err := mgr.RefreshMany(ctx, pid, reqData.Names)
 
-	if wp, sk, ok := maybeSdkRefresh(reqData.Names); ok {
-		change = newWorkshopSdkChange(st, "refresh", user, pid, reqData.Action, wp, sk)
-		if !sdk.IsSketch(sk) {
-			return change, taskset, fmt.Errorf(`partial refresh is supported only for "sketch" SDK`)
-		}
-		taskset, err = mgr.RefreshMany(ctx, pid, []string{wp})
-	} else {
-		change = newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-		taskset, err = mgr.RefreshMany(ctx, pid, reqData.Names)
-	}
 	return change, taskset, err
 }
 

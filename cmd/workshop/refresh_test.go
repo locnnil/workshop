@@ -248,33 +248,3 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C
 	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 	c.Check(n, check.Equals, 3)
 }
-
-func (m *workshopRefresh) TestRefreshIncompatibleOptions(c *check.C) {
-	cmd := &CmdRefresh{root: &CmdRoot{}}
-	cmd.Abort = true
-	cmd.Continue = true
-
-	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: '--abort' incompatible with '--continue'")
-
-	cmd.WaitOnError = true
-	cmd.Abort = false
-	cmd.Continue = true
-
-	err = cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with '--continue'")
-
-	cmd.WaitOnError = true
-	cmd.Abort = true
-	cmd.Continue = false
-
-	err = cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with '--abort'")
-
-	cmd.WaitOnError = true
-	cmd.Abort = false
-	cmd.Continue = false
-
-	err = cmd.Run(nil, []string{"ws", "ws-1"})
-	c.Assert(err, check.ErrorMatches, "cannot refresh: '--wait-on-error' incompatible with multiple workshops")
-}
