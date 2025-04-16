@@ -139,7 +139,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error)
 		// progress reporting
 		for _, t := range chg.Tasks {
 			switch {
-			case t.Status != "Doing":
+			case t.Status != "Doing" && t.Status != "Undoing":
 				continue
 			case t.Progress.Total == 1:
 				pb.Spin(t.Summary)

@@ -241,8 +241,9 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 	// Ensure that the workshop is Ready, aborting previous sketch if necessary.
 	if wp.Status == "Waiting" {
+		fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
 		cmdabort := &CmdRefresh{root: c.root, Abort: true}
-		if err = cmdabort.Run(cmd, []string{wp.Name}); err != nil {
+		if err = cmdabort.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			return err
 		}
 	} else if wp.Status != "Ready" {

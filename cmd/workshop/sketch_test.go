@@ -333,18 +333,18 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 	// The API calls break down as follows:
 	// 1-2: get workshop info
 	// 3-4: refresh --wait-on-error (fails due to setup-base)
-	// 5-7: get workshop info
-	// 8-9. refresh --abort
-	// 9-11. refresh --wait-on-error
+	// 5-6: get workshop info
+	// 7-8. refresh --abort
+	// 9-10. refresh --wait-on-error
 	n := 0
 	change := 42
 	workshop := "ws"
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 5, 7:
+		case 1, 5:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects", check.Commentf("call: %d", n))
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
 		case 2, 6:
@@ -357,10 +357,10 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 			case 6:
 				fmt.Fprintln(w, mockWorkshopWithSdksWaiting)
 			}
-		case 3, 8, 10:
+		case 3, 7, 9:
 			mode := "wait-on-error"
 			name := workshop
-			if n == 8 {
+			if n == 7 {
 				mode = "abort"
 			}
 
@@ -373,19 +373,19 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 				"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, response)
-		case 4, 9, 11:
+		case 4, 8, 10:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/changes/%d", change))
 			switch n {
 			case 4:
 				fmt.Fprintln(w, mockWaitChangeJSON)
-			case 9:
+			case 8:
 				fmt.Fprintln(w, mockAbortedChangeJSON)
-			case 11:
+			case 10:
 				fmt.Fprintln(w, mockReadyChangeJSON)
 			}
 		default:
-			c.Errorf("expected 11 calls, now on %d", n)
+			c.Errorf("expected 10 calls, now on %d", n)
 		}
 	})
 
@@ -425,7 +425,7 @@ hooks:
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	c.Assert(n, check.Equals, 11)
+	c.Assert(n, check.Equals, 10)
 	c.Assert(attempts, check.Equals, 2)
 }
 
