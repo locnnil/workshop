@@ -242,6 +242,12 @@ func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
 	return ordered
 }
 
+func retrieveBase(st *state.State, file *workshop.File) *state.Task {
+	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
+	base.Set("workshop-base", file.Base)
+	return base
+}
+
 func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
 	retrieve := state.NewTaskSet()
 	retrieveMap := map[string]string{}
@@ -305,10 +311,6 @@ func launchWorkshop(st *state.State, file *workshop.File, project workshop.Proje
 		prev = t
 	}
 
-	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-	base.Set("workshop-base", file.Base)
-	addTask(base)
-
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	addTask(create)
 	create.Set("workshop-file", file)
@@ -333,12 +335,6 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 			t.WaitFor(prev)
 		}
 		prev = t
-	}
-
-	if sdkSnapshot == "" {
-		base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-		base.Set("workshop-base", file.Base)
-		addTask(base)
 	}
 
 	var summary string
@@ -379,7 +375,9 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 		all.AddAll(ts)
 	}
 
+	base := retrieveBase(st, file)
 	retrieve, rmap := retrieveSdks(st, sdks)
+	retrieve.AddTask(base)
 	addTaskSet(retrieve)
 
 	createAptCache := st.NewTask("create-apt-cache", fmt.Sprintf("Create apt cache for %q", file.Name))
@@ -633,7 +631,15 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 		prev = ts
 	}
 
+	var base *state.Task
+	if plan.sdkSnapshot == "" {
+		// Create download-base first so the task IDs are in a nice order.
+		base = retrieveBase(st, file)
+	}
 	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
+	if base != nil {
+		retrieve.AddTask(base)
+	}
 	addTaskSet(retrieve)
 
 	if len(plan.Refresh()) > 0 {
