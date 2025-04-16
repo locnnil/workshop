@@ -22,7 +22,8 @@ import (
 )
 
 type storeIntegration struct {
-	oldRoot string
+	oldRoot  string
+	oldCache string
 }
 
 var _ = check.Suite(&storeIntegration{})
@@ -30,12 +31,15 @@ var _ = check.Suite(&storeIntegration{})
 func (f *storeIntegration) SetUpSuite(c *check.C) {
 	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 	f.oldRoot = dirs.BaseDir
+	f.oldCache = dirs.CacheDir
 	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 }
 
 func (f *storeIntegration) TearDownSuite(c *check.C) {
 	c.Assert(os.Unsetenv("SDK_STORE_URL"), check.IsNil)
+	dirs.SetCacheDir(f.oldCache)
 	dirs.SetRootDir(f.oldRoot)
 }
 

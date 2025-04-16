@@ -11,6 +11,10 @@ import (
 // the workshop client.
 const defaultBaseDir = "/var/lib/workshop"
 
+// defaultCacheDir is the Workshop directory used if $WORKSHOP_CACHE is not set. It is
+// created by the daemon ("workshopd run") if it doesn't exist.
+const defaultCacheDir = "/var/cache/workshop"
+
 // Variables for paths inside a workshop
 var (
 	// base directory inside a workshop
@@ -39,6 +43,8 @@ var (
 var (
 	// Base directory for workshopd
 	BaseDir string
+	// Cache directory for workshopd
+	CacheDir string
 	// Work directory
 	ExecDir string
 	// The directory to store downloaded SDKs
@@ -57,16 +63,20 @@ var (
 	WorkshopTlsDir string
 )
 
-func getEnvPaths() (workshopdDir string, socketPath string) {
+func getEnvPaths() (workshopdDir, cacheDir, socketPath string) {
 	workshopdDir = os.Getenv("WORKSHOP")
 	if workshopdDir == "" {
 		workshopdDir = defaultBaseDir
+	}
+	cacheDir = os.Getenv("WORKSHOP_CACHE")
+	if cacheDir == "" {
+		cacheDir = defaultCacheDir
 	}
 	socketPath = os.Getenv("WORKSHOP_SOCKET")
 	if socketPath == "" {
 		socketPath = filepath.Join(workshopdDir, "workshop.socket")
 	}
-	return workshopdDir, socketPath
+	return workshopdDir, cacheDir, socketPath
 }
 
 func init() {
@@ -79,8 +89,9 @@ func init() {
 
 	ExecDir = filepath.Dir(execPath)
 	XdgRuntimeDirBase = "/run/user"
-	BaseDir, SocketPath = getEnvPaths()
+	BaseDir, CacheDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
+	SetCacheDir(CacheDir)
 }
 
 func SetRootDir(rootdir string) {
@@ -88,7 +99,6 @@ func SetRootDir(rootdir string) {
 		panic(fmt.Sprintf("cannot set root dir: path %q is not absolute", rootdir))
 	}
 	BaseDir = rootdir
-	SdkDownloads = filepath.Join(BaseDir, "cache")
 
 	WorkshopStateLockFile = filepath.Join(BaseDir, "state.lock")
 	WorkshopTlsDir = filepath.Join(BaseDir, "tls")
@@ -96,8 +106,20 @@ func SetRootDir(rootdir string) {
 	WorkshopdLocksDir = filepath.Join(WorkshopdRunDir, "locks")
 }
 
+func SetCacheDir(cachedir string) {
+	if !filepath.IsAbs(cachedir) {
+		panic(fmt.Sprintf("cannot set cache dir: path %q is not absolute", cachedir))
+	}
+	CacheDir = cachedir
+
+	SdkDownloads = filepath.Join(CacheDir, "sdk")
+}
+
 func CreateDirs() error {
 	if err := os.MkdirAll(BaseDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(CacheDir, 0755); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(SdkDownloads, 0755); err != nil {
