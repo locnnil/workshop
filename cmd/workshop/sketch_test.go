@@ -153,7 +153,7 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3:
+		case 1:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
@@ -163,19 +163,19 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockWorkshopWithSdksReady)
-		case 4:
+		case 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{refreshname}, "options": map[string]interface{}{"mode": mode}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
-		case 5:
+		case 4:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		default:
-			c.Errorf("expected 5 calls, now on %d", n)
+			c.Errorf("expected 4 calls, now on %d", n)
 		}
 	})
 }
@@ -204,7 +204,7 @@ func (m *workshopSketch) mockSketchesHappyPath(c *check.C, resp string) {
 func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	sketchContent := fmt.Sprintf(sketchTemplate, "/home/project/.workshop/ws.yaml")
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
@@ -226,7 +226,7 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 func (m *workshopSketch) TestSketchSdkSuccess(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	sketchContent := `name: sketch
 base: ubuntu@22.04
@@ -249,11 +249,12 @@ hooks:
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, sketchContent)
 	c.Assert(filepath.Join(current, "sdk", "hooks", "setup-base"), testutil.FileEquals, "echo \"Hello\"\n")
+	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch refreshed\n`)
 }
 
 func (m *workshopSketch) TestSketchSdkUpdateHooks(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	meta, hooks := m.mockMinimalSketchSdk(c, "ws", true, []byte(`name: sketch
 base: ubuntu@22.04
@@ -294,7 +295,7 @@ hooks:
 func (m *workshopSketch) TestSketchSdkEditExistingMeta(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	dir := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	metadir := filepath.Join(dir, "meta")
@@ -331,37 +332,36 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 	// The second run should automatically abort the first refresh.
 	// The API calls break down as follows:
 	// 1-2: get workshop info
-	// 3-5: refresh --wait-on-error (fails due to setup-base)
-	// 6-7: get workshop info
-	// 8-10. refresh --abort
-	// 11-13. refresh --wait-on-error
+	// 3-4: refresh --wait-on-error (fails due to setup-base)
+	// 5-6: get workshop info
+	// 7-8. refresh --abort
+	// 9-10. refresh --wait-on-error
 	n := 0
 	change := 42
 	workshop := "ws"
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3, 6, 8, 11:
+		case 1, 5:
 			c.Check(r.Method, check.Equals, "POST")
-			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects", check.Commentf("call: %d", n))
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
-		case 2, 7:
+		case 2, 6:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
 			switch n {
 			case 2:
 				fmt.Fprintln(w, mockWorkshopWithSdksReady)
-			case 7:
+			case 6:
 				fmt.Fprintln(w, mockWorkshopWithSdksWaiting)
 			}
-		case 4, 9, 12:
+		case 3, 7, 9:
 			mode := "wait-on-error"
-			name := fmt.Sprintf("%s/sketch", workshop)
-			if n == 9 {
+			name := workshop
+			if n == 7 {
 				mode = "abort"
-				name = workshop
 			}
 
 			change += 1
@@ -373,19 +373,19 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 				"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, response)
-		case 5, 10, 13:
+		case 4, 8, 10:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/changes/%d", change))
 			switch n {
-			case 5:
+			case 4:
 				fmt.Fprintln(w, mockWaitChangeJSON)
-			case 10:
+			case 8:
 				fmt.Fprintln(w, mockAbortedChangeJSON)
-			case 13:
+			case 10:
 				fmt.Fprintln(w, mockReadyChangeJSON)
 			}
 		default:
-			c.Errorf("expected 13 calls, now on %d", n)
+			c.Errorf("expected 10 calls, now on %d", n)
 		}
 	})
 
@@ -425,7 +425,7 @@ hooks:
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
 
-	c.Assert(n, check.Equals, 13)
+	c.Assert(n, check.Equals, 10)
 	c.Assert(attempts, check.Equals, 2)
 }
 
@@ -442,6 +442,7 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 
 	c.Assert(metadir, testutil.FileAbsent)
 	c.Assert(filepath.Join(restore, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch stashed\n`)
 }
 
 func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
@@ -475,7 +476,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3:
+		case 1:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
@@ -485,19 +486,19 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
-		case 4:
+		case 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
 				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
-		case 5:
+		case 4:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
 			fmt.Fprintln(w, mockChangeWithError)
 		default:
-			c.Errorf("expected 5 calls, now on %d", n)
+			c.Errorf("expected 4 calls, now on %d", n)
 		}
 	})
 
@@ -505,7 +506,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
-	c.Assert(n, check.Equals, 5)
+	c.Assert(n, check.Equals, 4)
 
 	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 	restore := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
@@ -517,7 +518,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 	m.mockMinimalSketchSdk(c, "ws", false, []byte(simpleSketchMeta))
 
 	err := cmd.Run(nil, []string{"ws"})
@@ -525,12 +526,13 @@ func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(current, "meta", "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
+	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch restored\n`)
 }
 
 func (m *workshopSketch) TestSketchSdkRestoreNoStoredSketch(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot restore: no stashed 'sketch' SDK found`)
@@ -539,7 +541,7 @@ func (m *workshopSketch) TestSketchSdkRestoreNoStoredSketch(c *check.C) {
 func (m *workshopSketch) TestSketchSdkRestoreFailsIfCurrentExists(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
 
-	m.mockSketchHappyRefreshPath(c, "ws/sketch", "wait-on-error")
+	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 	stored := `name: sketch
 base: ubuntu@22.04
 plugs:
@@ -566,6 +568,7 @@ func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
 	c.Assert(current, testutil.FileAbsent)
+	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch removed\n`)
 }
 
 func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {

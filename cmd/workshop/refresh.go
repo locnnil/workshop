@@ -6,6 +6,8 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdRefresh struct {
@@ -98,6 +100,10 @@ $ workshop refresh nimble/sketch`,
 		false,
 		"Return the change ID, don't wait for the operation to finish.")
 
+	cmd.MarkFlagsMutuallyExclusive("abort", "continue")
+	cmd.MarkFlagsMutuallyExclusive("abort", "wait-on-error")
+	cmd.MarkFlagsMutuallyExclusive("continue", "wait-on-error")
+
 	return cmd
 }
 
@@ -110,43 +116,11 @@ func workshopName(name string) string {
 	return name
 }
 
-func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
-	av = strutil.Deduplicate(av)
-
-	if c.Abort && c.Continue {
-		return fmt.Errorf("cannot refresh: '--abort' incompatible with '--continue'")
-	}
-
-	if c.WaitOnError && c.Abort {
-		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with '--abort'")
-	}
-
-	if c.WaitOnError && c.Continue {
-		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with '--continue'")
-	}
-
+func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av []string) error {
 	// We should have no more than one argument (a single workshop) for a
 	// wait-on-error operation
 	if (c.Abort || c.Continue || c.WaitOnError) && len(av) > 1 {
 		return fmt.Errorf("cannot refresh: '--wait-on-error' incompatible with multiple workshops")
-	}
-
-	cli, err := c.root.client()
-	if err != nil {
-		return err
-	}
-
-	project, err := cli.Project(c.root.project())
-	if err != nil {
-		return err
-	}
-
-	if len(av) == 0 {
-		name, err := cli.SingleWorkshopName(project)
-		if err != nil {
-			return err
-		}
-		av = []string{name}
 	}
 
 	mode := "transactional"
@@ -179,6 +153,32 @@ To view more information: 'workshop tasks %s'`, w, w, w, changeId)
 		}
 
 		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
+	}
+	return nil
+}
+
+func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
+	cli, err := c.root.client()
+	if err != nil {
+		return err
+	}
+
+	project, err := cli.Project(c.root.project())
+	if err != nil {
+		return err
+	}
+
+	av = strutil.Deduplicate(av)
+	if len(av) == 0 {
+		name, err := cli.SingleWorkshopName(project)
+		if err != nil {
+			return err
+		}
+		av = []string{name}
+	}
+
+	if err := c.RunRefresh(cli, project, av); err != nil {
+		return err
 	}
 
 	if c.Abort {

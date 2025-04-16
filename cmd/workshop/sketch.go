@@ -79,20 +79,18 @@ $ workshop sketch-sdk nimble --stash`,
 var sketchTemplate = `# Sketch SDK for %s
 # Sketch SDK provides local customisation of this specific workshop.
 
-# To read more about SDKs, their components and syntax, see:
-# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/
+# To read more about the sketch SDK, its and syntax, see:
+# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 
 hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # setup-base: |
     # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
 
   # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/hooks/
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
@@ -102,19 +100,16 @@ hooks:
 
 plugs:
   # EXAMPLE: forward your SSH agent into the workshop enabling 'git push' inside the workshop.
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/ssh-interface/
   # ssh-agent:
   #   interface: ssh-agent
 
   # EXAMPLE: expose well-known config file locations to the workshop
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/mount-interface/
   # vs-code-settings:
   #   interface: mount
   #   workshop-target: /home/workshop/.config/Code/User
 
 slots:
   # EXAMPLE: expose SDK services to the host
-  # See https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/interfaces/tunnel-interface/
   # dashboard:
   #   interface: tunnel
   #   endpoint: 8080
@@ -244,11 +239,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
-	// Ensure that the workshop is Ready,
-	// aborting previous sketch if necessary.
+	// Ensure that the workshop is Ready, aborting previous sketch if necessary.
 	if wp.Status == "Waiting" {
+		fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
 		cmdabort := &CmdRefresh{root: c.root, Abort: true}
-		if err = cmdabort.Run(cmd, []string{wp.Name}); err != nil {
+		if err = cmdabort.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			return err
 		}
 	} else if wp.Status != "Ready" {
@@ -273,12 +268,13 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		if err = cmdrefresh.Run(cmd, []string{wp.Name}); err != nil {
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
 			// "workshop refresh <WORKSHOP>/sketch" won't fail due to the lack of
 			// sketch SDK definition.
 			return err
 		}
+		fmt.Fprintf(Stdout, "%q sketch stashed\n", wp.Name)
 		reverter.Success()
 		return nil
 	}
@@ -298,7 +294,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// and with --wait-on-error. Hence, there is always a possibility to
 		// workshop refresh --abort and workshop sketch-sdk --stash to restore the
 		// original stash content.
-		return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+			return err
+		}
+		fmt.Fprintf(Stdout, "%q sketch restored\n", wp.Name)
+		return nil
 	}
 
 	if c.remove {
@@ -307,7 +307,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		cmdrefresh := &CmdRefresh{root: c.root}
-		return cmdrefresh.Run(cmd, []string{wp.Name})
+		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+			return err
+		}
+		fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
+		return nil
 	}
 
 	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
@@ -317,7 +321,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
 
-	return cmdrefresh.Run(cmd, []string{fmt.Sprintf("%s/sketch", wp.Name)})
+	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+		return err
+	}
+	fmt.Fprintf(Stdout, "%q sketch refreshed\n", wp.Name)
+	return nil
 }
 
 func editSketchSdk(sketchdir, workshopFile string) error {
