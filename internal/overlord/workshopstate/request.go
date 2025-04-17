@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/canonical/workshop/internal/osutil"
@@ -71,6 +72,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	if err != nil {
 		return nil, err
 	}
+	local := localStore{usr, userDataDir, project}
 
 	reqs, err := w.resolveWorkshops(ctx, project, names, "launch")
 	if err != nil {
@@ -92,7 +94,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q: other changes in progress", name)
 		}
 
-		localSdks, err := resolveLocalSdks(usr, userDataDir, projectId, name, nil)
+		localSdks, err := local.resolveSdks(name, req.file, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
@@ -152,7 +154,7 @@ func (w *WorkshopManager) resolveWorkshops(ctx context.Context, project workshop
 func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.Setup, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		if workshop.IsImplicitSdk(sd.Name) {
+		if workshop.IsImplicitSdk(sd.Name) || workshop.IsProjectSdk(sd.Name) {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
@@ -173,10 +175,24 @@ func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file
 	return setups, nil
 }
 
-func resolveLocalSdks(usr *user.User, userDataDir, pid, name string, wp *workshop.Workshop) ([]sdk.Setup, error) {
-	var localSdks []sdk.Setup
+type localStore struct {
+	user        *user.User
+	userDataDir string
+	project     workshop.Project
+}
 
-	sketch, err := maybeSketch(userDataDir, pid, name, wp == nil)
+func (s *localStore) resolveSdks(name string, file *workshop.File, wp *workshop.Workshop) ([]sdk.Setup, error) {
+	localSdks := []sdk.Setup{}
+
+	for _, sd := range file.Sdks {
+		if !workshop.IsProjectSdk(sd.Name) {
+			continue
+		}
+		source := workshop.ProjectSdkPath("$PROJECT", strings.TrimPrefix(sd.Name, "project-"))
+		localSdks = append(localSdks, sdk.Setup{Name: sd.Name, Source: source})
+	}
+
+	sketch, err := maybeSketch(s.userDataDir, s.project.ProjectId, name, wp == nil)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +206,10 @@ func resolveLocalSdks(usr *user.User, userDataDir, pid, name string, wp *worksho
 			installed = wp.Sdks[sk.Name].Revision
 		}
 
-		sdkdir := workshop.LocalSdkDir(userDataDir, pid, name, sk.Name)
-		localSdks[i].Revision, err = sdk.CommitRevision(usr, sk.Source, sdkdir, installed)
+		source := workshop.ExpandSdkSource(sk.Source, s.project.Path)
+		target := workshop.LocalSdkDir(s.userDataDir, s.project.ProjectId, name, sk.Name)
+
+		localSdks[i].Revision, err = sdk.CommitRevision(s.user, source, target, installed)
 		if err != nil {
 			return nil, err
 		}
@@ -240,6 +258,12 @@ func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
 		}
 	}
 	return ordered
+}
+
+func retrieveBase(st *state.State, file *workshop.File) *state.Task {
+	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
+	base.Set("workshop-base", file.Base)
+	return base
 }
 
 func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
@@ -305,10 +329,6 @@ func launchWorkshop(st *state.State, file *workshop.File, project workshop.Proje
 		prev = t
 	}
 
-	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-	base.Set("workshop-base", file.Base)
-	addTask(base)
-
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	addTask(create)
 	create.Set("workshop-file", file)
@@ -333,12 +353,6 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 			t.WaitFor(prev)
 		}
 		prev = t
-	}
-
-	if sdkSnapshot == "" {
-		base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
-		base.Set("workshop-base", file.Base)
-		addTask(base)
 	}
 
 	var summary string
@@ -379,7 +393,9 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 		all.AddAll(ts)
 	}
 
+	base := retrieveBase(st, file)
 	retrieve, rmap := retrieveSdks(st, sdks)
+	retrieve.AddTask(base)
 	addTaskSet(retrieve)
 
 	createAptCache := st.NewTask("create-apt-cache", fmt.Sprintf("Create apt cache for %q", file.Name))
@@ -421,6 +437,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 	if err != nil {
 		return nil, err
 	}
+	local := localStore{usr, userDataDir, project}
 
 	reqs, err := w.resolveWorkshops(ctx, project, names, "refresh")
 	if err != nil {
@@ -442,7 +459,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
 
-		localSdks, err := resolveLocalSdks(usr, userDataDir, projectId, name, wp)
+		localSdks, err := local.resolveSdks(name, req.file, wp)
 		if err != nil {
 			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 		}
@@ -633,7 +650,15 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 		prev = ts
 	}
 
+	var base *state.Task
+	if plan.sdkSnapshot == "" {
+		// Create download-base first so the task IDs are in a nice order.
+		base = retrieveBase(st, file)
+	}
 	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
+	if base != nil {
+		retrieve.AddTask(base)
+	}
 	addTaskSet(retrieve)
 
 	if len(plan.Refresh()) > 0 {

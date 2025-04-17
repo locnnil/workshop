@@ -1,0 +1,8 @@
+name: dev
+base: ubuntu@22.04
+sdks:
+  - name: project-one
+  - name: project-two
+  - name: project-three
+    plugs:
+      desktop:

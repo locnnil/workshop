@@ -3,6 +3,7 @@ package sdk
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/revert"
 )
 
 // CommitRevision copies the source SDK into a subdirectory of the target, reusing an existing
@@ -26,19 +29,22 @@ func CommitRevision(u *user.User, source, target string, installed Revision) (Re
 		return Revision{}, err
 	}
 
-	revision, exists := nextRevision(source, target, revisions)
+	temp, rev, err := copyRevision(u, source, target)
+	if err != nil {
+		return Revision{}, err
+	}
+	defer rev.Fail()
+
+	revision, exists := nextRevision(temp, target, revisions)
 	if exists {
 		return revision, nil
 	}
 
-	uid, gid, err := osutil.UidGid(u)
-	if err != nil {
+	if err := moveRevision(temp, target, revision); err != nil {
 		return Revision{}, err
 	}
-	if err := osutil.MkdirAllChown(target, os.ModePerm, uid, gid); err != nil {
-		return Revision{}, err
-	}
-	if err := osutil.CopyDirOnBehalf(source, filepath.Join(target, revision.String()), uid, gid); err != nil {
+	rev.Success()
+	if err := commitRevision(target); err != nil {
 		return Revision{}, err
 	}
 
@@ -68,6 +74,139 @@ func listRevisions(path string) ([]Revision, error) {
 	return revisions, nil
 }
 
+func copyRevision(u *user.User, source, target string) (string, *revert.Reverter, error) {
+	uid, gid, err := osutil.UidGid(u)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := osutil.MkdirAllChown(target, os.ModePerm, uid, gid); err != nil {
+		return "", nil, err
+	}
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	temp, err := os.MkdirTemp(target, "copy-*")
+	if err != nil {
+		return "", nil, err
+	}
+	rev.Add(func() { _ = os.RemoveAll(temp) })
+
+	if err := osutil.CopyAllChown(source, temp, uid, gid); err != nil {
+		return "", nil, err
+	}
+
+	if err := fixLayout(source, temp, uid, gid); err != nil {
+		return "", nil, err
+	}
+
+	clone := rev.Clone()
+	rev.Success()
+	return temp, clone, nil
+}
+
+// fixLayout moves sdk.yaml to meta/sdk.yaml and hooks/ to sdk/hooks/.
+func fixLayout(source, target string, uid sys.UserID, gid sys.GroupID) error {
+	d, err := os.Open(target)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	info, err := d.Stat()
+	if err != nil {
+		return err
+	}
+
+	if err := moveSdkYaml(source, target, info.Mode().Perm(), uid, gid); err != nil {
+		return err
+	}
+
+	if err := moveHooks(source, target, info.Mode().Perm(), uid, gid); err != nil {
+		return err
+	}
+
+	return d.Sync()
+}
+
+func moveSdkYaml(source, target string, perm os.FileMode, uid sys.UserID, gid sys.GroupID) error {
+	short := filepath.Join(target, "sdk.yaml")
+	meta := filepath.Join(target, "meta")
+	long := filepath.Join(meta, "sdk.yaml")
+
+	if !osutil.FileExists(short) {
+		return nil
+	}
+	if osutil.FileExists(long) {
+		return fmt.Errorf("local SDK %q contains both sdk.yaml and meta/sdk.yaml", source)
+	}
+
+	if err := mkdirChmodChown(meta, perm, uid, gid); err != nil {
+		return err
+	}
+
+	d, err := os.Open(meta)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	if err := os.Rename(short, long); err != nil {
+		return err
+	}
+
+	return d.Sync()
+}
+
+func moveHooks(source, target string, perm os.FileMode, uid sys.UserID, gid sys.GroupID) error {
+	short := filepath.Join(target, "hooks")
+	sdk := filepath.Join(target, "sdk")
+	long := filepath.Join(sdk, "hooks")
+
+	exists, isDir, err := osutil.ExistsIsDir(short)
+	if err != nil {
+		return err
+	}
+	if !exists || !isDir {
+		return nil
+	}
+	if osutil.FileExists(long) {
+		return fmt.Errorf("local SDK %q contains both hooks and sdk/hooks", source)
+	}
+
+	if err := mkdirChmodChown(sdk, perm, uid, gid); err != nil {
+		return err
+	}
+
+	d, err := os.Open(sdk)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	if err := os.Rename(short, long); err != nil {
+		return err
+	}
+
+	return d.Sync()
+}
+
+func mkdirChmodChown(path string, perm os.FileMode, uid sys.UserID, gid sys.GroupID) error {
+	if err := os.Mkdir(path, os.ModePerm); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return nil
+		}
+		return err
+	}
+	if err := os.Chmod(path, perm); err != nil {
+		return err
+	}
+	if err := sys.ChownPath(path, uid, gid); err != nil {
+		return &os.PathError{Op: "chown", Path: path, Err: err}
+	}
+	return nil
+}
+
 func nextRevision(source, target string, revisions []Revision) (Revision, bool) {
 	if len(revisions) == 0 {
 		return R(-1), false
@@ -88,6 +227,19 @@ func nextRevision(source, target string, revisions []Revision) (Revision, bool) 
 
 	revision := slices.MinFunc(revisions, func(a, b Revision) int { return cmp.Compare(a.N, b.N) })
 	return Revision{N: revision.N - 1}, false
+}
+
+func moveRevision(source, target string, revision Revision) error {
+	return os.Rename(source, filepath.Join(target, revision.String()))
+}
+
+func commitRevision(target string) error {
+	d, err := os.Open(target)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }
 
 func removeOldRevisions(path string, revisions []Revision, remove int) {

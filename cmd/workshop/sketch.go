@@ -329,7 +329,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 }
 
 func editSketchSdk(sketchdir, workshopFile string) error {
-	content, err := os.ReadFile(filepath.Join(sketchdir, "meta", "sdk.yaml"))
+	content, err := os.ReadFile(filepath.Join(sketchdir, "sdk.yaml"))
 	if errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(sketchdir, 0755); err != nil {
 			return err
@@ -350,7 +350,7 @@ func editSketchSdk(sketchdir, workshopFile string) error {
 		return err
 	}
 
-	target := filepath.Join(temp, "meta", "sdk.yaml")
+	target := filepath.Join(temp, "sdk.yaml")
 	if err := writeSketchSdk(target, content); err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ func writeSketchHooks(sketchdir string, content []byte) error {
 		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
-	hooksdir := filepath.Join(sketchdir, "sdk", "hooks")
+	hooksdir := filepath.Join(sketchdir, "hooks")
 	if len(rec.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
 			return err

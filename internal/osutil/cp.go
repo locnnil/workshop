@@ -29,7 +29,6 @@ import (
 	"syscall"
 
 	"github.com/canonical/workshop/internal/osutil/sys"
-	"github.com/canonical/workshop/internal/revert"
 )
 
 // CopyFlag is used to tweak the behaviour of CopyFile
@@ -175,65 +174,24 @@ func (e CopySpecialFileError) Error() string {
 	return fmt.Sprintf("failed to %s: %q (%v)", e.desc, e.output, e.err)
 }
 
-// CopyDirOnBehalf copies a directory into a new location, owned by the provided user.
+// CopyAllChown copies a directory's contents to a new location, owned by the provided user.
 // It ignores non-regular files, resolves symlinks, preserves permissions and syncs to disk.
+// On failure the target directory is left in an unspecified state.
 // FIXME: the chown behaviour is not currently tested. The plan is to simplify this function
 // and run it as the actual user, once we have decided on a uniform approach for this.
-func CopyDirOnBehalf(src, dst string, uid sys.UserID, gid sys.GroupID) error {
+func CopyAllChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
 	info, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
-	if err := checkOwner(uid, info, src); err != nil {
+	if err := checkOwner(info, src, uid); err != nil {
 		return err
 	}
 
-	dst, err = filepath.Abs(dst)
-	if err != nil {
-		return err
-	}
-
-	// Fail early and also check dst != "/".
-	if FileExists(dst) {
-		return &os.PathError{Op: "mkdir", Path: dst, Err: syscall.EEXIST}
-	}
-	parent := filepath.Dir(dst)
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	temp, err := os.MkdirTemp(parent, "copy-*")
-	if err != nil {
-		return err
-	}
-	rev.Add(func() { _ = os.RemoveAll(temp) })
-
-	if err := os.Chmod(temp, info.Mode().Perm()); err != nil {
-		return err
-	}
-
-	if err := chownCopyAndSync(uid, gid, src, temp, []os.FileInfo{info}); err != nil {
-		return err
-	}
-
-	if err = os.Rename(temp, dst); err != nil {
-		return err
-	}
-
-	d, err := os.OpenFile(parent, os.O_RDONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	if err := d.Sync(); err != nil {
-		return err
-	}
-
-	rev.Success()
-	return nil
+	return copyDirChown(src, dst, uid, gid, []os.FileInfo{info})
 }
 
-func checkOwner(uid sys.UserID, info os.FileInfo, path string) error {
+func checkOwner(info os.FileInfo, path string, uid sys.UserID) error {
 	fuid, _, err := sys.FileOwner(info)
 	if err != nil {
 		return &os.PathError{Op: "stat", Path: path, Err: err}
@@ -244,13 +202,18 @@ func checkOwner(uid sys.UserID, info os.FileInfo, path string) error {
 	return nil
 }
 
-func chownCopyAndSync(uid sys.UserID, gid sys.GroupID, src, dst string, prev []os.FileInfo) error {
-	d, err := os.OpenFile(dst, os.O_RDONLY, 0)
+func copyDirChown(src, dst string, uid sys.UserID, gid sys.GroupID, prev []os.FileInfo) error {
+	srcinfo := prev[len(prev)-1]
+
+	d, err := os.Open(dst)
 	if err != nil {
 		return err
 	}
 	defer d.Close()
 
+	if err := d.Chmod(srcinfo.Mode().Perm()); err != nil {
+		return err
+	}
 	if err := sys.Chown(d, uid, gid); err != nil {
 		return &os.PathError{Op: "chown", Path: dst, Err: err}
 	}
@@ -264,39 +227,35 @@ func chownCopyAndSync(uid sys.UserID, gid sys.GroupID, src, dst string, prev []o
 		from := filepath.Join(src, names[i])
 		to := filepath.Join(dst, names[i])
 
-		if err := checkOwner(uid, info, from); err != nil {
+		if err := checkOwner(info, from, uid); err != nil {
 			return err
 		}
 
-		if info.IsDir() {
-			if err := copyDirOnBehalf(uid, gid, from, to, info, prev); err != nil {
+		if !info.IsDir() {
+			if err := copyFileChown(from, to, uid, gid, info); err != nil {
 				return err
 			}
-		} else if err := copyFileOnBehalf(uid, gid, from, to, info); err != nil {
+			continue
+		}
+
+		if err := os.Mkdir(to, info.Mode().Perm()); err != nil {
 			return err
 		}
+
+		if slices.ContainsFunc(prev, func(fi os.FileInfo) bool { return os.SameFile(fi, info) }) {
+			return fmt.Errorf("directory %q contains a symlink cycle", from)
+		}
+		prev = append(prev, info)
+		if err := copyDirChown(from, to, uid, gid, prev); err != nil {
+			return err
+		}
+		prev = prev[:len(prev)-1]
 	}
 
 	return d.Sync()
 }
 
-func copyDirOnBehalf(uid sys.UserID, gid sys.GroupID, src, dst string, info os.FileInfo, prev []os.FileInfo) error {
-	if err := os.Mkdir(dst, info.Mode().Perm()); err != nil {
-		return err
-	}
-
-	if slices.ContainsFunc(prev, func(fi os.FileInfo) bool { return os.SameFile(fi, info) }) {
-		return fmt.Errorf("directory %q contains a symlink cycle", dst)
-	}
-	prev = append(prev, info)
-	if err := chownCopyAndSync(uid, gid, src, dst, prev); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func copyFileOnBehalf(uid sys.UserID, gid sys.GroupID, src, dst string, info os.FileInfo) error {
+func copyFileChown(src, dst string, uid sys.UserID, gid sys.GroupID, info os.FileInfo) error {
 	r, err := os.Open(src)
 	if err != nil {
 		return err
@@ -309,6 +268,10 @@ func copyFileOnBehalf(uid sys.UserID, gid sys.GroupID, src, dst string, info os.
 	}
 	defer w.Close()
 
+	// Need to Chmod, despite passing mode to Mkdir, because of system umask.
+	if err := w.Chmod(info.Mode().Perm()); err != nil {
+		return err
+	}
 	if err := sys.Chown(w, uid, gid); err != nil {
 		return &os.PathError{Op: "chown", Path: dst, Err: err}
 	}
