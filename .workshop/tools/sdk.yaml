@@ -1,0 +1,5 @@
+name: tools
+slots:
+  fake-store:
+    interface: tunnel
+    endpoint: 8080

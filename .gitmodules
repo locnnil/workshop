@@ -1,3 +1,0 @@
-[submodule "snapd-testing-tools"]
-	path = snapd-testing-tools
-	url = https://github.com/canonical/snapd-testing-tools.git

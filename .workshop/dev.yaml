@@ -1,0 +1,26 @@
+name: dev
+base: ubuntu@24.04
+sdks:
+  - name: go
+    channel: noble/stable
+  - name: project-tools
+  - name: system
+    plugs:
+      fake-store:
+        interface: tunnel
+        endpoint: 8080
+scripts:
+  lint: |
+    golangci-lint run
+    golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml
+  shellcheck: |
+    git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+    "$HOME"/snapd-testing-tools/utils/spread-shellcheck tests/integration
+  cover: |
+    go test ./... -coverprofile=coverage.out
+  fake-store: |
+    STORE_DIR=/tmp/sdkstore
+    source tests/lib/utils.sh
+    rm -rf "$STORE_DIR"
+    publish_test_sdks ./tests/lib/sdk "$STORE_DIR"
+    fake-gcs-server -data /tmp -backend memory -scheme http -port 8080 -host 127.0.0.1 -public-host localhost:8080
