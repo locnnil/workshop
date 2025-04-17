@@ -247,7 +247,6 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Execute
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer helper.RemoveTestVolume(c, f.ctx, f.bd)
 
 	// Validate
 	err := f.bd.RemoveWorkshop(f.ctx, "test")

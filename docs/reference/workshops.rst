@@ -162,7 +162,7 @@ each workshop maintains a package cache at :file:`/var/cache/apt/archives`.
 Because the container is single-user,
 only the mapped user and root can access that cache.
 
-When a workshop is removed, the :program:`apt` cache volume is removed as well.
+When a workshop is removed, the :program:`apt` cache directory is removed as well.
 
 
 Interfaces

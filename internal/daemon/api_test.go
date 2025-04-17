@@ -56,6 +56,7 @@ type apiSuite struct {
 	restoreRetrieve   func()
 	restoreProjectId  func()
 	restoreUserEnv    func()
+	restoreUserLookup func()
 	restoreTime       func()
 	restoreSanitize   func()
 	restoreSecBackend func()
@@ -67,8 +68,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreMuxVars = FakeMuxVars(s.muxVars)
 	s.workshopDir = c.MkDir()
 
-	// Real UID and GID are required to copy local SDKs.
-	// TODO: implement unprivileged operations properly and mock them separately.
+	// Real UID and GID are required to copy local SDKs and create the apt cache directory.
+	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
 	actual, err := user.Current()
 	c.Assert(err, check.IsNil)
 	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
@@ -101,9 +102,17 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 
 	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		if name != "testuser" {
+			return nil, nil, user.UnknownUserError("not found")
+		}
 		return s.user, nil, nil
 	})
-
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
 }
 
 func (s *apiSuite) TearDownTest(c *check.C) {

@@ -398,8 +398,8 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	retrieve.AddTask(base)
 	addTaskSet(retrieve)
 
-	createAptCache := st.NewTask("create-apt-cache", fmt.Sprintf("Create apt cache for %q", file.Name))
-	addTaskSet(state.NewTaskSet(createAptCache))
+	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
+	addTaskSet(state.NewTaskSet(createDirs))
 
 	create := launchWorkshop(st, file, project)
 	addTaskSet(create)
@@ -1003,15 +1003,14 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	addTaskSet(state.NewTaskSet(remove))
 
-	removeAptCache := st.NewTask("remove-apt-cache", fmt.Sprintf("Remove apt cache for %q", w.Name))
-	addTaskSet(state.NewTaskSet(removeAptCache))
+	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", w.Name))
+	addTaskSet(state.NewTaskSet(removeDirs))
 
-	// The apt cache cannot be removed until the workshop has stopped, which
-	// currently happens as part of remove-workshop. Since there is no way to
-	// undo remove-workshop, we run remove-apt-cache in a separate lane. If an
-	// error occurs when removing the cache, it will not affect the other tasks.
+	// Directories should exist from before create-workshop until after remove-workshop.
+	// Since there is no way to undo remove-workshop, we run remove-workshop-storage in a separate lane.
+	// If an error occurs when removing the directories, it will not affect the other tasks.
 	cleanupLane := st.NewLane()
-	removeAptCache.JoinLane(cleanupLane)
+	removeDirs.JoinLane(cleanupLane)
 
 	for _, task := range removeSet.Tasks() {
 		task.Set("workshop", w.Name)

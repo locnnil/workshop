@@ -11,6 +11,7 @@ execute: |
     workshop_exec exec "$1" test -S /var/lib/workshop/run/workshop.socket.untrusted
     # ensure the apt cache is mounted
     workshop_exec exec "$1" mountpoint /var/cache/apt/archives
+    workshop_exec exec "$1" stat --format='%A %U %G' /var/cache/apt/archives | MATCH '^drwxr-xr-x workshop workshop$'
     # ensure apt is configured to exclude suggested and recommended packages
     workshop_exec run "$1" check-apt
     workshop_exec remove "$1"

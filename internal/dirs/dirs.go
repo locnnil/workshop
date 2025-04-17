@@ -36,7 +36,7 @@ var (
 	WorkshopScriptsDir = filepath.Join(WorkshopRunDir, "scripts")
 
 	// Cache directory for deb packages
-	AptCachePath = "/var/cache/apt/archives"
+	AptCacheDir = "/var/cache/apt/archives"
 )
 
 // Variables for workshopd (host paths)
