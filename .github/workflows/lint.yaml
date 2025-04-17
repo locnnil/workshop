@@ -8,8 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          repository: canonical/snapd-testing-tools
+          path: snapd-testing-tools	      
+          fetch-depth: 1
 
       - uses: actions/setup-go@v5
         with:

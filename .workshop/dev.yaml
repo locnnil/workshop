@@ -1,0 +1,41 @@
+name: dev
+base: ubuntu@24.04
+sdks:
+  - name: go
+    channel: noble/stable
+    slots:
+       vs-code:
+         interface: tunnel
+         endpoint: 22
+       fake-store:
+         interface: tunnel
+         endpoint: 8080
+  - name: system
+    plugs:
+      vs-code:
+        interface: tunnel
+        endpoint: 2022
+      fake-store:
+        interface: tunnel
+        endpoint: 8080
+scripts:
+  init: |
+    # this should move to the project-level SDK.
+    [ -f $HOME/go/bin/fake-gcs-server ] || go install github.com/fsouza/fake-gcs-server@latest
+    go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.2
+    git clone --depth 1 https://github.com/canonical/snapd-testing-tools.git  
+    sudo apt-get install shellcheck
+  lint: |
+    golangci-lint run
+    golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml
+  shellcheck: |
+    git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+    snapd-testing-tools/utils/spread-shellcheck tests/integration
+  cover: |
+    go test ./... -coverprofile=coverage.out
+  fake-store: |
+    STORE_DIR=/tmp/store
+    source tests/lib/utils.sh
+    rm -rf "$STORE_DIR"
+    publish_test_sdks ./tests/lib/sdk "$STORE_DIR"
+    fake-gcs-server -data /tmp -filesystem-root /tmp -scheme http -port 8080 -host 127.0.0.1 -public-host localhost:8080

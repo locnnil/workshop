@@ -10,9 +10,9 @@ workshopctl
 !workshop/
 .spread-reuse.*
 .workshop.lock
-/.workshop/
 *.snap
 cover.out
+coverage.out
 
 # docs
 gendocs
