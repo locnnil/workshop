@@ -39,7 +39,7 @@ to implement custom logic of package and snap installation.
 For a complete reference of :samp:`parts` and their properties,
 refer to the corresponding Craft Parts
 `documentation section
-<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html>`_.
+<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties/>`_.
 
 
 .. _ref_sdk_plugs_slots:

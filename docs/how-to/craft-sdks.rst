@@ -193,7 +193,7 @@ In our example, the :samp:`parts` section of the definition can be used as is:
 
 For in-depth details,
 refer to the `Parts
-<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts.html>`_
+<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
 section in Craft Parts documentation.
 
 
@@ -407,7 +407,7 @@ according to the part definition.
    For a detailed explanation of the build process,
    see the respective Craft Parts
    `documentation section
-   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/lifecycle.html>`_.
+   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/lifecycle/>`_.
 
 
 Optionally, you can clean the build cache before a build attempt:
