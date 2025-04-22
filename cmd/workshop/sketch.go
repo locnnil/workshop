@@ -190,30 +190,36 @@ func restoreSketch(sketchdir, stashdir string) error {
 	return nil
 }
 
-func removeSketch(sketchdir string) error {
+func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
 	_, err := os.Stat(sketchdir)
 	if err != nil && !osutil.IsDirNotExist(err) {
-		return err
+		return "", nil, err
 	}
 	if osutil.IsDirNotExist(err) {
 		// Nothing to do.
-		return fmt.Errorf(`cannot remove: the 'sketch' SDK doesn't exist`)
+		return "", nil, fmt.Errorf(`cannot remove: the 'sketch' SDK doesn't exist`)
 	}
+
+	reverter := revert.New()
+	defer reverter.Fail()
 
 	temp, err := os.MkdirTemp(filepath.Dir(sketchdir), "sketch-*")
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	defer os.RemoveAll(temp)
+	reverter.Add(func() { _ = os.RemoveAll(temp) })
 	if err := os.Chmod(temp, 0755); err != nil {
-		return err
+		return "", nil, err
 	}
 
 	if err := osutil.Exchange(sketchdir, temp); err != nil {
-		return err
+		return "", nil, err
 	}
+	reverter.Add(func() { _ = osutil.Exchange(temp, sketchdir) })
 
-	return os.Remove(sketchdir)
+	clone := reverter.Clone()
+	reverter.Success()
+	return temp, clone, nil
 }
 
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
@@ -302,14 +308,20 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if c.remove {
-		if err := removeSketch(sketchdir); err != nil {
+		temp, reverter, err := hideSketch(sketchdir)
+		if err != nil {
 			return err
 		}
+		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			return err
 		}
+
+		reverter.Success()
+		_ = os.RemoveAll(temp)
+
 		fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
 		return nil
 	}

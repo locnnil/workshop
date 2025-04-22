@@ -563,7 +563,7 @@ func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	c.Assert(current, testutil.FileAbsent)
+	c.Assert(current, testutil.DirEquals, []string{})
 	c.Assert(m.stdout.String(), check.Matches, `"ws" sketch removed\n`)
 }
 
@@ -574,6 +574,48 @@ func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {
 
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot remove: the 'sketch' SDK doesn't exist`)
+}
+
+func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
+		case 3:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional"}})
+			w.WriteHeader(202)
+			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
+		case 4:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
+			fmt.Fprintln(w, mockChangeWithError)
+		default:
+			c.Errorf("expected 4 calls, now on %d", n)
+		}
+	})
+
+	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
+
+	err := cmd.Run(nil, nil)
+	c.Assert(err, check.NotNil)
+	c.Assert(n, check.Equals, 4)
+
+	c.Assert(filepath.Join(metadir, "sdk.yaml"), testutil.FileEquals, simpleSketchMeta)
 }
 
 func (m *workshopSketch) TestSketchesOK(c *check.C) {
