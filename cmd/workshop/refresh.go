@@ -100,9 +100,7 @@ $ workshop refresh nimble/sketch`,
 		false,
 		"Return the change ID, don't wait for the operation to finish.")
 
-	cmd.MarkFlagsMutuallyExclusive("abort", "continue")
-	cmd.MarkFlagsMutuallyExclusive("abort", "wait-on-error")
-	cmd.MarkFlagsMutuallyExclusive("continue", "wait-on-error")
+	cmd.MarkFlagsMutuallyExclusive("abort", "continue", "wait-on-error")
 
 	return cmd
 }
