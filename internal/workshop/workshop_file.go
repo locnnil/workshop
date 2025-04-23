@@ -77,7 +77,7 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 		parts[0] = sdk.System.String()
 	}
 	if !sdk.SdkName.MatchString(parts[0]) {
-		return fmt.Errorf("%q is not a valid plug or slot reference (%q is an invalid SDK name)", refStr, parts[0])
+		return fmt.Errorf("%q is not a valid plug or slot reference: invalid SDK name %q", refStr, parts[0])
 	}
 
 	b.Sdk = parts[0]
