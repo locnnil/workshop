@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -23,12 +24,14 @@ type CmdSketch struct {
 	root    *CmdRoot
 	stash   bool
 	restore bool
+	eject   bool
+	name    string
 	remove  bool
 }
 
 func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "sketch-sdk [--stash|--restore|--remove] [<WORKSHOP>]",
+		Use:   "sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Edit the sketch SDK and graft it onto the workshop",
 		Long: `
@@ -40,6 +43,8 @@ which installs the configured 'sketch' SDK in the workshop.
 
 The '--stash' and '--restore' options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
+The '--eject' option moves the SDK definition into the project directory,
+so it can be added to multiple workshops or shared with others.
 The '--remove' option removes the SDK permanently.
 
 Notes:
@@ -69,9 +74,11 @@ $ workshop sketch-sdk nimble --stash`,
 
 	cmd.Flags().BoolVar(&c.stash, "stash", false, "Stash the sketch SDK and remove it from the workshop.")
 	cmd.Flags().BoolVar(&c.restore, "restore", false, "Return the previously stashed SDK to the workshop.")
+	cmd.Flags().BoolVar(&c.eject, "eject", false, "Promote the sketch SDK to an in-project SDK.")
+	cmd.Flags().StringVar(&c.name, "name", "", "Name for the ejected SDK.")
 	cmd.Flags().BoolVar(&c.remove, "remove", false, "Remove the sketch SDK from the workshop.")
 
-	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "remove")
+	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "eject", "remove")
 
 	return cmd
 }
@@ -182,6 +189,137 @@ func restoreSketch(sketchdir, stashdir string) error {
 	return osutil.Rename(stashdir, sketchdir)
 }
 
+func (c *CmdSketch) inferSdkName(cmd *cobra.Command, project string) error {
+	inferred := false
+	if c.name == "" {
+		c.name = filepath.Base(project)
+		inferred = true
+	}
+
+	if sdk.SdkName.MatchString(c.name) {
+		return nil
+	}
+
+	err := fmt.Errorf("invalid SDK name %q", c.name)
+	if inferred {
+		err = fmt.Errorf("flag --name required: %w", err)
+	}
+	return err
+}
+
+func ejectSketch(project, sketchdir string, name string) (*revert.Reverter, error) {
+	target := workshop.ProjectSdkPath(project, name)
+	if osutil.FileExists(target) {
+		return nil, &os.PathError{Op: "mkdir", Path: target, Err: os.ErrExist}
+	}
+
+	content, err := os.ReadFile(filepath.Join(sketchdir, "sdk.yaml"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, errors.New(`"sketch" SDK not found`)
+	} else if err != nil {
+		return nil, err
+	}
+	var document yaml.Node
+	if err := yaml.Unmarshal(content, &document); err != nil {
+		return nil, err
+	}
+
+	var rec workshop.SdkRecord
+	if err := document.Decode(&rec); err != nil {
+		return nil, err
+	}
+	rec.Name = name
+
+	if err := sketchToProjectSdk(&document, name); err != nil {
+		return nil, err
+	}
+	if err := validateProjectSdk(&document, &rec); err != nil {
+		return nil, err
+	}
+
+	// This won't be cleaned up on failure. In most cases the user
+	// is likely to retry the eject after fixing the underlying issue.
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return nil, err
+	}
+
+	reverter := revert.New()
+	defer reverter.Fail()
+
+	temp, err := os.MkdirTemp(filepath.Dir(target), name+"-*")
+	if err != nil {
+		return nil, err
+	}
+	reverter.Add(func() { _ = os.RemoveAll(temp) })
+
+	f, err := os.OpenFile(filepath.Join(temp, "sdk.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	encoder := yaml.NewEncoder(f)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(&document); err != nil {
+		return nil, err
+	}
+	if err := writeHooks(temp, rec); err != nil {
+		return nil, err
+	}
+
+	if err := os.Rename(temp, target); err != nil {
+		return nil, err
+	}
+
+	reverter.Success()
+
+	ejectReverter := revert.New()
+	ejectReverter.Add(func() { _ = os.RemoveAll(target) })
+	return ejectReverter, nil
+}
+
+func sketchToProjectSdk(document *yaml.Node, name string) error {
+	var nodes struct {
+		Name  NodeRef `yaml:"name"`
+		Hooks NodeRef `yaml:"hooks"`
+	}
+	if err := document.Decode(&nodes); err != nil {
+		return err
+	}
+
+	if nodes.Name.Node == nil {
+		return errors.New(`"sketch" SDK name not found`)
+	}
+	nodes.Name.Node.Value = name
+
+	if nodes.Hooks.Node != nil {
+		RemoveNodes(document, nodes.Hooks.Node)
+	}
+
+	return nil
+}
+
+func validateProjectSdk(document *yaml.Node, expected *workshop.SdkRecord) error {
+	var actual workshop.SdkRecord
+	if err := document.Decode(&actual); err != nil {
+		return err
+	}
+
+	if actual.Name != expected.Name {
+		return fmt.Errorf("internal error: sketch SDK renamed %q (expected %q)", actual.Name, expected.Name)
+	}
+	if !reflect.DeepEqual(expected.Plugs, actual.Plugs) {
+		return errors.New("internal error: sketch SDK plugs not preserved")
+	}
+	if !reflect.DeepEqual(actual.Slots, actual.Slots) {
+		return errors.New("internal error: sketch SDK slots not preserved")
+	}
+	if len(actual.Hooks) > 0 {
+		return errors.New("internal error: hooks not ejected from sketch SDK")
+	}
+
+	return nil
+}
+
 func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
 	_, err := os.Stat(sketchdir)
 	if err != nil && !osutil.IsDirNotExist(err) {
@@ -215,6 +353,10 @@ func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
 }
 
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
+	if c.name != "" && !c.eject {
+		return errors.New("flag --name requires --eject")
+	}
+
 	cli, err := c.root.client()
 	if err != nil {
 		return err
@@ -299,7 +441,20 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return nil
 	}
 
-	if c.remove {
+	var ejectReverter *revert.Reverter
+	if c.eject {
+		if err := c.inferSdkName(cmd, p.Path); err != nil {
+			return fmt.Errorf("cannot eject: %w", err)
+		}
+
+		ejectReverter, err = ejectSketch(p.Path, sketchdir, c.name)
+		if err != nil {
+			return fmt.Errorf("cannot eject: %w", err)
+		}
+		defer ejectReverter.Fail()
+	}
+
+	if c.eject || c.remove {
 		temp, reverter, err := hideSketch(sketchdir)
 		if err != nil {
 			return fmt.Errorf("cannot remove: %w", err)
@@ -312,9 +467,18 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		}
 
 		reverter.Success()
+		if ejectReverter != nil {
+			ejectReverter.Success()
+		}
 		_ = os.RemoveAll(temp)
 
-		fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
+		if c.remove {
+			fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
+		} else {
+			fmt.Fprintf(Stdout, "%q sketch ejected to %q\n", wp.Name, workshop.ProjectSdkPath("", c.name))
+			fmt.Fprintf(Stdout, "To use it, add %q to the list of SDKs and run 'workshop refresh %s'\n", "project-"+c.name, wp.Name)
+		}
+
 		return nil
 	}
 
@@ -386,7 +550,11 @@ func writeSketchHooks(sketchdir string, content []byte) error {
 		return fmt.Errorf("SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
-	hooksdir := filepath.Join(sketchdir, "hooks")
+	return writeHooks(sketchdir, rec)
+}
+
+func writeHooks(sdkdir string, rec workshop.SdkRecord) error {
+	hooksdir := filepath.Join(sdkdir, "hooks")
 	if len(rec.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
 			return err
@@ -396,7 +564,10 @@ func writeSketchHooks(sketchdir string, content []byte) error {
 	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
 		hookpath := filepath.Join(hooksdir, hook)
 		if script := rec.Hooks[hook]; len(script) > 0 {
-			if err := os.WriteFile(hookpath, []byte(script+"\n"), 0644); err != nil {
+			if !strings.HasSuffix(script, "\n") {
+				script += "\n"
+			}
+			if err := os.WriteFile(hookpath, []byte(script), 0644); err != nil {
 				return err
 			}
 		}

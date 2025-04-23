@@ -420,14 +420,17 @@ hooks:
 }
 
 func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdStash := cmd.Command()
+	cmd.stash = true
+
 	restore := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	c.Assert(filepath.Join(restore, "sdk.yaml"), testutil.FileAbsent)
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdStash, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(metadir, testutil.FileAbsent)
@@ -436,7 +439,10 @@ func (m *workshopSketch) TestSketchSdkStashOK(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdStash := cmd.Command()
+	cmd.stash = true
+
 	stash := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	_, stashedhooks := m.mockMinimalSketchSdk(c, "ws", false, []byte(`name: sketch
 hooks:
@@ -449,7 +455,7 @@ hooks:
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdStash, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
 	c.Assert(metadir, testutil.FileAbsent)
@@ -459,7 +465,9 @@ hooks:
 }
 
 func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdStash := cmd.Command()
+	cmd.stash = true
 
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -493,7 +501,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 
 	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, nil)
+	err := cmd.Run(cmdStash, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(n, check.Equals, 4)
 
@@ -505,12 +513,14 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRestore := cmd.Command()
+	cmd.restore = true
 
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 	m.mockMinimalSketchSdk(c, "ws", false, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdRestore, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
@@ -519,16 +529,20 @@ func (m *workshopSketch) TestSketchSdkRestoreOK(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchSdkRestoreNoStoredSketch(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRestore := cmd.Command()
+	cmd.restore = true
 
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdRestore, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot restore: stashed "sketch" SDK not found`)
 }
 
 func (m *workshopSketch) TestSketchSdkRestoreFailsIfCurrentExists(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, restore: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRestore := cmd.Command()
+	cmd.restore = true
 
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 	stored := `name: sketch
@@ -541,17 +555,150 @@ plugs:
 	// stored
 	m.mockMinimalSketchSdk(c, "ws", false, []byte(stored))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdRestore, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot restore: "sketch" SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
 }
 
+func (m *workshopSketch) TestSketchSdkEjectOK(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+	cmd.name = "notsketch"
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+	m.mockMinimalSketchSdk(c, "ws", true, []byte(`name: sketch
+
+hooks:
+  # comment1
+  setup-base: |
+    echo "Hello"
+# comment2
+  check-health: |-
+    workshopctl set-health okay
+
+plugs:
+  ssh-agent:
+   # comment3
+    interface: ssh-agent
+     # comment4
+
+slots:
+  tunnel:
+    interface: tunnel
+    endpoint: 1234
+    # comment5
+`))
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Assert(err, check.IsNil)
+
+	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
+	c.Check(current, testutil.DirEquals, []string{})
+
+	notsketch := workshop.ProjectSdkPath(m.prjDir, "notsketch")
+	c.Check(filepath.Join(notsketch, "sdk.yaml"), testutil.FileEquals, `name: notsketch
+plugs:
+  ssh-agent:
+    # comment3
+    interface: ssh-agent
+    # comment4
+slots:
+  tunnel:
+    interface: tunnel
+    endpoint: 1234
+    # comment5
+`)
+	c.Check(filepath.Join(notsketch, "hooks", "setup-base"), testutil.FileEquals, `echo "Hello"
+`)
+	c.Check(filepath.Join(notsketch, "hooks", "check-health"), testutil.FileEquals, `workshopctl set-health okay
+`)
+	c.Check(m.stdout.String(), check.Equals, `"ws" sketch ejected to ".workshop/notsketch"
+To use it, add "project-notsketch" to the list of SDKs and run 'workshop refresh ws'
+`)
+}
+
+func (m *workshopSketch) TestSketchSdkEjectInferName(c *check.C) {
+	m.prjDir = filepath.Join(m.prjDir, "myproject")
+	c.Assert(os.Mkdir(m.prjDir, os.ModePerm), check.IsNil)
+
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+	m.mockMinimalSketchSdk(c, "ws", true, []byte(`name: sketch
+`))
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Assert(err, check.IsNil)
+
+	myproject := workshop.ProjectSdkPath(m.prjDir, "myproject")
+	c.Check(filepath.Join(myproject, "sdk.yaml"), testutil.FileEquals, `name: myproject
+`)
+}
+
+func (m *workshopSketch) TestSketchSdkEjectCannotInferName(c *check.C) {
+	m.prjDir = filepath.Join(m.prjDir, "_____")
+
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Check(err, check.ErrorMatches, `cannot eject: flag --name required: invalid SDK name "_____"`)
+}
+
+func (m *workshopSketch) TestSketchSdkEjectPreservesExisting(c *check.C) {
+	c.Assert(os.MkdirAll(workshop.ProjectSdkPath(m.prjDir, "name"), os.ModePerm), check.IsNil)
+
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+	cmd.name = "name"
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Check(err, testutil.ErrorIs, os.ErrExist)
+}
+
+func (m *workshopSketch) TestSketchSdkEjectCurrentNotExist(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+	cmd.name = "name"
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, `cannot eject: "sketch" SDK not found`)
+}
+
+func (m *workshopSketch) TestSketchSdkEjectNoName(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdEject := cmd.Command()
+	cmd.eject = true
+	cmd.name = "name"
+
+	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
+	sketchDir := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
+	c.Assert(writeSketchSdk(filepath.Join(sketchDir, "sdk.yaml"), []byte("{}")), check.IsNil)
+
+	err := cmd.Run(cmdEject, []string{"ws"})
+	c.Assert(err, check.ErrorMatches, `cannot eject: "sketch" SDK name not found`)
+}
+
 func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRemove := cmd.Command()
+	cmd.remove = true
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdRemove, []string{"ws"})
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
@@ -560,16 +707,20 @@ func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRemove := cmd.Command()
+	cmd.remove = true
 
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 
-	err := cmd.Run(nil, []string{"ws"})
+	err := cmd.Run(cmdRemove, []string{"ws"})
 	c.Assert(err, check.ErrorMatches, `cannot remove: "sketch" SDK not found`)
 }
 
 func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, remove: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdRemove := cmd.Command()
+	cmd.remove = true
 
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -603,7 +754,7 @@ func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
 
 	metadir, _ := m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, nil)
+	err := cmd.Run(cmdRemove, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(n, check.Equals, 4)
 
@@ -640,7 +791,9 @@ func (m *workshopSketch) TestSketchesEmpty(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchSdkWorkshopStatusNotReady(c *check.C) {
-	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
+	cmd := &CmdSketch{root: &CmdRoot{}}
+	cmdStash := cmd.Command()
+	cmd.stash = true
 
 	status := []string{"Pending", "Error", "Stopped"}
 
@@ -664,7 +817,7 @@ func (m *workshopSketch) TestSketchSdkWorkshopStatusNotReady(c *check.C) {
 	})
 
 	for i := 1; i <= len(status); i++ {
-		err := cmd.Run(nil, nil)
+		err := cmd.Run(cmdStash, nil)
 		c.Assert(err, check.NotNil)
 		c.Assert(n, check.Equals, i*2)
 	}
