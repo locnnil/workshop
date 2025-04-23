@@ -94,10 +94,6 @@ func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }
 
-func AptCacheVolumeName(ws, pid string) string {
-	return fmt.Sprintf("%s-%s-cache-apt", ws, pid)
-}
-
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
 	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
 	if err != nil {

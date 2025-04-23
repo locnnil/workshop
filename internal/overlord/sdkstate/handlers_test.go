@@ -99,6 +99,7 @@ slots:
 func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	var err error
 	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
 	s.fs = afero.NewMemMapFs()

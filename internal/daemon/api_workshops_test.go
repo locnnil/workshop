@@ -1043,8 +1043,7 @@ line 1: cannot unmarshal !!seq into string`,
 	fw := s.b.Workshops[wp.Project.ProjectId]["basic"]
 	c.Assert(fw.Devices[workshop.ConfigProjectPathDevice]["path"], check.Equals, workshop.WorkshopProjectPath)
 
-	volume := workshop.AptCacheVolumeName("basic", wp.Project.ProjectId)
-	c.Assert(s.b.WorkshopVolumes[volume], check.Equals, true)
+	c.Check(workshop.AptCacheDir(wp.Project.ProjectId, "basic"), testutil.DirEquals, []string{})
 
 	c.Assert(wp.Running, check.Equals, true)
 

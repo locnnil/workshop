@@ -18,7 +18,8 @@ import (
 )
 
 type systemSdk struct {
-	oldRoot string
+	oldRoot  string
+	oldCache string
 }
 
 var _ = check.Suite(&systemSdk{})
@@ -27,11 +28,14 @@ func Test(t *testing.T) { check.TestingT(t) }
 
 func (f *systemSdk) SetUpSuite(c *check.C) {
 	f.oldRoot = dirs.BaseDir
+	f.oldCache = dirs.CacheDir
 	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 }
 
 func (f *systemSdk) TearDownSuite(c *check.C) {
+	dirs.SetCacheDir(f.oldRoot)
 	dirs.SetRootDir(f.oldRoot)
 }
 

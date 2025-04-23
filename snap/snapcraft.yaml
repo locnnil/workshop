@@ -30,6 +30,7 @@ apps:
   workshopd:
     environment:
       WORKSHOP: ${SNAP_DATA}
+      WORKSHOP_CACHE: $SNAP_COMMON/workshop/cache
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: commands/run_daemon
     daemon: notify

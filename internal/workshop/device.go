@@ -114,9 +114,9 @@ func defaultDevices(pid, w string) ([]Mount, []ProxyEntry) {
 		Type:  HostWorkshop,
 	}, {
 		Name:  "cache.apt",
-		What:  AptCacheVolumeName(w, pid),
-		Where: dirs.AptCachePath,
-		Type:  Volume,
+		What:  AptCacheDir(pid, w),
+		Where: dirs.AptCacheDir,
+		Type:  HostWorkshop,
 	}}
 
 	socketHost := dirs.SocketPath + ".untrusted"

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"syscall"
 	"time"
 
 	"gopkg.in/tomb.v2"
@@ -12,6 +13,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -22,18 +24,6 @@ import (
 var StopLogInterval = 30 * time.Second
 
 var StopWorkshop = (workshop.Backend).StopWorkshop
-
-func (m *WorkshopManager) undoConstructWorkshop(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, workshop, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	return m.backend.RemoveWorkshop(ctx, workshop)
-}
 
 func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
@@ -131,43 +121,93 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	return nil
 }
 
-func (m *WorkshopManager) doCreateAptCache(task *state.Task, tomb *tomb.Tomb) error {
+func (m *WorkshopManager) doCreateWorkshopStorage(task *state.Task, tomb *tomb.Tomb) error {
+	username, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	// The workshop's root user needs write access to the apt cache.
+	// We use the client user (mapped to the workshop user) for simplicity.
+	// Another approach would be to add shift=true to the mount device,
+	// but it's risky in terms of security (e.g. setuid binaries).
+	user, err := osutil.UserLookup(username)
+	if err != nil {
+		return err
+	}
+	uid, gid, err := osutil.UidGid(user)
+	if err != nil {
+		return err
+	}
+
+	aptCache := workshop.AptCacheDir(prj.ProjectId, w)
+	if err := os.MkdirAll(aptCache, 0755); err != nil {
+		return err
+	}
+	if err = sys.ChownPath(aptCache, uid, gid); err != nil {
+		return &os.PathError{Op: "chown", Path: aptCache, Err: err}
+	}
+
+	return nil
+}
+
+func (m *WorkshopManager) doRemoveWorkshopStorage(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
+	var errs []error
+	if err := m.cleanupWorkshopData(user, prj.ProjectId, w); err != nil {
+		errs = append(errs, err)
+	}
+	if err := m.cleanupWorkshopCache(prj.ProjectId, w); err != nil {
+		errs = append(errs, err)
+	}
 
-	// TODO: The apt cache directory usually has mode 0755.
-	// At present CreateVolume doesn't provide a way to specify this,
-	// and the LXD backend will default to mode 0711 for new volumes.
-	//
-	// It seems possible to override the LXD default by restoring a "backup",
-	// which is a tarball containing the volume contents and a YAML metadata file.
-	//
-	// Currently the difference in modes doesn't seem to cause any issues,
-	// so the effort required to remedy this probably isn't worth it.
-	volume := workshop.AptCacheVolumeName(w, prj.ProjectId)
-	err = m.backend.CreateVolume(ctx, volume)
-	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("reusing existing storage volume %q", volume)
+	if len(errs) == 0 {
+		return nil
+	}
+
+	st := task.State()
+	st.Lock()
+	for _, err := range errs[:len(errs)-1] {
+		task.Errorf("%v", err)
+	}
+	st.Unlock()
+	return errs[len(errs)-1]
+}
+
+func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
+	usr, env, err := osutil.UserAndEnv(user)
+	if err != nil {
+		return err
+	}
+
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	workshopUserData := workshop.UserData(userDataDir, projectId, w)
+	if err := os.RemoveAll(workshopUserData); err != nil {
+		return err
+	}
+
+	return removeIfEmpty(workshop.ProjectUserData(userDataDir, projectId))
+}
+
+func (m *WorkshopManager) cleanupWorkshopCache(projectId, w string) error {
+	cache := workshop.CacheDir(projectId, w)
+	if err := os.RemoveAll(cache); err != nil {
+		return err
+	}
+
+	return removeIfEmpty(workshop.ProjectCacheDir(projectId))
+}
+
+func removeIfEmpty(path string) error {
+	err := os.Remove(path)
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTEMPTY) {
 		return nil
 	}
 	return err
-}
-
-func (m *WorkshopManager) doRemoveAptCache(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	return m.backend.DeleteVolume(ctx, workshop.AptCacheVolumeName(w, prj.ProjectId))
 }
 
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
@@ -257,18 +297,7 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	if err := m.backend.RemoveWorkshop(ctx, w); err != nil {
-		return err
-	}
-
-	if err = m.cleanupWorkshopData(user, prj.ProjectId, w); err != nil {
-		st := task.State()
-		st.Lock()
-		task.Logf("%v", err)
-		st.Unlock()
-	}
-
-	return nil
+	return m.backend.RemoveWorkshop(ctx, w)
 }
 
 func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {
@@ -336,31 +365,4 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	defer cancel()
 
 	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
-}
-
-func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
-	usr, env, err := osutil.UserAndEnv(user)
-	if err != nil {
-		return err
-	}
-
-	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-	workshopUserData := workshop.UserData(userDataDir, projectId, w)
-	err = os.RemoveAll(workshopUserData)
-	if err != nil {
-		return err
-	}
-
-	// If this was the last workshop in the project, cleanup the project dir
-	projectUserData := workshop.ProjectUserData(userDataDir, projectId)
-
-	prjDir, err := os.ReadDir(projectUserData)
-	if err != nil {
-		return err
-	}
-
-	if len(prjDir) == 0 {
-		return os.RemoveAll(projectUserData)
-	}
-	return nil
 }

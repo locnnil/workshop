@@ -3,6 +3,7 @@ package workshop
 import (
 	"path/filepath"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -56,4 +57,16 @@ func SketchSdkCurrent(userDataDir, pid, w string) string {
 
 func SketchSdkStash(userDataDir, pid, w string) string {
 	return filepath.Join(SketchSdkDir(userDataDir, pid, w), "stash")
+}
+
+func ProjectCacheDir(pid string) string {
+	return filepath.Join(dirs.CacheDir, "id", pid)
+}
+
+func CacheDir(pid, w string) string {
+	return filepath.Join(ProjectCacheDir(pid), w)
+}
+
+func AptCacheDir(pid, w string) string {
+	return filepath.Join(CacheDir(pid, w), "apt")
 }

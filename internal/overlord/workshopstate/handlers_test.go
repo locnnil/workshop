@@ -12,6 +12,7 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -80,10 +81,19 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
+
+	// Real UID and GID are required to create the apt cache directory
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
 	s.user = &user.User{
 		HomeDir: c.MkDir(),
+		Uid:     actual.Uid,
+		Gid:     actual.Gid,
 	}
 	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		if name != "testuser" {
+			return nil, nil, user.UnknownUserError("not found")
+		}
 		return s.user, nil, nil
 	})
 
@@ -185,6 +195,18 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 }
 
 func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
+	cacheDir := dirs.CacheDir
+	dirs.SetCacheDir(c.MkDir())
+	defer dirs.SetCacheDir(cacheDir)
+
+	restoreUserLookup := osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
+	defer restoreUserLookup()
+
 	s.state.Lock()
 	defer s.state.Unlock()
 	wFiles := []*workshop.File{{
@@ -207,6 +229,21 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 		c.Check(err, check.IsNil)
 
 		// create content directories
+		chg := s.state.NewChange("sample", "...")
+		t1 := s.state.NewTask("create-workshop-storage", "...")
+		setWorkshopProject(wf.Name, s.project, t1)
+		chg.Set("user", "testuser")
+		chg.AddTask(t1)
+
+		s.state.Unlock()
+		for i := 0; i < 6; i = i + 1 {
+			c.Assert(s.se.Ensure(), check.IsNil)
+			s.se.Wait()
+		}
+		s.state.Lock()
+
+		c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+
 		sdkMountData := workshop.SdkMountDir(userDataDir, s.project.ProjectId, wf.Name, "test")
 		var plugs = []string{"plug1", "plug2"}
 		for _, p := range plugs {
@@ -218,15 +255,21 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	for _, wf := range wFiles {
 		// Make sure content exists, we only care about this at a directory level
 		workshopUserData := workshop.UserData(userDataDir, s.project.ProjectId, wf.Name)
-		exist, _, _ := osutil.ExistsIsDir(workshopUserData)
-		c.Assert(exist, check.Equals, true)
+		c.Check(workshopUserData, testutil.DirEquals, []string{
+			"drwxr--r-- mount",
+		})
+
+		aptCache := workshop.AptCacheDir(s.project.ProjectId, wf.Name)
+		c.Check(aptCache, testutil.DirEquals, []string{})
 
 		chg := s.state.NewChange("sample", "...")
 		t1 := s.state.NewTask("remove-workshop", "...")
-
-		setWorkshopProject(wf.Name, s.project, t1)
+		t2 := s.state.NewTask("remove-workshop-storage", "...")
+		t2.WaitFor(t1)
+		setWorkshopProject(wf.Name, s.project, t1, t2)
 		chg.Set("user", "testuser")
 		chg.AddTask(t1)
+		chg.AddTask(t2)
 
 		s.state.Unlock()
 		for i := 0; i < 6; i = i + 1 {
@@ -240,14 +283,16 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 		c.Assert(ws, check.IsNil)
 		c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 
-		exist, _, _ = osutil.ExistsIsDir(workshopUserData)
-		c.Assert(exist, check.Equals, false)
+		c.Check(workshopUserData, testutil.FileAbsent)
+		c.Check(aptCache, testutil.FileAbsent)
 	}
 
-	// Make sure project directory is cleaned up
+	// Make sure project directories are cleaned up
 	projectContent := workshop.ProjectUserData(userDataDir, s.project.ProjectId)
-	exist, _, _ := osutil.ExistsIsDir(projectContent)
-	c.Assert(exist, check.Equals, false)
+	c.Check(projectContent, testutil.FileAbsent)
+
+	projectCache := workshop.ProjectCacheDir(s.project.ProjectId)
+	c.Check(projectCache, testutil.FileAbsent)
 }
 
 func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *check.C) {
@@ -320,6 +365,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
 	_, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 }
@@ -358,65 +404,4 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	c.Assert(label, check.Equals, "download finished")
 	c.Assert(done, check.Equals, 100)
 	c.Assert(total, check.Equals, 100)
-}
-
-func (s *workshopHandlers) TestAptCache(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	s.createWFile(c, "ws", wsJammy)
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
-
-	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("create-workshop", "...")
-	t1.Set("workshop-file", wf)
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		c.Check(s.se.Ensure(), check.IsNil)
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-
-	// Create volume for apt cache
-	chg = s.state.NewChange("sample", "...")
-	t1 = s.state.NewTask("create-apt-cache", "...")
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-
-	volume := workshop.AptCacheVolumeName("ws", s.project.ProjectId)
-	c.Assert(s.backend.WorkshopVolumes[volume], check.Equals, true)
-
-	// Remove volume for apt cache
-	chg = s.state.NewChange("sample", "...")
-	t1 = s.state.NewTask("remove-apt-cache", "...")
-	setWorkshopProject("ws", s.project, t1)
-	chg.Set("user", "testuser")
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-
-	c.Assert(s.backend.WorkshopVolumes[volume], check.Equals, false)
 }

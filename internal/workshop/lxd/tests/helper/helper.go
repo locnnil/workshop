@@ -115,14 +115,10 @@ printf '%s\n' "$@"
 	err = os.WriteFile(path, []byte(testYaml), 0644)
 	c.Assert(err, check.IsNil)
 
-	prj, _, err := bd.CreateOrLoadProject(ctx, dir)
+	_, _, err = bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
 
 	err = bd.LaunchOrRebuildWorkshop(ctx, wf)
-	c.Assert(err, check.IsNil)
-
-	volume := workshop.AptCacheVolumeName(wf.Name, prj.ProjectId)
-	err = bd.CreateVolume(ctx, volume)
 	c.Assert(err, check.IsNil)
 
 	err = bd.StartWorkshop(ctx, "test")
@@ -131,17 +127,6 @@ printf '%s\n' "$@"
 
 func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
 	err := bd.RemoveWorkshop(ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	RemoveTestVolume(c, ctx, bd)
-}
-
-func RemoveTestVolume(c *check.C, ctx context.Context, bd workshop.Backend) {
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	c.Assert(ok, check.Equals, true)
-
-	volume := workshop.AptCacheVolumeName("test", projectId)
-	err := bd.DeleteVolume(ctx, volume)
 	c.Assert(err, check.IsNil)
 }
 
