@@ -126,7 +126,7 @@ func stashSketch(sketchdir, stashdir string) (*revert.Reverter, error) {
 	}
 	if len(recs) == 0 {
 		// Nothing to do.
-		return nil, fmt.Errorf(`cannot stash: the 'sketch' SDK doesn't exist`)
+		return nil, errors.New(`"sketch" SDK not found`)
 	}
 
 	// Ensure stashdir exists but is empty.
@@ -175,19 +175,16 @@ func restoreSketch(sketchdir, stashdir string) error {
 	}
 	if len(recs) == 0 || osutil.IsDirNotExist(err) {
 		// Nothing in stored.
-		return fmt.Errorf(`cannot restore: no stashed 'sketch' SDK found`)
+		return errors.New(`stashed "sketch" SDK not found`)
 	}
 
 	// We don't overwrite current sketch SDK as opposed to overwriting stashed
 	// sketch SDK.
 	if _, err = os.Stat(sketchdir); err == nil {
-		return fmt.Errorf(`cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
+		return errors.New(`"sketch" SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
 	}
 
-	if err = osutil.Rename(stashdir, sketchdir); err != nil {
-		return err
-	}
-	return nil
+	return osutil.Rename(stashdir, sketchdir)
 }
 
 func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
@@ -197,7 +194,7 @@ func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
 	}
 	if osutil.IsDirNotExist(err) {
 		// Nothing to do.
-		return "", nil, fmt.Errorf(`cannot remove: the 'sketch' SDK doesn't exist`)
+		return "", nil, fmt.Errorf(`"sketch" SDK not found`)
 	}
 
 	reverter := revert.New()
@@ -253,7 +250,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 			return err
 		}
 	} else if wp.Status != "Ready" {
-		return fmt.Errorf(`error: cannot sketch %q: workshop currently %q, must be "Ready"`, wp.Name, wp.Status)
+		return fmt.Errorf(`cannot sketch: workshop %q currently %q, must be "Ready"`, wp.Name, wp.Status)
 	}
 
 	user, env, err := osutil.CurrentUserAndEnv()
@@ -269,7 +266,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 		reverter, err := stashSketch(sketchdir, stashdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot stash: %w", err)
 		}
 		defer reverter.Fail()
 
@@ -292,7 +289,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		stashdir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
 
 		if err = restoreSketch(sketchdir, stashdir); err != nil {
-			return err
+			return fmt.Errorf("cannot restore: %w", err)
 		}
 
 		// Run refresh with the stashed sketch SDK. We do not revert dirs exchange
@@ -310,7 +307,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	if c.remove {
 		temp, reverter, err := hideSketch(sketchdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot remove: %w", err)
 		}
 		defer reverter.Fail()
 
@@ -327,7 +324,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
-		return err
+		return fmt.Errorf("cannot sketch: %w", err)
 	}
 
 	cmdrefresh := &CmdRefresh{root: c.root}
@@ -348,7 +345,7 @@ func editSketchSdk(sketchdir, workshopFile string) error {
 		}
 
 		// Format sketch SDK template header.
-		content = []byte(fmt.Sprintf(sketchTemplate, workshopFile))
+		content = fmt.Appendf(nil, sketchTemplate, workshopFile)
 	} else if err != nil {
 		return err
 	}
@@ -391,7 +388,7 @@ func writeSketchHooks(sketchdir string, content []byte) error {
 	}
 
 	if !sdk.IsSketch(rec.Name) {
-		return fmt.Errorf("cannot sketch: SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
+		return fmt.Errorf("SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
 	}
 
 	hooksdir := filepath.Join(sketchdir, "hooks")

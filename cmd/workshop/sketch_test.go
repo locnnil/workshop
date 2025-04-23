@@ -531,7 +531,7 @@ func (m *workshopSketch) TestSketchSdkRestoreNoStoredSketch(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot restore: no stashed 'sketch' SDK found`)
+	c.Assert(err, check.ErrorMatches, `cannot restore: stashed "sketch" SDK not found`)
 }
 
 func (m *workshopSketch) TestSketchSdkRestoreFailsIfCurrentExists(c *check.C) {
@@ -550,7 +550,7 @@ plugs:
 	m.mockMinimalSketchSdk(c, "ws", false, []byte(stored))
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot restore: the 'sketch' SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot restore: "sketch" SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
 }
 
 func (m *workshopSketch) TestSketchSdkRemoveOK(c *check.C) {
@@ -573,7 +573,7 @@ func (m *workshopSketch) TestSketchSdkRemoveCurrentNotExist(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws", "transactional")
 
 	err := cmd.Run(nil, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot remove: the 'sketch' SDK doesn't exist`)
+	c.Assert(err, check.ErrorMatches, `cannot remove: "sketch" SDK not found`)
 }
 
 func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
