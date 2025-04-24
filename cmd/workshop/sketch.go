@@ -54,9 +54,6 @@ Notes:
 
 - In addition to hooks, the 'sketch' SDK can use interfaces,
   define plugs, slots, connections and bindings.
-
-- You can partially refresh the workshop, targeting the 'sketch' SDK
-  with the 'workshop refresh <WORKSHOP>/sketch' command.
 `,
 		Example: `
 Edit the sketch SDK definition for the 'nimble' workshop
@@ -410,8 +407,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
-			// "workshop refresh <WORKSHOP>/sketch" won't fail due to the lack of
-			// sketch SDK definition.
+			// refresh won't fail due to the lack of a sketch SDK definition.
 			return err
 		}
 		fmt.Fprintf(Stdout, "%q sketch stashed\n", wp.Name)

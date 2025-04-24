@@ -20,7 +20,7 @@ type CmdRefresh struct {
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>[/<SDK>]...",
+		Use:   "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
 		Short: "Update workshops according to their definitions",
 		Long: `
 This command updates the workshops listed as arguments by going over their
@@ -79,10 +79,7 @@ $ workshop refresh --abort
 
 After refresh paused on error and the workshop was fixed,
 continue the operation:
-$ workshop refresh --continue
-
-Refresh the sketch SDK in the 'nimble' workshop:
-$ workshop refresh nimble/sketch`,
+$ workshop refresh --continue`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.root.completeWorkshopNames([]string{"Ready", "Waiting"}),
 	}
