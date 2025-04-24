@@ -82,14 +82,12 @@ var sketchTemplate = `# Sketch SDK for %s
 # To read more about the sketch SDK, its and syntax, see:
 # https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
-
 hooks:
   # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
   # setup-base: |
     # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
-
   # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
@@ -97,17 +95,14 @@ hooks:
     # else
     #   workshopctl set-health --code=installation-failed error "Installation failed"
     # fi
-
 plugs:
   # EXAMPLE: forward your SSH agent into the workshop enabling 'git push' inside the workshop.
   # ssh-agent:
   #   interface: ssh-agent
-
   # EXAMPLE: expose well-known config file locations to the workshop
   # vs-code-settings:
   #   interface: mount
   #   workshop-target: /home/workshop/.config/Code/User
-
 slots:
   # EXAMPLE: expose SDK services to the host
   # dashboard:
