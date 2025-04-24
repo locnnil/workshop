@@ -106,7 +106,6 @@ var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK
 "warning-count":1}`
 
 var simpleSketchMeta = `name: sketch
-base: ubuntu@22.04
 `
 
 func (m *workshopSketch) SetUpTest(c *check.C) {
@@ -226,7 +225,6 @@ func (m *workshopSketch) TestSketchSdkSuccess(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	sketchContent := `name: sketch
-base: ubuntu@22.04
 
 hooks:
     setup-base: |-
@@ -254,7 +252,6 @@ func (m *workshopSketch) TestSketchSdkUpdateHooks(c *check.C) {
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
 	meta, hooks := m.mockMinimalSketchSdk(c, "ws", true, []byte(`name: sketch
-base: ubuntu@22.04
 
 hooks:
   setup-base: |-
@@ -264,7 +261,6 @@ hooks:
 `))
 
 	sketchContent := `name: sketch
-base: ubuntu@22.04
 
 hooks:
     save-state: |-
@@ -301,7 +297,6 @@ func (m *workshopSketch) TestSketchSdkEditExistingMeta(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	sketchContent := `name: sketch
-base: ubuntu@22.04
 plugs:
   gpu:
     interface: gpu
@@ -387,7 +382,6 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 
 	attempts := 0
 	sketchSetup := `name: sketch
-base: ubuntu@22.04
 
 hooks:
     setup-base: |
@@ -445,7 +439,6 @@ func (m *workshopSketch) TestSketchSdkOverwritesExistingStash(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}, stash: true}
 	stash := workshop.SketchSdkStash(m.userDataDir, m.prjId, "ws")
 	_, stashedhooks := m.mockMinimalSketchSdk(c, "ws", false, []byte(`name: sketch
-base: ubuntu@18.04
 hooks:
     setup-base: |
         touch /home/workshop/stash
@@ -539,7 +532,6 @@ func (m *workshopSketch) TestSketchSdkRestoreFailsIfCurrentExists(c *check.C) {
 
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 	stored := `name: sketch
-base: ubuntu@22.04
 plugs:
   gpu:
     interface: gpu
