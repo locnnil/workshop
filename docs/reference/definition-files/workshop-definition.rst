@@ -107,11 +107,14 @@ Each SDK is described with the following keys:
 
    * - :samp:`name` (required)
      - string
-     - Name of an existing SDK
-       that is available from the SDK store,
-       or :samp:`system` for the :ref:`system SDK <ref_system_sdk>`.
+     - Name of an existing SDK,
+       typically from the SDK Store.
 
-   * - :samp:`channel` (required)
+       The :ref:`system SDK <ref_system_sdk>` is named :samp:`system`.
+
+       :ref:`In-project SDKs <ref_in_project_sdk>` should be prefixed by :samp:`project-`.
+
+   * - :samp:`channel`
      - string
      - SDK version to retrieve during
        :ref:`launch <ref_workshop_launch>`
@@ -124,7 +127,7 @@ Each SDK is described with the following keys:
        of :samp:`<TRACK>/<RISK>`
        without the :samp:`<BRANCH>` part.
 
-       Not required for the :ref:`system SDK <ref_system_sdk>`.
+       Required for SDKs from the Store.
 
    * - :samp:`plugs`
      - object
@@ -154,7 +157,7 @@ System SDK
 
 The system SDK is built into every workshop
 to expose resources provided by the host system in a consistent way.
-It's not available in the SDK store,
+It's not available in the SDK Store,
 so :samp:`channel` isn't relevant and can be omitted.
 
 Technically, the system SDK is of :samp:`system` type,
@@ -177,6 +180,24 @@ largely due to security considerations,
 because the system SDK exposes sensitive host system resources.
 To the contrary, plugs added under the system SDK can be auto-connected
 because they expose workshop internals.
+
+
+.. _ref_in_project_sdk:
+
+In-project SDKs
+~~~~~~~~~~~~~~~
+
+.. @artefact in-project SDK
+
+Projects can define their own SDKs
+to configure the workshop in a project-specific way.
+These SDKs are defined by files named like :file:`.workshop/<NAME>/sdk.yaml`,
+relative to the project directory.
+Accordingly, SDK hooks are stored under :file:`.workshop/<NAME>/hooks/`.
+
+Workshops within the project consume these SDKs
+using names like :samp:`project-<NAME>`;
+a :samp:`channel` is not required in this case.
 
 
 Camera interface
@@ -419,8 +440,9 @@ and some useful scripts:
 
 
 This YAML file defines a :samp:`go-dev` workshop
-that uses two SDKs, :samp:`go` and :samp:`dev-tunnel`;
-the :samp:`data` plug defined by the :samp:`dev-tunnel` SDK
+that uses the :samp:`go` SDK from the Store
+and an :ref:`in-project SDK <ref_in_project_sdk>` named :samp:`tunnel`;
+the :samp:`data` plug defined by the :samp:`tunnel` SDK
 is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
 
 .. code-block:: yaml
@@ -431,8 +453,7 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
    sdks:
      - name: go
        channel: latest/candidate
-     - name: dev-tunnel
-       channel: latest/edge
+     - name: project-tunnel
        plugs:
          data:
            bind: go:mod-cache
