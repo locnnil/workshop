@@ -25,7 +25,15 @@ execute: |
   workshop_exec stop ws-remove
   workshop_exec remove ws-remove
   workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"
-  
+
+  echo "Check the workshop can be removed if in Waiting"
+  workshop_exec launch ws-remove
+  echo -e "sdks:\n  - name: test-sdk-setup-fail\n    channel: latest/stable" >> .workshop/ws-remove.yaml
+  workshop_exec refresh --wait-on-error ws-remove || true
+  workshop_exec remove ws-remove
+  sed -i '/^sdks:$/,/^    channel: latest\/stable$/d' .workshop/ws-remove.yaml
+  workshop_exec list | MATCH "^.+[[:space:]]+ws-remove[[:space:]]+Off[[:space:]]+-$"
+
   echo "Check the workshop can be removed and SDKs disconnected"
   workshop_exec launch ws-remove-mount
   workshop_exec remove ws-remove-mount

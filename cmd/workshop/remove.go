@@ -68,6 +68,20 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
+	for _, name := range av {
+		wp, err := cli.Workshop(project.Id, name)
+		if err != nil {
+			return err
+		}
+		if wp.Status == "Waiting" {
+			fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
+			cmdabort := &CmdRefresh{root: c.root, Abort: true}
+			if err = cmdabort.RunRefresh(cli, project, []string{wp.Name}); err != nil {
+				return err
+			}
+		}
+	}
+
 	changeId, err := cli.Remove(project.Id, av)
 	if err != nil {
 		return err
