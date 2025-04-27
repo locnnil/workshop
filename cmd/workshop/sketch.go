@@ -523,6 +523,9 @@ func editSketchSdk(sketchdir, workshopFile string) error {
 		return err
 	}
 	if err := writeSketchHooks(temp, content); err != nil {
+		// If writeSketchHooks failed, we don't want to refresh
+		// but we do want to remember the user's edits for next time.
+		_ = osutil.Exchange(temp, sketchdir)
 		return err
 	}
 

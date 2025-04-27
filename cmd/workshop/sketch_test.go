@@ -315,6 +315,59 @@ plugs:
 	c.Assert(filepath.Join(dir, "sdk.yaml"), testutil.FileEquals, sketchContent)
 }
 
+func (m *workshopSketch) TestSketchSdkPreserveBadEdits(c *check.C) {
+	cmd := &CmdSketch{root: &CmdRoot{}}
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1, 3:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2, 4:
+			c.Check(r.Method, check.Equals, "GET")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws", m.prjId))
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockWorkshopWithSdksReady)
+		default:
+			c.Errorf("expected 4 calls, now on %d", n)
+		}
+	})
+
+	sketchContent := `name: sketch
+hooks:
+  setup-base:
+    check-health:
+  # comment
+      save-state:
+`
+	checked := false
+	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
+		if n >= 4 {
+			checked = true
+			c.Check(string(inContent), check.Equals, sketchContent)
+		}
+		if inPath != "" {
+			c.Assert(writeSketchSdk(inPath, []byte(sketchContent)), check.IsNil)
+		}
+		return []byte(sketchContent), nil
+	})
+	defer restore()
+
+	err := cmd.Run(cmd.Command(), []string{"ws"})
+	c.Assert(err, check.NotNil)
+	dir := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
+	c.Check(filepath.Join(dir, "sdk.yaml"), testutil.FileEquals, sketchContent)
+
+	err = cmd.Run(cmd.Command(), []string{"ws"})
+	c.Assert(err, check.NotNil)
+	c.Check(checked, check.Equals, true)
+	c.Check(n, check.Equals, 4)
+}
+
 func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
