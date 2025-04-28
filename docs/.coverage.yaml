@@ -146,6 +146,11 @@
     - SK020
     - SK031
 
+"in-project SDK":
+  category: project
+  type: concept
+  specs: []
+
 "installation":
   category: "workshop (CLI)"
   type: action

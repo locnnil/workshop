@@ -83,3 +83,7 @@ execute: |
 
   echo "Abort the change"
   workshop_exec refresh --abort
+
+  echo "Eject the sketch"
+  workshop_exec sketch-sdk --eject --name broken
+  [ -f .workshop/broken/sdk.yaml ]

@@ -222,13 +222,48 @@ Stashing does not delete the SDK,
 allowing you to restore and continue working later.
 
 
-Craft the SDK (optional)
+Eject the SDK (optional)
 ------------------------
 
+.. @artefact in-project SDK
+.. @artefact SDK Store
+
 If you're satisfied with the sketch to a degree
-where think others may benefit from it as well,
-the next possible step is to refine it into a permanent SDK for publishing.
-For details, see the |sdk_markup| :ref:`how-to guide <how_sdkcraft>`.
+where others may benefit from it,
+you can either add it to your project
+or publish it in the SDK Store.
+
+The first step is to *eject* the SDK:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk --eject
+
+     "dev" sketch ejected to ".workshop/hello-workshop"
+     To use it, add "project-hello-workshop" to the list of SDKs and run 'workshop refresh dev'
+
+
+This moves the SDK definition files
+into the :file:`.workshop/` subdirectory of the project
+and removes the sketch from the running workshop.
+|ws_markup| can pull SDKs from this directory,
+bypassing the SDK Store.
+
+If you'd rather publish the SDK for other projects to use,
+|sdk_markup| can help.
+For details, see the :ref:`how-to guide <how_sdkcraft>`.
+
+The new SDK is named after the project directory by default;
+use the :option:`!--name` option to change this:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk --eject --name tools
+
+     "dev" sketch ejected to ".workshop/tools"
+     To use it, add "project-tools" to the list of SDKs and run 'workshop refresh dev'
+
+
 
 
 Clean up
