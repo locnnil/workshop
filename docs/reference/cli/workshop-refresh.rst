@@ -11,7 +11,7 @@ Update workshops according to their definitions.
 
 .. code-block:: console
 
-   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>[/<SDK>]... [flags]
+   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [flags]
 
 .. rubric:: Description
 
@@ -95,13 +95,6 @@ continue the operation:
 .. code-block:: console
 
    $ workshop refresh --continue
-
-
-Refresh the sketch SDK in the 'nimble' workshop:
-
-.. code-block:: console
-
-   $ workshop refresh nimble/sketch
 
 
 

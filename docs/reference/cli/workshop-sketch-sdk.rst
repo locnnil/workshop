@@ -11,7 +11,7 @@ Edit the sketch SDK and graft it onto the workshop.
 
 .. code-block:: console
 
-   $ workshop sketch-sdk [--stash|--restore|--remove] [<WORKSHOP>] [flags]
+   $ workshop sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>] [flags]
 
 .. rubric:: Description
 
@@ -24,6 +24,8 @@ which installs the configured 'sketch' SDK in the workshop.
 
 The '--stash' and '--restore' options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
+The '--eject' option moves the SDK definition into the project directory,
+so it can be added to multiple workshops or shared with others.
 The '--remove' option removes the SDK permanently.
 
 Notes:
@@ -33,9 +35,6 @@ Notes:
 
 - In addition to hooks, the 'sketch' SDK can use interfaces,
   define plugs, slots, connections and bindings.
-
-- You can partially refresh the workshop, targeting the 'sketch' SDK
-  with the 'workshop refresh <WORKSHOP>/sketch' command.
 
 
 .. rubric:: Examples
@@ -65,6 +64,16 @@ Stash the sketch SDK, temporarily reverting the changes in the workshop:
 
 
 .. rubric:: Flags
+
+
+--eject
+
+   Promote the sketch SDK to an in-project SDK.
+
+
+--name
+
+   Name for the ejected SDK.
 
 
 --remove
