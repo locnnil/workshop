@@ -122,7 +122,7 @@ and
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.14_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.15_amd64.snap
 
 
 Enable shell completion
