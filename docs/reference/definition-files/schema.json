@@ -35,13 +35,13 @@
           },
           "channel": {
             "type": "string",
-            "description": "Channel used for the SDK.",
-            "pattern": "^[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)$",
-            "errorMessage": "Channel must follow the pattern <track>/<risk> (e.g., 'latest/stable')."
+            "description": "Channel used for the SDK. May be empty when the SDK is installed from a local source.",
+            "pattern": "^(?:[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)|)$",
+            "errorMessage": "Channel must be empty or follow the pattern <track>/<risk> (e.g., 'latest/stable')."
           },
           "source": {
             "type": "string",
-            "description": "Local path or source for the SDK. If set, 'channel' need not be specified."
+            "description": "Local path or source for the SDK."
           },
           "plugs": {
             "type": "object",
@@ -101,24 +101,12 @@
         "required": [
           "name"
         ],
-        "anyOf": [
-          {
-            "required": [
-              "channel"
-            ]
-          },
-          {
-            "required": [
-              "source"
-            ]
-          }
-        ],
         "errorMessage": {
           "required": {
-            "name": "Each SDK must specify a name.",
-            "channel": "Either 'channel' or 'source' must be provided for the SDK."
+            "name": "Each SDK must specify a name."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "connections": {
@@ -149,7 +137,8 @@
             "plug": "Each connection must specify a plug.",
             "slot": "Each connection must specify a slot."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "scripts": {
