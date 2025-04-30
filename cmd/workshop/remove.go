@@ -5,6 +5,8 @@ import (
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdRemove struct {
@@ -68,12 +70,23 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
+	// Workshops should be removed even if yml file formats are wrong
+	// So use cli.List() instead of cli.Workshop() here
+	wps, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
+	if err != nil {
+		return err
+	}
+
+	// convert list to map for faster lookup
+	wpsMap := map[string]*client.WorkshopInfo{}
+	for _, wp := range wps {
+		wpsMap[wp.Name] = wp
+	}
+
 	for _, name := range av {
-		wp, err := cli.Workshop(project.Id, name)
-		if err != nil {
-			return err
-		}
-		if wp.Status == "Waiting" {
+		if wp, ok := wpsMap[name]; !ok {
+			return fmt.Errorf("workshop %s not found", name)
+		} else if wp.Status == "Waiting" {
 			fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
 			cmdabort := &CmdRefresh{root: c.root, Abort: true}
 			if err = cmdabort.RunRefresh(cli, project, []string{wp.Name}); err != nil {

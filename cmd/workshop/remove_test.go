@@ -31,22 +31,20 @@ func (m *workshopRemove) SetUpTest(c *check.C) {
 
 // Test explanation:
 //
-//	cli ----> daemon   |   query project info              |    POST /v1/projects
-//	daemon ----> cli   |   project.id == 42424242          |
-//	cli ----> daemon   |   query workshop `ws` info        |    GET  /v1/projects/42424242/workshops/ws
-//	daemon ----> cli   |   ws.status == "Waiting"          |
-//	cli ----> daemon   |   abort the failed refresh        |    POST /v1/projects/42424242/workshops
-//	daemon ----> cli   |   change.id == 41                 |
-//	cli ----> daemon   |   query change 41 progress        |    GET  /v1/changes/41
-//	daemon ----> cli   |   change 41 finished              |
-//	cli ----> daemon   |   query workshop `ws-1` info      |    GET  /v1/projects/42424242/workshops/ws-1
-//	daemon ----> cli   |   ws-1.status == "Ready"          |
-//	cli ----> daemon   |   remove two workshops            |    POST /v1/projects/42424242/workshops
-//	daemon ----> cli   |   change.id == 42                 |
-//	cli ----> daemon   |   query change 42 progress        |    GET  /v1/changes/42
-//	daemon ----> cli   |   change 42 finished              |
+//	cli ----> daemon  |  query project info        |  POST /v1/projects
+//	daemon ----> cli  |  project.id = 42424242     |
+//	cli ----> daemon  |  list all workshops        |  GET  /v1/projects/42424242/workshops
+//	daemon ----> cli  |  ws(Waiting), ws-1(Ready)  |
+//	cli ----> daemon  |  abort the failed refresh  |  POST /v1/projects/42424242/workshops
+//	daemon ----> cli  |  change.id = 41            |
+//	cli ----> daemon  |  query change 41 progress  |  GET  /v1/changes/41
+//	daemon ----> cli  |  change 41 finished        |
+//	cli ----> daemon  |  remove two workshops      |  POST /v1/projects/42424242/workshops
+//	daemon ----> cli  |  change.id = 42            |
+//	cli ----> daemon  |  query change 42 progress  |  GET  /v1/changes/42
+//	daemon ----> cli  |  change 42 finished        |
 //
-// 7 requests in total
+// 6 requests in total
 func (m *workshopRemove) TestRemoveSuccess(c *check.C) {
 	cmd := &CmdRemove{root: &CmdRoot{}}
 	n := 0
@@ -60,9 +58,9 @@ func (m *workshopRemove) TestRemoveSuccess(c *check.C) {
 			fmt.Fprintln(w, r)
 		case 2:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
-			fmt.Fprintf(w, `{"type":"sync","status-code":202,"result":{"name":"ws","status":"Waiting"}}`)
+			fmt.Fprintf(w, `{"type":"sync","status-code":202,"result":{"workshops":[{"name":"ws","status":"Waiting"},{"name":"ws-1","status":"Ready"}]}}`)
 		case 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
@@ -73,21 +71,16 @@ func (m *workshopRemove) TestRemoveSuccess(c *check.C) {
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/41")
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		case 5:
-			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws-1", m.prjId))
-			w.WriteHeader(202)
-			fmt.Fprintf(w, `{"type":"sync","status-code":202,"result":{"name":"ws-1","status":"Ready"}}`)
-		case 6:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
-		case 7:
+		case 6:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, "/v1/changes/42")
 			fmt.Fprintln(w, mockReadyChangeJSON)
 		default:
-			c.Errorf("expected 7 calls, now on %d", n)
+			c.Errorf("expected 6 calls, now on %d", n)
 		}
 	})
 
