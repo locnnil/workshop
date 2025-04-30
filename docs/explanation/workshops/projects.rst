@@ -46,6 +46,17 @@ You can store workshop definitions in two ways:
   you can't omit the workshop name in commands.
 
 
+Projects can also store SDK definitions in subdirectories of :file:`.workshop/`:
+
+.. code-block:: none
+
+   .workshop/build-tools/sdk.yaml
+   .workshop/system-services/sdk.yaml
+
+
+Such SDKs can be used by any workshop in the project.
+
+
 When a workshop is then started with :command:`workshop start`,
 the project directory is mounted to it as :file:`/project/`;
 conversely, the :command:`workshop stop` command unmounts it.

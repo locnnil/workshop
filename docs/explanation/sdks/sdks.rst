@@ -7,14 +7,15 @@ SDK concepts
 .. @artefact SDK publisher
 .. @artefact SDK Store
 
-SDKs are essential workshop components
-that install the required system and language packages,
-configure the workshop for their operation
-and maintain their own state
+An *SDK* is an essential workshop component
+that installs system and language packages,
+configures the workshop for their operation
+and maintains its own state
 throughout the lifetime of the workshop.
-An *SDK* is designed by a publisher
-and made available via the SDK Store.
-A single workshop can include multiple SDKs from different publishers.
+Most SDKs are designed by publishers
+and made available via the SDK Store,
+but some are specific to a particular project or user.
+A single workshop can include multiple SDKs from different sources.
 SDKs are distributed through channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 

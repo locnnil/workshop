@@ -466,7 +466,7 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 .. note::
 
    Currently, you can't use unpublished SDKs in a workshop.
-   However, the :ref:`sketch SDK <how_sketch>` provides
+   However, the :ref:`sketch SDK <how_sketch>` and in-project SDKs provide
    a subset of |sdk_markup|'s functionality.
 
 
