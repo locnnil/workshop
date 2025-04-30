@@ -295,7 +295,7 @@ additional file system mounts are defined by the SDK author or the user
 using the :ref:`mount interface <exp_mount_interface>`:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    plugs:
      ros-cache:

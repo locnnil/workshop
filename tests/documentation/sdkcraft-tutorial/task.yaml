@@ -7,9 +7,8 @@ execute: |
   mkdir go/
   cd go/
   run_sdkcraft init
-  mv ../sdkcraft.yaml .
+  mv ../sdk.yaml .
   mkdir hooks
   mv ../{setup-base,save-state,restore-state,check-health} hooks/
-  chmod +x hooks/*
   run_sdkcraft clean
   run_sdkcraft

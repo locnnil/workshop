@@ -58,7 +58,7 @@ the definition may look like this:
 .. @artefact sdkcraft (CLI)
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    name: go
    title: Go SDK
