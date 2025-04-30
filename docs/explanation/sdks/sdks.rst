@@ -20,32 +20,6 @@ SDKs are distributed through channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
 
 
-.. _exp_sdk_state:
-
-SDK state
----------
-
-.. @artefact restore-state
-.. @artefact save-state
-.. @artefact SDK state
-
-An SDK can store any data specific to it,
-such as a model training configuration,
-within the workshop.
-To enable this,
-the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
-when building the SDK using |sdk_markup|.
-Later, |ws_markup| runs these hooks at the appropriate moments
-to consistently handle such data, collectively known as *SDK state*.
-
-For example, before changes are applied to the workshop
-during :command:`workshop refresh`,
-the states of the SDKs are saved
-by invoking their :samp:`save-state` hooks.
-On success,
-they are restored using the :samp:`restore-state` hooks.
-
-
 .. _exp_sdk_definition:
 
 SDK definition
@@ -99,6 +73,32 @@ Specific examples include :samp:`setup-base`,
 You may see individual hooks mentioned in the output of
 :command:`workshop changes` and :command:`workshop tasks`;
 understanding the events that trigger them can help you with troubleshooting.
+
+
+.. _exp_sdk_state:
+
+SDK state
+---------
+
+.. @artefact restore-state
+.. @artefact save-state
+.. @artefact SDK state
+
+An SDK can store any data specific to it,
+such as a model training configuration,
+within the workshop.
+To enable this,
+the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
+when building the SDK using |sdk_markup|.
+Later, |ws_markup| runs these hooks at the appropriate moments
+to consistently handle such data, collectively known as *SDK state*.
+
+For example, before changes are applied to the workshop
+during :command:`workshop refresh`,
+the states of the SDKs are saved
+by invoking their :samp:`save-state` hooks.
+On success,
+they are restored using the :samp:`restore-state` hooks.
 
 
 .. _exp_system_sdk:
