@@ -33,6 +33,7 @@ golangci
 gopkg
 GPG
 GPUs
+gRPC
 GUIs
 hostname
 hostnames

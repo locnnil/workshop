@@ -9,8 +9,9 @@ of running and fixing workshops:
 .. toctree::
    :maxdepth: 1
 
-   Fix the installation <troubleshoot>
    Debug issues in workshops <debug-workshop-issues>
+   Fix the installation <troubleshoot>
+   Forward ports <forward-ports>
    Move projects around <moving-projects>
    Sketch SDKs to customise workshops <sketch-sdk>
    Use workshops with Git <git-workshop>

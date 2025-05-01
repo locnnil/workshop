@@ -747,6 +747,11 @@ Finally, test the server on the host at port 8080 (the plug):
      Hello, Workshop!
 
 
+.. note::
+
+   For additional details of using the tunnel interface, see this guide:
+   :ref:`how_forward_ports`.
+
 .. _tut_sketch:
 
 Sketch an SDK (optional)
