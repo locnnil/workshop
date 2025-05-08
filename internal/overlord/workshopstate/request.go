@@ -960,10 +960,15 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		}
 		workshops = append(workshops, wp)
 
-		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
+		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus,
+			healthstate.StoppedStatus, healthstate.WaitingStatus}
 		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
+		// TODO(yan.jiang): this should be implemented as another task
+		// if err = conflict.AbortIfWaitingBeforeRemove(w.state, name, projectId); err != nil {
+		// 	return nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		// }
 	}
 
 	taskset, err := removeMany(w.state, workshops, project)
@@ -1011,8 +1016,17 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	addTaskSet(state.NewTaskSet(remove))
 
+	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+	addTaskSet(state.NewTaskSet(removeStateStorage))
+
+	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", w.Name))
+	addTaskSet(state.NewTaskSet(removeStash))
+
 	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", w.Name))
 	addTaskSet(state.NewTaskSet(removeDirs))
+
+	abortWaiting := st.NewTask("abort-waiting-refresh", fmt.Sprintf("Abort waiting refreshes for %q", w.Name))
+	addTaskSet(state.NewTaskSet(abortWaiting))
 
 	// Directories should exist from before create-workshop until after remove-workshop.
 	// Since there is no way to undo remove-workshop, we run remove-workshop-storage in a separate lane.

@@ -37,6 +37,7 @@ func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), manager.undoStashWorkshop)
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), manager.doRemoveStateStorage)
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
+	runner.AddHandler("abort-waiting-refresh", OnDo(manager.doDiscardWaitingRefresh), nil)
 
 	return manager
 }

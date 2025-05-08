@@ -110,7 +110,7 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 // Iterates over the list of running tasks and returns either nil or
 // a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
-func findRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
+func FindRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
 		if chg.IsReady() || slices.Contains(ignoreKinds, chg.Kind()) {
@@ -132,7 +132,7 @@ func findRunningChange(st *state.State, projectId, workshop string, ignoreKinds 
 // there is a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
 func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKinds []string) error {
-	chg, err := findRunningChange(st, projectId, workshop, ignoreKinds)
+	chg, err := FindRunningChange(st, projectId, workshop, ignoreKinds)
 	if err != nil {
 		return err
 	}
@@ -147,6 +147,25 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKind
 	}
 }
 
+func AbortIfWaitingBeforeRemove(st *state.State, workshop, projectId string) error {
+	chg, err := FindRunningChange(st, projectId, workshop, []string{"exec"})
+	if err != nil {
+		return err
+	}
+	if chg == nil || chg.Status() != state.WaitStatus {
+		return nil
+	}
+	for _, tsk := range chg.Tasks() {
+		if tsk.Status() == state.WaitStatus {
+			tsk.SetStatus(state.DoStatus)
+			tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), workshop)
+		}
+	}
+
+	chg.Abort()
+	return nil
+}
+
 // Attempt to resume the change associated with the Resume/Launch operation
 // for the given workshop. Depending on the mode the change will either be
 // turned into Doing (Continue mode) or Abort (Abort mode).
@@ -156,7 +175,7 @@ func ResumeAfterWait(st *state.State,
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
 
-	chg, err := findRunningChange(st, projectId, workshop, []string{"exec"})
+	chg, err := FindRunningChange(st, projectId, workshop, []string{"exec"})
 	if err != nil {
 		return nil, err
 	}

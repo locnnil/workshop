@@ -366,3 +366,26 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 
 	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
+
+func (m *WorkshopManager) doDiscardWaitingRefresh(task *state.Task, tomb *tomb.Tomb) error {
+	_, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+	chg, err := conflict.FindRunningChange(task.State(), prj.ProjectId, w, []string{"exec"})
+	if err != nil {
+		return err
+	}
+	if chg == nil || chg.Status() != state.WaitStatus {
+		return nil
+	}
+	for _, tsk := range chg.Tasks() {
+		if tsk.Status() == state.WaitStatus {
+			tsk.SetStatus(state.DoStatus)
+			tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), w)
+		}
+	}
+
+	chg.Abort()
+	return nil
+}
