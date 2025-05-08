@@ -1068,10 +1068,16 @@ write_files:
     # Bypass confirmation prompts
     APT::Get::Assume-Yes "1";
   path: /etc/apt/apt.conf.d/01norecommend
+- content: |
+    # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
+    [Service]
+    Environment=SNAPD_STANDBY_WAIT=1m
+  path: /etc/systemd/system/snapd.service.d/override.conf
 runcmd:
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
   - systemctl enable --now xauth-watch.path
+  - systemctl restart snapd.service
 `
 
 	f, err := yaml.Marshal(file)
