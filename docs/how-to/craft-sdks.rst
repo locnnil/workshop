@@ -108,7 +108,7 @@ Make sure it runs:
    $ sdkcraft --help
 
 
-.. _tut_init:
+.. _how_sdkcraft_init:
 
 Initialise the SDK
 ------------------
@@ -140,7 +140,7 @@ Next, browse to the SDK directory and initialise it:
 This command creates a template definition file
 named :file:`sdk.yaml`;
 although it's almost empty,
-it can already be :ref:`built <tut_build_sdk>`.
+it can already be :ref:`built <how_sdkcraft_build_sdk>`.
 
 However, let's take a few extra steps
 to explore what goes into an SDK.
@@ -171,7 +171,7 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
        plugin: nil
 
 
-.. _tut_parts:
+.. _how_sdkcraft_parts:
 
 Define parts
 ------------
@@ -197,7 +197,7 @@ refer to the `Parts
 section in Craft Parts documentation.
 
 
-.. _tut_mount_interface:
+.. _how_sdkcraft_mount_interface:
 
 Add interface plugs
 -------------------
@@ -383,7 +383,7 @@ Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
 
 
-.. _tut_build_sdk:
+.. _how_sdkcraft_build_sdk:
 
 Build and pack
 --------------
@@ -425,7 +425,7 @@ which contains the build artefacts from the previous step
 along with SDK metadata, hooks and other components.
 
 
-.. _tut_publish:
+.. _how_sdkcraft_publish:
 
 Publish the SDK
 ---------------
