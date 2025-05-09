@@ -11,7 +11,7 @@ Filename convention
 
 .. @artefact sdkcraft (CLI)
 
-The name of the SDK definition file must be :file:`sdkcraft.yaml`;
+The name of the SDK definition file must be :file:`sdk.yaml`;
 the file is usually created using the :command:`sdkcraft init` command
 in the source directory when :ref:`building an SDK <how_sdkcraft>`.
 
@@ -103,7 +103,7 @@ The :samp:`plugs` field is optional.
 For example:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     name: go
     title: Go SDK
@@ -152,7 +152,7 @@ Examples
 This YAML file defines a simple :samp:`go` SDK:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    name: go
    base: ubuntu@24.04
@@ -173,7 +173,7 @@ This is a more elaborate example of an SDK
 that uses several :ref:`plugs <ref_sdk_plugs_slots>` and multiple platforms:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    name: ros2
    title: The ROS 2 SDK

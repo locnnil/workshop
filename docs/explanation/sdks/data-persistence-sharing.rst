@@ -57,7 +57,7 @@ per each directory you want to retain during the workshop's life cycle.
 .. @artefact sdkcraft (CLI)
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    name: data-science
    title: Data science SDK

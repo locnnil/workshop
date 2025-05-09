@@ -24,7 +24,7 @@ SDK parts
 .. @artefact SDK part
 
 Parts can be thought of as the building blocks of |ws_markup| and |sdk_markup|.
-Each part in the :file:`sdkcraft.yaml` :ref:`definition <ref_sdk_definition>`
+Each part in the :file:`sdk.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
 providing a way to modularise the package and manage its dependencies.
 
@@ -72,7 +72,7 @@ Camera interface
 A camera plug in the definition must specify the plug name and the interface:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     plugs:
@@ -98,7 +98,7 @@ Desktop interface
 A desktop plug in the definition must specify the plug name and the interface:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     plugs:
@@ -123,7 +123,7 @@ GPU interface
 A GPU plug in the definition must specify the plug name and the interface:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     plugs:
@@ -149,7 +149,7 @@ Mount interface
 A mount plug in the definition must specify the plug name, the interface, the target directory and optionally whether to be read-only:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     plugs:
@@ -168,7 +168,7 @@ A mount *slot* in the definition must specify the slot name, the interface,
 and the *source* directory:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     slots:
@@ -198,7 +198,7 @@ SSH interface
 An SSH plug in the definition must specify the plug name and the interface:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
     # ...
     plugs:
@@ -224,7 +224,7 @@ Tunnel interface
 A tunnel plug in the definition must specify the plug name, the interface and optionally an endpoint:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    # ...
    plugs:
@@ -236,7 +236,7 @@ A tunnel plug in the definition must specify the plug name, the interface and op
 Similarly, a tunnel *slot* in the definition must specify the slot name, the interface and optionally an endpoint:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    # ...
    slots:

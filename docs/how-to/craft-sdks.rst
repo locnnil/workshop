@@ -138,7 +138,7 @@ Next, browse to the SDK directory and initialise it:
 
 
 This command creates a template definition file
-named :file:`sdkcraft.yaml`;
+named :file:`sdk.yaml`;
 although it's almost empty,
 it can already be :ref:`built <tut_build_sdk>`.
 
@@ -149,11 +149,11 @@ to explore what goes into an SDK.
 Update metadata
 ---------------
 
-Update the metadata in :file:`sdkcraft.yaml`,
+Update the metadata in :file:`sdk.yaml`,
 adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
    :emphasize-lines: 1,4-6
 
    name: go
@@ -183,7 +183,7 @@ and prepare an SDK package for publishing.
 In our example, the :samp:`parts` section of the definition can be used as is:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    # ...
    parts:
@@ -216,11 +216,11 @@ You can use a :ref:`mount interface <exp_mount_interface>` plug for that:
 it mounts a host directory to a target directory in the workshop,
 so that the files remain on the host.
 
-Open :file:`sdkcraft.yaml` again
+Open :file:`sdk.yaml` again
 and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
    :emphasize-lines: 15-18
 
    name: go
@@ -398,7 +398,7 @@ Under :file:`go/`, run:
 .. @artefact SDK part
 
 This builds all :ref:`SDK parts <exp_sdk_parts>`
-defined in the :file:`sdkcraft.yaml` file,
+defined in the :file:`sdk.yaml` file,
 e.g. pulling source code, applying patches, configuring and compiling it
 according to the part definition.
 
@@ -466,7 +466,7 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 .. note::
 
    Currently, you can't use unpublished SDKs in a workshop.
-   However, the :ref:`sketch SDK <how_sketch>` provides
+   However, the :ref:`sketch SDK <how_sketch>` and in-project SDKs provide
    a subset of |sdk_markup|'s functionality.
 
 

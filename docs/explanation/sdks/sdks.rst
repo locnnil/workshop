@@ -7,42 +7,17 @@ SDK concepts
 .. @artefact SDK publisher
 .. @artefact SDK Store
 
-SDKs are essential workshop components
-that install the required system and language packages,
-configure the workshop for their operation
-and maintain their own state
+An *SDK* is an essential workshop component
+that installs system and language packages,
+configures the workshop for their operation
+and maintains its own state
 throughout the lifetime of the workshop.
-An *SDK* is designed by a publisher
-and made available via the SDK Store.
-A single workshop can include multiple SDKs from different publishers.
+Most SDKs are designed by publishers
+and made available via the SDK Store,
+but some are specific to a particular project or user.
+A single workshop can include multiple SDKs from different sources.
 SDKs are distributed through channels similar to
 `snap channels <https://snapcraft.io/docs/channels>`_.
-
-
-.. _exp_sdk_state:
-
-SDK state
----------
-
-.. @artefact restore-state
-.. @artefact save-state
-.. @artefact SDK state
-
-An SDK can store any data specific to it,
-such as a model training configuration,
-within the workshop.
-To enable this,
-the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
-when building the SDK using |sdk_markup|.
-Later, |ws_markup| runs these hooks at the appropriate moments
-to consistently handle such data, collectively known as *SDK state*.
-
-For example, before changes are applied to the workshop
-during :command:`workshop refresh`,
-the states of the SDKs are saved
-by invoking their :samp:`save-state` hooks.
-On success,
-they are restored using the :samp:`restore-state` hooks.
 
 
 .. _exp_sdk_definition:
@@ -58,7 +33,7 @@ the definition may look like this:
 .. @artefact sdkcraft (CLI)
 
 .. code-block:: yaml
-   :caption: sdkcraft.yaml
+   :caption: sdk.yaml
 
    name: go
    title: Go SDK
@@ -98,6 +73,32 @@ Specific examples include :samp:`setup-base`,
 You may see individual hooks mentioned in the output of
 :command:`workshop changes` and :command:`workshop tasks`;
 understanding the events that trigger them can help you with troubleshooting.
+
+
+.. _exp_sdk_state:
+
+SDK state
+---------
+
+.. @artefact restore-state
+.. @artefact save-state
+.. @artefact SDK state
+
+An SDK can store any data specific to it,
+such as a model training configuration,
+within the workshop.
+To enable this,
+the SDK publisher implements save and restore :ref:`hooks <exp_sdk_hooks>`
+when building the SDK using |sdk_markup|.
+Later, |ws_markup| runs these hooks at the appropriate moments
+to consistently handle such data, collectively known as *SDK state*.
+
+For example, before changes are applied to the workshop
+during :command:`workshop refresh`,
+the states of the SDKs are saved
+by invoking their :samp:`save-state` hooks.
+On success,
+they are restored using the :samp:`restore-state` hooks.
 
 
 .. _exp_system_sdk:

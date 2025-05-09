@@ -28,7 +28,7 @@ Define the SDK
 
 Here's the entire SDK definition:
 
-.. literalinclude:: design-sdk/sdkcraft.yaml
+.. literalinclude:: design-sdk/sdk.yaml
    :language: yaml
 
 
@@ -202,7 +202,7 @@ with build, install, and log file paths.
 
 .. important::
 
-   This is where the :samp:`colcon-artefacts` plug from :file:`sdkcraft.yaml`
+   This is where the :samp:`colcon-artefacts` plug from :file:`sdk.yaml`
    comes into play;
    the configuration points the build actions there instead of the default path.
 
