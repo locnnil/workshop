@@ -57,8 +57,7 @@ In this documentation
       :ref:`Define workshops <tut_define_launch>` |
       :ref:`Refresh workshops <tut_refresh>` |
       :ref:`Run commands <tut_exec>` |
-      :ref:`Use interfaces <tut_interfaces>` |
-      :ref:`Sketch SDKs <tut_sketch>`
+      :ref:`Use interfaces <tut_interfaces>`
 
 
    .. grid-item:: :doc:`How-to guides <how-to/index>`
