@@ -138,7 +138,7 @@ If you need more space or different performance,
 you can resize or tune the ZFS pool (it's named :samp:`workshop`),
 using the :command:`lxc storage` command
 as suggested in this `LXD documentation section
-<https://documentation.ubuntu.com/lxd/en/latest/howto/storage_pools/>`_.
+<https://documentation.ubuntu.com/lxd/latest/howto/storage_pools/>`_.
 However, day-to-day usage requires little manual intervention.
 
 .. attention::

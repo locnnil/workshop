@@ -49,7 +49,7 @@ Prepare LXD
 `LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
-`API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
+`API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
 Check whether it's configured:
@@ -59,9 +59,9 @@ Check whether it's configured:
    $ lxc info
 
 
-If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+If not, `install <https://documentation.ubuntu.com/lxd/latest/installing/>`_
 and
-`initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
+`initialise <https://documentation.ubuntu.com/lxd/latest/howto/initialize/>`_
 LXD.
 
 .. tabs::
@@ -79,12 +79,12 @@ LXD.
 
       See the available installation options in
       `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_.
+      <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
 
 
 Next, ensure the
 `LXD daemon
-<https://documentation.ubuntu.com/lxd/en/latest/explanation/lxd_lxc/#lxd-daemon>`_
+<https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
 is enabled and running:
 
 .. tabs::
@@ -99,7 +99,7 @@ is enabled and running:
 
       Refer to
       `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+      <https://documentation.ubuntu.com/lxd/latest/installing/>`_
       and your distribution's manuals for guidance.
 
 
