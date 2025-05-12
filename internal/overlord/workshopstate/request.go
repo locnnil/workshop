@@ -543,6 +543,10 @@ func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh)
 }
 
+func (p refreshPlan) IntactOrRefresh() []sdk.Setup {
+	return ordered(p.installOrder, p.intact, p.refresh)
+}
+
 func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 	revOrder := slices.Clone(p.installedOrder)
 	slices.Reverse(revOrder)
@@ -552,10 +556,6 @@ func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
-}
-
-func (p refreshPlan) Refresh() []sdk.Setup {
-	return ordered(p.installOrder, p.refresh)
 }
 
 func (p refreshPlan) Remove() []sdk.Setup {
@@ -661,14 +661,14 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	}
 	addTaskSet(retrieve)
 
-	if len(plan.Refresh()) > 0 {
+	if len(plan.IntactOrRefresh()) > 0 {
 		stateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 		addTaskSet(state.NewTaskSet(stateStorage))
 	}
 
 	// Call save-state hooks for the SDKs that are installed and will not be
 	// removed after this refresh.
-	saveState := runHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), 0, hookstate.SaveState)
+	saveState := runHooks(st, w.Project.ProjectId, file.Name, plan.IntactOrRefresh(), 0, hookstate.SaveState)
 	addTaskSet(saveState)
 
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
@@ -692,7 +692,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
 
-	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), 0, hookstate.RestoreState)
+	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
 
 	checkHealth := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
@@ -704,7 +704,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 
 	cleanupLane := st.NewLane()
 
-	if len(plan.Refresh()) > 0 {
+	if len(plan.IntactOrRefresh()) > 0 {
 		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 		removeStateStorage.WaitFor(last)
 		removeStateStorage.JoinLane(cleanupLane)

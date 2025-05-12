@@ -43,6 +43,7 @@ execute: |
   echo false >> .workshop/two/sdk/hooks/setup-base
   ! workshop_exec refresh
   workshop_exec exec -- test -d /one/two/three
+  workshop_exec exec -- test ! -f /restored-state
 
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
@@ -52,6 +53,7 @@ execute: |
   workshop_exec refresh
   workshop_exec exec -- test -d /one/two/three
   workshop_exec exec -- test -d /two
+  workshop_exec exec -- test -f /restored-state
 
   workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x3\)$'

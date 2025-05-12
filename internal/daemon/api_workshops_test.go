@@ -20,6 +20,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -919,6 +920,17 @@ func (s *apiSuite) createWFile(c *check.C, name, yaml string) {
 	c.Assert(err, check.IsNil)
 }
 
+func storeDownloadWithSaveRestore(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
+	if err := storeDownload(ctx, setup, report); err != nil || sdk.IsSystem(setup.Name) {
+		return err
+	}
+	hooksdir := filepath.Join(setup.Filepath(), "sdk", "hooks")
+	if err := os.WriteFile(filepath.Join(hooksdir, "save-state"), nil, 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(hooksdir, "restore-state"), nil, 0o644)
+}
+
 func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
 	// Emulate store action behaviour which would reuse the existing SDK if
 	// present.
@@ -1589,6 +1601,23 @@ func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, fil
 	}
 }
 
+func (s *apiSuite) checkHookCalls(c *check.C, name string, sdks []string, hooks []hookstate.WorkshopHookType) {
+	wpCalls := []*fakebackend.ExecCall{}
+	for _, ec := range s.b.ExecCalls {
+		if ec.Name == name {
+			wpCalls = append(wpCalls, ec)
+		}
+	}
+
+	c.Assert(wpCalls, check.HasLen, len(sdks))
+
+	for i, sk := range sdks {
+		c.Check(wpCalls[i].Args.WorkDir, check.Equals, sdk.SdkHooksDir(sk))
+		command := wpCalls[i].Args.Command
+		c.Check(command[len(command)-1], check.Equals, sdk.SdkHookPath(sk, hooks[i].String()))
+	}
+}
+
 func (s *apiSuite) TestRefreshMany(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -2099,6 +2128,138 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+}
+
+func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.store.SetDownloadCallback(storeDownloadWithSaveRestore)()
+
+	// Launch
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.checkHookCalls(c, "manysdks", nil, nil)
+
+	// Refresh saves and restores state for intact SDKs
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	s.checkHookCalls(c, "manysdks", []string{
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
+	}, []hookstate.WorkshopHookType{
+		hookstate.SaveState,
+		hookstate.SaveState,
+		hookstate.RestoreState,
+		hookstate.RestoreState,
+	})
+	s.b.ExecCalls = nil
+
+	// Refresh saves and restores state for updated SDKs
+	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2)()
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	s.checkHookCalls(c, "manysdks", []string{
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
+	}, []hookstate.WorkshopHookType{
+		hookstate.SaveState,
+		hookstate.SaveState,
+		hookstate.RestoreState,
+		hookstate.RestoreState,
+	})
+	s.b.ExecCalls = nil
+
+	// Refresh doesn't save or restore state for removed SDKs
+	s.createWFile(c, "manysdks", manysdks_minusone)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.checkHookCalls(c, "manysdks", []string{
+		"test-sdk",
+		"test-sdk",
+	}, []hookstate.WorkshopHookType{
+		hookstate.SaveState,
+		hookstate.RestoreState,
+	})
+	s.b.ExecCalls = nil
+
+	// Refresh doesn't save or restore state for installed SDKs
+	s.createWFile(c, "manysdks", manysdks)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.checkHookCalls(c, "manysdks", []string{
+		"test-sdk",
+		"test-sdk",
+	}, []hookstate.WorkshopHookType{
+		hookstate.SaveState,
+		hookstate.RestoreState,
+	})
 }
 
 func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
