@@ -27,26 +27,20 @@ func (s *hooksRequestSuite) TestCreateHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	envs := []map[string]string{
-		{},
-		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
-		{"SDK_STATE_DIR": "/var/lib/workshop/state/sdk/go"},
-	}
-
-	for num, i := range []hookstate.WorkshopHookType{
+	for _, hook := range []hookstate.WorkshopHookType{
 		hookstate.SetupBase,
+		hookstate.SetupProject,
 		hookstate.SaveState,
 		hookstate.RestoreState,
 	} {
-		task := hookstate.Hook(s.state, s.project.ProjectId, "test", "go", 0, i)
+		task := hookstate.Hook(s.state, s.project.ProjectId, "test", "go", 0, hook)
 
 		var hookSetup hookstate.HookSetup
 		err := task.Get("hook-setup", &hookSetup)
 		c.Assert(err, check.IsNil)
-		c.Assert(hookSetup.Type(), check.Equals, i.String())
+		c.Assert(hookSetup.Type(), check.Equals, hook.String())
 		c.Assert(hookSetup.Workshop, check.DeepEquals, "test")
 		c.Assert(hookSetup.Sdk, check.DeepEquals, "go")
-		c.Assert(hookSetup.Environment, check.DeepEquals, envs[num])
 		c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 	}
 }
@@ -61,7 +55,6 @@ func (s *hooksRequestSuite) TestCreateHookWithTimeout(c *check.C) {
 	c.Assert(hookSetup.Type(), check.Equals, "check-health")
 	c.Assert(hookSetup.Workshop, check.DeepEquals, "test")
 	c.Assert(hookSetup.Sdk, check.DeepEquals, "go")
-	c.Assert(hookSetup.Environment, check.HasLen, 0)
 	c.Assert(hookSetup.Timeout, check.Equals, 5*time.Second)
 	c.Check(task.Summary(), check.Equals, fmt.Sprintf("Run hook %q for \"go\" SDK", hookSetup.Type()))
 }

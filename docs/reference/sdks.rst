@@ -326,6 +326,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 .. @artefact SDK base image
 .. @artefact setup-base
 .. @artefact workshop base image
+.. @artefact setup-project
 
 .. list-table::
    :header-rows: 1
@@ -336,26 +337,24 @@ which can be defined when the SDK is built using |sdk_markup|:
      - When |ws_markup| runs it
      - What it does
 
-   * - :samp:`check-health`
-     - At :ref:`ref_workshop_launch`:
-       after running :samp:`setup-base` hooks for *all* SDKs.
+   * - :samp:`setup-base`
 
-       At :ref:`ref_workshop_refresh`:
-       after running :samp:`restore-state` hooks for *all* SDKs.
+     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
+       after unpacking the base image
+       and starting the workshop,
+       but before mounting the project directory
+       and connecting plugs and slots.
 
-     - Sets the state of the SDK
-       (:samp:`okay`, :samp:`waiting` or :samp:`error`)
-       using :ref:`workshopctl <ref_workshopctl>`,
-       which affects the :ref:`status <ref_workshop_status>` of the workshop.
+     - Configures system packages and services required by the SDK.
 
-   * - :samp:`restore-state`
+   * - :samp:`setup-project`
 
-     - At :ref:`ref_workshop_refresh`:
-       after launching the new workshop
-       and running the :samp:`setup-base` hook for the SDK.
+     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
+       after mounting the project directory
+       and connecting plugs and slots
+       but before the workshop is set to *Ready*.
 
-     - Restores SDK-specific data from the :ref:`state directory <ref_sdk_state>`.
-       The hook itself comes from the *new* SDK revision.
+     - Configures the user environment for the SDK to become operational.
 
    * - :samp:`save-state`
 
@@ -365,20 +364,37 @@ which can be defined when the SDK is built using |sdk_markup|:
      - Saves SDK-specific data to the :ref:`state directory <ref_sdk_state>`.
        The hook itself comes from the *old* SDK revision.
 
-   * - :samp:`setup-base`
+   * - :samp:`restore-state`
 
-     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
-       after unpacking the base image
-       and starting the workshop,
-       but before setting its status to *Ready*.
+     - At :ref:`ref_workshop_refresh`:
+       after running :samp:`setup-project` hooks for *all* SDKs.
 
-     - Configures the base image for the SDK to become operational.
+     - Restores SDK-specific data from the :ref:`state directory <ref_sdk_state>`.
+       The hook itself comes from the *new* SDK revision.
+
+   * - :samp:`check-health`
+     - At :ref:`ref_workshop_launch`:
+       after running :samp:`setup-project` hooks for *all* SDKs.
+
+       At :ref:`ref_workshop_refresh`:
+       after running :samp:`restore-state` hooks for *all* SDKs.
+
+     - Sets the state of the SDK
+       (:samp:`okay`, :samp:`waiting` or :samp:`error`)
+       using :ref:`workshopctl <ref_workshopctl>`,
+       which affects the :ref:`status <ref_workshop_status>` of the workshop.
 
 
-Each hook is defined in a text file of the same name
+Each hook is defined as a :program:`bash` script of the same name
 under :samp:`hooks/` in the :ref:`source directory <ref_sdk_directory>`.
-At run-time, they are executed by :command:`bash`
-as :samp:`root` inside the workshop.
+Inside the workshop,
+the SDK is mounted at :file:`/var/lib/workshop/sdk/<SDK>/`
+and hooks are stored in the :file:`sdk/hooks/` subdirectory.
+Most hooks run as :samp:`root`
+and use that subdirectory as the working directory.
+The exception is :samp:`setup-project`,
+which runs as the :samp:`workshop` user
+in the :file:`/project/` directory.
 
 A hook can signal an error by returning a non-zero exit code;
 a zero code indicates success.

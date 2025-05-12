@@ -1,0 +1,9 @@
+set -x
+[ -d /one/two/three ]
+[ "$(id -un)" = 'workshop' ]
+[ "$(id -gn)" = 'workshop' ]
+[ "$(pwd)" = '/project' ]
+[ "$HOME" = '/home/workshop' ]
+[ "$USER" = 'workshop' ]
+[ "$LANG" = 'C.UTF-8' ]
+sudo touch /setup-project.log

@@ -9,6 +9,7 @@ execute: |
   cd project
   workshop_exec launch
   workshop_exec exec -- test -d /one/two/three
+  workshop_exec exec -- test -f /setup-project.log
 
   workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
   workshop_exec connections dev | MATCH "^tunnel.+\-.+dev/project-two:http.+\-$"

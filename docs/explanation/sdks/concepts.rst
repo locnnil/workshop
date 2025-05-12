@@ -67,7 +67,7 @@ Each hook is a shell script with domain-aware actions
 that |ws_markup| runs in the workshop
 at a particular life cycle stage
 to ensure that the SDK stays functional.
-Specific examples include :samp:`setup-base`,
+Specific examples include :samp:`setup-base`, :samp:`setup-project`,
 :samp:`save-state` and :samp:`restore-state`.
 
 You may see individual hooks mentioned in the output of

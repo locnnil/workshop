@@ -410,6 +410,9 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
 
+	setupProject := runHooks(st, project.ProjectId, file.Name, sdks, 0, hookstate.SetupProject)
+	addTaskSet(setupProject)
+
 	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, checkHealthTimeout, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
@@ -691,6 +694,9 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 
 	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
+
+	setupProject := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
+	addTaskSet(setupProject)
 
 	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
