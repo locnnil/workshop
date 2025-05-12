@@ -324,12 +324,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
-		// TODO: Run mount-project after snapshots, and delete this workaround.
-		projectPathDevice, ok := rebuilt.Devices[workshop.ConfigProjectPathDevice]
-		if ok {
-			devices[workshop.ConfigProjectPathDevice] = projectPathDevice
-		}
-
 		maps.Copy(rebuilt.Config, config)
 		clear(rebuilt.Devices)
 		maps.Copy(rebuilt.Devices, devices)
@@ -1073,6 +1067,8 @@ write_files:
     Environment=SNAPD_STANDBY_WAIT=1m
   path: /etc/systemd/system/snapd.service.d/override.conf
 runcmd:
+  # Project directory is required for 'workshop exec'.
+  - install --directory --mode=755 /project
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
   - systemctl enable --now xauth-watch.path

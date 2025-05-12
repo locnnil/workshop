@@ -35,11 +35,6 @@ execute: |
   workshop_exec info | grep -v notes | yq '.sdks["project-three"].tracking' | MATCH "^$PWD/\\.workshop/three\$"
   workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
 
-  # TODO: don't move back, to provide coverage for refresh (currently broken due to /project mount)
-  cd ..
-  mv moved project
-  cd project
-
   echo "Break second SDK"
   echo false >> .workshop/two/sdk/hooks/setup-base
   ! workshop_exec refresh

@@ -333,10 +333,6 @@ func launchWorkshop(st *state.State, file *workshop.File, project workshop.Proje
 	addTask(create)
 	create.Set("workshop-file", file)
 
-	// TODO: move this after snapshots are taken; also for refresh.
-	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
-	addTask(mountProject)
-
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	addTask(start)
 
@@ -406,6 +402,9 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 
 	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
 	addTaskSet(install)
+
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
+	addTaskSet(state.NewTaskSet(mountProject))
 
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
@@ -691,6 +690,9 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	// Install updated SDKs to the rebuilt workshop.
 	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
+
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
+	addTaskSet(state.NewTaskSet(mountProject))
 
 	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
