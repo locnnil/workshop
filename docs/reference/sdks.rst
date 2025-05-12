@@ -316,7 +316,7 @@ SDK hooks
 ---------
 
 |ws_markup| supports the following life cycle hooks,
-which can be defined when the SDK's is built using |sdk_markup|:
+which can be defined when the SDK is built using |sdk_markup|:
 
 .. @artefact workshopctl
 .. @artefact check-health
@@ -399,7 +399,7 @@ SDK state
 
 .. @artefact SDK state
 
-An SDK cat store any data specific to it within the workshop.
+An SDK can store any data specific to it within the workshop.
 For this purpose, an environment variable named :envvar:`$SDK_STATE_DIR`
 is exposed by |ws_markup| at run-time;
 it resolves to an internal directory in the workshop,
