@@ -14,4 +14,14 @@ of running and fixing workshops:
    Forward ports <forward-ports>
    Move projects around <moving-projects>
    Sketch SDKs to customise workshops <sketch-sdk>
+
+
+
+These guides cover the aspects of using |ws_markup| with developer tooling:
+
+.. toctree::
+   :maxdepth: 1
+
    Use workshops with Git <git-workshop>
+   Use workshops with VS Code <vscode-workshop>
+
