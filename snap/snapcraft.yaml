@@ -1,7 +1,7 @@
 name: workshop
 title: Workshop
 base: core22
-version: 0.1.15
+version: 0.1.16
 summary: A tool for defining and handling ephemeral development environments
 description: |
   List your dependencies and components in YAML to define an environment.
