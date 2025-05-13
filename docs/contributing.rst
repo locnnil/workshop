@@ -432,7 +432,7 @@ Build the snaps locally
 `Snapcraft <https://snapcraft.io/docs/snapcraft>`_
 is used to build, package, and publish ``workshop`` snaps.
 All these processes run in a self-launched
-`LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_ container.
+`LXD <https://documentation.ubuntu.com/lxd/latest/>`_ container.
 To be able to run the build, install ``snapcraft`` and ``lxd`` using ``snap``:
 
 .. code-block:: console

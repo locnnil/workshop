@@ -1,4 +1,6 @@
 canonical-sphinx[full]
+pre-commit
+snowballstemmer!=3.0.0
 sphinxcontrib-mermaid
 sphinxcontrib-svg2pdfconverter[CairoSVG]
 sphinx-last-updated-by-git

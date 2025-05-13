@@ -22,15 +22,6 @@ and finally :ref:`removing <tut_remove>` it.
 The actions you're about to perform
 cover most of your daily needs with |ws_markup|.
 
-If you need a more descriptive overview,
-refer to the
-:ref:`explanation <exp_index>` section.
-For comprehensive details, explore the
-:ref:`reference <ref_index>` section.
-If you're looking for advanced practical steps,
-see the
-:ref:`how-to guides <how_index>`.
-
 
 .. _tut_install:
 
@@ -49,61 +40,49 @@ Prepare LXD
 `LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
-`API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
+`API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to handle individual *workshops*.
-
-Check whether it's configured:
+Check whether it's properly configured:
 
 .. code-block:: console
 
-   $ lxc info
+   $ lxc info | grep 'server_version:'
+
+     server_version: "6.3"
 
 
-If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
-and
-`initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
-LXD.
+If the command displays an older version
+or returns an error indicating LXD is missing,
+install a recent LXD version with :program:`snap`.
+To install it from scratch:
 
-.. tabs::
-   .. group-tab:: Using :program:`snap`
+.. code-block:: console
 
-      It's available as a snap:
-
-      .. code-block:: console
-
-         $ sudo snap install lxd
-         $ sudo lxd init --auto
+   $ sudo snap install lxd --channel=6/stable
 
 
-   .. group-tab:: Other ways
+To refresh an existing installation:
 
-      See the available installation options in
-      `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_.
+.. code-block:: console
 
-
-Next, ensure the
-`LXD daemon
-<https://documentation.ubuntu.com/lxd/en/latest/explanation/lxd_lxc/#lxd-daemon>`_
-is enabled and running:
-
-.. tabs::
-   .. group-tab:: Using :program:`snap`
-
-      .. code-block:: console
-
-         $ sudo snap start --enable lxd.daemon
-         $ snap services lxd.daemon
-
-   .. group-tab:: Other ways
-
-      Refer to
-      `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
-      and your distribution's manuals for guidance.
+   $ sudo snap refresh lxd --channel=6/stable
 
 
-With LXD installed and initialised,
+.. note::
+
+   For other ways to install LXD,
+   see the available installation options in
+   `LXD documentation
+   <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
+   Also, you need to ensure the
+   `LXD daemon
+   <https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
+   is enabled and running.
+   Again, refer to LXD documentation
+   and your distribution's manuals for guidance.
+
+
+With LXD properly installed, initialised and started,
 proceed to installing |ws_markup|.
 
 
@@ -114,8 +93,11 @@ Install
 .. @artefact workshopd
 .. @artefact workshop (CLI)
 
-Install the latest snap from |ws_markup|'s `Releases`_ page,
-using the options
+Download the latest snap from |ws_markup|'s "Releases" page on GitHub:
+:literalref:`https://github.com/canonical/workshop/releases/`
+
+
+Browse to the download directory and install the snap using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
 `--classic <https://snapcraft.io/docs/install-modes>`_:
@@ -125,17 +107,20 @@ and
    $ sudo snap install --dangerous --classic ./workshop_0.1.15_amd64.snap
 
 
-Enable shell completion
-~~~~~~~~~~~~~~~~~~~~~~~
+Shell integration (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 |ws_markup| features shell completion for popular shells
 such as :program:`bash`, :program:`zsh` and :program:`fish`.
+
 Bash completion is configured automatically;
-for other shells, check out the manual setup instructions:
+manual setup instructions are available for all shells:
 
 .. code-block:: console
 
-   $ workshop completion -h
+   $ workshop completion bash -h
+   $ workshop completion fish -h
+   $ workshop completion zsh -h
 
 
 With completion enabled, you can press the :kbd:`Tab` key while typing a command
@@ -165,22 +150,24 @@ and is stored in your project directory.
 .. @artefact SDK publisher
 .. @artefact SDK Store
 
-We'll be focusing on SDKs,
+A definition can list many moving parts;
+in this tutorial, we'll be focusing on SDKs,
 which are the basic units of a workshop's functionality.
 At run-time, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
 
-.. note::
-
-   SDKs are built and published in the Store using |sdk_markup|.
-   For details, see this guide:
-   :ref:`how_sdkcraft`.
-
-
-Here, we'll use the sample :samp:`go` SDK,
+For demonstration purposes, assume we want to build some Go code.
+To do this, let's use the sample :samp:`go` SDK,
 which was already defined, built and published in the SDK Store
 by the |ws_markup| team.
+
+.. tip::
+
+   The tutorial uses Go samples for demonstration purposes only.
+   This doesn't imply that |ws_markup| is intended solely for Go;
+   quite the contrary, it's envisioned as language-neutral and framework-agnostic.
+
 
 .. @artefact project
 
@@ -192,9 +179,8 @@ Create a project directory named :file:`hello-workshop`:
    $ cd ./hello-workshop
 
 
-Everything you plan to build using your workshop goes here:
-your source code, custom assets, and so on.
-In this tutorial, we'll be building some Go code.
+Everything you handle with your workshop goes here:
+your source code, custom assets and so on.
 
 .. @artefact workshop definition
 
@@ -216,13 +202,6 @@ Here, the SDK is referenced as :samp:`go`,
 and the specific version to retrieve from the SDK Store
 comes from the :samp:`jammy/stable` channel.
 
-.. tip::
-
-   This tutorial relies on a number of Go samples for demonstration purposes.
-   However, this doesn't imply that |ws_markup| is focused solely on Go;
-   quite the contrary, it's envisioned as language-neutral and framework-agnostic.
-
-
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
 
@@ -242,8 +221,8 @@ so it needs to be launched.
 
 .. _tut_launch:
 
-Launch
-~~~~~~
+Launch, start and stop
+~~~~~~~~~~~~~~~~~~~~~~
 
 To get a workshop ready for use, you launch it:
 
@@ -299,19 +278,8 @@ The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
-To briefly glimpse the steps of the latest change,
-use :command:`workshop tasks` without a change ID:
-
-.. @artefact workshop tasks
-
-.. code-block:: console
-
-   $ workshop tasks
-
-
-For a historical view,
-check out the list of recent changes
-to see how |ws_markup| keeps track of the project directory:
+To see how |ws_markup| keeps track of the directory,
+check out the recent major operations, or changes:
 
 .. @artefact workshop changes
 
@@ -323,12 +291,16 @@ to see how |ws_markup| keeps track of the project directory:
      34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
 
 
-To find out what launching a workshop implies,
-pass the ID of the change to the :command:`workshop tasks` command:
+To find out which smaller steps, or tasks, went into a certain change,
+pass the change ID to the :command:`workshop tasks` command.
+To look at the latest change,
+use :command:`workshop tasks` without the argument:
+
+.. @artefact workshop tasks
 
 .. code-block:: console
 
-   $ workshop tasks 34
+   $ workshop tasks
 
      ID   Status  Spawn               Ready               Summary
      132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
@@ -343,42 +315,15 @@ pass the ID of the change to the :command:`workshop tasks` command:
      2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical** installed
 
 
-This displays a list of all the tasks
-which comprise launching the workshop,
-and logs for some of the tasks.
-For launch, the following happens:
-
-- The :samp:`ubuntu@22.04` base image from the definition is retrieved.
-
-- A cache is created for apt packages.
-
-- The :ref:`project directory <tut_define>`
-  is mounted inside the workshop
-  (remember that it's a container)
-  as :file:`/project/`.
-
-- The workshop is *started*, or brought online.
-
-- The :ref:`system SDK <exp_system_sdk>` is installed.
-
-- The :samp:`go` SDK from the definition is retrieved,
-  installed and set up inside the workshop.
-
-- The interfaces of the SDKs are connected.
-
+This lists all the tasks and includes logs for some of them.
 
 You only need to launch a workshop once after defining it;
 for any subsequent changes, you can do a :ref:`refresh <tut_refresh>`.
 Otherwise, the workshop is just a fancy container
 that can be started and stopped.
 
-
-Start and stop
-~~~~~~~~~~~~~~
-
 The workshop starts automatically at launch,
 but you can also stop and restart it at will.
-
 Suppose you want to free up some resources, so you stop the workshop:
 
 .. @artefact workshop stop
@@ -423,7 +368,7 @@ Alternatively,
 you may have changed the definition to switch bases,
 add and remove SDKs or toggle their channels.
 In either case,
-you should refresh the workshop to apply the updates.
+you must refresh the workshop to apply the updates.
 
 To do so, change the base and the SDK channel in your definition
 and refresh the workshop:
@@ -483,31 +428,11 @@ Next, build it *inside the workshop* using the :command:`workshop exec` command
 
 .. code-block:: console
 
-   $ workshop exec dev go build main.go
-
-.. tip::
-
-   Since :samp:`dev` is the only workshop in the project,
-   it can be omitted from most :command:`workshop` commands.
-   For :command:`workshop exec`,
-   a name or a separator (:samp:`--`) is required to avoid ambiguity.
-   The above command can also be written as:
-
-   .. code-block:: console
-
-      $ workshop exec -- go build main.go
+   $ workshop exec dev -- go build main.go
 
 
-This uses the Go version installed by the :samp:`go` SDK.
-
-You can define environment variables for the :command:`go build` command
-or separate it from :command:`workshop exec` options for clarity:
-
-.. code-block:: console
-
-   $ workshop exec --env GO111MODULE=off dev -- go build -x
-
-The binary, built within the workshop environment,
+This runs the Go version installed by the :samp:`go` SDK.
+The resulting binary, built within the workshop environment,
 is now available in the project directory.
 
 **This is the single most important part of the tutorial**;
@@ -555,8 +480,8 @@ are visible in the project directory, and vice versa:
 .. code-block:: console
 
    $ touch created_outside.txt
-   $ workshop exec -- ls /project/
-   $ workshop exec -- touch /project/created_inside.txt
+   $ workshop exec dev -- ls /project/
+   $ workshop exec dev -- touch /project/created_inside.txt
    $ ls
 
 
@@ -572,17 +497,16 @@ Work with interfaces
 .. @artefact interface
 .. @artefact system SDK
 
-For security and control,
-|ws_markup| provides various host system capabilities (camera, GPU, and so forth)
-to the workshop through the interface mechanism, using plugs and slots.
-
 SDKs use interfaces to interact in an organised manner,
 exposing the resources they provide via slots and consuming them via plugs;
 the layout of these plugs and slots is defined by the SDK publishers.
-Host system resources are similarly exposed to the |ws_markup| ecosystem
-through the so-called *system SDK* slots.
 
-To check out the connected interfaces, list the connections:
+For uniformity, security and control,
+various host system capabilities (camera, GPU, and so on)
+are also exposed to the workshop via the same interface mechanism
+with a designated system SDK.
+
+To check out the connected interfaces of a workshop, list the connections:
 
 .. @artefact workshop connections
 
@@ -654,7 +578,7 @@ to serve files over HTTP:
 
 .. code-block:: console
 
-   $ workshop exec -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+   $ workshop exec dev -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
    $ cat <<EOF > Caddyfile
    :8080 {
            file_server
@@ -731,7 +655,7 @@ Then start the server at port 8080 (the slot):
 
 .. code-block:: console
 
-   $ workshop exec -- caddy start
+   $ workshop exec dev -- caddy start
 
 
 By default,
@@ -751,24 +675,6 @@ Finally, test the server on the host at port 8080 (the plug):
 
    For additional details of using the tunnel interface, see this guide:
    :ref:`how_forward_ports`.
-
-.. _tut_sketch:
-
-Sketch an SDK (optional)
-------------------------
-
-Another way to customise a workshop in-place
-uses the :command:`workshop sketch-sdk` command
-and is called *sketching*.
-It effectively grafts a special *sketch SDK* onto the workshop,
-so you can run a quick local experiment
-and circumvent the usual SDK Store publishing workflow.
-
-Sketching an SDK involves finer details
-covered in this guide: :ref:`how_sketch`.
-You'll also need a basic understanding of SDK concepts
-such as plugs, slots and hooks
-to use them effectively.
 
 
 .. _tut_remove:
@@ -810,15 +716,27 @@ This was the last step in the tutorial;
 you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
 
-- If you wish to try building and publishing a full-fledged SDK,
-  continue to the |sdk_markup| :ref:`how-to guide <how_sdkcraft>`;
-  the :ref:`ROS 2 case study <how_ros2>`
-  describes the entire process of building an SDK and using it in |ws_markup|
-  in extra detail.
+|ws_markup| is built around the concept of SDKs;
+you next step is to look at the different ways of building them.
 
-- For advanced scenarios and use cases,
-  see other :ref:`how-to guides <how_index>`.
+- First, you can graft a special *sketch SDK* onto the workshop
+  with the :command:`workshop sketch-sdk` command
+  to run a quick local experiment while designing an SDK.
+  For details, see this guide: :ref:`how_sketch`.
 
-- To know more about workshops in general,
-  proceed to :ref:`explanation <exp_index>`
-  and :ref:`reference <ref_index>` sections.
+
+- If you wish to build and publish a full-fledged SDK to the Store
+  instead of going for a local-only option,
+  proceed to this guide: :ref:`how_sdkcraft`.
+  The :ref:`ROS 2 how-to guides <how_ros2>`
+  provide a real-world example
+  to detail the process of building an SDK
+  and using it in |ws_markup|.
+
+
+Finally, if you need a more descriptive overview of |ws_markup|,
+refer to the :ref:`explanation <exp_index>` section.
+For comprehensive details,
+explore the :ref:`reference <ref_index>` section.
+If you're looking for advanced practical steps,
+see the :ref:`how-to guides <how_index>`.

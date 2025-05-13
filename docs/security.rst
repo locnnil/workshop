@@ -15,7 +15,7 @@ its CLI, which is the contact surface for the users,
 is confined as a snap and neither needs nor requires elevated privileges to run.
 Instead, it uses a RESTful API to communicate with the :program:`workshopd` daemon,
 which performs all the heavy lifting and does indeed run with elevated privileges.
-The use of `LXD <https://documentation.ubuntu.com/lxd/en/latest/>`_
+The use of `LXD <https://documentation.ubuntu.com/lxd/latest/>`_
 for implementation provides the benefits of a mature container technology.
 
 |sdk_markup| is an instance of `craft-application
@@ -42,7 +42,7 @@ these workshops have limited capabilities on the host.
 To achieve this, LXD is used to add a level of confinement:
 everything users do ends up in a `non-privileged container
 <https://documentation.ubuntu.com/server/how-to/containers/lxd-containers/#uid-mappings-and-privileged-containers>`_
-within a dedicated `project <https://documentation.ubuntu.com/lxd/en/latest/explanation/projects/>`_,
+within a dedicated `project <https://documentation.ubuntu.com/lxd/latest/explanation/projects/>`_,
 which separates workshops that belong to different users
 and isolates them from each other and the host system.
 
@@ -108,10 +108,29 @@ older releases may have known bugs
 or be incompatible with latest changes.
 
 
-Reporting a vulnerability
--------------------------
+Reporting issues
+----------------
 
-As with other high-priority cases,
-report concerns in our
+The easiest way to report a security issue is through GitHub,
+filing a private security report with a description of the issue,
+affected versions, the steps to reproduce the issue
+and, if known, ways of mitigating it.
+See
+`Privately reporting a security vulnerability
+<https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability>`_
+for instructions.
+
+Our GitHub admins will be notified of the issue
+and will work with you to determine whether the issue qualifies as a security issue
+and, if so, in which component.
+We will then handle figuring out a fix, getting a CVE assigned
+and coordinating the release of the fix.
+
+The `Ubuntu Security disclosure and embargo policy <https://ubuntu.com/security/disclosure-policy>`_
+contains more information about what you can expect when you contact us
+and what we expect from you.
+
+In lower-priority cases that do not affect security,
+you may report your concerns in our
 `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
 or `GitHub issues <https://github.com/canonical/workshop/issues>`__.

@@ -145,14 +145,20 @@ each edit with :command:`workshop sketch-sdk` increments the revision number.
 At this point, you've created a functional, albeit simple, SDK in minutes.
 For more complex needs, you can refine it iteratively.
 
+.. note::
+
+   You can only have one sketch SDK per workshop at a time;
+   there's no way to create :samp:`sketch-foo`, :samp:`sketch-draft`,
+   :samp:`sketch-final-final`, and so on.
+
 
 Add scripts
 -----------
 
-To make use of the new functionality in an organised way,
-add scripts to run inside your workshop.
-These scripts won’t be part of the sketch SDK
-but can be executed with :command:`workshop run`.
+You can make use of the sketch SDK the same way you would use a regular SDK.
+For example, you can add scripts that use its features inside your workshop.
+While these scripts are technically not a part of the sketch SDK,
+they can be executed with :command:`workshop run`.
 
 Edit :file:`workshop.yaml` to include the highlighted lines:
 
@@ -199,7 +205,7 @@ Stash and restore
 -----------------
 
 You can temporarily stash the sketch SDK
-to revert your workshop to its previous state:
+to revert your workshop to its pre-sketching state:
 
 .. code-block:: console
 
@@ -207,6 +213,10 @@ to revert your workshop to its previous state:
 
 .. important::
 
+   Stashing does not delete the SDK,
+   allowing you to restore it and continue working later.
+
+   However, there's only one slot available for stashing.
    Running :command:`workshop sketch-sdk --stash` overwrites the existing stash,
    if any.
    Be cautious to avoid losing your changes.
@@ -218,12 +228,9 @@ To restore the stashed SDK:
 
    $ workshop sketch-sdk --restore
 
-Stashing does not delete the SDK,
-allowing you to restore and continue working later.
 
-
-Eject the SDK (optional)
-------------------------
+Eject the SDK
+-------------
 
 .. @artefact in-project SDK
 .. @artefact SDK Store
@@ -264,8 +271,6 @@ use the :option:`!--name` option to change this:
      To use it, add "project-tools" to the list of SDKs and run 'workshop refresh dev'
 
 
-
-
 Clean up
 --------
 
@@ -277,6 +282,9 @@ To remove the sketch SDK permanently:
 
 
 This deletes all changes introduced by the sketch.
+Also, mind that :command:`workshop remove` removes the sketch SDK,
+as you could expect,
+including the stashed version.
 
 To list all sketch SDKs in a project:
 
@@ -285,6 +293,10 @@ To list all sketch SDKs in a project:
 .. code-block:: console
 
    $ workshop sketches
+
+
+A project can have multiple workshops, remember;
+hence the need to browse the respective sketches.
 
 
 See also

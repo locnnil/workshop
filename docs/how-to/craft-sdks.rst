@@ -28,7 +28,7 @@ Check the prerequisites
 `LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation,
 using its
-`REST API <https://documentation.ubuntu.com/lxd/en/latest/restapi_landing/>`_
+`REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to craft the SDKs.
 
 Check whether it's configured:
@@ -38,9 +38,9 @@ Check whether it's configured:
    $ lxc info
 
 
-If not, `install <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+If not, `install <https://documentation.ubuntu.com/lxd/latest/installing/>`_
 and
-`initialise <https://documentation.ubuntu.com/lxd/en/latest/howto/initialize/>`_
+`initialise <https://documentation.ubuntu.com/lxd/latest/howto/initialize/>`_
 LXD.
 
 .. tabs::
@@ -58,12 +58,12 @@ LXD.
 
       See the available installation options in
       `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_.
+      <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
 
 
 Next, ensure the
 `LXD daemon
-<https://documentation.ubuntu.com/lxd/en/latest/explanation/lxd_lxc/#lxd-daemon>`_
+<https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
 is enabled and running:
 
 .. tabs::
@@ -78,7 +78,7 @@ is enabled and running:
 
       Refer to
       `LXD documentation
-      <https://documentation.ubuntu.com/lxd/en/latest/installing/>`_
+      <https://documentation.ubuntu.com/lxd/latest/installing/>`_
       and your distribution's manuals for guidance.
 
 
@@ -108,7 +108,7 @@ Make sure it runs:
    $ sdkcraft --help
 
 
-.. _tut_init:
+.. _how_sdkcraft_init:
 
 Initialise the SDK
 ------------------
@@ -140,7 +140,7 @@ Next, browse to the SDK directory and initialise it:
 This command creates a template definition file
 named :file:`sdk.yaml`;
 although it's almost empty,
-it can already be :ref:`built <tut_build_sdk>`.
+it can already be :ref:`built <how_sdkcraft_build_sdk>`.
 
 However, let's take a few extra steps
 to explore what goes into an SDK.
@@ -171,7 +171,7 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
        plugin: nil
 
 
-.. _tut_parts:
+.. _how_sdkcraft_parts:
 
 Define parts
 ------------
@@ -197,7 +197,7 @@ refer to the `Parts
 section in Craft Parts documentation.
 
 
-.. _tut_mount_interface:
+.. _how_sdkcraft_mount_interface:
 
 Add interface plugs
 -------------------
@@ -383,7 +383,7 @@ Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
 
 
-.. _tut_build_sdk:
+.. _how_sdkcraft_build_sdk:
 
 Build and pack
 --------------
@@ -425,7 +425,7 @@ which contains the build artefacts from the previous step
 along with SDK metadata, hooks and other components.
 
 
-.. _tut_publish:
+.. _how_sdkcraft_publish:
 
 Publish the SDK
 ---------------

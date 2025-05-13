@@ -1,7 +1,7 @@
 .. _how_ros2:
 
-ROS 2: case study
-=================
+Examples: ROS 2
+===============
 
 .. @artefact SDK
 
