@@ -1030,6 +1030,18 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
+apt:
+  conf: |
+    # Installed by workshop
+    
+    # Don't automatically install recommended packages
+    APT::Install-Recommends "0";
+
+    # Don't automatically install suggested packages
+    APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
 write_files:
 - content: |
     # Managed by workshop, do not remove
@@ -1055,18 +1067,6 @@ write_files:
     [Install]
     WantedBy=multi-user.target
   path: /etc/systemd/system/xauth-copy.service
-- content: |
-    # Installed by workshop
-    
-    # Don't automatically install recommended packages
-    APT::Install-Recommends "0";
-
-    # Don't automatically install suggested packages
-    APT::Install-Suggests "0";
-
-    # Bypass confirmation prompts
-    APT::Get::Assume-Yes "1";
-  path: /etc/apt/apt.conf.d/01norecommend
 - content: |
     # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
     [Service]
