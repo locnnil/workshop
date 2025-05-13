@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	LxdSock               = "/var/snap/lxd/common/lxd/unix.socket"
 	storagePool           = "workshop"
 	storagePoolDriver     = "zfs"
 	storagePoolMinimalGiB = 5
@@ -111,7 +110,7 @@ func New() (*Backend, error) {
 	}
 
 	// Create LXD storage pool if it doesn't exist
-	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
+	conn, err := lxd.ConnectLXDUnix("", nil)
 	if err != nil {
 		return nil, ErrorWithInstallLXDPrompt(err)
 	}
@@ -290,7 +289,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			Source: api.InstanceSource{
 				Type:        "image",
 				Fingerprint: image.Fingerprint,
-				Project:     LxdProjectName(userName),
+				Project:     LxdProjectName(usr.Name),
 			},
 		}
 		op, err := conn.CreateInstance(req)
@@ -939,7 +938,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil); err != nil {
+	if srv, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil); err != nil {
 		return nil, ErrorWithInstallLXDPrompt(err)
 	} else {
 		if err = InitLxdProject(srv, user); err != nil {
@@ -984,7 +983,7 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func checkNvidia() (bool, error) {
-	conn, err := lxd.ConnectLXDUnixWithContext(context.Background(), LxdSock, nil)
+	conn, err := lxd.ConnectLXDUnix("", nil)
 	if err != nil {
 		return false, ErrorWithInstallLXDPrompt(err)
 	}
