@@ -87,7 +87,7 @@ and includes a number of mandatory and optional keys:
 
        These are copied into the workshop
        before being executed by :command:`bash`.
-       The options :samp:`errexit`, :samp:`pipefail` and :samp:`nounset`
+       The options :samp:`errexit` and :samp:`pipefail`
        are set by default.
 
 

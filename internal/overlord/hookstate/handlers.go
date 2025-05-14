@@ -144,8 +144,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 			GroupId: 0,
 			Command: []string{
 				"bash",
-				"-ue",
-				"-o",
+				"-eo",
 				"pipefail",
 				hookPath,
 			},
