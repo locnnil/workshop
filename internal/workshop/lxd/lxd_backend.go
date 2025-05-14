@@ -289,7 +289,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			Source: api.InstanceSource{
 				Type:        "image",
 				Fingerprint: image.Fingerprint,
-				Project:     LxdProjectName(usr.Name),
+				Project:     LxdProjectName(usr.Username),
 			},
 		}
 		op, err := conn.CreateInstance(req)

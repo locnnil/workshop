@@ -291,7 +291,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 	restoreLookup := osutil.FakeUserLookup(func(username string) (*user.User, error) {
 		if username == f.username {
-			return &user.User{Name: username}, nil
+			return &user.User{Username: username}, nil
 		}
 		return nil, user.UnknownUserError("not found")
 	})

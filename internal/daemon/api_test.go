@@ -72,7 +72,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
 	actual, err := user.Current()
 	c.Assert(err, check.IsNil)
-	s.user = &user.User{Name: "testuser", Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
 
 	s.project = workshop.Project{
 		Path:      s.workshopDir,

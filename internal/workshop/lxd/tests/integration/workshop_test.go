@@ -45,7 +45,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	f.bd, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
 
-	f.usr = &user.User{Name: "testuser", Username: "testuser", Uid: "1000", Gid: "1000"}
+	f.usr = &user.User{Username: "testuser", Uid: "1000", Gid: "1000"}
 	f.project = workshop.Project{
 		ProjectId: "42424242",
 		Path:      c.MkDir(),
