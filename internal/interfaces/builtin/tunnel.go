@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
 	"github.com/canonical/workshop/internal/logger"
@@ -374,7 +375,7 @@ func expandPath(target *workshop.ProxyTarget, user *user.User) error {
 		return nil
 	}
 	if strings.HasPrefix(target.Address, "$XDG_RUNTIME_DIR/") {
-		runtimeDir := filepath.Join("/run/user", user.Uid)
+		runtimeDir := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
 		target.Address = strings.Replace(target.Address, "$XDG_RUNTIME_DIR", runtimeDir, 1)
 		return nil
 	}
@@ -397,7 +398,7 @@ func authorizePath(listen workshop.ProxyTarget, user *user.User) error {
 		return fmt.Errorf("cannot create socket %q: %w", listen.Address, err)
 	}
 
-	runtimeDir := filepath.Join("/run/user", user.Uid)
+	runtimeDir := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
 	if strings.HasPrefix(realDir, user.HomeDir) || strings.HasPrefix(realDir, runtimeDir) {
 		return nil
 	}

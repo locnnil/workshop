@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/ptyutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -447,13 +449,14 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	// user. This is created due to enabling lingering for this user during the
 	// workshop start script and will not exist for other users. See:
 	// https://github.com/systemd/systemd/blob/7419291670dd4066594350cce585031f60bc4f0a/src/login/pam_systemd.c#L1288
-	env["XDG_RUNTIME_DIR"] = "/run/user/" + strconv.Itoa(flags.UserId)
+	xdgRuntimeDir := filepath.Join(dirs.XdgRuntimeDirBase, strconv.Itoa(flags.UserId))
+	env["XDG_RUNTIME_DIR"] = xdgRuntimeDir
 
 	// The session bus address is often determined programatically, however some
 	// programs rely on an explicit environment variable. We set that here. Like
 	// the runtime dir above, we only guarantee that the bus exists for the
 	// workshop user.
-	env["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/run/user/" + strconv.Itoa(flags.UserId) + "/bus"
+	env["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + filepath.Join(xdgRuntimeDir, "bus")
 
 	for _, kv := range flags.Env {
 		parts := strings.SplitN(kv, "=", 2)

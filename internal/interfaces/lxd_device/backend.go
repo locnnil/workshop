@@ -15,6 +15,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"github.com/spf13/afero"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -263,7 +264,7 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	if dev.Wayland != nil {
-		prefix := filepath.Join("/run/user", workshop.User.Uid) + "/"
+		prefix := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid) + "/"
 		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, prefix)
 	}
 
