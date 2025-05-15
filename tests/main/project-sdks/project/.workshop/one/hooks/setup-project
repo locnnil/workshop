@@ -6,4 +6,5 @@ set -x
 [ "$HOME" = '/home/workshop' ]
 [ "$USER" = 'workshop' ]
 [ "$LANG" = 'C.UTF-8' ]
+[ "$SDK" = '/var/lib/workshop/sdk/project-one' ]
 sudo touch /setup-project.log

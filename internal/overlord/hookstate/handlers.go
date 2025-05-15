@@ -49,9 +49,11 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			"pipefail",
 			hookPath,
 		},
-		Environment: map[string]string{},
-		WorkDir:     sdk.SdkHooksDir(hook.Sdk),
-		Timeout:     hook.Timeout,
+		Environment: map[string]string{
+			"SDK": sdk.SdkDir(hook.Sdk),
+		},
+		WorkDir: sdk.SdkHooksDir(hook.Sdk),
+		Timeout: hook.Timeout,
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
