@@ -53,6 +53,11 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 					}
 				}
 
+			} else if change.Kind() == "remove" {
+				if task.Kind() == "remove-state-storage" || task.Kind() == "remove-workshop-stash" {
+					// 'pool volume not found' / 'stash instance not found' are not considered as error when removing
+					return nil
+				}
 			}
 			return err
 		}

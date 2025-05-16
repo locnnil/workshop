@@ -965,10 +965,6 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
-		// TODO(yan.jiang): this should be implemented as another task
-		// if err = conflict.AbortIfWaitingBeforeRemove(w.state, name, projectId); err != nil {
-		// 	return nil, fmt.Errorf("cannot remove %q: %w", name, err)
-		// }
 	}
 
 	taskset, err := removeMany(w.state, workshops, project)

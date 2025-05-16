@@ -68,32 +68,6 @@ func (c *CmdRemove) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
-	// TODO(yan.jiang): remove this after backend abort is ready
-	// // Workshops should be removed even if yml file formats are wrong
-	// // So use cli.List() instead of cli.Workshop() here
-	// wps, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // convert list to map for faster lookup
-	// wpsMap := map[string]*client.WorkshopInfo{}
-	// for _, wp := range wps {
-	// 	wpsMap[wp.Name] = wp
-	// }
-
-	// for _, name := range av {
-	// 	if wp, ok := wpsMap[name]; !ok {
-	// 		return fmt.Errorf("workshop %s not found", name)
-	// 	} else if wp.Status == "Waiting" {
-	// 		fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
-	// 		cmdabort := &CmdRefresh{root: c.root, Abort: true}
-	// 		if err = cmdabort.RunRefresh(cli, project, []string{wp.Name}); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
-
 	changeId, err := cli.Remove(project.Id, av)
 	if err != nil {
 		return err

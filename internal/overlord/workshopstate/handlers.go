@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/osutil/sys"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -372,6 +373,8 @@ func (m *WorkshopManager) doDiscardWaitingRefresh(task *state.Task, tomb *tomb.T
 	if err != nil {
 		return err
 	}
+	task.State().Lock()
+	defer task.State().Unlock()
 	chg, err := conflict.FindRunningChange(task.State(), prj.ProjectId, w, []string{"exec"})
 	if err != nil {
 		return err
@@ -379,13 +382,19 @@ func (m *WorkshopManager) doDiscardWaitingRefresh(task *state.Task, tomb *tomb.T
 	if chg == nil || chg.Status() != state.WaitStatus {
 		return nil
 	}
-	for _, tsk := range chg.Tasks() {
-		if tsk.Status() == state.WaitStatus {
-			tsk.SetStatus(state.DoStatus)
-			tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), w)
+
+	for _, t := range chg.Tasks() {
+		switch t.Status() {
+		case state.WaitStatus:
+			t.SetStatus(state.ErrorStatus)
+		case state.DoStatus:
+			t.SetStatus(state.HoldStatus)
+		case state.DoingStatus:
+			t.SetStatus(state.AbortStatus)
+		case state.DoneStatus:
+			t.SetStatus(state.UndoneStatus)
 		}
 	}
 
-	chg.Abort()
 	return nil
 }
