@@ -99,7 +99,24 @@ Or, you can shell into the container to recover its data:
 
 .. code-block:: console
 
-   $ sudo lxc exec nimble-ec275767 --project workshop.user -- /bin/bash
+   $ sudo lxc shell nimble-ec275767 --project workshop.user
+
+
+If the container fails to start,
+use :command:`lxc info` to view the latest log entries:
+
+.. code-block:: console
+
+   $ sudo lxc info --show-log nimble-ec275767 --project workshop.user
+
+
+To increase log verbosity,
+you can reconfigure LXD with :program:`snap`:
+
+.. code-block:: console
+
+   $ sudo snap set lxd daemon.debug=true
+   $ sudo snap restart lxd.daemon
 
 
 Use other relevant `LXC`_ commands to continue your investigation.
