@@ -578,7 +578,7 @@ to serve files over HTTP:
 
 .. code-block:: console
 
-   $ workshop exec dev -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+   $ workshop exec --env GOBIN=/project dev -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
    $ cat <<EOF > Caddyfile
    :8080 {
            file_server
@@ -587,8 +587,8 @@ to serve files over HTTP:
    $ echo 'Hello, Workshop!' > index.html
 
 
-This installs Caddy inside the workshop under :file:`~/go/bin/`
-in the :samp:`workshop` user's home directory,
+This builds Caddy inside the workshop,
+installs it to the project directory,
 configures it to run as a file server at port 8080
 and creates an index file.
 
@@ -655,7 +655,7 @@ Then start the server at port 8080 (the slot):
 
 .. code-block:: console
 
-   $ workshop exec dev -- caddy start
+   $ workshop exec dev -- ./caddy start
 
 
 By default,
