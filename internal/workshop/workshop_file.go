@@ -276,15 +276,21 @@ func validateBinding(sdks []SdkRecord) error {
 			if p.Bind == nil {
 				continue
 			}
-			mr := PlugRef{Sdk: p.Bind.Sdk, Name: p.Bind.Name}
+			mr := *p.Bind
 			sl := PlugRef{Sdk: s.Name, Name: name}
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
+			if sdk.IsSystem(sl.Sdk) {
+				return fmt.Errorf("cannot bind system SDK plug %q", sl.String())
+			}
+			if sdk.IsSystem(mr.Sdk) {
+				return fmt.Errorf("cannot bind to system SDK plug %q", mr.String())
+			}
 			if !IsImplicitSdk(p.Bind.Sdk) && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("cannot bind plug %q: SDK %q not found", p.Bind.String(), p.Bind.Sdk)
 			}
-			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
+			if mr == sl {
 				return fmt.Errorf(`cannot bind plug %q to itself`, p.Bind.String())
 			}
 		}

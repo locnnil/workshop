@@ -369,6 +369,36 @@ sdks:
 	c.Assert(err, check.ErrorMatches, `cannot bind plug "no-sdk:cache": SDK "no-sdk" not found`)
 }
 
+func (f *workshopFile) TestBindPlugSystemSdk(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: system
+  - name: etl-sdk
+    channel: latest/stable
+    plugs:
+      data: 
+        bind: system:cache
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	_, err := f.project.Workshop("xbert-gpu")
+	c.Check(err, check.ErrorMatches, `cannot bind to system SDK plug "system:cache"`)
+
+	yaml = `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: system
+    plugs:
+      cache: 
+        bind: etl-sdk:data
+  - name: etl-sdk
+    channel: latest/stable
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	_, err = f.project.Workshop("xbert-gpu")
+	c.Check(err, check.ErrorMatches, `cannot bind system SDK plug "system:cache"`)
+}
+
 func (f *workshopFile) TestBindPlugToItself(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
