@@ -1,7 +1,7 @@
 name: workshop
 title: Workshop
 base: core22
-version: 0.1.16
+adopt-info: workshop
 summary: A tool for defining and handling ephemeral development environments
 description: |
   List your dependencies and components in YAML to define an environment.
@@ -68,6 +68,10 @@ parts:
 
       # Generate completions script
       "${CRAFT_PART_INSTALL}/bin/workshop" completion bash > "${CRAFT_PART_INSTALL}/workshop-completer.sh"
+
+      # Set snap version
+      VERSION="$("${CRAFT_PART_INSTALL}/bin/workshop" --version)"
+      craftctl set version="$VERSION"
     prime:
       - bin/workshop
       - bin/workshopd

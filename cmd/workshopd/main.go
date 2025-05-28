@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/version"
 )
 
 // exitStatus can be used in panic(&exitStatus{code}) to cause Workshops's main
@@ -22,7 +23,8 @@ func (e *exitStatus) Error() string {
 }
 
 var workshopd = &cobra.Command{
-	Use:              "workshop",
+	Use:              "workshopd",
+	Version:          version.Version,
 	SilenceErrors:    false,
 	SilenceUsage:     true,
 	TraverseChildren: true,
@@ -47,6 +49,7 @@ func main() {
 		}
 	}()
 
+	workshopd.SetVersionTemplate("{{.Version}}\n")
 	workshopd.AddCommand((&cmdRun{}).Command())
 	if err = workshopd.Execute(); err != nil {
 		os.Exit(1)

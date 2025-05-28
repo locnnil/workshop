@@ -14,10 +14,17 @@
 
 package version
 
-//go:generate ./mkversion.sh
+import (
+	_ "embed"
+	"strings"
+)
 
-// Version will be overwritten at build-time via mkversion.sh
-var Version = "unknown"
+//go:embed VERSION
+var Version string
+
+func init() {
+	Version = strings.TrimSpace(Version)
+}
 
 func MockVersion(version string) (restore func()) {
 	old := Version
