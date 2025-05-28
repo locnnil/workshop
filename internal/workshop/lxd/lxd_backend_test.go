@@ -71,7 +71,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 		Name: "test",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{
 				"one-plug":     {Bind: &workshop.PlugRef{Sdk: "two", Name: "two-plug"}},
 				"one-plug-two": {Bind: &workshop.PlugRef{Sdk: "two", Name: "two-plug"}},
 			}},

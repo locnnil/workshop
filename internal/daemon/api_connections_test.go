@@ -82,7 +82,7 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 		file.Sdks = append(file.Sdks, workshop.SdkRecord{
 			Name:    s.Name,
 			Channel: "latest/stable",
-			Plugs:   make(map[string]workshop.Plug),
+			Plugs:   make(map[string]workshop.PlugOrBind),
 		})
 	}
 	return file
@@ -1122,8 +1122,8 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 
 	wp, err := s.b.Workshop(s.ctx, "consumer-ws")
 	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug2"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
+	wp.File.Sdks[0].Plugs["plug2"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
 
 	d.Overlord().Loop()
 	defer d.Overlord().Stop()
@@ -1505,7 +1505,7 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 type disconnectOpts struct {
 	auto   bool
 	forget bool
-	bind   map[string]workshop.Plug
+	bind   map[string]workshop.PlugOrBind
 }
 
 func (s *apiSuite) connect(c *check.C, plug string) *interfaces.ConnRef {
@@ -1623,7 +1623,7 @@ func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
 
 func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 	opts := &disconnectOpts{
-		bind: map[string]workshop.Plug{
+		bind: map[string]workshop.PlugOrBind{
 			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
@@ -1637,7 +1637,7 @@ func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 
 func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 	opts := &disconnectOpts{
-		bind: map[string]workshop.Plug{
+		bind: map[string]workshop.PlugOrBind{
 			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}
@@ -1651,7 +1651,7 @@ func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 
 func (s *apiSuite) TestDisconnectBoundPlugSlaveSuccess(c *check.C) {
 	opts := &disconnectOpts{
-		bind: map[string]workshop.Plug{
+		bind: map[string]workshop.PlugOrBind{
 			"plug2": {Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}},
 		},
 	}

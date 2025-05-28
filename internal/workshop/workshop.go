@@ -184,7 +184,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
 		if m.Bind == nil {
-			plugs[name] = m.Attributes
+			plugs[name] = m.Plug
 		} else {
 			binds[name] = sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
 		}

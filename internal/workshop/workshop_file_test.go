@@ -102,8 +102,8 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Name: "test-workshop",
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
-			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
+			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
+			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
 		Scripts: map[string]workshop.Script{
 			"oneline":   "\n\n\necho one line\n",
@@ -259,6 +259,30 @@ sdks:
 	c.Assert(err, check.ErrorMatches, `unsupported channel "latest/foo" for "cuda" SDK`)
 }
 
+func (f *workshopFile) TestShortcuts(c *check.C) {
+	yaml := `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: data-sdk
+    channel: latest/stable
+    plugs:
+      db: tunnel
+      tunnel:
+  - name: etl-sdk
+    channel: latest/stable
+    slots:
+      dashboard: tunnel
+      tunnel:
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	file, err := f.project.Workshop("xbert-gpu")
+	c.Assert(err, check.IsNil)
+	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"db": {Plug: "tunnel"}, "tunnel": {}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Slots: map[string]interface{}{"dashboard": "tunnel", "tunnel": nil}},
+	})
+}
+
 func (f *workshopFile) TestBindPlug(c *check.C) {
 	yaml := `name: xbert-gpu
 base: ubuntu@20.04
@@ -278,8 +302,8 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
-		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Bind: &workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
-		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"cache": {Bind: &workshop.PlugRef{Sdk: "etl-sdk", Name: "cache"}}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
 }
 
@@ -302,8 +326,8 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
-		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"cache": {Attributes: map[string]interface{}{"attr1": "val"}}}},
-		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.Plug{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"cache": {Plug: map[string]interface{}{"attr1": "val"}}}},
+		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
 }
 
@@ -322,7 +346,7 @@ sdks:
 `
 	f.createWFile(c, "xbert-gpu", yaml)
 	_, err := f.project.Workshop("xbert-gpu")
-	c.Assert(err, check.ErrorMatches, `plug "data-sdk:aux" is bound and must not define other attributes`)
+	c.Assert(err, check.ErrorMatches, `plug is bound to "data-sdk:aux" and must not define other attributes`)
 }
 
 func (f *workshopFile) TestBindPlugNoSdk(c *check.C) {

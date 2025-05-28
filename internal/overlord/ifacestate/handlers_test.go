@@ -223,8 +223,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
+	wp.File.Sdks[0].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -282,8 +282,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
+	wp.File.Sdks[0].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
