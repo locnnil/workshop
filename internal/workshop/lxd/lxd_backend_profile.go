@@ -17,12 +17,16 @@ func ProfileName(pid, workshop, sdk string) string {
 	return strings.Join([]string{InstanceName(workshop, pid), sdk}, "-")
 }
 
-func DeviceConfigKey(sdk, dev string) string {
-	return fmt.Sprintf("user.workshop.%s.%s", sdk, dev)
+func DeviceName(parts ...string) string {
+	return strings.Join(parts, "_")
 }
 
-func DeviceTypeConfigKey(sdk, dev string) string {
-	return fmt.Sprintf("user.workshop.%s.%s.type", sdk, dev)
+func DeviceConfigKey(name string) string {
+	return fmt.Sprintf("user.workshop.%s", name)
+}
+
+func DeviceTypeConfigKey(name string) string {
+	return fmt.Sprintf("user.workshop.%s.type", name)
 }
 
 func Profile(conn lxd.InstanceServer, pid, wp, profile string) (workshop.SdkProfile, error) {
@@ -40,14 +44,16 @@ func Profile(conn lxd.InstanceServer, pid, wp, profile string) (workshop.SdkProf
 
 func lxdToSdkProfile(profile string, devs map[string]map[string]string, config map[string]string) (workshop.SdkProfile, error) {
 	var pr = workshop.NewSdkProfile(profile)
-	for name, dev := range devs {
+	for devname, dev := range devs {
+		name := strings.TrimPrefix(devname, DeviceName(profile, ""))
+
 		switch dev["type"] {
 		case "disk":
 			pr.Mounts[name] = workshop.Mount{Name: name, What: dev["source"], Where: dev["path"], Type: workshop.HostWorkshop}
 		case "gpu":
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
-			devtype := config[DeviceTypeConfigKey(profile, name)]
+			devtype := config[DeviceTypeConfigKey(devname)]
 			switch devtype {
 			case "tunnel":
 				proxyEntry, err := proxyEntryFromLxdDevice(name, dev)
@@ -83,20 +89,20 @@ func lxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 				logger.Noticef("On reading %q SDK profile: unknown device type: %q", profile, devtype)
 			}
 		case "unix-hotplug":
-			devtype := config[DeviceTypeConfigKey(profile, name)]
+			devtype := config[DeviceTypeConfigKey(devname)]
 			if devtype == "camera" {
 				continue
 			}
 
 			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "none":
-			cfg, exist := config[DeviceConfigKey(profile, name)]
+			cfg, exist := config[DeviceConfigKey(devname)]
 			if !exist {
-				logger.Noticef("On reading %q SDK profile: unknown device %q", profile, name)
+				logger.Noticef("On reading %q SDK profile: unknown device %q", profile, devname)
 				continue
 			}
 
-			devtype := config[DeviceTypeConfigKey(profile, name)]
+			devtype := config[DeviceTypeConfigKey(devname)]
 			switch devtype {
 			case "camera":
 				var camera workshop.Camera
