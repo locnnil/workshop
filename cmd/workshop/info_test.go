@@ -285,58 +285,25 @@ var mockWorkshopWithTunnels = `{
       {
         "name": "system",
         "revision": "1",
-        "tunnels": {
-          "plugs": [
-            {
-              "plug": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "system",
-                "plug": "gopls"
-              },
-              "slot": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "go",
-                "slot": "gopls"
-              },
-              "from": {
-                "protocol": "tcp",
-                "host": "127.0.0.1",
-                "port": 60915
-              },
-              "to": {
-                "protocol": "unix",
-                "path": "/run/user/%s/gopls.socket"
-              }
+        "tunnels": [
+          {
+            "plug": {
+              "project-id": "42ws42ws",
+              "workshop": "ws",
+              "sdk": "system",
+              "plug": "gopls"
+            },
+            "from": {
+              "protocol": "tcp",
+              "host": "127.0.0.1",
+              "port": 60915
+            },
+            "to": {
+              "protocol": "unix",
+              "path": "/run/user/%s/gopls.socket"
             }
-          ],
-          "slots": [
-            {
-              "plug": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "go",
-                "plug": "snap-cache"
-              },
-              "slot": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "system",
-                "slot": "snap-cache"
-              },
-              "from": {
-                "protocol": "tcp",
-                "host": "0.0.0.0",
-                "port": 12345
-              },
-              "to": {
-                "protocol": "unix",
-                "path": "/run/snap-proxy.socket"
-              }
-            }
-          ]
-        }
+          }
+        ]
       },
       {
         "name": "go",
@@ -345,58 +312,25 @@ var mockWorkshopWithTunnels = `{
         "revision": "1",
         "build-time": "2017-02-19T17:23:05.592623Z",
         "install-time": "2017-03-22T09:01:00.0Z",
-        "tunnels": {
-          "plugs": [
-            {
-              "plug": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "go",
-                "plug": "snap-cache"
-              },
-              "slot": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "system",
-                "slot": "snap-cache"
-              },
-              "from": {
-                "protocol": "tcp",
-                "host": "0.0.0.0",
-                "port": 12345
-              },
-              "to": {
-                "protocol": "unix",
-                "path": "/run/snap-proxy.socket"
-              }
+        "tunnels": [
+          {
+            "plug": {
+              "project-id": "42ws42ws",
+              "workshop": "ws",
+              "sdk": "go",
+              "plug": "snap-cache"
+            },
+            "from": {
+              "protocol": "tcp",
+              "host": "0.0.0.0",
+              "port": 12345
+            },
+            "to": {
+              "protocol": "unix",
+              "path": "/run/snap-proxy.socket"
             }
-          ],
-          "slots": [
-            {
-              "plug": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "system",
-                "plug": "gopls"
-              },
-              "slot": {
-                "project-id": "42ws42ws",
-                "workshop": "ws",
-                "sdk": "go",
-                "slot": "gopls"
-              },
-              "from": {
-                "protocol": "tcp",
-                "host": "127.0.0.1",
-                "port": 60915
-              },
-              "to": {
-                "protocol": "unix",
-                "path": "/run/user/%s/gopls.socket"
-              }
-            }
-          ]
-        }
+          }
+        ]
       }
     ]
   }

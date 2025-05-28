@@ -516,12 +516,27 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "data")
 
-	p := workshop.NewSdkProfile("test-sdk")
+	p := workshop.NewSdkProfile("system")
+	p.Tunnels = []workshop.Tunnel{{ProxyEntry: workshop.ProxyEntry{
+		Name:      "api",
+		Connect:   workshop.ProxyTarget{Protocol: "unix", Address: "@testapi"},
+		Listen:    workshop.ProxyTarget{Protocol: "tcp", Address: "0.0.0.0:8888"},
+		Direction: workshop.HostToWorkshop,
+	}}}
+	w.Profiles["system"] = p
+
+	p = workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
 		What:  testSDKSource,
 		Where: "/opt/data",
 		Type:  workshop.HostWorkshop,
 	}
+	p.Tunnels = []workshop.Tunnel{{ProxyEntry: workshop.ProxyEntry{
+		Name:      "dns",
+		Connect:   workshop.ProxyTarget{Protocol: "udp", Address: "127.0.0.53:5353"},
+		Listen:    workshop.ProxyTarget{Protocol: "udp", Address: "127.0.0.1:5353"},
+		Direction: workshop.WorkshopToHost,
+	}}}
 	w.Profiles["test-sdk"] = p
 
 	testSDKSource2 := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "photos")
@@ -538,25 +553,6 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 		Type:  workshop.WorkshopWorkshop,
 	}
 	w.Profiles["test-sdk-2"] = p
-
-	// TODO: extend above setup with tunnels once system SDK profile is available.
-	// Also need coverage for tunnel plug binding logic.
-	connsState := map[string]interface{}{
-		"b8639dea/tunnels/system:api b8639dea/tunnels/test-sdk-2:api": map[string]interface{}{
-			"interface":   "tunnel",
-			"plug-static": map[string]interface{}{"endpoint": "0.0.0.0:8888/tcp"},
-			"slot-static": map[string]interface{}{"endpoint": "@testapi"},
-		},
-		"b8639dea/tunnels/test-sdk:dns b8639dea/tunnels/system:dns": map[string]interface{}{
-			"interface":   "tunnel",
-			"plug-static": map[string]interface{}{"endpoint": "127.0.0.1:5353/udp"},
-			"slot-static": map[string]interface{}{"endpoint": "127.0.0.53/udp"},
-		},
-	}
-	st := s.d.Overlord().State()
-	st.Lock()
-	st.Set("conns", connsState)
-	st.Unlock()
 
 	// Get Workshop info
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
@@ -593,30 +589,22 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
 					InstallTime: &install1,
-					Tunnels: &TunnelInfo{
-						Plugs: []*Tunnel{
-							{
-								Plug: sdk.PlugRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "system",
-									Name:      "api",
-								},
-								Slot: sdk.SlotRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "test-sdk-2",
-									Name:      "api",
-								},
-								From: Endpoint{
-									Protocol: "tcp",
-									Host:     "0.0.0.0",
-									Port:     8888,
-								},
-								To: Endpoint{
-									Protocol: "unix",
-									Path:     "@testapi",
-								},
+					Tunnels: []*Tunnel{
+						{
+							Plug: sdk.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "tunnels",
+								Sdk:       "system",
+								Name:      "api",
+							},
+							From: Endpoint{
+								Protocol: "tcp",
+								Host:     "0.0.0.0",
+								Port:     8888,
+							},
+							To: Endpoint{
+								Protocol: "unix",
+								Path:     "@testapi",
 							},
 						},
 					},
@@ -640,31 +628,23 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 							},
 						},
 					},
-					Tunnels: &TunnelInfo{
-						Plugs: []*Tunnel{
-							{
-								Plug: sdk.PlugRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "test-sdk",
-									Name:      "dns",
-								},
-								Slot: sdk.SlotRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "system",
-									Name:      "dns",
-								},
-								From: Endpoint{
-									Protocol: "udp",
-									Host:     "127.0.0.1",
-									Port:     5353,
-								},
-								To: Endpoint{
-									Protocol: "udp",
-									Host:     "127.0.0.53",
-									Port:     5353,
-								},
+					Tunnels: []*Tunnel{
+						{
+							Plug: sdk.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "tunnels",
+								Sdk:       "test-sdk",
+								Name:      "dns",
+							},
+							From: Endpoint{
+								Protocol: "udp",
+								Host:     "127.0.0.1",
+								Port:     5353,
+							},
+							To: Endpoint{
+								Protocol: "udp",
+								Host:     "127.0.0.53",
+								Port:     5353,
 							},
 						},
 					},

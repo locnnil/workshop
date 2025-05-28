@@ -194,12 +194,12 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				}
 			}
 
-			if sk.Tunnels != nil && len(sk.Tunnels.Plugs) > 0 {
+			if len(sk.Tunnels) > 0 {
 				fmt.Fprintf(w, "    tunnels:\n")
-				slices.SortFunc(sk.Tunnels.Plugs, func(a, b *client.Tunnel) int {
+				slices.SortFunc(sk.Tunnels, func(a, b *client.Tunnel) int {
 					return cmp.Compare(a.Plug.Name, b.Plug.Name)
 				})
-				for _, tunnel := range sk.Tunnels.Plugs {
+				for _, tunnel := range sk.Tunnels {
 					fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
 					fmt.Fprintf(w, "        from:\t%s\n", formatEndpoint(tunnel.From))
 					fmt.Fprintf(w, "        to:\t%s\n", formatEndpoint(tunnel.To))

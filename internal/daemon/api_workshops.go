@@ -7,17 +7,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/canonical/x-go/strutil"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/canonical/workshop/internal/metautil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -52,7 +49,7 @@ type SdkInfo struct {
 	InstallTime *time.Time       `json:"install-time,omitempty"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
-	Tunnels     *TunnelInfo      `json:"tunnels,omitempty"`
+	Tunnels     []*Tunnel        `json:"tunnels,omitempty"`
 }
 
 type Mount struct {
@@ -62,14 +59,8 @@ type Mount struct {
 	WorkshopTarget string      `json:"workshop-target,omitempty"`
 }
 
-type TunnelInfo struct {
-	Plugs []*Tunnel `json:"plugs,omitempty"`
-	Slots []*Tunnel `json:"slots,omitempty"`
-}
-
 type Tunnel struct {
 	Plug sdk.PlugRef `json:"plug"`
-	Slot sdk.SlotRef `json:"slot"`
 	From Endpoint    `json:"from"`
 	To   Endpoint    `json:"to"`
 }
@@ -173,6 +164,7 @@ func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health health
 	}
 
 	mnts := w.Mounts(sdks)
+	tunnels := w.Tunnels(sdks)
 
 	for _, sk := range sdks {
 		var healthInfo *HealthCheckInfo
@@ -186,6 +178,10 @@ func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health health
 
 		ref := sdk.Ref{ProjectId: info.ProjectId, Workshop: info.Name, Sdk: sk.Name}
 		mntInfos := mountInfos(ref, mnts[sk.Name])
+		tunnelInfos, err := tunnelInfos(ref, tunnels[sk.Name])
+		if err != nil {
+			return nil, err
+		}
 
 		info.Sdks = append(info.Sdks, &SdkInfo{
 			Name:        sk.Name,
@@ -197,6 +193,7 @@ func workshopToInfoFull(ctx context.Context, w *workshop.Workshop, health health
 			InstallTime: w.Sdks[sk.Name].InstallTime,
 			Health:      healthInfo,
 			Mounts:      mntInfos,
+			Tunnels:     tunnelInfos,
 		})
 	}
 
@@ -237,136 +234,48 @@ func mountInfos(sk sdk.Ref, mnts []workshop.Mount) []*Mount {
 	return infos
 }
 
-// TODO: reimplement using SDK profiles once system SDK is available.
-func tunnels(conns *connectionsJSON) (map[string]*TunnelInfo, error) {
-	var tunnels = map[string]*TunnelInfo{}
-
-	masters := map[sdk.PlugRef][]sdk.PlugRef{}
-	for _, plug := range conns.Plugs {
-		if plug.Bind == nil {
-			continue
-		}
-
-		ref := *plug.Bind
-		sref := sdk.PlugRef{ProjectId: plug.ProjectId, Workshop: plug.Workshop, Sdk: plug.Sdk, Name: plug.Name}
-		masters[ref] = append(masters[ref], sref)
+func tunnelInfos(sk sdk.Ref, tunnels []workshop.Tunnel) ([]*Tunnel, error) {
+	if tunnels == nil {
+		return nil, nil
 	}
 
-	for _, conn := range conns.Established {
-		listen, connect, err := endpoints(conn)
+	infos := make([]*Tunnel, 0, len(tunnels))
+	for _, tunnel := range tunnels {
+		pref := sdk.PlugRef{ProjectId: sk.ProjectId, Workshop: sk.Workshop, Sdk: sk.Sdk, Name: tunnel.Name}
+		listen, err := endpoint(tunnel.Listen)
 		if err != nil {
 			return nil, err
 		}
-
-		tunnel := Tunnel{
-			Plug: conn.Plug,
-			Slot: conn.Slot,
+		connect, err := endpoint(tunnel.Connect)
+		if err != nil {
+			return nil, err
+		}
+		info := &Tunnel{
+			Plug: pref,
 			From: *listen,
 			To:   *connect,
 		}
-
-		sk := conn.Plug.Sdk
-		info, ok := tunnels[sk]
-		if !ok {
-			info = &TunnelInfo{}
-			tunnels[sk] = info
-		}
-		if sk == conn.Plug.Sdk {
-			info.Plugs = append(info.Plugs, &tunnel)
-		} else {
-			info.Slots = append(info.Slots, &tunnel)
-		}
-
-		if slaves, ok := masters[conn.Plug]; ok {
-			for _, slave := range slaves {
-				t := tunnel
-				t.Plug = slave
-
-				if !sdk.IsSystem(conn.Plug.Sdk) {
-					sk = slave.Sdk
-				}
-				info, ok := tunnels[sk]
-				if !ok {
-					info = &TunnelInfo{}
-					tunnels[sk] = info
-				}
-				if sk == slave.Sdk {
-					info.Plugs = append(info.Plugs, &t)
-				} else {
-					info.Slots = append(info.Slots, &t)
-				}
-			}
-		}
+		infos = append(infos, info)
 	}
 
-	return tunnels, nil
+	return infos, nil
 }
 
-func endpoints(conn connectionJSON) (*Endpoint, *Endpoint, error) {
-	v, ok := metautil.LookupAttr(conn.PlugAttrs, nil, "endpoint")
-	if !ok {
-		return nil, nil, &sdk.AttributeNotFoundError{Attribute: "endpoint", Plug: &conn.Plug}
+func endpoint(target workshop.ProxyTarget) (*Endpoint, error) {
+	if target.Protocol == "unix" {
+		return &Endpoint{Protocol: "unix", Path: target.Address}, nil
 	}
-	var address string
-	if err := metautil.SetValueFromAttribute(v, &address); err != nil {
-		return nil, nil, fmt.Errorf("invalid attribute %q for plug %q: %w", "endpoint", conn.Plug.ShortRef(), err)
-	}
-	listen, err := parseEndpoint(address)
+
+	host, port, err := net.SplitHostPort(target.Address)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	v, ok = metautil.LookupAttr(conn.SlotAttrs, nil, "endpoint")
-	if !ok {
-		return nil, nil, &sdk.AttributeNotFoundError{Attribute: "endpoint", Slot: &conn.Slot}
-	}
-	if err := metautil.SetValueFromAttribute(v, &address); err != nil {
-		return nil, nil, fmt.Errorf("invalid attribute %q for slot %q: %w", "endpoint", conn.Slot.ShortRef(), err)
-	}
-	connect, err := parseEndpoint(address)
+	number, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if (listen.Protocol == "tcp" || listen.Protocol == "udp") && listen.Port == 0 {
-		listen.Port = connect.Port
-	}
-	if (connect.Protocol == "tcp" || connect.Protocol == "udp") && connect.Port == 0 {
-		connect.Port = listen.Port
-	}
-
-	return listen, connect, nil
-}
-
-func parseEndpoint(endpoint string) (*Endpoint, error) {
-	// Leave unix sockets untouched.
-	if filepath.IsAbs(endpoint) || strings.HasPrefix(endpoint, "@") || strings.HasPrefix(endpoint, "$") {
-		return &Endpoint{Protocol: "unix", Path: endpoint}, nil
-	}
-
-	protocol := "tcp"
-	idx := strings.LastIndexByte(endpoint, '/')
-	if idx >= 0 {
-		protocol = endpoint[idx+1:]
-		endpoint = endpoint[:idx]
-	}
-
-	host, port, err := net.SplitHostPort(endpoint)
-	if err != nil {
-		host = endpoint
-		port = ""
-	}
-
-	result := &Endpoint{Protocol: protocol, Host: host}
-	if port != "" {
-		number, err := strconv.ParseUint(port, 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		result.Port = uint16(number)
-	}
-
-	return result, nil
+	return &Endpoint{Protocol: target.Protocol, Host: host, Port: uint16(number)}, nil
 }
 
 func newWorkshopChange(st *state.State, kind string, user, projectId, action string, names []string) *state.Change {
@@ -576,16 +485,6 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("workshop name required")
 	}
 
-	conns, err := collectConnections(c.d.overlord.InterfaceManager(), collectFilter{
-		projectId: projectId,
-		workshop:  name,
-		ifaceName: "tunnel",
-		connected: true,
-	})
-	if err != nil {
-		return statusInternalError("collecting connection information failed: %w", err)
-	}
-
 	state := c.d.overlord.State()
 	state.Lock()
 	defer state.Unlock()
@@ -602,14 +501,6 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	info, err := workshopToInfoFull(ctx, w, health)
 	if err != nil {
 		return statusBadRequest("%w", err)
-	}
-
-	ts, err := tunnels(conns)
-	if err != nil {
-		return statusBadRequest("%w", err)
-	}
-	for _, sk := range info.Sdks {
-		sk.Tunnels = ts[sk.Name]
 	}
 
 	files, err := wrkmgr.WorkshopFiles(ctx, projectId)
