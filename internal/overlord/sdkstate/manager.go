@@ -20,9 +20,9 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 	s.Unlock()
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
-	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), manager.doUninstallSdk)
-	runner.AddHandler("register-sdk", OnDo(manager.doRegisterSdk), manager.doUnregisterSdk)
-	runner.AddHandler("unregister-sdk", OnDo(manager.doUnregisterSdk), manager.doRegisterSdk)
+	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), OnUnDo(manager.doUninstallSdk))
+	runner.AddHandler("register-sdk", OnDo(manager.doRegisterSdk), OnUnDo(manager.doUnregisterSdk))
+	runner.AddHandler("unregister-sdk", OnDo(manager.doUnregisterSdk), OnUnDo(manager.doRegisterSdk))
 
 	return manager
 }

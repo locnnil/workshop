@@ -110,10 +110,20 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 // Iterates over the list of running tasks and returns either nil or
 // a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
+// Ignore discard-background refresh changes.
 func FindRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
 		if chg.IsReady() || slices.Contains(ignoreKinds, chg.Kind()) {
+			continue
+		}
+
+		var discardBackground bool
+		err := chg.Get("discard-background", &discardBackground)
+		if err != nil && !errors.Is(err, state.ErrNoState) {
+			return nil, err
+		}
+		if discardBackground {
 			continue
 		}
 
@@ -131,6 +141,7 @@ func FindRunningChange(st *state.State, projectId, workshop string, ignoreKinds 
 // Iterates over the list of running tasks and returns a ChangeConflictError if
 // there is a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
+// Ignore discard-background refresh changes.
 func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKinds []string) error {
 	chg, err := FindRunningChange(st, projectId, workshop, ignoreKinds)
 	if err != nil {
@@ -147,20 +158,31 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKind
 	}
 }
 
-func AbortIfWaitingBeforeRemove(st *state.State, workshop, projectId string) error {
+func BackgroundDiscardWaitingRefresh(st *state.State, workshop, projectId string) error {
 	chg, err := FindRunningChange(st, projectId, workshop, []string{"exec"})
 	if err != nil {
 		return err
 	}
+
 	if chg == nil || chg.Status() != state.WaitStatus {
 		return nil
 	}
+
+	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
+		return fmt.Errorf("cannot discard %s: %s is in progress", workshop, chg.Kind())
+	}
+
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
 			tsk.SetStatus(state.DoStatus)
 			tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), workshop)
 		}
 	}
+
+	// "discard-background" changes:
+	//  1. skip all undo handlers when aborting
+	//  2. are ignored by CheckChangeConflict
+	chg.Set("discard-background", true)
 
 	chg.Abort()
 	return nil
@@ -218,10 +240,20 @@ func ResumeAfterWait(st *state.State,
 
 // Iterates over the list of running tasks and returns a change ID if
 // there is a change running for the provided projectID, workshop and kind.
+// Ignore discard-background refresh changes.
 func FindChangeByKind(st *state.State, projectId, workshop, kind string) (string, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
 		if chg.IsReady() || chg.Kind() != kind {
+			continue
+		}
+
+		var discardBackground bool
+		err := chg.Get("discard-background", &discardBackground)
+		if err != nil && !errors.Is(err, state.ErrNoState) {
+			return "", err
+		}
+		if discardBackground {
 			continue
 		}
 

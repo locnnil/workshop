@@ -73,7 +73,6 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 		"stash-workshop",
 		"create-state-storage",
 		"remove-state-storage",
-		"abort-waiting-refresh",
 	})
 }
 

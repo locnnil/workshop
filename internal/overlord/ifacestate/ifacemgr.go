@@ -38,12 +38,12 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
-	r.AddHandler("connect", OnDo(m.doConnect), m.undoConnect)
-	r.AddHandler("disconnect", OnDo(m.doDisconnect), m.undoDisconnect)
+	r.AddHandler("connect", OnDo(m.doConnect), OnUnDo(m.undoConnect))
+	r.AddHandler("disconnect", OnDo(m.doDisconnect), OnUnDo(m.undoDisconnect))
 
-	r.AddHandler("discard-conns", m.doDiscard, m.undoDiscard)
+	r.AddHandler("discard-conns", m.doDiscard, OnUnDo(m.undoDiscard))
 
-	r.AddHandler("setup-profiles", OnDo(m.doSetupProfiles), m.undoSetupProfiles)
+	r.AddHandler("setup-profiles", OnDo(m.doSetupProfiles), OnUnDo(m.undoSetupProfiles))
 	r.AddHandler("remove-profiles", OnDo(m.doRemoveProfiles), nil)
 
 	// TODO: there is no use for the undo logic as remount is a single task

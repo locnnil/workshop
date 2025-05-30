@@ -91,7 +91,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
 		}
 		if err := conflict.CheckChangeConflict(w.state, projectId, name, nil); err != nil {
-			return nil, fmt.Errorf("cannot launch %q: other changes in progress", name)
+			return nil, fmt.Errorf("cannot launch %q, other changes in progress: %w", name, err)
 		}
 
 		localSdks, err := local.resolveSdks(name, req.file, nil)
@@ -959,9 +959,11 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 		workshops = append(workshops, wp)
+		if err = conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
+			return nil, fmt.Errorf("failed to find waiting refresh change of %q before remove: %w", name, err)
+		}
 
-		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus,
-			healthstate.StoppedStatus, healthstate.WaitingStatus}
+		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
 		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
@@ -1020,9 +1022,6 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 
 	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", w.Name))
 	addTaskSet(state.NewTaskSet(removeDirs))
-
-	abortWaiting := st.NewTask("abort-waiting-refresh", fmt.Sprintf("Abort waiting refreshes for %q", w.Name))
-	addTaskSet(state.NewTaskSet(abortWaiting))
 
 	// Directories should exist from before create-workshop until after remove-workshop.
 	// Since there is no way to undo remove-workshop, we run remove-workshop-storage in a separate lane.

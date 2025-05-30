@@ -457,9 +457,6 @@ func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name stri
 	s.workshopLock.Lock()
 	defer s.workshopLock.Unlock()
 
-	if s.StashedWorkshops[projectId]["stash-"+name] == nil {
-		return fmt.Errorf("stashed workshop %q not found", name)
-	}
 	delete(s.StashedWorkshops[projectId], "stash-"+name)
 	return nil
 }

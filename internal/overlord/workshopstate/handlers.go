@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"syscall"
 	"time"
 
+	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/osutil/sys"
-	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -310,7 +311,15 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.RemoveWorkshopStash(ctx, w)
+	err = m.backend.RemoveWorkshopStash(ctx, w)
+	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -365,35 +374,12 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
-}
-
-func (m *WorkshopManager) doDiscardWaitingRefresh(task *state.Task, tomb *tomb.Tomb) error {
-	_, prj, w, err := UserProjectWorkshop(task)
+	err = m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 	if err != nil {
-		return err
-	}
-	task.State().Lock()
-	defer task.State().Unlock()
-	chg, err := conflict.FindRunningChange(task.State(), prj.ProjectId, w, []string{"exec"})
-	if err != nil {
-		return err
-	}
-	if chg == nil || chg.Status() != state.WaitStatus {
-		return nil
-	}
-
-	for _, t := range chg.Tasks() {
-		switch t.Status() {
-		case state.WaitStatus:
-			t.SetStatus(state.ErrorStatus)
-		case state.DoStatus:
-			t.SetStatus(state.HoldStatus)
-		case state.DoingStatus:
-			t.SetStatus(state.AbortStatus)
-		case state.DoneStatus:
-			t.SetStatus(state.UndoneStatus)
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
 		}
+		return err
 	}
 
 	return nil

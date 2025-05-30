@@ -2,6 +2,7 @@ package handlersetup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gopkg.in/tomb.v2"
@@ -10,6 +11,25 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+// OnUnDo helps to skip the undo handler if the change is an abort-backgroud refresh
+func OnUnDo(handler state.HandlerFunc) state.HandlerFunc {
+	return func(task *state.Task, tomb *tomb.Tomb) error {
+		st := task.State()
+		st.Lock()
+		change := task.Change()
+		var discardBackground bool
+		err := change.Get("discard-background", &discardBackground)
+		st.Unlock()
+		if err != nil && !errors.Is(err, state.ErrNoState) {
+			return err
+		}
+		if discardBackground {
+			return nil
+		}
+		return handler(task, tomb)
+	}
+}
 
 // OnDo helps to decide whether:
 // 1. The task needs to be put on Wait (wait-on-error for refresh).
@@ -53,11 +73,6 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 					}
 				}
 
-			} else if change.Kind() == "remove" {
-				if task.Kind() == "remove-state-storage" || task.Kind() == "remove-workshop-stash" {
-					// 'pool volume not found' / 'stash instance not found' are not considered as error when removing
-					return nil
-				}
 			}
 			return err
 		}
