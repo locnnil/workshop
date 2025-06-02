@@ -1075,6 +1075,13 @@ write_files:
     [Service]
     Environment=SNAPD_STANDBY_WAIT=1m
   path: /etc/systemd/system/snapd.service.d/override.conf
+- content: |
+    [DHCPv4]
+    SendRelease=false
+
+    [DHCPv6]
+    SendRelease=false
+  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1082,6 +1089,8 @@ runcmd:
   - systemctl enable xauth-copy.service
   - systemctl enable --now xauth-watch.path
   - systemctl restart snapd.service
+  # Required to load above DHCP config.
+  - networkctl reload
 `
 
 	f, err := yaml.Marshal(file)
