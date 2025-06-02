@@ -1267,7 +1267,7 @@ func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 
 	conn, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, ok := conn.CheckBound()
+	_, ok := conn.Plug.CheckBound()
 	c.Assert(ok, check.Equals, true)
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 4)

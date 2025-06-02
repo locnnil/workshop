@@ -823,7 +823,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 			return nil, err
 		}
 		for _, conn := range r.slotPlugs[slotInfo] {
-			if _, ok := conn.CheckBound(); ok {
+			if _, ok := conn.Plug.CheckBound(); ok {
 				continue
 			}
 			if err := spec.AddConnectedSlot(iface, conn.Plug, conn.Slot); err != nil {
@@ -838,7 +838,7 @@ func (r *Repository) SdkSpecification(ctx context.Context, securitySystem Securi
 			return nil, err
 		}
 		for _, conn := range r.plugSlots[plugInfo] {
-			if _, ok := conn.CheckBound(); ok {
+			if _, ok := conn.Plug.CheckBound(); ok {
 				continue
 			}
 			if err := spec.AddConnectedPlug(iface, conn.Plug, conn.Slot); err != nil {

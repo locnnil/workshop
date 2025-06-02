@@ -1210,7 +1210,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 
 	connection, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, bound := connection.CheckBound()
+	_, bound := connection.Plug.CheckBound()
 	c.Assert(bound, check.Equals, true)
 }
 
@@ -1482,7 +1482,7 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 
 	connection, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, bound := connection.CheckBound()
+	_, bound := connection.Plug.CheckBound()
 	c.Assert(bound, check.Equals, true)
 }
 
