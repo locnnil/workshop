@@ -172,7 +172,8 @@ type Backend interface {
 	LaunchOrRebuildWorkshop(ctx context.Context, file *File) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
-	RemoveWorkshop(ctx context.Context, name string) error
+	// Also deletes all metadata associated with the workshop if forget is true.
+	RemoveWorkshop(ctx context.Context, name string, forget bool) error
 
 	// Starts a workshop and waits until it is ready
 	// to accept commands

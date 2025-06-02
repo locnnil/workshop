@@ -141,6 +141,12 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	conn = conn.UseProject(stash)
 	iname := instanceStashName(name, projectId)
 
+	// Remove MAC address so LXD won't release the DHCP lease,
+	// which is owned by the real instance and not the stash.
+	if err := removeHwaddr(ctx, conn, iname); err != nil {
+		logger.Noticef("On RemoveWorkshopStash: failed to preserve %q workshop DHCP lease: %v", name, err)
+	}
+
 	op, err := conn.DeleteInstance(iname)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {

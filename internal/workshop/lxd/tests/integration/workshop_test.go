@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/user"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -79,8 +80,15 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
+	// Wait a bit longer than the default start command, to ensure both
+	// IPv4 and IPv6 addresses are ready.
+	defer lxdbackend.FakeStartCommand(
+		"/usr/lib/systemd/systemd-networkd-wait-online --ipv4 --ipv6 --operational-state=routable",
+	)()
+
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+	addresses := f.ipAddresses(c, "test")
 
 	// Execute
 	err := f.bd.StashWorkshop(f.ctx, "test")
@@ -91,7 +99,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Execute
-	err = f.bd.RemoveWorkshop(f.ctx, "test")
+	err = f.bd.RemoveWorkshop(f.ctx, "test", false)
 	c.Assert(err, check.IsNil)
 
 	// Execute
@@ -104,6 +112,30 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+
+	c.Check(f.ipAddresses(c, "test"), testutil.DeepUnsortedMatches, addresses)
+}
+
+func (f *wsOps) ipAddresses(c *check.C, name string) []string {
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+
+	inst, _, err := conn.GetInstanceFull(lxdbackend.InstanceName(name, f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+
+	var addresses []string
+	for _, network := range inst.State.Network {
+		for _, address := range network.Addresses {
+			if !slices.Contains([]string{"inet", "inet6"}, address.Family) {
+				continue
+			}
+			if slices.Contains([]string{"link", "local"}, address.Scope) {
+				continue
+			}
+			addresses = append(addresses, address.Address)
+		}
+	}
+	return addresses
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
@@ -249,7 +281,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Validate
-	err := f.bd.RemoveWorkshop(f.ctx, "test")
+	err := f.bd.RemoveWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)

@@ -779,7 +779,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	return workshops, nil
 }
 
-func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
+func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) (err error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -796,6 +796,13 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 
+	if !forget {
+		// Remove MAC address so LXD won't release the DHCP lease.
+		if err := removeHwaddr(ctx, conn, InstanceName(name, projectId)); err != nil {
+			logger.Noticef("On RemoveWorkshop: failed to preserve %q workshop DHCP lease: %v", name, err)
+		}
+	}
+
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
@@ -803,6 +810,26 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 
 	// DeleteInstance cannot be cancelled in LXD.
 	return op.Wait()
+}
+
+func removeHwaddr(ctx context.Context, conn lxd.InstanceServer, name string) error {
+	inst, etag, err := conn.GetInstance(name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	if _, ok := inst.Config["volatile.workshop.network.hwaddr"]; !ok {
+		return nil
+	}
+	delete(inst.Config, "volatile.workshop.network.hwaddr")
+
+	op, err := conn.UpdateInstance(name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.WaitContext(ctx)
 }
 
 func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
