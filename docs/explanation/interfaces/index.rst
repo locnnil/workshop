@@ -10,7 +10,7 @@ important for understanding |ws_markup|'s interface mechanics:
    :glob:
    :maxdepth: 1
 
-   interfaces
+   concepts
    *-interface
 
 

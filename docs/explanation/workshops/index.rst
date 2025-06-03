@@ -11,7 +11,7 @@ specifically the eponymous *workshop*:
 .. toctree::
    :maxdepth: 1
 
-   workshops
+   concepts
    changes-tasks
    projects
    workshop-cli
