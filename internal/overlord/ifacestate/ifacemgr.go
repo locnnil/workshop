@@ -35,6 +35,7 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	m.backend = workshop.WorkshopBackend(s)
 	s.Unlock()
 
+	r.AddHandler("resolve-interfaces", OnDo(m.doResolveInterfaces), nil)
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
@@ -420,31 +421,31 @@ func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) erro
 	return nil
 }
 
-func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
-	allPlugs := m.repo.AllPlugs("mount")
-
-	for _, plug := range sdkInfo.Plugs {
-		if plug.Interface != "mount" {
-			continue
+func (m *InterfaceManager) checkConflictingMounts(w *workshop.Workshop) error {
+	var plugs []*sdk.PlugInfo
+	for _, sk := range w.Sdks {
+		for _, plug := range m.repo.Plugs(w.Project.ProjectId, w.Name, sk.Name) {
+			if plug.Interface == "mount" {
+				plugs = append(plugs, plug)
+			}
 		}
+	}
+
+	for _, plug := range plugs {
 		candidateTarget, _ := plug.Lookup("workshop-target")
 
-		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
-			// only plugs from the same workshop will be considered
-			if pi.Sdk.ProjectId != plug.Sdk.ProjectId || pi.Sdk.Workshop != plug.Sdk.Workshop {
-				return false
-			}
+		idx := slices.IndexFunc(plugs, func(pi *sdk.PlugInfo) bool {
 			// exclude oneself
-			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
+			if pi.Sdk.Name == plug.Sdk.Name && pi.Name == plug.Name {
 				return false
 			}
 			target, _ := pi.Lookup("workshop-target")
 			return target == candidateTarget
 		})
-		if idx != -1 {
+		if idx >= 0 {
 			return fmt.Errorf(`cannot connect %q: target %q is also mounted by %q`,
 				plug.Ref().ShortRef(), candidateTarget,
-				allPlugs[idx].Ref().ShortRef())
+				plugs[idx].Ref().ShortRef())
 		}
 	}
 	return nil

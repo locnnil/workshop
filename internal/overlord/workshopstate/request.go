@@ -406,7 +406,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
-	connect := autoconnectSdks(st, sdks)
+	connect := autoconnectSdks(st, file.Name, sdks)
 	addTaskSet(connect)
 
 	setupProject := runHooks(st, project.ProjectId, file.Name, sdks, 0, hookstate.SetupProject)
@@ -694,7 +694,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
-	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
+	connect := autoconnectSdks(st, file.Name, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
 
 	setupProject := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
@@ -751,17 +751,19 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	return refresh, nil
 }
 
-func autoconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet {
 	autoconnectSet := state.NewTaskSet()
-	var prevAuto = (*state.Task)(nil)
+
+	validate := st.NewTask("resolve-interfaces", fmt.Sprintf("Resolve relations between interfaces of %q workshop", w))
+	autoconnectSet.AddTask(validate)
+
+	prev := validate
 	for _, setup := range sdks {
 		autoconnect := st.NewTask("auto-connect", fmt.Sprintf("Auto-connect interfaces of %q SDK", setup.Name))
 		autoconnect.Set("sdk", setup.Name)
 		autoconnectSet.AddTask(autoconnect)
-		if prevAuto != nil {
-			autoconnect.WaitFor(prevAuto)
-		}
-		prevAuto = autoconnect
+		autoconnect.WaitFor(prev)
+		prev = autoconnect
 	}
 	return autoconnectSet
 }

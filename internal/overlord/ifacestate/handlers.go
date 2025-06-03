@@ -21,6 +21,37 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+func (m *InterfaceManager) doResolveInterfaces(task *state.Task, tomb *tomb.Tomb) (err error) {
+	user, project, w, err := handlersetup.UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := handlersetup.BackendContext(tomb, user, project.ProjectId)
+	defer cancel()
+
+	wp, err := m.backend.Workshop(ctx, w)
+	if err != nil {
+		return err
+	}
+
+	// Ensure all bound plugs exist in the repository.
+	if err = m.resolveWorkshopBindings(wp); err != nil {
+		return err
+	}
+
+	// Ensure that connections requested via the workshop file use existing and
+	// compatible plugs and slots.
+	if err = m.resolveWorkshopConnections(wp); err != nil {
+		return err
+	}
+
+	// Ensure that if the SDK is connected there will be no conflicting bind
+	// mount targets in the workshop, i.e. the situation when a two or more
+	// sources are bind mount at the same target in the workshop.
+	return m.checkConflictingMounts(wp)
+}
+
 func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err error) {
 	st := task.State()
 	user, project, w, err := handlersetup.UserProjectWorkshop(task)
@@ -62,25 +93,6 @@ func (m *InterfaceManager) doAutoConnect(task *state.Task, tomb *tomb.Tomb) (err
 	// if any of those are still relevant for the new workshop.
 	var remounts map[string]string
 	if err := chg.Get("remounts", &remounts); err != nil && !errors.Is(err, state.ErrNoState) {
-		return err
-	}
-
-	// Ensure that all plugs that the workshop bindings bind to actually exist
-	// in the repository.
-	if err = m.resolveWorkshopBindings(wp); err != nil {
-		return err
-	}
-
-	// Ensure that connections requested via the workshop file use existing and
-	// compatible plugs and slots.
-	if err = m.resolveWorkshopConnections(wp); err != nil {
-		return err
-	}
-
-	// Ensure that if the SDK is connected there will be no conflicting bind
-	// mount targets in the workshop, i.e. the situation when a two or more
-	// sources are bind mount at the same target in the workshop.
-	if err = m.checkConflictingTargets(info); err != nil {
 		return err
 	}
 

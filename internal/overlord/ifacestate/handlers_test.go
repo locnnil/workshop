@@ -160,11 +160,14 @@ func (di denyAutoIface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool
 
 func (s *interfaceHandlersSuite) newAutoconnectChange() *state.Change {
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
+	chg.AddTask(t2)
 	return chg
 }
 
@@ -368,15 +371,18 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "conflict-1")
+	t1 := s.state.NewTask("resolve-interfaces", "...")
 	t2 := s.state.NewTask("auto-connect", "...")
-	t2.Set("sdk", "conflict-2")
+	t2.Set("sdk", "conflict-1")
 	t2.WaitFor(t1)
-	setWorkshopProject("ws", s.prj, t1, t2)
+	t3 := s.state.NewTask("auto-connect", "...")
+	t3.Set("sdk", "conflict-2")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2, t3)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t2)
+	chg.AddTask(t3)
 	s.state.Unlock()
 
 	// Execute
@@ -397,13 +403,17 @@ func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.
 	// Execute
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	t2 := s.state.NewTask("error-trigger", "...")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	t3 := s.state.NewTask("error-trigger", "...")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t2)
+	chg.AddTask(t3)
 	s.state.Unlock()
 
 	s.settle(c)
@@ -439,11 +449,14 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 	chg.Set("remounts", map[string]string{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": "/old/source",
 	})
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
+	chg.AddTask(t2)
 	s.state.Unlock()
 
 	s.settle(c)
