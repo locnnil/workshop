@@ -11,6 +11,7 @@ import (
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/version"
 )
 
 type CmdRoot struct {
@@ -21,7 +22,8 @@ type CmdRoot struct {
 
 func (c *CmdRoot) Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "workshop",
+		Use:     "workshop",
+		Version: version.Version,
 		// Avoid printing errors twice
 		SilenceErrors:    true,
 		SilenceUsage:     true,
@@ -29,6 +31,7 @@ func (c *CmdRoot) Command() *cobra.Command {
 
 		PersistentPostRun: c.postRun,
 	}
+	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.AddGroup(
 		&cobra.Group{
