@@ -41,7 +41,7 @@ mechanism from the upstream
 `Craft Application <https://github.com/canonical/craft-application/>`_
 project,
 ultimately sharing it with such tools as
-`Snapcraft <https://snapcraft.io/docs/>`_
+`Snapcraft <https://documentation.ubuntu.com/snapcraft/>`_
 and
 `Charmcraft <https://juju.is/docs/sdk/charmcraft/>`_,
 so general approaches that work for any of those will apply here.

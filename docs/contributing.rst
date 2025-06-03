@@ -429,7 +429,7 @@ The steps to produce a |ws_markup| release are as follows.
 Build the snaps locally
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-`Snapcraft <https://snapcraft.io/docs/snapcraft>`_
+`Snapcraft <https://documentation.ubuntu.com/snapcraft/>`_
 is used to build, package, and publish ``workshop`` snaps.
 All these processes run in a self-launched
 `LXD <https://documentation.ubuntu.com/lxd/latest/>`_ container.

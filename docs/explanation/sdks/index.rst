@@ -11,7 +11,7 @@ with |ws_markup| and |sdk_markup|:
 .. toctree::
    :maxdepth: 1
 
-   sdks
+   concepts
    Data storage and sharing <data-persistence-sharing>
    Dockerfiles versus SDKs <dockerfile-vs-sdk>
    Health reports <workshopctl>
