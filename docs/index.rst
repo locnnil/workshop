@@ -105,6 +105,8 @@ In this documentation
 
 ----
 
+.. _project_community:
+
 Project and community
 ---------------------
 

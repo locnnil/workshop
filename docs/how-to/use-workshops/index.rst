@@ -13,6 +13,7 @@ of running and fixing workshops:
    Fix the installation <troubleshoot>
    Forward ports <forward-ports>
    Move projects around <moving-projects>
+   Purge workshops <purge>
    Sketch SDKs to customise workshops <sketch-sdk>
 
 
