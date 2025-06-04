@@ -12,8 +12,8 @@
    Home <self>
    tutorial/index
    how-to/index
-   explanation/index
    reference/index
+   explanation/index
    Contribution <contributing>
    Release notes <release-notes>
 
