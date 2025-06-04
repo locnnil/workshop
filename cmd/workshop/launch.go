@@ -139,8 +139,8 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 			w := workshopName(av[0])
 			return fmt.Errorf(`cannot complete launch for %q, execution is paused
 
-To proceed, resolve the issue and run 'workshop refresh --continue %s'
-To cancel and undo: 'workshop refresh --abort %s'
+To proceed, resolve the issue and run 'workshop launch --continue %s'
+To cancel and undo: 'workshop launch --abort %s'
 To view more information: 'workshop tasks %s'`, w, w, w, changeId)
 		}
 		return fmt.Errorf("%v\n%s launch aborted", err, strutil.Quoted(av))
