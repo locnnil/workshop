@@ -669,11 +669,18 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 	}
 	unwantedSdks := sdks[lastIntact+1:]
 
-	// Remove SDKs from after the snapshot.
 	fs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
 		return err
 	}
+	defer fs.Close()
+
+	// Remove project mount
+	if err := fs.Remove(workshop.WorkshopProjectPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	// Remove SDKs from after the snapshot.
 	for _, sk := range unwantedSdks {
 		if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
 			return err

@@ -333,10 +333,6 @@ func launchWorkshop(st *state.State, file *workshop.File, project workshop.Proje
 	addTask(create)
 	create.Set("workshop-file", file)
 
-	// TODO: move this after snapshots are taken; also for refresh.
-	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
-	addTask(mountProject)
-
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	addTask(start)
 
@@ -407,8 +403,14 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
 	addTaskSet(install)
 
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
+	addTaskSet(state.NewTaskSet(mountProject))
+
 	connect := autoconnectSdks(st, sdks)
 	addTaskSet(connect)
+
+	setupProject := runHooks(st, project.ProjectId, file.Name, sdks, 0, hookstate.SetupProject)
+	addTaskSet(setupProject)
 
 	checkHealth := runHooks(st, project.ProjectId, file.Name, sdks, checkHealthTimeout, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
@@ -543,6 +545,10 @@ func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh)
 }
 
+func (p refreshPlan) IntactOrRefresh() []sdk.Setup {
+	return ordered(p.installOrder, p.intact, p.refresh)
+}
+
 func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 	revOrder := slices.Clone(p.installedOrder)
 	slices.Reverse(revOrder)
@@ -552,10 +558,6 @@ func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
-}
-
-func (p refreshPlan) Refresh() []sdk.Setup {
-	return ordered(p.installOrder, p.refresh)
 }
 
 func (p refreshPlan) Remove() []sdk.Setup {
@@ -661,14 +663,14 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	}
 	addTaskSet(retrieve)
 
-	if len(plan.Refresh()) > 0 {
+	if len(plan.IntactOrRefresh()) > 0 {
 		stateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 		addTaskSet(state.NewTaskSet(stateStorage))
 	}
 
 	// Call save-state hooks for the SDKs that are installed and will not be
 	// removed after this refresh.
-	saveState := runHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), 0, hookstate.SaveState)
+	saveState := runHooks(st, w.Project.ProjectId, file.Name, plan.IntactOrRefresh(), 0, hookstate.SaveState)
 	addTaskSet(saveState)
 
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
@@ -689,10 +691,16 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
 
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
+	addTaskSet(state.NewTaskSet(mountProject))
+
 	connect := autoconnectSdks(st, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
 
-	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.Refresh(), 0, hookstate.RestoreState)
+	setupProject := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
+	addTaskSet(setupProject)
+
+	restoreState := runHooks(st, w.Project.ProjectId, file.Name, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
 
 	checkHealth := runHooks(st, w.Project.ProjectId, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
@@ -704,7 +712,7 @@ func refresh(ctx context.Context, st *state.State, plan *refreshPlan, w *worksho
 
 	cleanupLane := st.NewLane()
 
-	if len(plan.Refresh()) > 0 {
+	if len(plan.IntactOrRefresh()) > 0 {
 		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 		removeStateStorage.WaitFor(last)
 		removeStateStorage.JoinLane(cleanupLane)

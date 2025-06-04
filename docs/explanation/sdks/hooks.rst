@@ -11,6 +11,7 @@ SDK hooks
 .. @artefact restore-state
 .. @artefact save-state
 .. @artefact setup-base
+.. @artefact setup-project
 
 |ws_markup| and |sdk_markup| enable optional life cycle *hooks*
 that control and extend the behaviour of an SDK.
@@ -19,7 +20,7 @@ Each hook is a shell script
 that performs SDK-specific, domain-oriented actions in the workshop
 at a particular life cycle stage
 to ensure that the SDK stays functional.
-Specific examples include :samp:`setup-base`,
+Specific examples include :samp:`setup-base`, :samp:`setup-project`,
 :samp:`save-state` and :samp:`restore-state`.
 
 When you define an SDK,

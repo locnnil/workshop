@@ -224,22 +224,7 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 }
 
 func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
-	mount := workshop.Mount{Name: name, What: name, Where: where, Type: workshop.Volume, ReadOnly: ro}
-	if err := s.AddWorkshopMount(ctx, wp, mount); err != nil {
-		return err
-	}
-
-	// Workaround for https://github.com/canonical/lxd/issues/14507
-	fs, err := s.WorkshopFs(ctx, wp)
-	if err != nil {
-		logger.Noticef("Cannot chmod volume root: %v", err)
-		return nil
-	}
-	defer fs.Close()
-	if err := fs.Chmod(where, 0755); err != nil {
-		logger.Noticef("Cannot chmod volume root: %v", err)
-	}
-	return nil
+	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: name, Where: where, Type: workshop.Volume, ReadOnly: ro})
 }
 
 func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {

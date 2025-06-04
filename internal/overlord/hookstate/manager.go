@@ -29,19 +29,19 @@ type Handler interface {
 type HandlerGenerator func(*Context) Handler
 
 type HookSetup struct {
-	ProjectId   string            `json:"project-id"`
-	Workshop    string            `json:"workshop"`
-	Sdk         string            `json:"sdk"`
-	HookType    WorkshopHookType  `json:"type"`
-	Environment map[string]string `json:"environment"`
-	Timeout     time.Duration     `json:"timeout"`
-	IgnoreError bool              `json:"bool"`
+	ProjectId   string           `json:"project-id"`
+	Workshop    string           `json:"workshop"`
+	Sdk         string           `json:"sdk"`
+	HookType    WorkshopHookType `json:"type"`
+	Timeout     time.Duration    `json:"timeout"`
+	IgnoreError bool             `json:"bool"`
 }
 
 type WorkshopHookType int
 
 const (
 	SetupBase WorkshopHookType = iota
+	SetupProject
 	SaveState
 	RestoreState
 	CheckHealth
@@ -50,7 +50,7 @@ const (
 )
 
 func (s WorkshopHookType) String() string {
-	return [...]string{"setup-base", "save-state", "restore-state", "check-health", "fake-hook"}[s]
+	return [...]string{"setup-base", "setup-project", "save-state", "restore-state", "check-health", "fake-hook"}[s]
 }
 
 func (h *HookSetup) Type() string {
@@ -148,6 +148,7 @@ func setupHooks(hookMgr *HookManager) {
 	}
 
 	hookMgr.Register(regexp.MustCompile("^setup-base$"), handlerGenerator)
+	hookMgr.Register(regexp.MustCompile("^setup-project$"), handlerGenerator)
 	hookMgr.Register(regexp.MustCompile("^save-state$"), handlerGenerator)
 	hookMgr.Register(regexp.MustCompile("^restore-state$"), handlerGenerator)
 }

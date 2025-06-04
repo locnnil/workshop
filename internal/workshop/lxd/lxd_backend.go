@@ -324,12 +324,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
-		// TODO: Run mount-project after snapshots, and delete this workaround.
-		projectPathDevice, ok := rebuilt.Devices[workshop.ConfigProjectPathDevice]
-		if ok {
-			devices[workshop.ConfigProjectPathDevice] = projectPathDevice
-		}
-
 		maps.Copy(rebuilt.Config, config)
 		clear(rebuilt.Devices)
 		maps.Copy(rebuilt.Devices, devices)
@@ -1030,6 +1024,18 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
+apt:
+  conf: |
+    # Installed by workshop
+    
+    # Don't automatically install recommended packages
+    APT::Install-Recommends "0";
+
+    # Don't automatically install suggested packages
+    APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
 write_files:
 - content: |
     # Managed by workshop, do not remove
@@ -1056,23 +1062,13 @@ write_files:
     WantedBy=multi-user.target
   path: /etc/systemd/system/xauth-copy.service
 - content: |
-    # Installed by workshop
-    
-    # Don't automatically install recommended packages
-    APT::Install-Recommends "0";
-
-    # Don't automatically install suggested packages
-    APT::Install-Suggests "0";
-
-    # Bypass confirmation prompts
-    APT::Get::Assume-Yes "1";
-  path: /etc/apt/apt.conf.d/01norecommend
-- content: |
     # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
     [Service]
     Environment=SNAPD_STANDBY_WAIT=1m
   path: /etc/systemd/system/snapd.service.d/override.conf
 runcmd:
+  # Project directory is required for 'workshop exec'.
+  - install --directory --mode=755 /project
   - systemctl daemon-reload
   - systemctl enable xauth-copy.service
   - systemctl enable --now xauth-watch.path

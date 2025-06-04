@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/afero"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -35,7 +37,28 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
+	stateDir := filepath.Join(dirs.WorkshopStateDir, "sdk", hook.Sdk)
+
+	execArgs := &workshop.ExecArgs{
+		UserId:  0,
+		GroupId: 0,
+		Command: []string{
+			"bash",
+			"-eo",
+			"pipefail",
+			hookPath,
+		},
+		Environment: map[string]string{
+			"SDK": sdk.SdkDir(hook.Sdk),
+		},
+		WorkDir: sdk.SdkHooksDir(hook.Sdk),
+		Timeout: hook.Timeout,
+	}
+
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
+		execArgs.Environment["SDK_STATE_DIR"] = stateDir
+
 		volume := workshop.WorkshopStateVolumeName(w, prj.ProjectId)
 		if err := h.backend.AttachVolume(ctx, w, volume, dirs.WorkshopStateDir, false); err != nil {
 			return fmt.Errorf("cannot run hook %q for SDK %q: %w", hook.Type(), hook.Sdk, err)
@@ -54,20 +77,19 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		if err != nil {
 			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 		}
-		err = fs.MkdirAll(hook.Environment["SDK_STATE_DIR"], 0755)
+		err = fs.MkdirAll(stateDir, 0755)
 		fs.Close()
 		if err != nil {
 			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 		}
 
-		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook, execArgs)
 	case RestoreState:
-
 		fs, err := h.backend.WorkshopFs(ctx, w)
 		if err != nil {
 			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
 		}
-		info, err := fs.Stat(hook.Environment["SDK_STATE_DIR"])
+		info, err := fs.Stat(stateDir)
 		fs.Close()
 		if err != nil {
 			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
@@ -77,18 +99,47 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
 		}
 
-		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook, execArgs)
 	case SetupBase:
-		if err = h.executeHook(ctx, task, w, prj.ProjectId, &hook); err != nil {
+		if err = h.executeHook(ctx, task, w, prj.ProjectId, &hook, execArgs); err != nil {
 			return err
 		}
 		return h.backend.Snapshot(ctx, w, workshop.SnapshotId(w, hook.Sdk))
+	case SetupProject:
+		execArgs.Command = []string{
+			"sudo",
+			"-u",
+			"#" + workshop.User.Uid,
+			"-g",
+			"#" + workshop.User.Gid,
+			"--preserve-env",
+			"--",
+			"bash",
+			"-elo",
+			"pipefail",
+			hookPath,
+		}
+
+		uid, gid, err := osutil.UidGid(&workshop.User)
+		if err != nil {
+			return err
+		}
+		execArgs.UserId = int(uid)
+		execArgs.GroupId = int(gid)
+
+		execArgs.WorkDir = workshop.WorkshopProjectPath
+
+		execArgs.Environment["HOME"] = workshop.User.HomeDir
+		xdgRuntimeDir := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid)
+		execArgs.Environment["XDG_RUNTIME_DIR"] = xdgRuntimeDir
+		execArgs.Environment["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + filepath.Join(xdgRuntimeDir, "bus")
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook, execArgs)
 	default:
-		return h.executeHook(ctx, task, w, prj.ProjectId, &hook)
+		return h.executeHook(ctx, task, w, prj.ProjectId, &hook, execArgs)
 	}
 }
 
-func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, projectId string, hook *HookSetup) error {
+func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, projectId string, hook *HookSetup, execArgs *workshop.ExecArgs) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
 
 	wsFs, err := h.backend.WorkshopFs(ctx, w)
@@ -137,22 +188,9 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w, proj
 	}
 	defer stderr.Close()
 
-	hook.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
+	execArgs.Environment["WORKSHOP_COOKIE"] = hookCtx.ID()
 	args := workshop.Execution{
-		ExecArgs: workshop.ExecArgs{
-			UserId:  0,
-			GroupId: 0,
-			Command: []string{
-				"bash",
-				"-ue",
-				"-o",
-				"pipefail",
-				hookPath,
-			},
-			Environment: hook.Environment,
-			WorkDir:     sdk.SdkHooksDir(hook.Sdk),
-			Timeout:     hook.Timeout,
-		},
+		ExecArgs: *execArgs,
 		ExecControls: workshop.ExecControls{
 			Stdin:  nil,
 			Stdout: stdout,

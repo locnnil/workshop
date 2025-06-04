@@ -9,6 +9,7 @@ execute: |
   cd project
   workshop_exec launch
   workshop_exec exec -- test -d /one/two/three
+  workshop_exec exec -- test -f /setup-project.log
 
   workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
   workshop_exec connections dev | MATCH "^tunnel.+\-.+dev/project-two:http.+\-$"
@@ -34,15 +35,11 @@ execute: |
   workshop_exec info | grep -v notes | yq '.sdks["project-three"].tracking' | MATCH "^$PWD/\\.workshop/three\$"
   workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
 
-  # TODO: don't move back, to provide coverage for refresh (currently broken due to /project mount)
-  cd ..
-  mv moved project
-  cd project
-
   echo "Break second SDK"
   echo false >> .workshop/two/sdk/hooks/setup-base
   ! workshop_exec refresh
   workshop_exec exec -- test -d /one/two/three
+  workshop_exec exec -- test ! -f /restored-state
 
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
@@ -52,6 +49,7 @@ execute: |
   workshop_exec refresh
   workshop_exec exec -- test -d /one/two/three
   workshop_exec exec -- test -d /two
+  workshop_exec exec -- test -f /restored-state
 
   workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
   workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x3\)$'

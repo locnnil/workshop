@@ -278,8 +278,11 @@ named :file:`hooks/`:
 This directory stores all the hooks for an SDK.
 
 
-Build: setup base
-~~~~~~~~~~~~~~~~~
+Build: setup base and project
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. @artefact setup-base
+.. @artefact setup-project
 
 Under :file:`go/hooks/`,
 create a file
@@ -289,7 +292,6 @@ named :file:`setup-base`:
    :caption: setup-base
 
    snap install --classic go
-   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
    
    # Create a mod cache directory to be mounted using the mount interface
    cache=$(sudo -u workshop -- go env GOMODCACHE)
@@ -297,13 +299,31 @@ named :file:`setup-base`:
 
 
 It runs when the workshop is launched or refreshed,
-installing the prerequisites and preparing it for use.
+installing system packages and preparing the workshop for use.
 
 .. note::
 
    For workshops,
    :command:`apt` is configured to exclude recommended or suggested packages
    and answer 'yes' to all confirmation prompts.
+
+
+In the same directory,
+create a file named :file:`setup-project`:
+
+.. code-block:: shell
+   :caption: setup-project
+
+   go mod download
+
+   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
+
+
+It runs after :file:`setup-base`,
+once the project directory is mounted
+and interfaces are connected.
+This can be used to install project-specific packages
+or setup the :samp:`workshop` user's environment.
 
 
 Persist: save and restore

@@ -92,6 +92,10 @@ hooks:
     # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
+  # EXAMPLE: setup-project runs after connecting plugs and slots, use it to install the project environment.
+  # setup-project: |
+    # go mod download
+    # uv sync
   # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
@@ -560,7 +564,7 @@ func writeHooks(sdkdir string, rec workshop.SdkRecord) error {
 		}
 	}
 
-	for _, hook := range []string{"setup-base", "save-state", "restore-state", "check-health"} {
+	for _, hook := range []string{"setup-base", "setup-project", "save-state", "restore-state", "check-health"} {
 		hookpath := filepath.Join(hooksdir, hook)
 		if script := rec.Hooks[hook]; len(script) > 0 {
 			if !strings.HasSuffix(script, "\n") {

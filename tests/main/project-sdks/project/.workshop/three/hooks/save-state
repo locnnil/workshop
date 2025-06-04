@@ -1,0 +1,2 @@
+[ "$SDK_STATE_DIR" = '/var/lib/workshop/state/sdk/project-three' ]
+touch "${SDK_STATE_DIR}/saved"

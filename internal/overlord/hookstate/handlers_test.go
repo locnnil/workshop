@@ -18,7 +18,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
@@ -109,6 +108,29 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
+func (s *hookSuite) TestExecSetupProject(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SetupProject)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.launchWorkshop(c, "one")
+
+	s.state.Unlock()
+	c.Assert(s.se.Ensure(), check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+	c.Assert(chg.Err(), check.IsNil)
+	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
+	c.Check(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"sudo", "-u", "#1000", "-g", "#1000", "--preserve-env", "--", "bash", "-elo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/setup-project"})
+	c.Check(s.backend.ExecCalls[0].Args.WorkDir, check.Equals, "/project")
+}
+
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -134,8 +156,8 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	c.Assert(chg.Err(), check.IsNil)
 	c.Assert(s.backend.ExecCalls, check.HasLen, 1)
-	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"bash", "-eo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
 
 	// Ensure that the save-state handler has created the required state
 	// directory (reattach the volume to the workshop to check).
@@ -151,11 +173,11 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 
 	c.Check(s.backend.ExecCalls, check.HasLen, 1)
-	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"bash", "-eo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
-	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 3)
 }
 
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
@@ -191,11 +213,11 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 
 	c.Check(s.backend.ExecCalls, check.HasLen, 1)
-	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/restore-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"bash", "-eo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/restore-state"})
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["SDK_STATE_DIR"], check.Equals, "/var/lib/workshop/state/sdk/one")
 	c.Assert(s.backend.ExecCalls[0].Args.Environment["WORKSHOP_COOKIE"], check.NotNil)
-	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 2)
+	c.Assert(s.backend.ExecCalls[0].Args.Environment, check.HasLen, 3)
 }
 
 func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
@@ -234,8 +256,8 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.state.Lock()
 
 	c.Check(s.backend.ExecCalls, check.HasLen, 1)
-	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"bash", "-eo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/save-state"})
 
 	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Check(t1.Log(), check.HasLen, 1)
@@ -274,8 +296,8 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 	s.state.Lock()
 
 	c.Check(s.backend.ExecCalls, check.HasLen, 1)
-	c.Assert(s.backend.ExecCalls[0].Args.Command, testutil.DeepUnsortedMatches,
-		[]string{"bash", "-ue", "-o", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/fake-hook"})
+	c.Assert(s.backend.ExecCalls[0].Args.Command, check.DeepEquals,
+		[]string{"bash", "-eo", "pipefail", "/var/lib/workshop/sdk/one/sdk/hooks/fake-hook"})
 
 	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
 	c.Check(t1.Log(), check.HasLen, 1)
@@ -514,6 +536,8 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.RestoreState.String()))
 	c.Check(err, check.IsNil)
 	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.SetupBase.String()))
+	c.Check(err, check.IsNil)
+	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.SetupProject.String()))
 	c.Check(err, check.IsNil)
 	_, err = ws.Create(sdk.SdkHookPath(newsdk, hookstate.FakeHook.String()))
 	c.Check(err, check.IsNil)

@@ -234,6 +234,11 @@
   specs:
     - SK005
 
+"setup-project":
+  category: SDK
+  type: action
+  specs: []
+
 "sketch SDK":
   category: SDK
   type: concept
