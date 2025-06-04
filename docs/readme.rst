@@ -37,21 +37,21 @@ Check whether it's configured:
 
 .. code-block:: console
 
-   $ lxc info
+   lxc info | grep 'server_version:'
 
+     server_version: "6.3"
 
-If not, `install <https://documentation.ubuntu.com/lxd/latest/installing/>`_
-and
-`initialise <https://documentation.ubuntu.com/lxd/latest/howto/initialize/>`_
-LXD:
+If the command displays an older version
+or returns an error indicating LXD is missing,
+install a recent LXD version with :program:`snap`:
 
 .. code-block:: console
 
-   sudo snap install lxd
-   sudo lxd init --auto
+   sudo snap install lxd --channel=6/stable  # to install
+   sudo snap refresh lxd --channel=6/stable  # to update
 
 
-Download the latest snap from the
+Next, download the latest Workshop snap from the
 `Releases <https://github.com/canonical/workshop/releases/>`_
 page on GitHub and install it,
 using the options
