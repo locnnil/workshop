@@ -28,7 +28,7 @@ After that, add the :samp:`code-remote` SDK to your workshop definition:
    name: vscode-remote
    base: ubuntu@24.04
    sdks:
-     - name: code-remote
+     - name: vscode-remote
        channel: noble/stable
 
 
