@@ -16,9 +16,17 @@ such as debugging individual workshops or the entire |ws_markup| installation,
 moving projects within the file system or using |ws_markup| with Git:
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
 
    Use workshops <use-workshops/index>
+
+- :doc:`Debug issues in workshops <use-workshops/debug-workshop-issues>`
+- :doc:`Fix the installation <use-workshops/troubleshoot>`
+- :doc:`Forward ports <use-workshops/forward-ports>`
+- :doc:`Move projects around <use-workshops/moving-projects>`
+- :doc:`Purge workshops <use-workshops/purge>`
+- :doc:`Sketch SDKs to customise workshops <use-workshops/sketch-sdk>`
+- :doc:`Use workshops with Git <use-workshops/git-workshop>`
 
 
 Build SDKs
@@ -48,6 +56,10 @@ a popular robotics-oriented framework.
 The articles discuss the design of a ROS 2-oriented SDK and its practical usage:
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
 
    ros2/index
+
+
+- :doc:`Design an SDK <ros2/design-sdk>`
+- :doc:`Create a workshop <ros2/create-workshop>`

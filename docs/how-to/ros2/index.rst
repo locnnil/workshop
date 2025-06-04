@@ -12,5 +12,5 @@ a popular robotics-oriented framework:
 .. toctree::
    :maxdepth: 1
 
-   Design an SDK <ros2-design-sdk>
-   Create a workshop <ros2-create-workshop>
+   Design an SDK <design-sdk>
+   Create a workshop <create-workshop>

@@ -24,10 +24,14 @@ so storing repositories, code, or data such as models in the project directory
 enables you to use them inside the workshop.
 
 .. toctree::
-   :maxdepth: 2
-   :titlesonly:
+   :hidden:
 
    workshops/index
+
+- :doc:`workshops/concepts`
+- :doc:`workshops/changes-tasks`
+- :doc:`workshops/projects`
+- :doc:`workshops/workshop-cli`
 
 
 SDKs
@@ -44,10 +48,17 @@ Publishers handle installation and updates for SDKs,
 freeing users from maintaining complex image definitions or configurations.
 
 .. toctree::
-   :maxdepth: 2
-   :titlesonly:
+   :hidden:
 
    sdks/index
+
+
+- :doc:`sdks/concepts`
+- :doc:`Data storage and sharing <sdks/data-persistence-sharing>`
+- :doc:`Dockerfiles versus SDKs <sdks/dockerfile-vs-sdk>`
+- :doc:`Health reports <sdks/workshopctl>`
+- :doc:`Hooks <sdks/hooks>`
+- :doc:`Parts <sdks/parts>`
 
 
 Interfaces
@@ -59,10 +70,17 @@ ensuring that each workshop operates in its own isolated environment,
 while still allowing controlled interactions among the SDKs and with the host.
 
 .. toctree::
-   :maxdepth: 2
-   :titlesonly:
+   :hidden:
 
    interfaces/index
+
+- :doc:`interfaces/concepts`
+- :doc:`interfaces/camera-interface`
+- :doc:`interfaces/desktop-interface`
+- :doc:`interfaces/gpu-interface`
+- :doc:`interfaces/mount-interface`
+- :doc:`interfaces/ssh-interface`
+- :doc:`interfaces/tunnel-interface`
 
 
 Security considerations

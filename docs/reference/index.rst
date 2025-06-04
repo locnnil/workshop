@@ -15,9 +15,13 @@ These articles share the usage details of the command-line tools
 provided by |ws_markup| and |sdk_markup|:
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
 
    CLI <cli/index>
+
+
+- :doc:`cli/workshop`
+- :doc:`cli/workshopctl`
 
 
 Definition formats
@@ -31,9 +35,13 @@ such as plugs, base images and so on.
 However, both definition types have different purposes and structure:
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
 
    Definition files <definition-files/index>
+
+
+- :doc:`definition-files/workshop-definition`
+- :doc:`definition-files/sdk-definition`
 
 
 Structure and behaviour
