@@ -57,7 +57,7 @@ In the terminal prompt, you'll see that the IDE is running inside your workshop.
 Run VS Code in your browser
 ---------------------------
 
-Another, more portable option allows you to run a VS Code instance
+Another, more portable option allows you to run a VS Code Server instance
 in the workshop itself without the need to install it on the host,
 accessing it via your browser.
 
