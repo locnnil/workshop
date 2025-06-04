@@ -58,7 +58,7 @@ slots:
   ssh-agent:
 `, s.projectId, "ws", "producer", "ssh-agent")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)

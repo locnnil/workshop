@@ -86,7 +86,6 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 	var err error
 	f.pid = "42424242"
 	f.usr = &user.User{
-		Name:     "testuser",
 		Username: "testuser",
 		Uid:      "1000",
 		Gid:      "1000",

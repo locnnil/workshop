@@ -335,7 +335,7 @@ slots:
 `, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	s.env["XDG_DATA_HOME"] = ""
@@ -366,7 +366,7 @@ slots:
 `, s.projectId, "ws", "system", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	s.env["XDG_DATA_HOME"] = c.MkDir()
@@ -398,7 +398,7 @@ slots:
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)

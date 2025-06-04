@@ -57,7 +57,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
@@ -94,7 +94,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
@@ -131,7 +131,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
@@ -177,7 +177,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
@@ -205,7 +205,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
@@ -233,7 +233,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.ErrorMatches, "neither DISPLAY nor WAYLAND_DISPLAY.*")
@@ -259,7 +259,7 @@ slots:
   desktop:
 `, s.projectId, "ws", "producer", "desktop")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
-	deviceSpec, err := lxd_device.NewSpecification(testuser.Name, "consumer")
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.ErrorMatches, "XDG_RUNTIME_DIR is either empty.*")

@@ -83,7 +83,6 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	}
 
 	f.usr = &user.User{
-		Name:     "testuser",
 		Username: "testuser",
 		Uid:      "1000",
 		Gid:      "1000",

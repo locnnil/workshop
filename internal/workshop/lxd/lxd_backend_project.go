@@ -16,21 +16,17 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-var lxdProjectConfig = map[string]string{
-	"features.images":          "false",
-	"features.profiles":        "true",
-	"features.storage.volumes": "false",
+func lxdProjectConfig(username string) map[string]string {
+	return map[string]string{
+		"features.images":          "false",
+		"features.profiles":        "true",
+		"features.storage.volumes": "false",
+		"user.workshop.username":   username,
+	}
 }
 
 func LxdProjectName(user string) string {
 	return "workshop." + user
-}
-
-func lxdProjectUser(project string) string {
-	if strings.HasPrefix(project, "workshop.") {
-		return strings.TrimPrefix(project, "workshop.")
-	}
-	return ""
 }
 
 func LxdStashProjectName(user string) string {
@@ -42,30 +38,28 @@ func InitLxdProject(conn lxd.InstanceServer, username string) error {
 	if username == "" {
 		return fmt.Errorf("cannot init LXD project: username is empty")
 	}
-	if err := createOrLoadLxdProject(conn, LxdProjectName(username)); err != nil {
+	if err := createOrLoadLxdProject(conn, username, LxdProjectName(username)); err != nil {
 		return err
 	}
 
-	if err := createOrLoadLxdProject(conn, LxdStashProjectName(username)); err != nil {
+	if err := createOrLoadLxdProject(conn, username, LxdStashProjectName(username)); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createOrLoadLxdProject(conn lxd.InstanceServer, projectName string) error {
-	if _, _, err := conn.GetProject(projectName); err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return conn.CreateProject(api.ProjectsPost{
-				ProjectPut: api.ProjectPut{
-					Config: lxdProjectConfig,
-				},
-				Name: projectName,
-			})
-		} else {
-			return err
-		}
+func createOrLoadLxdProject(conn lxd.InstanceServer, username, project string) error {
+	_, _, err := conn.GetProject(project)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return conn.CreateProject(api.ProjectsPost{
+			ProjectPut: api.ProjectPut{
+				Config:      lxdProjectConfig(username),
+				Description: fmt.Sprintf(`Workshop project for "%s" user`, username),
+			},
+			Name: project,
+		})
 	}
-	return nil
+	return err
 }
 
 func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*workshop.Project, bool, error) {
@@ -125,11 +119,10 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 		return map[string][]workshop.Project{user: projects}, nil
 	}
 
-	// get a default connection without preseting the LXD project as we are
-	// going over all the LXD projects to filter the ones managed by
-	// workshop and reload every interface connection for every SDK of
-	// every workshop
-	client, err := lxd.ConnectLXDUnixWithContext(ctx, LxdSock, nil)
+	// Get a default connection without preseting the LXD project as we are
+	// going over all the LXD projects to filter the ones managed by workshop
+	// and reload every interface connection for every SDK of every workshop.
+	client, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
 	if err != nil {
 		return nil, ErrorWithInstallLXDPrompt(err)
 	}
@@ -140,14 +133,12 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 	}
 	allProjects := make(map[string][]workshop.Project)
 	for _, lxdProject := range lxdProjects {
-		// if the project is created by workshop, the key must be present
-		if _, ok := lxdProject.Config["user.workshop.projects"]; !ok {
+		// If the project is created by workshop, the key must be present.
+		username, ok := lxdProject.Config["user.workshop.username"]
+		if !ok {
 			continue
 		}
-		username := lxdProjectUser(lxdProject.Name)
-		if username == "" {
-			continue
-		}
+
 		if _, err = osutil.UserLookup(username); err != nil {
 			logger.Noticef("cannot find user %q: %v", username, err)
 			continue
