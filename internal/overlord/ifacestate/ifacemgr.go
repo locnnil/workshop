@@ -431,12 +431,24 @@ func (m *InterfaceManager) checkConflictingMounts(w *workshop.Workshop) error {
 		}
 	}
 
+	sdks := map[string]workshop.SdkRecord{}
+	for _, sk := range w.File.Sdks {
+		sdks[sk.Name] = sk
+	}
+
 	for _, plug := range plugs {
+		if sdks[plug.Sdk.Name].Plugs[plug.Name].Bind != nil {
+			continue
+		}
 		candidateTarget, _ := plug.Lookup("workshop-target")
 
 		idx := slices.IndexFunc(plugs, func(pi *sdk.PlugInfo) bool {
 			// exclude oneself
 			if pi.Sdk.Name == plug.Sdk.Name && pi.Name == plug.Name {
+				return false
+			}
+			// exclude bound plugs
+			if sdks[pi.Sdk.Name].Plugs[pi.Name].Bind != nil {
 				return false
 			}
 			target, _ := pi.Lookup("workshop-target")

@@ -395,6 +395,43 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/opt" is also mounted by.*`)
 }
 
+func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {
+	// Setup
+	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget1},
+		{sdk.Setup{Name: "conflict-2", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget2},
+	})
+	c.Assert(err, check.IsNil)
+	wp.File.Sdks[1].Plugs = map[string]workshop.PlugOrBind{}
+	wp.File.Sdks[1].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "conflict-1", Name: "plug"}}
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget1, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget2, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "conflict-1")
+	t2.WaitFor(t1)
+	t3 := s.state.NewTask("auto-connect", "...")
+	t3.Set("sdk", "conflict-2")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2, t3)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	chg.AddTask(t3)
+	s.state.Unlock()
+
+	// Execute
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Assert(chg.Err(), check.IsNil)
+}
+
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
