@@ -68,7 +68,7 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
    :caption: workshop.yaml
    :emphasize-lines: 5-10
 
-   name: vscode-server
+   name: dev
    base: ubuntu@24.04
    sdks:
      - name: system
