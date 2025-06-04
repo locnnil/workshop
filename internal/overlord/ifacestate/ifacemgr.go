@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"slices"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -397,13 +398,29 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 
 func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
 	for _, s := range w.File.Sdks {
-		for _, plug := range s.Plugs {
-			if plug.Bind != nil {
-				master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
-				if master == nil {
-					sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
-					return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
-				}
+		for name, plug := range s.Plugs {
+			if plug.Bind == nil {
+				continue
+			}
+
+			master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
+			if master == nil {
+				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
+				return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
+			}
+
+			slave := m.repo.Plug(w.Project.ProjectId, w.Name, s.Name, name)
+			if slave == nil {
+				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name}
+				return fmt.Errorf("internal error: SDK %q has no plug named %q", sdkRef.ShortRef(), name)
+			}
+
+			if slave.Interface != master.Interface {
+				return fmt.Errorf("cannot bind %q (%q interface) to %q (%q interface)", slave.Ref().ShortRef(), slave.Interface, master.Ref().ShortRef(), master.Interface)
+			}
+
+			if slave.Label != master.Label || !reflect.DeepEqual(slave.Attrs, master.Attrs) {
+				return fmt.Errorf("cannot bind %q to %q: incompatible attributes", slave.Ref().ShortRef(), master.Ref().ShortRef())
 			}
 		}
 	}

@@ -198,6 +198,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 			// its master.
 			continue
 		}
+
 		candidates := m.repo.AutoConnectCandidateSlots(info.ProjectId, info.Workshop,
 			info.Name, plug.Name, autoConnectChecker(wconns))
 
@@ -207,6 +208,11 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				slotDynamic[connRef.ID()] = make(map[string]interface{})
 			}
 
+			// remounts may be not nil when a previously existing mount
+			// interface connection (e.g. pre-refresh) needs to be recreated
+			// without changes to its 'source' attribute in the new workshop
+			// (given the new workshop also has an SDK with exactly the same
+			// plug; the target directory may change in the new workshop).
 			if src, ok := remounts[connRef.ID()]; ok {
 				slotDynamic[connRef.ID()]["host-source"] = src
 			}
@@ -235,6 +241,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 	for _, slot := range info.Slots {
 		candidates := m.repo.AutoConnectCandidatePlugs(info.ProjectId, info.Workshop,
 			info.Name, slot.Name, autoConnectChecker(wconns))
+
 		for _, plug := range candidates {
 			ref := plug.Ref()
 			master, slaves := MaybeBound(wp, ref)
@@ -243,30 +250,25 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				// its master.
 				continue
 			}
-			connRef := interfaces.NewConnRef(plug, slot)
 
+			connRef := interfaces.NewConnRef(plug, slot)
 			if slotDynamic[connRef.ID()] == nil {
 				slotDynamic[connRef.ID()] = make(map[string]interface{})
 			}
 
+			// remounts may be not nil when a previously existing mount
+			// interface connection (e.g. pre-refresh) needs to be recreated
+			// without changes to its 'source' attribute in the new workshop
+			// (given the new workshop also has an SDK with exactly the same
+			// plug; the target directory may change in the new workshop).
 			if src, ok := remounts[connRef.ID()]; ok {
 				slotDynamic[connRef.ID()]["host-source"] = src
 			}
 
 			slotRef := slot.Ref()
+			// save associated binds as a dynamic attribute
 			for _, slave := range slaves {
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
-
-				slaveInfo := m.repo.Plug(slave.ProjectId, slave.Workshop, slave.Sdk, slave.Name)
-				if slaveInfo == nil {
-					return fmt.Errorf("SDK %q has no plug named %q", slave.SdkRef().ShortRef(), slave.Name)
-				}
-
-				if slaveInfo.Interface != plug.Interface {
-					return fmt.Errorf("cannot bind %q (%q interface) to %q (%q interface)",
-						slave.ShortRef(), slaveInfo.Interface, master.ShortRef(), plug.Interface)
-				}
-
 				if _, ok := conns[slref.ID()]; !ok {
 					connectRefs = append(connectRefs, slref)
 					plugDynamic[slref.ID()] = make(map[string]interface{})
@@ -275,6 +277,9 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 			}
 
 			if _, ok := conns[connRef.ID()]; ok {
+				// Suggested connection already exist (or has Undesired flag
+				// set) so don't clobber it. NOTE: we don't log anything here as
+				// this is a normal and common condition.
 				continue
 			}
 
@@ -282,11 +287,6 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 		}
 	}
 
-	// remounts may be not nil when a previously existing mount
-	// interface connection (e.g. pre-refresh) needs to be recreated
-	// without changes to its 'source' attribute in the new workshop
-	// (given the new workshop also has an SDK with exactly the same
-	// plug; the target directory may change in the new workshop).
 	ts, err := m.batchAutoConnectTasks(wp, info, connectRefs, plugDynamic, slotDynamic)
 	if err != nil {
 		return err

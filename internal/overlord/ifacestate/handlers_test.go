@@ -69,6 +69,9 @@ plugs:
   plug-ssh:
     interface: mock-ssh-agent
     attribute: four
+  bound:
+    interface: mock-network
+    attribute: one
 `
 
 var consumer2 = `name: consumer2
@@ -227,7 +230,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
 	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
+	wp.File.Sdks[0].Plugs["bound"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -243,21 +246,20 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
-	c.Check(pconns, check.HasLen, 3)
+	c.Check(pconns, check.HasLen, 4)
 	c.Check(err, check.IsNil)
 
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
-	c.Check(ref, check.HasLen, 3)
+	c.Check(ref, check.HasLen, 4)
 	c.Check(err, check.IsNil)
 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
 	c.Check(conns, check.DeepEquals, map[string]interface{}{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
-			"interface":    "mock-network",
-			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot"},
+			"interface":   "mock-network",
+			"auto":        true,
+			"plug-static": map[string]interface{}{"attribute": "one"},
 		},
 		"42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":   "mock-network",
@@ -268,6 +270,12 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 			"interface":   "mock-network",
 			"auto":        true,
 			"plug-static": map[string]interface{}{"attribute": "three"},
+		},
+		"42424242/ws/consumer:bound 42424242/ws-producer/producer:slot": map[string]interface{}{
+			"interface":    "mock-network",
+			"auto":         true,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug 42424242/ws-producer/producer:slot"},
 		},
 	})
 

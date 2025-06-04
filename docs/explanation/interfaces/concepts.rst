@@ -148,71 +148,73 @@ or simply use a singleton-like interface (:samp:`gpu` is a good example).
 
 
 As an example,
-imagine two SDKs, :samp:`pytorch` and :samp:`tensorflow`,
-that store their training data in the workshop under
-:file:`~/.cache/torchvision/datasets/` and :file:`~/.keras/datasets/`,
-respectively.
+imagine two SDKs, :samp:`torchaudio` and :samp:`torchvision`,
+that both store data in the workshop under
+:file:`~/.cache/torch/hub/`.
 The data should be persisted,
-so each SDK has a corresponding mount interface plug, :samp:`datasets`.
+so each SDK has a corresponding mount interface plug, :samp:`hub`.
 
-Now, what if our workshop includes both SDKs;
-can we leverage bindings to reuse the data?
-Here, the :samp:`datasets` plug of the :samp:`pytorch` SDK
-is bound to the :samp:`datasets` plug under :samp:`tensorflow`:
+If our workshop includes both SDKs,
+a conflict arises
+because |ws_markup| doesn't know which directory it should mount
+at the target location.
+Bindings resolve this ambiguity.
+Here, the :samp:`hub` plug of the :samp:`torchvision` SDK
+is bound to the :samp:`hub` plug under :samp:`torchaudio`:
 
 .. code-block:: yaml
    :caption: .workshop/digits.yaml
-   :emphasize-lines: 8
+   :emphasize-lines: 10
 
    name: digits
    base: ubuntu@22.04
    sdks:
-     - name: pytorch
+     - name: torchaudio
+       channel: latest/stable
+     - name: torchvision
        channel: latest/stable
        plugs:
-         datasets:
-           bind: tensorflow:datasets
-     - name: tensorflow
-       channel: latest/stable
+         hub:
+           bind: torchaudio:hub
 
 
-This binds :samp:`pytorch:datasets`
-to the location of :samp:`tensorflow:datasets`;
+This binds :samp:`torchvision:hub`
+to the location of :samp:`torchaudio:hub`;
 you benefit from sharing the data between the two frameworks,
 while simultaneously persisting it on the host.
 
 Any actions on the plug thus bound affect all its bindings.
-Here, if you remount :samp:`pytorch:datasets`,
-the :samp:`tensorflow:datasets` plug is also remounted
+Here, if you remount :samp:`torchaudio:hub`,
+the :samp:`torchvision:hub` plug is also remounted
 because they reference the same entity:
 
 .. @artefact workshop info
 
 .. code-block:: console
 
-   $ workshop remount digits/pytorch:datasets /new-mount/
+   $ mkdir -p .cache/hub
+   $ workshop remount digits/torchaudio:hub .cache/hub
    $ workshop info digits
 
      ...
      sdks:
-       pytorch:
+       system:
+         installed:  (1)
+       torchaudio:
          tracking:   latest/stable
          installed:  2.5.1  2024-11-02  (42)
          mounts:
-           datasets:
-             host-source:      /new-mount
-             workshop-target:  /home/workshop/.cache/torchvision/datasets
-       tensorflow:
+           hub:
+             host-source:      /home/user/digits/.cache/hub
+             workshop-target:  /home/workshop/.cache/torch/hub
+       torchvision:
          tracking:   latest/stable
          installed:  2.18.0  2024-10-27  (37)
          mounts:
-           data:
-             host-source:      /new-mount
-             workshop-target:  /home/workshop/.keras/datasets
+           hub:
+             host-source:      /home/user/digits/.cache/hub
+             workshop-target:  /home/workshop/.cache/torch/hub
 
-
-This avoids the need to reconfigure each mount manually,
-reducing the potential for mistakes.
 
 When you run :command:`workshop connections`,
 a bound plug will have :samp:`bind` listed under :samp:`Notes`,
@@ -224,13 +226,13 @@ along with the line number of the target plug:
 
    $ workshop connections digits
 
-     Interface  Plug                        Slot                 Notes
-     mount      digits/pytorch:datasets     digits/system:mount  bind.2
-     mount      digits/tensorflow:datasets  digits/system:mount  bind.2
+     Interface  Plug                    Slot                 Notes
+     mount      digits/torchaudio:hub   digits/system:mount  bind.1
+     mount      digits/torchvision:hub  digits/system:mount  bind.1
 
 
-Here, both plugs are listed as :samp:`bind.2`,
-pointing to :samp:`tensorflow:datasets` in the second line.
+Here, both plugs are listed as :samp:`bind.1`,
+pointing to :samp:`torchaudio:hub` in the first line.
 
 .. _exp_interfaces_cli_operations:
 
