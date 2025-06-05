@@ -33,8 +33,8 @@ Notes:
 - The 'sketch' SDK doesn't appear in the workshop definition
   and cannot include build-time data such as parts.
 
-- In addition to hooks, the 'sketch' SDK can use interfaces,
-  define plugs, slots, connections and bindings.
+- In addition to hooks, the 'sketch' SDK can use interfaces
+  by defining plugs and slots.
 
 
 .. rubric:: Examples
