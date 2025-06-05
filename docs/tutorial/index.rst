@@ -422,6 +422,13 @@ In the project directory, save this code as :file:`main.go`:
    }
 
 
+.. note::
+
+   |ws_markup| also integrates with modern IDEs.
+   For instance, see this guide:
+   :ref:`how_vscode_workshops`.
+
+
 Next, build it *inside the workshop* using the :command:`workshop exec` command:
 
 .. @artefact workshop exec
