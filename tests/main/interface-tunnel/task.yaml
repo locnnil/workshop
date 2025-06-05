@@ -46,15 +46,7 @@ execute: |
 
   echo "Check that plugs cannot bind to same address"
   (! workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused) | MATCH 'listen tcp 127.0.0.1:5432: bind: address already in use'
-  # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
-  if workshop_exec connect ws-tunnel/test-sdk-tunnel:conflict :unused; then
-    workshop_exec disconnect ws-tunnel/test-sdk-tunnel:conflict
-  fi
   (! workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused) | MATCH 'listen tcp 0.0.0.0:8000: bind: address already in use'
-  # FIXME: device is still in LXD profile; reconnect to enable disconnect (which removes the profile)
-  if workshop_exec connect ws-tunnel/system:conflict ws-tunnel/test-sdk-tunnel:unused; then
-    workshop_exec disconnect ws-tunnel/system:conflict
-  fi
 
   echo "Check that unix sockets have correct permissions"
   usermod --append --groups ubuntu --gid games ubuntu

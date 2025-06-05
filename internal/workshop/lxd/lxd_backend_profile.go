@@ -30,19 +30,27 @@ func DeviceTypeConfigKey(name string) string {
 }
 
 func Profile(conn lxd.InstanceServer, pid, wp, profile string) (workshop.SdkProfile, error) {
-	name := ProfileName(pid, wp, profile)
-	lxdp, _, err := conn.GetProfile(name)
+	lxdp, _, err := LxdProfile(conn, pid, wp, profile)
 	if err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return workshop.SdkProfile{}, workshop.ErrSdkProfileNotFound
-		}
-		return workshop.SdkProfile{}, fmt.Errorf("cannot load %q profile (%w)", profile, err)
+		return workshop.SdkProfile{}, err
 	}
 
-	return lxdToSdkProfile(profile, lxdp.Devices, lxdp.Config)
+	return LxdToSdkProfile(profile, lxdp.Devices, lxdp.Config)
 }
 
-func lxdToSdkProfile(profile string, devs map[string]map[string]string, config map[string]string) (workshop.SdkProfile, error) {
+func LxdProfile(conn lxd.InstanceServer, pid, wp, profile string) (*api.Profile, string, error) {
+	name := ProfileName(pid, wp, profile)
+	lxdp, etag, err := conn.GetProfile(name)
+	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil, "", workshop.ErrSdkProfileNotFound
+		}
+		return nil, "", fmt.Errorf("cannot load %q profile (%w)", profile, err)
+	}
+	return lxdp, etag, nil
+}
+
+func LxdToSdkProfile(profile string, devs map[string]map[string]string, config map[string]string) (workshop.SdkProfile, error) {
 	var pr = workshop.NewSdkProfile(profile)
 	for devname, dev := range devs {
 		name := strings.TrimPrefix(devname, DeviceName(profile, ""))

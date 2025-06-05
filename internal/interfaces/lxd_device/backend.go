@@ -79,22 +79,13 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		// Ensure that the source path exists here. LXD allows to
-		// require the source attribute when updating an instance
-		// configuration but it would fail and still save changes to the
-		// instace profile even if the source does not exist. For
-		// Workshop that would mean that the interface connection would
-		// fail but there will still be changes made to the instance
-		// configuration which is not acceptable.
-		// The dir is being dynamically created (no source attribute
-		// provided by the slot).
+		// We cannot infer what the user intended to mount if the source doesn't
+		// exist. In this case - inline with the above - we create a directory.
 		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(dev.What)
 		if err != nil {
 			return false, err
 		}
 
-		// We cannot infer what the user intended to mount if the source doesn't
-		// exist. In this case - inline with the above - we create a directory.
 		if !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
@@ -110,17 +101,12 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			return false, nil
 		}
 
-		_, err = fs.Stat(dev.Where)
-		if !osutil.IsDirNotExist(err) {
+		if _, err := fs.Stat(dev.Where); !osutil.IsDirNotExist(err) {
 			return false, err
-		} else {
-			// FIXME: workaround LXD empty directory issue (which, if the
-			// connection was disconnected earlier, was removed by LXD).
-			if err = fs.MkdirAll(dev.Where, os.ModePerm); err != nil {
-				return false, err
-			}
 		}
-		return false, nil
+		// FIXME: workaround LXD empty directory issue (which, if the
+		// connection was disconnected earlier, was removed by LXD).
+		return false, fs.MkdirAll(dev.Where, os.ModePerm)
 	}
 	return false, fmt.Errorf(`unknown device type: %v`, dev.Type)
 }
@@ -371,8 +357,13 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 
 	// Either create or update an existing LXD profile for the SDK so that later
 	// it can be assigned to the required workshop.
-	prevp, err := lxdbackend.Profile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	lxdp, etag, err := lxdbackend.LxdProfile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	if err == nil {
+		prevp, err := lxdbackend.LxdToSdkProfile(sdkRef.Sdk, lxdp.Devices, lxdp.Config)
+		if err != nil {
+			return err
+		}
+
 		// Find the difference between a set of old and new devices to detect if any
 		// clean up is required when a new profile will be assigned (updated).
 		for key, dev := range prevp.Mounts {
@@ -395,7 +386,20 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 			}
 		}
 
-		return conn.UpdateProfile(name, newp, "")
+		if err := conn.UpdateProfile(name, newp, etag); err != nil {
+			// By design, LXD does not roll back profile changes if the update failed,
+			// so we have to do it ourselves.
+			_, etag2, err2 := conn.GetProfile(name)
+			if err2 != nil {
+				logger.Noticef("cannot get updated profile: %v", err2)
+			} else if etag2 != etag {
+				if err2 := conn.UpdateProfile(name, lxdp.Writable(), etag2); err2 != nil {
+					logger.Noticef("cannot restore original profile: %v", err2)
+				}
+			}
+			return err
+		}
+		return nil
 	}
 
 	if errors.Is(err, workshop.ErrSdkProfileNotFound) {
