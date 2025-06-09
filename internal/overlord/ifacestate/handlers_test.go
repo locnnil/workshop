@@ -417,7 +417,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/opt" is also mounted by.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*cannot connect "ws/conflict-[12]:plug" without binding to "ws/conflict-[12]:plug": unbound plugs cannot share target "/opt".*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {

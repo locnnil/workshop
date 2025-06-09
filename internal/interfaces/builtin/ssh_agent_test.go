@@ -69,7 +69,7 @@ slots:
 			Protocol: "unix",
 		},
 		Listen: workshop.ProxyTarget{
-			Address:  "/var/lib/workshop/run/consumer_ssh-agent.ssh",
+			Address:  "/var/lib/workshop/run/ssh-agent.sock",
 			Protocol: "unix",
 		},
 		Direction: workshop.WorkshopToHost,

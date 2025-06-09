@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/strutil/shlex"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -196,37 +198,32 @@ func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string,
 	})
 }
 
-func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop, sdkName string) error {
-	script := fmt.Sprintf("%s_%s.sh", sdkName, dev.Name)
-	env, err := fs.Create(filepath.Join("/etc", "profile.d", script))
-	if err != nil {
-		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
+func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) (exists bool, err error) {
+	script := "/etc/profile.d/workshop-ssh-agent.sh"
+	if _, err := fs.Stat(script); err == nil {
+		exists = true
 	}
-	defer env.Close()
-
-	_, err = fmt.Fprintf(env, "export SSH_AUTH_SOCK=%s\n", dev.Listen.Address)
-	if err != nil {
-		return fmt.Errorf("cannot set SSH_AUTH_SOCK for %q: %w", workshop, err)
-	}
-	return nil
+	envVars := map[string]string{"SSH_AUTH_SOCK": dev.Listen.Address}
+	return exists, workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
 }
 
-func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, sdkName string) error {
-	script := fmt.Sprintf("%s_%s.sh", sdkName, dev.Name)
-	return fs.RemoveIfExists(filepath.Join("/etc", "profile.d", script))
+func removeSshAgent(fs workshop.WorkshopFs) error {
+	return fs.RemoveIfExists("/etc/profile.d/workshop-ssh-agent.sh")
 }
 
-func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string, ws string) error {
-	backend := env["XDG_BACKEND"]
+func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string) (exists bool, err error) {
+	script := "/etc/profile.d/workshop-desktop.sh"
+	if _, err := fs.Stat(script); err == nil {
+		exists = true
+	}
+	envVars := desktopEnvironment(user, env, dev)
+	return exists, workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+}
 
+func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Desktop) map[string]string {
 	var envVars map[string]string
-	envFile, err := fs.Create("/etc/profile.d/desktop.sh")
-	if err != nil {
-		return fmt.Errorf("cannot configure required environment for %q: %w", ws, err)
-	}
-	defer envFile.Close()
-
 	// Use Wayland as the default backend in the case where it's unset
+	backend := env["XDG_BACKEND"]
 	if (backend == "wayland" || backend == "") && dev.Wayland != nil {
 		envVars = map[string]string{
 			"QT_QPA_PLATFORM":  "wayland-egl",
@@ -268,21 +265,27 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 	}
 
 	envVars["ELECTRON_OZONE_PLATFORM_HINT"] = "auto"
-
-	for key, val := range envVars {
-		_, err = envFile.WriteString("export " + key + "=" + val + "\n")
-		if err != nil {
-			return fmt.Errorf("cannot set %s for %q: %w", key, ws, err)
-		}
-	}
-
-	return nil
+	return envVars
 }
 
 func removeDesktop(fs workshop.WorkshopFs) error {
-	err := fs.RemoveIfExists("/etc/profile.d/desktop.sh")
+	err := fs.RemoveIfExists("/etc/profile.d/workshop-desktop.sh")
 	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
 	return cmp.Or(err, err2)
+}
+
+type envScript map[string]string
+
+func (e envScript) WriteTo(w io.Writer) (int64, error) {
+	var n int64
+	for k, v := range e {
+		m, err := fmt.Fprintf(w, "export %s=%s\n", k, shlex.Quote(v))
+		n += int64(m)
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
 }
 
 func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
@@ -339,15 +342,17 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 		}
 	}
 
+	var sshScriptExists bool
 	if spec.Profile.Agent != nil {
-		err = installSshAgent(fs, *spec.Profile.Agent, sdkRef.Workshop, sdkRef.Sdk)
+		sshScriptExists, err = installSshAgent(fs, *spec.Profile.Agent)
 		if err != nil {
 			return err
 		}
 	}
 
+	var desktopScriptExists bool
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment, sdkRef.Workshop)
+		desktopScriptExists, err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment)
 		if err != nil {
 			return err
 		}
@@ -372,12 +377,18 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 			}
 		}
 
+		if prevp.Agent == nil && sshScriptExists {
+			return errors.New("ssh-agent interface already connected")
+		}
 		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
-			if err = removeSshAgent(fs, *prevp.Agent, sdkRef.Sdk); err != nil {
+			if err = removeSshAgent(fs); err != nil {
 				return err
 			}
 		}
 
+		if prevp.Desktop == nil && desktopScriptExists {
+			return errors.New("desktop interface already connected")
+		}
 		if prevp.Desktop != nil && !prevp.Desktop.Equal(spec.Profile.Desktop) {
 			if err = removeDesktop(fs); err != nil {
 				return err
@@ -457,7 +468,7 @@ func (b *Backend) Remove(ctx context.Context, sdkRef sdk.Ref) error {
 	}
 
 	if prof.Agent != nil {
-		if err = removeSshAgent(fs, *prof.Agent, sdkRef.Sdk); err != nil {
+		if err = removeSshAgent(fs); err != nil {
 			return err
 		}
 	}
