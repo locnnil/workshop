@@ -98,28 +98,3 @@ func (b *TestSecurityBackend) SandboxFeatures() []string {
 	}
 	return b.SandboxFeaturesCallback()
 }
-
-// TestSecurityBackendSetupMany is a security backend that implements SetupMany on top of TestSecurityBackend.
-type TestSecurityBackendSetupMany struct {
-	TestSecurityBackend
-
-	// SetupManyCalls stores information about all calls to Setup
-	SetupManyCalls []TestSetupManyCall
-
-	// SetupManyCallback is an callback that is optionally called in Setup
-	SetupManyCallback func(context context.Context, sdkInfo []*sdk.Info, repo *interfaces.Repository) []error
-}
-
-// TestSetupManyCall stores details about calls to TestSecurityBackendMany.SetupMany
-type TestSetupManyCall struct {
-	// SdkInfos is a copy of the sdkInfo arguments to a particular call to SetupMany
-	SdkInfos []*sdk.Info
-}
-
-func (b *TestSecurityBackendSetupMany) SetupMany(context context.Context, sdkInfo []*sdk.Info, repo *interfaces.Repository) []error {
-	b.SetupManyCalls = append(b.SetupManyCalls, TestSetupManyCall{SdkInfos: sdkInfo})
-	if b.SetupManyCallback == nil {
-		return nil
-	}
-	return b.SetupManyCallback(context, sdkInfo, repo)
-}

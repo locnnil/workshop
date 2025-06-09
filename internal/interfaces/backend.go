@@ -49,11 +49,3 @@ type SecurityBackend interface {
 	// NewSpecification returns a new specification associated with this backend.
 	NewSpecification(user string, sdk string) (Specification, error)
 }
-
-// SecurityBackendSetupMany interface may be implemented by backends that can optimize their operations
-// when setting up multiple sdks at once.
-type SecurityBackendSetupMany interface {
-	// SetupMany creates and loads apparmor profiles of multiple sdks. It tries to process all sdks and doesn't interrupt processing
-	// on errors of individual sdks.
-	SetupMany(context context.Context, sdks []*sdk.Info, repo *Repository) []error
-}
