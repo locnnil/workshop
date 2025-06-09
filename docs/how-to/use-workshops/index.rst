@@ -9,13 +9,13 @@ of running and fixing workshops:
 .. toctree::
    :maxdepth: 1
 
+   Add scripts to workshops <scripts>
    Debug issues in workshops <debug-workshop-issues>
    Fix the installation <troubleshoot>
    Forward ports <forward-ports>
    Move projects around <moving-projects>
    Purge workshops <purge>
    Sketch SDKs to customise workshops <sketch-sdk>
-
 
 
 These guides cover the aspects of using |ws_markup| with developer tooling:
@@ -25,4 +25,3 @@ These guides cover the aspects of using |ws_markup| with developer tooling:
 
    Use workshops with Git <git-workshop>
    Use workshops with VS Code <vscode-workshop>
-

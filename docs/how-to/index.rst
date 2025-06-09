@@ -20,6 +20,7 @@ moving projects within the file system or using |ws_markup| with Git:
 
    Use workshops <use-workshops/index>
 
+- :doc:`Add scripts to workshops <use-workshops/scripts>`
 - :doc:`Debug issues in workshops <use-workshops/debug-workshop-issues>`
 - :doc:`Fix the installation <use-workshops/troubleshoot>`
 - :doc:`Forward ports <use-workshops/forward-ports>`
