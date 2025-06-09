@@ -675,7 +675,7 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 	defer fs.Close()
 
 	// Remove project mount
-	if err := fs.Remove(workshop.WorkshopProjectPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := fs.RemoveIfExists(workshop.WorkshopProjectPath); err != nil {
 		return err
 	}
 
@@ -724,6 +724,13 @@ func NewWorkshopFs(baseDir string) (*FakeInstanceFs, error) {
 	}
 	fs.Fs = afero.NewBasePathFs(osfs, wfspath)
 	return &fs, nil
+}
+
+func (w *FakeInstanceFs) RemoveIfExists(name string) error {
+	if err := w.Remove(name); !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func (w *FakeInstanceFs) Symlink(source, target string) error {

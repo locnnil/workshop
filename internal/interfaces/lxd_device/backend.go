@@ -2,6 +2,7 @@ package lxd_device
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/spf13/afero"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
@@ -213,7 +213,7 @@ func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, workshop, sd
 
 func removeSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent, sdkName string) error {
 	script := fmt.Sprintf("%s_%s.sh", sdkName, dev.Name)
-	return fs.Remove(filepath.Join("/etc", "profile.d", script))
+	return fs.RemoveIfExists(filepath.Join("/etc", "profile.d", script))
 }
 
 func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string, ws string) error {
@@ -280,17 +280,9 @@ func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.Use
 }
 
 func removeDesktop(fs workshop.WorkshopFs) error {
-	if err := fs.Remove("/etc/profile.d/desktop.sh"); err != nil {
-		return err
-	}
-
-	// The Xauth cookie may not always exist. Ignore any errors relating to this
-	if err := fs.Remove("/tmp/.Xauthority"); err != nil {
-		if !errors.Is(err, afero.ErrFileNotFound) {
-			return err
-		}
-	}
-	return nil
+	err := fs.RemoveIfExists("/etc/profile.d/desktop.sh")
+	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
+	return cmp.Or(err, err2)
 }
 
 func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
