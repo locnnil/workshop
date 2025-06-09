@@ -21,6 +21,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -45,93 +46,227 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 	return interfaces.SecurityLxdDevice
 }
 
-func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (reload bool, err error) {
-	if dev.Type == workshop.WorkshopWorkshop {
-		if _, err := fs.Stat(dev.What); osutil.IsDirNotExist(err) && dev.MakeWhat {
-			if err := fs.MkdirAll(dev.What, os.ModePerm); err != nil {
-				return false, err
-			}
-		} else if err != nil {
-			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
-		}
-
-		if _, err := fs.Stat(dev.Where); osutil.IsDirNotExist(err) && dev.MakeWhere {
-			if err := fs.MkdirAll(dev.Where, os.ModePerm); err != nil {
-				return false, err
-			}
-		} else if err != nil {
-			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
-		}
-
-		mounts, err := readMountProfile(fs)
+func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.User, pid, w string, prev, next map[string]workshop.Mount) (*revert.Reverter, error) {
+	var mounts *osutil.MountProfile
+	var content []byte
+	if containsWorkshopWorkshop(prev) || containsWorkshopWorkshop(next) {
+		var err error
+		mounts, content, err = readMountProfile(fs)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
-
-		check := func(me osutil.MountEntry) bool {
-			return me.Name == dev.What && me.Dir == dev.Where && dev.ReadOnly == slices.Contains(me.Options, "ro")
-		}
-		if slices.ContainsFunc(mounts.Entries, check) {
-			return false, nil
-		}
-
-		options := []string{"bind", "x-systemd.requires=/project"}
-		if dev.ReadOnly {
-			options = append(options, "ro")
-		}
-
-		entry := osutil.MountEntry{Name: dev.What, Dir: dev.Where, Type: "none", Options: options}
-		mounts.Entries = append(mounts.Entries, entry)
-		if err = writeMountProfile(fs, mounts); err != nil {
-			return false, err
-		}
-		return true, nil
 	}
 
-	if dev.Type == workshop.HostWorkshop {
-		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(dev.What)
+	var removed []string
+	for _, mnt := range prev {
+		if mnt == next[mnt.Name] {
+			continue
+		}
+		if removeMountEntry(mounts, mnt) {
+			removed = append(removed, mnt.Where)
+		}
+	}
+
+	var added []string
+	for _, mnt := range next {
+		if mnt == prev[mnt.Name] {
+			continue
+		}
+		found, err := addMountEntry(fs, user, mounts, mnt)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			added = append(added, mnt.Where)
+		}
+	}
+
+	rev := revert.New()
+	if len(removed) == 0 && len(added) == 0 {
+		return rev, nil
+	}
+	defer rev.Fail()
+
+	rev.Add(func() {
+		if reverr := reloadMounts(conn, pid, w); reverr != nil {
+			logger.Noticef("On setupMounts: cannot undo unmount: %v", reverr)
+		}
+	})
+
+	for _, where := range removed {
+		if err := unmount(conn, pid, w, where); err != nil {
+			logger.Noticef("On setupMounts: cannot unmount %q: %v", where, err)
+		}
+	}
+
+	if err := writeMountProfile(fs, mounts); err != nil {
+		return nil, err
+	}
+
+	rev.Add(func() {
+		for _, where := range added {
+			if reverr := unmount(conn, pid, w, where); reverr != nil {
+				logger.Noticef("On setupMounts: cannot undo mount: %v", reverr)
+			}
+		}
+		if reverr := writeMountProfile(fs, bytes.NewBuffer(content)); reverr != nil {
+			logger.Noticef("On setupMounts: cannot restore mount profile: %v", reverr)
+		}
+	})
+
+	if err := reloadMounts(conn, pid, w); err != nil {
+		return nil, err
+	}
+
+	clone := rev.Clone()
+	rev.Success()
+	return clone, nil
+}
+
+func removeMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, prev map[string]workshop.Mount) error {
+	var mounts *osutil.MountProfile
+	if containsWorkshopWorkshop(prev) {
+		var err error
+		mounts, _, err = readMountProfile(fs)
+		if err != nil {
+			return err
+		}
+	}
+
+	var removed []string
+	for _, mnt := range prev {
+		if removeMountEntry(mounts, mnt) {
+			removed = append(removed, mnt.Where)
+		}
+	}
+
+	if len(removed) == 0 {
+		return nil
+	}
+
+	var errs []error
+	for _, where := range removed {
+		if err := unmount(conn, pid, w, where); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := writeMountProfile(fs, mounts); err != nil {
+		errs = append(errs, err)
+	} else if err := reloadMounts(conn, pid, w); err != nil {
+		errs = append(errs, err)
+	}
+
+	return cmp.Or(errs...)
+}
+
+func containsWorkshopWorkshop(mounts map[string]workshop.Mount) bool {
+	for _, mnt := range mounts {
+		if mnt.Type == workshop.WorkshopWorkshop {
+			return true
+		}
+	}
+	return false
+}
+
+func addMountEntry(fs workshop.WorkshopFs, user *user.User, mounts *osutil.MountProfile, mnt workshop.Mount) (bool, error) {
+	if mnt.Type == workshop.HostWorkshop {
+		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(mnt.What)
 		if err != nil {
 			return false, err
 		}
 
-		if dev.MakeWhat && !sourceExists {
+		if mnt.MakeWhat && !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
 				return false, err
 			}
 
-			if err = osutil.MkdirAllChown(dev.What, 0755, uid, gid); err != nil {
+			if err = osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
 				return false, err
 			}
 		}
 
-		if !dev.MakeWhere || !sourceIsDir {
+		if !mnt.MakeWhere || !sourceIsDir {
 			return false, nil
 		}
 
-		if _, err := fs.Stat(dev.Where); !osutil.IsDirNotExist(err) {
+		if _, err := fs.Stat(mnt.Where); !osutil.IsDirNotExist(err) {
 			return false, err
 		}
 		// FIXME: workaround LXD empty directory issue (which, if the
 		// connection was disconnected earlier, was removed by LXD).
-		return false, fs.MkdirAll(dev.Where, os.ModePerm)
+		return false, fs.MkdirAll(mnt.Where, os.ModePerm)
 	}
-	return false, fmt.Errorf(`unknown device type: %v`, dev.Type)
+
+	if mnt.Type != workshop.WorkshopWorkshop {
+		return false, fmt.Errorf(`unknown device type: %v`, mnt.Type)
+	}
+
+	if _, err := fs.Stat(mnt.What); osutil.IsDirNotExist(err) && mnt.MakeWhat {
+		if err := fs.MkdirAll(mnt.What, os.ModePerm); err != nil {
+			return false, err
+		}
+	} else if err != nil {
+		return false, fmt.Errorf(`stat workshop-source %q: %v`, mnt.What, err)
+	}
+
+	if _, err := fs.Stat(mnt.Where); osutil.IsDirNotExist(err) && mnt.MakeWhere {
+		if err := fs.MkdirAll(mnt.Where, os.ModePerm); err != nil {
+			return false, err
+		}
+	} else if err != nil {
+		return false, fmt.Errorf(`stat workshop-target %q: %v`, mnt.Where, err)
+	}
+
+	check := func(me osutil.MountEntry) bool {
+		return me.Name == mnt.What && me.Dir == mnt.Where && mnt.ReadOnly == slices.Contains(me.Options, "ro")
+	}
+	if slices.ContainsFunc(mounts.Entries, check) {
+		return false, nil
+	}
+
+	options := []string{"bind", "x-systemd.requires=/project"}
+	if mnt.ReadOnly {
+		options = append(options, "ro")
+	}
+
+	entry := osutil.MountEntry{Name: mnt.What, Dir: mnt.Where, Type: "none", Options: options}
+	mounts.Entries = append(mounts.Entries, entry)
+	return true, nil
 }
 
-func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, error) {
+func removeMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
+	if mnt.Type != workshop.WorkshopWorkshop {
+		return false
+	}
+
+	cnt := len(mounts.Entries)
+	deleter := func(me osutil.MountEntry) bool {
+		return me.Name == mnt.What && me.Dir == mnt.Where
+	}
+	mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
+	return cnt != len(mounts.Entries)
+}
+
+func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, []byte, error) {
 	fstab, err := fs.Open("/etc/fstab")
 	if errors.Is(err, os.ErrNotExist) {
-		return &osutil.MountProfile{}, nil
+		return &osutil.MountProfile{}, nil, nil
 	} else if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer fstab.Close()
 
-	return osutil.ReadMountProfile(fstab)
+	var content bytes.Buffer
+	mounts, err := osutil.ReadMountProfile(io.TeeReader(fstab, &content))
+	if err != nil {
+		return nil, nil, err
+	}
+	return mounts, content.Bytes(), nil
 }
 
-func writeMountProfile(fs workshop.WorkshopFs, mounts *osutil.MountProfile) error {
+func writeMountProfile(fs workshop.WorkshopFs, mounts io.WriterTo) error {
 	return workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644)
 }
 
@@ -150,10 +285,11 @@ func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error
 		return err
 	}
 
-	if err = op.Wait(); err != nil {
-		logger.Noticef("On workshop mount: %v (%s)", err, out.String())
-	}
-	return err
+	return op.Wait()
+}
+
+func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
+	return runMountCommand(conn, pid, w, []string{"umount", where})
 }
 
 // 'systemd-fstab-generator' is responsible for creating mount entries from
@@ -169,55 +305,62 @@ func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 	})
 }
 
-func removeMount(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, mnt workshop.Mount) error {
-	if mnt.Type != workshop.WorkshopWorkshop {
+func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error {
+	if prev.Equal(next) {
 		return nil
 	}
-
-	mounts, err := readMountProfile(fs)
-	if err != nil {
-		return err
+	if next == nil {
+		return removeSshAgent(fs, prev)
 	}
 
-	cnt := len(mounts.Entries)
-	deleter := func(me osutil.MountEntry) bool {
-		return me.Name == mnt.What && me.Dir == mnt.Where
-	}
-	mounts.Entries = slices.DeleteFunc(mounts.Entries, deleter)
-	if cnt == len(mounts.Entries) {
-		return nil
-	}
-
-	if err = writeMountProfile(fs, mounts); err != nil {
-		return err
-	}
-
-	return runMountCommand(conn, pid, w, []string{
-		"umount",
-		mnt.Where,
-	})
-}
-
-func installSshAgent(fs workshop.WorkshopFs, dev workshop.SshAgent) (exists bool, err error) {
 	script := "/etc/profile.d/workshop-ssh-agent.sh"
-	if _, err := fs.Stat(script); err == nil {
-		exists = true
+	if prev == nil {
+		if _, err := fs.Stat(script); err == nil {
+			return errors.New("ssh-agent interface already connected")
+		}
 	}
-	envVars := map[string]string{"SSH_AUTH_SOCK": dev.Listen.Address}
-	return exists, workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+
+	envVars := map[string]string{"SSH_AUTH_SOCK": next.Listen.Address}
+	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
 }
 
-func removeSshAgent(fs workshop.WorkshopFs) error {
-	return fs.RemoveIfExists("/etc/profile.d/workshop-ssh-agent.sh")
+func removeSshAgent(fs workshop.WorkshopFs, prev *workshop.SshAgent) error {
+	if prev == nil {
+		return nil
+	}
+
+	script := "/etc/profile.d/workshop-ssh-agent.sh"
+	return fs.RemoveIfExists(script)
 }
 
-func installDesktop(fs workshop.WorkshopFs, dev workshop.Desktop, user *user.User, env map[string]string) (exists bool, err error) {
+func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
+	if prev.Equal(next) {
+		return nil
+	}
+	if next == nil {
+		return removeDesktop(fs, prev)
+	}
+
 	script := "/etc/profile.d/workshop-desktop.sh"
-	if _, err := fs.Stat(script); err == nil {
-		exists = true
+	if prev == nil {
+		if _, err := fs.Stat(script); err == nil {
+			return errors.New("desktop interface already connected")
+		}
 	}
-	envVars := desktopEnvironment(user, env, dev)
-	return exists, workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+
+	envVars := desktopEnvironment(user, env, *next)
+	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+}
+
+func removeDesktop(fs workshop.WorkshopFs, prev *workshop.Desktop) error {
+	if prev == nil {
+		return nil
+	}
+
+	script := "/etc/profile.d/workshop-desktop.sh"
+	err := fs.RemoveIfExists(script)
+	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
+	return cmp.Or(err, err2)
 }
 
 func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Desktop) map[string]string {
@@ -268,12 +411,6 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	return envVars
 }
 
-func removeDesktop(fs workshop.WorkshopFs) error {
-	err := fs.RemoveIfExists("/etc/profile.d/workshop-desktop.sh")
-	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
-	return cmp.Or(err, err2)
-}
-
 type envScript map[string]string
 
 func (e envScript) WriteTo(w io.Writer) (int64, error) {
@@ -296,6 +433,97 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 	return workshop.NewWorkshopFs(sftp), nil
 }
 
+func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref, profile api.ProfilePut) error {
+	rev := revert.New()
+	defer rev.Fail()
+
+	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	if err := conn.CreateProfile(api.ProfilesPost{ProfilePut: profile, Name: name}); err != nil {
+		return err
+	}
+	rev.Add(func() {
+		if reverr := conn.DeleteProfile(name); reverr != nil {
+			logger.Noticef("On Setup: cannot remove %q SDK profile: %v", sdkRef.Sdk, reverr)
+		}
+	})
+
+	iname := lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId)
+	inst, etag, err := conn.GetInstance(iname)
+	if err != nil {
+		return err
+	}
+
+	// Assigning the profile for the first time.
+	inst.Profiles = append(inst.Profiles, name)
+	op, err := conn.UpdateInstance(iname, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	if err := op.WaitContext(ctx); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
+}
+
+func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]string, sdkRef sdk.Ref, prev, next *workshop.SdkProfile) (*revert.Reverter, error) {
+	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
+	if err != nil {
+		return nil, err
+	}
+	defer fs.Close()
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	r, err := setupMounts(conn, fs, user, sdkRef.ProjectId, sdkRef.Workshop, prev.Mounts, next.Mounts)
+	if err != nil {
+		return nil, err
+	}
+	rev.AddAll(r)
+
+	if err := setupSshAgent(fs, prev.Agent, next.Agent); err != nil {
+		return nil, err
+	}
+	rev.Add(func() {
+		if reverr := setupSshAgent(fs, next.Agent, prev.Agent); reverr != nil {
+			logger.Noticef("On setupProfile: cannot undo SSH agent changes: %v", reverr)
+		}
+	})
+
+	if err := setupDesktop(fs, user, env, prev.Desktop, next.Desktop); err != nil {
+		return nil, err
+	}
+	rev.Add(func() {
+		if reverr := setupDesktop(fs, user, env, next.Desktop, prev.Desktop); reverr != nil {
+			logger.Noticef("On setupProfile: cannot undo desktop interface changes: %v", reverr)
+		}
+	})
+
+	clone := rev.Clone()
+	rev.Success()
+	return clone, nil
+}
+
+func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
+	prof, err := lxdbackend.Profile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	if err != nil {
+		return err
+	}
+
+	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	err = removeDesktop(fs, prof.Desktop)
+	err2 := removeSshAgent(fs, prof.Agent)
+	err3 := removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
+	return cmp.Or(err, err2, err3)
+}
+
 // Setup creates mount profile specific to a given sdk.
 func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkRef)
@@ -304,135 +532,61 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 	}
 	spec := s.(*Specification)
 
-	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	newp := api.ProfilePut{
-		Devices:     spec.devices,
-		Config:      spec.config,
-		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop),
-	}
-
 	conn, err := lxdbackend.ConnectLxd(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
+	prev := workshop.NewSdkProfile(sdkRef.Sdk)
+	oldp := api.ProfilePut{
+		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop),
+	}
+	newp := api.ProfilePut{
+		Config:      spec.config,
+		Description: oldp.Description,
+		Devices:     spec.devices,
+	}
+
+	// Either create or update an existing LXD profile for the SDK.
+	prof, etag, err := lxdbackend.LxdProfile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	if errors.Is(err, workshop.ErrSdkProfileNotFound) {
+		if err := assignNewProfile(ctx, conn, sdkRef, oldp); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		prev, err = lxdbackend.LxdToSdkProfile(sdkRef.Sdk, prof.Devices, prof.Config)
+		if err != nil {
+			return err
+		}
+		oldp = prof.Writable()
+	}
+
+	rev, err := setupProfile(conn, spec.User, spec.Environment, sdkRef, &prev, &spec.Profile)
 	if err != nil {
 		return err
 	}
-	defer fs.Close()
+	defer rev.Fail()
 
-	reload := false
-	for _, mnt := range spec.Profile.Mounts {
-		rld, err := installMount(spec.User, fs, mnt)
-		if err != nil {
-			return err
-		}
-
-		if rld {
-			reload = true
-		}
-	}
-
-	if reload {
-		err = reloadMounts(conn, sdkRef.ProjectId, sdkRef.Workshop)
-		if err != nil {
-			return err
-		}
-	}
-
-	var sshScriptExists bool
-	if spec.Profile.Agent != nil {
-		sshScriptExists, err = installSshAgent(fs, *spec.Profile.Agent)
-		if err != nil {
-			return err
-		}
-	}
-
-	var desktopScriptExists bool
-	if spec.Profile.Desktop != nil {
-		desktopScriptExists, err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Either create or update an existing LXD profile for the SDK so that later
-	// it can be assigned to the required workshop.
-	lxdp, etag, err := lxdbackend.LxdProfile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if err == nil {
-		prevp, err := lxdbackend.LxdToSdkProfile(sdkRef.Sdk, lxdp.Devices, lxdp.Config)
-		if err != nil {
-			return err
-		}
-
-		// Find the difference between a set of old and new devices to detect if any
-		// clean up is required when a new profile will be assigned (updated).
-		for key, dev := range prevp.Mounts {
-			if _, exist := spec.Profile.Mounts[key]; !exist {
-				if err = removeMount(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, dev); err != nil {
-					return err
-				}
+	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	if err := conn.UpdateProfile(name, newp, etag); err != nil {
+		// By design, LXD does not roll back profile changes if the update failed,
+		// so we have to do it ourselves.
+		_, etag2, err2 := conn.GetProfile(name)
+		if err2 != nil {
+			logger.Noticef("cannot get updated profile: %v", err2)
+		} else if etag2 != etag {
+			if err2 := conn.UpdateProfile(name, oldp, etag2); err2 != nil {
+				logger.Noticef("cannot restore original profile: %v", err2)
 			}
 		}
-
-		if prevp.Agent == nil && sshScriptExists {
-			return errors.New("ssh-agent interface already connected")
-		}
-		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
-			if err = removeSshAgent(fs); err != nil {
-				return err
-			}
-		}
-
-		if prevp.Desktop == nil && desktopScriptExists {
-			return errors.New("desktop interface already connected")
-		}
-		if prevp.Desktop != nil && !prevp.Desktop.Equal(spec.Profile.Desktop) {
-			if err = removeDesktop(fs); err != nil {
-				return err
-			}
-		}
-
-		if err := conn.UpdateProfile(name, newp, etag); err != nil {
-			// By design, LXD does not roll back profile changes if the update failed,
-			// so we have to do it ourselves.
-			_, etag2, err2 := conn.GetProfile(name)
-			if err2 != nil {
-				logger.Noticef("cannot get updated profile: %v", err2)
-			} else if etag2 != etag {
-				if err2 := conn.UpdateProfile(name, lxdp.Writable(), etag2); err2 != nil {
-					logger.Noticef("cannot restore original profile: %v", err2)
-				}
-			}
-			return err
-		}
-		return nil
+		return err
 	}
 
-	if errors.Is(err, workshop.ErrSdkProfileNotFound) {
-		if err = conn.CreateProfile(api.ProfilesPost{ProfilePut: newp, Name: name}); err != nil {
-			return err
-		}
-
-		iname := lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId)
-		inst, etag, err := conn.GetInstance(iname)
-		if err != nil {
-			return err
-		}
-
-		// Assigning the profile for the first time.
-		inst.Profiles = append(inst.Profiles, name)
-		op, err := conn.UpdateInstance(iname, inst.Writable(), etag)
-		if err != nil {
-			return err
-		}
-
-		return op.WaitContext(ctx)
-	}
-
-	return err
+	rev.Success()
+	return nil
 }
 
 // Remove removes profile of a given sdk.
@@ -445,45 +599,18 @@ func (b *Backend) Remove(ctx context.Context, sdkRef sdk.Ref) error {
 	}
 	defer conn.Disconnect()
 
-	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	inst, etag, err := conn.GetInstance(lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	prof, err := lxdbackend.Profile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if err != nil {
-		return err
-	}
-
-	for _, dev := range prof.Mounts {
-		if err = removeMount(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, dev); err != nil {
-			return err
-		}
-	}
-
-	if prof.Agent != nil {
-		if err = removeSshAgent(fs); err != nil {
-			return err
-		}
-	}
-
-	if prof.Desktop != nil {
-		if err = removeDesktop(fs); err != nil {
-			return err
-		}
-	}
-
 	// 1. Unassign the profile from the workshop
+	iname := lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId)
+	inst, etag, err := conn.GetInstance(iname)
+	if err != nil {
+		return err
+	}
+
 	lxdname := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if idx := slices.Index(inst.Profiles, lxdname); idx != -1 {
+	if idx := slices.Index(inst.Profiles, lxdname); idx >= 0 {
 		inst.Profiles = slices.Delete(inst.Profiles, idx, idx+1)
-		op, err := conn.UpdateInstance(lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId), inst.Writable(), etag)
+
+		op, err := conn.UpdateInstance(iname, inst.Writable(), etag)
 		if err != nil {
 			return err
 		}
@@ -492,7 +619,9 @@ func (b *Backend) Remove(ctx context.Context, sdkRef sdk.Ref) error {
 		}
 	}
 
-	return conn.DeleteProfile(lxdname)
+	err = cleanupProfile(conn, sdkRef)
+	err2 := conn.DeleteProfile(lxdname)
+	return cmp.Or(err, err2)
 }
 
 // NewSpecification returns a new mount specification.

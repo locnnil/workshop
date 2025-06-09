@@ -19,6 +19,15 @@ func (r *Reverter) Add(f Hook) {
 	r.revertFuncs = append(r.revertFuncs, f)
 }
 
+// AddAll steals every revert function from another Reverter.
+func (r *Reverter) AddAll(other *Reverter) {
+	if other == nil {
+		return
+	}
+	r.revertFuncs = append(r.revertFuncs, other.revertFuncs...)
+	other.Success()
+}
+
 // Fail runs any revert functions in the reverse order they were added.
 // Should be used with defer or when a task has encountered an error and needs to be reverted.
 func (r *Reverter) Fail() {
