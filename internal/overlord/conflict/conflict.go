@@ -110,7 +110,7 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 // Iterates over the list of running tasks and returns either nil or
 // a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
-// Ignore discard-background refresh changes.
+// Ignore discard-background changes.
 func findRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
@@ -240,7 +240,7 @@ func ResumeAfterWait(st *state.State,
 
 // Iterates over the list of running tasks and returns a change ID if
 // there is a change running for the provided projectID, workshop and kind.
-// Ignore discard-background refresh changes.
+// Ignore discard-background changes.
 func FindChangeByKind(st *state.State, projectId, workshop, kind string) (string, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()

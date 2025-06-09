@@ -143,9 +143,15 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 
 	op, err := conn.DeleteInstance(iname)
 	if err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
+		}
 		return err
 	}
 	if err = op.Wait(); err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
+		}
 		return err
 	}
 	return nil

@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"syscall"
 	"time"
 
-	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -311,14 +309,7 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	if err := m.backend.RemoveWorkshopStash(ctx, w); err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil
-		}
-		return err
-	}
-
-	return nil
+	return m.backend.RemoveWorkshopStash(ctx, w)
 }
 
 func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -373,13 +364,5 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	err = m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
-	if err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil
-		}
-		return err
-	}
-
-	return nil
+	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
 }
