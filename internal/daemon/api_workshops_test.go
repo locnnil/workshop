@@ -206,8 +206,8 @@ sdks:
     channel: latest/stable
     plugs:
       data:
-        bind: test-sdk-2:photos
-  - name: test-sdk-2
+        bind: mount-conflict:photos
+  - name: mount-conflict
     channel: latest/stable
 `
 
@@ -268,7 +268,7 @@ sdks:
     plugs:
       training-plug:
         interface: mount
-        workshop-target: /opt
+        workshop-target: /opt/data
       data:
         bind: test-sdk:training-plug
   - name: test-sdk-2
@@ -325,7 +325,7 @@ sdks:
       photos:
         interface: mount
         workshop-source: /project/photos
-  - name: test-sdk-2
+  - name: mount-conflict
     channel: latest/stable
     plugs:
       photos:
@@ -335,7 +335,7 @@ sdks:
         interface: mount
 connections:
   - plug: test-sdk:data
-    slot: test-sdk-2:training
+    slot: mount-conflict:training
 `
 
 	testsdk = `
@@ -389,6 +389,26 @@ slots:
     interface: mount
 `
 
+	mount_conflict = `
+name: mount-conflict
+title: title
+base: ubuntu@20.04
+version: '20200401.3f3a63f'
+summary: summary
+description: SDK
+sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+plugs:
+  photos:
+    interface: mount
+    workshop-target: /opt/data
+  gpu:
+    interface: gpu
+slots:
+  data-slot:
+    workshop-source: /mnt
+    interface: mount
+`
+
 	testsdk3 = `
 name: test-sdk-3
 title: title
@@ -406,9 +426,10 @@ type testSdk struct {
 }
 
 var apiSuiteSdks = map[string]testSdk{
-	"test-sdk":   {s: sdk.Setup{Name: "test-sdk", Revision: sdk.R(1)}, meta: testsdk},
-	"test-sdk-2": {s: sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(1)}, meta: testsdk2},
-	"test-sdk-3": {s: sdk.Setup{Name: "test-sdk-3", Revision: sdk.R(1)}, meta: testsdk3},
+	"test-sdk":       {s: sdk.Setup{Name: "test-sdk", Revision: sdk.R(1)}, meta: testsdk},
+	"test-sdk-2":     {s: sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(1)}, meta: testsdk2},
+	"mount-conflict": {s: sdk.Setup{Name: "mount-conflict", Revision: sdk.R(1)}, meta: mount_conflict},
+	"test-sdk-3":     {s: sdk.Setup{Name: "test-sdk-3", Revision: sdk.R(1)}, meta: testsdk3},
 }
 
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
@@ -516,12 +537,27 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "data")
 
-	p := workshop.NewSdkProfile("test-sdk")
+	p := workshop.NewSdkProfile("system")
+	p.Tunnels = []workshop.Tunnel{{ProxyEntry: workshop.ProxyEntry{
+		Name:      "api",
+		Connect:   workshop.ProxyTarget{Protocol: "unix", Address: "@testapi"},
+		Listen:    workshop.ProxyTarget{Protocol: "tcp", Address: "0.0.0.0:8888"},
+		Direction: workshop.HostToWorkshop,
+	}}}
+	w.Profiles["system"] = p
+
+	p = workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
 		What:  testSDKSource,
 		Where: "/opt/data",
 		Type:  workshop.HostWorkshop,
 	}
+	p.Tunnels = []workshop.Tunnel{{ProxyEntry: workshop.ProxyEntry{
+		Name:      "dns",
+		Connect:   workshop.ProxyTarget{Protocol: "udp", Address: "127.0.0.53:5353"},
+		Listen:    workshop.ProxyTarget{Protocol: "udp", Address: "127.0.0.1:5353"},
+		Direction: workshop.WorkshopToHost,
+	}}}
 	w.Profiles["test-sdk"] = p
 
 	testSDKSource2 := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "tunnels", "test-sdk-2", "photos")
@@ -538,25 +574,6 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 		Type:  workshop.WorkshopWorkshop,
 	}
 	w.Profiles["test-sdk-2"] = p
-
-	// TODO: extend above setup with tunnels once system SDK profile is available.
-	// Also need coverage for tunnel plug binding logic.
-	connsState := map[string]interface{}{
-		"b8639dea/tunnels/system:api b8639dea/tunnels/test-sdk-2:api": map[string]interface{}{
-			"interface":   "tunnel",
-			"plug-static": map[string]interface{}{"endpoint": "0.0.0.0:8888/tcp"},
-			"slot-static": map[string]interface{}{"endpoint": "@testapi"},
-		},
-		"b8639dea/tunnels/test-sdk:dns b8639dea/tunnels/system:dns": map[string]interface{}{
-			"interface":   "tunnel",
-			"plug-static": map[string]interface{}{"endpoint": "127.0.0.1:5353/udp"},
-			"slot-static": map[string]interface{}{"endpoint": "127.0.0.53/udp"},
-		},
-	}
-	st := s.d.Overlord().State()
-	st.Lock()
-	st.Set("conns", connsState)
-	st.Unlock()
 
 	// Get Workshop info
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
@@ -593,30 +610,22 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
 					InstallTime: &install1,
-					Tunnels: &TunnelInfo{
-						Plugs: []*Tunnel{
-							{
-								Plug: sdk.PlugRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "system",
-									Name:      "api",
-								},
-								Slot: sdk.SlotRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "test-sdk-2",
-									Name:      "api",
-								},
-								From: Endpoint{
-									Protocol: "tcp",
-									Host:     "0.0.0.0",
-									Port:     8888,
-								},
-								To: Endpoint{
-									Protocol: "unix",
-									Path:     "@testapi",
-								},
+					Tunnels: []*Tunnel{
+						{
+							Plug: sdk.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "tunnels",
+								Sdk:       "system",
+								Name:      "api",
+							},
+							From: Endpoint{
+								Protocol: "tcp",
+								Host:     "0.0.0.0",
+								Port:     8888,
+							},
+							To: Endpoint{
+								Protocol: "unix",
+								Path:     "@testapi",
 							},
 						},
 					},
@@ -640,31 +649,23 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 							},
 						},
 					},
-					Tunnels: &TunnelInfo{
-						Plugs: []*Tunnel{
-							{
-								Plug: sdk.PlugRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "test-sdk",
-									Name:      "dns",
-								},
-								Slot: sdk.SlotRef{
-									ProjectId: s.project.ProjectId,
-									Workshop:  "tunnels",
-									Sdk:       "system",
-									Name:      "dns",
-								},
-								From: Endpoint{
-									Protocol: "udp",
-									Host:     "127.0.0.1",
-									Port:     5353,
-								},
-								To: Endpoint{
-									Protocol: "udp",
-									Host:     "127.0.0.53",
-									Port:     5353,
-								},
+					Tunnels: []*Tunnel{
+						{
+							Plug: sdk.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "tunnels",
+								Sdk:       "test-sdk",
+								Name:      "dns",
+							},
+							From: Endpoint{
+								Protocol: "udp",
+								Host:     "127.0.0.1",
+								Port:     5353,
+							},
+							To: Endpoint{
+								Protocol: "udp",
+								Host:     "127.0.0.53",
+								Port:     5353,
 							},
 						},
 					},
@@ -715,14 +716,14 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	w, ok := s.b.Workshops[s.project.ProjectId]["somebound"]
 	c.Assert(ok, check.Equals, true)
 
-	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "somebound", "test-sdk-2", "photos")
-	p := workshop.NewSdkProfile("test-sdk-2")
+	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "somebound", "mount-conflict", "photos")
+	p := workshop.NewSdkProfile("mount-conflict")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
 		What:  testSDKSource,
-		Where: "/opt/data2",
+		Where: "/opt/data",
 		Type:  workshop.HostWorkshop,
 	}
-	w.Profiles["test-sdk-2"] = p
+	w.Profiles["mount-conflict"] = p
 
 	// Get Workshop info
 	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}")
@@ -756,6 +757,26 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 			Notes:     nil,
 			Sdks: []*SdkInfo{
 				{
+					Name:        "mount-conflict",
+					Version:     "20200401.3f3a63f",
+					Channel:     "latest/stable",
+					Revision:    "1",
+					BuildTime:   &build2,
+					InstallTime: &install2,
+					Mounts: []*Mount{
+						{
+							HostSource:     testSDKSource,
+							WorkshopTarget: "/opt/data",
+							Plug: sdk.PlugRef{
+								ProjectId: s.project.ProjectId,
+								Workshop:  "somebound",
+								Sdk:       "mount-conflict",
+								Name:      "photos",
+							},
+						},
+					},
+				},
+				{
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
 					InstallTime: &install1,
@@ -770,32 +791,12 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
-							WorkshopTarget: "/opt/data2",
+							WorkshopTarget: "/opt/data",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "somebound",
 								Sdk:       "test-sdk",
 								Name:      "data",
-							},
-						},
-					},
-				},
-				{
-					Name:        "test-sdk-2",
-					Version:     "20200401.3f3a63f",
-					Channel:     "latest/stable",
-					Revision:    "1",
-					BuildTime:   &build2,
-					InstallTime: &install2,
-					Mounts: []*Mount{
-						{
-							HostSource:     testSDKSource,
-							WorkshopTarget: "/opt/data2",
-							Plug: sdk.PlugRef{
-								ProjectId: s.project.ProjectId,
-								Workshop:  "somebound",
-								Sdk:       "test-sdk-2",
-								Name:      "photos",
 							},
 						},
 					},
@@ -1210,7 +1211,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 
 	connection, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, bound := connection.CheckBound()
+	_, bound := connection.Plug.CheckBound()
 	c.Assert(bound, check.Equals, true)
 }
 
@@ -1475,14 +1476,14 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	c.Assert(conns, check.HasLen, 1)
 	c.Assert(conns[0].SlotRef.Name, check.Equals, "training")
 
-	conns, err = repo.Connected(s.project.ProjectId, "connsplugbound", "test-sdk-2", "photos")
+	conns, err = repo.Connected(s.project.ProjectId, "connsplugbound", "mount-conflict", "photos")
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
 	c.Assert(conns[0].SlotRef.Name, check.Equals, "training")
 
 	connection, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, bound := connection.CheckBound()
+	_, bound := connection.Plug.CheckBound()
 	c.Assert(bound, check.Equals, true)
 }
 
@@ -1662,19 +1663,19 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "mount-conflict", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		}, connections: []string{
 			"b8639dea/somebound/test-sdk:data b8639dea/somebound/system:mount",
-			"b8639dea/somebound/test-sdk-2:photos b8639dea/somebound/system:mount",
-			"b8639dea/somebound/test-sdk-2:gpu b8639dea/somebound/system:gpu",
+			"b8639dea/somebound/mount-conflict:photos b8639dea/somebound/system:mount",
+			"b8639dea/somebound/mount-conflict:gpu b8639dea/somebound/system:gpu",
 		},
 		plugs: []string{
 			"test-sdk:data",
-			"test-sdk-2:photos",
-			"test-sdk-2:gpu",
+			"mount-conflict:photos",
+			"mount-conflict:gpu",
 		},
 		slots: []string{
-			"test-sdk-2:data-slot",
+			"mount-conflict:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
@@ -1724,7 +1725,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 	s.checkSnapshotCalls(c, "somebound", []string{
 		"system",
 		"test-sdk",
-		"test-sdk-2",
+		"mount-conflict",
 	})
 
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})

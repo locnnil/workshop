@@ -184,7 +184,7 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	plugs := map[string]interface{}{}
 	for name, m := range w.File.Sdks[idx].Plugs {
 		if m.Bind == nil {
-			plugs[name] = m.Attributes
+			plugs[name] = m.Plug
 		} else {
 			binds[name] = sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: m.Bind.Sdk, Name: m.Bind.Name}
 		}
@@ -285,6 +285,36 @@ func (w *Workshop) Mounts(sdks []*sdk.Info) map[string][]Mount {
 	}
 
 	return mnts
+}
+
+// Tunnels returns a map of active SDK tunnels for the workshop.
+func (w *Workshop) Tunnels(sdks []*sdk.Info) map[string][]Tunnel {
+	if sdks == nil {
+		return nil
+	}
+
+	masters := map[sdk.PlugRef][]PlugRef{}
+	for _, sk := range sdks {
+		for name, m := range sk.PlugBinds {
+			s := PlugRef{Sdk: sk.Name, Name: name}
+			masters[m] = append(masters[m], s)
+		}
+	}
+
+	tunnels := map[string][]Tunnel{}
+	for _, prof := range w.Profiles {
+		for _, tunnel := range prof.Tunnels {
+			tunnels[prof.Sdk] = append(tunnels[prof.Sdk], tunnel)
+
+			pref := sdk.PlugRef{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: prof.Sdk, Name: tunnel.Name}
+			for _, slave := range masters[pref] {
+				tunnel.Name = slave.Name
+				tunnels[slave.Sdk] = append(tunnels[slave.Sdk], tunnel)
+			}
+		}
+	}
+
+	return tunnels
 }
 
 func SnapshotId(w, sk string) string {

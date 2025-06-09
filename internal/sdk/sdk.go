@@ -94,10 +94,6 @@ func (i *Info) Ref() Ref {
 }
 
 func (i *Info) SetupPlugBinds(binds map[string]PlugRef) error {
-	if i.Type == System {
-		return nil
-	}
-
 	for name, plug := range binds {
 		if _, ok := i.Plugs[name]; ok {
 			// Check plugs that are bound. The existence of plugs that are

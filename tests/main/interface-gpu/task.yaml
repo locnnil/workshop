@@ -23,7 +23,7 @@ execute: |
   # ensure that the LXD profile contains a gpu device with a proper
   # configuration.  
   project_id=$(cat .workshop.lock)
-  lxc profile show --project workshop.ubuntu ws-gpu-"$project_id"-test-sdk-gpu | yq '.devices.gpu' > output.log
+  lxc profile show --project workshop.ubuntu ws-gpu-"$project_id"-test-sdk-gpu | yq '.devices.test-sdk-gpu_gpu' > output.log
   MATCH "type: gpu" < output.log
   MATCH "gputype: physical" < output.log
   MATCH 'uid: "1000"' < output.log

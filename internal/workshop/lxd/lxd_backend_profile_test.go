@@ -92,29 +92,29 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		{
 			"sdk",
 			map[string]map[string]string{
-				"camera": {
+				"sdk_camera": {
 					"type": "none",
 				},
-				"camera_video4linux": {
+				"sdk_camera_video4linux": {
 					"type":              "unix-hotplug",
 					"subsystem":         "video4linux",
 					"required":          "false",
 					"ownership.inherit": "true",
 				},
-				"camera_media": {
+				"sdk_camera_media": {
 					"type":              "unix-hotplug",
 					"subsystem":         "media",
 					"required":          "false",
 					"ownership.inherit": "true"}},
 			map[string]string{
-				"user.workshop.sdk.camera":                  `{"name": "camera"}`,
-				"user.workshop.sdk.camera.type":             "camera",
-				"user.workshop.sdk.camera_video4linux.type": "camera",
-				"user.workshop.sdk.camera_media.type":       "camera"},
+				"user.workshop.sdk_camera":                  `{"name": "camera"}`,
+				"user.workshop.sdk_camera.type":             "camera",
+				"user.workshop.sdk_camera_video4linux.type": "camera",
+				"user.workshop.sdk_camera_media.type":       "camera"},
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"gpu": {
+				"sdk_gpu": {
 					"type":    "gpu",
 					"gputype": "physical",
 					"uid":     "1000",
@@ -123,7 +123,7 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"userdisk": {
+				"sdk_userdisk": {
 					"type":   "disk",
 					"source": "/home",
 					"path":   "/opt"}},
@@ -131,17 +131,17 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"http": {
+				"sdk_http": {
 					"type":    "proxy",
 					"connect": "tcp:127.0.0.1:8080",
 					"listen":  "tcp:0.0.0.0:8000",
 					"bind":    "host"}},
 			map[string]string{
-				"user.workshop.sdk.http.type": "tunnel"},
+				"user.workshop.sdk_http.type": "tunnel"},
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"ssh-agent": {
+				"sdk_ssh-agent": {
 					"type":    "proxy",
 					"connect": "unix:.host.socket",
 					"listen":  "unix:.workshop.socket",
@@ -149,11 +149,11 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					"gid":     "1000",
 					"bind":    "instance"}},
 			map[string]string{
-				"user.workshop.sdk.ssh-agent.type": "ssh-agent"},
+				"user.workshop.sdk_ssh-agent.type": "ssh-agent"},
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"desktop": {
+				"sdk_desktop": {
 					"type":    "proxy",
 					"connect": "unix:.host.socket",
 					"listen":  "unix:.workshop.socket",
@@ -161,19 +161,19 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					"gid":     "1000",
 					"bind":    "instance"}},
 			map[string]string{
-				"user.workshop.sdk.desktop.type": "desktop-wayland"},
+				"user.workshop.sdk_desktop.type": "desktop-wayland"},
 		}, {
 			"sdk",
 			map[string]map[string]string{
-				"plug": {
+				"sdk_plug": {
 					"type": "none"}},
 			map[string]string{
-				"user.workshop.sdk.plug": `{
+				"user.workshop.sdk_plug": `{
           "name": "plug",
           "what": "/var",
           "where": "/etc", 
           "type": 1}`,
-				"user.workshop.sdk.plug.type": "mount"},
+				"user.workshop.sdk_plug.type": "mount"},
 		},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)

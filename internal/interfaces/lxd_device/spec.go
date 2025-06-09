@@ -2,7 +2,6 @@ package lxd_device
 
 import (
 	"encoding/json"
-	"fmt"
 	"os/user"
 	"strconv"
 
@@ -74,18 +73,20 @@ func (s *Specification) AddConnectedPlug(iface interfaces.Interface, plug *inter
 func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	s.Profile.Mounts[dev.Name] = dev
 
+	name := lxdbackend.DeviceName(s.Profile.Sdk, dev.Name)
+
 	if dev.Type == workshop.WorkshopWorkshop {
-		s.devices[dev.Name] = map[string]string{"type": "none"}
+		s.devices[name] = map[string]string{"type": "none"}
 		buf, err := json.Marshal(dev)
 		if err != nil {
 			return err
 		}
-		s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, dev.Name)] = string(buf)
-		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, dev.Name)] = "mount"
+		s.config[lxdbackend.DeviceConfigKey(name)] = string(buf)
+		s.config[lxdbackend.DeviceTypeConfigKey(name)] = "mount"
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		s.devices[dev.Name] = map[string]string{"type": "disk", "source": dev.What,
+		s.devices[name] = map[string]string{"type": "disk", "source": dev.What,
 			"path": dev.Where, "readonly": strconv.FormatBool(dev.ReadOnly)}
 	}
 
@@ -140,7 +141,8 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	// card*/render* dri devices by LXD properly. Both will be assigned to
 	// the group provided in "gid"; there is no way to assign video to card*
 	// and render to render* devices.
-	s.devices[gpu.Name] = map[string]string{
+	name := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name)
+	s.devices[name] = map[string]string{
 		"type":    "gpu",
 		"gputype": "physical",
 		"uid":     workshop.User.Uid,
@@ -153,31 +155,32 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 func (s *Specification) SetCamera(camera workshop.Camera) error {
 	s.Profile.Camera = &camera
 
-	s.devices[camera.Name] = map[string]string{"type": "none"}
+	name := lxdbackend.DeviceName(s.Profile.Sdk, camera.Name)
+	s.devices[name] = map[string]string{"type": "none"}
 	buf, err := json.Marshal(camera)
 	if err != nil {
 		return err
 	}
-	s.config[lxdbackend.DeviceConfigKey(s.Profile.Sdk, camera.Name)] = string(buf)
-	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, camera.Name)] = "camera"
+	s.config[lxdbackend.DeviceConfigKey(name)] = string(buf)
+	s.config[lxdbackend.DeviceTypeConfigKey(name)] = "camera"
 
 	for _, subsystem := range []string{"video4linux", "media"} {
-		// This name is unique because '_' is not permitted in plug names.
-		name := fmt.Sprintf("%s_%s", camera.Name, subsystem)
+		name := lxdbackend.DeviceName(s.Profile.Sdk, camera.Name, subsystem)
 		s.devices[name] = map[string]string{
 			"type":              "unix-hotplug",
 			"subsystem":         subsystem,
 			"required":          "false",
 			"ownership.inherit": "true",
 		}
-		s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, name)] = "camera"
+		s.config[lxdbackend.DeviceTypeConfigKey(name)] = "camera"
 	}
 
 	return nil
 }
 
 func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
-	s.config[lxdbackend.DeviceTypeConfigKey(s.Profile.Sdk, entry.Name)] = configKey
+	name := lxdbackend.DeviceName(s.Profile.Sdk, entry.Name)
+	s.config[lxdbackend.DeviceTypeConfigKey(name)] = configKey
 	device := map[string]string{
 		"type":    "proxy",
 		"connect": entry.Connect.Protocol + ":" + entry.Connect.Address,
@@ -197,5 +200,5 @@ func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey stri
 			device["gid"] = s.User.Gid
 		}
 	}
-	s.devices[entry.Name] = device
+	s.devices[name] = device
 }

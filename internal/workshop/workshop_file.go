@@ -47,9 +47,51 @@ func ExpandSdkSource(source, project string) string {
 	return source
 }
 
-type Plug struct {
-	Bind       *PlugRef               `yaml:"bind,omitempty"`
-	Attributes map[string]interface{} `yaml:",inline"`
+type PlugOrBind struct {
+	Bind *PlugRef
+	Plug interface{}
+}
+
+func (p *PlugOrBind) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		p.Bind = nil
+		return value.Decode(&p.Plug)
+	}
+
+	var plug struct {
+		Bind       *PlugRef               `yaml:"bind"`
+		Attributes map[string]interface{} `yaml:",inline"`
+	}
+	if err := value.Decode(&plug); err != nil {
+		return err
+	}
+
+	if plug.Bind == nil {
+		*p = PlugOrBind{Plug: plug.Attributes}
+		return nil
+	}
+
+	if len(plug.Attributes) > 0 {
+		return fmt.Errorf("plug is bound to %q and must not define other attributes", plug.Bind.String())
+	}
+	*p = PlugOrBind{Bind: plug.Bind}
+	return nil
+}
+
+func (p PlugOrBind) MarshalYAML() (interface{}, error) {
+	if p.Bind == nil {
+		return p.Plug, nil
+	}
+
+	if p.Plug != nil {
+		return nil, fmt.Errorf("plug is bound to %q and must not define other attributes", p.Bind.String())
+	}
+
+	bind, err := p.Bind.MarshalYAML()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"bind": bind}, nil
 }
 
 type PlugRef struct {
@@ -92,7 +134,7 @@ func (b PlugRef) MarshalYAML() (interface{}, error) {
 type SdkRecord struct {
 	Name    string                 `yaml:"name"`
 	Channel string                 `yaml:"channel"`
-	Plugs   map[string]Plug        `yaml:"plugs,omitempty"`
+	Plugs   map[string]PlugOrBind  `yaml:"plugs,omitempty"`
 	Slots   map[string]interface{} `yaml:"slots,omitempty"`
 	Hooks   map[string]string      `yaml:"hooks,omitempty"`
 }
@@ -219,13 +261,6 @@ func validateSdks(sdks []SdkRecord) error {
 		if !channel.MatchString(s.Channel) {
 			return fmt.Errorf("unsupported channel %q for %q SDK", s.Channel, s.Name)
 		}
-		// A plug must either be bound or declared/extended with dynamic
-		// attributes.
-		for _, plug := range s.Plugs {
-			if plug.Bind != nil && len(plug.Attributes) > 0 {
-				return fmt.Errorf("plug %q is bound and must not define other attributes", plug.Bind.String())
-			}
-		}
 	}
 	return nil
 }
@@ -241,15 +276,21 @@ func validateBinding(sdks []SdkRecord) error {
 			if p.Bind == nil {
 				continue
 			}
-			mr := PlugRef{Sdk: p.Bind.Sdk, Name: p.Bind.Name}
+			mr := *p.Bind
 			sl := PlugRef{Sdk: s.Name, Name: name}
 			masters[mr] = append(masters[mr], sl)
 			slaves[sl] = mr
 
+			if sdk.IsSystem(sl.Sdk) {
+				return fmt.Errorf("cannot bind system SDK plug %q", sl.String())
+			}
+			if sdk.IsSystem(mr.Sdk) {
+				return fmt.Errorf("cannot bind to system SDK plug %q", mr.String())
+			}
 			if !IsImplicitSdk(p.Bind.Sdk) && !slices.ContainsFunc(sdks, func(sr SdkRecord) bool { return p.Bind.Sdk == sr.Name }) {
 				return fmt.Errorf("cannot bind plug %q: SDK %q not found", p.Bind.String(), p.Bind.Sdk)
 			}
-			if p.Bind.Sdk == s.Name && p.Bind.Name == name {
+			if mr == sl {
 				return fmt.Errorf(`cannot bind plug %q to itself`, p.Bind.String())
 			}
 		}

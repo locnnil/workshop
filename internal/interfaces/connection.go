@@ -33,8 +33,15 @@ type Connection struct {
 	Slot *ConnectedSlot
 }
 
-func (c *Connection) CheckBound() (*ConnRef, bool) {
-	attr, _ := c.Plug.Lookup("bind")
+// ConnectedPlug represents a plug that is connected to a slot.
+type ConnectedPlug struct {
+	plugInfo     *sdk.PlugInfo
+	staticAttrs  map[string]interface{}
+	dynamicAttrs map[string]interface{}
+}
+
+func (p *ConnectedPlug) CheckBound() (*ConnRef, bool) {
+	attr, _ := p.Lookup("bind")
 	if attr == nil {
 		return nil, false
 	}
@@ -48,13 +55,6 @@ func (c *Connection) CheckBound() (*ConnRef, bool) {
 		ok = false
 	}
 	return cref, ok
-}
-
-// ConnectedPlug represents a plug that is connected to a slot.
-type ConnectedPlug struct {
-	plugInfo     *sdk.PlugInfo
-	staticAttrs  map[string]interface{}
-	dynamicAttrs map[string]interface{}
 }
 
 // ConnectedSlot represents a slot that is connected to a plug.

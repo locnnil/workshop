@@ -78,7 +78,7 @@ and includes a number of mandatory and optional keys:
        a :samp:`plug` and a :samp:`slot` from the SDKs listed under :samp:`sdks`
        (the system SDK is always implicitly included).
        Both must be strings that reference a plug and a slot
-       with the same interface in different SDKs,
+       with the same interface,
        using the :samp:`<SDK>:<PLUG>` format.
 
    * - :samp:`scripts`
@@ -135,7 +135,7 @@ Each SDK is described with the following keys:
 
        - A plug binding must name an existing plug in the SDK
          and set a single :samp:`bind` attribute
-         that references a plug of the same interface in a different SDK
+         that references a different plug of the same interface
          using the :samp:`<SDK>:<PLUG>` format.
 
        - A plug definition must specify the :samp:`interface`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"slices"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -35,6 +36,7 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	m.backend = workshop.WorkshopBackend(s)
 	s.Unlock()
 
+	r.AddHandler("resolve-interfaces", OnDo(m.doResolveInterfaces), nil)
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
 
@@ -396,13 +398,29 @@ func (m *InterfaceManager) reloadConnections(projectId, workshop, sdkName string
 
 func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
 	for _, s := range w.File.Sdks {
-		for _, plug := range s.Plugs {
-			if plug.Bind != nil {
-				master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
-				if master == nil {
-					sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
-					return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
-				}
+		for name, plug := range s.Plugs {
+			if plug.Bind == nil {
+				continue
+			}
+
+			master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
+			if master == nil {
+				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
+				return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
+			}
+
+			slave := m.repo.Plug(w.Project.ProjectId, w.Name, s.Name, name)
+			if slave == nil {
+				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name}
+				return fmt.Errorf("internal error: SDK %q has no plug named %q", sdkRef.ShortRef(), name)
+			}
+
+			if slave.Interface != master.Interface {
+				return fmt.Errorf("cannot bind %q (%q interface) to %q (%q interface)", slave.Ref().ShortRef(), slave.Interface, master.Ref().ShortRef(), master.Interface)
+			}
+
+			if slave.Label != master.Label || !reflect.DeepEqual(slave.Attrs, master.Attrs) {
+				return fmt.Errorf("cannot bind %q to %q: incompatible attributes", slave.Ref().ShortRef(), master.Ref().ShortRef())
 			}
 		}
 	}
@@ -420,31 +438,43 @@ func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) erro
 	return nil
 }
 
-func (m *InterfaceManager) checkConflictingTargets(sdkInfo *sdk.Info) error {
-	allPlugs := m.repo.AllPlugs("mount")
+func (m *InterfaceManager) checkConflictingMounts(w *workshop.Workshop) error {
+	var plugs []*sdk.PlugInfo
+	for _, sk := range w.Sdks {
+		for _, plug := range m.repo.Plugs(w.Project.ProjectId, w.Name, sk.Name) {
+			if plug.Interface == "mount" {
+				plugs = append(plugs, plug)
+			}
+		}
+	}
 
-	for _, plug := range sdkInfo.Plugs {
-		if plug.Interface != "mount" {
+	sdks := map[string]workshop.SdkRecord{}
+	for _, sk := range w.File.Sdks {
+		sdks[sk.Name] = sk
+	}
+
+	for _, plug := range plugs {
+		if sdks[plug.Sdk.Name].Plugs[plug.Name].Bind != nil {
 			continue
 		}
 		candidateTarget, _ := plug.Lookup("workshop-target")
 
-		idx := slices.IndexFunc(allPlugs, func(pi *sdk.PlugInfo) bool {
-			// only plugs from the same workshop will be considered
-			if pi.Sdk.ProjectId != plug.Sdk.ProjectId || pi.Sdk.Workshop != plug.Sdk.Workshop {
+		idx := slices.IndexFunc(plugs, func(pi *sdk.PlugInfo) bool {
+			// exclude oneself
+			if pi.Sdk.Name == plug.Sdk.Name && pi.Name == plug.Name {
 				return false
 			}
-			// exclude oneself
-			if pi.Sdk.Ref() == plug.Sdk.Ref() && pi.Name == plug.Name {
+			// exclude bound plugs
+			if sdks[pi.Sdk.Name].Plugs[pi.Name].Bind != nil {
 				return false
 			}
 			target, _ := pi.Lookup("workshop-target")
 			return target == candidateTarget
 		})
-		if idx != -1 {
+		if idx >= 0 {
 			return fmt.Errorf(`cannot connect %q: target %q is also mounted by %q`,
 				plug.Ref().ShortRef(), candidateTarget,
-				allPlugs[idx].Ref().ShortRef())
+				plugs[idx].Ref().ShortRef())
 		}
 	}
 	return nil

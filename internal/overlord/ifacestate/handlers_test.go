@@ -69,6 +69,9 @@ plugs:
   plug-ssh:
     interface: mock-ssh-agent
     attribute: four
+  bound:
+    interface: mock-network
+    attribute: one
 `
 
 var consumer2 = `name: consumer2
@@ -160,11 +163,14 @@ func (di denyAutoIface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool
 
 func (s *interfaceHandlersSuite) newAutoconnectChange() *state.Change {
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
+	chg.AddTask(t2)
 	return chg
 }
 
@@ -223,8 +229,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug2"}}
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
+	wp.File.Sdks[0].Plugs["bound"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "plug"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -240,21 +246,20 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
-	c.Check(pconns, check.HasLen, 3)
+	c.Check(pconns, check.HasLen, 4)
 	c.Check(err, check.IsNil)
 
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
-	c.Check(ref, check.HasLen, 3)
+	c.Check(ref, check.HasLen, 4)
 	c.Check(err, check.IsNil)
 
 	var conns map[string]interface{}
 	s.state.Get("conns", &conns)
 	c.Check(conns, check.DeepEquals, map[string]interface{}{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
-			"interface":    "mock-network",
-			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot"},
+			"interface":   "mock-network",
+			"auto":        true,
+			"plug-static": map[string]interface{}{"attribute": "one"},
 		},
 		"42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot": map[string]interface{}{
 			"interface":   "mock-network",
@@ -265,6 +270,12 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 			"interface":   "mock-network",
 			"auto":        true,
 			"plug-static": map[string]interface{}{"attribute": "three"},
+		},
+		"42424242/ws/consumer:bound 42424242/ws-producer/producer:slot": map[string]interface{}{
+			"interface":    "mock-network",
+			"auto":         true,
+			"plug-static":  map[string]interface{}{"attribute": "one"},
+			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug 42424242/ws-producer/producer:slot"},
 		},
 	})
 
@@ -282,8 +293,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumerManyPlugs}})
 	c.Check(err, check.IsNil)
-	wp.File.Sdks[0].Plugs = make(map[string]workshop.Plug)
-	wp.File.Sdks[0].Plugs["plug"] = workshop.Plug{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
+	wp.File.Sdks[0].Plugs = make(map[string]workshop.PlugOrBind)
+	wp.File.Sdks[0].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "consumer", Name: "no-such-plug2"}}
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs, s.prj.ProjectId, "ws")), check.IsNil)
 
 	// Execute
@@ -368,15 +379,18 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "conflict-1")
+	t1 := s.state.NewTask("resolve-interfaces", "...")
 	t2 := s.state.NewTask("auto-connect", "...")
-	t2.Set("sdk", "conflict-2")
+	t2.Set("sdk", "conflict-1")
 	t2.WaitFor(t1)
-	setWorkshopProject("ws", s.prj, t1, t2)
+	t3 := s.state.NewTask("auto-connect", "...")
+	t3.Set("sdk", "conflict-2")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2, t3)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t2)
+	chg.AddTask(t3)
 	s.state.Unlock()
 
 	// Execute
@@ -389,6 +403,43 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/opt" is also mounted by.*`)
 }
 
+func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {
+	// Setup
+	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{
+		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget1},
+		{sdk.Setup{Name: "conflict-2", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget2},
+	})
+	c.Assert(err, check.IsNil)
+	wp.File.Sdks[1].Plugs = map[string]workshop.PlugOrBind{}
+	wp.File.Sdks[1].Plugs["plug"] = workshop.PlugOrBind{Bind: &workshop.PlugRef{Sdk: "conflict-1", Name: "plug"}}
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget1, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget2, s.prj.ProjectId, "ws")), check.IsNil)
+
+	s.state.Lock()
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "conflict-1")
+	t2.WaitFor(t1)
+	t3 := s.state.NewTask("auto-connect", "...")
+	t3.Set("sdk", "conflict-2")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2, t3)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+	chg.AddTask(t3)
+	s.state.Unlock()
+
+	// Execute
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Assert(chg.Err(), check.IsNil)
+}
+
 func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
@@ -397,13 +448,17 @@ func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.
 	// Execute
 	s.state.Lock()
 	chg := s.state.NewChange("sample", "...")
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	t2 := s.state.NewTask("error-trigger", "...")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	t3 := s.state.NewTask("error-trigger", "...")
+	t3.WaitFor(t2)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 	chg.AddTask(t2)
+	chg.AddTask(t3)
 	s.state.Unlock()
 
 	s.settle(c)
@@ -439,11 +494,14 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 	chg.Set("remounts", map[string]string{
 		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": "/old/source",
 	})
-	t1 := s.state.NewTask("auto-connect", "...")
-	t1.Set("sdk", "consumer")
-	setWorkshopProject("ws", s.prj, t1)
+	t1 := s.state.NewTask("resolve-interfaces", "...")
+	t2 := s.state.NewTask("auto-connect", "...")
+	t2.Set("sdk", "consumer")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.prj, t1, t2)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
+	chg.AddTask(t2)
 	s.state.Unlock()
 
 	s.settle(c)
@@ -1267,7 +1325,7 @@ func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 
 	conn, err := repo.Connection(conns[0])
 	c.Assert(err, check.IsNil)
-	_, ok := conn.CheckBound()
+	_, ok := conn.Plug.CheckBound()
 	c.Assert(ok, check.Equals, true)
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 4)

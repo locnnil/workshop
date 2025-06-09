@@ -8,11 +8,11 @@ description: |
 
 sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
 plugs:
-  data:
+  one:
     interface: mount
-    workshop-target: /home/workshop/data
-  cache:
+    workshop-target: /mnt/one
+  two:
     interface: mount
-    workshop-target: /cache
+    workshop-target: /opt/two
   ssh-agent:
     interface: ssh-agent
