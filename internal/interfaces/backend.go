@@ -23,7 +23,6 @@ import (
 	"context"
 
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/timings"
 )
 
 // SecurityBackend abstracts interactions between the interface system and the
@@ -40,15 +39,15 @@ type SecurityBackend interface {
 	// Setup creates and loads security artefacts specific to a given sdk.
 	// This method should be called after changing plug, slots, connections
 	// between them.
-	Setup(context context.Context, sdk sdk.Ref, repo *Repository) error
+	Setup(context context.Context, sdkRef sdk.Ref, repo *Repository) error
 
 	// Remove removes and unloads security artefacts of a given sdk.
 	//
 	// This method should be called during the process of removing an sdk.
-	Remove(context context.Context, workshop, sdkName string) error
+	Remove(context context.Context, sdkRef sdk.Ref) error
 
 	// NewSpecification returns a new specification associated with this backend.
-	NewSpecification(user string, pid, sdk string) (Specification, error)
+	NewSpecification(user string, sdk string) (Specification, error)
 }
 
 // SecurityBackendSetupMany interface may be implemented by backends that can optimize their operations
@@ -56,5 +55,5 @@ type SecurityBackend interface {
 type SecurityBackendSetupMany interface {
 	// SetupMany creates and loads apparmor profiles of multiple sdks. It tries to process all sdks and doesn't interrupt processing
 	// on errors of individual sdks.
-	SetupMany(sdks []*sdk.Info, repo *Repository, tm timings.Measurer) []error
+	SetupMany(context context.Context, sdks []*sdk.Info, repo *Repository) []error
 }

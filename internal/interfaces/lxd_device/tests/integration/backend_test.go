@@ -241,7 +241,7 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Check the LXD profile is removed
-	err = b.Remove(f.ctx, "test", "consumer")
+	err = b.Remove(f.ctx, sdk.Ref{ProjectId: f.pid, Workshop: "test", Sdk: "consumer"})
 	c.Assert(err, check.IsNil)
 	_, err = lxdbackend.Profile(f.client, f.pid, "test", "consumer")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrSdkProfileNotFound)

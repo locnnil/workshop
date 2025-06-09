@@ -36,7 +36,7 @@ type TestSecurityBackend struct {
 	// RemoveCalls stores information about all calls to Remove
 	RemoveCalls []string
 	// SetupCallback is an callback that is optionally called in Setup
-	SetupCallback func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error
+	SetupCallback func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error
 	// RemoveCallback is a callback that is optionally called in Remove
 	RemoveCallback func(sdkName string) error
 	lock           sync.Mutex
@@ -46,8 +46,8 @@ type TestSecurityBackend struct {
 
 // TestSetupCall stores details about calls to TestSecurityBackend.Setup
 type TestSetupCall struct {
-	// SdkInfo is a copy of the sdkInfo argument to a particular call to Setup
-	SdkInfo sdk.Ref
+	// SdkInfo is a copy of the sdkRef argument to a particular call to Setup
+	SdkRef sdk.Ref
 }
 
 // Initialize does nothing.
@@ -61,35 +61,35 @@ func (b *TestSecurityBackend) Name() interfaces.SecuritySystem {
 }
 
 // Setup records information about the call and calls the setup callback if one is defined.
-func (b *TestSecurityBackend) Setup(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+func (b *TestSecurityBackend) Setup(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkInfo: sdkInfo})
+	b.SetupCalls = append(b.SetupCalls, TestSetupCall{SdkRef: sdkRef})
 	if b.SetupCallback == nil {
 		return nil
 	}
-	return b.SetupCallback(context, sdkInfo, repo)
+	return b.SetupCallback(context, sdkRef, repo)
 }
 
 // Remove records information about the call and calls the remove callback if one is defined
-func (b *TestSecurityBackend) Remove(context context.Context, workshop, sdkName string) error {
+func (b *TestSecurityBackend) Remove(context context.Context, sdkRef sdk.Ref) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.RemoveCalls = append(b.RemoveCalls, sdkName)
+	b.RemoveCalls = append(b.RemoveCalls, sdkRef.Sdk)
 	if b.RemoveCallback == nil {
 		return nil
 	}
-	return b.RemoveCallback(sdkName)
+	return b.RemoveCallback(sdkRef.Sdk)
 }
 
-func (b *TestSecurityBackend) NewSpecification(user string, pid, sdk string) (interfaces.Specification, error) {
+func (b *TestSecurityBackend) NewSpecification(user string, sdk string) (interfaces.Specification, error) {
 	usr, err := osutil.UserLookup(user)
 	if err != nil {
 		return nil, err
 	}
-	return &Specification{user: usr, pid: pid, sdk: sdk}, nil
+	return &Specification{user: usr, sdk: sdk}, nil
 }
 
 func (b *TestSecurityBackend) SandboxFeatures() []string {

@@ -310,18 +310,18 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 }
 
 // Setup creates mount profile specific to a given sdk.
-func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
-	s, err := repo.SdkSpecification(ctx, b.Name(), sdkInfo)
+func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
+	s, err := repo.SdkSpecification(ctx, b.Name(), sdkRef)
 	if err != nil {
 		return err
 	}
 	spec := s.(*Specification)
 
-	name := lxdbackend.ProfileName(sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
+	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	newp := api.ProfilePut{
 		Devices:     spec.devices,
 		Config:      spec.config,
-		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkInfo.Sdk, sdkInfo.Workshop),
+		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop),
 	}
 
 	conn, err := lxdbackend.ConnectLxd(ctx)
@@ -330,7 +330,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 	defer conn.Disconnect()
 
-	fs, err := workshopFs(conn, sdkInfo.ProjectId, sdkInfo.Workshop)
+	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
 	if err != nil {
 		return err
 	}
@@ -349,21 +349,21 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 	}
 
 	if reload {
-		err = reloadMounts(conn, sdkInfo.ProjectId, sdkInfo.Workshop)
+		err = reloadMounts(conn, sdkRef.ProjectId, sdkRef.Workshop)
 		if err != nil {
 			return err
 		}
 	}
 
 	if spec.Profile.Agent != nil {
-		err = installSshAgent(fs, *spec.Profile.Agent, sdkInfo.Workshop, sdkInfo.Sdk)
+		err = installSshAgent(fs, *spec.Profile.Agent, sdkRef.Workshop, sdkRef.Sdk)
 		if err != nil {
 			return err
 		}
 	}
 
 	if spec.Profile.Desktop != nil {
-		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment, sdkInfo.Workshop)
+		err = installDesktop(fs, *spec.Profile.Desktop, spec.User, spec.Environment, sdkRef.Workshop)
 		if err != nil {
 			return err
 		}
@@ -371,20 +371,20 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 
 	// Either create or update an existing LXD profile for the SDK so that later
 	// it can be assigned to the required workshop.
-	prevp, err := lxdbackend.Profile(conn, sdkInfo.ProjectId, sdkInfo.Workshop, sdkInfo.Sdk)
+	prevp, err := lxdbackend.Profile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	if err == nil {
 		// Find the difference between a set of old and new devices to detect if any
 		// clean up is required when a new profile will be assigned (updated).
 		for key, dev := range prevp.Mounts {
 			if _, exist := spec.Profile.Mounts[key]; !exist {
-				if err = removeMount(conn, fs, sdkInfo.ProjectId, sdkInfo.Workshop, dev); err != nil {
+				if err = removeMount(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, dev); err != nil {
 					return err
 				}
 			}
 		}
 
 		if prevp.Agent != nil && !prevp.Agent.Equal(spec.Profile.Agent) {
-			if err = removeSshAgent(fs, *prevp.Agent, sdkInfo.Sdk); err != nil {
+			if err = removeSshAgent(fs, *prevp.Agent, sdkRef.Sdk); err != nil {
 				return err
 			}
 		}
@@ -403,7 +403,7 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 			return err
 		}
 
-		iname := lxdbackend.InstanceName(sdkInfo.Workshop, sdkInfo.ProjectId)
+		iname := lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId)
 		inst, etag, err := conn.GetInstance(iname)
 		if err != nil {
 			return err
@@ -425,42 +425,37 @@ func (b *Backend) Setup(ctx context.Context, sdkInfo sdk.Ref, repo *interfaces.R
 // Remove removes profile of a given sdk.
 //
 // This method should be called after removing a sdk.
-func (b *Backend) Remove(ctx context.Context, w, profile string) error {
+func (b *Backend) Remove(ctx context.Context, sdkRef sdk.Ref) error {
 	conn, err := lxdbackend.ConnectLxd(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	fs, err := workshopFs(conn, projectId, w)
+	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	inst, etag, err := conn.GetInstance(lxdbackend.InstanceName(w, projectId))
+	inst, etag, err := conn.GetInstance(lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId))
 	if err != nil {
 		return err
 	}
 
-	prof, err := lxdbackend.Profile(conn, projectId, w, profile)
+	prof, err := lxdbackend.Profile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	if err != nil {
 		return err
 	}
 
 	for _, dev := range prof.Mounts {
-		if err = removeMount(conn, fs, projectId, w, dev); err != nil {
+		if err = removeMount(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, dev); err != nil {
 			return err
 		}
 	}
 
 	if prof.Agent != nil {
-		if err = removeSshAgent(fs, *prof.Agent, profile); err != nil {
+		if err = removeSshAgent(fs, *prof.Agent, sdkRef.Sdk); err != nil {
 			return err
 		}
 	}
@@ -472,10 +467,10 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 	}
 
 	// 1. Unassign the profile from the workshop
-	lxdname := lxdbackend.ProfileName(projectId, w, profile)
+	lxdname := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	if idx := slices.Index(inst.Profiles, lxdname); idx != -1 {
 		inst.Profiles = slices.Delete(inst.Profiles, idx, idx+1)
-		op, err := conn.UpdateInstance(lxdbackend.InstanceName(w, projectId), inst.Writable(), etag)
+		op, err := conn.UpdateInstance(lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId), inst.Writable(), etag)
 		if err != nil {
 			return err
 		}
@@ -488,7 +483,7 @@ func (b *Backend) Remove(ctx context.Context, w, profile string) error {
 }
 
 // NewSpecification returns a new mount specification.
-func (b *Backend) NewSpecification(user string, pid, sdk string) (interfaces.Specification, error) {
+func (b *Backend) NewSpecification(user string, sdk string) (interfaces.Specification, error) {
 	return NewSpecification(user, sdk)
 }
 

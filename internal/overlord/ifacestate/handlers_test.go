@@ -333,7 +333,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	// One of the SDKs setup fails, we need to make sure that any partial
 	// progress will be aborted (i.e. previously created profiles for other SDKs
 	// will be removed).
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		if n > 0 {
 			return errors.New("cannot finish backend setup")
 		}
@@ -659,8 +659,8 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 
 	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
-	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Sdk, check.Equals, "consumer")
-	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Workshop, check.Equals, "ws-consumer")
+	c.Assert(s.secBackend.SetupCalls[0].SdkRef.Sdk, check.Equals, "consumer")
+	c.Assert(s.secBackend.SetupCalls[0].SdkRef.Workshop, check.Equals, "ws-consumer")
 
 	// ensure the global conns state was updated correctly
 	conns, err := ifacestate.GetConns(s.state)
@@ -789,7 +789,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	s.launchRemountWorkshop(c, oldSource)
 	change := s.newRemountChange(newSource)
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return errors.New("cannot setup LXD profile")
 	}
 	defer func() { s.secBackend.SetupCallback = nil }()
@@ -1479,7 +1479,7 @@ func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *ch
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return errors.New("cannot finish backend setup")
 	}
 	defer func() { s.secBackend.SetupCallback = nil }()
@@ -1517,7 +1517,7 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	tsk.Set("delayed-setup-profile", false)
 	s.state.Unlock()
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 		c.Check(err, check.IsNil)
 		conn, err := repo.Connection(conns[0])
@@ -1847,7 +1847,7 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf("setup failed")
 	}
 
@@ -1922,7 +1922,7 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf("setup failed")
 	}
 

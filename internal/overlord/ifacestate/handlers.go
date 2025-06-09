@@ -855,10 +855,8 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 				return err
 			}
 
-			ref := ref
-			backend := backend
 			rev.Add(func() {
-				if err1 := backend.Remove(ctx, ref.Workshop, ref.Sdk); err1 != nil {
+				if err1 := backend.Remove(ctx, ref); err1 != nil {
 					logger.Noticef(`On doSetupProfiles: Failed to clean up %q SDK backend setup`, ref.ShortRef())
 				}
 			})
@@ -901,7 +899,7 @@ func (m *InterfaceManager) undoSetupProfiles(task *state.Task, tomb *tomb.Tomb) 
 					return err
 				}
 			} else {
-				if err := backend.Remove(ctx, w, sdkRef.Sdk); err != nil {
+				if err := backend.Remove(ctx, sdkRef); err != nil {
 					return err
 				}
 			}
@@ -935,7 +933,8 @@ func (m *InterfaceManager) doRemoveProfiles(task *state.Task, tomb *tomb.Tomb) e
 	for _, backend := range m.repo.Backends() {
 		// If there are not plugs or slots declared by the SDK the profile does
 		// not neccessarily exist for the SDK.
-		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+		ref := sdk.Ref{ProjectId: p.ProjectId, Workshop: w, Sdk: s}
+		if err := backend.Remove(ctx, ref); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
 	}

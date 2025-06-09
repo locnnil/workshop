@@ -1107,7 +1107,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	s.createWFile(c, "manysdks", manysdks)
 	defer s.store.SetDownloadCallback(storeDownload)()
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf(`cannot assign profile to "manysdks"`)
 	}
 
@@ -3352,7 +3352,7 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		var err error
 		errOnce.Do(func() { err = errors.New("setup failed") })
 		return err
@@ -3397,7 +3397,7 @@ func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		var err error
 		errOnce.Do(func() { err = errors.New("setup failed") })
 		return err
@@ -3478,7 +3478,7 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		var err error
 		errOnce.Do(func() { err = errors.New("setup failed") })
 		return err
