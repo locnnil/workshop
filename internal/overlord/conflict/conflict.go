@@ -111,7 +111,7 @@ func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
 // a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
 // Ignore discard-background refresh changes.
-func FindRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
+func findRunningChange(st *state.State, projectId, workshop string, ignoreKinds []string) (*state.Change, error) {
 	for _, task := range st.Tasks() {
 		chg := task.Change()
 		if chg.IsReady() || slices.Contains(ignoreKinds, chg.Kind()) {
@@ -141,9 +141,9 @@ func FindRunningChange(st *state.State, projectId, workshop string, ignoreKinds 
 // Iterates over the list of running tasks and returns a ChangeConflictError if
 // there is a change running for the provided projectID / workshop pair.
 // Ignores certain kinds of changes based on the ignoreKinds argument.
-// Ignore discard-background refresh changes.
+// Ignore discarded changes.
 func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKinds []string) error {
-	chg, err := FindRunningChange(st, projectId, workshop, ignoreKinds)
+	chg, err := findRunningChange(st, projectId, workshop, ignoreKinds)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKind
 }
 
 func BackgroundDiscardWaitingRefresh(st *state.State, workshop, projectId string) error {
-	chg, err := FindRunningChange(st, projectId, workshop, []string{"exec"})
+	chg, err := findRunningChange(st, projectId, workshop, []string{"exec"})
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func BackgroundDiscardWaitingRefresh(st *state.State, workshop, projectId string
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
 			tsk.SetStatus(state.DoStatus)
-			tsk.Logf("Aborting %q for workshop %q...", chg.Kind(), workshop)
+			tsk.Logf("Discarding %q for workshop %q...", chg.Kind(), workshop)
 		}
 	}
 
@@ -197,7 +197,7 @@ func ResumeAfterWait(st *state.State,
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
 
-	chg, err := FindRunningChange(st, projectId, workshop, []string{"exec"})
+	chg, err := findRunningChange(st, projectId, workshop, []string{"exec"})
 	if err != nil {
 		return nil, err
 	}

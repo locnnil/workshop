@@ -960,7 +960,7 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 		}
 		workshops = append(workshops, wp)
 		if err = conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
-			return nil, fmt.Errorf("failed to find waiting refresh change of %q before remove: %w", name, err)
+			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 
 		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}

@@ -26,16 +26,16 @@ func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	st.Unlock()
 
 	runner.AddHandler("download-base", OnDo(manager.doDownloadBase), nil)
-	runner.AddHandler("create-workshop", OnDo(manager.doConstructWorkshop), OnUnDo(manager.doRemoveWorkshop))
-	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUnDo(manager.doStop))
-	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUnDo(manager.doStart))
+	runner.AddHandler("create-workshop", OnDo(manager.doConstructWorkshop), OnUndo(manager.doRemoveWorkshop))
+	runner.AddHandler("start-workshop", OnDo(manager.doStart), OnUndo(manager.doStop))
+	runner.AddHandler("stop-workshop", OnDo(manager.doStop), OnUndo(manager.doStart))
 	runner.AddHandler("remove-workshop", OnDo(manager.doRemoveWorkshop), nil)
-	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUnDo(manager.undoMountProject))
-	runner.AddHandler("create-workshop-storage", OnDo(manager.doCreateWorkshopStorage), OnUnDo(manager.doRemoveWorkshopStorage))
+	runner.AddHandler("mount-project", OnDo(manager.doMountProject), OnUndo(manager.undoMountProject))
+	runner.AddHandler("create-workshop-storage", OnDo(manager.doCreateWorkshopStorage), OnUndo(manager.doRemoveWorkshopStorage))
 	runner.AddHandler("remove-workshop-storage", OnDo(manager.doRemoveWorkshopStorage), nil)
 	runner.AddHandler("remove-workshop-stash", OnDo(manager.doRemoveWorkshopStash), nil)
-	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), OnUnDo(manager.undoStashWorkshop))
-	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUnDo(manager.doRemoveStateStorage))
+	runner.AddHandler("stash-workshop", OnDo(manager.doStashWorkshop), OnUndo(manager.undoStashWorkshop))
+	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
 	return manager

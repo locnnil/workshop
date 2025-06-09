@@ -311,8 +311,7 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	err = m.backend.RemoveWorkshopStash(ctx, w)
-	if err != nil {
+	if err := m.backend.RemoveWorkshopStash(ctx, w); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
 		}

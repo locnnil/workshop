@@ -12,8 +12,8 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-// OnUnDo helps to skip the undo handler if the change is an abort-backgroud refresh
-func OnUnDo(handler state.HandlerFunc) state.HandlerFunc {
+// OnUndo helps to skip the undo handler if the change is an abort-backgroud refresh
+func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		st := task.State()
 		st.Lock()
