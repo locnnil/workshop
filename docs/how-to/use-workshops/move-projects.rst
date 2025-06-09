@@ -1,4 +1,4 @@
-.. _how_moving_projects:
+.. _how_move_projects:
 
 How to move projects around
 ===========================

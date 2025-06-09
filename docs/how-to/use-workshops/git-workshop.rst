@@ -101,7 +101,7 @@ They stay there even if you remove the workshop:
 
 From here, you can do whatever you like with your repo,
 because |ws_markup| handles
-:ref:`moving projects around <how_moving_projects>` quite well.
+:ref:`moving projects around <how_move_projects>` quite well.
 
 With your dependencies accounted for,
 restoring your build system after cloning the repo elsewhere
@@ -207,7 +207,7 @@ Explanation:
 
 How-to guides:
 
-- :ref:`how_moving_projects`
+- :ref:`how_move_projects`
 
 
 Reference:

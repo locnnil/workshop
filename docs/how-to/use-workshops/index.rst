@@ -9,11 +9,11 @@ of running and fixing workshops:
 .. toctree::
    :maxdepth: 1
 
-   Add scripts to workshops <scripts>
+   Add scripts to workshops <add-scripts>
    Debug issues in workshops <debug-workshop-issues>
    Fix the installation <troubleshoot>
    Forward ports <forward-ports>
-   Move projects around <moving-projects>
+   Move projects around <move-projects>
    Purge workshops <purge>
    Sketch SDKs to customise workshops <sketch-sdk>
 

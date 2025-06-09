@@ -92,7 +92,7 @@ Explanation:
 
 How-to guides:
 
-- :ref:`how_moving_projects`
+- :ref:`how_move_projects`
 
 
 Reference:
