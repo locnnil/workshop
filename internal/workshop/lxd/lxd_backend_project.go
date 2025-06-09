@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"regexp"
+	"slices"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -25,41 +27,72 @@ func lxdProjectConfig(username string) map[string]string {
 	}
 }
 
-func LxdProjectName(user string) string {
-	return "workshop." + user
-}
+// Checks if a user name can be used in a LXD project name.
+var isValidProjectSuffix = regexp.MustCompile(`^[a-zA-Z][-a-zA-Z0-9._]*$`).MatchString
 
-func LxdStashProjectName(user string) string {
-	return "workshop-stash." + user
-}
-
-// Initialise the Workshop project namespace.
-func InitLxdProject(conn lxd.InstanceServer, username string) error {
-	if username == "" {
-		return fmt.Errorf("cannot init LXD project: username is empty")
+func projectName(prefix, username string) (string, error) {
+	if isValidProjectSuffix(username) {
+		return prefix + username, nil
 	}
-	if err := createOrLoadLxdProject(conn, username, LxdProjectName(username)); err != nil {
+
+	u, err := osutil.UserLookup(username)
+	if err != nil {
+		return "", err
+	}
+	return prefix + u.Uid, nil
+}
+
+func lxdProjectName(user string) (string, error) {
+	return projectName("workshop.", user)
+}
+
+func lxdStashProjectName(user string) (string, error) {
+	return projectName("workshop-stash.", user)
+}
+
+// Create regular and stash LXD projects for the user if they don't exist.
+func initLxdProject(conn lxd.InstanceServer, project, username string) error {
+	names, err := conn.GetProjectNames()
+	if err != nil {
 		return err
 	}
 
-	if err := createOrLoadLxdProject(conn, username, LxdStashProjectName(username)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func createOrLoadLxdProject(conn lxd.InstanceServer, username, project string) error {
-	_, _, err := conn.GetProject(project)
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return conn.CreateProject(api.ProjectsPost{
+	if !slices.Contains(names, project) {
+		err = conn.CreateProject(api.ProjectsPost{
 			ProjectPut: api.ProjectPut{
 				Config:      lxdProjectConfig(username),
 				Description: fmt.Sprintf(`Workshop project for "%s" user`, username),
 			},
 			Name: project,
 		})
+		if err != nil {
+			return err
+		}
 	}
-	return err
+
+	rev := revert.New()
+	defer rev.Fail()
+	rev.Add(func() { _ = conn.DeleteProject(project) })
+
+	stash, err := lxdStashProjectName(username)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(names, stash) {
+		err = conn.CreateProject(api.ProjectsPost{
+			ProjectPut: api.ProjectPut{
+				Config:      lxdProjectConfig(username),
+				Description: fmt.Sprintf(`Workshop stash project for "%s" user`, username),
+			},
+			Name: stash,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	rev.Success()
+	return nil
 }
 
 func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*workshop.Project, bool, error) {
@@ -69,12 +102,12 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 	}
 	defer client.Disconnect()
 
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return nil, false, fmt.Errorf("context key %s not found", workshop.ContextUser)
+	info, err := client.GetConnectionInfo()
+	if err != nil {
+		return nil, false, err
 	}
 
-	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
+	lxdPrj, etag, err := client.GetProject(info.Project)
 	if err != nil {
 		return nil, false, err
 	}
@@ -112,7 +145,7 @@ func (s *Backend) CreateOrLoadProject(ctx context.Context, path string) (*worksh
 
 func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, error) {
 	if user, ok := ctx.Value(workshop.ContextUser).(string); ok {
-		projects, err := s.userProjects(ctx, user)
+		projects, err := s.userProjects(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +157,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 	// and reload every interface connection for every SDK of every workshop.
 	client, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
 	if err != nil {
-		return nil, ErrorWithInstallLXDPrompt(err)
+		return nil, ErrorLxdBackend(err)
 	}
 	// list all projects for all users if the user is not provided
 	lxdProjects, err := client.GetProjects()
@@ -145,7 +178,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 		}
 
 		prjctx := context.WithValue(ctx, workshop.ContextUser, username)
-		projects, err := s.userProjects(prjctx, username)
+		projects, err := s.userProjects(prjctx)
 		if err != nil {
 			return nil, err
 		}
@@ -155,14 +188,19 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 	return allProjects, nil
 }
 
-func (s *Backend) userProjects(ctx context.Context, user string) ([]workshop.Project, error) {
+func (s *Backend) userProjects(ctx context.Context) ([]workshop.Project, error) {
 	client, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Disconnect()
 
-	lxdPrj, etag, err := client.GetProject(LxdProjectName(user))
+	info, err := client.GetConnectionInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	lxdPrj, etag, err := client.GetProject(info.Project)
 	if err != nil {
 		return nil, err
 	}
