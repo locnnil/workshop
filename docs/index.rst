@@ -12,8 +12,8 @@
    Home <self>
    tutorial/index
    how-to/index
-   explanation/index
    reference/index
+   explanation/index
    Contribution <contributing>
    Release notes <release-notes>
 
@@ -104,6 +104,8 @@ In this documentation
   :ref:`Troubleshoot installation <how_troubleshoot>`
 
 ----
+
+.. _project_community:
 
 Project and community
 ---------------------

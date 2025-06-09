@@ -31,55 +31,44 @@ using its
 `REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to craft the SDKs.
 
-Check whether it's configured:
+Check whether it's properly configured:
 
 .. code-block:: console
 
-   $ lxc info
+   $ lxc info | grep 'server_version:'
+
+     server_version: "6.3"
 
 
-If not, `install <https://documentation.ubuntu.com/lxd/latest/installing/>`_
-and
-`initialise <https://documentation.ubuntu.com/lxd/latest/howto/initialize/>`_
-LXD.
+If the command displays an older version
+or returns an error indicating LXD is missing,
+install a recent LXD version with :program:`snap`.
+To install it from scratch:
 
-.. tabs::
-   .. group-tab:: Using :program:`snap`
+.. code-block:: console
 
-      It's available as a snap:
-
-      .. code-block:: console
-
-         $ sudo snap install lxd
-         $ sudo lxd init --auto
+   $ sudo snap install lxd --channel=6/stable
 
 
-   .. group-tab:: Other ways
+To refresh an existing installation:
 
-      See the available installation options in
-      `LXD documentation
-      <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
+.. code-block:: console
+
+   $ sudo snap refresh lxd --channel=6/stable
 
 
-Next, ensure the
-`LXD daemon
-<https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
-is enabled and running:
+.. note::
 
-.. tabs::
-   .. group-tab:: Using :program:`snap`
-
-      .. code-block:: console
-
-         $ sudo snap start --enable lxd.daemon
-         $ snap services lxd.daemon
-
-   .. group-tab:: Other ways
-
-      Refer to
-      `LXD documentation
-      <https://documentation.ubuntu.com/lxd/latest/installing/>`_
-      and your distribution's manuals for guidance.
+   For other ways to install LXD,
+   see the available installation options in
+   `LXD documentation
+   <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
+   Also, you need to ensure the
+   `LXD daemon
+   <https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
+   is enabled and running.
+   Again, refer to LXD documentation
+   and your distribution's manuals for guidance.
 
 
 Install |sdk_markup|

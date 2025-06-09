@@ -302,6 +302,11 @@ hence the need to browse the respective sketches.
 See also
 --------
 
+Explanation:
+
+- :ref:`exp_dockerfile_vs_sdk`
+
+
 Reference:
 
 - :ref:`ref_sdk_definition`
