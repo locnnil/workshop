@@ -238,7 +238,14 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	return conn.DeleteStoragePoolVolume(storagePool, "custom", name)
+	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {

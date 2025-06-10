@@ -91,7 +91,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
 		}
 		if err := conflict.CheckChangeConflict(w.state, projectId, name, nil); err != nil {
-			return nil, fmt.Errorf("cannot launch %q: other changes in progress", name)
+			return nil, fmt.Errorf("cannot launch %q, other changes in progress: %w", name, err)
 		}
 
 		localSdks, err := local.resolveSdks(name, req.file, nil)
@@ -961,6 +961,9 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 		workshops = append(workshops, wp)
+		if err = conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
+			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
 
 		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
 		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
@@ -1012,6 +1015,12 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) (*s
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	addTaskSet(state.NewTaskSet(remove))
+
+	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
+	addTaskSet(state.NewTaskSet(removeStateStorage))
+
+	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", w.Name))
+	addTaskSet(state.NewTaskSet(removeStash))
 
 	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", w.Name))
 	addTaskSet(state.NewTaskSet(removeDirs))
