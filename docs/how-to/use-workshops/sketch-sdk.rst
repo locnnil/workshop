@@ -152,55 +152,6 @@ For more complex needs, you can refine it iteratively.
    :samp:`sketch-final-final`, and so on.
 
 
-Add scripts
------------
-
-You can make use of the sketch SDK the same way you would use a regular SDK.
-For example, you can add scripts that use its features inside your workshop.
-While these scripts are technically not a part of the sketch SDK,
-they can be executed with :command:`workshop run`.
-
-Edit :file:`workshop.yaml` to include the highlighted lines:
-
-.. code-block:: yaml
-   :caption: workshop.yaml
-   :emphasize-lines: 7-11
-
-   name: dev
-   base: ubuntu@22.04
-   sdks:
-     - name: go
-       channel: jammy/stable
-   
-   scripts:
-     lint: |
-       golangci-lint run --out-format=colored-line-number -c .golangci.yaml
-     shellcheck: |
-       git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
-
-
-Save and exit. Unlike changes in SDK layout or base,
-script updates do not require :command:`workshop refresh`.
-
-Now, instead of typing commands manually and risking typos, you can run:
-
-.. @artefact workshop run
-
-.. code-block:: console
-
-   $ workshop run lint
-
-     main.go:1:
-     ./main.go:5:2: "os" imported and not used (typecheck)
-     package main
-
-   $ workshop run shellcheck
-   
-     In 1.sh line 10:
-     cat /etc/passwd | grep root
-         ^---------^ SC2002 (style): Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead.
-
-
 Stash and restore
 -----------------
 
@@ -312,6 +263,5 @@ Reference:
 - :ref:`ref_sdk_definition`
 - :ref:`ref_workshop_info`
 - :ref:`ref_workshop_run`
-- :ref:`ref_workshop_scripts`
 - :ref:`ref_workshop_sketch-sdk`
 - :ref:`ref_workshop_sketches`

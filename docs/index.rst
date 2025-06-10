@@ -76,7 +76,7 @@ In this documentation
 
 
 - **Projects**: :ref:`Concepts <exp_projects>` |
-  :ref:`Move projects <how_moving_projects>` |
+  :ref:`Move projects <how_move_projects>` |
   :ref:`Update projects <tut_project_updates>`
 
 - **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |

@@ -20,10 +20,11 @@ moving projects within the file system or using |ws_markup| with Git:
 
    Use workshops <use-workshops/index>
 
+- :doc:`Add scripts to workshops <use-workshops/add-scripts>`
 - :doc:`Debug issues in workshops <use-workshops/debug-workshop-issues>`
 - :doc:`Fix the installation <use-workshops/troubleshoot>`
 - :doc:`Forward ports <use-workshops/forward-ports>`
-- :doc:`Move projects around <use-workshops/moving-projects>`
+- :doc:`Move projects around <use-workshops/move-projects>`
 - :doc:`Purge workshops <use-workshops/purge>`
 - :doc:`Sketch SDKs to customise workshops <use-workshops/sketch-sdk>`
 - :doc:`Use workshops with Git <use-workshops/git-workshop>`
