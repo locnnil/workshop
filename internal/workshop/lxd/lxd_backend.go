@@ -360,13 +360,13 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		cleanupCtxTimeout, cancel := context.WithTimeout(cleanupCtx, 5*time.Second)
 		defer cancel()
 
-		if e := s.AddWorkshopConfig(cleanupCtxTimeout, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); e != nil {
+		if e := s.addWorkshopConfig(conn, cleanupCtxTimeout, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); e != nil {
 			logger.Noticef("On StartWorkshop: cannot reset %q workshop autostart config on cleanup: %v", name, e)
 		}
 
 		// Stop workshop's timeout is handled by LXD API, so no need to have
 		// a context with a timeout.
-		if e := s.StopWorkshop(cleanupCtx, name, true); e != nil {
+		if e := s.stopWorkshop(conn, cleanupCtx, name, true); e != nil {
 			logger.Noticef("On StartWorkshop: cannot stop %q workshop on cleanup: %v", name, e)
 		}
 	})
