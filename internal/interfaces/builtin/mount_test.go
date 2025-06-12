@@ -344,7 +344,14 @@ slots:
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/id/42424242/ws/mount/consumer/mount")
-	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
+	expectedMnt := workshop.Mount{
+		Name:      plug.Name,
+		What:      sourceDir,
+		Where:     "/project/training",
+		MakeWhat:  true,
+		MakeWhere: true,
+		Type:      workshop.HostWorkshop,
+	}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 
@@ -375,7 +382,14 @@ slots:
 
 	// Validate the mount specification.
 	sourceDir := filepath.Join(s.env["XDG_DATA_HOME"], "/workshop/id/42424242/ws/mount/consumer/mount")
-	expectedMnt := workshop.Mount{Name: plug.Name, What: sourceDir, Where: "/project/training", Type: workshop.HostWorkshop}
+	expectedMnt := workshop.Mount{
+		Name:      plug.Name,
+		What:      sourceDir,
+		Where:     "/project/training",
+		MakeWhat:  true,
+		MakeWhere: true,
+		Type:      workshop.HostWorkshop,
+	}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 

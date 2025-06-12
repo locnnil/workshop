@@ -86,8 +86,14 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		s.devices[name] = map[string]string{"type": "disk", "source": dev.What,
-			"path": dev.Where, "readonly": strconv.FormatBool(dev.ReadOnly)}
+		s.devices[name] = map[string]string{
+			"type":             "disk",
+			"source":           dev.What,
+			"path":             dev.Where,
+			"user.make-source": strconv.FormatBool(dev.MakeWhat),
+			"user.make-path":   strconv.FormatBool(dev.MakeWhere),
+			"readonly":         strconv.FormatBool(dev.ReadOnly),
+		}
 	}
 
 	return nil

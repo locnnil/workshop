@@ -74,10 +74,11 @@ func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 func defaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 	cwd, _ := os.Getwd()
 	mounts := []workshop.Mount{{
-		Name:  workshop.ConfigProjectPathDevice,
-		What:  cwd,
-		Where: workshop.WorkshopProjectPath,
-		Type:  workshop.HostWorkshop,
+		Name:      workshop.ConfigProjectPathDevice,
+		What:      cwd,
+		Where:     workshop.WorkshopProjectPath,
+		MakeWhere: true,
+		Type:      workshop.HostWorkshop,
 	}}
 	return mounts, nil
 }
@@ -207,11 +208,17 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
 	c.Check(prof.Mounts["one"].What, check.Equals, "/usr/local")
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
+	c.Check(prof.Mounts["one"].MakeWhat, check.Equals, false)
+	c.Check(prof.Mounts["one"].MakeWhere, check.Equals, false)
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.WorkshopWorkshop)
+	c.Check(prof.Mounts["one"].ReadOnly, check.Equals, false)
 	c.Check(prof.Mounts["two"].Name, check.Equals, "two")
 	c.Check(prof.Mounts["two"].What, check.Equals, "/home")
 	c.Check(prof.Mounts["two"].Where, check.Equals, "/mnt")
+	c.Check(prof.Mounts["two"].MakeWhat, check.Equals, false)
+	c.Check(prof.Mounts["two"].MakeWhere, check.Equals, false)
 	c.Check(prof.Mounts["two"].Type, check.Equals, workshop.WorkshopWorkshop)
+	c.Check(prof.Mounts["two"].ReadOnly, check.Equals, false)
 
 	// Check /etc/fstab and mount
 	fstab := f.readWorkshopFile(c, "/etc/fstab")
@@ -295,7 +302,10 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
 	c.Check(prof.Mounts["one"].What, check.Equals, filepath.Join(f.usr.HomeDir, ".local/share/workshop/id/42424242/test/mount/consumer/one"))
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
+	c.Check(prof.Mounts["one"].MakeWhat, check.Equals, true)
+	c.Check(prof.Mounts["one"].MakeWhere, check.Equals, true)
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.HostWorkshop)
+	c.Check(prof.Mounts["one"].ReadOnly, check.Equals, false)
 }
 
 func (f *backendDeviceSuite) TestSetupUpdateProfile(c *check.C) {

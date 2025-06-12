@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -57,7 +58,27 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 
 		switch dev["type"] {
 		case "disk":
-			pr.Mounts[name] = workshop.Mount{Name: name, What: dev["source"], Where: dev["path"], Type: workshop.HostWorkshop}
+			makeWhat, err := boolFromString(dev["user.make-source"])
+			if err != nil {
+				return pr, err
+			}
+			makeWhere, err := boolFromString(dev["user.make-path"])
+			if err != nil {
+				return pr, err
+			}
+			readOnly, err := boolFromString(dev["readonly"])
+			if err != nil {
+				return pr, err
+			}
+			pr.Mounts[name] = workshop.Mount{
+				Name:      name,
+				What:      dev["source"],
+				Where:     dev["path"],
+				MakeWhat:  makeWhat,
+				MakeWhere: makeWhere,
+				Type:      workshop.HostWorkshop,
+				ReadOnly:  readOnly,
+			}
 		case "gpu":
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
@@ -132,6 +153,13 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 		}
 	}
 	return pr, nil
+}
+
+func boolFromString(s string) (bool, error) {
+	if s == "" {
+		return false, nil
+	}
+	return strconv.ParseBool(s)
 }
 
 // Constructs a ProxyEntry from an LXD device entry

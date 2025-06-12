@@ -116,7 +116,7 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 		}
 		if conn.Interface() == "mount" {
 			attrs := conn.Slot.DynamicAttrs()
-			if attrs != nil && attrs["host-source"] != nil {
+			if attrs["host-source"] != nil {
 				candidates[cref.ID()] = attrs["host-source"].(string)
 			}
 		}
@@ -995,11 +995,28 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 		return err
 	}
 
+	if connection.Slot.Sdk().Type != sdk.System {
+		return fmt.Errorf("source directory of connected slot %q is inside the workshop", connRef.SlotRef.ShortRef())
+	}
+
 	var oldSource string
-	if err := connection.Slot.Attr("host-source", &oldSource); err != nil {
+	var attrError *sdk.AttributeNotFoundError
+	if err := connection.Slot.Attr("host-source", &oldSource); errors.As(err, &attrError) {
+		user, ok := ctx.Value(workshop.ContextUser).(string)
+		if !ok {
+			return fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
+		}
+		usr, env, err := osutil.UserAndEnv(user)
+		if err != nil {
+			return err
+		}
+		userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+		oldSource = workshop.SdkMountHostSource(userDataDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
+	} else if err != nil {
 		return err
 	}
 
+	oldDynamicAttrs := maps.Clone(connection.Slot.DynamicAttrs())
 	if err := connection.Slot.SetAttr("host-source", source); err != nil {
 		return err
 	}
@@ -1013,16 +1030,35 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	}
 
 	revert.Add(func() {
-		_ = connection.Slot.SetAttr("host-source", oldSource)
 		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(),
-			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
+			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), oldDynamicAttrs, nil); err != nil {
 			logger.Debugf("On doRemount: cannot reconnect %q plug on a failed remount", plug.ShortRef())
 		}
 	})
 
-	_, err = os.Stat(oldSource)
-	if osutil.IsDirNotExist(err) {
-		task.State().Warnf("cannot find source %q for %q; will attempt to recreate", oldSource, plug.ShortRef())
+	if _, err := os.Stat(oldSource); osutil.IsDirNotExist(err) {
+		if _, err := os.Stat(source); osutil.IsDirNotExist(err) {
+			username, ok := ctx.Value(workshop.ContextUser).(string)
+			if !ok {
+				return fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
+			}
+			user, err := osutil.UserLookup(username)
+			if err != nil {
+				return err
+			}
+			uid, gid, err := osutil.UidGid(user)
+			if err != nil {
+				return err
+			}
+			if err = osutil.MkdirAllChown(source, 0755, uid, gid); err != nil {
+				return err
+			}
+			task.State().Warnf("cannot find source %q for %q; created directory %q", oldSource, plug.ShortRef(), source)
+		} else if err != nil {
+			return err
+		} else {
+			task.State().Warnf("cannot find source %q for %q; using existing directory %q", oldSource, plug.ShortRef(), source)
+		}
 	} else if err != nil {
 		return err
 	} else {

@@ -45,11 +45,19 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 
 func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (reload bool, err error) {
 	if dev.Type == workshop.WorkshopWorkshop {
-		if _, err = fs.Stat(dev.What); err != nil {
+		if _, err := fs.Stat(dev.What); osutil.IsDirNotExist(err) && dev.MakeWhat {
+			if err := fs.MkdirAll(dev.What, os.ModePerm); err != nil {
+				return false, err
+			}
+		} else if err != nil {
 			return false, fmt.Errorf(`stat workshop-source %q: %v`, dev.What, err)
 		}
 
-		if _, err = fs.Stat(dev.Where); err != nil {
+		if _, err := fs.Stat(dev.Where); osutil.IsDirNotExist(err) && dev.MakeWhere {
+			if err := fs.MkdirAll(dev.Where, os.ModePerm); err != nil {
+				return false, err
+			}
+		} else if err != nil {
 			return false, fmt.Errorf(`stat workshop-target %q: %v`, dev.Where, err)
 		}
 
@@ -79,14 +87,12 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 	}
 
 	if dev.Type == workshop.HostWorkshop {
-		// We cannot infer what the user intended to mount if the source doesn't
-		// exist. In this case - inline with the above - we create a directory.
 		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(dev.What)
 		if err != nil {
 			return false, err
 		}
 
-		if !sourceExists {
+		if dev.MakeWhat && !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
 				return false, err
@@ -97,7 +103,7 @@ func installMount(user *user.User, fs workshop.WorkshopFs, dev workshop.Mount) (
 			}
 		}
 
-		if !sourceIsDir {
+		if !dev.MakeWhere || !sourceIsDir {
 			return false, nil
 		}
 

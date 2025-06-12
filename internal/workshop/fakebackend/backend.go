@@ -258,8 +258,10 @@ func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string,
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
-		return err
+	if mount.MakeWhere {
+		if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
+			return err
+		}
 	}
 
 	if err := os.Symlink(mount.What, mnt); err != nil {

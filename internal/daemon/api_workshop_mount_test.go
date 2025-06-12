@@ -56,16 +56,7 @@ func (s *apiSuite) TestWorkshopRemountSuccess(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	repo := s.d.overlord.InterfaceManager().Repository()
-
 	s.launchWorkshop(c, "manysdks", manysdks)
-	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
-	c.Assert(err, check.IsNil)
-	conn, err := repo.Connection(ref[0])
-	c.Assert(err, check.IsNil)
-	// The mock iface backend does not set this attribute as the actual one
-	// would.
-	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(fmt.Sprintf(`{"action":"remount","plug":{"sdk":"test-sdk","plug":"data"},"host-source":%q}`, c.MkDir())),
@@ -94,11 +85,6 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	s.launchWorkshop(c, "manysdks", manysdks)
 	ref, err := repo.Connected(s.project.ProjectId, "manysdks", "test-sdk", "data")
 	c.Assert(err, check.IsNil)
-	conn, err := repo.Connection(ref[0])
-	c.Assert(err, check.IsNil)
-	// The mock iface backend does not set this attribute as the actual one
-	// would.
-	c.Assert(conn.Slot.SetAttr("host-source", "/home/user/.local/share"), check.IsNil)
 
 	// Setup
 	src := c.MkDir()
@@ -116,7 +102,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	}
 
 	s.runMountTest(c, "manysdks", requests, expected)
-	conn, err = repo.Connection(ref[0])
+	conn, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
 	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
 }
@@ -238,7 +224,7 @@ func (s *apiSuite) TestWorkshopRemountStaticSlotSourceFails(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "remount",
 			Summary:   `Remount workshopconns/test-sdk:data`,
-			ChangeErr: `(?s).*attribute "host-source" not found for slot "workshopconns/test-sdk-2:training".*`,
+			ChangeErr: `(?s).*source directory of connected slot "workshopconns/test-sdk-2:training" is inside the workshop.*`,
 		},
 	}
 
