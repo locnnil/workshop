@@ -1,5 +1,8 @@
 summary: Run LXD integration tests for workshop operations (launch, delete, attach storage, etc.)
 
+restore: |
+  lxc storage volume delete workshop system-1 || true
+
 execute: |
   rm -rf cover
   mkdir cover

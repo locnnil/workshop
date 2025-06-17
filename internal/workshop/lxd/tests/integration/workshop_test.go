@@ -428,6 +428,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	volume := sdk.VolumeName(setup.Name, setup.Revision)
 	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
 	c.Assert(err, check.IsNil)
+	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume) }()
 
 	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir(setup.Name), true)
 	c.Assert(err, check.IsNil)
