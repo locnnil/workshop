@@ -1093,6 +1093,17 @@ runcmd:
   - networkctl reload
 `
 
+	// Based on lxd-imagebuilder Ubuntu template. By default
+	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
+	// which can change when refreshing to a new base image.
+	cloudInitNetwork := `network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      dhcp-identifier: mac
+`
+
 	f, err := yaml.Marshal(file)
 	if err != nil {
 		return map[string]string{}, err
@@ -1120,6 +1131,7 @@ runcmd:
 		"security.nesting":           "true",
 		"user.workshop.project-id":   projectId,
 		"user.user-data":             cloudInitConfig,
+		"user.network-config":        cloudInitNetwork,
 		"user.workshop.file":         string(f),
 		"user.workshop.sdks":         "{}",
 		"nvidia.driver.capabilities": cfgNvidiaDriverCapabilities,
