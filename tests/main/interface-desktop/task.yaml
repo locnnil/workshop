@@ -31,7 +31,8 @@ execute: |
   echo "Check that the required mounts are configured inside the workshop"
   workshop_exec exec ws-desktop sudo -Hiu workshop /bin/bash -s <<"EOF"
       set -e
-      [ -S "/run/user/1000/${WAYLAND_DISPLAY}" ]
+      [ -S "/tmp/${WAYLAND_DISPLAY}" ]
+      [ -L "/run/user/1000/${WAYLAND_DISPLAY}" ]
   EOF
 
   echo "Disconnect the desktop interface"
