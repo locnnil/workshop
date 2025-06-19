@@ -1,5 +1,10 @@
 .. _exp_index:
 
+.. meta::
+   :description: An overview of Workshop's core concepts, explaining how
+                 workshops, projects, and SDKs work together to create
+                 consistent development environments and help build workflows.
+
 Explanation
 ===========
 

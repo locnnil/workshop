@@ -1,5 +1,9 @@
 .. _how_add_scripts:
 
+.. meta::
+   :description: How-to guide on adding scripts to workshops, enabling automation and
+                 enhanced functionality without modifying SDKs.
+
 How to add scripts to your workshop
 ===================================
 

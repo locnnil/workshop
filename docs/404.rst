@@ -1,5 +1,10 @@
 :orphan:
 
+.. meta::
+   :description: Custom 404 error page that appears when users cannot find a
+                 documentation page they were looking for, providing guidance
+                 on how to navigate further.
+
 Page not found
 ==============
 

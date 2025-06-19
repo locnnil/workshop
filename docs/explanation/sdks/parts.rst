@@ -2,6 +2,11 @@
 
 .. _exp_sdk_parts:
 
+.. meta::
+   :description: Explanation of SDK parts in Workshop, detailing how they
+                 modularize SDKs and manage dependencies through source, build,
+                 and staging phases for improved maintenance and updates.
+
 SDK parts
 =========
 

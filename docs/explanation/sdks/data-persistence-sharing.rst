@@ -1,5 +1,10 @@
 .. _exp_content_sharing:
 
+.. meta::
+   :description: An explanation of data persistence and sharing mechanisms in
+                 Workshop that simplify the management of mounted directories
+                 and shared caches compared to traditional container approaches like Docker.
+
 Data persistence and sharing
 ============================
 

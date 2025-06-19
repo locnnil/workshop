@@ -1,5 +1,9 @@
 .. _how_git_workshops:
 
+.. meta::
+   :description: How-to guide on using workshops with Git, covering initialization,
+                 repository setup, and best practices for development workflows.
+
 How to use workshops with Git
 =============================
 

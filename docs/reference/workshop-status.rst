@@ -1,5 +1,9 @@
 .. _ref_workshop_status:
 
+.. meta::
+   :description: Reference guide on workshop status changes, providing diagrams
+                 that explain lifecycle states and transitions caused by various commands.
+
 Workshop status diagrams
 ========================
 

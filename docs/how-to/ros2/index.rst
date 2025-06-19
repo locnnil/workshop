@@ -1,5 +1,9 @@
 .. _how_ros2:
 
+.. meta::
+   :description: Examples of using Workshop and SDKcraft with ROS 2, including
+                 designing SDKs and creating workshops for robotics applications.
+
 Examples: ROS 2
 ===============
 

@@ -2,6 +2,11 @@
 
 .. _exp_workshop_cli:
 
+.. meta::
+   :description: Documentation of the workshop CLI, detailing its role in
+                 managing the lifecycle of workshops and interacting with the
+                 workshopd daemon via a REST API.
+
 workshop (CLI)
 ==============
 

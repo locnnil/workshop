@@ -1,5 +1,9 @@
 .. _how_fix_workshops:
 
+.. meta::
+   :description: How-to guides on fixing workshops, including debugging
+                 issues, troubleshooting installations, and purging workshops.
+
 How to fix workshops
 ====================
 

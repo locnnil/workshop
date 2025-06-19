@@ -1,5 +1,9 @@
 .. _ref_index:
 
+.. meta::
+   :description: Workshop reference guides, providing technical background
+                 for using Workshop and SDKcraft, including command-line interfaces.
+
 Reference
 =========
 

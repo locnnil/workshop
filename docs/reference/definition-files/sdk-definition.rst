@@ -1,5 +1,9 @@
 .. _ref_sdk_definition:
 
+.. meta::
+   :description: Reference for SDK definition files, including filename conventions,
+                 required YAML structure, and field descriptions for Workshop SDKs.
+
 SDK definition
 ==============
 

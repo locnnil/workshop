@@ -1,5 +1,9 @@
 .. _how_vscode_workshops:
 
+.. meta::
+   :description: How-to guide on integrating workshops with Visual Studio Code,
+                 covering remote connectivity and local development options.
+
 How to use workshops with Visual Studio Code
 ============================================
 

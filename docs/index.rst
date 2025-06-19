@@ -3,6 +3,10 @@
 
 .. _home:
 
+.. meta::
+   :description: Home page for Workshop documentation, providing links to
+                 tutorials, how-to guides, references, and explanations.
+
 |ws_markup|
 ===========
 

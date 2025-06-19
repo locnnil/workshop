@@ -1,3 +1,7 @@
+.. meta::
+   :description: Overview of security considerations for Workshop and SDKcraft,
+                 including privilege management and container technology.
+
 Security
 ========
 

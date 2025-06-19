@@ -1,5 +1,10 @@
 .. _release_notes:
 
+.. meta::
+   :description: Release notes and upgrade instructions for Workshop and
+                 SDKcraft, including new features, bug fixes, and
+                 version-specific guidance.
+
 Release notes and upgrade instructions
 ======================================
 

@@ -2,6 +2,11 @@
 
 .. _exp_changes_tasks:
 
+.. meta::
+   :description: Explanation of changes and tasks in Workshop, detailing how
+                 state management operations are planned and executed as changes
+                 consisting of ordered tasks.
+
 Changes, tasks
 ==============
 

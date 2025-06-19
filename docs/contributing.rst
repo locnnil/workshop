@@ -1,5 +1,11 @@
 .. _contributing:
 
+.. meta::
+   :description: Guide on contributing to the Workshop project, detailing
+                 why and how to join the community, including instructions for
+                 code contributions, documentation improvements, releases,
+                 and testing opportunities.
+
 How to contribute
 =================
 

@@ -1,5 +1,10 @@
 .. _exp_interface_concepts:
-.. _exp_interfaces:
+
+.. meta::
+   :description: A comprehensive explanation of the Workshop interface system,
+                 detailing how SDKs connect to host system resources through
+                 interfaces, and the mechanism of plugs and slots for resource
+                 sharing between containers.
 
 Interface concepts
 ==================
@@ -130,7 +135,7 @@ Plug bindings
 
 When you list an SDK in your workshop,
 you can optionally *bind* any of its plugs
-to other plugs of the same :ref:`interface <exp_interfaces>`
+to other plugs of the same :ref:`interface <exp_interface_concepts>`
 in the same workshop.
 
 Binding a plug to another plug makes them both refer to a single entity;

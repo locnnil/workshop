@@ -1,5 +1,9 @@
 .. _ref_definitions:
 
+.. meta::
+   :description: Overview of SDK and workshop definition files, with links to
+                 detailed reference pages for each file type in Workshop.
+
 SDK and workshop definition files
 =================================
 

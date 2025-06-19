@@ -1,5 +1,9 @@
 .. _how_move_projects:
 
+.. meta::
+   :description: How-to guide on moving and copying project directories in Workshop,
+                 explaining how workshops react to these operations before and after launch.
+
 How to move projects around
 ===========================
 

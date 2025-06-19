@@ -1,5 +1,10 @@
 .. _ref_workshopctl:
 
+
+.. meta::
+   :description: Command reference for 'workshopctl', detailing its use by SDKs
+                 for reporting health and invoking subcommands in workshops.
+
 workshopctl (CLI)
 =================
 

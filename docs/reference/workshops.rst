@@ -1,5 +1,9 @@
 .. _ref_workshop_internals:
 
+.. meta::
+   :description: Reference guide to Workshop internals, covering container-based
+                 environments, SDK layering, and user/session management.
+
 Workshop internals
 ==================
 

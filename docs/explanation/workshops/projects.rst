@@ -2,6 +2,11 @@
 
 .. _exp_projects:
 
+.. meta::
+   :description: Explanation of projects in Workshop, detailing how directories
+                 are initialized as projects containing workshop definitions and
+                 managed with commands such as 'workshop launch'.
+
 Projects
 ========
 

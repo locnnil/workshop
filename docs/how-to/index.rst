@@ -1,5 +1,9 @@
 .. _how_index:
 
+.. meta::
+   :description: How-to guides for Workshop, addressing common scenarios and
+                 corner cases when using Workshop and SDKcraft.
+
 How-to guides
 =============
 

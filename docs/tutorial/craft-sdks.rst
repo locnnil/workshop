@@ -1,5 +1,10 @@
 .. _tut_craft_sdks:
 
+.. meta::
+   :description: Tutorial on crafting SDKs with SDKcraft, teaching users how to
+                 initialize, define, pack, and publish SDKs for sharing and use
+                 with the CLI utility.
+
 Craft SDKs with |sdk_markup|
 ==============================
 
@@ -195,7 +200,7 @@ Add interface plugs
 .. @artefact interface plug
 
 In |sdk_markup|,
-:ref:`interfaces <exp_interfaces>` provide a controllable way
+:ref:`interfaces <exp_interface_concepts>` provide a controllable way
 of exposing the resources of the host system to the workshops,
 and you can use them in a variety of ways
 to extend the functionality of your SDK.

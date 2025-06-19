@@ -1,5 +1,11 @@
 .. _exp_dockerfile_vs_sdk:
 
+.. meta::
+   :description: A comparison between traditional Dockerfiles and Workshop SDKs,
+                 explaining how Workshop's approach to development environments
+                 offers improved repeatability, persistence, and layering
+                 compared to Docker-based solutions.
+
 How Dockerfiles compare to SDKs
 ===============================
 
@@ -76,7 +82,7 @@ can be notably inconsistent;
 for example, enabling GPU pass-through is visibly different from SSH forwarding.
 
 In contrast, |ws_markup| and |sdk_markup| unify these mechanisms
-under the single concept of an :ref:`interface <exp_interfaces>`,
+under the single concept of an :ref:`interface <exp_interface_concepts>`,
 providing a consistent way to uniformly manage host resource access.
 
 

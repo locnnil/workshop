@@ -1,5 +1,9 @@
 .. _how_create_ros2_workshop:
 
+.. meta::
+   :description: How-to guide on creating a ROS 2 workshop using the 'ros2' SDK from the
+                 SDK Store, based on the 'humble' distribution.
+
 How to create a ROS 2 workshop
 ==============================
 

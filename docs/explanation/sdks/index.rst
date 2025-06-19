@@ -1,5 +1,10 @@
 .. _exp_sdks:
 
+.. meta::
+   :description: Workshop SDK documentation, providing access to
+                 explanations of SDK concepts, data storage, lifecycle hooks,
+                 and comparisons with traditional container approaches.
+
 SDKs
 ====
 

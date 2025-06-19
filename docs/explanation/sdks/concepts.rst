@@ -1,5 +1,10 @@
 .. _exp_sdk_concepts:
 
+.. meta::
+   :description: A comprehensive overview of SDK concepts in Workshop, explaining
+                 what SDKs are, how they install packages and configure environments,
+                 and how they're distributed through an SDK Store with channel-based versioning.
+
 SDK concepts
 ============
 
@@ -149,7 +154,7 @@ Unlike a regular SDK, the sketch SDK:
 
 
 The sketch SDK can have :ref:`hooks <exp_sdk_hooks>`
-and use :ref:`interfaces <exp_interfaces>`,
+and use :ref:`interfaces <exp_interface_concepts>`,
 which allows it to interact with other SDKs.
 Note that :samp:`sketch` is a reserved name,
 and the sketch SDK is always installed last.

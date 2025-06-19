@@ -1,5 +1,10 @@
 .. _tut_index:
 
+.. meta::
+   :description: Workshop tutorial, providing a three-stage guide
+                 to creating workshops, building SDKs, and publishing them as
+                 essential components of the ecosystem.
+
 Tutorial
 ========
 

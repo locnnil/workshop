@@ -1,5 +1,9 @@
 .. _ref_sdk_internals:
 
+.. meta::
+   :description: Reference guide to SDK internals, including source directory
+                 structure, parts, plugs, slots, and modularization in Workshop SDKs.
+
 SDK internals
 =============
 
@@ -462,7 +466,7 @@ See also
 Explanation:
 
 - :ref:`exp_base`
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_sdks`
 - :ref:`exp_sdk_state`
 - :ref:`exp_workshop_definition`

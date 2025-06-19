@@ -1,5 +1,10 @@
 .. _exp_mount_interface:
 
+.. meta::
+   :description: Documentation of the mount interface that securely exposes file
+                 system locations from the host or within the workshop, enabling
+                 data persistence and resource sharing between isolated environments.
+
 Mount interface
 ===============
 
@@ -183,7 +188,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

@@ -1,5 +1,9 @@
 .. _how_debug_issues_workshops:
 
+.. meta::
+   :description: How-to guide on debugging workshop issues, covering tasks like tracing
+                 changes, pausing on errors, and managing system-wide warnings.
+
 How to debug issues in workshops
 ================================
 

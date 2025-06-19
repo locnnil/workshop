@@ -1,5 +1,9 @@
 .. _how_use_workshops:
 
+.. meta::
+   :description: How-to guides on daily usage of workshops, including adding scripts,
+                 forwarding ports, and moving projects within the Workshop ecosystem.
+
 How to use workshops
 ====================
 

@@ -1,5 +1,9 @@
 .. _how_troubleshoot:
 
+.. meta::
+   :description: How-to guide on troubleshooting Workshop issues, including verifying
+                 installation, updating prerequisites, and checking versions.
+
 How to troubleshoot |ws_markup|
 ===============================
 

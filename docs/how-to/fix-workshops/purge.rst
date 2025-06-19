@@ -1,5 +1,9 @@
 .. _how_purge:
 
+.. meta::
+   :description: How-to guide on purging malfunctioning workshops, covering steps to
+                 remove containers, metadata, and files thoroughly.
+
 How to purge malfunctioning workshops
 =====================================
 
