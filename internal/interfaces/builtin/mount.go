@@ -21,6 +21,7 @@ package builtin
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -152,8 +153,21 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 		return fmt.Errorf(`mount slot "workshop-source" is not a string (found %T)`, source)
 	}
 
-	if path == "$SDK" || strings.HasPrefix(path, "$SDK/") {
-		path = strings.Replace(path, "$SDK", sdk.SdkDir(slot.Sdk.Name), 1)
+	var err error
+	path = os.Expand(path, func(s string) string {
+		switch s {
+		case "SDK":
+			return sdk.SdkDir(slot.Sdk.Name)
+		case "$":
+			// Unescape $$ -> $.
+			return "$"
+		default:
+			err = fmt.Errorf("unexpected variable %q", s)
+			return ""
+		}
+	})
+	if err != nil {
+		return err
 	}
 
 	if !filepath.IsAbs(path) {

@@ -41,10 +41,18 @@ func ProjectSdkPath(project, name string) string {
 }
 
 func ExpandSdkSource(source, project string) string {
-	if source == "$PROJECT" || strings.HasPrefix(source, "$PROJECT/") {
-		source = strings.Replace(source, "$PROJECT", project, 1)
-	}
-	return source
+	return os.Expand(source, func(s string) string {
+		switch s {
+		case "PROJECT":
+			return project
+		case "$":
+			// Unescape $$ -> $.
+			return "$"
+		default:
+			// Should never be reached because Workshop controls the source.
+			return ""
+		}
+	})
 }
 
 type PlugOrBind struct {

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -366,22 +367,27 @@ func checkListenPort(listen workshop.ProxyTarget, direction workshop.ProxyDirect
 }
 
 func expandPath(target *workshop.ProxyTarget, user *user.User) error {
-	if target.Protocol != "unix" || !strings.HasPrefix(target.Address, "$") {
+	if target.Protocol != "unix" {
 		return nil
 	}
 
-	if target.Address == "$HOME" || strings.HasPrefix(target.Address, "$HOME/") {
-		target.Address = strings.Replace(target.Address, "$HOME", user.HomeDir, 1)
-		return nil
-	}
-	if target.Address == "$XDG_RUNTIME_DIR" || strings.HasPrefix(target.Address, "$XDG_RUNTIME_DIR/") {
-		runtimeDir := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
-		target.Address = strings.Replace(target.Address, "$XDG_RUNTIME_DIR", runtimeDir, 1)
-		return nil
-	}
+	var err error
+	target.Address = os.Expand(target.Address, func(s string) string {
+		switch s {
+		case "HOME":
+			return user.HomeDir
+		case "XDG_RUNTIME_DIR":
+			return filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
+		case "$":
+			// Unescape $$ -> $.
+			return "$"
+		default:
+			err = fmt.Errorf("unexpected variable %q", s)
+			return ""
+		}
+	})
 
-	variable, _, _ := strings.Cut(target.Address[1:], "/")
-	return fmt.Errorf("unexpected variable %q", variable)
+	return err
 }
 
 // authorizePath attempts to ensure that the user is allowed to create the given socket.
