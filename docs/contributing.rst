@@ -505,9 +505,11 @@ You'll also need to update the documentation:
   according to the changes in :file:`internal/workshop/workshop_file.go`.
 
 - Update the release notes,
-  adding additional information on top of the auto-generated change log
-  and following the `established format
-  <https://github.com/canonical/workshop/releases>`_.
+  adding detailed information from pull requests and commit messages
+  within the release scope
+  to supplement the auto-generated change log.
+  Follow the `established format <https://github.com/canonical/workshop/releases>`_
+  to ensure consistency with previous releases.
 
 - Update the `coverage map
   <https://github.com/canonical/workshop/actions/workflows/doc-cover.yaml>`_.
