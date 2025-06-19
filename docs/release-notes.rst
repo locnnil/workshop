@@ -18,8 +18,8 @@ Releases
 
 We provide two binaries: |ws_markup| and |sdk_markup|.
 
-- |ws_markup| (**AArch64** and **x86_64**) is designed for common users.
-- |sdk_markup| (**x86_64** only) is intended for SDK publishers.
+- |ws_markup| (:samp:`amd64` and :samp:`arm64`) is designed for common users.
+- |sdk_markup| (:samp:`arm64` only) is intended for SDK publishers.
 
 
 Currently, neither is publicly available,
