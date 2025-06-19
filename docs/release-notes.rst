@@ -77,6 +77,15 @@ Our release cadence is biweekly, aligned with our development methodology.
 Releases follow the `semantic versioning <https://semver.org/>`_ scheme.
 
 
+Long-term support
+~~~~~~~~~~~~~~~~~
+
+We only provide support for the latest version of |ws_markup|.
+If you encounter issues with an older version,
+we recommend upgrading to the latest release first;
+see the next section for guidance.
+
+
 .. _release_upgrade:
 
 Upgrade instructions
