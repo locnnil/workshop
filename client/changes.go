@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -60,8 +61,9 @@ type Task struct {
 	Log      []string     `json:"log,omitempty"`
 	Progress TaskProgress `json:"progress"`
 
-	SpawnTime time.Time `json:"spawn-time,omitempty"`
-	ReadyTime time.Time `json:"ready-time,omitempty"`
+	SpawnTime time.Time     `json:"spawn-time,omitempty"`
+	ReadyTime time.Time     `json:"ready-time,omitempty"`
+	DoingTime time.Duration `json:"doing-time,omitempty"`
 
 	Data map[string]*json.RawMessage
 }
@@ -88,9 +90,12 @@ type changeAndData struct {
 }
 
 // Change fetches information about a Change given its ID.
-func (client *Client) Change(id string) (*Change, error) {
+func (client *Client) Change(id string, verbose bool) (*Change, error) {
 	var chgd changeAndData
-	_, err := client.doSync("GET", "/v1/changes/"+id, nil, nil, nil, &chgd)
+	query := url.Values{}
+	query.Set("verbose", strconv.FormatBool(verbose))
+
+	_, err := client.doSync("GET", "/v1/changes/"+id, query, nil, nil, &chgd)
 	if err != nil {
 		return nil, err
 	}

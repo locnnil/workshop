@@ -4,13 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/client"
-	"github.com/canonical/workshop/internal/timeutil"
 )
 
 type CmdTasks struct {
@@ -63,7 +62,7 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 
 	var change *client.Change
 	if len(av) > 0 {
-		change, err = cli.Change(av[0])
+		change, err = cli.Change(av[0], false)
 		if err != nil {
 			return err
 		}
@@ -96,21 +95,28 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 
 		if len(tasks) > 0 {
 			w := tabWriter()
-			fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
+
+			maxDur := len("Duration")
+			for _, tsk := range tasks {
+				dur := len(tsk.DoingTime.Round(time.Millisecond).String())
+				if dur > maxDur {
+					maxDur = dur
+				}
+			}
+
+			fmt.Fprintf(w, "Status\t%*s\tSummary\n", maxDur, "Duration")
 
 			for _, tsk := range tasks {
-				spawnTime := timeutil.Human(tsk.SpawnTime)
-				readyTime := timeutil.Human(tsk.ReadyTime)
-				if tsk.ReadyTime.IsZero() {
-					readyTime = "-"
+				duration := tsk.DoingTime.Round(time.Millisecond).String()
+				if tsk.DoingTime == 0 {
+					duration = "-"
 				}
 
-				fmt.Fprintln(w, strings.Join([]string{
-					tsk.ID,
+				fmt.Fprintf(w, "%s\t%*s\t%s\n",
 					tsk.Status,
-					spawnTime,
-					readyTime,
-					tsk.Summary}, "\t"))
+					maxDur,
+					duration,
+					tsk.Summary)
 			}
 			w.Flush()
 
