@@ -13,7 +13,9 @@ Filename convention
 
 The name of the SDK definition file must be :file:`sdk.yaml`;
 the file is usually created using the :command:`sdkcraft init` command
-in the source directory when :ref:`building an SDK <how_sdkcraft>`.
+in the source directory when :ref:`sketching a local SDK <tut_sketch_sdks>`
+or
+:ref:`crafting and publishing an SDK <tut_craft_sdks>`.
 
 
 Structure
@@ -214,12 +216,12 @@ that uses several :ref:`plugs <ref_sdk_plugs_slots>` and multiple platforms:
 See also
 --------
 
-How-to guides:
-
-- :ref:`how_sdkcraft`
-
-
 Reference:
 
 - :ref:`ref_sdk_internals`
 - :ref:`ref_workshop_definition`
+
+Tutorial:
+
+- :ref:`tut_sketch_sdks`
+- :ref:`tut_craft_sdks`

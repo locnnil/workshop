@@ -89,8 +89,8 @@ In this documentation
   :ref:`Internals <ref_sdk_internals>` |
   :ref:`Definition file <ref_sdk_definition>` |
   :ref:`Design SDKs <how_create_ros2_sdk>` |
-  :ref:`Sketch SDKs in-place <how_sketch>` |
-  :ref:`Craft full SDKs <how_sdkcraft>`
+  :ref:`Sketch SDKs in-place <tut_sketch_sdks>` |
+  :ref:`Craft full SDKs <tut_craft_sdks>`
 
 - **Interfaces**: :ref:`Concepts <exp_interface_concepts>` |
   :ref:`Camera <exp_camera_interface>` |

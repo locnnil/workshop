@@ -24,8 +24,8 @@ provided by |ws_markup| and |sdk_markup|:
 - :doc:`cli/workshopctl`
 
 
-Definition formats
-------------------
+Definition file formats
+-----------------------
 
 .. @artefact SDK
 .. @artefact workshop (container)

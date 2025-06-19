@@ -14,7 +14,7 @@ under the :samp:`latest/edge` channel.
 .. note::
 
    This guide assumes that you already have |ws_markup| installed
-   and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
+   and know how to use it; if needed, see the :ref:`tutorial <tut_index>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
    so we'll use their
    `tutorials

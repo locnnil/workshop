@@ -314,7 +314,9 @@ This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake
 
 .. note::
 
-   This guide assumes you're familiar with :ref:`SDKcraft <how_sdkcraft>`.
+   This guide assumes you're familiar with |sdk_markup|:
+   see the :ref:`tut_craft_sdks` tutorial section for details.
+
 
 
 Create the directory structure

@@ -1,7 +1,14 @@
-.. _how_sketch:
+.. _tut_sketch_sdks:
 
-How to customize workshops with sketch SDKs
-===========================================
+Customize workshops with sketch SDKs
+====================================
+
+This is the second section of the :ref:`three-part series <tut_index>`;
+it teaches you to create experimental SDKs quickly
+using the :command:`workshop sketch-sdk` command
+to run local SDK experiments without publishing them.
+It relies on the knowledge gained in the :ref:`tut_getting_started` section,
+where you learned how to create and run workshops.
 
 Suppose you built your workshop with a number of SDKs
 only to realize it still lacks some functionality you need.
@@ -20,7 +27,8 @@ Introduction
 We'll use the following scenario to demonstrate
 how to iterate on an SDK to add missing functionality.
 
-Suppose you're running the :samp:`dev` workshop from the :ref:`tutorial`:
+Suppose you're running the :samp:`dev` workshop
+from the :ref:`tut_getting_started` tutorial section:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -209,7 +217,7 @@ bypassing the SDK Store.
 
 If you'd rather publish the SDK for other projects to use,
 |sdk_markup| can help.
-For details, see the :ref:`how-to guide <how_sdkcraft>`.
+For details, see the :ref:`tut_craft_sdks` section.
 
 The new SDK is named after the project directory by default;
 use the :option:`!--name` option to change this:
@@ -250,18 +258,23 @@ A project can have multiple workshops, remember;
 hence the need to browse the respective sketches.
 
 
-See also
---------
+Next steps
+----------
 
-Explanation:
+This was the last step in this tutorial section;
+you are now familiar with the essentials of sketching in |ws_markup|
+and have had your first taste of what it can achieve.
 
-- :ref:`exp_dockerfile_vs_sdk`
+If you've mastered sketching local SDKs,
+your next logical step is to explore
+how to create publicly available SDKs:
+
+- :ref:`tut_craft_sdks`:
+  Go through the complete process
+  of building and publishing full-fledged SDKs to the SDK Store.
+  This tutorial section covers the workflow for creating production-ready SDKs
+  that can be shared with others.
 
 
-Reference:
-
-- :ref:`ref_sdk_definition`
-- :ref:`ref_workshop_info`
-- :ref:`ref_workshop_run`
-- :ref:`ref_workshop_sketch-sdk`
-- :ref:`ref_workshop_sketches`
+This section builds on what you've learned here
+and expands your |ws_markup| skills.

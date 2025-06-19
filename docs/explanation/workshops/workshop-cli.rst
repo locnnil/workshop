@@ -67,7 +67,7 @@ There are several categories of commands that vary by their purpose:
 
 
 For an end-to-end example of putting these commands to use,
-refer to the :ref:`tutorial <tutorial>`.
+refer to the :ref:`tutorial <tut_index>`.
 
 
 See also
@@ -76,3 +76,8 @@ See also
 Reference:
 
 - :ref:`ref_cli`
+
+
+Tutorial:
+
+- :ref:`tut_getting_started`

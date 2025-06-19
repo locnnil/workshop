@@ -18,8 +18,8 @@ maps to a workshop and its SDKs.
 
 .. note::
 
-   We assume you're familiar
-   with |sdk_markup| basics covered in the :ref:`how-to guide <how_sdkcraft>`
+   We assume you're familiar with |sdk_markup| basics
+   covered in the :ref:`tut_craft_sdks` tutorial section
    and have an understanding of Docker.
 
 
