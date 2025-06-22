@@ -433,13 +433,19 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)
 	return workshop.NewWorkshopFs(sftp), nil
 }
 
-func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref, profile api.ProfilePut) error {
+func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref) (*revert.Reverter, error) {
 	rev := revert.New()
 	defer rev.Fail()
 
 	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if err := conn.CreateProfile(api.ProfilesPost{ProfilePut: profile, Name: name}); err != nil {
-		return err
+	description := fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop)
+	lxdp := api.ProfilesPost{
+		ProfilePut: api.ProfilePut{Description: description},
+		Name:       name,
+	}
+
+	if err := conn.CreateProfile(lxdp); err != nil {
+		return nil, err
 	}
 	rev.Add(func() {
 		if reverr := conn.DeleteProfile(name); reverr != nil {
@@ -450,24 +456,42 @@ func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.R
 	iname := lxdbackend.InstanceName(sdkRef.Workshop, sdkRef.ProjectId)
 	inst, etag, err := conn.GetInstance(iname)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Assigning the profile for the first time.
 	inst.Profiles = append(inst.Profiles, name)
 	op, err := conn.UpdateInstance(iname, inst.Writable(), etag)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := op.WaitContext(ctx); err != nil {
-		return err
+		return nil, err
 	}
+	rev.Add(func() {
+		inst, etag, reverr := conn.GetInstance(iname)
+		if reverr != nil {
+			logger.Noticef("On Setup: cannot unassign %q SDK profile: %v", sdkRef.Sdk, reverr)
+			return
+		}
+		inst.Profiles = slices.DeleteFunc(inst.Profiles, func(n string) bool { return n == name })
 
+		op, reverr := conn.UpdateInstance(iname, inst.Writable(), etag)
+		if reverr != nil {
+			logger.Noticef("On Setup: cannot unassign %q SDK profile: %v", sdkRef.Sdk, reverr)
+			return
+		}
+		if reverr := op.WaitContext(ctx); reverr != nil {
+			logger.Noticef("On Setup: cannot unassign %q SDK profile: %v", sdkRef.Sdk, reverr)
+		}
+	})
+
+	clone := rev.Clone()
 	rev.Success()
-	return nil
+	return clone, nil
 }
 
-func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]string, sdkRef sdk.Ref, prev, next *workshop.SdkProfile) (*revert.Reverter, error) {
+func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]string, sdkRef sdk.Ref, prev, next workshop.SdkProfile) (*revert.Reverter, error) {
 	fs, err := workshopFs(conn, sdkRef.ProjectId, sdkRef.Workshop)
 	if err != nil {
 		return nil, err
@@ -538,49 +562,65 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 	}
 	defer conn.Disconnect()
 
+	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
 	prev := workshop.NewSdkProfile(sdkRef.Sdk)
-	oldp := api.ProfilePut{
-		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop),
-	}
-	newp := api.ProfilePut{
-		Config:      spec.config,
-		Description: oldp.Description,
-		Devices:     spec.devices,
-	}
 
-	// Either create or update an existing LXD profile for the SDK.
-	prof, etag, err := lxdbackend.LxdProfile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if errors.Is(err, workshop.ErrSdkProfileNotFound) {
-		if err := assignNewProfile(ctx, conn, sdkRef, oldp); err != nil {
+	// Load previous profile, if in use.
+	lxdp, etag, err := lxdbackend.LxdProfile(conn, sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+	if err != nil {
+		if !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
-	} else if err != nil {
-		return err
+		lxdp, etag = nil, ""
+	} else if len(lxdp.UsedBy) == 0 {
+		if err := conn.DeleteProfile(name); err != nil {
+			return err
+		}
+		lxdp, etag = nil, ""
 	} else {
-		prev, err = lxdbackend.LxdToSdkProfile(sdkRef.Sdk, prof.Devices, prof.Config)
+		prev, err = lxdbackend.LxdToSdkProfile(sdkRef.Sdk, lxdp.Devices, lxdp.Config)
 		if err != nil {
 			return err
 		}
-		oldp = prof.Writable()
 	}
 
-	rev, err := setupProfile(conn, spec.User, spec.Environment, sdkRef, &prev, &spec.Profile)
+	rev, err := setupProfile(conn, spec.User, spec.Environment, sdkRef, prev, spec.Profile)
 	if err != nil {
 		return err
 	}
 	defer rev.Fail()
 
-	name := lxdbackend.ProfileName(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
-	if err := conn.UpdateProfile(name, newp, etag); err != nil {
+	if lxdp == nil {
+		r, err := assignNewProfile(ctx, conn, sdkRef)
+		if err != nil {
+			return err
+		}
+		rev.AddAll(r)
+	}
+
+	prof := api.ProfilePut{
+		Description: fmt.Sprintf("%q SDK profile for %q workshop", sdkRef.Sdk, sdkRef.Workshop),
+		Config:      spec.config,
+		Devices:     spec.devices,
+	}
+	if err := conn.UpdateProfile(name, prof, etag); err != nil {
+		if lxdp == nil {
+			return err
+		}
+
 		// By design, LXD does not roll back profile changes if the update failed,
 		// so we have to do it ourselves.
 		_, etag2, err2 := conn.GetProfile(name)
 		if err2 != nil {
 			logger.Noticef("cannot get updated profile: %v", err2)
-		} else if etag2 != etag {
-			if err2 := conn.UpdateProfile(name, oldp, etag2); err2 != nil {
-				logger.Noticef("cannot restore original profile: %v", err2)
-			}
+			return err
+		}
+		if etag2 == etag {
+			return err
+		}
+
+		if err2 := conn.UpdateProfile(name, lxdp.Writable(), etag2); err2 != nil {
+			logger.Noticef("cannot restore original profile: %v", err2)
 		}
 		return err
 	}
