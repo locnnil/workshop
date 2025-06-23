@@ -505,7 +505,7 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 	if err != nil {
 		return nil, err
 	}
-	rev.AddAll(r)
+	revert.Copy(rev, r)
 
 	if err := setupSshAgent(fs, prev.Agent, next.Agent); err != nil {
 		return nil, err
@@ -595,7 +595,7 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 		if err != nil {
 			return err
 		}
-		rev.AddAll(r)
+		revert.Copy(rev, r)
 	}
 
 	prof := api.ProfilePut{
