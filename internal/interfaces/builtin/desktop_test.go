@@ -112,7 +112,7 @@ slots:
 }
 
 func (s *desktopSuite) TestDesktopInterfaceBoth(c *check.C) {
-	env := map[string]string{"DISPLAY": ":0", "WAYLAND_DISPLAY": "/var/run/wayland-0"}
+	env := map[string]string{"DISPLAY": ":2.0", "WAYLAND_DISPLAY": "/var/run/wayland-0"}
 	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
 		return &testuser, env, nil
 	})()
@@ -139,7 +139,7 @@ slots:
 		X11: &workshop.ProxyEntry{
 			Name: "desktop_x11",
 			Connect: workshop.ProxyTarget{
-				Address:  "/tmp/.X11-unix/X0",
+				Address:  "/tmp/.X11-unix/X2",
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
 				Address:  "/tmp/.X11-unix/X0",
@@ -263,4 +263,30 @@ slots:
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.ErrorMatches, "XDG_RUNTIME_DIR is either empty.*")
+}
+
+func (s *desktopSuite) TestDesktopEnvX11Fail(c *check.C) {
+	env := map[string]string{"DISPLAY": "remote:0"}
+	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		return &testuser, env, nil
+	})()
+
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ desktop:
+  interface: desktop
+`, s.projectId, "ws", "consumer", "desktop")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+  desktop:
+`, s.projectId, "ws", "producer", "desktop")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.ErrorMatches, "desktop interface requires local X server")
 }

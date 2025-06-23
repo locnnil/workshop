@@ -98,7 +98,7 @@ execute: |
   echo "Check that the expected environment is configured inside the workshop"
   workshop_exec exec ws-desktop sudo -Hiu workshop /bin/bash -s <<"EOF"
       set -e
-      [ "$DISPLAY" == ":1" ]
+      [ "$DISPLAY" == ":0" ]
       [ -n "$XAUTHORITY" ]
   EOF
 

@@ -27,6 +27,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -110,14 +111,26 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	// on the host. This then gives users the option to modify their xhost
 	// settings to allow connections from the container and container user.
 	if display != "" {
-		proxyTarget := workshop.ProxyTarget{
-			Address:  filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":")),
-			Protocol: "unix",
+		var found bool
+		display, found = strings.CutPrefix(display, ":")
+		if !found {
+			return fmt.Errorf("desktop interface requires local X server")
 		}
+		display, _, found = strings.Cut(display, ".")
+		if found {
+			logger.Noticef("desktop interface ignores screen number")
+		}
+
 		desktop.X11 = &workshop.ProxyEntry{
-			Name:      fmt.Sprintf("%s_x11", plug.Name()),
-			Connect:   proxyTarget,
-			Listen:    proxyTarget,
+			Name: fmt.Sprintf("%s_x11", plug.Name()),
+			Connect: workshop.ProxyTarget{
+				Address:  filepath.Join("/tmp/.X11-unix", "X"+display),
+				Protocol: "unix",
+			},
+			Listen: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix",
+			},
 			Direction: workshop.WorkshopToHost,
 		}
 	}
