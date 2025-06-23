@@ -75,29 +75,31 @@ func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 }
 
 func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	xdg := spec.Environment["XDG_RUNTIME_DIR"]
-	if xdg == "" {
-		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
-	}
-
 	desktop := workshop.Desktop{}
 
 	wayland := spec.Environment["WAYLAND_DISPLAY"]
 	display := spec.Environment["DISPLAY"]
-
 	if wayland == "" && display == "" {
 		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User.Username)
 	}
 
 	if wayland != "" {
+		if !filepath.IsAbs(wayland) {
+			xdg := spec.Environment["XDG_RUNTIME_DIR"]
+			if xdg == "" {
+				return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
+			}
+			wayland = filepath.Join(xdg, wayland)
+		}
+
 		desktop.Wayland = &workshop.ProxyEntry{
 			Name: fmt.Sprintf("%s_wayland", plug.Name()),
 			Connect: workshop.ProxyTarget{
-				Address:  filepath.Join(xdg, wayland),
+				Address:  wayland,
 				Protocol: "unix",
 			},
 			Listen: workshop.ProxyTarget{
-				Address:  filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, wayland),
+				Address:  filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, "wayland-0"),
 				Protocol: "unix",
 			},
 			Direction: workshop.WorkshopToHost,
