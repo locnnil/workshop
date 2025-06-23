@@ -16,3 +16,4 @@ and resolve issues with your workshops:
    Debug issues in workshops <debug-workshop-issues>
    Fix the installation <troubleshoot>
    Purge workshops <purge>
+   Resolve plug conflicts <resolve-plug-conflicts>
