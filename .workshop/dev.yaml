@@ -14,10 +14,14 @@ sdks:
         interface: tunnel
         endpoint: 8000
 scripts:
+  docs-html: |
+    make -C docs/ html
   docs-run: |
     make -C docs/ run
   docs-clean: |
     make -C docs/ clean-doc
+  docs-check: |
+    make -C docs/ {spelling,linkcheck,woke}
   lint: |
     golangci-lint run
     golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml
