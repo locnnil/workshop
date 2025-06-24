@@ -72,11 +72,10 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 		if mnt == prev[mnt.Name] {
 			continue
 		}
-		found, err := addMountEntry(fs, user, mounts, mnt)
-		if err != nil {
+		if err := prepareMount(fs, user, mnt); err != nil {
 			return nil, err
 		}
-		if found {
+		if addMountEntry(mounts, mnt) {
 			added = append(added, mnt.Where)
 		}
 	}
@@ -169,61 +168,69 @@ func containsWorkshopWorkshop(mounts map[string]workshop.Mount) bool {
 	return false
 }
 
-func addMountEntry(fs workshop.WorkshopFs, user *user.User, mounts *osutil.MountProfile, mnt workshop.Mount) (bool, error) {
+func prepareMount(fs workshop.WorkshopFs, user *user.User, mnt workshop.Mount) error {
 	if mnt.Type == workshop.HostWorkshop {
 		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(mnt.What)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		if mnt.MakeWhat && !sourceExists {
 			uid, gid, err := osutil.UidGid(user)
 			if err != nil {
-				return false, err
+				return err
 			}
 
 			if err = osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
-				return false, err
+				return err
 			}
 		}
 
 		if !mnt.MakeWhere || !sourceIsDir {
-			return false, nil
+			return nil
 		}
 
 		if _, err := fs.Stat(mnt.Where); !osutil.IsDirNotExist(err) {
-			return false, err
+			return err
 		}
 		// FIXME: workaround LXD empty directory issue (which, if the
 		// connection was disconnected earlier, was removed by LXD).
-		return false, fs.MkdirAll(mnt.Where, os.ModePerm)
+		return fs.MkdirAll(mnt.Where, os.ModePerm)
 	}
 
 	if mnt.Type != workshop.WorkshopWorkshop {
-		return false, fmt.Errorf(`unknown device type: %v`, mnt.Type)
+		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
 	}
 
 	if _, err := fs.Stat(mnt.What); osutil.IsDirNotExist(err) && mnt.MakeWhat {
 		if err := fs.MkdirAll(mnt.What, os.ModePerm); err != nil {
-			return false, err
+			return err
 		}
 	} else if err != nil {
-		return false, fmt.Errorf(`stat workshop-source %q: %v`, mnt.What, err)
+		return fmt.Errorf(`stat workshop-source %q: %v`, mnt.What, err)
 	}
 
 	if _, err := fs.Stat(mnt.Where); osutil.IsDirNotExist(err) && mnt.MakeWhere {
 		if err := fs.MkdirAll(mnt.Where, os.ModePerm); err != nil {
-			return false, err
+			return err
 		}
 	} else if err != nil {
-		return false, fmt.Errorf(`stat workshop-target %q: %v`, mnt.Where, err)
+		return fmt.Errorf(`stat workshop-target %q: %v`, mnt.Where, err)
+	}
+
+	return nil
+}
+
+func addMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
+	if mnt.Type != workshop.WorkshopWorkshop {
+		return false
 	}
 
 	check := func(me osutil.MountEntry) bool {
 		return me.Name == mnt.What && me.Dir == mnt.Where && mnt.ReadOnly == slices.Contains(me.Options, "ro")
 	}
 	if slices.ContainsFunc(mounts.Entries, check) {
-		return false, nil
+		return false
 	}
 
 	options := []string{"bind", "x-systemd.requires=/project"}
@@ -233,7 +240,7 @@ func addMountEntry(fs workshop.WorkshopFs, user *user.User, mounts *osutil.Mount
 
 	entry := osutil.MountEntry{Name: mnt.What, Dir: mnt.Where, Type: "none", Options: options}
 	mounts.Entries = append(mounts.Entries, entry)
-	return true, nil
+	return true
 }
 
 func removeMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
