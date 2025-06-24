@@ -182,8 +182,8 @@ func parseEndpoint(endpoint string) workshop.ProxyTarget {
 		return workshop.ProxyTarget{Address: endpoint, Protocol: "unix"}
 	}
 
-	if strings.HasSuffix(endpoint, "/udp") {
-		address := strings.TrimSuffix(endpoint, "/udp")
+	address, found := strings.CutSuffix(endpoint, "/udp")
+	if found {
 		return workshop.ProxyTarget{Address: address, Protocol: "udp"}
 	}
 
@@ -191,7 +191,7 @@ func parseEndpoint(endpoint string) workshop.ProxyTarget {
 		return workshop.ProxyTarget{Address: "", Protocol: endpoint}
 	}
 
-	address := strings.TrimSuffix(endpoint, "/tcp")
+	address = strings.TrimSuffix(endpoint, "/tcp")
 	return workshop.ProxyTarget{Address: address, Protocol: "tcp"}
 }
 
