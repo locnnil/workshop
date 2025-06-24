@@ -1,0 +1,7 @@
+rm -rf /tmp/sp /project/docs/{Makefile,.sphinx}
+
+git clone --depth 1 https://github.com/canonical/sphinx-docs-starter-pack /tmp/sp/
+cp -ar /tmp/sp/docs/{Makefile,.sphinx} /project/docs/
+cd /project/docs/ && make install
+
+rm -rf /tmp/sp/
