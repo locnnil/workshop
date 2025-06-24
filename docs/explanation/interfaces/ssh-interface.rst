@@ -92,7 +92,7 @@ are available inside the workshop:
    $ workshop shell ws
    workshop@ws-8584e571$ echo $SSH_AUTH_SOCK
 
-     /var/lib/workshop/ws-ssh-agent.ssh
+     /var/lib/workshop/run/ssh-agent.sock
 
    workshop@ws-8584e571$ ssh-add -l
 

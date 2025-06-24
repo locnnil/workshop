@@ -45,3 +45,12 @@ func (r *Reverter) Clone() *Reverter {
 
 	return rNew
 }
+
+// Copy adds the revert functions of the source reverter to the target reverter.
+func Copy(target, source *Reverter) {
+	if source == nil {
+		return
+	}
+	target.revertFuncs = append(target.revertFuncs, source.revertFuncs...)
+}
+

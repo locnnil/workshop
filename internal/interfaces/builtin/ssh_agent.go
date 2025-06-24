@@ -80,7 +80,7 @@ func (iface *sshAgentInterface) MountConnectedPlug(spec *lxd_device.Specificatio
 	}
 
 	fromSocket := sock
-	toSocket := filepath.Join(dirs.WorkshopRunDir, fmt.Sprintf("%s_%s.ssh", plug.Sdk().Name, plug.Name()))
+	toSocket := filepath.Join(dirs.WorkshopRunDir, "ssh-agent.sock")
 
 	return spec.SetSshAgent(workshop.SshAgent{
 		ProxyEntry: workshop.ProxyEntry{

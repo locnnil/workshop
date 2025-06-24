@@ -131,6 +131,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 		m.Type = workshop.HostWorkshop
 		m.What = workshopdXauth
 		m.Where = filepath.Join(dirs.WorkshopRunDir, "Xauthority")
+		m.MakeWhere = true
 		spec.AddMountEntry(m)
 	}
 

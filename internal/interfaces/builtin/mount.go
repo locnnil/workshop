@@ -190,20 +190,16 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	return source, nil
 }
 
-func (iface *mountInterface) hostSource(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, error) {
+func (iface *mountInterface) hostSource(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, bool) {
 	var source string
-	err := slot.Attr("host-source", &source)
-	if err == nil {
-		return source, nil
+	if err := slot.Attr("host-source", &source); err == nil {
+		return source, false
 	}
 
 	// default dir: <sdk>/<plug>
 	userDataDir := workshop.UserDataRootDir(spec.User.HomeDir, spec.Environment)
 	source = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
-	if err = slot.SetAttr("host-source", source); err != nil {
-		return "", err
-	}
-	return source, nil
+	return source, true
 }
 
 func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -214,18 +210,29 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	if slot.Sdk().Type == sdk.System {
-		source, err := iface.hostSource(spec, plug, slot)
-		if err != nil {
-			return err
-		}
-		return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.HostWorkshop, ReadOnly: iface.readOnly(plug)})
+		source, auto := iface.hostSource(spec, plug, slot)
+		return spec.AddMountEntry(workshop.Mount{
+			Name:      plug.Name(),
+			What:      source,
+			Where:     iface.target(plug),
+			MakeWhat:  auto,
+			MakeWhere: true,
+			Type:      workshop.HostWorkshop,
+			ReadOnly:  iface.readOnly(plug),
+		})
 	}
 
 	source, err := iface.workshopSource(slot)
 	if err != nil {
 		return err
 	}
-	return spec.AddMountEntry(workshop.Mount{Name: plug.Name(), What: source, Where: iface.target(plug), Type: workshop.WorkshopWorkshop, ReadOnly: iface.readOnly(plug)})
+	return spec.AddMountEntry(workshop.Mount{
+		Name:     plug.Name(),
+		What:     source,
+		Where:    iface.target(plug),
+		Type:     workshop.WorkshopWorkshop,
+		ReadOnly: iface.readOnly(plug),
+	})
 }
 
 func init() {

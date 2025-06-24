@@ -74,10 +74,11 @@ func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 func defaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 	cwd, _ := os.Getwd()
 	mounts := []workshop.Mount{{
-		Name:  workshop.ConfigProjectPathDevice,
-		What:  cwd,
-		Where: workshop.WorkshopProjectPath,
-		Type:  workshop.HostWorkshop,
+		Name:      workshop.ConfigProjectPathDevice,
+		What:      cwd,
+		Where:     workshop.WorkshopProjectPath,
+		MakeWhere: true,
+		Type:      workshop.HostWorkshop,
 	}}
 	return mounts, nil
 }
@@ -207,11 +208,17 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
 	c.Check(prof.Mounts["one"].What, check.Equals, "/usr/local")
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
+	c.Check(prof.Mounts["one"].MakeWhat, check.Equals, false)
+	c.Check(prof.Mounts["one"].MakeWhere, check.Equals, false)
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.WorkshopWorkshop)
+	c.Check(prof.Mounts["one"].ReadOnly, check.Equals, false)
 	c.Check(prof.Mounts["two"].Name, check.Equals, "two")
 	c.Check(prof.Mounts["two"].What, check.Equals, "/home")
 	c.Check(prof.Mounts["two"].Where, check.Equals, "/mnt")
+	c.Check(prof.Mounts["two"].MakeWhat, check.Equals, false)
+	c.Check(prof.Mounts["two"].MakeWhere, check.Equals, false)
 	c.Check(prof.Mounts["two"].Type, check.Equals, workshop.WorkshopWorkshop)
+	c.Check(prof.Mounts["two"].ReadOnly, check.Equals, false)
 
 	// Check /etc/fstab and mount
 	fstab := f.readWorkshopFile(c, "/etc/fstab")
@@ -241,7 +248,7 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Check the LXD profile is removed
-	err = b.Remove(f.ctx, "test", "consumer")
+	err = b.Remove(f.ctx, sdk.Ref{ProjectId: f.pid, Workshop: "test", Sdk: "consumer"})
 	c.Assert(err, check.IsNil)
 	_, err = lxdbackend.Profile(f.client, f.pid, "test", "consumer")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrSdkProfileNotFound)
@@ -295,7 +302,10 @@ func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
 	c.Check(prof.Mounts["one"].Name, check.Equals, "one")
 	c.Check(prof.Mounts["one"].What, check.Equals, filepath.Join(f.usr.HomeDir, ".local/share/workshop/id/42424242/test/mount/consumer/one"))
 	c.Check(prof.Mounts["one"].Where, check.Equals, "/opt")
+	c.Check(prof.Mounts["one"].MakeWhat, check.Equals, true)
+	c.Check(prof.Mounts["one"].MakeWhere, check.Equals, true)
 	c.Check(prof.Mounts["one"].Type, check.Equals, workshop.HostWorkshop)
+	c.Check(prof.Mounts["one"].ReadOnly, check.Equals, false)
 }
 
 func (f *backendDeviceSuite) TestSetupUpdateProfile(c *check.C) {
@@ -379,12 +389,12 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 	c.Check(prof.Agent.Name, check.Equals, "ssh-agent")
 	c.Check(prof.Agent.Connect.Address, check.Equals, "/run/.workshop.socket")
 	c.Check(prof.Agent.Connect.Protocol, check.Equals, "unix")
-	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/consumer_ssh-agent.ssh")
+	c.Check(prof.Agent.Listen.Address, check.Equals, "/run/ssh-agent.sock")
 	c.Check(prof.Agent.Listen.Protocol, check.Equals, "unix")
 	c.Check(prof.Agent.Direction, check.Equals, workshop.WorkshopToHost)
 
-	buf := f.readWorkshopFile(c, "/etc/profile.d/consumer_ssh-agent.sh")
-	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/consumer_ssh-agent.ssh\n")
+	buf := f.readWorkshopFile(c, "/etc/profile.d/workshop-ssh-agent.sh")
+	c.Check(buf, check.Equals, "export SSH_AUTH_SOCK=/run/ssh-agent.sock\n")
 
 	f.repo.DisconnectAll([]*interfaces.ConnRef{connref})
 
@@ -394,7 +404,7 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
+	_, err = fs.Stat("/etc/profile.d/workshop-ssh-agent.sh")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
 
@@ -458,18 +468,18 @@ func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
 		// Validate Filesystem
 		fs, err := f.be.WorkshopFs(f.ctx, "test")
 		c.Assert(err, check.IsNil)
-		_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
+		_, err = fs.Stat("/etc/profile.d/workshop-ssh-agent.sh")
 		c.Assert(err, check.IsNil)
-		_, err = fs.Stat("/etc/profile.d/desktop.sh")
+		_, err = fs.Stat("/etc/profile.d/workshop-desktop.sh")
 		c.Assert(err, check.IsNil)
 
 		// Disconnect and setup
 		f.repo.DisconnectAll([]*interfaces.ConnRef{sshConnRef, desktopConnRef})
 		err = b.Setup(f.ctx, cref, f.repo)
 		c.Assert(err, check.IsNil)
-		_, err = fs.Stat("/etc/profile.d/consumer_ssh-agent.sh")
+		_, err = fs.Stat("/etc/profile.d/workshop-ssh-agent.sh")
 		c.Assert(err, check.NotNil)
-		_, err = fs.Stat("/etc/profile.d/desktop.sh")
+		_, err = fs.Stat("/etc/profile.d/workshop-desktop.sh")
 		c.Assert(err, check.NotNil)
 	}
 

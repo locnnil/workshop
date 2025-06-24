@@ -472,9 +472,9 @@ func (m *InterfaceManager) checkConflictingMounts(w *workshop.Workshop) error {
 			return target == candidateTarget
 		})
 		if idx >= 0 {
-			return fmt.Errorf(`cannot connect %q: target %q is also mounted by %q`,
-				plug.Ref().ShortRef(), candidateTarget,
-				plugs[idx].Ref().ShortRef())
+			return fmt.Errorf(`cannot connect %q without binding to %q: unbound plugs cannot share target %q`,
+				plug.Ref().ShortRef(), plugs[idx].Ref().ShortRef(),
+				candidateTarget)
 		}
 	}
 	return nil

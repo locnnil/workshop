@@ -27,9 +27,11 @@ import (
 type interfaceHandlersSuite struct {
 	interfaceManagerSuite
 	mgr                      *ifacestate.InterfaceManager
+	user                     *user.User
 	restoreSimple            func()
 	restoreDeny              func()
 	restoreSecurtityBackends func()
+	restoreUserEnv           func()
 	restoreUserLookup        func()
 }
 
@@ -123,8 +125,22 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	err := s.o.StartUp()
 	c.Assert(err, check.IsNil)
 
+	// Real UID and GID are required to create source directories on remount.
+	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
+	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+		if name != "testuser" {
+			return nil, nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil, nil
+	})
 	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		return &user.User{HomeDir: c.MkDir()}, nil
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
 	})
 }
 
@@ -132,6 +148,7 @@ func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {
 	s.restoreSimple()
 	s.restoreDeny()
 	s.restoreSecurtityBackends()
+	s.restoreUserEnv()
 	s.restoreUserLookup()
 }
 
@@ -333,7 +350,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	// One of the SDKs setup fails, we need to make sure that any partial
 	// progress will be aborted (i.e. previously created profiles for other SDKs
 	// will be removed).
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		if n > 0 {
 			return errors.New("cannot finish backend setup")
 		}
@@ -400,7 +417,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*target "/opt" is also mounted by.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*cannot connect "ws/conflict-[12]:plug" without binding to "ws/conflict-[12]:plug": unbound plugs cannot share target "/opt".*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {
@@ -569,13 +586,17 @@ slots:
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, systemYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
+	dynamic := map[string]interface{}{}
+	if source != "" {
+		dynamic["host-source"] = source
+	}
 	s.state.Lock()
 	s.state.Set("conns", map[string]interface{}{
 		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount": map[string]interface{}{
 			"interface":    "mount",
 			"auto":         true,
 			"plug-static":  map[string]interface{}{"workshop-target": "/opt"},
-			"slot-dynamic": map[string]interface{}{"host-source": source},
+			"slot-dynamic": dynamic,
 		},
 	})
 	_, err = ifacestate.ReloadConnections(s.mgr, s.prj.ProjectId, "ws-consumer", "consumer")
@@ -659,8 +680,8 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 
 	c.Assert(oldSource, testutil.FileAbsent)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
-	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Sdk, check.Equals, "consumer")
-	c.Assert(s.secBackend.SetupCalls[0].SdkInfo.Workshop, check.Equals, "ws-consumer")
+	c.Assert(s.secBackend.SetupCalls[0].SdkRef.Sdk, check.Equals, "consumer")
+	c.Assert(s.secBackend.SetupCalls[0].SdkRef.Workshop, check.Equals, "ws-consumer")
 
 	// ensure the global conns state was updated correctly
 	conns, err := ifacestate.GetConns(s.state)
@@ -789,7 +810,7 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 	s.launchRemountWorkshop(c, oldSource)
 	change := s.newRemountChange(newSource)
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return errors.New("cannot setup LXD profile")
 	}
 	defer func() { s.secBackend.SetupCallback = nil }()
@@ -810,7 +831,6 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 
 	connection, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(err, check.IsNil)
 	var src string
 	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
 	c.Assert(src, check.Equals, oldSource)
@@ -823,9 +843,8 @@ func (s *interfaceHandlersSuite) TestRemountInterfaceBackendSetupFails(c *check.
 
 func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C) {
 	// Setup
-	oldSource := "/does/not/exist"
 	newSource := c.MkDir()
-	s.launchRemountWorkshop(c, oldSource)
+	s.launchRemountWorkshop(c, "")
 	change := s.newRemountChange(newSource)
 
 	// Execute
@@ -838,7 +857,40 @@ func (s *interfaceHandlersSuite) TestRemountWorksIfOldSourceNotExist(c *check.C)
 
 	warnings := s.state.AllWarnings()
 	c.Check(warnings, check.HasLen, 1)
-	c.Check(warnings[0].String(), check.Equals, `cannot find source "/does/not/exist" for "ws-consumer/consumer:plug"; will attempt to recreate`)
+	c.Check(warnings[0].String(), check.Matches, `cannot find source ".*/id/42424242/ws-consumer/mount/consumer/plug" for "ws-consumer/consumer:plug"; using existing directory ".*"`)
+
+	repo := s.mgr.Repository()
+	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	connection, err := repo.Connection(ref[0])
+	c.Assert(err, check.IsNil)
+	var src string
+	c.Assert(connection.Slot.Attr("host-source", &src), check.IsNil)
+	c.Assert(src, check.Equals, newSource)
+
+	c.Assert(newSource, testutil.FilePresent)
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
+}
+
+func (s *interfaceHandlersSuite) TestRemountWorksIfNeitherSourceExists(c *check.C) {
+	// Setup
+	newSource := filepath.Join(c.MkDir(), "new")
+	s.launchRemountWorkshop(c, "")
+	change := s.newRemountChange(newSource)
+
+	// Execute
+	s.settle(c)
+
+	// Validate
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Assert(change.Status(), check.Equals, state.DoneStatus)
+
+	warnings := s.state.AllWarnings()
+	c.Check(warnings, check.HasLen, 1)
+	c.Check(warnings[0].String(), check.Matches, `cannot find source ".*/id/42424242/ws-consumer/mount/consumer/plug" for "ws-consumer/consumer:plug"; created directory ".*"`)
 
 	repo := s.mgr.Repository()
 	ref, err := repo.Connected(s.prj.ProjectId, "ws-consumer", "consumer", "plug")
@@ -947,6 +999,33 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	c.Assert(attrs, check.HasLen, 1)
 	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount"],
 		check.DeepEquals, source)
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
+}
+
+func (s *interfaceHandlersSuite) TestAutoDisconnectIgnoresAutoConnections(c *check.C) {
+	// Setup
+	// Create an already installed workshop with an auto-connected mount plug
+	s.launchRemountWorkshop(c, "")
+
+	// Execute
+	s.state.Lock()
+	chg := s.newDisconnectInterfacesChange("consumer")
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.IsNil)
+
+	// Validate
+	var stateConns map[string]interface{}
+	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
+	c.Assert(stateConns, check.HasLen, 0)
+
+	var attrs map[string]interface{}
+	c.Assert(chg.Get("remounts", &attrs), check.NotNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
@@ -1479,7 +1558,7 @@ func (s *interfaceHandlersSuite) TestConnectDisconnectsIfBackedSetupFailed(c *ch
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws")), check.IsNil)
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return errors.New("cannot finish backend setup")
 	}
 	defer func() { s.secBackend.SetupCallback = nil }()
@@ -1517,7 +1596,7 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	tsk.Set("delayed-setup-profile", false)
 	s.state.Unlock()
 
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		conns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
 		c.Check(err, check.IsNil)
 		conn, err := repo.Connection(conns[0])
@@ -1847,7 +1926,7 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailure(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf("setup failed")
 	}
 
@@ -1922,7 +2001,7 @@ func (s *interfaceHandlersSuite) TestDoDisconnectSetupFailureAuto(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Force the disconnect to fail
-	s.secBackend.SetupCallback = func(context context.Context, sdkInfo sdk.Ref, repo *interfaces.Repository) error {
+	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf("setup failed")
 	}
 

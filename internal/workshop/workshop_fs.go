@@ -1,6 +1,7 @@
 package workshop
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 type WorkshopFs interface {
 	afero.Fs
+	RemoveIfExists(name string) error
 	Symlink(old, new string) error
 	ReadLink(p string) (string, error)
 	Close()
@@ -32,8 +34,19 @@ type InstanceFs struct {
 	client *sftp.Client
 }
 
+func (w *InstanceFs) RemoveIfExists(name string) error {
+	if err := w.Remove(name); !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
 func (w *InstanceFs) RemoveAll(path string) error {
-	return w.client.RemoveAll(path)
+	// The os and afero packages ignore ErrNotExist in RemoveAll, but sftp doesn't.
+	if err := w.client.RemoveAll(path); !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func (w *InstanceFs) Rename(oldname, newname string) error {

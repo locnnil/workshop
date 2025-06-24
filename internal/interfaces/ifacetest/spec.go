@@ -31,7 +31,6 @@ type Specification struct {
 	Snippets []string
 
 	user *user.User
-	pid  string
 	sdk  string
 }
 

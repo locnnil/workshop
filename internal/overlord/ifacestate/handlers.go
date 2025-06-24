@@ -116,7 +116,7 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 		}
 		if conn.Interface() == "mount" {
 			attrs := conn.Slot.DynamicAttrs()
-			if attrs != nil && attrs["host-source"] != nil {
+			if attrs["host-source"] != nil {
 				candidates[cref.ID()] = attrs["host-source"].(string)
 			}
 		}
@@ -855,10 +855,8 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 				return err
 			}
 
-			ref := ref
-			backend := backend
 			rev.Add(func() {
-				if err1 := backend.Remove(ctx, ref.Workshop, ref.Sdk); err1 != nil {
+				if err1 := backend.Remove(ctx, ref); err1 != nil {
 					logger.Noticef(`On doSetupProfiles: Failed to clean up %q SDK backend setup`, ref.ShortRef())
 				}
 			})
@@ -901,7 +899,7 @@ func (m *InterfaceManager) undoSetupProfiles(task *state.Task, tomb *tomb.Tomb) 
 					return err
 				}
 			} else {
-				if err := backend.Remove(ctx, w, sdkRef.Sdk); err != nil {
+				if err := backend.Remove(ctx, sdkRef); err != nil {
 					return err
 				}
 			}
@@ -935,7 +933,8 @@ func (m *InterfaceManager) doRemoveProfiles(task *state.Task, tomb *tomb.Tomb) e
 	for _, backend := range m.repo.Backends() {
 		// If there are not plugs or slots declared by the SDK the profile does
 		// not neccessarily exist for the SDK.
-		if err := backend.Remove(ctx, w, s); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
+		ref := sdk.Ref{ProjectId: p.ProjectId, Workshop: w, Sdk: s}
+		if err := backend.Remove(ctx, ref); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err
 		}
 	}
@@ -996,11 +995,28 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 		return err
 	}
 
+	if connection.Slot.Sdk().Type != sdk.System {
+		return fmt.Errorf("source directory of connected slot %q is inside the workshop", connRef.SlotRef.ShortRef())
+	}
+
 	var oldSource string
-	if err := connection.Slot.Attr("host-source", &oldSource); err != nil {
+	var attrError *sdk.AttributeNotFoundError
+	if err := connection.Slot.Attr("host-source", &oldSource); errors.As(err, &attrError) {
+		user, ok := ctx.Value(workshop.ContextUser).(string)
+		if !ok {
+			return fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
+		}
+		usr, env, err := osutil.UserAndEnv(user)
+		if err != nil {
+			return err
+		}
+		userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+		oldSource = workshop.SdkMountHostSource(userDataDir, plug.ProjectId, plug.Workshop, plug.Sdk, plug.Name)
+	} else if err != nil {
 		return err
 	}
 
+	oldDynamicAttrs := maps.Clone(connection.Slot.DynamicAttrs())
 	if err := connection.Slot.SetAttr("host-source", source); err != nil {
 		return err
 	}
@@ -1014,16 +1030,35 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	}
 
 	revert.Add(func() {
-		_ = connection.Slot.SetAttr("host-source", oldSource)
 		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(),
-			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), connection.Slot.DynamicAttrs(), nil); err != nil {
+			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), oldDynamicAttrs, nil); err != nil {
 			logger.Debugf("On doRemount: cannot reconnect %q plug on a failed remount", plug.ShortRef())
 		}
 	})
 
-	_, err = os.Stat(oldSource)
-	if osutil.IsDirNotExist(err) {
-		task.State().Warnf("cannot find source %q for %q; will attempt to recreate", oldSource, plug.ShortRef())
+	if _, err := os.Stat(oldSource); osutil.IsDirNotExist(err) {
+		if _, err := os.Stat(source); osutil.IsDirNotExist(err) {
+			username, ok := ctx.Value(workshop.ContextUser).(string)
+			if !ok {
+				return fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
+			}
+			user, err := osutil.UserLookup(username)
+			if err != nil {
+				return err
+			}
+			uid, gid, err := osutil.UidGid(user)
+			if err != nil {
+				return err
+			}
+			if err = osutil.MkdirAllChown(source, 0755, uid, gid); err != nil {
+				return err
+			}
+			task.State().Warnf("cannot find source %q for %q; created directory %q", oldSource, plug.ShortRef(), source)
+		} else if err != nil {
+			return err
+		} else {
+			task.State().Warnf("cannot find source %q for %q; using existing directory %q", oldSource, plug.ShortRef(), source)
+		}
 	} else if err != nil {
 		return err
 	} else {

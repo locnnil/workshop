@@ -5,7 +5,6 @@ var (
 	ReadProjects       = readProjects
 	SaveProjects       = saveProjects
 	HandleLaunchUpdate = handleLaunchUpdate
-	LxdToSdkProfile    = lxdToSdkProfile
 )
 
 func MockNvidiaRuntime(f func() (bool, error)) func() {

@@ -48,11 +48,13 @@ type Camera struct {
 }
 
 type Mount struct {
-	Name     string    `json:"name"`
-	What     string    `json:"what"`
-	Where    string    `json:"where"`
-	Type     MountType `json:"type"`
-	ReadOnly bool      `json:"readonly"`
+	Name      string    `json:"name"`
+	What      string    `json:"what"`
+	Where     string    `json:"where"`
+	MakeWhat  bool      `json:"make-what,omitempty"`
+	MakeWhere bool      `json:"make-where,omitempty"`
+	Type      MountType `json:"type"`
+	ReadOnly  bool      `json:"readonly"`
 }
 
 type Tunnel struct {
