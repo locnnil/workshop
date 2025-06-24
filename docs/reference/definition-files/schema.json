@@ -47,41 +47,29 @@
             "type": "object",
             "description": "Plugs for the SDK.",
             "patternProperties": {
-              "^[a-z_][a-z0-9_-]*$": {
+              "^[a-z](?:-?[a-z0-9])*$": {
                 "type": "object",
+                "description": "Plug definition. If 'bind' is provided, the plug is bound and MUST NOT define any other attributes. Otherwise, any additional attributes are accepted and forwarded to the interface implementation.",
                 "properties": {
                   "bind": {
                     "type": "string",
                     "description": "Reference to a plug in the form [<sdk>:]<plug>. If omitted, the SDK is 'system'.",
                     "pattern": "^(([a-z0-9]-?)*[a-z](-?[a-z0-9])*)?:[a-z](-?[a-z0-9])*$",
                     "errorMessage": "Bind reference must follow the pattern [<sdk>:]<plug> (SDK optional)."
-                  },
-                  "attributes": {
-                    "type": "object",
-                    "description": "Dynamic attributes for the plug, must be empty if 'bind' is set.",
-                    "additionalProperties": true
                   }
                 },
-                "allOf": [
-                  {
-                    "if": {
-                      "properties": {
-                        "bind": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "then": {
-                      "properties": {
-                        "attributes": {
-                          "type": "object",
-                          "maxProperties": 0
-                        }
-                      },
-                      "errorMessage": "If 'bind' is set, 'attributes' must be empty."
-                    }
-                  }
-                ]
+                "if": {
+                  "required": [
+                    "bind"
+                  ]
+                },
+                "then": {
+                  "additionalProperties": false,
+                  "errorMessage": "When 'bind' is set, no other attributes are allowed on the plug."
+                },
+                "else": {
+                  "additionalProperties": true
+                }
               }
             }
           },

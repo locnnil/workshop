@@ -213,6 +213,7 @@
       ],
       "maxLength": 40,
       "minLength": 1,
+      "pattern": "(?!^(system|project-.*|sketch)$)^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$",
       "title": "Project Name",
       "type": "string"
     },
