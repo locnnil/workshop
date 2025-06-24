@@ -360,13 +360,13 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		cleanupCtxTimeout, cancel := context.WithTimeout(cleanupCtx, 5*time.Second)
 		defer cancel()
 
-		if e := s.AddWorkshopConfig(cleanupCtxTimeout, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); e != nil {
+		if e := s.addWorkshopConfig(conn, cleanupCtxTimeout, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); e != nil {
 			logger.Noticef("On StartWorkshop: cannot reset %q workshop autostart config on cleanup: %v", name, e)
 		}
 
 		// Stop workshop's timeout is handled by LXD API, so no need to have
 		// a context with a timeout.
-		if e := s.StopWorkshop(cleanupCtx, name, true); e != nil {
+		if e := s.stopWorkshop(conn, cleanupCtx, name, true); e != nil {
 			logger.Noticef("On StartWorkshop: cannot stop %q workshop on cleanup: %v", name, e)
 		}
 	})
@@ -779,7 +779,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	return workshops, nil
 }
 
-func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
+func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) (err error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -796,6 +796,13 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 
+	if !forget {
+		// Remove MAC address so LXD won't release the DHCP lease.
+		if err := removeHwaddr(ctx, conn, InstanceName(name, projectId)); err != nil {
+			logger.Noticef("On RemoveWorkshop: failed to preserve %q workshop DHCP lease: %v", name, err)
+		}
+	}
+
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
@@ -803,6 +810,26 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 
 	// DeleteInstance cannot be cancelled in LXD.
 	return op.Wait()
+}
+
+func removeHwaddr(ctx context.Context, conn lxd.InstanceServer, name string) error {
+	inst, etag, err := conn.GetInstance(name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	if _, ok := inst.Config["volatile.workshop.network.hwaddr"]; !ok {
+		return nil
+	}
+	delete(inst.Config, "volatile.workshop.network.hwaddr")
+
+	op, err := conn.UpdateInstance(name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.WaitContext(ctx)
 }
 
 func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
@@ -1048,6 +1075,13 @@ write_files:
     [Service]
     Environment=SNAPD_STANDBY_WAIT=1m
   path: /etc/systemd/system/snapd.service.d/override.conf
+- content: |
+    [DHCPv4]
+    SendRelease=false
+
+    [DHCPv6]
+    SendRelease=false
+  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1055,6 +1089,19 @@ runcmd:
   - systemctl enable xauth-copy.service
   - systemctl enable --now xauth-watch.path
   - systemctl restart snapd.service
+  # Required to load above DHCP config.
+  - networkctl reload
+`
+
+	// Based on lxd-imagebuilder Ubuntu template. By default
+	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
+	// which can change when refreshing to a new base image.
+	cloudInitNetwork := `network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      dhcp-identifier: mac
 `
 
 	f, err := yaml.Marshal(file)
@@ -1084,6 +1131,7 @@ runcmd:
 		"security.nesting":           "true",
 		"user.workshop.project-id":   projectId,
 		"user.user-data":             cloudInitConfig,
+		"user.network-config":        cloudInitNetwork,
 		"user.workshop.file":         string(f),
 		"user.workshop.sdks":         "{}",
 		"nvidia.driver.capabilities": cfgNvidiaDriverCapabilities,

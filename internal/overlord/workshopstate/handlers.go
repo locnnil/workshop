@@ -82,6 +82,14 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
+	var forget bool
+	st.Lock()
+	err = task.Get("forget", &forget)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+	}
+
 	rev := revert.New()
 	defer rev.Fail()
 
@@ -92,7 +100,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 
 		// This may fail if the first workshop launch has failed for some
 		// reason; it is safe to ignore the error in that case.
-		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w); reverr != nil {
+		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w, forget); reverr != nil {
 			logger.Noticef("On doConstructWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
 		}
 	})
@@ -295,10 +303,19 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
+	var forget bool
+	st := task.State()
+	st.Lock()
+	err = task.Get("forget", &forget)
+	st.Unlock()
+	if err != nil {
+		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+	}
+
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.RemoveWorkshop(ctx, w)
+	return m.backend.RemoveWorkshop(ctx, w, forget)
 }
 
 func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {

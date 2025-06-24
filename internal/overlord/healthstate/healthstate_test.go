@@ -204,6 +204,7 @@ func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	chg := s.state.NewChange("launch", "test")
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
+	task.Set("forget", true)
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -224,6 +225,7 @@ func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
+	task.Set("forget", true)
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -285,6 +287,7 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 	chg.SetStatus(state.DoingStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
+	task.Set("forget", true)
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -307,6 +310,7 @@ func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
+	task.Set("forget", true)
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 

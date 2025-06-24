@@ -332,6 +332,7 @@ func launchWorkshop(st *state.State, file *workshop.File) *state.TaskSet {
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	addTask(create)
 	create.Set("workshop-file", file)
+	create.Set("forget", true)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
 	addTask(start)
@@ -361,6 +362,7 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 	create := st.NewTask("create-workshop", summary)
 	addTask(create)
 	create.Set("workshop-file", file)
+	create.Set("forget", false)
 
 	if sdkSnapshot != "" {
 		create.Set("sdk-snapshot", sdkSnapshot)
@@ -996,6 +998,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
+	remove.Set("forget", true)
 	addTaskSet(state.NewTaskSet(remove))
 
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")

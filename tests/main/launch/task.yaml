@@ -4,6 +4,10 @@ execute: |
 
   echo "Test launch for all the supported bases"
 
+  function extract_section() {
+    awk --assign title="[$1]" '/\[/ {p=0} $0 == title {p=1; next} p'
+  }
+
   function launch_and_validate() {
     workshop_exec launch "$1"
     workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
@@ -14,11 +18,17 @@ execute: |
     workshop_exec exec "$1" stat --format='%A %U %G' /var/cache/apt/archives | MATCH '^drwxr-xr-x workshop workshop$'
     # ensure apt is configured to exclude suggested and recommended packages
     workshop_exec run "$1" check-apt
+    # ensure systemd-networkd is configured not to release DHCP on stop
+    # just skip if `networkctl cat` is missing, since old bases have been manually tested
+    sd_ver="$(workshop_exec exec "$1" networkctl --version | awk 'FNR == 1 {print $2}')"
+    if [ "$sd_ver" -ge 254 ]; then
+      workshop_exec exec "$1" sudo networkctl cat @eth0 > eth0.log
+      extract_section DHCPv4 < eth0.log | MATCH '^SendRelease=false$'
+      extract_section DHCPv6 < eth0.log | MATCH '^SendRelease=false$'
+    fi
     workshop_exec remove "$1"
   }
   
   launch_and_validate ws-20
   launch_and_validate ws-22
   launch_and_validate ws-24
-
-  
