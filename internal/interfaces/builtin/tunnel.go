@@ -370,11 +370,11 @@ func expandPath(target *workshop.ProxyTarget, user *user.User) error {
 		return nil
 	}
 
-	if strings.HasPrefix(target.Address, "$HOME/") {
+	if target.Address == "$HOME" || strings.HasPrefix(target.Address, "$HOME/") {
 		target.Address = strings.Replace(target.Address, "$HOME", user.HomeDir, 1)
 		return nil
 	}
-	if strings.HasPrefix(target.Address, "$XDG_RUNTIME_DIR/") {
+	if target.Address == "$XDG_RUNTIME_DIR" || strings.HasPrefix(target.Address, "$XDG_RUNTIME_DIR/") {
 		runtimeDir := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
 		target.Address = strings.Replace(target.Address, "$XDG_RUNTIME_DIR", runtimeDir, 1)
 		return nil
@@ -398,8 +398,11 @@ func authorizePath(listen workshop.ProxyTarget, user *user.User) error {
 		return fmt.Errorf("cannot create socket %q: %w", listen.Address, err)
 	}
 
+	if realDir == user.HomeDir || strings.HasPrefix(realDir, user.HomeDir+"/") {
+		return nil
+	}
 	runtimeDir := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
-	if strings.HasPrefix(realDir, user.HomeDir) || strings.HasPrefix(realDir, runtimeDir) {
+	if realDir == runtimeDir || strings.HasPrefix(realDir, runtimeDir+"/") {
 		return nil
 	}
 

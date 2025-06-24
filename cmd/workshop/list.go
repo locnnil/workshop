@@ -179,7 +179,7 @@ Make the path nicer and shorter by contracting $HOME with a ~
 */
 func contractHomeDirectory(path string) string {
 	if home, err := os.UserHomeDir(); err == nil {
-		if strings.HasPrefix(path, home) {
+		if path == home || strings.HasPrefix(path, home+"/") {
 			return strings.Replace(path, home, "~", 1)
 		} else if strings.HasPrefix(path, "(") {
 			return "-"

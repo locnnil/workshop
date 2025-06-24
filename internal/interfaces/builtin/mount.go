@@ -152,7 +152,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 		return fmt.Errorf(`mount slot "workshop-source" is not a string (found %T)`, source)
 	}
 
-	if strings.HasPrefix(path, "$SDK/") {
+	if path == "$SDK" || strings.HasPrefix(path, "$SDK/") {
 		path = strings.Replace(path, "$SDK", sdk.SdkDir(slot.Sdk.Name), 1)
 	}
 

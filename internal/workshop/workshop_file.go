@@ -41,7 +41,7 @@ func ProjectSdkPath(project, name string) string {
 }
 
 func ExpandSdkSource(source, project string) string {
-	if strings.HasPrefix(source, "$PROJECT/") {
+	if source == "$PROJECT" || strings.HasPrefix(source, "$PROJECT/") {
 		source = strings.Replace(source, "$PROJECT", project, 1)
 	}
 	return source
