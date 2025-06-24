@@ -236,7 +236,7 @@ exclude_patterns = ["readme.rst", "reference/cli/workshop-*.rst", "coverage.md"]
 # Adds custom CSS files, located under 'html_static_path'
 
 html_css_files = [
-    "css/workshop.css",
+    "workshop.css",
 ]
 
 
