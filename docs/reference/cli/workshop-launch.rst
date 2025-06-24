@@ -80,6 +80,11 @@ The name is optional if the project has only one workshop:
    Return the change ID, don't wait for the operation to finish.
 
 
+--verbose
+
+   Combine stdout and stderr output from hooks.
+
+
 --wait-on-error
 
    Pause the operation on error; to resume, use '--continue' or '--abort'.
