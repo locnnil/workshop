@@ -199,8 +199,8 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 }
 
 func connectImageServer(url string) (lxd.ImageServer, error) {
-	if strings.HasPrefix(url, "simplestreams:") {
-		server, _ := strings.CutPrefix(url, "simplestreams:")
+	server, found := strings.CutPrefix(url, "simplestreams:")
+	if found {
 		conn, err := ConnectSimpleStreams(server, nil)
 		if err != nil {
 			return nil, fmt.Errorf("image server is not available: %w", err)
@@ -208,8 +208,8 @@ func connectImageServer(url string) (lxd.ImageServer, error) {
 		return conn, err
 	}
 
-	if strings.HasPrefix(url, "lxd:") {
-		server, _ := strings.CutPrefix(url, "lxd:")
+	server, found = strings.CutPrefix(url, "lxd:")
+	if found {
 		args, err := lxdConnectionArgs()
 		if err != nil {
 			return nil, err

@@ -188,7 +188,9 @@ func (s *localStore) resolveSdks(name string, file *workshop.File, wp *workshop.
 		if !workshop.IsProjectSdk(sd.Name) {
 			continue
 		}
-		source := workshop.ProjectSdkPath("$PROJECT", strings.TrimPrefix(sd.Name, "project-"))
+		relative := workshop.ProjectSdkPath("", strings.TrimPrefix(sd.Name, "project-"))
+		escaped := strings.ReplaceAll(relative, "$", "$$")
+		source := filepath.Join("$PROJECT", escaped)
 		localSdks = append(localSdks, sdk.Setup{Name: sd.Name, Source: source})
 	}
 
@@ -240,7 +242,8 @@ func maybeSketch(userDataDir, pid, name string, launch bool) (*sdk.Setup, error)
 		return nil, nil
 	}
 
-	return &sdk.Setup{Name: sdk.Sketch, Source: sketchdir}, nil
+	escaped := strings.ReplaceAll(sketchdir, "$", "$$")
+	return &sdk.Setup{Name: sdk.Sketch, Source: escaped}, nil
 }
 
 func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
