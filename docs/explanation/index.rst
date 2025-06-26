@@ -8,6 +8,23 @@ To start using |ws_markup| and |sdk_markup|,
 it is important to understand how these concepts fit together.
 
 
+Architecture
+------------
+
+The architecture section provides a detailed overview of Workshop's design,
+its components
+and how they work together to provide isolated development environments.
+
+.. toctree::
+   :hidden:
+   :titlesonly:
+
+   architecture/index
+
+
+- :doc:`architecture/installation`
+
+
 Workshops and projects
 ----------------------
 

@@ -13,6 +13,7 @@ coverprofile
 cuda
 customisable
 cwd
+deduplication
 deliverables
 deterministically
 dev
@@ -53,6 +54,7 @@ localhost
 lxc
 lxd
 LXD
+LXD's
 mixin
 mixins
 modularise
@@ -80,6 +82,7 @@ SDK's
 SDK’s
 SDKs
 shellcheck
+simplestreams
 snapcraft
 snapctl
 snapd
@@ -90,6 +93,7 @@ subcommand
 subcommands
 subdirectory
 sudo
+systemd
 TCP
 transactional
 ubuntu
