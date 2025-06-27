@@ -105,94 +105,59 @@ func StreamsEqual(a, b io.Reader) bool {
 }
 
 // DirsAreEqual compares the two directories' contents and returns whether
-// they are the same. Ignores non-regular files, and the mode of the given
-// directories. Follows symlinks, but returns false if a cycle is detected.
+// they are the same. Takes permissions into account, except for the given
+// directories. Compares regular files by contents, symlinks by link path and
+// recurses into directories. Ignores all other files.
 func DirsAreEqual(a, b string) bool {
-	return dirsAreEqualRecursive(a, b, nil)
-}
-
-func dirsAreEqualRecursive(a, b string, prev []os.FileInfo) bool {
-	na, fia, err := regularFilesAndDirs(a)
+	ias, err := regularFilesDirsAndLinks(a)
 	if err != nil {
 		return false
 	}
-	nb, fib, err := regularFilesAndDirs(b)
+	ibs, err := regularFilesDirsAndLinks(b)
 	if err != nil {
 		return false
 	}
 
-	if !slices.Equal(na, nb) {
-		return false
-	}
-	if !slices.EqualFunc(fia, fib, maybeFilesAreEqual) {
-		return false
-	}
-
-	for i, info := range fia {
-		pa := filepath.Join(a, na[i])
-		pb := filepath.Join(b, nb[i])
-
-		if info.IsDir() {
-			// Prevent infinite recursion from symlink loops. As long as each branch never repeats `a`,
-			// the recursion depth is bounded by the number of distinct directories.
-			if slices.ContainsFunc(prev, func(fi os.FileInfo) bool { return os.SameFile(fi, info) }) {
-				return false
-			}
-
-			prev = append(prev, info)
-			if !dirsAreEqualRecursive(pa, pb, prev) {
-				return false
-			}
-			prev = prev[:len(prev)-1]
-		} else if !FilesAreEqual(pa, pb) {
-			return false
-		}
-	}
-
-	return true
+	return slices.EqualFunc(ias, ibs, func(ia, ib os.FileInfo) bool {
+		return childrenAreEqual(a, b, ia, ib)
+	})
 }
 
-func regularFilesAndDirs(path string) ([]string, []os.FileInfo, error) {
+func regularFilesDirsAndLinks(path string) ([]os.FileInfo, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	infos, err := DirInfos(entries)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	names := make([]string, 0, len(infos))
-	resolved := make([]os.FileInfo, 0, len(infos))
-
-	for _, info := range infos {
-		name := info.Name()
-		if info.Mode()&os.ModeSymlink != 0 {
-			var err error
-			info, err = os.Stat(filepath.Join(path, name))
-			if err != nil {
-				return names, resolved, err
-			}
-		}
-
-		if info.IsDir() || info.Mode().IsRegular() {
-			names = append(names, name)
-			resolved = append(resolved, info)
-		}
-	}
-
-	return names, resolved, nil
+	const keep = os.ModeDir | os.ModeSymlink
+	infos = slices.DeleteFunc(infos, func(info os.FileInfo) bool { return info.Mode().Type()|keep != keep })
+	return infos, nil
 }
 
-func maybeFilesAreEqual(a, b os.FileInfo) bool {
+func childrenAreEqual(a, b string, ia, ib os.FileInfo) bool {
 	switch {
-	case a.IsDir() != b.IsDir():
+	case ia.Name() != ib.Name():
 		return false
-	case a.Mode().Perm() != b.Mode().Perm():
+	case ia.Mode().Type() != ib.Mode().Type():
 		return false
-	case a.Mode().IsRegular() && b.Mode().IsRegular() && a.Size() != b.Size():
+	case ia.Mode()&os.ModeSymlink != 0:
+		ta, erra := os.Readlink(filepath.Join(a, ia.Name()))
+		tb, errb := os.Readlink(filepath.Join(b, ib.Name()))
+		return erra == nil && errb == nil && ta == tb
+	case ia.Mode().Perm() != ib.Mode().Perm():
 		return false
+	case ia.Mode().IsRegular():
+		if ia.Size() != ib.Size() {
+			return false
+		}
+		return FilesAreEqual(filepath.Join(a, ia.Name()), filepath.Join(b, ib.Name()))
+	case ia.Mode().IsDir():
+		return DirsAreEqual(filepath.Join(a, ia.Name()), filepath.Join(b, ib.Name()))
 	default:
-		return true
+		return false
 	}
 }

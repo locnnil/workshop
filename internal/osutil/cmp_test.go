@@ -213,8 +213,8 @@ func (s *CmpTestSuite) TestDirsAreEqual(c *C) {
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
 
-	// Add subdirectory and a regular file
-	c.Assert(os.Mkdir(filepath.Join(a, "dir", "dir"), os.ModePerm), IsNil)
+	// Add subdirectory
+	c.Assert(os.Mkdir(filepath.Join(a, "dir", "dir"), 0700), IsNil)
 	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
 
@@ -222,16 +222,21 @@ func (s *CmpTestSuite) TestDirsAreEqual(c *C) {
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
 
-	// Add symlink to subdirectory
 	c.Assert(os.Remove(filepath.Join(b, "dir", "dir")), IsNil)
+	c.Assert(os.Mkdir(filepath.Join(b, "dir", "dir"), os.ModePerm), IsNil)
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
-	c.Assert(os.Symlink(filepath.Join(a, "dir", "dir"), filepath.Join(b, "dir", "dir")), IsNil)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Chmod(filepath.Join(b, "dir", "dir"), 0700), IsNil)
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
 
-	// Add file in shared subdirectory
-	c.Assert(os.WriteFile(filepath.Join(a, "dir", "dir", "file"), nil, os.ModePerm), IsNil)
+	// Add symlink
+	c.Assert(os.Symlink("/foo/bar", filepath.Join(a, "dir", "link")), IsNil)
 	c.Check(osutil.DirsAreEqual(a, a), Equals, true)
+	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
+
+	c.Assert(os.Symlink("/foo/bar", filepath.Join(b, "dir", "link")), IsNil)
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, true)
 
@@ -241,16 +246,4 @@ func (s *CmpTestSuite) TestDirsAreEqual(c *C) {
 	c.Check(osutil.DirsAreEqual(b, b), Equals, true)
 	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
 	c.Check(osutil.DirsAreEqual(filepath.Join(a, "dir"), filepath.Join(b, "dir")), Equals, true)
-}
-
-func (s *CmpTestSuite) TestDirsAreEqualTerminates(c *C) {
-	loop := filepath.Join(c.MkDir(), "loop")
-	c.Assert(os.Symlink("loop", loop), IsNil)
-	c.Check(osutil.DirsAreEqual(loop, loop), Equals, false)
-
-	a := c.MkDir()
-	b := c.MkDir()
-	c.Assert(os.Symlink(a, filepath.Join(b, "a")), IsNil)
-	c.Assert(os.Symlink(b, filepath.Join(a, "b")), IsNil)
-	c.Check(osutil.DirsAreEqual(a, b), Equals, false)
 }

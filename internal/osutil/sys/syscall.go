@@ -23,7 +23,6 @@ import (
 	"errors"
 	"os"
 	"syscall"
-	"unsafe"
 )
 
 // FlagID can be passed to chown-ish functions to mean "no change",
@@ -73,40 +72,15 @@ func Chown(f *os.File, uid UserID, gid GroupID) error {
 }
 
 func Fchown(fd int, uid UserID, gid GroupID) error {
-	_, _, errno := syscall.Syscall(syscall.SYS_FCHOWN, uintptr(fd), uintptr(uid), uintptr(gid))
-	if errno == 0 {
-		return nil
-	}
-	return errno
+	return syscall.Fchown(fd, int(uid), int(gid))
 }
 
 func ChownPath(path string, uid UserID, gid GroupID) error {
-	AT_FDCWD := -100 // also written as -0x64 in ztypes_linux_*.go (but -100 in sys_linux_*.s, and /usr/include/linux/fcntl.h)
-	return FchownAt(uintptr(AT_FDCWD), path, uid, gid, 0)
+	return syscall.Chown(path, int(uid), int(gid))
 }
 
-func FchownAt(dirfd uintptr, path string, uid UserID, gid GroupID, flags int) error {
-	p0, err := syscall.BytePtrFromString(path)
-	if err != nil {
-		return err
-	}
-	_, _, errno := syscall.Syscall6(_SYS_FCHOWNAT, dirfd, uintptr(unsafe.Pointer(p0)), uintptr(uid), uintptr(gid), uintptr(flags), 0)
-	if errno == 0 {
-		return nil
-	}
-	return errno
-}
-
-// As of Go 1.9, the O_PATH constant does not seem to be declared
-// uniformly over all archtiectures.
-const O_PATH = 0x200000
-
-func FcntlGetFl(fd int) (int, error) {
-	flags, _, errno := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fd), uintptr(syscall.F_GETFL), 0)
-	if errno != 0 {
-		return 0, errno
-	}
-	return int(flags), nil
+func LchownPath(path string, uid UserID, gid GroupID) error {
+	return syscall.Lchown(path, int(uid), int(gid))
 }
 
 func FileOwner(info os.FileInfo) (UserID, GroupID, error) {

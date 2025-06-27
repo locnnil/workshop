@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"syscall"
 
 	"github.com/canonical/workshop/internal/osutil/sys"
@@ -174,11 +173,12 @@ func (e CopySpecialFileError) Error() string {
 	return fmt.Sprintf("failed to %s: %q (%v)", e.desc, e.output, e.err)
 }
 
-// CopyAllChown copies a directory's contents to a new location, owned by the provided user.
-// It ignores non-regular files, resolves symlinks, preserves permissions and syncs to disk.
-// On failure the target directory is left in an unspecified state.
-// FIXME: the chown behaviour is not currently tested. The plan is to simplify this function
-// and run it as the actual user, once we have decided on a uniform approach for this.
+// CopyAllChown copies a directory's contents to a new location, owned by the
+// provided user. Preserves permissions and symlinks, but ignores other
+// non-regular files. Syncs to disk. On failure the target directory is left in
+// an unspecified state. FIXME: the chown behaviour is not currently tested.
+// The plan is to simplify this function and run it as the actual user, once we
+// have decided on a uniform approach for this.
 func CopyAllChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
 	info, err := os.Stat(src)
 	if err != nil {
@@ -188,7 +188,7 @@ func CopyAllChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
 		return err
 	}
 
-	return copyDirChown(src, dst, uid, gid, []os.FileInfo{info})
+	return copyDirChown(info, src, dst, uid, gid)
 }
 
 func checkOwner(info os.FileInfo, path string, uid sys.UserID) error {
@@ -202,57 +202,70 @@ func checkOwner(info os.FileInfo, path string, uid sys.UserID) error {
 	return nil
 }
 
-func copyDirChown(src, dst string, uid sys.UserID, gid sys.GroupID, prev []os.FileInfo) error {
-	srcinfo := prev[len(prev)-1]
-
+func copyDirChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.GroupID) error {
 	d, err := os.Open(dst)
 	if err != nil {
 		return err
 	}
 	defer d.Close()
 
-	if err := d.Chmod(srcinfo.Mode().Perm()); err != nil {
+	// Need to Chmod, despite passing mode to Mkdir, because of system umask.
+	if err := d.Chmod(info.Mode().Perm()); err != nil {
 		return err
 	}
 	if err := sys.Chown(d, uid, gid); err != nil {
 		return &os.PathError{Op: "chown", Path: dst, Err: err}
 	}
 
-	names, infos, err := regularFilesAndDirs(src)
+	infos, err := regularFilesDirsAndLinks(src)
 	if err != nil {
 		return err
 	}
 
-	for i, info := range infos {
-		from := filepath.Join(src, names[i])
-		to := filepath.Join(dst, names[i])
+	for _, info := range infos {
+		from := filepath.Join(src, info.Name())
+		to := filepath.Join(dst, info.Name())
 
-		if err := checkOwner(info, from, uid); err != nil {
+		if err := copyChown(info, from, to, uid, gid); err != nil {
 			return err
 		}
-
-		if !info.IsDir() {
-			if err := copyFileChown(from, to, uid, gid, info); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := os.Mkdir(to, info.Mode().Perm()); err != nil {
-			return err
-		}
-
-		if slices.ContainsFunc(prev, func(fi os.FileInfo) bool { return os.SameFile(fi, info) }) {
-			return fmt.Errorf("directory %q contains a symlink cycle", from)
-		}
-		prev = append(prev, info)
-		if err := copyDirChown(from, to, uid, gid, prev); err != nil {
-			return err
-		}
-		prev = prev[:len(prev)-1]
 	}
 
 	return d.Sync()
+}
+
+func copyChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.GroupID) error {
+	if err := checkOwner(info, src, uid); err != nil {
+		return err
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		return copyLinkChown(src, dst, uid, gid)
+	}
+
+	if info.Mode().IsRegular() {
+		return copyFileChown(src, dst, uid, gid, info)
+	}
+
+	if info.IsDir() {
+		if err := os.Mkdir(dst, info.Mode().Perm()); err != nil {
+			return err
+		}
+		return copyDirChown(info, src, dst, uid, gid)
+	}
+
+	return fmt.Errorf("unexpected file %q", src)
+}
+
+func copyLinkChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
+	path, err := os.Readlink(src)
+	if err != nil {
+		return err
+	}
+	if err := os.Symlink(path, dst); err != nil {
+		return err
+	}
+	return sys.LchownPath(dst, uid, gid)
 }
 
 func copyFileChown(src, dst string, uid sys.UserID, gid sys.GroupID, info os.FileInfo) error {
@@ -268,7 +281,7 @@ func copyFileChown(src, dst string, uid sys.UserID, gid sys.GroupID, info os.Fil
 	}
 	defer w.Close()
 
-	// Need to Chmod, despite passing mode to Mkdir, because of system umask.
+	// Need to Chmod, despite passing mode to OpenFile, because of system umask.
 	if err := w.Chmod(info.Mode().Perm()); err != nil {
 		return err
 	}
