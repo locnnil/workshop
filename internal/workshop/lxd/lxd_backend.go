@@ -1052,7 +1052,7 @@ write_files:
     Description=Required for x11 support
 
     [Path]
-    PathChanged=/var/lib/workshop/run/
+    PathModified=/var/lib/workshop/run/Xauthority/.Xauthority
     Unit=xauth-copy.service
 
     [Install]
@@ -1064,8 +1064,8 @@ write_files:
     Description=Required for x11 support; copies Xauthority to /tmp
 
     [Service]
-    Type=simple
-    ExecStart=/bin/bash -c 'if [ -f /var/lib/workshop/run/Xauthority/.Xauthority ]; then cp -f /var/lib/workshop/run/Xauthority/.Xauthority /tmp/.Xauthority && chown workshop:workshop /tmp/.Xauthority; fi'
+    Type=oneshot
+    ExecStart=/bin/bash -c '[ ! -f /var/lib/workshop/run/Xauthority/.Xauthority ] || install --mode 600 --owner workshop --group workshop --target-directory /tmp /var/lib/workshop/run/Xauthority/.Xauthority'
 
     [Install]
     WantedBy=multi-user.target
@@ -1086,7 +1086,7 @@ runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
   - systemctl daemon-reload
-  - systemctl enable xauth-copy.service
+  - systemctl enable --now xauth-copy.service
   - systemctl enable --now xauth-watch.path
   - systemctl restart snapd.service
   # Required to load above DHCP config.

@@ -353,6 +353,14 @@ func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string
 		if _, err := fs.Stat(script); err == nil {
 			return errors.New("desktop interface already connected")
 		}
+
+		if next.Wayland != nil {
+			socket := next.Wayland.Listen.Address
+			link := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, filepath.Base(socket))
+			if err := fs.Symlink(socket, link); err != nil {
+				return err
+			}
+		}
 	}
 
 	envVars := desktopEnvironment(user, env, *next)
@@ -367,7 +375,13 @@ func removeDesktop(fs workshop.WorkshopFs, prev *workshop.Desktop) error {
 	script := "/etc/profile.d/workshop-desktop.sh"
 	err := fs.RemoveIfExists(script)
 	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
-	return cmp.Or(err, err2)
+	var err3 error
+	if prev.Wayland != nil {
+		socket := prev.Wayland.Listen.Address
+		link := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, filepath.Base(socket))
+		err3 = fs.RemoveIfExists(link)
+	}
+	return cmp.Or(err, err2, err3)
 }
 
 func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Desktop) map[string]string {
@@ -389,8 +403,7 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	}
 
 	if dev.Wayland != nil {
-		prefix := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid) + "/"
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, prefix)
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/tmp/")
 	}
 
 	if dev.X11 != nil {
@@ -555,6 +568,24 @@ func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
 	return cmp.Or(err, err2, err3)
 }
 
+func checkListenSocketPaths(devices map[string]map[string]string) error {
+	for _, dev := range devices {
+		if dev["type"] != "proxy" || dev["bind"] != "instance" {
+			continue
+		}
+		listen := dev["listen"]
+		if !strings.HasPrefix(listen, "unix:/") {
+			continue
+		}
+		listen = strings.TrimPrefix(listen, "unix:")
+		if strings.HasPrefix(listen, "/tmp/") || strings.HasPrefix(listen, dirs.WorkshopRunDir+"/") {
+			continue
+		}
+		return fmt.Errorf("currently unsafe to create socket %q using LXD", listen)
+	}
+	return nil
+}
+
 // Setup creates mount profile specific to a given sdk.
 func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkRef)
@@ -562,6 +593,10 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 		return err
 	}
 	spec := s.(*Specification)
+
+	if err := checkListenSocketPaths(spec.devices); err != nil {
+		return err
+	}
 
 	conn, err := lxdbackend.ConnectLxd(ctx)
 	if err != nil {

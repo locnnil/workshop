@@ -27,6 +27,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -75,29 +76,31 @@ func (iface *desktopInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInf
 }
 
 func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	xdg := spec.Environment["XDG_RUNTIME_DIR"]
-	if xdg == "" {
-		return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
-	}
-
 	desktop := workshop.Desktop{}
 
 	wayland := spec.Environment["WAYLAND_DISPLAY"]
 	display := spec.Environment["DISPLAY"]
-
 	if wayland == "" && display == "" {
 		return fmt.Errorf("neither DISPLAY nor WAYLAND_DISPLAY are set for user %q", spec.User.Username)
 	}
 
 	if wayland != "" {
+		if !filepath.IsAbs(wayland) {
+			xdg := spec.Environment["XDG_RUNTIME_DIR"]
+			if xdg == "" {
+				return fmt.Errorf("XDG_RUNTIME_DIR is either empty or unset for user %q", spec.User.Username)
+			}
+			wayland = filepath.Join(xdg, wayland)
+		}
+
 		desktop.Wayland = &workshop.ProxyEntry{
 			Name: fmt.Sprintf("%s_wayland", plug.Name()),
 			Connect: workshop.ProxyTarget{
-				Address:  filepath.Join(xdg, wayland),
+				Address:  wayland,
 				Protocol: "unix",
 			},
 			Listen: workshop.ProxyTarget{
-				Address:  filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, wayland),
+				Address:  filepath.Join("/tmp", "wayland-0"),
 				Protocol: "unix",
 			},
 			Direction: workshop.WorkshopToHost,
@@ -108,14 +111,26 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	// on the host. This then gives users the option to modify their xhost
 	// settings to allow connections from the container and container user.
 	if display != "" {
-		proxyTarget := workshop.ProxyTarget{
-			Address:  filepath.Join("/tmp/.X11-unix", "X"+strings.TrimPrefix(display, ":")),
-			Protocol: "unix",
+		var found bool
+		display, found = strings.CutPrefix(display, ":")
+		if !found {
+			return fmt.Errorf("desktop interface requires local X server")
 		}
+		display, _, found = strings.Cut(display, ".")
+		if found {
+			logger.Noticef("desktop interface ignores screen number")
+		}
+
 		desktop.X11 = &workshop.ProxyEntry{
-			Name:      fmt.Sprintf("%s_x11", plug.Name()),
-			Connect:   proxyTarget,
-			Listen:    proxyTarget,
+			Name: fmt.Sprintf("%s_x11", plug.Name()),
+			Connect: workshop.ProxyTarget{
+				Address:  filepath.Join("/tmp/.X11-unix", "X"+display),
+				Protocol: "unix",
+			},
+			Listen: workshop.ProxyTarget{
+				Address:  "/tmp/.X11-unix/X0",
+				Protocol: "unix",
+			},
 			Direction: workshop.WorkshopToHost,
 		}
 	}
@@ -127,7 +142,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	xauth := spec.Environment["XAUTHORITY"]
 	if xauth != "" {
 		m := workshop.Mount{}
-		m.Name = plug.Sdk().Name + "-" + "xauth"
+		m.Name = fmt.Sprintf("%s_xauth", plug.Name())
 		m.Type = workshop.HostWorkshop
 		m.What = workshopdXauth
 		m.Where = filepath.Join(dirs.WorkshopRunDir, "Xauthority")
