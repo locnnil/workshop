@@ -53,7 +53,7 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 		var err error
 		mounts, content, err = readMountProfile(fs)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read filesystem table: %w", err)
 		}
 	}
 
@@ -88,13 +88,13 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 
 	rev.Add(func() {
 		if reverr := reloadMounts(conn, pid, w); reverr != nil {
-			logger.Noticef("On setupMounts: cannot undo unmount: %v", reverr)
+			logger.Noticef("On setupMounts: cannot undo unmount in workshop %q: %v", w, reverr)
 		}
 	})
 
 	for _, where := range removed {
 		if err := unmount(conn, pid, w, where); err != nil {
-			logger.Noticef("On setupMounts: cannot unmount %q: %v", where, err)
+			logger.Noticef("On setupMounts: cannot unmount in workshop %q: %v", w, err)
 		}
 	}
 
@@ -105,7 +105,7 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 	rev.Add(func() {
 		for _, where := range added {
 			if reverr := unmount(conn, pid, w, where); reverr != nil {
-				logger.Noticef("On setupMounts: cannot undo mount: %v", reverr)
+				logger.Noticef("On setupMounts: cannot undo mount in workshop %q: %v", w, reverr)
 			}
 		}
 		if reverr := writeMountProfile(fs, bytes.NewBuffer(content)); reverr != nil {
@@ -128,7 +128,7 @@ func removeMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string
 		var err error
 		mounts, _, err = readMountProfile(fs)
 		if err != nil {
-			return err
+			return fmt.Errorf("read filesystem table: %w", err)
 		}
 	}
 
@@ -278,21 +278,32 @@ func writeMountProfile(fs workshop.WorkshopFs, mounts io.WriterTo) error {
 }
 
 func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
-	var out bytes.Buffer
-
 	c := api.InstanceExecPost{
 		Command:     cmd,
 		Interactive: false,
 	}
 
-	args := lxd.InstanceExecArgs{Stderr: &out}
+	args := lxd.InstanceExecArgs{}
 
 	op, err := conn.ExecInstance(lxdbackend.InstanceName(w, pid), c, &args)
 	if err != nil {
 		return err
 	}
+	if err := op.Wait(); err != nil {
+		switch err.Error() {
+		case "Command not executable", "Command not found":
+			// Usually a nonzero exit status is not an error,
+			// but LXD translates 126 and 127 into the above messages.
+		default:
+			return fmt.Errorf("%s: %w", strings.Join(cmd, " "), err)
+		}
+	}
 
-	return op.Wait()
+	if status := int(op.Get().Metadata["return"].(float64)); status != 0 {
+		err := &workshop.ErrExec{Status: status}
+		return fmt.Errorf("%s: %w", strings.Join(cmd, " "), err)
+	}
+	return nil
 }
 
 func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
@@ -305,11 +316,10 @@ func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
 // newly-creaed units by restarting a downstream target (ie. local-fs) see:
 // https://www.freedesktop.org/software/systemd/man/latest/systemd.special.html
 func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
-	return runMountCommand(conn, pid, w, []string{
-		"/bin/bash",
-		"-c",
-		"systemctl daemon-reload && systemctl restart local-fs.target",
-	})
+	if err := runMountCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}); err != nil {
+		return err
+	}
+	return runMountCommand(conn, pid, w, []string{"systemctl", "restart", "local-fs.target"})
 }
 
 func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error {
