@@ -1000,8 +1000,8 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	}
 
 	var oldSource string
-	var attrError *sdk.AttributeNotFoundError
-	if err := connection.Slot.Attr("host-source", &oldSource); errors.As(err, &attrError) {
+	var attrErr *sdk.AttributeNotFoundError
+	if err := connection.Slot.Attr("host-source", &oldSource); errors.As(err, &attrErr) {
 		user, ok := ctx.Value(workshop.ContextUser).(string)
 		if !ok {
 			return fmt.Errorf("internal error: context key %s not found", workshop.ContextUser)
