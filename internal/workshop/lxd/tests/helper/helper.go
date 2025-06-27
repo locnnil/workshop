@@ -146,14 +146,20 @@ func MockSdkTarball(c *check.C, name, path, meta string) string {
 
 	tarball := filepath.Join(path, fmt.Sprintf("%s_1.sdk", name))
 	pack := exec.CommandContext(context.Background(), "tar",
-		"--strip-components=1",
-		"--remove-files",
 		"--create",
-		"--file",
-		tarball,
+		"--format=posix",
+		"--use-compress-program=zstd -10 --threads=0",
+		"--mode=a-st,go-w",
+		"--owner=root:0",
+		"--group=root:0",
+		"--mtime=2020-04-22T19:12:07.903032Z",
+		"--sort=name",
+		"--force-local",
+		"--file="+tarball,
+		"--remove-files",
 		"--directory="+sdkfs,
-		"--no-same-owner",
-		".",
+		"meta",
+		"sdk",
 	)
 	output, err := pack.CombinedOutput()
 	c.Check(err, check.IsNil, check.Commentf("%s", string(output)))

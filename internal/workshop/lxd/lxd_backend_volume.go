@@ -2,6 +2,7 @@ package lxdbackend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -149,8 +150,19 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	}
 	defer os.RemoveAll(dir)
 
-	unpack := exec.CommandContext(ctx, "tar",
+	// umask 0 with --no-same-permissions preserves normal permissions,
+	// just not setuid, setgid, etc. The parent directory should be empty
+	// with 700 permissions. For more details see
+	// https://www.gnu.org/software/tar/manual/html_section/Security.html
+	unpack := exec.CommandContext(ctx, "bash",
+		"-c",
+		`umask 0 && exec -- "$0" "$@"`,
+		"tar",
 		"--extract",
+		"--no-same-owner",
+		"--no-same-permissions",
+		"--keep-old-files",
+		"--force-local",
 		"--file="+tarball,
 		"--transform",
 		"s,^,volume/,",
@@ -158,7 +170,10 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	)
 
 	if _, err := unpack.Output(); err != nil {
-		logger.Debugf("Failed to unpack volume tarball: %v", err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			logger.Debugf("Failed to unpack volume tarball: %s", exitErr.Stderr)
+		}
 		return err
 	}
 
@@ -180,8 +195,10 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	}
 
 	repack := exec.CommandContext(ctx, "tar",
-		"--remove-files",
 		"--create",
+		"--format=posix",
+		"--force-local",
+		"--remove-files",
 		"--file",
 		newtar,
 		"--transform",
