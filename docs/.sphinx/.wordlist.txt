@@ -52,7 +52,6 @@ reST
 reStructuredText
 roadmap
 RTD
-stderr
 subdirectories
 subfolders
 subtree

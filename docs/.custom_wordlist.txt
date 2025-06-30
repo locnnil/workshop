@@ -87,6 +87,7 @@ snapcraft
 snapctl
 snapd
 stateDiagram
+stderr
 stdin
 stdout
 subcommand
