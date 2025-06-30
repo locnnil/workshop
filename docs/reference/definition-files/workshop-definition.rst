@@ -1,5 +1,9 @@
 .. _ref_workshop_definition:
 
+.. meta::
+   :description: Reference for workshop definition files, including filename
+                 conventions, YAML structure, and required fields for workshops.
+
 Workshop definition
 ===================
 

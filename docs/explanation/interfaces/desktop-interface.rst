@@ -1,5 +1,10 @@
 .. _exp_desktop_interface:
 
+.. meta::
+   :description: Documentation of the desktop interface that provides workshops
+                 with secure access to the host system's display (Wayland/X11)
+                 for running GUI applications within isolated environments.
+
 Desktop interface
 =================
 
@@ -100,7 +105,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

@@ -1,5 +1,10 @@
 .. _exp_workshop_concepts:
 
+.. meta::
+   :description: Overview of workshop-related concepts, explaining the role of
+                 workshops as containers defined by project directories and
+                 hosted by LXD for consistent development environments.
+
 Workshop concepts
 =================
 
@@ -99,7 +104,7 @@ A simple definition might look like this:
 
 It specifies a *base* and an *SDK*.
 A more complete definition would usually list several SDKs
-that use different :ref:`interfaces <exp_interfaces>`,
+that use different :ref:`interfaces <exp_interface_concepts>`,
 software packages, and :ref:`hooks <exp_sdk_hooks>`.
 
 A workshop definition can be hidden by naming it

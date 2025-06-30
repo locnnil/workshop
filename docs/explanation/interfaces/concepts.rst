@@ -1,5 +1,10 @@
 .. _exp_interface_concepts:
-.. _exp_interfaces:
+
+.. meta::
+   :description: A comprehensive explanation of the Workshop interface system,
+                 detailing how SDKs connect to host system resources through
+                 interfaces, and the mechanism of plugs and slots for resource
+                 sharing between containers.
 
 Interface concepts
 ==================
@@ -128,93 +133,14 @@ interfaces require manual connection.
 Plug bindings
 -------------
 
-When you list an SDK in your workshop,
-you can optionally *bind* any of its plugs
-to other plugs of the same :ref:`interface <exp_interfaces>`
-in the same workshop.
+SDKs usually access host resources via :ref:`interface plugs <exp_plugs_slots>`.
+When multiple SDKs try to use the same resource in conflicting ways, 
+the workshop won't launch and shows an error.
 
-Binding a plug to another plug makes them both refer to a single entity;
-any action on a bound plug affects all bindings, and vice versa.
-This comes handy if the SDKs implement different features on the same resources
-or simply use a singleton-like interface (:samp:`gpu` is a good example).
-
-.. @artefact SDK publisher
-
-.. note::
-
-   Double-check the plug layout
-   with :command:`workshop connections`;
-   you may also need additional info from the SDK publishers.
-
-
-As an example,
-imagine two SDKs, :samp:`torchaudio` and :samp:`torchvision`,
-that both store data in the workshop under
-:file:`~/.cache/torch/hub/`.
-The data should be persisted,
-so each SDK has a corresponding mount interface plug, :samp:`hub`.
-
-If our workshop includes both SDKs,
-a conflict arises
-because |ws_markup| doesn't know which directory it should mount
-at the target location.
-Bindings resolve this ambiguity.
-Here, the :samp:`hub` plug of the :samp:`torchvision` SDK
-is bound to the :samp:`hub` plug under :samp:`torchaudio`:
-
-.. code-block:: yaml
-   :caption: .workshop/digits.yaml
-   :emphasize-lines: 10
-
-   name: digits
-   base: ubuntu@22.04
-   sdks:
-     - name: torchaudio
-       channel: latest/stable
-     - name: torchvision
-       channel: latest/stable
-       plugs:
-         hub:
-           bind: torchaudio:hub
-
-
-This binds :samp:`torchvision:hub`
-to the location of :samp:`torchaudio:hub`;
-you benefit from sharing the data between the two frameworks,
-while simultaneously persisting it on the host.
-
-Any actions on the plug thus bound affect all its bindings.
-Here, if you remount :samp:`torchaudio:hub`,
-the :samp:`torchvision:hub` plug is also remounted
-because they reference the same entity:
-
-.. @artefact workshop info
-
-.. code-block:: console
-
-   $ mkdir -p .cache/hub
-   $ workshop remount digits/torchaudio:hub .cache/hub
-   $ workshop info digits
-
-     ...
-     sdks:
-       system:
-         installed:  (1)
-       torchaudio:
-         tracking:   latest/stable
-         installed:  2.5.1  2024-11-02  (42)
-         mounts:
-           hub:
-             host-source:      /home/user/digits/.cache/hub
-             workshop-target:  /home/workshop/.cache/torch/hub
-       torchvision:
-         tracking:   latest/stable
-         installed:  2.18.0  2024-10-27  (37)
-         mounts:
-           hub:
-             host-source:      /home/user/digits/.cache/hub
-             workshop-target:  /home/workshop/.cache/torch/hub
-
+To fix this issue, you can bind one plug to another of the same interface type.
+This makes both plugs point to the same resource without conflicts.
+Any action performed on one plug (like mounting or remounting)
+thus automatically applies to *all* bound plugs.
 
 When you run :command:`workshop connections`,
 a bound plug will have :samp:`bind` listed under :samp:`Notes`,
@@ -232,7 +158,8 @@ along with the line number of the target plug:
 
 
 Here, both plugs are listed as :samp:`bind.1`,
-pointing to :samp:`torchaudio:hub` in the first line.
+pointing to :samp:`torchaudio:hub` in the *first* line.
+
 
 .. _exp_interfaces_cli_operations:
 
@@ -288,6 +215,11 @@ Explanation:
 
 - :ref:`exp_workshop`
 - :ref:`exp_sdks`
+
+
+How-to guides:
+
+- :ref:`how_resolve_plug_conflicts`
 
 
 Reference:

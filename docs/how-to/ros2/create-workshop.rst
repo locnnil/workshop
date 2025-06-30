@@ -1,5 +1,9 @@
 .. _how_create_ros2_workshop:
 
+.. meta::
+   :description: How-to guide on creating a ROS 2 workshop using the 'ros2' SDK from the
+                 SDK Store, based on the 'humble' distribution.
+
 How to create a ROS 2 workshop
 ==============================
 
@@ -14,7 +18,7 @@ under the :samp:`latest/edge` channel.
 .. note::
 
    This guide assumes that you already have |ws_markup| installed
-   and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
+   and know how to use it; if needed, see the :ref:`tutorial <tut_index>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`humble` distribution,
    so we'll use their
    `tutorials

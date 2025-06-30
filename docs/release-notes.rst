@@ -1,5 +1,10 @@
 .. _release_notes:
 
+.. meta::
+   :description: Release notes and upgrade instructions for Workshop and
+                 SDKcraft, including new features, bug fixes, and
+                 version-specific guidance.
+
 Release notes and upgrade instructions
 ======================================
 
@@ -18,8 +23,8 @@ Releases
 
 We provide two binaries: |ws_markup| and |sdk_markup|.
 
-- |ws_markup| (**AArch64** and **x86_64**) is designed for common users.
-- |sdk_markup| (**x86_64** only) is intended for SDK publishers.
+- |ws_markup| (:samp:`amd64` and :samp:`arm64`) is designed for common users.
+- |sdk_markup| (:samp:`arm64` only) is intended for SDK publishers.
 
 
 Currently, neither is publicly available,
@@ -77,6 +82,15 @@ Our release cadence is biweekly, aligned with our development methodology.
 Releases follow the `semantic versioning <https://semver.org/>`_ scheme.
 
 
+Long-term support
+~~~~~~~~~~~~~~~~~
+
+We only provide support for the latest version of |ws_markup|.
+If you encounter issues with an older version,
+we recommend upgrading to the latest release first;
+see the next section for guidance.
+
+
 .. _release_upgrade:
 
 Upgrade instructions
@@ -94,4 +108,4 @@ Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 
 For prerequisites and other details, see the `Getting Started
 <https://github.com/canonical/workshop?tab=readme-ov-file#getting-started>`_
-section on GitHub, or follow the :ref:`tutorial`.
+section on GitHub, or follow the :ref:`tut_getting_started` tutorial section.

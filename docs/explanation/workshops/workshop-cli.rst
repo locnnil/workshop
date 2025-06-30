@@ -2,6 +2,11 @@
 
 .. _exp_workshop_cli:
 
+.. meta::
+   :description: Documentation of the workshop CLI, detailing its role in
+                 managing the lifecycle of workshops and interacting with the
+                 workshopd daemon via a REST API.
+
 workshop (CLI)
 ==============
 
@@ -67,7 +72,7 @@ There are several categories of commands that vary by their purpose:
 
 
 For an end-to-end example of putting these commands to use,
-refer to the :ref:`tutorial <tutorial>`.
+refer to the :ref:`tutorial <tut_index>`.
 
 
 See also
@@ -76,3 +81,8 @@ See also
 Reference:
 
 - :ref:`ref_cli`
+
+
+Tutorial:
+
+- :ref:`tut_getting_started`

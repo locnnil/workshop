@@ -1,24 +1,30 @@
-.. _how_sdkcraft:
+.. _tut_craft_sdks:
 
-How to craft SDKs with |sdk_markup|
-===================================
+.. meta::
+   :description: Tutorial on crafting SDKs with SDKcraft, teaching users how to
+                 initialize, define, pack, and publish SDKs for sharing and use
+                 with the CLI utility.
+
+Craft SDKs with |sdk_markup|
+==============================
 
 .. @artefact sdkcraft (CLI)
 .. @artefact SDK
 .. @artefact interface
 
-This is a practical how-to guide
-that takes you on a tour
-of the essential |sdk_markup| activities.
+This is the third section of the :ref:`three-part series <tut_index>`;
+you'll learn how to create full-featured SDKs
+that can be published and shared with others using |sdk_markup|.
+It relies on the knowledge gained in the :ref:`tut_getting_started` section,
+where you learned how to create and run workshops,
+and also leverages the :ref:`tut_sketch_sdks` section,
+where you learned how to sketch local SDKs.
 
 Here, you will initialize, define, pack, and publish an :ref:`SDK <exp_sdks>`:
 a set of hooks, interfaces, and parts that is bundled into a single package,
 suitable for use with |sdk_markup|, the user-oriented CLI utility.
 The commands you're about to run
 cover most of your daily needs with |sdk_markup|.
-
-For more details, see the
-:ref:`reference <ref_index>` and :ref:`explanation <exp_index>` sections.
 
 
 Check the prerequisites
@@ -194,7 +200,7 @@ Add interface plugs
 .. @artefact interface plug
 
 In |sdk_markup|,
-:ref:`interfaces <exp_interfaces>` provide a controllable way
+:ref:`interfaces <exp_interface_concepts>` provide a controllable way
 of exposing the resources of the host system to the workshops,
 and you can use them in a variety of ways
 to extend the functionality of your SDK.
@@ -475,17 +481,19 @@ Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
 .. note::
 
    Currently, you can't use unpublished SDKs in a workshop.
-   However, the :ref:`sketch SDK <how_sketch>` and in-project SDKs provide
+   However, the :ref:`sketch SDK <tut_sketch_sdks>` and in-project SDKs provide
    a subset of |sdk_markup|'s functionality.
 
 
-This was the last step of the guide;
-you are now familiar with the basic operations |sdk_markup| provides
-and have had your first taste of what it can do for you.
+Summary
+-------
 
-See also
---------
+This was the last step of the entire tutorial series.
 
-Reference:
-
-- :ref:`ref_workshopctl`
+You have learned how to create a workshop,
+add SDKs to it, and use them in practice.
+You have also learned how to sketch a local SDK
+and how to craft and publish a full-featured SDK;
+you are now familiar with all the basic operations
+that |ws_markup| and |sdk_markup| provide
+and have had an extensive tour of their capabilities.

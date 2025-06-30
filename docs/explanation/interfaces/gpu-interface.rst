@@ -1,5 +1,11 @@
 .. _exp_gpu_interface:
 
+.. meta::
+   :description: Documentation of the GPU interface that enables workshops to
+                 access the host system's GPUs directly, allowing for improved
+                 performance of GPU-intensive applications and workloads in
+                 isolated environments.
+
 GPU interface
 =============
 
@@ -96,7 +102,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

@@ -1,5 +1,9 @@
 .. _how_forward_ports:
 
+.. meta::
+   :description: How-to guide on forwarding ports with the tunnel interface in Workshop,
+                 covering scenarios like exposing services and connecting to remote systems.
+
 How to forward ports with tunneling
 ===================================
 

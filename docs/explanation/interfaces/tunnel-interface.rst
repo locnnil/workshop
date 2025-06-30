@@ -1,5 +1,11 @@
 .. _exp_tunnel_interface:
 
+.. meta::
+   :description: Documentation of the tunnel interface that enables network
+                 service sharing between workshops and the host system,
+                 supporting TCP, UDP, and Unix domain socket connections for
+                 accessing applications across isolation boundaries.
+
 Tunnel interface
 ================
 
@@ -209,7 +215,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

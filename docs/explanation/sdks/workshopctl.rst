@@ -1,5 +1,10 @@
 .. _exp_workshopctl:
 
+.. meta::
+   :description: Documentation of the workshopctl tool that enables SDKs to
+                 communicate with the workshopd daemon for health reporting and
+                 monitoring, similar to snapctl in the snap ecosystem.
+
 SDK health reports with :program:`workshopctl`
 ==============================================
 

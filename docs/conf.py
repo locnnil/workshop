@@ -132,6 +132,17 @@ html_context = {
 slug = ''
 
 
+html_baseurl = "https://canonical-workshop.readthedocs-hosted.com/"
+
+
+# When configured with RTD variables, check for RTD environment so manual runs succeed:
+
+if 'READTHEDOCS_VERSION' in os.environ:
+    version = os.environ["READTHEDOCS_VERSION"]
+    sitemap_url_scheme = '{version}{link}'
+else:
+    sitemap_url_scheme = 'MANUAL/{link}'
+
 # Template and asset locations
 
 html_static_path = ["_static"]
@@ -215,6 +226,7 @@ extensions = [
     "sphinxcontrib.cairosvgconverter",
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
+    "sphinx_sitemap",
 ]
 
 # Excludes files or directories from processing
@@ -224,7 +236,7 @@ exclude_patterns = ["readme.rst", "reference/cli/workshop-*.rst", "coverage.md"]
 # Adds custom CSS files, located under 'html_static_path'
 
 html_css_files = [
-    "css/workshop.css",
+    "workshop.css",
 ]
 
 

@@ -1,5 +1,11 @@
 .. _exp_ssh_interface:
 
+.. meta::
+   :description: Documentation of the SSH interface that allows workshops to
+                 securely use the host's SSH agent, keys, and configuration for
+                 accessing private repositories and remote machines from within
+                 isolated environments.
+
 SSH interface
 =============
 
@@ -104,7 +110,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

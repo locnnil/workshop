@@ -1,5 +1,11 @@
 .. _contributing:
 
+.. meta::
+   :description: Guide on contributing to the Workshop project, detailing
+                 why and how to join the community, including instructions for
+                 code contributions, documentation improvements, releases,
+                 and testing opportunities.
+
 How to contribute
 =================
 
@@ -314,7 +320,9 @@ This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake
 
 .. note::
 
-   This guide assumes you're familiar with :ref:`SDKcraft <how_sdkcraft>`.
+   This guide assumes you're familiar with |sdk_markup|:
+   see the :ref:`tut_craft_sdks` tutorial section for details.
+
 
 
 Create the directory structure
@@ -505,9 +513,11 @@ You'll also need to update the documentation:
   according to the changes in :file:`internal/workshop/workshop_file.go`.
 
 - Update the release notes,
-  adding additional information on top of the auto-generated change log
-  and following the `established format
-  <https://github.com/canonical/workshop/releases>`_.
+  adding detailed information from pull requests and commit messages
+  within the release scope
+  to supplement the auto-generated change log.
+  Follow the `established format <https://github.com/canonical/workshop/releases>`_
+  to ensure consistency with previous releases.
 
 - Update the `coverage map
   <https://github.com/canonical/workshop/actions/workflows/doc-cover.yaml>`_.

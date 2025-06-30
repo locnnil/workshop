@@ -1,5 +1,9 @@
 .. _how_create_ros2_sdk:
 
+.. meta::
+   :description: How-to guide on designing an SDK for ROS 2, showcasing the structure and
+                 layout of an SDK published in the SDK Store.
+
 How to design an SDK
 ====================
 
@@ -15,7 +19,7 @@ is structured.
 .. note::
 
    This guide assumes that you already have |sdk_markup| installed
-   and know how to use it; if needed, see the :ref:`tutorial <tutorial>` first.
+   and know how to use it; if needed, see the :ref:`tutorial <tut_index>` first.
    Also, our ROS 2 SDK is currently based on the :samp:`jazzy` distribution;
    adapt these steps for other distributions as needed.
 
@@ -296,7 +300,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_sdk_hooks`
 - :ref:`exp_sdk_parts`

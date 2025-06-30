@@ -2,6 +2,11 @@
 
 .. _exp_sdk_hooks:
 
+.. meta::
+   :description: Documentation of SDK lifecycle hooks in Workshop, explaining
+                 how these shell scripts control and extend SDK behavior at
+                 different stages of the workshop lifecycle.
+
 SDK hooks
 =========
 

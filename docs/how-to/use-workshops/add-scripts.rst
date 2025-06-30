@@ -1,5 +1,9 @@
 .. _how_add_scripts:
 
+.. meta::
+   :description: How-to guide on adding scripts to workshops, enabling automation and
+                 enhanced functionality without modifying SDKs.
+
 How to add scripts to your workshop
 ===================================
 
@@ -19,7 +23,7 @@ and making use of the features provided by the SDKs in your workshop
 
 Here's an example of a workshop definition with two scripts
 that use the capabilities provided by the sketch SDK
-from the :ref:`how_sketch` guide:
+from the :ref:`tut_sketch_sdks` tutorial section:
 
 .. code-block:: yaml
    :caption: workshop.yaml

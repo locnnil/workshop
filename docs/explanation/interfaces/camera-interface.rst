@@ -1,5 +1,11 @@
 .. _exp_camera_interface:
 
+.. meta::
+   :description: Documentation on the camera interface that enables workshops to
+                 access the host system's cameras and video capture devices for
+                 hardware testing, device development, and other video-related
+                 applications.
+
 Camera interface
 ================
 
@@ -105,7 +111,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interfaces`
+- :ref:`exp_interface_concepts`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`

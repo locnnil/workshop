@@ -1,5 +1,9 @@
 .. _ref_workshop_cli:
 
+.. meta::
+   :description: Overview of the 'workshop' CLI utility, listing available
+                 commands and global options for managing Workshop environments.
+
 workshop (CLI)
 ==============
 

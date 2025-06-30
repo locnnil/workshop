@@ -1,5 +1,10 @@
 .. _exp_interface:
 
+.. meta::
+   :description: Workshop interfaces documentation, providing
+                 access to explanations of interface concepts and specific
+                 interface types used for resource sharing between containers.
+
 Interfaces
 ==========
 

@@ -1,5 +1,9 @@
 .. _ref_index:
 
+.. meta::
+   :description: Workshop reference guides, providing technical background
+                 for using Workshop and SDKcraft, including command-line interfaces.
+
 Reference
 =========
 
@@ -24,8 +28,8 @@ provided by |ws_markup| and |sdk_markup|:
 - :doc:`cli/workshopctl`
 
 
-Definition formats
-------------------
+Definition file formats
+-----------------------
 
 .. @artefact SDK
 .. @artefact workshop (container)
