@@ -15,7 +15,7 @@ Craft SDKs with |sdk_markup|
 This is the third section of the :ref:`three-part series <tut_index>`;
 you'll learn how to create full-featured SDKs
 that can be published and shared with others using |sdk_markup|.
-It relies on the knowledge gained in the :ref:`tut_getting_started` section,
+It relies on the knowledge gained in the :ref:`tut_get_started` section,
 where you learned how to create and run workshops,
 and also leverages the :ref:`tut_sketch_sdks` section,
 where you learned how to sketch local SDKs.

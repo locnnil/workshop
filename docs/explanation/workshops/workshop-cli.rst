@@ -85,4 +85,4 @@ Reference:
 
 Tutorial:
 
-- :ref:`tut_getting_started`
+- :ref:`tut_get_started`
