@@ -55,28 +55,25 @@ In this documentation
 
 .. grid:: 1 1 2 2
 
-   .. grid-item:: :doc:`Tutorial <tutorial/index>`
+   .. grid-item-card:: :doc:`Tutorial <tutorial/index>`
 
-      :ref:`Install <tut_install>` |
-      :ref:`Define workshops <tut_define_launch>` |
-      :ref:`Refresh workshops <tut_refresh>` |
-      :ref:`Run commands <tut_exec>` |
-      :ref:`Use interfaces <tut_interfaces>`
+      | :ref:`Part 1: Get started <tut_get_started>`
+      | :ref:`Part 2: Sketch SDKs <tut_craft_sdks>`
+      | :ref:`Part 3: Craft SDKs <tut_sketch_sdks>`
 
+   .. grid-item-card:: :doc:`How-to guides <how-to/index>`
 
-   .. grid-item:: :doc:`How-to guides <how-to/index>`
-
-      **Step-by-step guides** for common |ws_markup| and |sdk_markup| tasks
+      Step-by-step guides for common |ws_markup| and |sdk_markup| tasks
 
 
-   .. grid-item:: :doc:`Explanation <explanation/index>`
+   .. grid-item-card:: :doc:`Explanation <explanation/index>`
 
-      **Discussion and clarification** of key topics
+      Discussion and clarification of key topics
 
 
-   .. grid-item:: :doc:`Reference <reference/index>`
+   .. grid-item-card:: :doc:`Reference <reference/index>`
 
-      **Technical details**, specifications, APIs
+      Technical details, specifications, APIs
 
 
 - **Projects**: :ref:`Concepts <exp_projects>` |

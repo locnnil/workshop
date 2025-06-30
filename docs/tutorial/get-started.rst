@@ -1,11 +1,11 @@
-.. _tut_getting_started:
+.. _tut_get_started:
 
 .. meta::
    :description: Practical introduction to workshops, guiding users through
                  defining, launching, and refreshing workshops, and executing commands in workshops.
 
-Getting started with workshops
-==============================
+Get started with workshops
+==========================
 
 This is the first section of the :ref:`three-part series <tut_index>`;
 a practical introduction

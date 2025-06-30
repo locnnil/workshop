@@ -11,7 +11,7 @@ This is the second section of the :ref:`three-part series <tut_index>`;
 it teaches you to create experimental SDKs quickly
 using the :command:`workshop sketch-sdk` command
 to run local SDK experiments without publishing them.
-It relies on the knowledge gained in the :ref:`tut_getting_started` section,
+It relies on the knowledge gained in the :ref:`tut_get_started` section,
 where you learned how to create and run workshops.
 
 Suppose you built your workshop with a number of SDKs
@@ -32,7 +32,7 @@ We'll use the following scenario to demonstrate
 how to iterate on an SDK to add missing functionality.
 
 Suppose you're running the :samp:`dev` workshop
-from the :ref:`tut_getting_started` tutorial section:
+from the :ref:`tut_get_started` tutorial section:
 
 .. code-block:: yaml
    :caption: workshop.yaml

@@ -24,7 +24,7 @@ This section also covers executing various commands and working with interfaces:
 .. toctree::
    :maxdepth: 1
 
-   getting-started
+   get-started
 
 
 Sketch SDKs
