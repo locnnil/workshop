@@ -78,6 +78,19 @@ This defines all SDK components in a single file named :file:`sdk.yaml`:
    $ workshop sketch-sdk
 
 
+.. note::
+
+   The :command:`workshop sketch-sdk` command opens the SDK definition
+   in your default text editor.
+   To use a specific editor,
+   set the :envvar:`EDITOR` environment variable, e.g.:
+
+   .. code-block:: console
+
+      $ export EDITOR=vim
+      $ workshop sketch-sdk
+
+
 The editor presents a minimal setup
 with empty :samp:`hooks`, :samp:`plugs`, and :samp:`slots`:
 
