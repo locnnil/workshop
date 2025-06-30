@@ -100,7 +100,7 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 				Protocol: "unix",
 			},
 			Listen: workshop.ProxyTarget{
-				Address:  filepath.Join("/tmp", "wayland-0"),
+				Address:  filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, "wayland-0"),
 				Protocol: "unix",
 			},
 			Direction: workshop.WorkshopToHost,
