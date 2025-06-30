@@ -248,8 +248,21 @@ use the :option:`!--name` option to change this:
 
 
 After you eject the SDK,
-the definition and the hooks are placed in the :file:`.workshop/dev/` subdirectory
-of the project.
+add it to your workshop definition
+(usually in :file:`workshop.yaml`) under the :samp:`sdks:` list:
+
+.. code-block:: yaml
+
+   sdks:
+     - name: project-dev
+       channel: latest/edge
+
+
+This is required for the workshop to use the new in-project SDK;
+next, run :command:`workshop refresh` to apply the change.
+
+The definition and the hooks of the ejected SDK
+are placed in the :file:`.workshop/dev/` subdirectory of the project.
 If your project did not previously have a :file:`.workshop/` directory
 (for example, if you only had a single :file:`workshop.yaml` in the project root),
 add the new directory and its contents to version control manually:
