@@ -42,6 +42,7 @@ jobs:
         run: |
           go install github.com/axw/gocov/gocov@v1.1.0
           go install github.com/AlekSi/gocov-xml@v1.1.0
+          go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Merge Coverage
         run: |
@@ -54,23 +55,11 @@ jobs:
           mkdir .coverage
           gocov-xml < coverage.json > .coverage/coverage.xml
 
-      # Qualification run, compares changes to a baseline
       - name: TICS GitHub Action
-        if: false && github.ref != 'refs/heads/main'
-        uses: tiobe/tics-github-action@v3
-        with:
-          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
-          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
-          project: workshop
-          installTics: true
-
-      # Baseline (reference) run
-      - name: TICS GitHub Action (Reference Run)
-        if: false && github.ref == 'refs/heads/main'
         uses: tiobe/tics-github-action@v3
         with:
           mode: qserver
-          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           project: workshop
           installTics: true
