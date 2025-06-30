@@ -353,14 +353,6 @@ func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string
 		if _, err := fs.Stat(script); err == nil {
 			return errors.New("desktop interface already connected")
 		}
-
-		if next.Wayland != nil {
-			socket := next.Wayland.Listen.Address
-			link := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, filepath.Base(socket))
-			if err := fs.Symlink(socket, link); err != nil {
-				return err
-			}
-		}
 	}
 
 	envVars := desktopEnvironment(user, env, *next)
@@ -375,13 +367,7 @@ func removeDesktop(fs workshop.WorkshopFs, prev *workshop.Desktop) error {
 	script := "/etc/profile.d/workshop-desktop.sh"
 	err := fs.RemoveIfExists(script)
 	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
-	var err3 error
-	if prev.Wayland != nil {
-		socket := prev.Wayland.Listen.Address
-		link := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, filepath.Base(socket))
-		err3 = fs.RemoveIfExists(link)
-	}
-	return cmp.Or(err, err2, err3)
+	return cmp.Or(err, err2)
 }
 
 func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Desktop) map[string]string {
@@ -403,7 +389,8 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	}
 
 	if dev.Wayland != nil {
-		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, "/tmp/")
+		prefix := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid) + "/"
+		envVars["WAYLAND_DISPLAY"] = strings.TrimPrefix(dev.Wayland.Listen.Address, prefix)
 	}
 
 	if dev.X11 != nil {
@@ -579,6 +566,9 @@ func checkListenSocketPaths(devices map[string]map[string]string) error {
 		}
 		listen = strings.TrimPrefix(listen, "unix:")
 		if strings.HasPrefix(listen, "/tmp/") || strings.HasPrefix(listen, dirs.WorkshopRunDir+"/") {
+			continue
+		}
+		if listen == filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, "wayland-0-inside-workshop") {
 			continue
 		}
 		return fmt.Errorf("currently unsafe to create socket %q using LXD", listen)
