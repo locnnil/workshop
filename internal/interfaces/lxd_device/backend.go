@@ -555,6 +555,27 @@ func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
 	return cmp.Or(err, err2, err3)
 }
 
+func checkListenSocketPaths(devices map[string]map[string]string) error {
+	for _, dev := range devices {
+		if dev["type"] != "proxy" || dev["bind"] != "instance" {
+			continue
+		}
+		listen := dev["listen"]
+		if !strings.HasPrefix(listen, "unix:/") {
+			continue
+		}
+		listen = strings.TrimPrefix(listen, "unix:")
+		if strings.HasPrefix(listen, "/tmp/") || strings.HasPrefix(listen, dirs.WorkshopRunDir+"/") {
+			continue
+		}
+		if listen == filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid, "wayland-0-inside-workshop") {
+			continue
+		}
+		return fmt.Errorf("currently unsafe to create socket %q using LXD", listen)
+	}
+	return nil
+}
+
 // Setup creates mount profile specific to a given sdk.
 func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 	s, err := repo.SdkSpecification(ctx, b.Name(), sdkRef)
@@ -562,6 +583,10 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 		return err
 	}
 	spec := s.(*Specification)
+
+	if err := checkListenSocketPaths(spec.devices); err != nil {
+		return err
+	}
 
 	conn, err := lxdbackend.ConnectLxd(ctx)
 	if err != nil {
