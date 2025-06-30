@@ -32,7 +32,7 @@ type plugJSON struct {
 	Interface string                 `json:"interface,omitempty"`
 	Attrs     map[string]interface{} `json:"attrs,omitempty"`
 	Label     string                 `json:"label,omitempty"`
-	Bind      *sdk.PlugRef    `json:"bind,omitempty"`
+	Bind      *sdk.PlugRef           `json:"bind,omitempty"`
 	// Connections are synthesized, they are not on the original type.
 	Connections []sdk.SlotRef `json:"connections,omitempty"`
 }
@@ -61,8 +61,8 @@ type interfaceAction struct {
 // connectionsJSON aids in marshalling information about a single connection
 // into JSON
 type connectionJSON struct {
-	Slot      sdk.SlotRef     `json:"slot"`
-	Plug      sdk.PlugRef     `json:"plug"`
+	Slot      sdk.SlotRef            `json:"slot"`
+	Plug      sdk.PlugRef            `json:"plug"`
 	Interface string                 `json:"interface"`
 	Manual    bool                   `json:"manual,omitempty"`
 	SlotAttrs map[string]interface{} `json:"slot-attrs,omitempty"`

@@ -53,4 +53,3 @@ func Copy(target, source *Reverter) {
 	}
 	target.revertFuncs = append(target.revertFuncs, source.revertFuncs...)
 }
-
