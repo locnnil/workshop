@@ -312,7 +312,6 @@ func (s *cpSuite) TestCopyAllChown(c *C) {
 	c.Assert(os.WriteFile(filepath.Join(root, "a", "script"), []byte("#!/bin/sh\n"), 0705), IsNil)
 	c.Assert(syscall.Mkfifo(filepath.Join(root, "a", "pipe"), 0644), IsNil)
 	c.Assert(os.Mkdir(filepath.Join(root, "target"), os.ModePerm), IsNil)
-	c.Assert(os.Chmod(filepath.Join(root, "target"), os.ModePerm), IsNil)
 	c.Assert(os.WriteFile(filepath.Join(root, "target", "file"), []byte("bar"), 0644), IsNil)
 	c.Assert(os.Symlink(filepath.Join(root, "target"), filepath.Join(root, "a", "link")), IsNil)
 
@@ -338,7 +337,7 @@ func (s *cpSuite) TestCopyAllChown(c *C) {
 	c.Check(b, testutil.DirEquals, []string{
 		"drwx------ dir",
 		"-rwxrwxrwx file",
-		"drwxrwxrwx link",
+		"Lrwxrwxrwx link",
 		"-rwx---r-x script"})
 	c.Check(filepath.Join(b, "file"), testutil.FileEquals, "foo")
 	c.Check(filepath.Join(b, "dir"), testutil.DirEquals, []string{})

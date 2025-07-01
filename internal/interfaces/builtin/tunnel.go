@@ -127,10 +127,10 @@ func (iface *tunnelInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 func normalizeEndpoint(attrs interfaces.Attrer) (string, error) {
 	var port int64
 	var endpoint string
-	var attrError *sdk.AttributeNotFoundError
+	var attrErr *sdk.AttributeNotFoundError
 	if err := attrs.Attr("endpoint", &port); err == nil {
 		endpoint = strconv.FormatInt(port, 10)
-	} else if err = attrs.Attr("endpoint", &endpoint); err != nil && !errors.As(err, &attrError) {
+	} else if err = attrs.Attr("endpoint", &endpoint); err != nil && !errors.As(err, &attrErr) {
 		return "", err
 	}
 

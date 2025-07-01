@@ -119,16 +119,30 @@ function publish_test_sdks() {
         SDK_NAME=$(basename "$i")
         SDK_FILE=$SDK_NAME.sdk
         SDK_PATH=$(readlink -f "$i")
-        STORE_PATH="$2"/"$SDK_NAME"
+        STORE_PATH="$2/$SDK_NAME"
 
         echo "$SDK_NAME:"
         find "$SDK_PATH/" -mindepth 2 -maxdepth 2 -type d -printf "%P\n" | while IFS= read -r track; do
             printf "\t%s -> %s\n" "$track" "$STORE_PATH/$track"
-            mkdir -p "$STORE_PATH"/"$track"
+            mkdir -p "$STORE_PATH/$track"
+            rm -f "$STORE_PATH/$track/$SDK_FILE"
 
-            # shellcheck disable=SC2046
-            tar cf "$STORE_PATH"/"$track"/"$SDK_FILE" -C "$SDK_PATH"/"$track" $(ls -A "$SDK_PATH"/"$track")
-            cp -f "$SDK_PATH"/"$track"/meta/sdk.yaml "$STORE_PATH"/"$track"
+            readarray -d '' -t SDK_FILES < <(ls --almost-all --zero "$SDK_PATH/$track")
+            tar \
+                --create \
+                --format=posix \
+                --use-compress-program='zstd -10 --threads=0' \
+                --mode='a-st,go-w' \
+                --owner='root:0' \
+                --group='root:0' \
+                --mtime="$(date --utc +'%Y-%m-%dT%H:%M:%S.%6NZ')" \
+                --sort=name \
+                --force-local \
+                --file="$STORE_PATH/$track/$SDK_FILE" \
+                --directory="$SDK_PATH/$track" \
+                "${SDK_FILES[@]}"
+
+            cp -f "$SDK_PATH/$track/meta/sdk.yaml" "$STORE_PATH/$track"
         done
     done
 }
