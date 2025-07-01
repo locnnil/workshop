@@ -73,6 +73,8 @@ Connections can be established:
 All connections are subject to validation.
 Also, automatic connections require plugs and slots to have matching details
 and aren't allowed for some interfaces, such as :samp:`ssh-agent`.
+Finally, the order of automatic connections is not guaranteed,
+so you should not rely on it.
 
 
 .. _exp_interfaces_validation:
