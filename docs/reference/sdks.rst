@@ -426,6 +426,19 @@ it resolves to an internal directory in the workshop,
 which :samp:`save-state` and :samp:`restore-state`
 can use to preserve and recover the data respectively.
 
+.. note::
+
+  The :envvar:`$SDK_STATE_DIR` variable is only available
+  to the :samp:`save-state` and :samp:`restore-state` SDK hooks.
+  It is not accessible to the :samp:`workshop` user, the SDK itself,
+  or in the workshop definition.
+
+  The state directory is a dedicated volume created by |ws_markup| at run-time
+  for each SDK in every workshop,
+  and is removed when the workshop stops.
+  The :samp:`*-state` hooks can use it
+  to store or retrieve any arbitrary data required by the SDK.
+
 
 .. _ref_sdk_channels:
 
