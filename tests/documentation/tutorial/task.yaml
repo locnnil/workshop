@@ -4,12 +4,16 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  # ----------------------------------------------------------------------------
+
+  ## Part 1: Get Started
+
   # Run
   workshop_exec --help
 
   # Define
   mkdir hello-workshop/
-  mv main.go workshop.yaml hello-workshop/
+  cp main.go workshop.yaml hello-workshop/
   chown -R ubuntu:ubuntu hello-workshop/
   cd hello-workshop/
   workshop_exec list
@@ -54,7 +58,9 @@ execute: |
   # Interfaces
   workshop_exec connections
   workshop_exec disconnect nimble/test-sdk-go:mod-cache
+  workshop_exec connections
   workshop_exec connect nimble/test-sdk-go:mod-cache :mount
+  workshop_exec connections
   workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
   workshop_exec info
 
@@ -82,23 +88,45 @@ execute: |
   workshop_exec exec -- caddy start
   curl localhost:8082 | MATCH 'Hello, Workshop!'
 
-  # sketch SDK
+  # Remove
+  workshop_exec remove
 
-  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  1/^plugs:$/a
-    ssh-agent:
-  .
-  wq
-  EOF
+
+  # ----------------------------------------------------------------------------
+
+  # Part 2: Sketch SDKs
+
+  cp ../workshop.yaml .
+  chown -R ubuntu:ubuntu workshop.yaml
+  workshop_exec launch
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   1/^hooks:$/a
     setup-base: |
       apt-get update
       apt-get install delve clang
+      snap install --classic golangci-lint
   .
   wq
   EOF
 
-  # Remove
-  workshop_exec remove
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
+
+  workshop_exec sketch-sdk --stash
+  workshop_exec sketch-sdk --restore
+  workshop_exec sketch-sdk --eject --name tools
+  # workshop_exec sketch-sdk --remove
+  workshop_exec sketches
+
+  # ----------------------------------------------------------------------------
+
+  # Part 3: Craft SDKs
+
+  run_sdkcraft --help
+  mkdir ../go/ && cd ../go/
+  run_sdkcraft init
+  mv ../sdk.yaml .
+  mkdir hooks
+  mv ../{setup-base,save-state,restore-state,check-health} hooks/
+  run_sdkcraft clean
+  run_sdkcraft
