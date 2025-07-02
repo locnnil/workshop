@@ -538,7 +538,8 @@ indicated by the ellipsis in the :samp:`host-source` path.
 Some interfaces are auto-connected, while some are not;
 this usually depends on their purpose.
 
-In any case, you can connect and disconnect interfaces at will:
+In any case, you can connect and disconnect interfaces at will,
+confirming the connection state with :command:`workshop connections`:
 
 .. @artefact workshop connect
 .. @artefact workshop disconnect
@@ -546,7 +547,9 @@ In any case, you can connect and disconnect interfaces at will:
 .. code-block:: console
 
    $ workshop disconnect dev/go:mod-cache
+   $ workshop connections
    $ workshop connect dev/go:mod-cache :mount
+   $ workshop connections
 
 
 You can remount a mount interface plug to a new location on the host:
