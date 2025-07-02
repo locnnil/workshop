@@ -1,5 +1,11 @@
 .. _exp_arch_install:
 
+.. meta::
+   :description: Explanation article on installing and understanding the
+                 architecture of Workshop, including its CLI, daemon, and
+                 containerized components, with details on LXD, ZFS, networking,
+                 and system isolation.
+
 Initial installation
 ====================
 
