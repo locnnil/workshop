@@ -3,6 +3,8 @@
 Initial installation
 ====================
 
+.. @artefact installation
+
 |ws_markup| is designed to run on Linux systems.
 It is primarily distributed as a `snap <https://snapcraft.io/>`_
 and relies on LXD as its containerization backend
@@ -11,6 +13,10 @@ and ZFS for efficient storage management.
 
 Main components
 ---------------
+
+.. @artefact workshop (CLI)
+.. @artefact workshopd
+.. @artefact workshopctl
 
 |ws_markup| installation on your host system includes three primary components:
 
@@ -39,6 +45,8 @@ while :program:`workshopd` interfaces with LXD through the latter's native API.
 CLI
 ~~~
 
+.. @artefact workshop (CLI)
+
 The :program:`workshop` CLI provides a comprehensive command-line interface
 for managing workshops and interacting with :program:`workshopd`.
 It is organized into logical command groups
@@ -64,6 +72,8 @@ with proper error reporting and progress tracking.
 Daemon
 ~~~~~~
 
+.. @artefact workshopd
+
 The :program:`workshopd` is the core component of |ws_markup|
 responsible for managing the complete workshop life cycle. It uses LXD as its container backend.
 
@@ -79,6 +89,8 @@ When integrated with :program:`systemd`,
 
 REST API
 ^^^^^^^^
+
+.. @artefact API
 
 The :program:`workshopd` daemon exposes a versioned REST API (v1) over Unix domain sockets
 for secure local communication with the CLI.
@@ -107,6 +119,8 @@ with appropriate HTTP status codes.
 
 LXD communication
 ^^^^^^^^^^^^^^^^^
+
+.. @artefact workshopd
 
 The :program:`workshopd` daemon maintains a persistent connection to LXD
 through its Unix domain socket at :file:`/var/snap/lxd/common/lxd/unix.socket`,
@@ -144,6 +158,8 @@ and resource constraints.
 Control interface
 ~~~~~~~~~~~~~~~~~
 
+.. @artefact workshopctl
+
 The :program:`workshopctl` tool serves as a secure bridge
 between workshop containers and the host system.
 It operates with the workshop user's permissions (UID 1000)
@@ -155,6 +171,8 @@ at :file:`/var/lib/workshop/run/workshop.socket.untrusted`.
 
 Management and isolation
 ------------------------
+
+.. @artefact workshopd
 
 The :program:`workshopd` daemon manages the complete workshop life cycle,
 including storage pool management,
