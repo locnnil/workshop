@@ -24,6 +24,11 @@ but can you align it with the way |ws_markup| operates?
 Fortunately, |ws_markup| allows you to quickly draft a local SDK
 and use it within your workshop. This process is called *sketching*.
 
+.. note::
+
+   For details of how sketch SDKs are different from regular SDKs,
+   see the :ref:`exp_sketch_sdk` explanation section.
+
 
 Introduction
 ------------
@@ -76,6 +81,19 @@ This defines all SDK components in a single file named :file:`sdk.yaml`:
 .. code-block:: console
 
    $ workshop sketch-sdk
+
+
+.. note::
+
+   The :command:`workshop sketch-sdk` command opens the SDK definition
+   in your default text editor.
+   To use a specific editor,
+   set the :envvar:`EDITOR` environment variable, e.g.:
+
+   .. code-block:: console
+
+      $ export EDITOR=vim
+      $ workshop sketch-sdk
 
 
 The editor presents a minimal setup
@@ -218,10 +236,18 @@ into the :file:`.workshop/` subdirectory of the project
 and removes the sketch from the running workshop.
 |ws_markup| can pull SDKs from this directory,
 bypassing the SDK Store.
+Such SDKs are called *in-project SDKs*.
 
-If you'd rather publish the SDK for other projects to use,
-|sdk_markup| can help.
-For details, see the :ref:`tut_craft_sdks` section.
+.. note::
+
+   For details of how in-project SDKs are different from regular and sketch SDKs,
+   see the :ref:`exp_in_project_sdk` explanation section.
+
+   If you'd rather publish a regular SDK for other projects to use,
+   |sdk_markup| can help;
+   proceed to the next part of the tutorial,
+   :ref:`tut_craft_sdks`.
+
 
 The new SDK is named after the project directory by default;
 use the :option:`!--name` option to change this:
@@ -232,6 +258,35 @@ use the :option:`!--name` option to change this:
 
      "dev" sketch ejected to ".workshop/tools"
      To use it, add "project-tools" to the list of SDKs and run 'workshop refresh dev'
+
+
+After you eject the SDK,
+add it to your workshop definition
+(usually in :file:`workshop.yaml`) under the :samp:`sdks:` list:
+
+.. code-block:: yaml
+
+   sdks:
+     - name: project-tools
+
+
+This is required for the workshop to use the new in-project SDK;
+next, run :command:`workshop refresh` to apply the change.
+
+The definition and the hooks of the ejected SDK
+are placed in the :file:`.workshop/tools/` subdirectory of the project.
+If your project did not previously have a :file:`.workshop/` directory
+(for example, if you only had a single :file:`workshop.yaml` in the project root),
+add the new directory and its contents to version control manually:
+
+.. code-block:: console
+
+   $ git add .workshop/
+   $ git commit -m "Add tools project SDK"
+
+
+This ensures your in-project SDK is tracked
+and can be shared with collaborators or CI systems.
 
 
 Clean up

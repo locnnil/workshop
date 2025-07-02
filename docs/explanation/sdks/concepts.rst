@@ -160,6 +160,30 @@ Note that :samp:`sketch` is a reserved name,
 and the sketch SDK is always installed last.
 
 
+.. _exp_in_project_sdk:
+
+In-project SDKs
+---------------
+
+.. @artefact in-project SDK
+
+An *in-project SDK* resides within your project's :file:`.workshop/` directory.
+Unlike regular SDKs, which are published and distributed through the SDK Store,
+in-project SDKs are specific to your project
+and are version-controlled alongside your project's source code.
+
+You can create an in-project SDK by ejecting a :ref:`sketch SDK <exp_sketch_sdk>`
+or by adding one manually.
+This approach allows you to customize the workshop
+to fit your project's unique requirements,
+ensuring that all collaborators use the same environment and dependencies.
+
+They are a good fit when your SDK includes project-specific dependencies,
+tools, interface connections, or configurations
+that should remain private to the project
+and not be published or reused elsewhere.
+
+
 See also
 --------
 

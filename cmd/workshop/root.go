@@ -36,15 +36,19 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.AddGroup(
 		&cobra.Group{
 			ID:    "create-update-delete",
-			Title: "Create new workshops, update or delete existing ones:",
+			Title: "Create new workshops; start, stop, update or delete existing ones:",
 		},
 		&cobra.Group{
-			ID:    "start-stop",
-			Title: "Start and stop existing workshops:",
+			ID:    "warnings",
+			Title: "List and acknowledge warnings:",
 		},
 		&cobra.Group{
 			ID:    "explore-troubleshoot",
-			Title: "Enumerate workshops, list details and recent activities:",
+			Title: "Enumerate workshops, list their details:",
+		},
+		&cobra.Group{
+			ID:    "changes-tasks",
+			Title: "List recent changes and individual activities:",
 		},
 		&cobra.Group{
 			ID:    "connect",
@@ -76,11 +80,11 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.AddCommand(listCmd)
 
 	changesCmd := (&CmdChanges{root: c}).Command()
-	changesCmd.GroupID = "explore-troubleshoot"
+	changesCmd.GroupID = "changes-tasks"
 	cmd.AddCommand(changesCmd)
 
 	tasksCmd := (&CmdTasks{root: c}).Command()
-	tasksCmd.GroupID = "explore-troubleshoot"
+	tasksCmd.GroupID = "changes-tasks"
 	cmd.AddCommand(tasksCmd)
 
 	refreshCmd := (&CmdRefresh{root: c}).Command()
@@ -88,11 +92,11 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.AddCommand(refreshCmd)
 
 	startCmd := (&CmdStart{root: c}).Command()
-	startCmd.GroupID = "start-stop"
+	startCmd.GroupID = "create-update-delete"
 	cmd.AddCommand(startCmd)
 
 	stopCmd := (&CmdStop{root: c}).Command()
-	stopCmd.GroupID = "start-stop"
+	stopCmd.GroupID = "create-update-delete"
 	cmd.AddCommand(stopCmd)
 
 	infoCmd := (&CmdInfo{root: c}).Command()
@@ -136,11 +140,11 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.AddCommand(disconnectCmd)
 
 	warningsCmd := (&CmdWarnings{root: c}).Command()
-	warningsCmd.GroupID = "explore-troubleshoot"
+	warningsCmd.GroupID = "warnings"
 	cmd.AddCommand(warningsCmd)
 
 	okayCmd := (&CmdOkay{root: c}).Command()
-	okayCmd.GroupID = "explore-troubleshoot"
+	okayCmd.GroupID = "warnings"
 	cmd.AddCommand(okayCmd)
 
 	sketchCmd := (&CmdSketch{root: c}).Command()
