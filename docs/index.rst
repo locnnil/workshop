@@ -58,8 +58,8 @@ In this documentation
    .. grid-item-card:: :doc:`Tutorial <tutorial/index>`
 
       | :ref:`Part 1: Get started <tut_get_started>`
-      | :ref:`Part 2: Sketch SDKs <tut_craft_sdks>`
-      | :ref:`Part 3: Craft SDKs <tut_sketch_sdks>`
+      | :ref:`Part 2: Sketch SDKs <tut_sketch_sdks>`
+      | :ref:`Part 3: Craft SDKs <tut_craft_sdks>`
 
    .. grid-item-card:: :doc:`How-to guides <how-to/index>`
 
