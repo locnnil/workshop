@@ -141,3 +141,11 @@ func MockMaxCp(new int64) (restore func()) {
 		maxcp = old
 	}
 }
+
+func FakeRandomString(f func(int) string) (restore func()) {
+	old := randomString
+	randomString = f
+	return func() {
+		randomString = old
+	}
+}

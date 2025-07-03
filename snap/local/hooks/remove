@@ -2,18 +2,18 @@
 
 # disable check for relative dir following
 # shellcheck disable=SC1091
-. "$(dirname "$0")/lxc-utils"
+. "$SNAP/snap/lib/lxc-utils"
 
-# The workshop services are stopped by the moment the remove 
-# hook is called. Therefore, for now, we walk the LXD projects created 
+# The workshop services are stopped by the moment the remove
+# hook is called. Therefore, for now, we walk the LXD projects created
 # by the workshop and remove all instances/profiles/images/volumes.
 projects=$(get_projects)
 
 for p in $(echo "$projects" | xargs -L1 echo); do
-  remove_instances "$p"
-  remove_profiles "$p"
-  remove_images "$p"
-  remove_project "$p"
+    remove_instances "$p"
+    remove_profiles "$p"
+    remove_images "$p"
+    remove_project "$p"
 done
 
 remove_network

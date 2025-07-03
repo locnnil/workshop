@@ -65,7 +65,7 @@ EOF
 
     setup_lxd
 
-    snap install --classic --channel=1.23/stable go
+    snap install --classic --channel=1.24/stable go
     snap install yq
 }
 

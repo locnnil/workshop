@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/rand"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
