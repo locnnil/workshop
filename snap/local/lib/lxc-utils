@@ -1,0 +1,62 @@
+# Enforce local unix socket and the default project (if not specified).
+run_lxc() {
+    lxc --force-local "$@"
+}
+
+get_projects() {
+    run_lxc project list -f compact | awk '$1 ~ /^workshop(-stash)?\..*/ {print $1}'
+}
+
+remove_instances() {
+    instances=$(run_lxc list -c n -f compact --project "$1" | awk 'NR>1 {printf "%s ", $1}')
+    if [ -n "$instances" ]; then
+        echo "Removing instances: $instances"
+        # shellcheck disable=SC2086
+        run_lxc delete --force $instances --project "$1"
+    fi
+}
+
+remove_profiles() {
+    profiles=$(run_lxc profile list -f compact --project "$1" | awk 'NR>1 {printf "%s ", $1}')
+    for profile in $(echo "$profiles" | xargs -L1 echo); do
+        # default profiles are protected
+        if [ "$profile" != "default" ]; then
+            run_lxc profile delete "$profile" --project "$1"
+            echo "Removing profile: $profile"
+        fi
+    done
+}
+
+remove_images() {
+    images=$(run_lxc image list -f compact --project "$1" | awk 'NR>1 {printf "%s ", $1}')
+    if [ -n "$images" ]; then
+        echo "Removing images: $images"
+        # shellcheck disable=SC2086
+        run_lxc image delete $images --project "$1"
+    fi
+}
+
+remove_network() {
+    echo "Removing network: workshopbr0"
+    run_lxc network delete workshopbr0
+}
+
+remove_project() {
+    echo "Removing project: $1"
+    run_lxc project delete "$1"
+}
+
+remove_volumes() {
+    # Storage pool custom volumes are shared among projects and removed last. These
+    # belong to the default LXD project.
+    storage_pool="workshop"
+    if ! run_lxc storage list -f compact | awk 'NR>1 {printf "%s ", $1}' | grep -q "$storage_pool"; then
+        echo "Storage pool '$storage_pool' does not exist, skipping volume removal."
+        return
+    fi
+    volumes=$(run_lxc storage volume list "$storage_pool" -c nt type=custom -f compact | awk 'NR>1 {printf "%s ", $1}')
+    echo "$volumes" | xargs -n1 -r | while read -r volume; do
+        run_lxc storage volume delete "$storage_pool" "$volume"
+    done
+    run_lxc storage delete "$storage_pool"
+}

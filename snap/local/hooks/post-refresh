@@ -2,15 +2,15 @@
 
 # disable check for relative dir following
 # shellcheck disable=SC1091
-. "$(dirname "$0")/lxc-utils"
+. "$SNAP/snap/lib/lxc-utils"
 
 projects=$(get_projects)
 
 for p in $(echo "$projects" | xargs -L1 echo); do
-  echo "Found LXD project: $p" 
-  remove_instances "$p"
-  remove_profiles "$p"
-done 
+    echo "Found LXD project: $p"
+    remove_instances "$p"
+    remove_profiles "$p"
+done
 
 remove_volumes
 
