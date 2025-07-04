@@ -32,7 +32,7 @@ The guidelines below will keep your contributions effective and meaningful.
 Environment setup
 -----------------
 #. ``Workshop`` has a client-server architecture.
-   Its ``workshopd`` daemon exposes a RESTful API (see :file:`internal/daemon/api.go`) to the clients.
+   Its ``workshopd`` daemon exposes a RESTful API (see ``internal/daemon/api.go``) to the clients.
    To run the daemon locally:
 
    .. code-block:: console
@@ -409,22 +409,6 @@ To go back to the default store:
 
 |ws_markup| will now use the default URL.
 
-Documentation
--------------
-
-All documentation resides in the ``docs/`` directory.
-To build and run it at ``127.0.0.1:8000``:
-
-.. code-block:: console
-
-   make run
-
-
-To suggest changes online, use the GitHub link in the footer of the page
-or submit a PR, limiting it to the ``docs/`` directory
-and following our internal `Sphinx and Read the Docs guide
-<https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/>`_.
-
 
 Releases
 --------
@@ -492,35 +476,143 @@ Here's the publishing checklist to follow:
 
 
 You'll also need to update the documentation:
+see the :ref:`contributing_doc_release` section for the full checklist.
 
-- Merge the auto-generated documentation pull request
 
-- Bump the snap version used across documentation
 
-- Generate the updated SDK definition schema
-  in the root of the SDKcraft_ repository:
+.. _contributing_doc:
+
+Documentation
+-------------
+
+All documentation resides in the :file:`docs/` directory.
+To build and run it at :samp:`127.0.0.1:8000`:
+
+.. code-block:: console
+
+   cd docs
+   make install
+   make run
+
+
+To suggest changes,
+submit a `pull request <https://github.com/canonical/workshop/pulls>`_,
+limiting it to the :file:`docs/` directory
+and prefixing the title with ``Doc:``.
+
+
+.. _contributing_doc_structure:
+
+Structure and style
+~~~~~~~~~~~~~~~~~~~
+
+We use the `Canonical documentation starter pack
+<https://github.com/canonical/sphinx-docs-starter-pack>`_
+to run and build our documentation;
+our preferred markup is reStructuredText (reST),
+with some opinionated style choices evident in the source.
+
+See the relevant documentation before making changes:
+
+- `Starter pack
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/>`_
+
+- `reST style guide
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/style-guide/>`_
+
+- `reST cheat sheet
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/doc-cheat-sheet/>`_
+
+
+.. _contributing_doc_generation:
+
+CLI reference
+~~~~~~~~~~~~~
+
+The :ref:`command-line reference <ref_workshop_cli>`
+is produced directly from the Cobra command tree:
+
+.. code-block:: console
+
+   go run ./cmd/workshop generate-docs
+
+
+The helper in :file:`cmd/workshop/gendocs.go`
+uses the `gencodo <https://github.com/canonical/gencodo>`_ Go module
+to convert the command metadata into :file:`.rst` files with clever templates.
+
+In particular, this is used during the
+:ref:`release workflow <contributing_doc_cicd>`.
+
+
+.. _contributing_doc_release:
+
+Release documentation
+~~~~~~~~~~~~~~~~~~~~~
+
+At every release, remember to:
+
+- Merge the auto-generated CLI reference pull request.
+
+- Bump the snap revision used across the docs.
+
+- Update two schema files:
+  :file:`docs/reference/definition-files/schema.json`
+  and
+  :file:`docs/reference/definition-files/schema-sdk.json`.
+
+  The former needs to be updated manually,
+  but you can generate the latter in the |sdk_markup| repository root:
 
   .. code-block:: console
 
      PYTHONPATH=. python sdkcraft/models/project.py
 
 
-  And copy the output to :file:`docs/reference/definitions/schema-sdk.json`
-  in this repository.
+- Update the `release notes <https://github.com/canonical/workshop/releases>`_
+  with relevant details, following the established format;
+  for an |sdk_markup| release, update the respective section in the same manner.
 
-- Update the workshop definition schema in
-  :file:`docs/reference/definitions/schema.json`
-  according to the changes in :file:`internal/workshop/workshop_file.go`.
+- Refresh the
+  `coverage map <https://github.com/canonical/workshop/blob/main/docs/coverage.md>`_
+  by running the :file:`.github/workflows/doc-cover.yaml` workflow
+  and merging the resulting pull request.
 
-- Update the release notes,
-  adding detailed information from pull requests and commit messages
-  within the release scope
-  to supplement the auto-generated change log.
-  Follow the `established format <https://github.com/canonical/workshop/releases>`_
-  to ensure consistency with previous releases.
 
-- Update the `coverage map
-  <https://github.com/canonical/workshop/actions/workflows/doc-cover.yaml>`_.
+.. _contributing_doc_cicd:
 
-- Publish and merge all documentation changes in the repository;
-  the site updates automatically.
+CI/CD
+~~~~~
+
+A few
+`GitHub Actions
+<https://docs.github.com/en/actions/get-started/understanding-github-actions>`_,
+defined in the :file:`.github/workflows/` directory,
+keep the documentation running smoothly.
+
+Some of these workflows come from the
+:ref:`starter pack <contributing_doc_structure>`,
+while others are custom-made for our needs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 40
+
+   * - Workflow
+     - Purpose
+
+   * - :file:`automatic-doc-checks.yml` (SP)
+     - Build the documentation and fail on Sphinx warnings.
+
+   * - :file:`doc-cover.yaml`
+     - Update the coverage map.
+
+   * - :file:`sphinx-python-dependency-build-checks.yml` (SP)
+     - Ensure that the Sphinx virtual environment can be built from source.
+
+   * - :file:`markdown-style-checks.yml` (SP)
+     - Check style, spelling, and links in documentation source.
+
+   * - :file:`release.yaml`
+     - Trigger a pull request
+       with :ref:`regenerated <contributing_doc_generation>` CLI reference docs.
