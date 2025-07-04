@@ -2,7 +2,7 @@
   "$defs": {
     "CameraPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project camera plug definition.",
+      "description": "SDKcraft project camera plug definition.",
       "properties": {
         "interface": {
           "const": "camera",
@@ -18,7 +18,7 @@
     },
     "DesktopPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project desktop plug definition.",
+      "description": "SDKcraft project desktop plug definition.",
       "properties": {
         "interface": {
           "const": "desktop",
@@ -34,7 +34,7 @@
     },
     "GPUPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project GPU plug definition.",
+      "description": "SDKcraft project GPU plug definition.",
       "properties": {
         "interface": {
           "const": "gpu",
@@ -50,7 +50,7 @@
     },
     "MountPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project mount plug definition.",
+      "description": "SDKcraft project mount plug definition.",
       "properties": {
         "interface": {
           "const": "mount",
@@ -76,7 +76,7 @@
     },
     "MountSlot": {
       "additionalProperties": false,
-      "description": "Sdkcraft project mount slot definition.",
+      "description": "SDKcraft project mount slot definition.",
       "properties": {
         "interface": {
           "const": "mount",
@@ -141,7 +141,7 @@
     },
     "SSHPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project SSH plug definition.",
+      "description": "SDKcraft project SSH plug definition.",
       "properties": {
         "interface": {
           "const": "ssh",
@@ -157,7 +157,7 @@
     },
     "TunnelPlug": {
       "additionalProperties": false,
-      "description": "Sdkcraft project tunnel plug definition.",
+      "description": "SDKcraft project tunnel plug definition.",
       "properties": {
         "interface": {
           "const": "tunnel",
@@ -178,7 +178,7 @@
     },
     "TunnelSlot": {
       "additionalProperties": false,
-      "description": "Sdkcraft project tunnel plug definition.",
+      "description": "SDKcraft project tunnel plug definition.",
       "properties": {
         "interface": {
           "const": "tunnel",
@@ -199,7 +199,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Sdkcraft project definition.",
+  "description": "SDKcraft project definition.",
   "properties": {
     "name": {
       "description": "The name of this project. This is used when uploading, publishing, or installing.\n\nProject name rules:\n* Valid characters are lower-case ASCII letters, numerals and hyphens.\n* Must contain at least one letter\n* May not start or end with a hyphen\n* May not have two hyphens in a row\n",
