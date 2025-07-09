@@ -26,6 +26,7 @@ envvar
 fixup
 GCP
 gcs
+gencodo
 GiB
 gid
 gocheck

@@ -32,7 +32,7 @@ The guidelines below will keep your contributions effective and meaningful.
 Environment setup
 -----------------
 #. ``Workshop`` has a client-server architecture.
-   Its ``workshopd`` daemon exposes a RESTful API (see :file:`internal/daemon/api.go`) to the clients.
+   Its ``workshopd`` daemon exposes a RESTful API (see ``internal/daemon/api.go``) to the clients.
    To run the daemon locally:
 
    .. code-block:: console
@@ -66,9 +66,9 @@ Environment setup
 
       spread -h
 
-   To run the end-to-end test suite `tests/documentation/`,  
-   download the latest |sdk_markup| release from the `repository <https://github.com/canonical/sdkcraft/releases>`_
-   and move it to the :file:`tests/` directory.
+   To run the end-to-end test suite ``tests/documentation/``,
+   download the latest SDKcraft release from the `repository <https://github.com/canonical/sdkcraft/releases>`_
+   and move it to the ``tests/`` directory.
 
 Coding
 ------
@@ -227,7 +227,7 @@ Some issues can be fixed automatically:
 
 
 If `pre-commit <https://pre-commit.com/index.html#install>`_ is available,
-:command:`git` can run these checks on every commit:
+``git`` can run these checks on every commit:
 
 .. code-block:: console
 
@@ -314,13 +314,13 @@ This can be accomplished by using the `-artifacts` flag when running `spread`.
 How to run a local SDK Store
 ----------------------------
 
-To test SDKs with |ws_markup| locally without publishing,
+To test SDKs with Workshop locally without publishing,
 it is possible to run a local instance of SDK Store.
 This guide uses the open-source `fake-gcs-server <https://github.com/fsouza/fake-gcs-server>`_.
 
 .. note::
 
-   This guide assumes you're familiar with |sdk_markup|:
+   This guide assumes you're familiar with SDKcraft:
    see the :ref:`tut_craft_sdks` tutorial section for details.
 
 
@@ -342,19 +342,19 @@ however, the remainder of the structure and naming convention is mandatory.
 
 Here:
 
-- :samp:`<SDK>` is the SDK name (e.g. :samp:`my-sdk`)
+- ``<SDK>`` is the SDK name (e.g. ``my-sdk``)
 
-- :samp:`<RELEASE>` is the SDK release (e.g. :samp:`latest`)
+- ``<RELEASE>`` is the SDK release (e.g. ``latest``)
 
-- :samp:`<CHANNEL>` is the SDK channel (e.g. :samp:`edge`)
+- ``<CHANNEL>`` is the SDK channel (e.g. ``edge``)
 
 
 Copy the SDK
 ~~~~~~~~~~~~
 
 Place the SDK files in the deepest directory from the previous step
-(e.g. :file:`fake-store/sdkstore/my-sdk/latest/edge/my-sdk/`).
-Rename the SDK definition (e.g. :file:`my-sdk.yaml`) to :file:`sdk.yaml`
+(e.g. ``fake-store/sdkstore/my-sdk/latest/edge/my-sdk/``).
+Rename the SDK definition (e.g. ``my-sdk.yaml``) to ``sdk.yaml``
 and place it at the same nesting level:
 
 .. code-block:: console
@@ -367,7 +367,7 @@ and place it at the same nesting level:
 Run the local store
 ~~~~~~~~~~~~~~~~~~~
 
-Pass the top-level SDK store directory to this :command:`go run` command:
+Pass the top-level SDK store directory to this ``go run`` command:
 
 .. code-block:: console
 
@@ -380,13 +380,13 @@ Pass the top-level SDK store directory to this :command:`go run` command:
      time=1990-01-01T00:00:00.000+00.00 level=INFO msg="server started at http://0.0.0.0:8080"
 
 
-Use the local store with |ws_markup|
+Use the local store with Workshop
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To override the URL that |ws_markup| uses to connect to SDK Store,
-configure the |ws_markup| snap
-with the address from :option:`!-public-host` in the step above,
-adding :samp:`/storage/v1/` as the path:
+To override the URL that Workshop uses to connect to SDK Store,
+configure the Workshop snap
+with the address from ``-public-host`` in the step above,
+adding ``/storage/v1/`` as the path:
 
 .. code-block:: console
 
@@ -394,7 +394,7 @@ adding :samp:`/storage/v1/` as the path:
    sudo snap restart workshop
 
 
-|ws_markup| will now use the local store.
+Workshop will now use the local store.
 
 
 Revert changes
@@ -407,23 +407,7 @@ To go back to the default store:
    sudo snap set workshop store.url=""
 
 
-|ws_markup| will now use the default URL.
-
-Documentation
--------------
-
-All documentation resides in the ``docs/`` directory.
-To build and run it at ``127.0.0.1:8000``:
-
-.. code-block:: console
-
-   make run
-
-
-To suggest changes online, use the GitHub link in the footer of the page
-or submit a PR, limiting it to the ``docs/`` directory
-and following our internal `Sphinx and Read the Docs guide
-<https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/>`_.
+Workshop will now use the default URL.
 
 
 Releases
@@ -431,7 +415,7 @@ Releases
 
 See the :ref:`release notes <release_notes>`
 for more information on our general approach.
-The steps to produce a |ws_markup| release are as follows.
+The steps to produce a Workshop release are as follows.
 
 
 Build the snaps locally
@@ -475,7 +459,7 @@ Here's the publishing checklist to follow:
 - Make sure the unit, integration and documentation tests are green;
   see `Testing`_ for details
 
-- Create and push a new release tag with :program:`git`,
+- Create and push a new release tag with ``git``,
   using `semantic versioning <https://semver.org/>`_
 
 - Run the `release workflow
@@ -492,35 +476,143 @@ Here's the publishing checklist to follow:
 
 
 You'll also need to update the documentation:
+see the :ref:`contributing_doc_release` section for the full checklist.
 
-- Merge the auto-generated documentation pull request
 
-- Bump the snap version used across documentation
 
-- Generate the updated SDK definition schema
-  in the root of the SDKcraft_ repository:
+.. _contributing_doc:
+
+Documentation
+-------------
+
+All documentation resides in the ``docs/`` directory.
+To build and run it at ``127.0.0.1:8000``:
+
+.. code-block:: console
+
+   workshop launch
+   workshop run docs-run
+
+
+To suggest changes,
+submit a `pull request <https://github.com/canonical/workshop/pulls>`_,
+limiting it to the ``docs/`` directory
+and prefixing the title with ``Doc:``.
+
+
+.. _contributing_doc_structure:
+
+Structure and style
+~~~~~~~~~~~~~~~~~~~
+
+We use the `Canonical documentation starter pack
+<https://github.com/canonical/sphinx-docs-starter-pack>`_
+together with a custom Workshop in-project SDK in ``.workshop/starter-pack``
+to run and build our documentation;
+our preferred markup is reStructuredText (reST),
+with some opinionated style choices evident in the source.
+
+See the relevant documentation before making changes:
+
+- `Starter pack
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/>`_
+
+- `reST style guide
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/style-guide/>`_
+
+- `reST cheat sheet
+  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/doc-cheat-sheet/>`_
+
+
+.. _contributing_doc_generation:
+
+CLI reference
+~~~~~~~~~~~~~
+
+The :ref:`command-line reference <ref_workshop_cli>`
+is produced directly from the Cobra command tree:
+
+.. code-block:: console
+
+   go run ./cmd/workshop generate-docs
+
+
+The helper in ``cmd/workshop/gendocs.go``
+uses the `gencodo <https://github.com/canonical/gencodo>`_ Go module
+to convert the command metadata into ``.rst`` files with clever templates.
+
+In particular, this is used during the
+:ref:`release workflow <contributing_doc_cicd>`.
+
+
+.. _contributing_doc_release:
+
+Release documentation
+~~~~~~~~~~~~~~~~~~~~~
+
+At every release, remember to:
+
+- Merge the auto-generated CLI reference pull request.
+
+- Bump the snap revision used across the docs.
+
+- Update two schema files:
+  ``docs/reference/definition-files/schema.json``
+  and
+  ``docs/reference/definition-files/schema-sdk.json``.
+
+  The former needs to be updated manually,
+  but you can generate the latter in the SDKcraft repository root:
 
   .. code-block:: console
 
      PYTHONPATH=. python sdkcraft/models/project.py
 
 
-  And copy the output to :file:`docs/reference/definitions/schema-sdk.json`
-  in this repository.
+- Update the `release notes <https://github.com/canonical/workshop/releases>`_
+  with relevant details, following the established format;
+  for an SDKcraft release, update the respective section in the same manner.
 
-- Update the workshop definition schema in
-  :file:`docs/reference/definitions/schema.json`
-  according to the changes in :file:`internal/workshop/workshop_file.go`.
+- Refresh the
+  `coverage map <https://github.com/canonical/workshop/blob/main/docs/coverage.md>`_
+  by running the ``.github/workflows/doc-cover.yaml`` workflow
+  and merging the resulting pull request.
 
-- Update the release notes,
-  adding detailed information from pull requests and commit messages
-  within the release scope
-  to supplement the auto-generated change log.
-  Follow the `established format <https://github.com/canonical/workshop/releases>`_
-  to ensure consistency with previous releases.
 
-- Update the `coverage map
-  <https://github.com/canonical/workshop/actions/workflows/doc-cover.yaml>`_.
+.. _contributing_doc_cicd:
 
-- Publish and merge all documentation changes in the repository;
-  the site updates automatically.
+CI/CD
+~~~~~
+
+A few
+`GitHub Actions
+<https://docs.github.com/en/actions/get-started/understanding-github-actions>`_,
+defined in the ``.github/workflows/`` directory,
+keep the documentation running smoothly.
+
+Some of these workflows come from the
+:ref:`starter pack <contributing_doc_structure>`,
+while others are custom-made for our needs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 40
+
+   * - Workflow
+     - Purpose
+
+   * - ``automatic-doc-checks.yml`` (SP)
+     - Build the documentation and fail on Sphinx warnings.
+
+   * - ``doc-cover.yaml``
+     - Update the coverage map.
+
+   * - ``sphinx-python-dependency-build-checks.yml`` (SP)
+     - Ensure that the Sphinx virtual environment can be built from source.
+
+   * - ``markdown-style-checks.yml`` (SP)
+     - Check style, spelling, and links in documentation source.
+
+   * - ``release.yaml``
+     - Trigger a pull request
+       with :ref:`regenerated <contributing_doc_generation>` CLI reference docs.
