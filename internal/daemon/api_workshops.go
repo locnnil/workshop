@@ -453,7 +453,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
 	if !slices.Contains(validActions, reqData.Action) {
-		return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
+		return statusBadRequest("unknown action %q", reqData.Action)
 	}
 
 	mode, err := actionMode(&reqData)
