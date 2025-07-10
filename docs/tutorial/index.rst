@@ -8,51 +8,22 @@
 Tutorial
 ========
 
-This three-stage tutorial will guide you
-through the essentials of the |ws_markup| ecosystem,
-from creating your first workshop to building and publishing SDKs,
-which are the main building blocks of workshops.
+Anyone new to |ws_markup| should start here.
 
+The tutorial is broken into three main parts:
+you will learn to build development environments,
+customize them, and share the customizations with others.
+The tutorial introduces key tools, concepts,
+and ways of thinking about workshops and SDKs.
 
-Build workshops
----------------
-
-Begin with installation,
-then learn how to define, launch, and refresh workshops.
-This section also covers executing various commands and working with interfaces:
+Follow the sections of the tutorial in order.
 
 .. toctree::
    :maxdepth: 1
 
-   get-started
-
-
-Sketch SDKs
------------
-
-Next, learn how to create local SDKs that customize the workshop you've built:
-
-.. toctree::
-    :maxdepth: 1
-
-    sketch-sdks
-
-
-Craft SDKs
-----------
-
-.. @artefact SDK definition
-.. @artefact SDK publisher
-.. @artefact SDK Store
-
-To create SDKs for |ws_markup|, SDK publishers use |sdk_markup|.
-This tool is installed separately and accepts an SDK definition
-to build and publish the SDK in the SDK Store (credentials provided on request):
-
-.. toctree::
-   :maxdepth: 1
-
-   craft-sdks
+   Part 1: Get Started <get-started>
+   Part 2: Sketch SDKs <sketch-sdks>
+   Part 3: Craft SDKs <craft-sdks>
 
 
 Next steps

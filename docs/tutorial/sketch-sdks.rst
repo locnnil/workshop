@@ -4,8 +4,8 @@
    :description: Tutorial on creating experimental SDKs with the 'workshop sketch-sdk'
                  command, enabling quick local SDK experiments without publishing them.
 
-Customize workshops with sketch SDKs
-====================================
+Customize with sketch SDKs
+==========================
 
 This is the second section of the :ref:`three-part series <tut_index>`;
 it teaches you to create experimental SDKs quickly
