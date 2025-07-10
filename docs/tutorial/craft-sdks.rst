@@ -12,7 +12,7 @@ Craft SDKs with |sdk_markup|
 .. @artefact SDK
 .. @artefact interface
 
-This is the third section of the :ref:`three-part series <tut_index>`;
+This is the fourth section of the :ref:`four-part series <tut_index>`;
 you'll learn how to create full-featured SDKs
 that can be published and shared with others using |sdk_markup|.
 It relies on the knowledge gained in the :ref:`tut_get_started` section,

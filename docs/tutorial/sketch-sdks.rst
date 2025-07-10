@@ -7,7 +7,7 @@
 Customize with sketch SDKs
 ==========================
 
-This is the second section of the :ref:`three-part series <tut_index>`;
+This is the third section of the :ref:`four-part series <tut_index>`;
 it teaches you to create experimental SDKs quickly
 using the :command:`workshop sketch-sdk` command
 to run local SDK experiments without publishing them.

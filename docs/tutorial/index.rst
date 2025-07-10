@@ -10,9 +10,9 @@ Tutorial
 
 Anyone new to |ws_markup| should start here.
 
-The tutorial is broken into three main parts:
+The tutorial is broken into four main parts:
 you will learn to build development environments,
-customize them, and share the customizations with others.
+customize them, and share the updates with others.
 The tutorial introduces key tools, concepts,
 and ways of thinking about workshops and SDKs.
 
@@ -22,8 +22,9 @@ Follow the sections of the tutorial in order.
    :maxdepth: 1
 
    Part 1: Get Started <get-started>
-   Part 2: Sketch SDKs <sketch-sdks>
-   Part 3: Craft SDKs <craft-sdks>
+   Part 2: Work with interfaces <work-with-interfaces>
+   Part 3: Sketch SDKs <sketch-sdks>
+   Part 4: Craft SDKs <craft-sdks>
 
 
 Next steps
