@@ -282,6 +282,23 @@ The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
+.. note::
+
+   Consider adding the :file:`.lock` file
+   to your :file:`.gitignore` or similar ignore files:
+
+   .. code-block:: console
+
+      $ echo ".workshop.lock" >> .gitignore
+
+
+   To the contrary, the definition and the :file:`.workshop/` directory
+   are *meant* to be stored in a repository;
+   if your :file:`.gitignore` file uses rules
+   such as "ignore everything except these files and directories,"
+   add them to the list of explicitly tracked items.
+
+
 To see how |ws_markup| keeps track of the directory,
 check out the recent major operations, or changes:
 
