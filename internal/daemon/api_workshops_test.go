@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -1598,6 +1599,14 @@ func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, fil
 		var f workshop.File
 		err := yaml.Unmarshal([]byte(files[i]), &f)
 		c.Assert(err, check.IsNil)
+
+		// Simulate passing through Task.Set and Task.Get.
+		// Converts plug and slot attributes from int to float64.
+		serialized, err := json.Marshal(&f)
+		c.Assert(err, check.IsNil)
+		err = json.Unmarshal(json.RawMessage(serialized), &f)
+		c.Assert(err, check.IsNil)
+
 		c.Assert(wpCalls[i].File, check.DeepEquals, &f)
 	}
 }
