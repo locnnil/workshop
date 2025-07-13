@@ -2530,11 +2530,9 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"test-sdk",
-		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_plugadded})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_plugadded})
 }
 
 func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
@@ -2603,11 +2601,9 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"system",
-		"test-sdk",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_system_extended})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -2681,11 +2677,9 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"test-sdk",
-		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
