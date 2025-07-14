@@ -74,15 +74,17 @@ create a workshop definition file named ``workshop.yaml``
 to list your project's prerequisites,
 then run ``workshop launch``:
 
-.. code-block:: console
+.. code-block:: yaml
+   :caption: workshop.yaml
 
-   cat > workshop.yaml <<EOF -
    name: golang
    base: ubuntu@22.04
    sdks:
      - name: go
        channel: latest/stable
-   EOF
+
+
+.. code-block:: console
 
    workshop launch
 

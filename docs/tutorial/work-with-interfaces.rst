@@ -97,33 +97,37 @@ with the system SDK to connect to a server running in the workshop.
 .. @artefact tunnel interface
 
 For a quick demo, let's install `Caddy <https://caddyserver.com/>`_
-to serve files over HTTP:
+*inside the workshop*:
 
 .. code-block:: console
 
-   $ workshop exec --env GOBIN=/project dev -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
-   $ cat <<EOF > Caddyfile
+   $ workshop exec --env GOBIN=/project dev -- \
+       go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+
+
+In the project directory on the host,
+create a basic :file:`Caddyfile` to serve files over HTTP at port 8080:
+
+.. code-block:: none
+   :caption: Caddyfile
+
    :8080 {
-           file_server
+       file_server
    }
-   EOF
+
+
+Follow up with a static :file:`index.html`:
+
+.. code-block:: console
+
    $ echo 'Hello, Workshop!' > index.html
 
 
-This builds Caddy inside the workshop,
-installs it to the project directory,
-configures it to run as a file server at port 8080
-and creates an index file.
-
-.. note::
-
-   We added the index file to the project directory on the host;
-   however, the server will be able to access it
-   because the project directory is mounted inside the workshop.
-
+The server can access both files
+because the project directory is mounted inside the workshop.
 
 To configure the tunnel interface,
-add the following lines to the definition:
+add the following lines to the workshop definition:
 
 .. code-block:: yaml
    :caption: workshop.yaml
