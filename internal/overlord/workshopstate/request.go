@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -512,22 +511,6 @@ func maybeRefresh(installed, candidate sdk.Setup) bool {
 	return installed.Channel != candidate.Channel || installed.Revision != candidate.Revision
 }
 
-func definitionChanged(old, new *workshop.File, sdkName string) bool {
-	byName := func(s workshop.SdkRecord) bool { return s.Name == sdkName }
-	oldidx := slices.IndexFunc(old.Sdks, byName)
-	newidx := slices.IndexFunc(new.Sdks, byName)
-
-	if oldidx == -1 || newidx == -1 {
-		// Check if the SDK definition was added or removed.
-		return oldidx != newidx
-	}
-
-	oldrec := old.Sdks[oldidx]
-	newrec := new.Sdks[newidx]
-
-	return !reflect.DeepEqual(oldrec.Plugs, newrec.Plugs) || !reflect.DeepEqual(oldrec.Slots, newrec.Slots)
-}
-
 type refreshPlan struct {
 	install []sdk.Setup
 	intact  []sdk.Setup
@@ -541,6 +524,10 @@ type refreshPlan struct {
 
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh)
+}
+
+func (p refreshPlan) Intact() []sdk.Setup {
+	return ordered(p.installOrder, p.intact)
 }
 
 func (p refreshPlan) IntactOrRefresh() []sdk.Setup {
@@ -558,12 +545,6 @@ func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
 }
 
-func (p refreshPlan) Remove() []sdk.Setup {
-	revOrder := slices.Clone(p.installedOrder)
-	slices.Reverse(revOrder)
-	return ordered(revOrder, p.remove)
-}
-
 func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []sdk.Setup) *refreshPlan {
 	plan := &refreshPlan{
 		install:        make([]sdk.Setup, 0),
@@ -577,34 +558,25 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []s
 	// Restore the order of SDKs installed in the running workshop.
 	installed := w.SdksByInstallOrder()
 
-	// Determine if a workshop can be partially updated.
-	lastIntactIdx := -1
-
 	if w.Base == newfile.Base {
 		for ci, s := range candidates {
 			// Do we have this SDK in the same order as in the running workshop?
-			if ci < len(installed) && installed[ci].Name == s.Name {
-				// Has this SDK had any updates?
-				if maybeRefresh(w.Sdks[s.Name], s) {
-					break
-				}
-				// Has this SDK had any changes in the workshop definition?
-				if definitionChanged(w.File, newfile, s.Name) {
-					break
-				}
-
-				plan.intact = append(plan.intact, s)
-				// No updates to the SDK - reuse its snapshot and keep looking.
-				// Otherwise, break the loop as the rest require to be reinstalled.
-				plan.sdkSnapshot = s.Name
-				lastIntactIdx = ci
-			} else {
+			if ci >= len(installed) || installed[ci].Name != s.Name {
 				break
 			}
+			// Has this SDK had any updates?
+			// If so, break the loop as the rest require to be reinstalled.
+			if maybeRefresh(w.Sdks[s.Name], s) {
+				break
+			}
+
+			plan.intact = append(plan.intact, s)
+			// No updates to the SDK - reuse its snapshot and keep looking.
+			plan.sdkSnapshot = s.Name
 		}
 	}
 
-	for _, s := range candidates[lastIntactIdx+1:] {
+	for _, s := range candidates[len(plan.intact):] {
 		if installed, exist := w.Sdks[s.Name]; exist {
 			plan.refresh = append(plan.refresh, s)
 			plan.remove = append(plan.remove, installed)
@@ -676,7 +648,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 
 	// Remove SDKs from interfaces repository. If refresh fails, the SDKs will be returned
 	// to the repository after restoring the stashed workshop (with the SDKs installed).
-	unregister := unregisterSdks(st, plan.Remove())
+	unregister, umap := unregisterSdks(st, plan.IntactOrRemove())
 	addTaskSet(unregister)
 
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
@@ -684,6 +656,10 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 
 	rebuild := rebuildWorkshop(st, file, plan.sdkSnapshot)
 	addTaskSet(rebuild)
+
+	// Re-register intact SDKs (the workshop definition can change plugs and slots).
+	register := registerSdks(st, plan.Intact(), umap)
+	addTaskSet(register)
 
 	// Install updated SDKs to the rebuilt workshop.
 	install := installSdks(st, w.Project.ProjectId, file.Name, plan.InstallOrRefresh(), rmap)
@@ -766,19 +742,36 @@ func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet
 	return autoconnectSet
 }
 
-func unregisterSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+func registerSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+	prev := (*state.Task)(nil)
+	registerSet := state.NewTaskSet()
+	for _, s := range sdks {
+		register := sdkstate.Register(st, s.Name, retrieveTasks[s.Name])
+		registerSet.AddTask(register)
+
+		if prev != nil {
+			register.WaitFor(prev)
+		}
+		prev = register
+	}
+	return registerSet
+}
+
+func unregisterSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
 	prev := (*state.Task)(nil)
 	unregisterSet := state.NewTaskSet()
+	unregisterMap := map[string]string{}
 	for _, s := range sdks {
 		unregister := sdkstate.Unregister(st, s)
 		unregisterSet.AddTask(unregister)
+		unregisterMap[s.Name] = unregister.ID()
 
 		if prev != nil {
 			unregister.WaitFor(prev)
 		}
 		prev = unregister
 	}
-	return unregisterSet
+	return unregisterSet, unregisterMap
 }
 
 func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
@@ -997,7 +990,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	unregister := unregisterSdks(st, slices.Collect(maps.Values(w.Sdks)))
+	unregister, _ := unregisterSdks(st, slices.Collect(maps.Values(w.Sdks)))
 	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))

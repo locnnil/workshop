@@ -16,7 +16,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: mkdir -p ${{ github.workspace }}.cover/unit/cover && go test -cover ./... -args -test.gocoverdir=${{ github.workspace }}.cover/unit/cover
+        run: mkdir -p ${{ github.workspace }}.cover/unit/cover && go test -cover -coverpkg=./... ./... -args -test.gocoverdir=${{ github.workspace }}.cover/unit/cover
 
       - name: Upload Coverage
         id: upload-coverage

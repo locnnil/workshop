@@ -271,7 +271,7 @@ To check code coverage:
 
 .. code-block:: console
 
-   go test --coverpkg=<./...|package> covermode=<set|count|atomic> -coverprofile=<OutputFile> <./...|package>
+   go test -coverpkg=<./...|package> -covermode=<set|count|atomic> -coverprofile=<OutputFile> <./...|package>
 
 
 For example, to measure coverage using all tests:

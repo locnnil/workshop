@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -1598,6 +1599,14 @@ func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, fil
 		var f workshop.File
 		err := yaml.Unmarshal([]byte(files[i]), &f)
 		c.Assert(err, check.IsNil)
+
+		// Simulate passing through Task.Set and Task.Get.
+		// Converts plug and slot attributes from int to float64.
+		serialized, err := json.Marshal(&f)
+		c.Assert(err, check.IsNil)
+		err = json.Unmarshal(json.RawMessage(serialized), &f)
+		c.Assert(err, check.IsNil)
+
 		c.Assert(wpCalls[i].File, check.DeepEquals, &f)
 	}
 }
@@ -2521,11 +2530,9 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"test-sdk",
-		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_plugadded})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_plugadded})
 }
 
 func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
@@ -2594,11 +2601,9 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"system",
-		"test-sdk",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_system_extended})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -2672,11 +2677,9 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		"system",
 		"test-sdk",
 		"test-sdk-2",
-		"test-sdk",
-		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
