@@ -310,7 +310,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 }
 
-func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, force bool) error {
+func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -329,8 +329,10 @@ func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Conte
 
 	req := api.InstanceStatePut{
 		Action:  action,
-		Timeout: 60,
-		Force:   force,
+		Timeout: timeout,
+		// Currently force is equivalent to zero timeout, but we might
+		// as well set it just in case.
+		Force: timeout == 0,
 	}
 
 	op, err := conn.UpdateInstanceState(inst.Name, req, etag)
@@ -371,7 +373,7 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		}
 	})
 
-	if err := s.updateInstanceState(conn, ctx, name, "start", false); err != nil {
+	if err := s.updateInstanceState(conn, ctx, name, "start", 60); err != nil {
 		return err
 	}
 
@@ -421,7 +423,19 @@ func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, nam
 		return err
 	}
 
-	return s.updateInstanceState(conn, ctx, name, "stop", force)
+	timeout := 60
+	if force {
+		timeout = 10
+	}
+	if err := s.updateInstanceState(conn, ctx, name, "stop", timeout); err != nil && force {
+		logger.Noticef("On stopWorkshop: failed to stop %q workshop: %v", name, err)
+	} else {
+		return err
+	}
+	if err := s.updateInstanceState(conn, ctx, name, "stop", 0); err != nil && err.Error() != "The instance is already stopped" {
+		return err
+	}
+	return nil
 }
 
 func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
